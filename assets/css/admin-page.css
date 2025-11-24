@@ -65,7 +65,7 @@
 }
 
 .hls-preset-font-selector {
-    margin-bottom: 20px;
+    margin: 0 15px 20px 15px;
 }
 
 .hls-preset-font-selector:last-child {
@@ -101,7 +101,7 @@
 }
 
 .hls-preset-size-control {
-    margin-top: 20px;
+    margin: 20px 15px 0 15px;
 }
 
 .hls-size-value {
@@ -616,4 +616,8 @@
 #hls-clear-file-btn {
     min-height: 44px;
     min-width: 44px;
+}
+
+.hls-font-section, .hls-fontsize-section {
+    margin: 0 1rem;
 }

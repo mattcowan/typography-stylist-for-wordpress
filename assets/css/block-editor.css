@@ -342,3 +342,21 @@
         box-shadow: 0 0 0 1px #1e1e1e, 0 0 0 3px #4f94d4;
     }
 }
+
+/* Font and Font Size Sections */
+.hls-font-section,
+.hls-fontsize-section {
+    margin: 0 1rem;
+    padding: 16px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.hls-font-section h4,
+.hls-fontsize-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e1e1e;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}

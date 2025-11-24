@@ -69,6 +69,9 @@ class Headline_Ligatures_Styles {
         // Enqueue block editor assets
         add_action('enqueue_block_editor_assets', array($this, 'enqueue_block_editor_assets'));
 
+        // Enqueue assets in the editor iframe (for block rendering)
+        add_action('enqueue_block_assets', array($this, 'enqueue_block_assets'));
+
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
 
@@ -104,10 +107,33 @@ class Headline_Ligatures_Styles {
     }
 
     /**
-     * Enqueue block editor assets
+     * Enqueue block assets (loads in both editor iframe and frontend)
+     * This hook fires for both editor and frontend
+     */
+    public function enqueue_block_assets() {
+        // Only load fonts in editor context, not frontend
+        // Frontend uses enqueue_frontend_assets() with optimized loading
+        if (is_admin()) {
+            $this->enqueue_custom_fonts_for_blocks();
+        }
+    }
+
+    /**
+     * Enqueue block editor assets (toolbar, popover, etc.)
      */
     public function enqueue_block_editor_assets() {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
+
+        // Enqueue fonts for popover preview
+        $this->enqueue_custom_fonts_for_editor();
+
+        // Editor styles
+        wp_enqueue_style(
+            'hls-block-editor',
+            HLS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
+            array('wp-edit-blocks'),
+            HLS_VERSION
+        );
 
         // Editor JavaScript
         wp_enqueue_script(
@@ -125,14 +151,6 @@ class Headline_Ligatures_Styles {
             ),
             HLS_VERSION,
             true
-        );
-
-        // Editor styles
-        wp_enqueue_style(
-            'hls-block-editor',
-            HLS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
-            array('wp-edit-blocks'),
-            HLS_VERSION
         );
 
         // Cache the localized data with transient
@@ -154,9 +172,6 @@ class Headline_Ligatures_Styles {
 
         // Pass data to JavaScript
         wp_localize_script('hls-block-editor', 'hlsData', $localized_data);
-
-        // Enqueue custom fonts in block editor
-        $this->enqueue_custom_fonts_for_editor();
     }
 
     /**
@@ -424,7 +439,46 @@ class Headline_Ligatures_Styles {
     }
 
     /**
-     * Enqueue custom fonts for block editor
+     * Enqueue custom fonts for block rendering in editor canvas iframe
+     * This is called by enqueue_block_assets hook
+     */
+    public function enqueue_custom_fonts_for_blocks() {
+        $fonts = $this->get_custom_fonts();
+
+        if (empty($fonts)) {
+            return;
+        }
+
+        // Cache combined font CSS
+        $cache_key = 'hls_block_font_css';
+        $combined_css = get_transient($cache_key);
+
+        if (false === $combined_css) {
+            $combined_css = '';
+            foreach ($fonts as $font) {
+                if (!empty($font['css_content'])) {
+                    // Sanitize CSS before adding
+                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                }
+            }
+
+            // Minify (remove extra whitespace)
+            $combined_css = preg_replace('/\s+/', ' ', $combined_css);
+
+            // Cache for 24 hours
+            set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
+        }
+
+        if (!empty($combined_css)) {
+            // Register and enqueue font CSS for blocks in editor iframe
+            wp_register_style('hls-block-fonts', false);
+            wp_enqueue_style('hls-block-fonts');
+            wp_add_inline_style('hls-block-fonts', $combined_css);
+        }
+    }
+
+    /**
+     * Enqueue custom fonts for block editor (deprecated - keeping for popover preview)
      */
     public function enqueue_custom_fonts_for_editor() {
         $fonts = $this->get_custom_fonts();
@@ -454,7 +508,10 @@ class Headline_Ligatures_Styles {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('hls-block-editor', $combined_css);
+            // Register a separate handle for fonts in the popover/toolbar context
+            wp_register_style('hls-editor-fonts', false);
+            wp_enqueue_style('hls-editor-fonts');
+            wp_add_inline_style('hls-editor-fonts', $combined_css);
         }
     }
 
@@ -911,6 +968,7 @@ class Headline_Ligatures_Styles {
         delete_transient('hls_combined_font_css');
         delete_transient('hls_admin_font_css');
         delete_transient('hls_editor_font_css');
+        delete_transient('hls_block_font_css');
 
         // Clear per-page font caches (all cached variations)
         global $wpdb;
