@@ -359,8 +359,19 @@
          * Render feature toggle
          */
         renderFeatureToggle(feature) {
-            const { selectedFeatures } = this.state;
+            const { selectedFeatures, selectedFont, previewText } = this.state;
             const isActive = selectedFeatures.includes(feature.id);
+
+            // Use preview text or default sample text
+            const sampleText = previewText || 'ffi ffl Th AE';
+
+            // Build preview styles - with this feature only
+            const previewStyle = {
+                fontFeatureSettings: `"${feature.id}" 1`
+            };
+            if (selectedFont) {
+                previewStyle.fontFamily = selectedFont;
+            }
 
             return (
                 <div key={feature.id} className="hls-feature-toggle">
@@ -371,6 +382,11 @@
                         onChange={() => this.toggleFeature(feature.id)}
                     />
                     <code className="hls-feature-code">{feature.id}</code>
+                    <div className="hls-feature-preview">
+                        <span className="hls-feature-preview-on" style={previewStyle}>
+                            {sampleText}
+                        </span>
+                    </div>
                 </div>
             );
         }

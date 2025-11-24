@@ -145,24 +145,8 @@ Features are applied using the `font-feature-settings` CSS property:
 
 - WordPress 5.8 or higher
 - PHP 7.4 or higher
-- Node.js 14+ (for development)
 
-### Local Development Setup
-
-```bash
-# Clone the repository
-git clone [repository-url]
-cd headline-ligatures-and-styles
-
-# Install dependencies (if using build tools)
-npm install
-
-# Build assets (if using webpack/build process)
-npm run build
-
-# For development with watch mode
-npm run dev
-```
+The plugin works as-is without build tools. Optionally, run `npm install && npm run build` to minify assets, or `npm run watch` for development with automatic rebuilding.
 
 ### Extending the Plugin
 
@@ -195,29 +179,6 @@ add_filter('hls_default_presets', function($presets) {
 });
 ```
 
-## Roadmap
-
-- [ ] Support for paragraph and other text blocks
-- [ ] Font feature detection (check which features a font supports)
-- [ ] Character map/glyph browser
-- [ ] Position-based feature application (initial/medial/final)
-- [ ] Import/export preset library
-- [ ] Font upload and management
-- [ ] Advanced preview with sample phrases
-- [ ] Keyboard shortcuts for common features
-- [ ] Template tag and shortcode support
-- [ ] Integration with popular page builders
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## License
 
 This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) file for details.
@@ -232,10 +193,6 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 - The WordPress community
 - Type designers who create fonts with rich OpenType features
 - Everyone who appreciates good typography
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/mattcowan/headline-ligatures-styles/issues)
 
 ---
 
