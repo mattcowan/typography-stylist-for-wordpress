@@ -1,5 +1,5 @@
 {
-  "name": "headline-ligatures-styles",
+  "name": "opentype-stylist",
   "version": "1.0.0",
   "description": "WordPress plugin for advanced OpenType typography features in Gutenberg headlines",
   "scripts": {
@@ -22,6 +22,7 @@
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-react": "^7.28.5",
+    "archiver": "^7.0.1",
     "clean-css-cli": "^5.6.2",
     "nodemon": "^2.0.20",
     "terser": "^5.16.0"

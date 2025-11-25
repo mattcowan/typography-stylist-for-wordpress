@@ -1,0 +1,694 @@
+# Copyright (C) 2025 Headline Ligatures and Styles
+# This file is distributed under the same license as the Headline Ligatures and Styles package.
+msgid ""
+msgstr ""
+"Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
+"POT-Creation-Date: 2025-11-24 20:08+0000\n"
+"PO-Revision-Date: 2025-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Custom PHP Script\n"
+"X-Domain: headline-ligatures-styles\n"
+
+#: headline-ligatures-styles.php:348
+msgid "Headline Ligatures & Styles"
+msgstr ""
+
+#: headline-ligatures-styles.php:349
+msgid "Headline Typography"
+msgstr ""
+
+#: headline-ligatures-styles.php:1464
+msgid "You do not have sufficient permissions to access this page."
+msgstr ""
+
+#: headline-ligatures-styles.php:389
+msgid "Are you sure you want to delete this font kit?"
+msgstr ""
+
+#: headline-ligatures-styles.php:390
+msgid "Failed to upload font kit."
+msgstr ""
+
+#: headline-ligatures-styles.php:391
+msgid "Please select a ZIP file (.zip)"
+msgstr ""
+
+#: headline-ligatures-styles.php:392
+msgid "Please enter a font kit name."
+msgstr ""
+
+#: headline-ligatures-styles.php:393
+msgid "Please select a ZIP file."
+msgstr ""
+
+#: headline-ligatures-styles.php:394
+msgid "Font kit uploaded and processed successfully! Reloading page..."
+msgstr ""
+
+#: headline-ligatures-styles.php:395
+msgid "Failed to delete font kit."
+msgstr ""
+
+#: headline-ligatures-styles.php:396
+msgid "No custom fonts uploaded yet."
+msgstr ""
+
+#: headline-ligatures-styles.php:397
+msgid "Upload a webfont kit using the form below to add custom fonts with OpenType features."
+msgstr ""
+
+#: headline-ligatures-styles.php:398
+msgid "Uploading"
+msgstr ""
+
+#: headline-ligatures-styles.php:399
+msgid "Uploading ZIP file..."
+msgstr ""
+
+#: headline-ligatures-styles.php:400
+msgid "Processing..."
+msgstr ""
+
+#: headline-ligatures-styles.php:401
+msgid "Upload Font Kit"
+msgstr ""
+
+#: headline-ligatures-styles.php:618
+msgid "Too many requests. Please try again later."
+msgstr ""
+
+#: headline-ligatures-styles.php:682
+msgid "Standard Ligatures"
+msgstr ""
+
+#: headline-ligatures-styles.php:684
+msgid "Common letter combinations like fi, fl"
+msgstr ""
+
+#: headline-ligatures-styles.php:688
+msgid "Discretionary Ligatures"
+msgstr ""
+
+#: headline-ligatures-styles.php:690
+msgid "Optional decorative ligatures"
+msgstr ""
+
+#: headline-ligatures-styles.php:694
+msgid "Contextual Alternates"
+msgstr ""
+
+#: headline-ligatures-styles.php:696
+msgid "Context-aware letter forms"
+msgstr ""
+
+#: headline-ligatures-styles.php:700
+msgid "Stylistic Set 1"
+msgstr ""
+
+#: headline-ligatures-styles.php:706
+msgid "Stylistic Set 2"
+msgstr ""
+
+#: headline-ligatures-styles.php:712
+msgid "Stylistic Set 3"
+msgstr ""
+
+#: headline-ligatures-styles.php:718
+msgid "Stylistic Set 4"
+msgstr ""
+
+#: headline-ligatures-styles.php:724
+msgid "Stylistic Set 5"
+msgstr ""
+
+#: headline-ligatures-styles.php:702
+msgid "Alternate character designs"
+msgstr ""
+
+#: headline-ligatures-styles.php:730
+msgid "Swashes"
+msgstr ""
+
+#: headline-ligatures-styles.php:732
+msgid "Decorative flourishes"
+msgstr ""
+
+#: headline-ligatures-styles.php:736
+msgid "Contextual Swashes"
+msgstr ""
+
+#: headline-ligatures-styles.php:738
+msgid "Context-aware decorative flourishes"
+msgstr ""
+
+#: headline-ligatures-styles.php:742
+msgid "Stylistic Alternates"
+msgstr ""
+
+#: headline-ligatures-styles.php:744
+msgid "Alternative character forms"
+msgstr ""
+
+#: headline-ligatures-styles.php:748
+msgid "Titling"
+msgstr ""
+
+#: headline-ligatures-styles.php:750
+msgid "Optimized for large titles"
+msgstr ""
+
+#: headline-ligatures-styles.php:754
+msgid "Ornaments"
+msgstr ""
+
+#: headline-ligatures-styles.php:756
+msgid "Decorative ornaments"
+msgstr ""
+
+#: headline-ligatures-styles.php:871
+msgid "Missing required parameters"
+msgstr ""
+
+#: headline-ligatures-styles.php:875
+msgid "Features must be a non-empty array"
+msgstr ""
+
+#: headline-ligatures-styles.php:882
+msgid "Invalid feature ID: %s"
+msgstr ""
+
+#: headline-ligatures-styles.php:923
+msgid "Preset not found"
+msgstr ""
+
+#: headline-ligatures-styles.php:1150
+msgid "Missing required font data"
+msgstr ""
+
+#: headline-ligatures-styles.php:1161
+msgid "Invalid file type"
+msgstr ""
+
+#: headline-ligatures-styles.php:1165
+msgid "Please upload a valid ZIP file"
+msgstr ""
+
+#: headline-ligatures-styles.php:1171
+msgid "File size exceeds maximum allowed (%s)"
+msgstr ""
+
+#: headline-ligatures-styles.php:1176
+msgid "File upload error"
+msgstr ""
+
+#: headline-ligatures-styles.php:1234
+msgid "Font not found"
+msgstr ""
+
+#: headline-ligatures-styles.php:1262
+msgid "Failed to create upload directory"
+msgstr ""
+
+#: headline-ligatures-styles.php:1279
+msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
+msgstr ""
+
+#: headline-ligatures-styles.php:1324
+msgid "No CSS file found in the font kit"
+msgstr ""
+
+#: headline-ligatures-styles.php:1330
+msgid "Invalid CSS file"
+msgstr ""
+
+#: headline-ligatures-styles.php:1337
+msgid "CSS file is too large (max 1MB)"
+msgstr ""
+
+#: headline-ligatures-styles.php:1345
+msgid "Could not read CSS file"
+msgstr ""
+
+#: headline-ligatures-styles.php:1351
+msgid "CSS file does not contain @font-face declarations"
+msgstr ""
+
+#: headline-ligatures-styles.php:1372
+msgid "No valid @font-face rules found in CSS"
+msgstr ""
+
+#: includes/admin-page.php:30
+msgid "Settings saved successfully."
+msgstr ""
+
+#: includes/admin-page.php:45
+msgid "Skip to main content"
+msgstr ""
+
+#: includes/admin-page.php:49
+msgid "Settings sections"
+msgstr ""
+
+#: includes/admin-page.php:57
+msgid "Presets"
+msgstr ""
+
+#: includes/admin-page.php:66
+msgid "Custom Fonts"
+msgstr ""
+
+#: includes/admin-page.php:75
+msgid "Font Features"
+msgstr ""
+
+#: includes/admin-page.php:84
+msgid "Help"
+msgstr ""
+
+#: includes/admin-page.php:95
+msgid "Feature Demonstrations"
+msgstr ""
+
+#: includes/admin-page.php:96
+msgid "See how each OpenType feature affects your text. Compare the default rendering with each feature enabled."
+msgstr ""
+
+#: includes/admin-page.php:102
+msgid "Preview with Font:"
+msgstr ""
+
+#: includes/admin-page.php:105
+msgid "Default (system font)"
+msgstr ""
+
+#: includes/admin-page.php:121
+msgid "Select a custom font to preview how features will look with that font."
+msgstr ""
+
+#: includes/admin-page.php:128
+msgid "Preview Size:"
+msgstr ""
+
+#: includes/admin-page.php:139
+msgid "Adjust preview text size"
+msgstr ""
+
+#: includes/admin-page.php:145
+msgid "Adjust the size of the preview text to better see typography features."
+msgstr ""
+
+#: includes/admin-page.php:164
+msgid "Ligatures"
+msgstr ""
+
+#: includes/admin-page.php:165
+msgid "Stylistic Sets"
+msgstr ""
+
+#: includes/admin-page.php:166
+msgid "Swashes & Alternates"
+msgstr ""
+
+#: includes/admin-page.php:167
+msgid "Decorative"
+msgstr ""
+
+#: includes/admin-page.php:186
+msgid "Default:"
+msgstr ""
+
+#: includes/admin-page.php:193
+msgid "With Feature:"
+msgstr ""
+
+#: includes/admin-page.php:209
+msgid "Your Saved Presets"
+msgstr ""
+
+#: includes/admin-page.php:210
+msgid "These are presets you\'ve created in the block editor."
+msgstr ""
+
+#: includes/admin-page.php:218
+msgid "Features:"
+msgstr ""
+
+#: includes/admin-page.php:245
+msgid "Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor."
+msgstr ""
+
+#: includes/admin-page.php:250
+msgid "Uploaded Fonts"
+msgstr ""
+
+#: includes/admin-page.php:259
+msgid "Delete font kit: %s"
+msgstr ""
+
+#: includes/admin-page.php:261
+msgid "Delete"
+msgstr ""
+
+#: includes/admin-page.php:265
+msgid "Font Families:"
+msgstr ""
+
+#: includes/admin-page.php:278
+msgid "Uploaded: %s"
+msgstr ""
+
+#: includes/admin-page.php:281
+msgid "%d font file"
+msgid_plural "%d font files"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin-page.php:303
+msgid "Font Kit Name:"
+msgstr ""
+
+#: includes/admin-page.php:304
+msgid "required"
+msgstr ""
+
+#: includes/admin-page.php:311
+msgid "e.g., MyFonts Kit 2024"
+msgstr ""
+
+#: includes/admin-page.php:316
+msgid "Enter a descriptive name for this font kit"
+msgstr ""
+
+#: includes/admin-page.php:322
+msgid "ZIP File:"
+msgstr ""
+
+#: includes/admin-page.php:325
+msgid "Choose ZIP file containing webfont kit"
+msgstr ""
+
+#: includes/admin-page.php:330
+msgid "Choose ZIP File"
+msgstr ""
+
+#: includes/admin-page.php:341
+msgid "Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files."
+msgstr ""
+
+#: includes/admin-page.php:347
+msgid "Clear selected file"
+msgstr ""
+
+#: includes/admin-page.php:367
+msgid "Uploading..."
+msgstr ""
+
+#: includes/admin-page.php:374
+msgid "How to use:"
+msgstr ""
+
+#: includes/admin-page.php:376
+msgid "Download your webfont kit from MyFonts, Fontspring, or another provider"
+msgstr ""
+
+#: includes/admin-page.php:377
+msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
+msgstr ""
+
+#: includes/admin-page.php:378
+msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
+msgstr ""
+
+#: includes/admin-page.php:379
+msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
+msgstr ""
+
+#: includes/admin-page.php:380
+msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
+msgstr ""
+
+#: includes/admin-page.php:382
+msgid "What should the ZIP contain:"
+msgstr ""
+
+#: includes/admin-page.php:384
+msgid "A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)"
+msgstr ""
+
+#: includes/admin-page.php:385
+msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
+msgstr ""
+
+#: includes/admin-page.php:386
+msgid "The directory structure must match the paths in the CSS file"
+msgstr ""
+
+#: includes/admin-page.php:388
+msgid "Note:"
+msgstr ""
+
+#: includes/admin-page.php:388
+msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
+msgstr ""
+
+#: includes/admin-page.php:401
+msgid "Available OpenType Features"
+msgstr ""
+
+#: includes/admin-page.php:402
+msgid "This plugin supports the following OpenType font features. Note that not all fonts include all features."
+msgstr ""
+
+#: includes/admin-page.php:409
+msgid "Available ligature OpenType features"
+msgstr ""
+
+#: includes/admin-page.php:413
+msgid "Code"
+msgstr ""
+
+#: includes/admin-page.php:414
+msgid "Name"
+msgstr ""
+
+#: includes/admin-page.php:415
+msgid "Description"
+msgstr ""
+
+#: includes/admin-page.php:422
+msgid "Common letter combinations like fi, fl, ff"
+msgstr ""
+
+#: includes/admin-page.php:427
+msgid "Optional decorative ligatures for special effects"
+msgstr ""
+
+#: includes/admin-page.php:432
+msgid "Context-aware letter forms that adapt to surrounding characters"
+msgstr ""
+
+#: includes/admin-page.php:442
+msgid "Available stylistic set OpenType features"
+msgstr ""
+
+#: includes/admin-page.php:455
+msgid "Stylistic Set %d"
+msgstr ""
+
+#: includes/admin-page.php:456
+msgid "Alternate character designs (font-specific)"
+msgstr ""
+
+#: includes/admin-page.php:460
+msgid "...and ss06 through ss20"
+msgstr ""
+
+#: includes/admin-page.php:470
+msgid "Available swashes and alternates OpenType features"
+msgstr ""
+
+#: includes/admin-page.php:483
+msgid "Decorative flourishes and ornamental strokes"
+msgstr ""
+
+#: includes/admin-page.php:498
+msgid "Forms optimized for large display sizes"
+msgstr ""
+
+#: includes/admin-page.php:503
+msgid "Decorative ornaments and symbols"
+msgstr ""
+
+#: includes/admin-page.php:519
+msgid "How to Use"
+msgstr ""
+
+#: includes/admin-page.php:522
+msgid "Basic Usage"
+msgstr ""
+
+#: includes/admin-page.php:524
+msgid "Create or edit a heading block (H1-H6) in the block editor"
+msgstr ""
+
+#: includes/admin-page.php:525
+msgid "Type your headline text"
+msgstr ""
+
+#: includes/admin-page.php:526
+msgid "Select the text you want to style"
+msgstr ""
+
+#: includes/admin-page.php:527
+msgid "Click the \"Typography Features\" button in the toolbar (icon with decorative \"A\")"
+msgstr ""
+
+#: includes/admin-page.php:528
+msgid "Choose a preset or select individual features"
+msgstr ""
+
+#: includes/admin-page.php:529
+msgid "See the live preview and save"
+msgstr ""
+
+#: includes/admin-page.php:534
+msgid "Best Fonts for Advanced Typography"
+msgstr ""
+
+#: includes/admin-page.php:535
+msgid "This plugin works best with fonts that support OpenType features. Recommended script fonts:"
+msgstr ""
+
+#: includes/admin-page.php:537
+msgid "by Alejandro Paul - Elegant connecting script"
+msgstr ""
+
+#: includes/admin-page.php:538
+msgid "by Alejandro Paul - Romantic calligraphy"
+msgstr ""
+
+#: includes/admin-page.php:539
+msgid "by Alejandro Paul - Casual handwritten style"
+msgstr ""
+
+#: includes/admin-page.php:540
+msgid "by Alejandro Paul - Vintage commercial script"
+msgstr ""
+
+#: includes/admin-page.php:542
+msgid "Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts."
+msgstr ""
+
+#: includes/admin-page.php:546
+msgid "Tips for Script Fonts"
+msgstr ""
+
+#: includes/admin-page.php:548
+msgid "Enable \"Contextual Alternates\" (calt) for natural letter connections"
+msgstr ""
+
+#: includes/admin-page.php:549
+msgid "Use swashes sparingly on first or last letters only"
+msgstr ""
+
+#: includes/admin-page.php:550
+msgid "Try different stylistic sets to find the best look"
+msgstr ""
+
+#: includes/admin-page.php:551
+msgid "Test your headlines at the actual display size"
+msgstr ""
+
+#: includes/admin-page.php:552
+msgid "Not all fonts support all features - experiment!"
+msgstr ""
+
+#: includes/admin-page.php:557
+msgid "Technical Notes"
+msgstr ""
+
+#: includes/admin-page.php:558
+msgid "This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content."
+msgstr ""
+
+#: includes/admin-page.php:559
+msgid "Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support."
+msgstr ""
+
+#: assets/js/block-editor.js:11
+msgid "Typography Features"
+msgstr ""
+
+#: assets/js/block-editor.js:423
+msgid "Elegant Typography & Flourish"
+msgstr ""
+
+#: assets/js/block-editor.js:457
+msgid "Font Family"
+msgstr ""
+
+#: assets/js/block-editor.js:461
+msgid "(Default)"
+msgstr ""
+
+#: assets/js/block-editor.js:471
+msgid "Font Size"
+msgstr ""
+
+#: assets/js/block-editor.js:475
+msgid "Inherit"
+msgstr ""
+
+#: assets/js/block-editor.js:476
+msgid "Responsive (Fluid)"
+msgstr ""
+
+#: assets/js/block-editor.js:484
+msgid "Minimum Size (mobile)"
+msgstr ""
+
+#: assets/js/block-editor.js:493
+msgid "Preferred Size (tablet)"
+msgstr ""
+
+#: assets/js/block-editor.js:502
+msgid "Maximum Size (desktop)"
+msgstr ""
+
+#: assets/js/block-editor.js:517
+msgid "Quick Presets"
+msgstr ""
+
+#: assets/js/block-editor.js:526
+msgid "Individual Features"
+msgstr ""
+
+#: assets/js/block-editor.js:543
+msgid "Preview"
+msgstr ""
+
+#: assets/js/block-editor.js:552
+msgid "Active: "
+msgstr ""
+
+#: assets/js/block-editor.js:566
+msgid "Apply"
+msgstr ""
+
+#: assets/js/block-editor.js:572
+msgid "Clear"
+msgstr ""
+
+#: assets/js/block-editor.js:578
+msgid "Cancel"
+msgstr ""
+
+#: assets/js/block-editor.js:598
+msgid "Other Features"
+msgstr ""

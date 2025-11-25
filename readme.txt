@@ -1,8 +1,8 @@
-=== Headline Ligatures and Styles ===
+=== OpenType Stylist ===
 Contributors: yourname
 Tags: typography, opentype, ligatures, stylistic-sets, fonts
 Requires at least: 5.8
-Tested up to: 6.4
+Tested up to: 6.8
 Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -12,7 +12,7 @@ Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines
 
 == Description ==
 
-Headline Ligatures and Styles brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts from foundries like Sudtipos (Alejandro Paul's Calgary Script, Affair, etc.), this plugin allows you to apply OpenType features directly in the block editor.
+OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts from foundries like Sudtipos (Alejandro Paul's Calgary Script, Affair, etc.), this plugin allows you to apply OpenType features directly in the block editor.
 
 = Key Features =
 
@@ -72,7 +72,7 @@ This plugin works best with fonts that support OpenType features:
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/headline-ligatures-and-styles`, or install through the WordPress plugins screen
+1. Upload the plugin files to `/wp-content/plugins/opentype-stylist`, or install through the WordPress plugins screen
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Go to Settings → Headline Typography to view available features and presets
 4. Start using the typography features in the block editor!
@@ -132,7 +132,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of Headline Ligatures and Styles.
+Initial release of OpenType Stylist.
 
 == Technical Details ==
 

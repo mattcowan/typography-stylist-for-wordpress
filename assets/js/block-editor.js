@@ -1,5 +1,5 @@
 /**
- * Block Editor Integration for Headline Ligatures & Styles
+ * Block Editor Integration for OpenType Stylist
  * Adds custom format type for OpenType features
  */
 
@@ -12,7 +12,7 @@
     const { compose } = wp.compose;
 
     // Define the format type name
-    const FORMAT_TYPE = 'hls/typography-features';
+    const FORMAT_TYPE = 'ots/typography-features';
 
     /**
      * Typography Features Component
@@ -318,7 +318,7 @@
          * Group features by category
          */
         groupFeatures() {
-            const features = hlsData.features || [];
+            const features = otsData.features || [];
             const grouped = {};
 
             features.forEach(feature => {
@@ -336,7 +336,7 @@
          * Get font options for select control
          */
         getFontOptions() {
-            const fonts = hlsData.fonts || [];
+            const fonts = otsData.fonts || [];
             const options = [];
 
             fonts.forEach(font => {
@@ -374,16 +374,16 @@
             }
 
             return (
-                <div key={feature.id} className="hls-feature-toggle">
+                <div key={feature.id} className="ots-feature-toggle">
                     <ToggleControl
                         label={feature.name}
                         help={feature.description}
                         checked={isActive}
                         onChange={() => this.toggleFeature(feature.id)}
                     />
-                    <code className="hls-feature-code">{feature.id}</code>
-                    <div className="hls-feature-preview">
-                        <span className="hls-feature-preview-on" style={previewStyle}>
+                    <code className="ots-feature-code">{feature.id}</code>
+                    <div className="ots-feature-preview">
+                        <span className="ots-feature-preview-on" style={previewStyle}>
                             {sampleText}
                         </span>
                     </div>
@@ -404,10 +404,10 @@
                     isSecondary={!isActive}
                     isPrimary={isActive}
                     onClick={() => this.applyPreset(preset)}
-                    className="hls-preset-button"
+                    className="ots-preset-button"
                 >
-                    <div className="hls-preset-name">{preset.name}</div>
-                    <div className="hls-preset-features-list">{preset.features.join(', ')}</div>
+                    <div className="ots-preset-name">{preset.name}</div>
+                    <div className="ots-preset-features-list">{preset.features.join(', ')}</div>
                 </Button>
             );
         }
@@ -416,11 +416,11 @@
             const { isActive } = this.props;
             const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, showPreview, previewText } = this.state;
             const groupedFeatures = this.groupFeatures();
-            const presets = hlsData.presets || [];
-            const fonts = hlsData.fonts || [];
+            const presets = otsData.presets || [];
+            const fonts = otsData.fonts || [];
 
             // Use stored preview text or fallback
-            const displayText = previewText || __('Elegant Typography & Flourish', 'headline-ligatures-styles');
+            const displayText = previewText || __('Elegant Typography & Flourish', 'opentype-stylist');
 
             // Build preview style
             const previewStyle = {
@@ -434,31 +434,31 @@
                 <Fragment>
                     <RichTextToolbarButton
                         icon="editor-textcolor"
-                        title={__('Typography Features', 'headline-ligatures-styles')}
+                        title={__('Typography Features', 'opentype-stylist')}
                         onClick={this.togglePopover}
                         isActive={isActive}
-                        className="hls-toolbar-button"
+                        className="ots-toolbar-button"
                     />
 
                     {isOpen && (
                         <Popover
                             position="bottom center"
                             onClose={this.togglePopover}
-                            className="hls-popover"
+                            className="ots-popover"
                         >
-                            <div className="hls-popover-content">
-                                <div className="hls-popover-header">
-                                    <h3>{__('Typography Features', 'headline-ligatures-styles')}</h3>
+                            <div className="ots-popover-content">
+                                <div className="ots-popover-header">
+                                    <h3>{__('Typography Features', 'opentype-stylist')}</h3>
                                 </div>
 
                                 {/* Font Selector */}
                                 {fonts.length > 0 && (
-                                    <div className="hls-font-section">
-                                        <h4>{__('Font Family', 'headline-ligatures-styles')}</h4>
+                                    <div className="ots-font-section">
+                                        <h4>{__('Font Family', 'opentype-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFont}
                                             options={[
-                                                { label: __('(Default)', 'headline-ligatures-styles'), value: '' },
+                                                { label: __('(Default)', 'opentype-stylist'), value: '' },
                                                 ...this.getFontOptions()
                                             ]}
                                             onChange={this.setFont}
@@ -467,21 +467,21 @@
                                 )}
 
                                 {/* Font Size Controls */}
-                                <div className="hls-fontsize-section">
-                                    <h4>{__('Font Size', 'headline-ligatures-styles')}</h4>
+                                <div className="ots-fontsize-section">
+                                    <h4>{__('Font Size', 'opentype-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
                                         options={[
-                                            { label: __('Inherit', 'headline-ligatures-styles'), value: 'inherit' },
-                                            { label: __('Responsive (Fluid)', 'headline-ligatures-styles'), value: 'responsive' }
+                                            { label: __('Inherit', 'opentype-stylist'), value: 'inherit' },
+                                            { label: __('Responsive (Fluid)', 'opentype-stylist'), value: 'responsive' }
                                         ]}
                                         onChange={this.setFontSize}
                                     />
 
                                     {fontSize === 'responsive' && (
-                                        <div className="hls-fontsize-controls">
+                                        <div className="ots-fontsize-controls">
                                             <RangeControl
-                                                label={__('Minimum Size (mobile)', 'headline-ligatures-styles')}
+                                                label={__('Minimum Size (mobile)', 'opentype-stylist')}
                                                 value={fontSizeMin}
                                                 onChange={this.setFontSizeMin}
                                                 min={8}
@@ -490,7 +490,7 @@
                                                 help={`${fontSizeMin}px`}
                                             />
                                             <RangeControl
-                                                label={__('Preferred Size (tablet)', 'headline-ligatures-styles')}
+                                                label={__('Preferred Size (tablet)', 'opentype-stylist')}
                                                 value={fontSizePreferred}
                                                 onChange={this.setFontSizePreferred}
                                                 min={8}
@@ -499,7 +499,7 @@
                                                 help={`${fontSizePreferred}px`}
                                             />
                                             <RangeControl
-                                                label={__('Maximum Size (desktop)', 'headline-ligatures-styles')}
+                                                label={__('Maximum Size (desktop)', 'opentype-stylist')}
                                                 value={fontSizeMax}
                                                 onChange={this.setFontSizeMax}
                                                 min={8}
@@ -513,24 +513,24 @@
 
                                 {/* Presets Section */}
                                 {presets.length > 0 && (
-                                    <div className="hls-presets-section">
-                                        <h4>{__('Quick Presets', 'headline-ligatures-styles')}</h4>
-                                        <div className="hls-presets-grid">
+                                    <div className="ots-presets-section">
+                                        <h4>{__('Quick Presets', 'opentype-stylist')}</h4>
+                                        <div className="ots-presets-grid">
                                             {presets.map(preset => this.renderPresetButton(preset))}
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Features Section */}
-                                <div className="hls-features-section">
-                                    <h4>{__('Individual Features', 'headline-ligatures-styles')}</h4>
+                                <div className="ots-features-section">
+                                    <h4>{__('Individual Features', 'opentype-stylist')}</h4>
 
                                     {Object.entries(groupedFeatures).map(([category, features]) => (
                                         <PanelBody
                                             key={category}
                                             title={this.getCategoryTitle(category)}
                                             initialOpen={category === 'ligatures'}
-                                            className="hls-feature-category"
+                                            className="ots-feature-category"
                                         >
                                             {features.map(feature => this.renderFeatureToggle(feature))}
                                         </PanelBody>
@@ -539,17 +539,17 @@
 
                                 {/* Preview Section */}
                                 {showPreview && (
-                                    <div className="hls-preview-section">
-                                        <h4>{__('Preview', 'headline-ligatures-styles')}</h4>
+                                    <div className="ots-preview-section">
+                                        <h4>{__('Preview', 'opentype-stylist')}</h4>
                                         <div
-                                            className="hls-preview-text"
+                                            className="ots-preview-text"
                                             style={previewStyle}
                                         >
                                             {displayText}
                                         </div>
                                         {selectedFeatures.length > 0 && (
-                                            <div className="hls-preview-features">
-                                                {__('Active: ', 'headline-ligatures-styles')}
+                                            <div className="ots-preview-features">
+                                                {__('Active: ', 'opentype-stylist')}
                                                 <code>{selectedFeatures.join(', ')}</code>
                                             </div>
                                         )}
@@ -557,25 +557,25 @@
                                 )}
 
                                 {/* Action Buttons */}
-                                <div className="hls-popover-actions">
+                                <div className="ots-popover-actions">
                                     <ButtonGroup>
                                         <Button
                                             isPrimary
                                             onClick={this.applyFeatures}
                                         >
-                                            {__('Apply', 'headline-ligatures-styles')}
+                                            {__('Apply', 'opentype-stylist')}
                                         </Button>
                                         <Button
                                             isSecondary
                                             onClick={this.clearFeatures}
                                         >
-                                            {__('Clear', 'headline-ligatures-styles')}
+                                            {__('Clear', 'opentype-stylist')}
                                         </Button>
                                         <Button
                                             isTertiary
                                             onClick={this.togglePopover}
                                         >
-                                            {__('Cancel', 'headline-ligatures-styles')}
+                                            {__('Cancel', 'opentype-stylist')}
                                         </Button>
                                     </ButtonGroup>
                                 </div>
@@ -591,11 +591,11 @@
          */
         getCategoryTitle(category) {
             const titles = {
-                'ligatures': __('Ligatures', 'headline-ligatures-styles'),
-                'stylistic-sets': __('Stylistic Sets', 'headline-ligatures-styles'),
-                'alternates': __('Swashes & Alternates', 'headline-ligatures-styles'),
-                'decorative': __('Decorative', 'headline-ligatures-styles'),
-                'other': __('Other Features', 'headline-ligatures-styles')
+                'ligatures': __('Ligatures', 'opentype-stylist'),
+                'stylistic-sets': __('Stylistic Sets', 'opentype-stylist'),
+                'alternates': __('Swashes & Alternates', 'opentype-stylist'),
+                'decorative': __('Decorative', 'opentype-stylist'),
+                'other': __('Other Features', 'opentype-stylist')
             };
 
             return titles[category] || category;
@@ -606,9 +606,9 @@
      * Register the format type
      */
     registerFormatType(FORMAT_TYPE, {
-        title: __('Typography Features', 'headline-ligatures-styles'),
+        title: __('Typography Features', 'opentype-stylist'),
         tagName: 'span',
-        className: 'hls-styled',
+        className: 'ots-styled',
         attributes: {
             'data-features': 'data-features',
             'data-font': 'data-font',

@@ -1,14 +1,14 @@
 <?php
 /**
- * Plugin Name: Headline Ligatures and Styles
- * Plugin URI: https://github.com/mattcowan/ligatures-and-typographic-styles-for-wordpress
+ * Plugin Name: OpenType Stylist
+ * Plugin URI: https://github.com/mattcowan/opentype-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
  * Version: 1.0.0
  * Author: Your Name
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: headline-ligatures-and-styles
+ * Text Domain: opentype-stylist
  * Domain Path: /languages
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -20,15 +20,15 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('HLS_VERSION', '1.0.1');
-define('HLS_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('HLS_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('HLS_PLUGIN_BASENAME', plugin_basename(__FILE__));
+define('OTS_VERSION', '1.0.1');
+define('OTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+define('OTS_PLUGIN_URL', plugin_dir_url(__FILE__));
+define('OTS_PLUGIN_BASENAME', plugin_basename(__FILE__));
 
 /**
  * Main plugin class
  */
-class Headline_Ligatures_Styles {
+class OpenType_Stylist {
 
     /**
      * Instance of this class
@@ -115,16 +115,16 @@ class Headline_Ligatures_Styles {
 
         // Editor styles
         wp_enqueue_style(
-            'hls-block-editor',
-            HLS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
+            'ots-block-editor',
+            OTS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
             array('wp-edit-blocks'),
-            HLS_VERSION
+            OTS_VERSION
         );
 
         // Editor JavaScript
         wp_enqueue_script(
-            'hls-block-editor',
-            HLS_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
+            'ots-block-editor',
+            OTS_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
             array(
                 'wp-blocks',
                 'wp-element',
@@ -135,19 +135,19 @@ class Headline_Ligatures_Styles {
                 'wp-i18n',
                 'wp-compose'
             ),
-            HLS_VERSION,
+            OTS_VERSION,
             true
         );
 
         // Enable JavaScript translations
         wp_set_script_translations(
-            'hls-block-editor',
-            'headline-ligatures-and-styles',
-            HLS_PLUGIN_DIR . 'languages'
+            'ots-block-editor',
+            'opentype-stylist',
+            OTS_PLUGIN_DIR . 'languages'
         );
 
         // Cache the localized data with transient
-        $cache_key = 'hls_editor_data_' . get_current_user_id();
+        $cache_key = 'ots_editor_data_' . get_current_user_id();
         $localized_data = get_transient($cache_key);
 
         if (false === $localized_data) {
@@ -155,7 +155,7 @@ class Headline_Ligatures_Styles {
                 'presets' => $this->get_presets(),
                 'features' => $this->get_available_features(),
                 'fonts' => $this->get_custom_fonts(),
-                'restUrl' => rest_url('hls/v1/'),
+                'restUrl' => rest_url('ots/v1/'),
                 'nonce' => wp_create_nonce('wp_rest')
             );
 
@@ -164,7 +164,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Pass data to JavaScript
-        wp_localize_script('hls-block-editor', 'hlsData', $localized_data);
+        wp_localize_script('ots-block-editor', 'otsData', $localized_data);
     }
 
     /**
@@ -178,7 +178,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Cache the result per post
-        $cache_key = 'hls_has_styled_' . $post->ID;
+        $cache_key = 'ots_has_styled_' . $post->ID;
         $has_styled = get_transient($cache_key);
 
         if (false === $has_styled) {
@@ -188,9 +188,9 @@ class Headline_Ligatures_Styles {
             // Apply content filters to render Gutenberg blocks
             $rendered_content = apply_filters('the_content', $raw_content);
 
-            // Check if hls-styled class exists in either raw or rendered content
-            $has_styled = (strpos($raw_content, 'hls-styled') !== false ||
-                          strpos($rendered_content, 'hls-styled') !== false) ? 'yes' : 'no';
+            // Check if ots-styled class exists in either raw or rendered content
+            $has_styled = (strpos($raw_content, 'ots-styled') !== false ||
+                          strpos($rendered_content, 'ots-styled') !== false) ? 'yes' : 'no';
 
             set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
         }
@@ -209,7 +209,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Cache the result per post
-        $cache_key = 'hls_used_fonts_' . $post->ID;
+        $cache_key = 'ots_used_fonts_' . $post->ID;
         $used_fonts = get_transient($cache_key);
 
         if (false === $used_fonts) {
@@ -242,7 +242,7 @@ class Headline_Ligatures_Styles {
         if (!$has_styled) {
             // DEBUG: Add HTML comment to see why fonts aren't loading
             add_action('wp_footer', function() {
-                echo '<!-- HLS Debug: No styled content detected on this page -->';
+                echo '<!-- OTS Debug: No styled content detected on this page -->';
             });
             return;
         }
@@ -250,10 +250,10 @@ class Headline_Ligatures_Styles {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'hls-frontend',
-            HLS_PLUGIN_URL . "assets/css/frontend{$suffix}.css",
+            'ots-frontend',
+            OTS_PLUGIN_URL . "assets/css/frontend{$suffix}.css",
             array(),
-            HLS_VERSION
+            OTS_VERSION
         );
 
         // Enqueue custom fonts only when needed
@@ -262,7 +262,7 @@ class Headline_Ligatures_Styles {
         // DEBUG: Add info about what fonts were detected
         $used_fonts = $this->get_used_fonts_in_content();
         add_action('wp_footer', function() use ($used_fonts) {
-            echo '<!-- HLS Debug: Styled content found. Used fonts: ' . esc_html(implode(', ', $used_fonts)) . ' -->';
+            echo '<!-- OTS Debug: Styled content found. Used fonts: ' . esc_html(implode(', ', $used_fonts)) . ' -->';
         });
     }
 
@@ -285,7 +285,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Build cache key based on used fonts
-        $cache_key = 'hls_font_css_' . md5(serialize($used_font_families));
+        $cache_key = 'ots_font_css_' . md5(serialize($used_font_families));
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -318,17 +318,17 @@ class Headline_Ligatures_Styles {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('hls-frontend', $combined_css);
+            wp_add_inline_style('ots-frontend', $combined_css);
 
             // DEBUG: Confirm fonts were added
             add_action('wp_footer', function() use ($combined_css) {
                 $css_length = strlen($combined_css);
-                echo '<!-- HLS Debug: Font CSS added (' . esc_html($css_length) . ' bytes) -->';
+                echo '<!-- OTS Debug: Font CSS added (' . esc_html($css_length) . ' bytes) -->';
             });
         } else {
             // DEBUG: No CSS to add
             add_action('wp_footer', function() use ($all_fonts, $used_font_families) {
-                echo '<!-- HLS Debug: No font CSS generated. Total font kits: ' . absint(count($all_fonts)) . ', Used families: ' . absint(count($used_font_families)) . ' -->';
+                echo '<!-- OTS Debug: No font CSS generated. Total font kits: ' . absint(count($all_fonts)) . ', Used families: ' . absint(count($used_font_families)) . ' -->';
             });
         }
     }
@@ -338,10 +338,10 @@ class Headline_Ligatures_Styles {
      */
     public function add_admin_menu() {
         $hook = add_options_page(
-            esc_html__('Headline Ligatures & Styles', 'headline-ligatures-and-styles'),
-            esc_html__('Headline Typography', 'headline-ligatures-and-styles'),
+            esc_html__('OpenType Stylist', 'opentype-stylist'),
+            esc_html__('OpenType Stylist', 'opentype-stylist'),
             'manage_options',
-            'headline-ligatures-and-styles',
+            'opentype-stylist',
             array($this, 'render_admin_page')
         );
 
@@ -357,17 +357,17 @@ class Headline_Ligatures_Styles {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'hls-admin',
-            HLS_PLUGIN_URL . "assets/css/admin-page{$suffix}.css",
+            'ots-admin',
+            OTS_PLUGIN_URL . "assets/css/admin-page{$suffix}.css",
             array(),
-            HLS_VERSION
+            OTS_VERSION
         );
 
         wp_enqueue_script(
-            'hls-admin',
-            HLS_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
+            'ots-admin',
+            OTS_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
             array('jquery'),
-            HLS_VERSION,
+            OTS_VERSION,
             true
         );
 
@@ -375,23 +375,23 @@ class Headline_Ligatures_Styles {
         $this->enqueue_custom_fonts_for_admin();
 
         // Localize script for translations and data
-        wp_localize_script('hls-admin', 'hlsAdmin', array(
-            'restUrl' => rest_url('hls/v1/'),
+        wp_localize_script('ots-admin', 'otsAdmin', array(
+            'restUrl' => rest_url('ots/v1/'),
             'nonce' => wp_create_nonce('wp_rest'),
             'strings' => array(
-                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'headline-ligatures-and-styles'),
-                'uploadError' => esc_html__('Failed to upload font kit.', 'headline-ligatures-and-styles'),
-                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'headline-ligatures-and-styles'),
-                'enterName' => esc_html__('Please enter a font kit name.', 'headline-ligatures-and-styles'),
-                'selectFile' => esc_html__('Please select a ZIP file.', 'headline-ligatures-and-styles'),
-                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'headline-ligatures-and-styles'),
-                'deleteError' => esc_html__('Failed to delete font kit.', 'headline-ligatures-and-styles'),
-                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'headline-ligatures-and-styles'),
-                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'headline-ligatures-and-styles'),
-                'uploading' => esc_html__('Uploading', 'headline-ligatures-and-styles'),
-                'uploadingZip' => esc_html__('Uploading ZIP file...', 'headline-ligatures-and-styles'),
-                'processing' => esc_html__('Processing...', 'headline-ligatures-and-styles'),
-                'uploadButton' => esc_html__('Upload Font Kit', 'headline-ligatures-and-styles')
+                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'opentype-stylist'),
+                'uploadError' => esc_html__('Failed to upload font kit.', 'opentype-stylist'),
+                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'opentype-stylist'),
+                'enterName' => esc_html__('Please enter a font kit name.', 'opentype-stylist'),
+                'selectFile' => esc_html__('Please select a ZIP file.', 'opentype-stylist'),
+                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'opentype-stylist'),
+                'deleteError' => esc_html__('Failed to delete font kit.', 'opentype-stylist'),
+                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'opentype-stylist'),
+                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'opentype-stylist'),
+                'uploading' => esc_html__('Uploading', 'opentype-stylist'),
+                'uploadingZip' => esc_html__('Uploading ZIP file...', 'opentype-stylist'),
+                'processing' => esc_html__('Processing...', 'opentype-stylist'),
+                'uploadButton' => esc_html__('Upload Font Kit', 'opentype-stylist')
             )
         ));
     }
@@ -407,7 +407,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Cache combined font CSS
-        $cache_key = 'hls_admin_font_css';
+        $cache_key = 'ots_admin_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -427,7 +427,7 @@ class Headline_Ligatures_Styles {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('hls-admin', $combined_css);
+            wp_add_inline_style('ots-admin', $combined_css);
         }
     }
 
@@ -443,7 +443,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Cache combined font CSS
-        $cache_key = 'hls_block_font_css';
+        $cache_key = 'ots_block_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -464,9 +464,9 @@ class Headline_Ligatures_Styles {
 
         if (!empty($combined_css)) {
             // Register and enqueue font CSS for blocks in editor iframe
-            wp_register_style('hls-block-fonts', false, array(), HLS_VERSION);
-            wp_enqueue_style('hls-block-fonts');
-            wp_add_inline_style('hls-block-fonts', $combined_css);
+            wp_register_style('ots-block-fonts', false, array(), OTS_VERSION);
+            wp_enqueue_style('ots-block-fonts');
+            wp_add_inline_style('ots-block-fonts', $combined_css);
         }
     }
 
@@ -481,7 +481,7 @@ class Headline_Ligatures_Styles {
         }
 
         // Cache combined font CSS
-        $cache_key = 'hls_editor_font_css';
+        $cache_key = 'ots_editor_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -502,9 +502,9 @@ class Headline_Ligatures_Styles {
 
         if (!empty($combined_css)) {
             // Register a separate handle for fonts in the popover/toolbar context
-            wp_register_style('hls-editor-fonts', false, array(), HLS_VERSION);
-            wp_enqueue_style('hls-editor-fonts');
-            wp_add_inline_style('hls-editor-fonts', $combined_css);
+            wp_register_style('ots-editor-fonts', false, array(), OTS_VERSION);
+            wp_enqueue_style('ots-editor-fonts');
+            wp_add_inline_style('ots-editor-fonts', $combined_css);
         }
     }
 
@@ -512,19 +512,19 @@ class Headline_Ligatures_Styles {
      * Register settings
      */
     public function register_settings() {
-        register_setting('hls_settings', 'hls_presets', array(
+        register_setting('ots_settings', 'ots_presets', array(
             'type' => 'array',
             'default' => $this->get_default_presets(),
             'sanitize_callback' => array($this, 'sanitize_presets')
         ));
 
-        register_setting('hls_settings', 'hls_global_settings', array(
+        register_setting('ots_settings', 'ots_global_settings', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_global_settings')
         ));
 
-        register_setting('hls_settings', 'hls_custom_fonts', array(
+        register_setting('ots_settings', 'ots_custom_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_custom_fonts')
@@ -535,38 +535,38 @@ class Headline_Ligatures_Styles {
      * Register REST API routes
      */
     public function register_rest_routes() {
-        register_rest_route('hls/v1', '/presets', array(
+        register_rest_route('ots/v1', '/presets', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_presets_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('hls/v1', '/presets', array(
+        register_rest_route('ots/v1', '/presets', array(
             'methods' => 'POST',
             'callback' => array($this, 'save_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('hls/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('ots/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
         // Add features endpoint
-        register_rest_route('hls/v1', '/features', array(
+        register_rest_route('ots/v1', '/features', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_features_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('hls/v1', '/fonts', array(
+        register_rest_route('ots/v1', '/fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('hls/v1', '/fonts', array(
+        register_rest_route('ots/v1', '/fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'upload_font_endpoint'),
             'permission_callback' => function() {
@@ -574,7 +574,7 @@ class Headline_Ligatures_Styles {
             }
         ));
 
-        register_rest_route('hls/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_font_endpoint'),
             'permission_callback' => function() {
@@ -595,7 +595,7 @@ class Headline_Ligatures_Styles {
         // Rate limiting for write operations
         if ($request && in_array($request->get_method(), array('POST', 'DELETE', 'PUT', 'PATCH'))) {
             $user_id = get_current_user_id();
-            $rate_limit_key = 'hls_rate_limit_' . $user_id;
+            $rate_limit_key = 'ots_rate_limit_' . $user_id;
             $requests = get_transient($rate_limit_key);
 
             if (false === $requests) {
@@ -608,7 +608,7 @@ class Headline_Ligatures_Styles {
             if ($requests > 50) {
                 return new WP_Error(
                     'rate_limit_exceeded',
-                    esc_html__('Too many requests. Please try again later.', 'headline-ligatures-and-styles'),
+                    esc_html__('Too many requests. Please try again later.', 'opentype-stylist'),
                     array('status' => 429)
                 );
             }
@@ -624,7 +624,7 @@ class Headline_Ligatures_Styles {
      */
     public function get_presets() {
         if (null === $this->presets_cache) {
-            $this->presets_cache = get_option('hls_presets', $this->get_default_presets());
+            $this->presets_cache = get_option('ots_presets', $this->get_default_presets());
         }
         return $this->presets_cache;
     }
@@ -672,81 +672,81 @@ class Headline_Ligatures_Styles {
             $this->features_cache = array(
                 array(
                     'id' => 'liga',
-                    'name' => esc_html__('Standard Ligatures', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Standard Ligatures', 'opentype-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Common letter combinations like fi, fl', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Common letter combinations like fi, fl', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'dlig',
-                    'name' => esc_html__('Discretionary Ligatures', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Discretionary Ligatures', 'opentype-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Optional decorative ligatures', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Optional decorative ligatures', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'calt',
-                    'name' => esc_html__('Contextual Alternates', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Contextual Alternates', 'opentype-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Context-aware letter forms', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Context-aware letter forms', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ss01',
-                    'name' => esc_html__('Stylistic Set 1', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Set 1', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ss02',
-                    'name' => esc_html__('Stylistic Set 2', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Set 2', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ss03',
-                    'name' => esc_html__('Stylistic Set 3', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Set 3', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ss04',
-                    'name' => esc_html__('Stylistic Set 4', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Set 4', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ss05',
-                    'name' => esc_html__('Stylistic Set 5', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Set 5', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'swsh',
-                    'name' => esc_html__('Swashes', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Swashes', 'opentype-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Decorative flourishes', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Decorative flourishes', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'cswh',
-                    'name' => esc_html__('Contextual Swashes', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Contextual Swashes', 'opentype-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Context-aware decorative flourishes', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Context-aware decorative flourishes', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'salt',
-                    'name' => esc_html__('Stylistic Alternates', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Stylistic Alternates', 'opentype-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Alternative character forms', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Alternative character forms', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'titl',
-                    'name' => esc_html__('Titling', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Titling', 'opentype-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Optimized for large titles', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Optimized for large titles', 'opentype-stylist')
                 ),
                 array(
                     'id' => 'ornm',
-                    'name' => esc_html__('Ornaments', 'headline-ligatures-and-styles'),
+                    'name' => esc_html__('Ornaments', 'opentype-stylist'),
                     'category' => 'decorative',
-                    'description' => esc_html__('Decorative ornaments', 'headline-ligatures-and-styles')
+                    'description' => esc_html__('Decorative ornaments', 'opentype-stylist')
                 )
             );
         }
@@ -861,11 +861,11 @@ class Headline_Ligatures_Styles {
 
         // Validate required parameters
         if (empty($params['id']) || empty($params['name']) || empty($params['features'])) {
-            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'opentype-stylist'), array('status' => 400));
         }
 
         if (!is_array($params['features']) || count($params['features']) === 0) {
-            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'opentype-stylist'), array('status' => 400));
         }
 
         // Validate feature IDs
@@ -873,7 +873,7 @@ class Headline_Ligatures_Styles {
         foreach ($params['features'] as $feature) {
             if (!in_array($feature, $available_features, true)) {
                 /* translators: %s: The invalid OpenType feature ID */
-                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'headline-ligatures-and-styles'), esc_html($feature)), array('status' => 400));
+                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'opentype-stylist'), esc_html($feature)), array('status' => 400));
             }
         }
 
@@ -886,7 +886,7 @@ class Headline_Ligatures_Styles {
 
         $presets = $this->get_presets();
         $presets[] = $new_preset;
-        update_option('hls_presets', $presets);
+        update_option('ots_presets', $presets);
 
         // Clear cache
         $this->clear_cache();
@@ -914,12 +914,12 @@ class Headline_Ligatures_Styles {
         if (!$found) {
             return new WP_Error(
                 'preset_not_found',
-                esc_html__('Preset not found', 'headline-ligatures-and-styles'),
+                esc_html__('Preset not found', 'opentype-stylist'),
                 array('status' => 404)
             );
         }
 
-        update_option('hls_presets', array_values($presets));
+        update_option('ots_presets', array_values($presets));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -946,7 +946,7 @@ class Headline_Ligatures_Styles {
      */
     public function get_custom_fonts() {
         if (null === $this->fonts_cache) {
-            $this->fonts_cache = get_option('hls_custom_fonts', array());
+            $this->fonts_cache = get_option('ots_custom_fonts', array());
         }
         return $this->fonts_cache;
     }
@@ -959,22 +959,22 @@ class Headline_Ligatures_Styles {
         $this->fonts_cache = null;
 
         // Clear all font CSS caches
-        delete_transient('hls_combined_font_css');
-        delete_transient('hls_admin_font_css');
-        delete_transient('hls_editor_font_css');
-        delete_transient('hls_block_font_css');
+        delete_transient('ots_combined_font_css');
+        delete_transient('ots_admin_font_css');
+        delete_transient('ots_editor_font_css');
+        delete_transient('ots_block_font_css');
 
         // Clear per-page font caches (all cached variations)
         // Direct database call is required here for bulk deletion of transients with wildcard patterns.
         // No caching needed as this is a delete operation.
         global $wpdb;
         // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_hls_font_css_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_hls_font_css_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_hls_has_styled_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_hls_has_styled_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_hls_used_fonts_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_hls_used_fonts_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_font_css_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_font_css_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_has_styled_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_has_styled_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_used_fonts_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_used_fonts_') . '%'));
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // Clear editor data cache for all users
@@ -986,8 +986,8 @@ class Headline_Ligatures_Styles {
      */
     private function invalidate_editor_data_cache($user_id = null) {
         if ($user_id) {
-            delete_transient('hls_editor_data_' . $user_id);
-            wp_cache_delete('hls_editor_data_' . $user_id, 'transient');
+            delete_transient('ots_editor_data_' . $user_id);
+            wp_cache_delete('ots_editor_data_' . $user_id, 'transient');
         } else {
             // Clear for all users
             // Direct database call is required for bulk deletion of user-specific transients.
@@ -997,8 +997,8 @@ class Headline_Ligatures_Styles {
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    $wpdb->esc_like('_transient_hls_editor_data_') . '%',
-                    $wpdb->esc_like('_transient_timeout_hls_editor_data_') . '%'
+                    $wpdb->esc_like('_transient_ots_editor_data_') . '%',
+                    $wpdb->esc_like('_transient_timeout_ots_editor_data_') . '%'
                 )
             );
             // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -1013,8 +1013,8 @@ class Headline_Ligatures_Styles {
      */
     public function get_fonts_upload_dir() {
         $upload_dir = wp_upload_dir();
-        $font_dir = $upload_dir['basedir'] . '/hls/fonts';
-        $font_url = $upload_dir['baseurl'] . '/hls/fonts';
+        $font_dir = $upload_dir['basedir'] . '/ots/fonts';
+        $font_url = $upload_dir['baseurl'] . '/ots/fonts';
 
         return array(
             'path' => $font_dir,
@@ -1154,7 +1154,7 @@ class Headline_Ligatures_Styles {
         $params = $request->get_params();
 
         if (empty($files['zip_file']) || empty($params['name'])) {
-            return new WP_Error('missing_data', esc_html__('Missing required font data', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('missing_data', esc_html__('Missing required font data', 'opentype-stylist'), array('status' => 400));
         }
 
         $uploaded_file = $files['zip_file'];
@@ -1165,23 +1165,23 @@ class Headline_Ligatures_Styles {
         $type = $file_info['type'];
 
         if (!$ext || !$type) {
-            return new WP_Error('invalid_file', esc_html__('Invalid file type', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('invalid_file', esc_html__('Invalid file type', 'opentype-stylist'), array('status' => 400));
         }
 
         if ($ext !== 'zip' || !in_array($type, array('application/zip', 'application/x-zip-compressed'), true)) {
-            return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'opentype-stylist'), array('status' => 400));
         }
 
         // Validate file size (max 10MB)
         $max_size = 10 * 1024 * 1024; // 10MB
         if ($uploaded_file['size'] > $max_size) {
             /* translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB") */
-            return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'headline-ligatures-and-styles'), size_format($max_size)), array('status' => 400));
+            return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'opentype-stylist'), size_format($max_size)), array('status' => 400));
         }
 
         // Check for upload errors
         if ($uploaded_file['error'] !== UPLOAD_ERR_OK) {
-            return new WP_Error('upload_error', esc_html__('File upload error', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('upload_error', esc_html__('File upload error', 'opentype-stylist'), array('status' => 400));
         }
 
         // Process the ZIP file
@@ -1193,7 +1193,7 @@ class Headline_Ligatures_Styles {
 
         $fonts = $this->get_custom_fonts();
         $fonts[] = $result;
-        update_option('hls_custom_fonts', $fonts);
+        update_option('ots_custom_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
@@ -1239,10 +1239,10 @@ class Headline_Ligatures_Styles {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'headline-ligatures-and-styles'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
         }
 
-        update_option('hls_custom_fonts', array_values($fonts));
+        update_option('ots_custom_fonts', array_values($fonts));
 
         // Clear cache
         $this->clear_cache();
@@ -1257,12 +1257,12 @@ class Headline_Ligatures_Styles {
         // Create unique kit ID and directory
         $kit_id = 'kit-' . time() . '-' . wp_generate_password(8, false);
         $upload_dir = wp_upload_dir();
-        $kit_base_path = $upload_dir['basedir'] . '/hls/fonts/' . $kit_id;
-        $kit_base_url = $upload_dir['baseurl'] . '/hls/fonts/' . $kit_id;
+        $kit_base_path = $upload_dir['basedir'] . '/ots/fonts/' . $kit_id;
+        $kit_base_url = $upload_dir['baseurl'] . '/ots/fonts/' . $kit_id;
 
         // Create directory
         if (!wp_mkdir_p($kit_base_path)) {
-            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'headline-ligatures-and-styles'));
+            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'opentype-stylist'));
         }
 
         // Initialize WordPress filesystem
@@ -1277,7 +1277,7 @@ class Headline_Ligatures_Styles {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
             // Return generic message to users
-            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'headline-ligatures-and-styles'), array('status' => 400));
+            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'opentype-stylist'), array('status' => 400));
         }
 
         // Validate extracted files - only allow CSS, WOFF, WOFF2, TTF, OTF, EOT
@@ -1317,25 +1317,25 @@ class Headline_Ligatures_Styles {
             }
         } catch (Exception $e) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('iterator_failed', esc_html__('Failed to process font kit', 'headline-ligatures-and-styles'));
+            return new WP_Error('iterator_failed', esc_html__('Failed to process font kit', 'opentype-stylist'));
         }
 
         if (!$css_file_path) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'headline-ligatures-and-styles'));
+            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'opentype-stylist'));
         }
 
         // Validate it's a real file, not a symlink
         if (!is_file($css_file_path) || is_link($css_file_path)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'headline-ligatures-and-styles'));
+            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'opentype-stylist'));
         }
 
         // Check CSS file size (max 1MB)
         $file_size = filesize($css_file_path);
         if ($file_size > 1024 * 1024) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'headline-ligatures-and-styles'));
+            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'opentype-stylist'));
         }
 
         // Use WP Filesystem API
@@ -1343,13 +1343,13 @@ class Headline_Ligatures_Styles {
 
         if ($css_content === false) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'headline-ligatures-and-styles'));
+            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'opentype-stylist'));
         }
 
         // Validate it looks like CSS (basic check)
         if (!preg_match('/@font-face\s*\{/i', $css_content)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'headline-ligatures-and-styles'));
+            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'opentype-stylist'));
         }
 
         // Get the directory where the CSS file is located (relative to kit_base_path)
@@ -1370,7 +1370,7 @@ class Headline_Ligatures_Styles {
         if (empty($font_faces)) {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'headline-ligatures-and-styles'));
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'opentype-stylist'));
         }
 
         // Count font files more efficiently
@@ -1430,7 +1430,7 @@ class Headline_Ligatures_Styles {
      */
     public function secure_upload_directory() {
         $upload_dir = wp_upload_dir();
-        $font_dir = $upload_dir['basedir'] . '/hls/fonts';
+        $font_dir = $upload_dir['basedir'] . '/ots/fonts';
 
         if (!file_exists($font_dir)) {
             wp_mkdir_p($font_dir);
@@ -1462,17 +1462,17 @@ class Headline_Ligatures_Styles {
     public function render_admin_page() {
         // Verify user has permission
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'headline-ligatures-and-styles'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'opentype-stylist'));
         }
 
-        include HLS_PLUGIN_DIR . 'includes/admin-page.php';
+        include OTS_PLUGIN_DIR . 'includes/admin-page.php';
     }
 }
 
 // Initialize plugin
-function hls_init() {
-    return Headline_Ligatures_Styles::get_instance();
+function ots_init() {
+    return OpenType_Stylist::get_instance();
 }
 
 // Start plugin
-add_action('plugins_loaded', 'hls_init');
+add_action('plugins_loaded', 'ots_init');

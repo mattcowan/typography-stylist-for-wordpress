@@ -1,4 +1,4 @@
-# Headline Ligatures and Styles
+# OpenType Stylist
 
 A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview.
 
@@ -31,12 +31,12 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 1. **Download** or clone this repository into your WordPress plugins directory:
    ```bash
    cd wp-content/plugins/
-   git clone [repository-url] headline-ligatures-and-styles
+   git clone [repository-url] opentype-stylist
    ```
 
 2. **Activate** the plugin through the WordPress admin panel:
    - Go to Plugins → Installed Plugins
-   - Find "Headline Ligatures and Styles"
+   - Find "OpenType Stylist"
    - Click "Activate"
 
 3. **Configure** (optional):
@@ -89,8 +89,8 @@ This plugin works best with fonts that support OpenType features:
 ### File Structure
 
 ```
-headline-ligatures-and-styles/
-├── headline-ligatures-styles.php    # Main plugin file
+opentype-stylist/
+├── opentype-stylist.php    # Main plugin file
 ├── includes/
 │   └── admin-page.php               # Admin settings page
 ├── assets/

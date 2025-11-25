@@ -1,15 +1,15 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const archiver = require('archiver');
 
-const pluginSlug = 'headline-ligatures-and-styles';
+const pluginSlug = 'opentype-stylist';
 const buildDir = path.join(__dirname, '..', 'build');
 const distDir = path.join(buildDir, pluginSlug);
 const zipFile = path.join(__dirname, '..', `${pluginSlug}.zip`);
 
 // Files and directories to include in the package
 const includeList = [
-  'headline-ligatures-styles.php',
+  'opentype-stylist.php',
   'includes/',
   'assets/css/*.min.css',
   'assets/js/*.min.js',
@@ -37,8 +37,8 @@ console.log('Copying production files...');
 
 // Copy main PHP file
 fs.copyFileSync(
-  path.join(__dirname, '..', 'headline-ligatures-styles.php'),
-  path.join(distDir, 'headline-ligatures-styles.php')
+  path.join(__dirname, '..', 'opentype-stylist.php'),
+  path.join(distDir, 'opentype-stylist.php')
 );
 
 // Copy includes directory
@@ -53,30 +53,32 @@ if (fs.existsSync(includesDir)) {
 const cssDir = path.join(__dirname, '..', 'assets', 'css');
 const distCssDir = path.join(distDir, 'assets', 'css');
 if (fs.existsSync(cssDir)) {
-  fs.mkdirSync(distCssDir, { recursive: true });
-  fs.readdirSync(cssDir)
-    .filter(file => file.endsWith('.min.css'))
-    .forEach(file => {
+  const cssFiles = fs.readdirSync(cssDir).filter(file => file.endsWith('.min.css'));
+  if (cssFiles.length > 0) {
+    fs.mkdirSync(distCssDir, { recursive: true });
+    cssFiles.forEach(file => {
       fs.copyFileSync(
         path.join(cssDir, file),
         path.join(distCssDir, file)
       );
     });
+  }
 }
 
 // Copy minified JS files
 const jsDir = path.join(__dirname, '..', 'assets', 'js');
 const distJsDir = path.join(distDir, 'assets', 'js');
 if (fs.existsSync(jsDir)) {
-  fs.mkdirSync(distJsDir, { recursive: true });
-  fs.readdirSync(jsDir)
-    .filter(file => file.endsWith('.min.js'))
-    .forEach(file => {
+  const jsFiles = fs.readdirSync(jsDir).filter(file => file.endsWith('.min.js'));
+  if (jsFiles.length > 0) {
+    fs.mkdirSync(distJsDir, { recursive: true });
+    jsFiles.forEach(file => {
       fs.copyFileSync(
         path.join(jsDir, file),
         path.join(distJsDir, file)
       );
     });
+  }
 }
 
 // Copy optional files if they exist
@@ -88,11 +90,11 @@ optionalFiles.forEach(file => {
   }
 });
 
-// Copy optional directories if they exist
+// Copy optional directories if they exist and have content
 const optionalDirs = ['languages', 'assets/fonts'];
 optionalDirs.forEach(dir => {
   const dirPath = path.join(__dirname, '..', dir);
-  if (fs.existsSync(dirPath)) {
+  if (fs.existsSync(dirPath) && fs.readdirSync(dirPath).length > 0) {
     const distDirPath = path.join(distDir, dir);
     fs.mkdirSync(distDirPath, { recursive: true });
     copyDirectory(dirPath, distDirPath);
@@ -101,26 +103,32 @@ optionalDirs.forEach(dir => {
 
 // Create ZIP file
 console.log('Creating ZIP file...');
-try {
-  // Use PowerShell on Windows for creating zip
-  if (process.platform === 'win32') {
-    const command = `powershell -command "Compress-Archive -Path '${distDir}' -DestinationPath '${zipFile}' -Force"`;
-    execSync(command, { stdio: 'inherit' });
-  } else {
-    // Use zip command on Unix-like systems
-    execSync(`cd "${buildDir}" && zip -r "${zipFile}" "${pluginSlug}"`, { stdio: 'inherit' });
-  }
-  console.log(`✓ Package created: ${pluginSlug}.zip`);
-} catch (error) {
-  console.error('Error creating ZIP file:', error.message);
+const output = fs.createWriteStream(zipFile);
+const archive = archiver('zip', { zlib: { level: 9 } });
+
+output.on('close', function() {
+  console.log(`✓ Package created: ${pluginSlug}.zip (${archive.pointer()} bytes)`);
+  // Clean up build directory
+  console.log('Cleaning up...');
+  fs.rmSync(buildDir, { recursive: true, force: true });
+  console.log('✓ Packaging complete!');
+});
+
+archive.on('error', function(err) {
+  console.error('Error creating ZIP file:', err.message);
   process.exit(1);
-}
+});
 
-// Clean up build directory
-console.log('Cleaning up...');
-fs.rmSync(buildDir, { recursive: true, force: true });
+archive.pipe(output);
 
-console.log('✓ Packaging complete!');
+// Add the entire directory with all subdirectories
+// This mimics the structure of official WordPress.org plugin ZIPs
+archive.directory(distDir, pluginSlug, {
+  // Ensure consistent behavior across platforms
+  mode: 0755
+});
+
+archive.finalize();
 
 // Helper function to copy directory recursively
 function copyDirectory(src, dest) {

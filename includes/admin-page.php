@@ -10,99 +10,99 @@ if (!defined('ABSPATH')) {
 
 // Verify user has permission
 if (!current_user_can('manage_options')) {
-    wp_die(__('You do not have sufficient permissions to access this page.', 'headline-ligatures-styles'));
+    wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'opentype-stylist'));
 }
 
 // Save settings (with proper sanitization)
-if (isset($_POST['hls_save_settings']) &&
-    check_admin_referer('hls_settings_nonce') &&
+if (isset($_POST['ots_save_settings']) &&
+    check_admin_referer('ots_settings_nonce') &&
     current_user_can('manage_options')) {
 
     // Use proper sanitization via registered settings
-    if (isset($_POST['hls_presets'])) {
-        $sanitized = Headline_Ligatures_Styles::get_instance()->sanitize_presets($_POST['hls_presets']);
-        update_option('hls_presets', $sanitized);
+    if (isset($_POST['ots_presets'])) {
+        $sanitized = OpenType_Stylist::get_instance()->sanitize_presets(wp_unslash($_POST['ots_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        update_option('ots_presets', $sanitized);
 
         // Clear cache
-        Headline_Ligatures_Styles::get_instance()->clear_cache();
+        OpenType_Stylist::get_instance()->clear_cache();
 
         echo '<div class="notice notice-success"><p>' .
-             esc_html__('Settings saved successfully.', 'headline-ligatures-styles') .
+             esc_html__('Settings saved successfully.', 'opentype-stylist') .
              '</p></div>';
     }
 }
 
-$instance = Headline_Ligatures_Styles::get_instance();
+$instance = OpenType_Stylist::get_instance();
 $presets = $instance->get_presets();
-$custom_fonts = get_option('hls_custom_fonts', array());
+$custom_fonts = get_option('ots_custom_fonts', array());
 ?>
 
-<div class="wrap hls-admin-wrap">
+<div class="wrap ots-admin-wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
     <!-- Skip link for accessibility -->
-    <a href="#hls-main-content" class="screen-reader-text skip-link">
-        <?php _e('Skip to main content', 'headline-ligatures-styles'); ?>
+    <a href="#ots-main-content" class="screen-reader-text skip-link">
+        <?php esc_html_e('Skip to main content', 'opentype-stylist'); ?>
     </a>
 
-    <div class="hls-admin-container">
-        <div class="hls-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'headline-ligatures-styles'); ?>">
+    <div class="ots-admin-container">
+        <div class="ots-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'opentype-stylist'); ?>">
             <button
-                class="hls-tab-button active"
+                class="ots-tab-button active"
                 data-tab="presets"
                 role="tab"
                 aria-selected="true"
-                aria-controls="hls-tab-presets"
-                id="hls-tab-button-presets">
-                <?php _e('Presets', 'headline-ligatures-styles'); ?>
+                aria-controls="ots-tab-presets"
+                id="ots-tab-button-presets">
+                <?php esc_html_e('Presets', 'opentype-stylist'); ?>
             </button>
             <button
-                class="hls-tab-button"
+                class="ots-tab-button"
                 data-tab="fonts"
                 role="tab"
                 aria-selected="false"
-                aria-controls="hls-tab-fonts"
-                id="hls-tab-button-fonts">
-                <?php _e('Custom Fonts', 'headline-ligatures-styles'); ?>
+                aria-controls="ots-tab-fonts"
+                id="ots-tab-button-fonts">
+                <?php esc_html_e('Custom Fonts', 'opentype-stylist'); ?>
             </button>
             <button
-                class="hls-tab-button"
+                class="ots-tab-button"
                 data-tab="features"
                 role="tab"
                 aria-selected="false"
-                aria-controls="hls-tab-features"
-                id="hls-tab-button-features">
-                <?php _e('Font Features', 'headline-ligatures-styles'); ?>
+                aria-controls="ots-tab-features"
+                id="ots-tab-button-features">
+                <?php esc_html_e('Font Features', 'opentype-stylist'); ?>
             </button>
             <button
-                class="hls-tab-button"
+                class="ots-tab-button"
                 data-tab="help"
                 role="tab"
                 aria-selected="false"
-                aria-controls="hls-tab-help"
-                id="hls-tab-button-help">
-                <?php _e('Help', 'headline-ligatures-styles'); ?>
+                aria-controls="ots-tab-help"
+                id="ots-tab-button-help">
+                <?php esc_html_e('Help', 'opentype-stylist'); ?>
             </button>
         </div>
 
         <!-- Presets Tab -->
         <div
-            class="hls-tab-content active"
-            id="hls-tab-presets"
+            class="ots-tab-content active"
+            id="ots-tab-presets"
             role="tabpanel"
-            aria-labelledby="hls-tab-button-presets"
+            aria-labelledby="ots-tab-button-presets"
             tabindex="0">
-            <h2><?php _e('Feature Demonstrations', 'headline-ligatures-styles'); ?></h2>
-            <p><?php _e('See how each OpenType feature affects your text. Compare the default rendering with each feature enabled.', 'headline-ligatures-styles'); ?></p>
+            <h2><?php esc_html_e('Feature Demonstrations', 'opentype-stylist'); ?></h2>
+            <p><?php esc_html_e('See how each OpenType feature affects your text. Compare the default rendering with each feature enabled.', 'opentype-stylist'); ?></p>
 
-            <div class="hls-preset-controls">
+            <div class="ots-preset-controls">
                 <?php if (!empty($custom_fonts)): ?>
-                <div class="hls-preset-font-selector">
-                    <label for="hls-preview-font-select">
-                        <?php _e('Preview with Font:', 'headline-ligatures-styles'); ?>
+                <div class="ots-preset-font-selector">
+                    <label for="ots-preview-font-select">
+                        <?php esc_html_e('Preview with Font:', 'opentype-stylist'); ?>
                     </label>
-                    <select id="hls-preview-font-select" class="hls-font-select">
-                        <option value=""><?php _e('Default (system font)', 'headline-ligatures-styles'); ?></option>
+                    <select id="ots-preview-font-select" class="ots-font-select">
+                        <option value=""><?php esc_html_e('Default (system font)', 'opentype-stylist'); ?></option>
                         <?php
                         foreach ($custom_fonts as $font) {
                             if (!empty($font['font_faces'])) {
@@ -118,31 +118,31 @@ $custom_fonts = get_option('hls_custom_fonts', array());
                         ?>
                     </select>
                     <p class="description">
-                        <?php _e('Select a custom font to preview how features will look with that font.', 'headline-ligatures-styles'); ?>
+                        <?php esc_html_e('Select a custom font to preview how features will look with that font.', 'opentype-stylist'); ?>
                     </p>
                 </div>
                 <?php endif; ?>
 
-                <div class="hls-preset-size-control">
-                    <label for="hls-preview-size-slider">
-                        <?php _e('Preview Size:', 'headline-ligatures-styles'); ?>
-                        <span id="hls-preview-size-value" class="hls-size-value">50px</span>
+                <div class="ots-preset-size-control">
+                    <label for="ots-preview-size-slider">
+                        <?php esc_html_e('Preview Size:', 'opentype-stylist'); ?>
+                        <span id="ots-preview-size-value" class="ots-size-value">50px</span>
                     </label>
                     <input
                         type="range"
-                        id="hls-preview-size-slider"
-                        class="hls-size-slider"
+                        id="ots-preview-size-slider"
+                        class="ots-size-slider"
                         min="12"
                         max="96"
                         value="50"
                         step="1"
-                        aria-label="<?php esc_attr_e('Adjust preview text size', 'headline-ligatures-styles'); ?>"
+                        aria-label="<?php esc_attr_e('Adjust preview text size', 'opentype-stylist'); ?>"
                         aria-valuemin="12"
                         aria-valuemax="96"
                         aria-valuenow="50"
                         aria-valuetext="50 pixels" />
                     <p class="description">
-                        <?php _e('Adjust the size of the preview text to better see typography features.', 'headline-ligatures-styles'); ?>
+                        <?php esc_html_e('Adjust the size of the preview text to better see typography features.', 'opentype-stylist'); ?>
                     </p>
                 </div>
             </div>
@@ -161,38 +161,38 @@ $custom_fonts = get_option('hls_custom_fonts', array());
             }
 
             $category_titles = array(
-                'ligatures' => __('Ligatures', 'headline-ligatures-styles'),
-                'stylistic-sets' => __('Stylistic Sets', 'headline-ligatures-styles'),
-                'alternates' => __('Swashes & Alternates', 'headline-ligatures-styles'),
-                'decorative' => __('Decorative', 'headline-ligatures-styles')
+                'ligatures' => esc_html__('Ligatures', 'opentype-stylist'),
+                'stylistic-sets' => esc_html__('Stylistic Sets', 'opentype-stylist'),
+                'alternates' => esc_html__('Swashes & Alternates', 'opentype-stylist'),
+                'decorative' => esc_html__('Decorative', 'opentype-stylist')
             );
             ?>
 
             <?php foreach ($grouped_features as $category => $features): ?>
-            <div class="hls-feature-category-section">
+            <div class="ots-feature-category-section">
                 <h3><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></h3>
 
-                <div class="hls-feature-demos-grid">
+                <div class="ots-feature-demos-grid">
                     <?php foreach ($features as $feature): ?>
-                    <div class="hls-feature-demo-card">
-                        <div class="hls-feature-demo-header">
+                    <div class="ots-feature-demo-card">
+                        <div class="ots-feature-demo-header">
                             <h4><?php echo esc_html($feature['name']); ?></h4>
-                            <code class="hls-feature-code"><?php echo esc_html($feature['id']); ?></code>
+                            <code class="ots-feature-code"><?php echo esc_html($feature['id']); ?></code>
                         </div>
-                        <p class="hls-feature-demo-description"><?php echo esc_html($feature['description']); ?></p>
+                        <p class="ots-feature-demo-description"><?php echo esc_html($feature['description']); ?></p>
 
-                        <div class="hls-feature-comparison">
-                            <div class="hls-feature-preview-container">
-                                <div class="hls-feature-preview-label"><?php _e('Default:', 'headline-ligatures-styles'); ?></div>
-                                <div class="hls-feature-preview hls-feature-preview-off">
+                        <div class="ots-feature-comparison">
+                            <div class="ots-feature-preview-container">
+                                <div class="ots-feature-preview-label"><?php esc_html_e('Default:', 'opentype-stylist'); ?></div>
+                                <div class="ots-feature-preview ots-feature-preview-off">
                                     <?php echo esc_html($instance->get_feature_demo_text($feature['id'])); ?>
                                 </div>
                             </div>
 
-                            <div class="hls-feature-preview-container">
-                                <div class="hls-feature-preview-label"><?php _e('With Feature:', 'headline-ligatures-styles'); ?></div>
+                            <div class="ots-feature-preview-container">
+                                <div class="ots-feature-preview-label"><?php esc_html_e('With Feature:', 'opentype-stylist'); ?></div>
                                 <div
-                                    class="hls-feature-preview hls-feature-preview-on"
+                                    class="ots-feature-preview ots-feature-preview-on"
                                     style="font-feature-settings: '<?php echo esc_attr($feature['id']); ?>' 1;">
                                     <?php echo esc_html($instance->get_feature_demo_text($feature['id'])); ?>
                                 </div>
@@ -205,64 +205,60 @@ $custom_fonts = get_option('hls_custom_fonts', array());
             <?php endforeach; ?>
 
             <?php if (!empty($presets)): ?>
-            <div class="hls-user-presets-section">
-                <h3><?php _e('Your Saved Presets', 'headline-ligatures-styles'); ?></h3>
-                <p><?php _e('These are presets you\'ve created in the block editor.', 'headline-ligatures-styles'); ?></p>
+            <div class="ots-user-presets-section">
+                <h3><?php esc_html_e('Your Saved Presets', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('These are presets you\'ve created in the block editor.', 'opentype-stylist'); ?></p>
 
-                <div class="hls-presets-grid">
+                <div class="ots-presets-grid">
                     <?php foreach ($presets as $preset): ?>
-                    <div class="hls-preset-card">
+                    <div class="ots-preset-card">
                         <h4><?php echo esc_html($preset['name']); ?></h4>
-                        <p class="hls-preset-description"><?php echo esc_html($preset['description']); ?></p>
-                        <div class="hls-preset-features">
-                            <strong><?php _e('Features:', 'headline-ligatures-styles'); ?></strong>
+                        <p class="ots-preset-description"><?php echo esc_html($preset['description']); ?></p>
+                        <div class="ots-preset-features">
+                            <strong><?php esc_html_e('Features:', 'opentype-stylist'); ?></strong>
                             <?php echo esc_html(implode(', ', $preset['features'])); ?>
                         </div>
-                        <div class="hls-preset-preview" style="font-feature-settings: <?php echo esc_attr($instance->features_to_css($preset['features'])); ?>">
+                        <div class="ots-preset-preview" style="font-feature-settings: <?php echo esc_attr($instance->features_to_css($preset['features'])); ?>">
                             <?php echo esc_html($instance->get_feature_demo_text($preset['features'][0])); ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
             </div>
-            <?php else: ?>
-            <div class="hls-add-preset-section">
-                <h3><?php _e('Create Custom Presets', 'headline-ligatures-styles'); ?></h3>
-                <p><?php _e('Custom presets can be created directly in the block editor by selecting features and clicking "Save as Preset". Your saved presets will appear here.', 'headline-ligatures-styles'); ?></p>
-            </div>
             <?php endif; ?>
         </div>
 
         <!-- Fonts Tab -->
         <div
-            class="hls-tab-content"
-            id="hls-tab-fonts"
+            class="ots-tab-content"
+            id="ots-tab-fonts"
             role="tabpanel"
-            aria-labelledby="hls-tab-button-fonts"
+            aria-labelledby="ots-tab-button-fonts"
             hidden="hidden"
             tabindex="0">
-            <h2><?php _e('Custom Fonts', 'headline-ligatures-styles'); ?></h2>
-            <p><?php _e('Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor.', 'headline-ligatures-styles'); ?></p>
+            <h2><?php esc_html_e('Custom Fonts', 'opentype-stylist'); ?></h2>
+            <p><?php esc_html_e('Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor.', 'opentype-stylist'); ?></p>
 
 
             <?php if (!empty($custom_fonts)): ?>
-            <div class="hls-fonts-list">
-                <h3><?php _e('Uploaded Fonts', 'headline-ligatures-styles'); ?></h3>
+            <div class="ots-fonts-list">
+                <h3><?php esc_html_e('Uploaded Fonts', 'opentype-stylist'); ?></h3>
                 <?php foreach ($custom_fonts as $font): ?>
-                <div class="hls-font-card">
-                    <div class="hls-font-header">
+                <div class="ots-font-card">
+                    <div class="ots-font-header">
                         <h4><?php echo esc_html($font['name']); ?></h4>
                         <button
-                            class="button hls-delete-font"
+                            class="button ots-delete-font"
                             data-font-id="<?php echo esc_attr($font['id']); ?>"
                             data-font-name="<?php echo esc_attr($font['name']); ?>"
-                            aria-label="<?php echo esc_attr(sprintf(__('Delete font kit: %s', 'headline-ligatures-styles'), $font['name'])); ?>">
+                            <?php /* translators: %s: The name of the font kit to be deleted */ ?>
+                            aria-label="<?php echo esc_attr(sprintf(__('Delete font kit: %s', 'opentype-stylist'), $font['name'])); ?>">
                             <span aria-hidden="true" class="dashicons dashicons-trash"></span>
-                            <?php _e('Delete', 'headline-ligatures-styles'); ?>
+                            <?php esc_html_e('Delete', 'opentype-stylist'); ?>
                         </button>
                     </div>
-                    <div class="hls-font-families">
-                        <strong><?php _e('Font Families:', 'headline-ligatures-styles'); ?></strong>
+                    <div class="ots-font-families">
+                        <strong><?php esc_html_e('Font Families:', 'opentype-stylist'); ?></strong>
                         <?php
                         if (!empty($font['font_faces'])) {
                             $families = array_unique(array_map(function($face) {
@@ -272,13 +268,24 @@ $custom_fonts = get_option('hls_custom_fonts', array());
                         }
                         ?>
                     </div>
-                    <div class="hls-font-meta">
+                    <div class="ots-font-meta">
                         <small>
                             <?php
-                            printf(__('Uploaded: %s', 'headline-ligatures-styles'), esc_html($font['uploaded_date']));
+                            // Format date using WordPress localized date format
+                            $upload_date = $font['uploaded_date'];
+                            if (is_string($upload_date)) {
+                                // Convert MySQL datetime to localized format
+                                $timestamp = strtotime($upload_date);
+                                $formatted_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+                            } else {
+                                $formatted_date = esc_html($upload_date);
+                            }
+                            /* translators: %s: The upload date in localized format */
+                            echo esc_html(sprintf(__('Uploaded: %s', 'opentype-stylist'), $formatted_date));
                             if (!empty($font['file_count'])) {
                                 echo ' &bull; ';
-                                printf(_n('%d font file', '%d font files', $font['file_count'], 'headline-ligatures-styles'), $font['file_count']);
+                                /* translators: %d: The number of font files in the kit */
+                                echo esc_html(sprintf(_n('%d font file', '%d font files', $font['file_count'], 'opentype-stylist'), absint($font['file_count'])));
                             }
                             ?>
                         </small>
@@ -287,220 +294,221 @@ $custom_fonts = get_option('hls_custom_fonts', array());
                 <?php endforeach; ?>
             </div>
             <?php else: ?>
-            <div class="hls-empty-state" role="status">
-                <p><strong><?php _e('No custom fonts uploaded yet.', 'headline-ligatures-styles'); ?></strong></p>
-                <p><?php _e('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'headline-ligatures-styles'); ?></p>
+            <div class="ots-empty-state" role="status">
+                <p><strong><?php esc_html_e('No custom fonts uploaded yet.', 'opentype-stylist'); ?></strong></p>
+                <p><?php esc_html_e('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'opentype-stylist'); ?></p>
             </div>
             <?php endif; ?>
 
-            <div class="hls-upload-font-section" id="hls-upload-font-section">
-                <h3><?php _e('Upload Font Kit', 'headline-ligatures-styles'); ?></h3>
-                <p><?php _e('Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP should contain the CSS file and all font files.', 'headline-ligatures-styles'); ?></p>
+            <div class="ots-upload-font-section" id="ots-upload-font-section">
+                <h3><?php esc_html_e('Upload Font Kit', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP should contain the CSS file and all font files.', 'opentype-stylist'); ?></p>
 
-                <div class="hls-upload-form">
-                    <div class="hls-form-field">
-                        <label for="hls-font-name">
-                            <?php _e('Font Kit Name:', 'headline-ligatures-styles'); ?>
-                            <span class="required" aria-label="<?php esc_attr_e('required', 'headline-ligatures-styles'); ?>">*</span>
+                <div class="ots-upload-form">
+                    <div class="ots-form-field">
+                        <label for="ots-font-name">
+                            <?php esc_html_e('Font Kit Name:', 'opentype-stylist'); ?>
+                            <span class="required" aria-label="<?php esc_attr_e('required', 'opentype-stylist'); ?>">*</span>
                         </label>
                         <input
                             type="text"
-                            id="hls-font-name"
-                            name="hls-font-name"
+                            id="ots-font-name"
+                            name="ots-font-name"
                             class="regular-text"
-                            placeholder="<?php esc_attr_e('e.g., MyFonts Kit 2024', 'headline-ligatures-styles'); ?>"
+                            placeholder="<?php esc_attr_e('e.g., MyFonts Kit 2024', 'opentype-stylist'); ?>"
                             aria-required="true"
-                            aria-describedby="hls-font-name-desc"
+                            aria-describedby="ots-font-name-desc"
                             required />
-                        <p id="hls-font-name-desc" class="description">
-                            <?php _e('Enter a descriptive name for this font kit', 'headline-ligatures-styles'); ?>
+                        <p id="ots-font-name-desc" class="description">
+                            <?php esc_html_e('Enter a descriptive name for this font kit', 'opentype-stylist'); ?>
                         </p>
                     </div>
 
-                    <div class="hls-form-field">
-                        <label for="hls-font-file">
-                            <?php _e('ZIP File:', 'headline-ligatures-styles'); ?>
+                    <div class="ots-form-field">
+                        <label for="ots-font-file">
+                            <?php esc_html_e('ZIP File:', 'opentype-stylist'); ?>
                         </label>
-                        <label for="hls-font-file" class="screen-reader-text">
-                            <?php _e('Choose ZIP file containing webfont kit', 'headline-ligatures-styles'); ?>
+                        <label for="ots-font-file" class="screen-reader-text">
+                            <?php esc_html_e('Choose ZIP file containing webfont kit', 'opentype-stylist'); ?>
                         </label>
-                        <div class="hls-upload-method-buttons">
-                            <button type="button" id="hls-select-file-btn" class="button">
+                        <div class="ots-upload-method-buttons">
+                            <button type="button" id="ots-select-file-btn" class="button">
                                 <span class="dashicons dashicons-upload" aria-hidden="true"></span>
-                                <?php _e('Choose ZIP File', 'headline-ligatures-styles'); ?>
+                                <?php esc_html_e('Choose ZIP File', 'opentype-stylist'); ?>
                             </button>
                         </div>
                         <input
                             type="file"
-                            id="hls-font-file"
-                            name="hls-font-file"
+                            id="ots-font-file"
+                            name="ots-font-file"
                             accept=".zip"
-                            aria-describedby="hls-file-instructions"
+                            aria-describedby="ots-file-instructions"
                             style="display: none;" />
-                        <span id="hls-file-instructions" class="screen-reader-text">
-                            <?php _e('Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files.', 'headline-ligatures-styles'); ?>
+                        <span id="ots-file-instructions" class="screen-reader-text">
+                            <?php esc_html_e('Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files.', 'opentype-stylist'); ?>
                         </span>
-                        <div id="hls-selected-file" class="hls-selected-file" style="display: none;">
+                        <div id="ots-selected-file" class="ots-selected-file" style="display: none;">
                             <span class="dashicons dashicons-media-archive" aria-hidden="true"></span>
-                            <span id="hls-file-name"></span>
-                            <span id="hls-file-size" class="hls-file-size"></span>
-                            <button type="button" id="hls-clear-file-btn" class="button-link" aria-label="<?php esc_attr_e('Clear selected file', 'headline-ligatures-styles'); ?>">
+                            <span id="ots-file-name"></span>
+                            <span id="ots-file-size" class="ots-file-size"></span>
+                            <button type="button" id="ots-clear-file-btn" class="button-link" aria-label="<?php esc_attr_e('Clear selected file', 'opentype-stylist'); ?>">
                                 <span class="dashicons dashicons-no-alt" aria-hidden="true"></span>
                             </button>
                         </div>
                     </div>
 
-                    <button type="button" id="hls-upload-font-btn" class="button button-primary" disabled>
-                        <?php _e('Upload Font Kit', 'headline-ligatures-styles'); ?>
+                    <button type="button" id="ots-upload-font-btn" class="button button-primary" disabled>
+                        <?php esc_html_e('Upload Font Kit', 'opentype-stylist'); ?>
                     </button>
-                    <div id="hls-upload-progress" class="hls-upload-progress" style="display: none;">
+                    <div id="ots-upload-progress" class="ots-upload-progress" style="display: none;">
                         <div
-                            class="hls-progress-bar"
+                            class="ots-progress-bar"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
                             aria-valuenow="0"
-                            aria-labelledby="hls-progress-label">
-                            <div class="hls-progress-fill" style="width: 0%;"></div>
+                            aria-labelledby="ots-progress-label">
+                            <div class="ots-progress-fill" style="width: 0%;"></div>
                         </div>
-                        <div id="hls-progress-label" class="hls-progress-text" role="status" aria-live="polite">
-                            <?php _e('Uploading...', 'headline-ligatures-styles'); ?>
+                        <div id="ots-progress-label" class="ots-progress-text" role="status" aria-live="polite">
+                            <?php esc_html_e('Uploading...', 'opentype-stylist'); ?>
                         </div>
                     </div>
-                    <div id="hls-font-message" role="alert" aria-live="assertive" aria-atomic="true" style="margin-top: 10px;"></div>
+                    <div id="ots-font-message" role="alert" aria-live="assertive" aria-atomic="true" style="margin-top: 10px;"></div>
                 </div>
 
-                <div class="hls-font-help">
-                    <h4><?php _e('How to use:', 'headline-ligatures-styles'); ?></h4>
+                <div class="ots-font-help">
+                    <h4><?php esc_html_e('How to use:', 'opentype-stylist'); ?></h4>
                     <ol>
-                        <li><?php _e('Download your webfont kit from MyFonts, Fontspring, or another provider', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('Give your kit a descriptive name and click "Upload Font Kit"', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('The plugin will extract the ZIP, process the fonts, and make them available in the block editor', 'headline-ligatures-styles'); ?></li>
+                        <li><?php esc_html_e('Download your webfont kit from MyFonts, Fontspring, or another provider', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Give your kit a descriptive name and click "Upload Font Kit"', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('The plugin will extract the ZIP, process the fonts, and make them available in the block editor', 'opentype-stylist'); ?></li>
                     </ol>
-                    <p><strong><?php _e('What should the ZIP contain:', 'headline-ligatures-styles'); ?></strong></p>
+                    <p><strong><?php esc_html_e('What should the ZIP contain:', 'opentype-stylist'); ?></strong></p>
                     <ul>
-                        <li><?php _e('A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)', 'headline-ligatures-styles'); ?></li>
-                        <li><?php _e('The directory structure must match the paths in the CSS file', 'headline-ligatures-styles'); ?></li>
+                        <li><?php esc_html_e('A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('The directory structure must match the paths in the CSS file', 'opentype-stylist'); ?></li>
                     </ul>
-                    <p><strong><?php _e('Note:', 'headline-ligatures-styles'); ?></strong> <?php _e('The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server.', 'headline-ligatures-styles'); ?></p>
+                    <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server.', 'opentype-stylist'); ?></p>
                 </div>
             </div>
         </div>
 
         <!-- Features Tab -->
         <div
-            class="hls-tab-content"
-            id="hls-tab-features"
+            class="ots-tab-content"
+            id="ots-tab-features"
             role="tabpanel"
-            aria-labelledby="hls-tab-button-features"
+            aria-labelledby="ots-tab-button-features"
             hidden="hidden"
             tabindex="0">
-            <h2><?php _e('Available OpenType Features', 'headline-ligatures-styles'); ?></h2>
-            <p><?php _e('This plugin supports the following OpenType font features. Note that not all fonts include all features.', 'headline-ligatures-styles'); ?></p>
+            <h2><?php esc_html_e('Available OpenType Features', 'opentype-stylist'); ?></h2>
+            <p><?php esc_html_e('This plugin supports the following OpenType font features. Note that not all fonts include all features.', 'opentype-stylist'); ?></p>
 
-            <div class="hls-features-list">
-                <div class="hls-feature-category">
-                    <h3><?php _e('Ligatures', 'headline-ligatures-styles'); ?></h3>
+            <div class="ots-features-list">
+                <div class="ots-feature-category">
+                    <h3><?php esc_html_e('Ligatures', 'opentype-stylist'); ?></h3>
                     <table class="widefat">
                         <caption class="screen-reader-text">
-                            <?php _e('Available ligature OpenType features', 'headline-ligatures-styles'); ?>
+                            <?php esc_html_e('Available ligature OpenType features', 'opentype-stylist'); ?>
                         </caption>
                         <thead>
                             <tr>
-                                <th scope="col"><?php _e('Code', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Name', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Description', 'headline-ligatures-styles'); ?></th>
+                                <th scope="col"><?php esc_html_e('Code', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Name', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Description', 'opentype-stylist'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <th scope="row"><code lang="en">liga</code></th>
-                                <td><?php _e('Standard Ligatures', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Common letter combinations like fi, fl, ff', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Standard Ligatures', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Common letter combinations like fi, fl, ff', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">dlig</code></th>
-                                <td><?php _e('Discretionary Ligatures', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Optional decorative ligatures for special effects', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Discretionary Ligatures', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Optional decorative ligatures for special effects', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">calt</code></th>
-                                <td><?php _e('Contextual Alternates', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Context-aware letter forms that adapt to surrounding characters', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Contextual Alternates', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Context-aware letter forms that adapt to surrounding characters', 'opentype-stylist'); ?></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="hls-feature-category">
-                    <h3><?php _e('Stylistic Sets', 'headline-ligatures-styles'); ?></h3>
+                <div class="ots-feature-category">
+                    <h3><?php esc_html_e('Stylistic Sets', 'opentype-stylist'); ?></h3>
                     <table class="widefat">
                         <caption class="screen-reader-text">
-                            <?php _e('Available stylistic set OpenType features', 'headline-ligatures-styles'); ?>
+                            <?php esc_html_e('Available stylistic set OpenType features', 'opentype-stylist'); ?>
                         </caption>
                         <thead>
                             <tr>
-                                <th scope="col"><?php _e('Code', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Name', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Description', 'headline-ligatures-styles'); ?></th>
+                                <th scope="col"><?php esc_html_e('Code', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Name', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Description', 'opentype-stylist'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php for ($i = 1; $i <= 5; $i++): ?>
                             <tr>
-                                <th scope="row"><code lang="en">ss<?php echo str_pad($i, 2, '0', STR_PAD_LEFT); ?></code></th>
-                                <td><?php printf(__('Stylistic Set %d', 'headline-ligatures-styles'), $i); ?></td>
-                                <td><?php _e('Alternate character designs (font-specific)', 'headline-ligatures-styles'); ?></td>
+                                <th scope="row"><code lang="en">ss<?php echo esc_html(str_pad($i, 2, '0', STR_PAD_LEFT)); ?></code></th>
+                                <?php /* translators: %d: The stylistic set number (1-20) */ ?>
+                                <td><?php echo esc_html(sprintf(__('Stylistic Set %d', 'opentype-stylist'), absint($i))); ?></td>
+                                <td><?php esc_html_e('Alternate character designs (font-specific)', 'opentype-stylist'); ?></td>
                             </tr>
                             <?php endfor; ?>
                             <tr>
-                                <td colspan="3"><em><?php _e('...and ss06 through ss20', 'headline-ligatures-styles'); ?></em></td>
+                                <td colspan="3"><em><?php esc_html_e('...and ss06 through ss20', 'opentype-stylist'); ?></em></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="hls-feature-category">
-                    <h3><?php _e('Swashes & Alternates', 'headline-ligatures-styles'); ?></h3>
+                <div class="ots-feature-category">
+                    <h3><?php esc_html_e('Swashes & Alternates', 'opentype-stylist'); ?></h3>
                     <table class="widefat">
                         <caption class="screen-reader-text">
-                            <?php _e('Available swashes and alternates OpenType features', 'headline-ligatures-styles'); ?>
+                            <?php esc_html_e('Available swashes and alternates OpenType features', 'opentype-stylist'); ?>
                         </caption>
                         <thead>
                             <tr>
-                                <th scope="col"><?php _e('Code', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Name', 'headline-ligatures-styles'); ?></th>
-                                <th scope="col"><?php _e('Description', 'headline-ligatures-styles'); ?></th>
+                                <th scope="col"><?php esc_html_e('Code', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Name', 'opentype-stylist'); ?></th>
+                                <th scope="col"><?php esc_html_e('Description', 'opentype-stylist'); ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <th scope="row"><code lang="en">swsh</code></th>
-                                <td><?php _e('Swashes', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Decorative flourishes and ornamental strokes', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Swashes', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Decorative flourishes and ornamental strokes', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">cswh</code></th>
-                                <td><?php _e('Contextual Swashes', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Context-aware decorative flourishes', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Contextual Swashes', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Context-aware decorative flourishes', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">salt</code></th>
-                                <td><?php _e('Stylistic Alternates', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Alternative character forms', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Stylistic Alternates', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Alternative character forms', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">titl</code></th>
-                                <td><?php _e('Titling', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Forms optimized for large display sizes', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Titling', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Forms optimized for large display sizes', 'opentype-stylist'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row"><code lang="en">ornm</code></th>
-                                <td><?php _e('Ornaments', 'headline-ligatures-styles'); ?></td>
-                                <td><?php _e('Decorative ornaments and symbols', 'headline-ligatures-styles'); ?></td>
+                                <td><?php esc_html_e('Ornaments', 'opentype-stylist'); ?></td>
+                                <td><?php esc_html_e('Decorative ornaments and symbols', 'opentype-stylist'); ?></td>
                             </tr>
                         </tbody>
                     </table>
@@ -510,53 +518,53 @@ $custom_fonts = get_option('hls_custom_fonts', array());
 
         <!-- Help Tab -->
         <div
-            class="hls-tab-content"
-            id="hls-tab-help"
+            class="ots-tab-content"
+            id="ots-tab-help"
             role="tabpanel"
-            aria-labelledby="hls-tab-button-help"
+            aria-labelledby="ots-tab-button-help"
             hidden="hidden"
             tabindex="0">
-            <h2><?php _e('How to Use', 'headline-ligatures-styles'); ?></h2>
+            <h2><?php esc_html_e('How to Use', 'opentype-stylist'); ?></h2>
 
-            <div class="hls-help-section">
-                <h3><?php _e('Basic Usage', 'headline-ligatures-styles'); ?></h3>
+            <div class="ots-help-section">
+                <h3><?php esc_html_e('Basic Usage', 'opentype-stylist'); ?></h3>
                 <ol>
-                    <li><?php _e('Create or edit a heading block (H1-H6) in the block editor', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Type your headline text', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Select the text you want to style', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Click the "Typography Features" button in the toolbar (icon with decorative "A")', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Choose a preset or select individual features', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('See the live preview and save', 'headline-ligatures-styles'); ?></li>
+                    <li><?php esc_html_e('Create or edit a heading block (H1-H6) in the block editor', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Type your headline text', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Select the text you want to style', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Click the "Typography Features" button in the toolbar (icon with decorative "A")', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Choose a preset or select individual features', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('See the live preview and save', 'opentype-stylist'); ?></li>
                 </ol>
             </div>
 
-            <div class="hls-help-section">
-                <h3><?php _e('Best Fonts for Advanced Typography', 'headline-ligatures-styles'); ?></h3>
-                <p><?php _e('This plugin works best with fonts that support OpenType features. Recommended script fonts:', 'headline-ligatures-styles'); ?></p>
+            <div class="ots-help-section">
+                <h3><?php esc_html_e('Best Fonts for Advanced Typography', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('This plugin works best with fonts that support OpenType features. Recommended script fonts:', 'opentype-stylist'); ?></p>
                 <ul>
-                    <li><strong>Calgary Script</strong> <?php _e('by Alejandro Paul - Elegant connecting script', 'headline-ligatures-styles'); ?></li>
-                    <li><strong>Affair</strong> <?php _e('by Alejandro Paul - Romantic calligraphy', 'headline-ligatures-styles'); ?></li>
-                    <li><strong>Adios Script</strong> <?php _e('by Alejandro Paul - Casual handwritten style', 'headline-ligatures-styles'); ?></li>
-                    <li><strong>Parfumerie Script</strong> <?php _e('by Alejandro Paul - Vintage commercial script', 'headline-ligatures-styles'); ?></li>
+                    <li><strong>Calgary Script</strong> <?php esc_html_e('by Alejandro Paul - Elegant connecting script', 'opentype-stylist'); ?></li>
+                    <li><strong>Affair</strong> <?php esc_html_e('by Alejandro Paul - Romantic calligraphy', 'opentype-stylist'); ?></li>
+                    <li><strong>Adios Script</strong> <?php esc_html_e('by Alejandro Paul - Casual handwritten style', 'opentype-stylist'); ?></li>
+                    <li><strong>Parfumerie Script</strong> <?php esc_html_e('by Alejandro Paul - Vintage commercial script', 'opentype-stylist'); ?></li>
                 </ul>
-                <p><?php _e('Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts.', 'headline-ligatures-styles'); ?></p>
+                <p><?php esc_html_e('Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts.', 'opentype-stylist'); ?></p>
             </div>
 
-            <div class="hls-help-section">
-                <h3><?php _e('Tips for Script Fonts', 'headline-ligatures-styles'); ?></h3>
+            <div class="ots-help-section">
+                <h3><?php esc_html_e('Tips for Script Fonts', 'opentype-stylist'); ?></h3>
                 <ul>
-                    <li><?php _e('Enable "Contextual Alternates" (calt) for natural letter connections', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Use swashes sparingly on first or last letters only', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Try different stylistic sets to find the best look', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Test your headlines at the actual display size', 'headline-ligatures-styles'); ?></li>
-                    <li><?php _e('Not all fonts support all features - experiment!', 'headline-ligatures-styles'); ?></li>
+                    <li><?php esc_html_e('Enable "Contextual Alternates" (calt) for natural letter connections', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Use swashes sparingly on first or last letters only', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Try different stylistic sets to find the best look', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Test your headlines at the actual display size', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Not all fonts support all features - experiment!', 'opentype-stylist'); ?></li>
                 </ul>
             </div>
 
-            <div class="hls-help-section">
-                <h3><?php _e('Technical Notes', 'headline-ligatures-styles'); ?></h3>
-                <p><?php _e('This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content.', 'headline-ligatures-styles'); ?></p>
-                <p><?php _e('Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support.', 'headline-ligatures-styles'); ?></p>
+            <div class="ots-help-section">
+                <h3><?php esc_html_e('Technical Notes', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content.', 'opentype-stylist'); ?></p>
+                <p><?php esc_html_e('Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support.', 'opentype-stylist'); ?></p>
             </div>
         </div>
     </div>
