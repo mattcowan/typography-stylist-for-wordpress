@@ -1,6 +1,6 @@
 === OpenType Stylist ===
 Contributors: yourname
-Tags: typography, opentype, ligatures, stylistic-sets, fonts
+Tags: typography, opentype, ligatures, stylistic-sets, fonts, adobe-fonts, webfonts
 Requires at least: 5.8
 Tested up to: 6.8
 Stable tag: 1.0.0
@@ -8,7 +8,7 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
+Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview. Upload custom fonts or connect Adobe Fonts.
 
 == Description ==
 
@@ -23,6 +23,9 @@ OpenType Stylist brings professional typography control to WordPress headlines. 
 * **Custom Presets**: Save your favorite feature combinations for reuse
 * **Visual Interface**: User-friendly popover with organized feature categories
 * **Block Editor Native**: Seamlessly integrates with Gutenberg
+* **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
+* **Adobe Fonts Integration**: Connect Adobe Fonts (Typekit) projects by pasting embed codes
+* **Font Preview**: Test OpenType features with any uploaded or connected font
 
 = Supported OpenType Features =
 
@@ -93,7 +96,49 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 = Can I use this with custom web fonts? =
 
-Absolutely! Load your fonts using @font-face in your theme or use a font plugin, then apply features with this plugin.
+Absolutely! You have three options:
+
+1. **Upload webfont kits** from MyFonts, Fontspring, or other providers using the plugin's Custom Fonts tab
+2. **Connect Adobe Fonts** (Typekit) by pasting your project's embed code
+3. **Load fonts manually** using @font-face in your theme
+
+The plugin can apply OpenType features to any font loaded on your site.
+
+= How do I upload custom fonts? =
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Enter a name for your font kit
+3. Click "Choose ZIP File" and select your webfont kit ZIP
+4. Click "Upload Font Kit"
+
+The plugin will extract the fonts and make them available in the editor and preview selector.
+
+= How do I add Adobe Fonts? =
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Scroll to "Adobe Fonts (Typekit)" section
+3. Enter a project name
+4. Paste your Adobe Fonts embed code (the <script> tag)
+5. Optionally enter font family names for the preview selector
+6. Click "Add Adobe Fonts Project"
+
+Make sure your domain is authorized in your Adobe Fonts project settings.
+
+= What file formats are supported for font uploads? =
+
+The plugin accepts ZIP files containing:
+- CSS files with @font-face declarations
+- Font files: WOFF, WOFF2, TTF, OTF, EOT, SVG
+
+= Is font upload secure? =
+
+Yes! The plugin implements multiple security measures:
+- File type validation
+- ZIP extraction security
+- Path traversal protection
+- CSS sanitization
+- 10MB size limit for uploads
+- Secure storage with .htaccess protection
 
 = Is this compatible with page builders? =
 
@@ -128,6 +173,10 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Live preview functionality
 * REST API for preset management
 * Admin settings page
+* Custom font upload system (MyFonts, Fontspring, etc.)
+* Adobe Fonts (Typekit) integration
+* Font preview system with size controls
+* Secure font file handling and storage
 
 == Upgrade Notice ==
 
@@ -153,7 +202,19 @@ Typography features are stored as inline styles and data attributes within post 
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/hls/v1/`.
+Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/ots/v1/`.
+
+= Font Management =
+
+The plugin provides two ways to add custom fonts:
+
+**Upload Webfont Kits:**
+Upload complete webfont kits (ZIP files) from MyFonts, Fontspring, or other providers. The plugin extracts fonts, processes CSS, and stores files securely in your WordPress uploads directory.
+
+**Adobe Fonts Integration:**
+Connect Adobe Fonts (Typekit) projects by pasting the embed code. Fonts load directly from Adobe's servers.
+
+Both methods make fonts available in the block editor and preview selector.
 
 == Credits ==
 

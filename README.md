@@ -26,6 +26,12 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Compatible with all modern browsers
 - Optimized for script and display fonts
 
+### 📦 Font Management
+- **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
+- **Adobe Fonts Integration**: Add fonts from Adobe Fonts (Typekit) by pasting embed codes
+- **Font Preview**: Test OpenType features with any uploaded or connected font
+- **Automatic Font Loading**: Optimized font delivery on frontend and in the editor
+
 ## Installation
 
 1. **Download** or clone this repository into your WordPress plugins directory:
@@ -46,7 +52,43 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ## Usage
 
-### Basic Workflow
+### Adding Custom Fonts
+
+#### Option 1: Upload Webfont Kits (MyFonts, Fontspring, etc.)
+
+1. **Purchase and download** your webfont kit from MyFonts, Fontspring, or another provider
+2. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
+4. **Click "Choose ZIP File"** and select your webfont kit ZIP file
+5. **Click "Upload Font Kit"**
+6. The plugin will:
+   - Extract the ZIP file
+   - Process the CSS and font files
+   - Make fonts available in the editor and preview selector
+   - Store files securely in your WordPress uploads directory
+
+**What should the ZIP contain:**
+- A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)
+- Font files (WOFF, WOFF2, TTF, OTF, EOT) in their subdirectories
+- The directory structure must match the paths in the CSS file
+
+#### Option 2: Add Adobe Fonts (Typekit)
+
+1. **Go to** [fonts.adobe.com](https://fonts.adobe.com) and create or open a Web Project
+2. **Add the fonts** you want to use to your project
+3. **Copy the embed code** (the `<script>` tag) from your Adobe Fonts project
+4. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+5. **Scroll to** "Adobe Fonts (Typekit)" section
+6. **Enter a project name** (e.g., "My Adobe Fonts")
+7. **Paste the embed code** into the textarea
+8. **Optionally enter font family names** separated by commas (e.g., "proxima-nova, futura-pt")
+9. **Click "Add Adobe Fonts Project"**
+
+The fonts will be immediately available in the preview selector and block editor.
+
+**Note:** Make sure your domain is authorized in your Adobe Fonts project settings.
+
+### Applying Typography Features
 
 1. **Create a heading block** in the WordPress editor (H1-H6)
 2. **Type your headline** text
@@ -90,15 +132,18 @@ This plugin works best with fonts that support OpenType features:
 
 ```
 opentype-stylist/
-├── opentype-stylist.php    # Main plugin file
+├── opentype-stylist.php              # Main plugin file
 ├── includes/
-│   └── admin-page.php               # Admin settings page
+│   └── admin-page.php                # Admin settings page
 ├── assets/
 │   ├── js/
-│   │   └── block-editor.js          # Block editor integration
+│   │   ├── block-editor.js           # Block editor integration
+│   │   └── admin-page.js             # Admin page interactions
 │   └── css/
-│       ├── block-editor.css         # Editor styles
-│       └── frontend.css             # Frontend styles
+│       ├── block-editor.css          # Editor styles
+│       ├── admin-page.css            # Admin page styles
+│       └── frontend.css              # Frontend styles
+├── languages/                        # Translation files
 ├── readme.txt                        # WordPress.org readme
 └── README.md                         # This file
 ```
@@ -111,12 +156,27 @@ opentype-stylist/
 - React-based UI components
 
 **REST API Endpoints**
-- `GET /wp-json/hls/v1/presets` - Get all presets
-- `POST /wp-json/hls/v1/presets` - Save new preset
-- `DELETE /wp-json/hls/v1/presets/{id}` - Delete preset
+
+*Presets:*
+- `GET /wp-json/ots/v1/presets` - Get all presets
+- `POST /wp-json/ots/v1/presets` - Save new preset
+- `DELETE /wp-json/ots/v1/presets/{id}` - Delete preset
+
+*Custom Fonts:*
+- `GET /wp-json/ots/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/ots/v1/fonts` - Upload font kit (multipart/form-data)
+- `DELETE /wp-json/ots/v1/fonts/{id}` - Delete font kit
+
+*Adobe Fonts:*
+- `GET /wp-json/ots/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/ots/v1/adobe-fonts` - Add Adobe Fonts project
+- `DELETE /wp-json/ots/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
 
 **Data Storage**
-- Presets: `wp_options` table (`hls_presets`)
+- Presets: `wp_options` table (`ots_presets`)
+- Custom Fonts: `wp_options` table (`ots_custom_fonts`)
+- Adobe Fonts: `wp_options` table (`ots_adobe_fonts`)
+- Font Files: `wp-content/uploads/ots/fonts/` directory
 - Feature settings: Inline in post content (data attributes + styles)
 
 ### CSS Implementation
@@ -139,6 +199,46 @@ Features are applied using the `font-feature-settings` CSS property:
 | Edge 79+ | ✅ Full |
 | IE 10-11 | ⚠️ Partial |
 
+## Frequently Asked Questions
+
+### Do I need special fonts?
+
+Yes, this plugin requires fonts that support OpenType features. Most premium script fonts and professional typefaces include these features. You can:
+- Upload webfont kits from MyFonts, Fontspring, or other providers
+- Connect Adobe Fonts (Typekit) projects
+- Use any font loaded via @font-face in your theme
+
+### How do I know if a font supports OpenType features?
+
+Check the font's documentation or specimen from the foundry. You can also use the plugin to experiment - features that aren't supported simply won't affect the text.
+
+### Can I use this with Google Fonts?
+
+Some Google Fonts support OpenType features. Check the individual font's specimen page for feature support. Most Google Fonts have limited OpenType features compared to premium fonts.
+
+### What happens to uploaded fonts?
+
+Fonts are stored securely in `wp-content/uploads/ots/fonts/` with:
+- .htaccess protection to prevent PHP execution
+- Organized directory structure by kit ID
+- Automatic CSS path rewriting for WordPress compatibility
+
+### Are Adobe Fonts loaded from my server or Adobe's?
+
+Adobe Fonts load directly from Adobe's servers using the script you provide. Make sure your domain is authorized in your Adobe Fonts project settings.
+
+### Can I delete uploaded fonts?
+
+Yes! Go to Settings → OpenType Stylist → Custom Fonts tab and click the "Delete" button next to any font kit or Adobe Fonts project. For uploaded kits, this will also remove all associated files from your server.
+
+### Will this work with page builders?
+
+The plugin is designed for the WordPress block editor (Gutenberg). Compatibility with page builders depends on their implementation of rich text formatting.
+
+### Does this slow down my site?
+
+No. The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. There's no JavaScript on the frontend. Font loading is optimized to only load fonts used on the current page.
+
 ## Development
 
 ### Prerequisites
@@ -154,7 +254,7 @@ The plugin works as-is without build tools. Optionally, run `npm install && npm 
 
 ```php
 // In your theme's functions.php
-add_filter('hls_available_features', function($features) {
+add_filter('OTS_available_features', function($features) {
     $features[] = array(
         'id' => 'cv01',
         'name' => __('Character Variant 1'),
@@ -168,7 +268,7 @@ add_filter('hls_available_features', function($features) {
 **Add Custom Presets**
 
 ```php
-add_filter('hls_default_presets', function($presets) {
+add_filter('OTS_default_presets', function($presets) {
     $presets[] = array(
         'id' => 'my-custom-preset',
         'name' => __('My Custom Style'),
@@ -178,6 +278,32 @@ add_filter('hls_default_presets', function($presets) {
     return $presets;
 });
 ```
+
+## Security
+
+### Font Upload Security
+
+The plugin implements multiple security measures for font uploads:
+
+- **File Type Validation**: Only allows CSS, WOFF, WOFF2, TTF, OTF, EOT, and SVG files
+- **ZIP Extraction Security**: Validates all extracted files and removes any dangerous file types
+- **Path Traversal Protection**: Prevents files from being extracted outside the designated directory
+- **CSS Sanitization**: Removes dangerous CSS expressions, JavaScript protocols, and unwanted @ rules
+- **Size Limits**: Maximum 10MB for ZIP files, 1MB for CSS files
+- **Secure Storage**: Uploaded fonts stored in `wp-content/uploads/ots/fonts/` with .htaccess protection
+
+### Adobe Fonts Security
+
+- **URL Validation**: Only accepts HTTPS URLs from `use.typekit.net`
+- **Duplicate Prevention**: Checks for existing Adobe Fonts projects before adding
+- **Script Sanitization**: Validates and sanitizes embed codes
+
+### General Security
+
+- **Nonce Verification**: All REST API requests require valid nonces
+- **Capability Checks**: Upload and delete operations require appropriate WordPress permissions
+- **Rate Limiting**: Prevents abuse of REST API endpoints (50 requests per minute per user)
+- **Input Sanitization**: All user input is sanitized using WordPress functions
 
 ## License
 
