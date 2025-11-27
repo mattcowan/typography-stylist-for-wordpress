@@ -36,6 +36,7 @@ $instance = OpenType_Stylist::get_instance();
 $presets = $instance->get_presets();
 $custom_fonts = get_option('ots_custom_fonts', array());
 $adobe_fonts = $instance->get_adobe_fonts();
+$manual_fonts = $instance->get_manual_fonts();
 ?>
 
 <div class="wrap ots-admin-wrap">
@@ -97,7 +98,7 @@ $adobe_fonts = $instance->get_adobe_fonts();
             <p><?php esc_html_e('See how each OpenType feature affects your text. Compare the default rendering with each feature enabled.', 'opentype-stylist'); ?></p>
 
             <div class="ots-preset-controls">
-                <?php if (!empty($custom_fonts) || !empty($adobe_fonts)): ?>
+                <?php if (!empty($custom_fonts) || !empty($adobe_fonts) || !empty($manual_fonts)): ?>
                 <div class="ots-preset-font-selector">
                     <label for="ots-preview-font-select">
                         <?php esc_html_e('Preview with Font:', 'opentype-stylist'); ?>
@@ -130,6 +131,17 @@ $adobe_fonts = $instance->get_adobe_fonts();
                                     foreach ($font['font_families'] as $family) {
                                         echo '<option value="' . esc_attr($family) . '">' . esc_html($family) . '</option>';
                                     }
+                                }
+                            }
+                            echo '</optgroup>';
+                        }
+
+                        // Manual fonts
+                        if (!empty($manual_fonts)) {
+                            echo '<optgroup label="' . esc_attr__('Custom Fonts', 'opentype-stylist') . '">';
+                            foreach ($manual_fonts as $font) {
+                                if (!empty($font['font_family'])) {
+                                    echo '<option value="' . esc_attr($font['font_family']) . '">' . esc_html($font['name']) . '</option>';
                                 }
                             }
                             echo '</optgroup>';
@@ -536,6 +548,138 @@ $adobe_fonts = $instance->get_adobe_fonts();
                         <li><?php esc_html_e('Optionally, enter the font family names (e.g., "proxima-nova") to enable them in the preview selector', 'opentype-stylist'); ?></li>
                     </ol>
                     <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('Adobe Fonts loads directly from Adobe\'s servers. Make sure your domain is authorized in your Adobe Fonts project settings.', 'opentype-stylist'); ?></p>
+                </div>
+            </div>
+
+            <!-- Manual Fonts Section -->
+            <div class="ots-manual-fonts-section" id="ots-manual-fonts-section">
+                <h3><?php esc_html_e('Custom Font Definitions', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('Define custom fonts that are loaded through your theme, other plugins, or CDN. Simply enter the CSS font-family name.', 'opentype-stylist'); ?></p>
+
+                <?php if (!empty($manual_fonts)): ?>
+                <div class="ots-manual-fonts-list">
+                    <h4><?php esc_html_e('Defined Custom Fonts', 'opentype-stylist'); ?></h4>
+                    <?php foreach ($manual_fonts as $font): ?>
+                    <div class="ots-manual-font-card">
+                        <div class="ots-font-header">
+                            <h5><?php echo esc_html($font['name']); ?></h5>
+                            <button
+                                class="button ots-delete-manual-font"
+                                data-font-id="<?php echo esc_attr($font['id']); ?>"
+                                data-font-name="<?php echo esc_attr($font['name']); ?>"
+                                <?php /* translators: %s: The name of the custom font to be deleted */ ?>
+                                aria-label="<?php echo esc_attr(sprintf(__('Delete custom font: %s', 'opentype-stylist'), $font['name'])); ?>">
+                                <span aria-hidden="true" class="dashicons dashicons-trash"></span>
+                                <?php esc_html_e('Delete', 'opentype-stylist'); ?>
+                            </button>
+                        </div>
+                        <div class="ots-font-families">
+                            <strong><?php esc_html_e('CSS Font Family:', 'opentype-stylist'); ?></strong>
+                            <code><?php echo esc_html($font['font_family']); ?></code>
+                        </div>
+                        <?php if (!empty($font['fallbacks'])): ?>
+                        <div class="ots-font-fallbacks">
+                            <strong><?php esc_html_e('Fallbacks:', 'opentype-stylist'); ?></strong>
+                            <code><?php echo esc_html($font['fallbacks']); ?></code>
+                        </div>
+                        <?php endif; ?>
+                        <div class="ots-font-meta">
+                            <small>
+                                <?php
+                                $upload_date = $font['added_date'];
+                                if (is_string($upload_date)) {
+                                    $timestamp = strtotime($upload_date);
+                                    $formatted_date = date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+                                } else {
+                                    $formatted_date = esc_html($upload_date);
+                                }
+                                /* translators: %s: The date when the custom font was added */
+                                echo esc_html(sprintf(__('Added: %s', 'opentype-stylist'), $formatted_date));
+                                ?>
+                            </small>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <div class="ots-add-manual-font-form">
+                    <h4><?php esc_html_e('Add Custom Font', 'opentype-stylist'); ?></h4>
+
+                    <div class="ots-form-field">
+                        <label for="ots-manual-font-name">
+                            <?php esc_html_e('Font Name:', 'opentype-stylist'); ?>
+                            <span class="required" aria-label="<?php esc_attr_e('required', 'opentype-stylist'); ?>">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="ots-manual-font-name"
+                            name="ots-manual-font-name"
+                            class="regular-text"
+                            placeholder="<?php esc_attr_e('e.g., Playfair Display', 'opentype-stylist'); ?>"
+                            aria-required="true"
+                            aria-describedby="ots-manual-font-name-desc" />
+                        <p id="ots-manual-font-name-desc" class="description">
+                            <?php esc_html_e('Enter a display name for this font', 'opentype-stylist'); ?>
+                        </p>
+                    </div>
+
+                    <div class="ots-form-field">
+                        <label for="ots-manual-font-family">
+                            <?php esc_html_e('CSS Font Family:', 'opentype-stylist'); ?>
+                            <span class="required" aria-label="<?php esc_attr_e('required', 'opentype-stylist'); ?>">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="ots-manual-font-family"
+                            name="ots-manual-font-family"
+                            class="regular-text code"
+                            placeholder="<?php esc_attr_e('e.g., \'Playfair Display\', serif', 'opentype-stylist'); ?>"
+                            aria-required="true"
+                            aria-describedby="ots-manual-font-family-desc" />
+                        <p id="ots-manual-font-family-desc" class="description">
+                            <?php esc_html_e('Enter the exact CSS font-family value as it appears in your theme or @font-face declaration', 'opentype-stylist'); ?>
+                        </p>
+                    </div>
+
+                    <div class="ots-form-field">
+                        <label for="ots-manual-font-fallbacks">
+                            <?php esc_html_e('Fallback Fonts (optional):', 'opentype-stylist'); ?>
+                        </label>
+                        <input
+                            type="text"
+                            id="ots-manual-font-fallbacks"
+                            name="ots-manual-font-fallbacks"
+                            class="regular-text code"
+                            placeholder="<?php esc_attr_e('e.g., Georgia, serif', 'opentype-stylist'); ?>"
+                            aria-describedby="ots-manual-font-fallbacks-desc" />
+                        <p id="ots-manual-font-fallbacks-desc" class="description">
+                            <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'opentype-stylist'); ?>
+                        </p>
+                    </div>
+
+                    <button type="button" id="ots-add-manual-font-btn" class="button button-primary">
+                        <?php esc_html_e('Add Custom Font', 'opentype-stylist'); ?>
+                    </button>
+                    <div id="ots-manual-font-message" role="alert" aria-live="assertive" aria-atomic="true" style="margin-top: 10px;"></div>
+                </div>
+
+                <div class="ots-manual-help">
+                    <h4><?php esc_html_e('How to use:', 'opentype-stylist'); ?></h4>
+                    <ol>
+                        <li><?php esc_html_e('Make sure your font is already loaded on your site (via theme, plugin, or @font-face)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Find the exact font-family name used in CSS (check your theme\'s stylesheet or browser developer tools)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Enter the font name and CSS font-family value above', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Optionally add fallback fonts for better compatibility', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('The font will be available in the block editor font selector', 'opentype-stylist'); ?></li>
+                    </ol>
+                    <p><strong><?php esc_html_e('Examples:', 'opentype-stylist'); ?></strong></p>
+                    <ul>
+                        <li><strong><?php esc_html_e('Google Fonts:', 'opentype-stylist'); ?></strong> <code>font-family: 'Playfair Display', serif</code></li>
+                        <li><strong><?php esc_html_e('System Fonts:', 'opentype-stylist'); ?></strong> <code>font-family: -apple-system, BlinkMacSystemFont, sans-serif</code></li>
+                        <li><strong><?php esc_html_e('Theme Fonts:', 'opentype-stylist'); ?></strong> <code>font-family: 'My Theme Font', Georgia, serif</code></li>
+                    </ul>
+                    <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('This plugin does not load fonts for you - it only applies OpenType features to fonts already loaded on your site.', 'opentype-stylist'); ?></p>
                 </div>
             </div>
         </div>

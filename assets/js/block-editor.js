@@ -337,20 +337,75 @@
          */
         getFontOptions() {
             const fonts = otsData.fonts || [];
+            const adobeFonts = otsData.adobeFonts || [];
+            const manualFonts = otsData.manualFonts || [];
             const options = [];
 
-            fonts.forEach(font => {
-                if (font.font_faces && font.font_faces.length > 0) {
-                    // Get unique font families from this kit
-                    const families = [...new Set(font.font_faces.map(face => face.family))];
-                    families.forEach(family => {
-                        options.push({
-                            label: family,
-                            value: family
+            // Uploaded fonts (MyFonts, etc.)
+            if (fonts.length > 0) {
+                const uploadedOptions = [];
+                fonts.forEach(font => {
+                    if (font.font_faces && font.font_faces.length > 0) {
+                        // Get unique font families from this kit
+                        const families = [...new Set(font.font_faces.map(face => face.family))];
+                        families.forEach(family => {
+                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
+                            uploadedOptions.push({
+                                label: family,
+                                value: fontValue
+                            });
                         });
+                    }
+                });
+                if (uploadedOptions.length > 0) {
+                    options.push({
+                        label: __('Uploaded Fonts', 'opentype-stylist'),
+                        options: uploadedOptions
                     });
                 }
-            });
+            }
+
+            // Adobe Fonts
+            if (adobeFonts.length > 0) {
+                const adobeOptions = [];
+                adobeFonts.forEach(font => {
+                    if (font.font_families && font.font_families.length > 0) {
+                        font.font_families.forEach(family => {
+                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
+                            adobeOptions.push({
+                                label: family,
+                                value: fontValue
+                            });
+                        });
+                    }
+                });
+                if (adobeOptions.length > 0) {
+                    options.push({
+                        label: __('Adobe Fonts', 'opentype-stylist'),
+                        options: adobeOptions
+                    });
+                }
+            }
+
+            // Manual fonts
+            if (manualFonts.length > 0) {
+                const manualOptions = [];
+                manualFonts.forEach(font => {
+                    if (font.font_family) {
+                        const fontValue = font.fallbacks ? `${font.font_family}, ${font.fallbacks}` : font.font_family;
+                        manualOptions.push({
+                            label: font.name,
+                            value: fontValue
+                        });
+                    }
+                });
+                if (manualOptions.length > 0) {
+                    options.push({
+                        label: __('Custom Fonts', 'opentype-stylist'),
+                        options: manualOptions
+                    });
+                }
+            }
 
             return options;
         }
@@ -417,7 +472,8 @@
             const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, showPreview, previewText } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
-            const fonts = otsData.fonts || [];
+            const fontOptions = this.getFontOptions();
+            const hasFonts = fontOptions.length > 0;
 
             // Use stored preview text or fallback
             const displayText = previewText || __('Elegant Typography & Flourish', 'opentype-stylist');
@@ -452,14 +508,14 @@
                                 </div>
 
                                 {/* Font Selector */}
-                                {fonts.length > 0 && (
+                                {hasFonts && (
                                     <div className="ots-font-section">
                                         <h4>{__('Font Family', 'opentype-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFont}
                                             options={[
                                                 { label: __('(Default)', 'opentype-stylist'), value: '' },
-                                                ...this.getFontOptions()
+                                                ...fontOptions
                                             ]}
                                             onChange={this.setFont}
                                         />

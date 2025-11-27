@@ -693,3 +693,85 @@
 .ots-delete-adobe-font:hover {
     color: #d63638;
 }
+
+/* Manual Fonts Section */
+.ots-manual-fonts-section {
+    margin-top: 40px;
+    padding-top: 40px;
+    border-top: 1px solid #dcdcde;
+}
+
+.ots-manual-fonts-list {
+    margin: 20px 0;
+}
+
+.ots-manual-font-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.ots-manual-font-card .ots-font-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ots-manual-font-card h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.ots-manual-font-card .ots-font-families,
+.ots-manual-font-card .ots-font-fallbacks {
+    margin: 10px 0;
+}
+
+.ots-manual-font-card .ots-font-families code,
+.ots-manual-font-card .ots-font-fallbacks code {
+    background: #f6f7f7;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.ots-add-manual-font-form {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.ots-manual-help {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f0f6fc;
+    border-left: 4px solid #0073aa;
+    border-radius: 4px;
+}
+
+.ots-manual-help h4 {
+    margin-top: 0;
+}
+
+.ots-manual-help ol {
+    line-height: 1.8;
+}
+
+.ots-manual-help code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.ots-delete-manual-font {
+    color: #b32d2e;
+}
+
+.ots-delete-manual-font:hover {
+    color: #d63638;
+}

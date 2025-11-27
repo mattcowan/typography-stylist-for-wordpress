@@ -385,4 +385,110 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // Add Manual Font
+    $('#ots-add-manual-font-btn').on('click', function() {
+        var $btn = $(this);
+        var $message = $('#ots-manual-font-message');
+        var fontName = $('#ots-manual-font-name').val().trim();
+        var fontFamily = $('#ots-manual-font-family').val().trim();
+        var fontFallbacks = $('#ots-manual-font-fallbacks').val().trim();
+
+        // Clear previous message
+        $message.html('');
+
+        // Validate
+        if (!fontName) {
+            $message.html('<div class="notice notice-error inline"><p>Please enter a font name.</p></div>');
+            $('#ots-manual-font-name').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        if (!fontFamily) {
+            $message.html('<div class="notice notice-error inline"><p>Please enter a CSS font-family value.</p></div>');
+            $('#ots-manual-font-family').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        // Clear aria-invalid on success
+        $('#ots-manual-font-name').attr('aria-invalid', 'false');
+        $('#ots-manual-font-family').attr('aria-invalid', 'false');
+
+        // Prepare data
+        var data = {
+            name: fontName,
+            font_family: fontFamily,
+            fallbacks: fontFallbacks
+        };
+
+        // Disable button
+        $btn.prop('disabled', true).text('Adding...');
+
+        // Add via REST API
+        $.ajax({
+            url: otsAdmin.restUrl + 'manual-fonts',
+            method: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function(response) {
+                $message.html('<div class="notice notice-success inline"><p>Custom font added successfully! Reloading page...</p></div>');
+
+                // Reset form
+                $('#ots-manual-font-name').val('');
+                $('#ots-manual-font-family').val('');
+                $('#ots-manual-font-fallbacks').val('');
+
+                // Refresh page after 1.5 seconds
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = 'Failed to add custom font.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text('Add Custom Font');
+            }
+        });
+    });
+
+    // Delete Manual Font
+    $('.ots-delete-manual-font').on('click', function() {
+        if (!confirm('Are you sure you want to delete this custom font?')) {
+            return;
+        }
+
+        var $btn = $(this);
+        var fontId = $btn.data('font-id');
+
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'manual-fonts/' + fontId,
+            method: 'DELETE',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $btn.closest('.ots-manual-font-card').fadeOut(function() {
+                    $(this).remove();
+                    // Check if there are any manual fonts left
+                    if ($('.ots-manual-font-card').length === 0) {
+                        $('.ots-manual-fonts-list').remove();
+                    }
+                });
+            },
+            error: function() {
+                alert('Failed to delete custom font.');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
 });

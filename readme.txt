@@ -3,12 +3,12 @@ Contributors: yourname
 Tags: typography, opentype, ligatures, stylistic-sets, fonts, adobe-fonts, webfonts
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview. Upload custom fonts or connect Adobe Fonts.
+Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview. Upload custom fonts, connect Adobe Fonts, or define theme fonts.
 
 == Description ==
 
@@ -25,6 +25,8 @@ OpenType Stylist brings professional typography control to WordPress headlines. 
 * **Block Editor Native**: Seamlessly integrates with Gutenberg
 * **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
 * **Adobe Fonts Integration**: Connect Adobe Fonts (Typekit) projects by pasting embed codes
+* **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
+* **Font Fallbacks**: Set fallback fonts for all font sources for better compatibility
 * **Font Preview**: Test OpenType features with any uploaded or connected font
 
 = Supported OpenType Features =
@@ -96,11 +98,12 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 = Can I use this with custom web fonts? =
 
-Absolutely! You have three options:
+Absolutely! You have four options:
 
 1. **Upload webfont kits** from MyFonts, Fontspring, or other providers using the plugin's Custom Fonts tab
 2. **Connect Adobe Fonts** (Typekit) by pasting your project's embed code
-3. **Load fonts manually** using @font-face in your theme
+3. **Define custom fonts** loaded through your theme, plugins, or CDN (like Google Fonts)
+4. **Load fonts manually** using @font-face in your theme
 
 The plugin can apply OpenType features to any font loaded on your site.
 
@@ -123,6 +126,23 @@ The plugin will extract the fonts and make them available in the editor and prev
 6. Click "Add Adobe Fonts Project"
 
 Make sure your domain is authorized in your Adobe Fonts project settings.
+
+= How do I define custom fonts from my theme? =
+
+If you have fonts already loaded through your theme, another plugin, or a CDN:
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Scroll to "Custom Font Definitions" section
+3. Enter a display name for the font
+4. Enter the exact CSS font-family value (e.g., 'Playfair Display', serif)
+5. Optionally add fallback fonts separated by commas
+6. Click "Add Custom Font"
+
+The font will be available in the block editor font selector.
+
+= Can I set fallback fonts? =
+
+Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can specify fallback fonts. These will be used if the primary font fails to load. Fallbacks are automatically included in the CSS font-family declaration.
 
 = What file formats are supported for font uploads? =
 
@@ -166,6 +186,15 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= 1.1.0 =
+* Added: Custom font definitions for fonts loaded through themes, plugins, or CDN
+* Added: Font fallback support for all font sources (uploaded, Adobe, custom)
+* Added: Manual fonts section in Custom Fonts tab
+* Added: REST API endpoints for manual fonts and fallback management
+* Enhanced: Font selector now shows organized optgroups for different font sources
+* Enhanced: Better font organization with separate sections for each source type
+* Improved: Documentation for custom fonts and fallbacks
+
 = 1.0.0 =
 * Initial release
 * Support for ligatures, stylistic sets, swashes, and alternates
@@ -179,6 +208,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Secure font file handling and storage
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+New features: Define custom fonts from your theme and set font fallbacks for better browser compatibility.
 
 = 1.0.0 =
 Initial release of OpenType Stylist.

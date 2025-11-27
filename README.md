@@ -2,7 +2,7 @@
 
 A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview.
 
-![WordPress Plugin Version](https://img.shields.io/badge/version-1.0.0-blue)
+![WordPress Plugin Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![WordPress Compatibility](https://img.shields.io/badge/wordpress-5.8%2B-green)
 ![PHP Version](https://img.shields.io/badge/php-7.4%2B-purple)
 
@@ -29,6 +29,8 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 ### 📦 Font Management
 - **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
 - **Adobe Fonts Integration**: Add fonts from Adobe Fonts (Typekit) by pasting embed codes
+- **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
+- **Font Fallbacks**: Set fallback fonts for all font sources for better browser compatibility
 - **Font Preview**: Test OpenType features with any uploaded or connected font
 - **Automatic Font Loading**: Optimized font delivery on frontend and in the editor
 
@@ -87,6 +89,40 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 The fonts will be immediately available in the preview selector and block editor.
 
 **Note:** Make sure your domain is authorized in your Adobe Fonts project settings.
+
+#### Option 3: Define Custom Fonts
+
+If you have fonts loaded through your theme, another plugin, or a CDN (like Google Fonts), you can define them for use with this plugin:
+
+1. **Make sure your font is already loaded** on your site
+2. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+3. **Scroll to** "Custom Font Definitions" section
+4. **Enter a display name** for the font (e.g., "Playfair Display")
+5. **Enter the CSS font-family value** exactly as it appears in your theme (e.g., `'Playfair Display', serif`)
+6. **Optionally add fallback fonts** separated by commas (e.g., `Georgia, serif`)
+7. **Click "Add Custom Font"**
+
+The font will be available in the block editor font selector.
+
+**Examples of CSS font-family values:**
+- Google Fonts: `'Playfair Display', serif`
+- System fonts: `-apple-system, BlinkMacSystemFont, sans-serif`
+- Theme fonts: `'My Theme Font', Georgia, serif`
+
+**Note:** This plugin does not load fonts - it only applies OpenType features to fonts already loaded on your site.
+
+### Managing Font Fallbacks
+
+For any font (uploaded, Adobe Fonts, or custom), you can define fallback fonts that will be used if the primary font fails to load:
+
+- **Default fonts** have no fallbacks and inherit from the parent element
+- **Custom fonts** can specify fallbacks when adding the font
+- Fallbacks are included automatically in the CSS `font-family` declaration
+
+Example: If you set a font with fallbacks as `Playfair Display` with fallbacks `Georgia, serif`, the CSS will be:
+```css
+font-family: 'Playfair Display', Georgia, serif;
+```
 
 ### Applying Typography Features
 
@@ -171,11 +207,21 @@ opentype-stylist/
 - `GET /wp-json/ots/v1/adobe-fonts` - Get Adobe Fonts projects
 - `POST /wp-json/ots/v1/adobe-fonts` - Add Adobe Fonts project
 - `DELETE /wp-json/ots/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
+- `PATCH /wp-json/ots/v1/adobe-fonts/{id}/fallback` - Update fallback fonts
+
+*Custom Fonts:*
+- `GET /wp-json/ots/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/ots/v1/manual-fonts` - Add custom font
+- `DELETE /wp-json/ots/v1/manual-fonts/{id}` - Delete custom font
+
+*Fallbacks:*
+- `PATCH /wp-json/ots/v1/fonts/{id}/fallback` - Update fallback for uploaded font
 
 **Data Storage**
 - Presets: `wp_options` table (`ots_presets`)
-- Custom Fonts: `wp_options` table (`ots_custom_fonts`)
+- Custom Fonts (Uploaded): `wp_options` table (`ots_custom_fonts`)
 - Adobe Fonts: `wp_options` table (`ots_adobe_fonts`)
+- Manual Fonts: `wp_options` table (`ots_manual_fonts`)
 - Font Files: `wp-content/uploads/ots/fonts/` directory
 - Feature settings: Inline in post content (data attributes + styles)
 
