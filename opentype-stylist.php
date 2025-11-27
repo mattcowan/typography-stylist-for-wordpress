@@ -112,6 +112,7 @@ class OpenType_Stylist {
 
         // Enqueue fonts for popover preview
         $this->enqueue_custom_fonts_for_editor();
+        $this->enqueue_adobe_fonts();
 
         // Editor styles
         wp_enqueue_style(
@@ -259,6 +260,9 @@ class OpenType_Stylist {
         // Enqueue custom fonts only when needed
         $this->enqueue_custom_fonts_optimized();
 
+        // Enqueue Adobe Fonts (always load if configured, they're lightweight)
+        $this->enqueue_adobe_fonts();
+
         // DEBUG: Add info about what fonts were detected
         $used_fonts = $this->get_used_fonts_in_content();
         add_action('wp_footer', function() use ($used_fonts) {
@@ -373,6 +377,7 @@ class OpenType_Stylist {
 
         // Enqueue custom fonts for preview
         $this->enqueue_custom_fonts_for_admin();
+        $this->enqueue_adobe_fonts();
 
         // Localize script for translations and data
         wp_localize_script('ots-admin', 'otsAdmin', array(
@@ -529,6 +534,12 @@ class OpenType_Stylist {
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_custom_fonts')
         ));
+
+        register_setting('ots_settings', 'ots_adobe_fonts', array(
+            'type' => 'array',
+            'default' => array(),
+            'sanitize_callback' => array($this, 'sanitize_adobe_fonts')
+        ));
     }
 
     /**
@@ -579,6 +590,29 @@ class OpenType_Stylist {
             'callback' => array($this, 'delete_font_endpoint'),
             'permission_callback' => function() {
                 return current_user_can('upload_files');
+            }
+        ));
+
+        // Adobe Fonts endpoints
+        register_rest_route('ots/v1', '/adobe-fonts', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_adobe_fonts_endpoint'),
+            'permission_callback' => array($this, 'check_permissions')
+        ));
+
+        register_rest_route('ots/v1', '/adobe-fonts', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'add_adobe_font_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+            'methods' => 'DELETE',
+            'callback' => array($this, 'delete_adobe_font_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
             }
         ));
     }
@@ -1453,6 +1487,171 @@ class OpenType_Stylist {
         $index_file = $font_dir . '/index.php';
         if (!file_exists($index_file)) {
             @file_put_contents($index_file, '<?php // Silence is golden');
+        }
+    }
+
+    /**
+     * Get Adobe Fonts scripts
+     */
+    public function get_adobe_fonts() {
+        return get_option('ots_adobe_fonts', array());
+    }
+
+    /**
+     * Sanitize Adobe Fonts data
+     */
+    public function sanitize_adobe_fonts($fonts) {
+        if (!is_array($fonts)) {
+            return array();
+        }
+
+        $sanitized = array();
+        foreach ($fonts as $font) {
+            if (isset($font['id']) && isset($font['script_url'])) {
+                $sanitized_font = array(
+                    'id' => sanitize_key($font['id']),
+                    'name' => isset($font['name']) ? sanitize_text_field($font['name']) : '',
+                    'script_url' => esc_url_raw($font['script_url'], array('https')),
+                    'font_families' => isset($font['font_families']) && is_array($font['font_families'])
+                        ? array_map('sanitize_text_field', $font['font_families'])
+                        : array(),
+                    'added_date' => isset($font['added_date']) ? sanitize_text_field($font['added_date']) : current_time('mysql')
+                );
+
+                // Only add if script URL is valid https
+                if (!empty($sanitized_font['script_url']) && strpos($sanitized_font['script_url'], 'https://') === 0) {
+                    $sanitized[] = $sanitized_font;
+                }
+            }
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Parse Adobe Fonts embed code to extract script URL and kit ID
+     */
+    public function parse_adobe_fonts_code($embed_code) {
+        // Extract script src from embed code
+        if (preg_match('/<script[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $embed_code, $matches)) {
+            $script_url = $matches[1];
+        } else if (preg_match('/https:\/\/use\.typekit\.net\/[a-z0-9]+\.js/i', $embed_code, $matches)) {
+            // Direct URL without script tags
+            $script_url = $matches[0];
+        } else {
+            return false;
+        }
+
+        // Validate it's an Adobe Fonts/Typekit URL
+        if (!preg_match('/^https:\/\/use\.typekit\.net\/([a-z0-9]+)\.js$/i', $script_url, $kit_matches)) {
+            return false;
+        }
+
+        $kit_id = $kit_matches[1];
+
+        return array(
+            'script_url' => $script_url,
+            'kit_id' => $kit_id
+        );
+    }
+
+    /**
+     * REST endpoint: Get Adobe Fonts
+     */
+    public function get_adobe_fonts_endpoint($request) {
+        return rest_ensure_response($this->get_adobe_fonts());
+    }
+
+    /**
+     * REST endpoint: Add Adobe Font
+     */
+    public function add_adobe_font_endpoint($request) {
+        $params = $request->get_json_params();
+
+        if (empty($params['embed_code'])) {
+            return new WP_Error('missing_embed_code', esc_html__('Embed code is required', 'opentype-stylist'), array('status' => 400));
+        }
+
+        // Parse embed code
+        $parsed = $this->parse_adobe_fonts_code($params['embed_code']);
+        if (!$parsed) {
+            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        // Check if already exists
+        $existing_fonts = $this->get_adobe_fonts();
+        foreach ($existing_fonts as $font) {
+            if ($font['script_url'] === $parsed['script_url']) {
+                return new WP_Error('duplicate_script', esc_html__('This Adobe Fonts kit has already been added.', 'opentype-stylist'), array('status' => 400));
+            }
+        }
+
+        $new_font = array(
+            'id' => 'adobe-' . $parsed['kit_id'],
+            'name' => !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'],
+            'script_url' => $parsed['script_url'],
+            'font_families' => !empty($params['font_families']) && is_array($params['font_families'])
+                ? array_map('sanitize_text_field', $params['font_families'])
+                : array(),
+            'added_date' => current_time('mysql')
+        );
+
+        $fonts = $this->get_adobe_fonts();
+        $fonts[] = $new_font;
+        update_option('ots_adobe_fonts', $fonts);
+
+        // Clear cache
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true, 'font' => $new_font));
+    }
+
+    /**
+     * REST endpoint: Delete Adobe Font
+     */
+    public function delete_adobe_font_endpoint($request) {
+        $id = sanitize_key($request->get_param('id'));
+        $fonts = $this->get_adobe_fonts();
+
+        $found = false;
+        foreach ($fonts as $key => $font) {
+            if ($font['id'] === $id) {
+                unset($fonts[$key]);
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'opentype-stylist'), array('status' => 404));
+        }
+
+        update_option('ots_adobe_fonts', array_values($fonts));
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true));
+    }
+
+    /**
+     * Enqueue Adobe Fonts scripts in editor and frontend
+     */
+    public function enqueue_adobe_fonts() {
+        $adobe_fonts = $this->get_adobe_fonts();
+
+        if (empty($adobe_fonts)) {
+            return;
+        }
+
+        foreach ($adobe_fonts as $font) {
+            if (!empty($font['script_url'])) {
+                wp_enqueue_script(
+                    'ots-adobe-' . $font['id'],
+                    $font['script_url'],
+                    array(),
+                    null,
+                    false // Load in head for fonts
+                );
+            }
         }
     }
 

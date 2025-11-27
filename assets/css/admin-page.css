@@ -621,3 +621,75 @@
 .hls-font-section, .hls-fontsize-section {
     margin: 0 1rem;
 }
+
+/* Adobe Fonts Section */
+.ots-adobe-fonts-section {
+    margin-top: 40px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ots-adobe-fonts-section h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2271b1;
+}
+
+.ots-adobe-fonts-list {
+    margin: 20px 0;
+}
+
+.ots-adobe-fonts-list h4 {
+    font-size: 15px;
+    margin-bottom: 15px;
+}
+
+.ots-adobe-font-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    background: #f8fbff;
+}
+
+.ots-adobe-font-card h5 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.ots-add-adobe-font-form {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.ots-add-adobe-font-form h4 {
+    margin-top: 0;
+}
+
+.ots-adobe-help {
+    margin-top: 30px;
+    padding: 15px;
+    background: #f0f6fc;
+    border-left: 4px solid #2271b1;
+    border-radius: 4px;
+}
+
+.ots-adobe-help h4 {
+    margin-top: 0;
+}
+
+.ots-adobe-help ol {
+    line-height: 1.8;
+}
+
+.ots-delete-adobe-font {
+    color: #b32d2e;
+}
+
+.ots-delete-adobe-font:hover {
+    color: #d63638;
+}
