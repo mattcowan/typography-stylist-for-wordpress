@@ -81,6 +81,66 @@ msgstr "Procesando..."
 msgid "Upload Font Kit"
 msgstr "Cargar Kit de Fuentes"
 
+#: opentype-stylist.php:404
+msgid "Please enter a project name."
+msgstr "Por favor, introduce un nombre de proyecto."
+
+#: opentype-stylist.php:405
+msgid "Please paste the Adobe Fonts embed code."
+msgstr "Por favor, pega el código de inserción de Adobe Fonts."
+
+#: opentype-stylist.php:406
+msgid "Adding..."
+msgstr "Añadiendo..."
+
+#: opentype-stylist.php:407
+msgid "Adobe Fonts project added successfully! Reloading page..."
+msgstr "¡Proyecto de Adobe Fonts añadido con éxito! Recargando página..."
+
+#: opentype-stylist.php:408
+msgid "Failed to add Adobe Fonts project."
+msgstr "Error al añadir el proyecto de Adobe Fonts."
+
+#: opentype-stylist.php:409
+msgid "Add Adobe Fonts Project"
+msgstr "Añadir Proyecto de Adobe Fonts"
+
+#: opentype-stylist.php:410
+msgid "Are you sure you want to delete this Adobe Fonts project?"
+msgstr "¿Estás seguro de que quieres eliminar este proyecto de Adobe Fonts?"
+
+#: opentype-stylist.php:411
+msgid "Failed to delete Adobe Fonts project."
+msgstr "Error al eliminar el proyecto de Adobe Fonts."
+
+#: opentype-stylist.php:413
+msgid "Please enter a font name."
+msgstr "Por favor, introduce un nombre de fuente."
+
+#: opentype-stylist.php:414
+msgid "Please enter a CSS font-family value."
+msgstr "Por favor, introduce un valor CSS font-family."
+
+#: opentype-stylist.php:415
+msgid "Custom font added successfully! Reloading page..."
+msgstr "¡Fuente personalizada añadida con éxito! Recargando página..."
+
+#: opentype-stylist.php:416
+msgid "Failed to add custom font."
+msgstr "Error al añadir la fuente personalizada."
+
+#: opentype-stylist.php:417
+msgid "Add Custom Font"
+msgstr "Añadir Fuente Personalizada"
+
+#: opentype-stylist.php:418
+msgid "Are you sure you want to delete this custom font?"
+msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
+
+#: opentype-stylist.php:419
+msgid "Failed to delete custom font."
+msgstr "Error al eliminar la fuente personalizada."
+
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
 msgstr "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde."

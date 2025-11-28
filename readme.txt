@@ -238,7 +238,7 @@ Developers can extend the plugin using WordPress hooks and filters. REST API end
 
 = Font Management =
 
-The plugin provides two ways to add custom fonts:
+The plugin provides three ways to add custom fonts:
 
 **Upload Webfont Kits:**
 Upload complete webfont kits (ZIP files) from MyFonts, Fontspring, or other providers. The plugin extracts fonts, processes CSS, and stores files securely in your WordPress uploads directory.
@@ -246,7 +246,10 @@ Upload complete webfont kits (ZIP files) from MyFonts, Fontspring, or other prov
 **Adobe Fonts Integration:**
 Connect Adobe Fonts (Typekit) projects by pasting the embed code. Fonts load directly from Adobe's servers.
 
-Both methods make fonts available in the block editor and preview selector.
+**Custom Font Definitions:**
+Define fonts that are already loaded through your theme, plugins, or CDN (like Google Fonts). Simply provide the font family name and optional fallbacks. No files are uploaded to WordPress—fonts continue loading from their original source.
+
+All three methods make fonts available in the block editor and preview selector.
 
 == Credits ==
 

@@ -159,7 +159,7 @@ This plugin works best with fonts that support OpenType features:
 <h1>Sarah & Michael</h1>
 
 <!-- After (with Wedding Style preset: calt + ss02 + swsh) -->
-<h1><span class="hls-styled" data-features="calt,ss02,swsh" style="font-feature-settings: 'calt' 1, 'ss02' 1, 'swsh' 1">S</span>arah & Michael</h1>
+<h1><span class="ots-styled" data-features="calt,ss02,swsh" style="font-feature-settings: 'calt' 1, 'ss02' 1, 'swsh' 1">S</span>arah & Michael</h1>
 ```
 
 ## Technical Details
@@ -230,7 +230,7 @@ opentype-stylist/
 Features are applied using the `font-feature-settings` CSS property:
 
 ```css
-.hls-styled {
+.ots-styled {
     font-feature-settings: "calt" 1, "ss02" 1, "swsh" 1;
 }
 ```

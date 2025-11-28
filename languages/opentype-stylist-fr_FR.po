@@ -81,6 +81,66 @@ msgstr "Traitement en cours..."
 msgid "Upload Font Kit"
 msgstr "Téléverser un Kit de Polices"
 
+#: opentype-stylist.php:404
+msgid "Please enter a project name."
+msgstr "Veuillez saisir un nom de projet."
+
+#: opentype-stylist.php:405
+msgid "Please paste the Adobe Fonts embed code."
+msgstr "Veuillez coller le code d'intégration Adobe Fonts."
+
+#: opentype-stylist.php:406
+msgid "Adding..."
+msgstr "Ajout en cours..."
+
+#: opentype-stylist.php:407
+msgid "Adobe Fonts project added successfully! Reloading page..."
+msgstr "Projet Adobe Fonts ajouté avec succès ! Rechargement de la page..."
+
+#: opentype-stylist.php:408
+msgid "Failed to add Adobe Fonts project."
+msgstr "Échec de l'ajout du projet Adobe Fonts."
+
+#: opentype-stylist.php:409
+msgid "Add Adobe Fonts Project"
+msgstr "Ajouter un Projet Adobe Fonts"
+
+#: opentype-stylist.php:410
+msgid "Are you sure you want to delete this Adobe Fonts project?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce projet Adobe Fonts ?"
+
+#: opentype-stylist.php:411
+msgid "Failed to delete Adobe Fonts project."
+msgstr "Échec de la suppression du projet Adobe Fonts."
+
+#: opentype-stylist.php:413
+msgid "Please enter a font name."
+msgstr "Veuillez saisir un nom de police."
+
+#: opentype-stylist.php:414
+msgid "Please enter a CSS font-family value."
+msgstr "Veuillez saisir une valeur CSS font-family."
+
+#: opentype-stylist.php:415
+msgid "Custom font added successfully! Reloading page..."
+msgstr "Police personnalisée ajoutée avec succès ! Rechargement de la page..."
+
+#: opentype-stylist.php:416
+msgid "Failed to add custom font."
+msgstr "Échec de l'ajout de la police personnalisée."
+
+#: opentype-stylist.php:417
+msgid "Add Custom Font"
+msgstr "Ajouter une Police Personnalisée"
+
+#: opentype-stylist.php:418
+msgid "Are you sure you want to delete this custom font?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
+
+#: opentype-stylist.php:419
+msgid "Failed to delete custom font."
+msgstr "Échec de la suppression de la police personnalisée."
+
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
 msgstr "Trop de requêtes. Veuillez réessayer plus tard."

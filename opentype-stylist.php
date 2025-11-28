@@ -399,7 +399,24 @@ class OpenType_Stylist {
                 'uploading' => esc_html__('Uploading', 'opentype-stylist'),
                 'uploadingZip' => esc_html__('Uploading ZIP file...', 'opentype-stylist'),
                 'processing' => esc_html__('Processing...', 'opentype-stylist'),
-                'uploadButton' => esc_html__('Upload Font Kit', 'opentype-stylist')
+                'uploadButton' => esc_html__('Upload Font Kit', 'opentype-stylist'),
+                // Adobe Fonts strings
+                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'opentype-stylist'),
+                'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'opentype-stylist'),
+                'adding' => esc_html__('Adding...', 'opentype-stylist'),
+                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'opentype-stylist'),
+                'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'opentype-stylist'),
+                'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'opentype-stylist'),
+                'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'opentype-stylist'),
+                'deleteAdobeFontError' => esc_html__('Failed to delete Adobe Fonts project.', 'opentype-stylist'),
+                // Manual/Custom Fonts strings
+                'enterManualFontName' => esc_html__('Please enter a font name.', 'opentype-stylist'),
+                'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'opentype-stylist'),
+                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'opentype-stylist'),
+                'addManualFontError' => esc_html__('Failed to add custom font.', 'opentype-stylist'),
+                'addManualFontButton' => esc_html__('Add Custom Font', 'opentype-stylist'),
+                'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'opentype-stylist'),
+                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'opentype-stylist')
             )
         ));
     }
@@ -613,7 +630,7 @@ class OpenType_Stylist {
             'methods' => 'POST',
             'callback' => array($this, 'add_adobe_font_endpoint'),
             'permission_callback' => function() {
-                return current_user_can('edit_posts');
+                return current_user_can('upload_files');
             }
         ));
 
@@ -621,7 +638,7 @@ class OpenType_Stylist {
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_adobe_font_endpoint'),
             'permission_callback' => function() {
-                return current_user_can('edit_posts');
+                return current_user_can('upload_files');
             }
         ));
 

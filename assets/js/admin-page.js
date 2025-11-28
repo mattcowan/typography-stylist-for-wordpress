@@ -283,13 +283,13 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>Please enter a project name.</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeProjectName + '</p></div>');
             $('#ots-adobe-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!embedCode) {
-            $message.html('<div class="notice notice-error inline"><p>Please paste the Adobe Fonts embed code.</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeEmbedCode + '</p></div>');
             $('#ots-adobe-embed-code').focus().attr('aria-invalid', 'true');
             return;
         }
@@ -316,7 +316,7 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text('Adding...');
+        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
@@ -328,7 +328,7 @@ jQuery(document).ready(function($) {
                 xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
             },
             success: function(response) {
-                $message.html('<div class="notice notice-success inline"><p>Adobe Fonts project added successfully! Reloading page...</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.adobeFontSuccess + '</p></div>');
 
                 // Reset form
                 $('#ots-adobe-font-name').val('');
@@ -341,21 +341,21 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = 'Failed to add Adobe Fonts project.';
+                var errorMsg = otsAdmin.strings.addAdobeFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text('Add Adobe Fonts Project');
+                $btn.prop('disabled', false).text(otsAdmin.strings.addAdobeFontButton);
             }
         });
     });
 
     // Delete Adobe Font
     $('.ots-delete-adobe-font').on('click', function() {
-        if (!confirm('Are you sure you want to delete this Adobe Fonts project?')) {
+        if (!confirm(otsAdmin.strings.confirmDeleteAdobeFont)) {
             return;
         }
 
@@ -380,7 +380,7 @@ jQuery(document).ready(function($) {
                 });
             },
             error: function() {
-                alert('Failed to delete Adobe Fonts project.');
+                alert(otsAdmin.strings.deleteAdobeFontError);
                 $btn.prop('disabled', false);
             }
         });
@@ -399,13 +399,13 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>Please enter a font name.</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterManualFontName + '</p></div>');
             $('#ots-manual-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!fontFamily) {
-            $message.html('<div class="notice notice-error inline"><p>Please enter a CSS font-family value.</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterFontFamily + '</p></div>');
             $('#ots-manual-font-family').focus().attr('aria-invalid', 'true');
             return;
         }
@@ -422,7 +422,7 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text('Adding...');
+        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
@@ -434,7 +434,7 @@ jQuery(document).ready(function($) {
                 xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
             },
             success: function(response) {
-                $message.html('<div class="notice notice-success inline"><p>Custom font added successfully! Reloading page...</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.manualFontSuccess + '</p></div>');
 
                 // Reset form
                 $('#ots-manual-font-name').val('');
@@ -447,21 +447,21 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = 'Failed to add custom font.';
+                var errorMsg = otsAdmin.strings.addManualFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text('Add Custom Font');
+                $btn.prop('disabled', false).text(otsAdmin.strings.addManualFontButton);
             }
         });
     });
 
     // Delete Manual Font
     $('.ots-delete-manual-font').on('click', function() {
-        if (!confirm('Are you sure you want to delete this custom font?')) {
+        if (!confirm(otsAdmin.strings.confirmDeleteManualFont)) {
             return;
         }
 
@@ -486,7 +486,7 @@ jQuery(document).ready(function($) {
                 });
             },
             error: function() {
-                alert('Failed to delete custom font.');
+                alert(otsAdmin.strings.deleteManualFontError);
                 $btn.prop('disabled', false);
             }
         });
