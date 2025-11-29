@@ -457,7 +457,7 @@ $manual_fonts = $instance->get_manual_fonts();
                         <?php endif; ?>
                         <div class="ots-font-meta">
                             <small>
-                                <code><?php echo esc_html($font['script_url']); ?></code>
+                                <code><?php echo esc_html($font['css_url']); ?></code>
                                 <?php
                                 $upload_date = $font['added_date'];
                                 if (is_string($upload_date)) {
@@ -508,17 +508,18 @@ $manual_fonts = $instance->get_manual_fonts();
                             name="ots-adobe-embed-code"
                             class="large-text code"
                             rows="3"
-                            placeholder="<?php esc_attr_e('<script src=&quot;https://use.typekit.net/abc1234.js&quot;></script>', 'opentype-stylist'); ?>"
+                            placeholder="<?php esc_attr_e('<link rel=&quot;stylesheet&quot; href=&quot;https://use.typekit.net/abc1234.css&quot;>', 'opentype-stylist'); ?>"
                             aria-required="true"
                             aria-describedby="ots-adobe-embed-desc"></textarea>
                         <p id="ots-adobe-embed-desc" class="description">
-                            <?php esc_html_e('Paste the complete embed code from your Adobe Fonts project (including <script> tags)', 'opentype-stylist'); ?>
+                            <?php esc_html_e('Paste the complete embed code from your Adobe Fonts project (including <link> tags)', 'opentype-stylist'); ?>
                         </p>
                     </div>
 
                     <div class="ots-form-field">
                         <label for="ots-adobe-font-families">
-                            <?php esc_html_e('Font Family Names (optional):', 'opentype-stylist'); ?>
+                            <?php esc_html_e('Font Family Names:', 'opentype-stylist'); ?>
+                            <span class="required" aria-label="<?php esc_attr_e('required', 'opentype-stylist'); ?>">*</span>
                         </label>
                         <input
                             type="text"
@@ -526,9 +527,10 @@ $manual_fonts = $instance->get_manual_fonts();
                             name="ots-adobe-font-families"
                             class="regular-text"
                             placeholder="<?php esc_attr_e('e.g., proxima-nova, futura-pt', 'opentype-stylist'); ?>"
+                            aria-required="true"
                             aria-describedby="ots-adobe-families-desc" />
                         <p id="ots-adobe-families-desc" class="description">
-                            <?php esc_html_e('Enter font family names separated by commas (you can find these in your Adobe Fonts project)', 'opentype-stylist'); ?>
+                            <?php esc_html_e('Enter the exact font family names separated by commas (find these in your Adobe Fonts project settings)', 'opentype-stylist'); ?>
                         </p>
                     </div>
 

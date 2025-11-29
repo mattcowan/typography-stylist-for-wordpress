@@ -12,8 +12,8 @@
     "build:css:frontend": "cleancss -o assets/css/frontend.min.css assets/css/frontend.css",
     "build:css:admin": "cleancss -o assets/css/admin-page.min.css assets/css/admin-page.css",
     "watch": "npm run watch:js & npm run watch:css",
-    "watch:js": "nodemon --watch assets/js --ext js --exec \"npm run build:js\"",
-    "watch:css": "nodemon --watch assets/css --ext css --exec \"npm run build:css\"",
+    "watch:js": "nodemon --watch assets/js --ext js --ignore \"*.min.js\" --exec \"npm run build:js\"",
+    "watch:css": "nodemon --watch assets/css --ext css --ignore \"*.min.css\" --exec \"npm run build:css\"",
     "version": "npm run build",
     "package": "npm run build && node scripts/package.js"
   },

@@ -29,9 +29,12 @@
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
+                fontWeight: this.getActiveFontWeight() || '400',
+                letterSpacing: this.getActiveLetterSpacing() || 0,
                 showPreview: true,
                 activePreset: null,
-                previewText: ''
+                previewText: '',
+                previewDevice: 'tablet'
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -44,6 +47,9 @@
             this.setFontSizeMin = this.setFontSizeMin.bind(this);
             this.setFontSizePreferred = this.setFontSizePreferred.bind(this);
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
+            this.setFontWeight = this.setFontWeight.bind(this);
+            this.setLetterSpacing = this.setLetterSpacing.bind(this);
+            this.setPreviewDevice = this.setPreviewDevice.bind(this);
         }
 
         /**
@@ -131,6 +137,34 @@
         }
 
         /**
+         * Get currently active font weight from format
+         */
+        getActiveFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontweight']) {
+                return activeFormat.attributes['data-fontweight'];
+            }
+
+            return '400';
+        }
+
+        /**
+         * Get currently active letter spacing from format
+         */
+        getActiveLetterSpacing() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-letterspacing']) {
+                return parseInt(activeFormat.attributes['data-letterspacing'], 10);
+            }
+
+            return 0;
+        }
+
+        /**
          * Toggle popover visibility
          */
         togglePopover() {
@@ -157,6 +191,8 @@
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
+                fontWeight: this.getActiveFontWeight() || '400',
+                letterSpacing: this.getActiveLetterSpacing() || 0,
                 previewText: extractedText
             }));
         }
@@ -207,6 +243,33 @@
         }
 
         /**
+         * Set font weight
+         */
+        setFontWeight(value) {
+            this.setState({
+                fontWeight: value
+            });
+        }
+
+        /**
+         * Set letter spacing
+         */
+        setLetterSpacing(value) {
+            this.setState({
+                letterSpacing: value
+            });
+        }
+
+        /**
+         * Set preview device
+         */
+        setPreviewDevice(device) {
+            this.setState({
+                previewDevice: device
+            });
+        }
+
+        /**
          * Toggle individual feature
          */
         toggleFeature(featureId) {
@@ -232,10 +295,10 @@
          */
         applyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax } = this.state;
+            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit') {
-                // Remove format if no features, font, or font size selected
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
+                // Remove format if no features, font, font size, weight, or letter spacing selected
                 onChange(removeFormat(value, FORMAT_TYPE));
             } else {
                 // Build attributes
@@ -254,6 +317,18 @@
                     attributes['data-font'] = selectedFont;
                     if (styleString) styleString += '; ';
                     styleString += `font-family: ${selectedFont}`;
+                }
+
+                // Add font weight (always apply, default to normal)
+                attributes['data-fontweight'] = fontWeight;
+                if (styleString) styleString += '; ';
+                styleString += `font-weight: ${fontWeight}`;
+
+                // Add letter spacing
+                if (letterSpacing !== 0) {
+                    attributes['data-letterspacing'] = letterSpacing.toString();
+                    if (styleString) styleString += '; ';
+                    styleString += `letter-spacing: ${letterSpacing / 1000}em`;
                 }
 
                 // Add font size
@@ -302,6 +377,8 @@
                 fontSizeMin: 16,
                 fontSizePreferred: 24,
                 fontSizeMax: 32,
+                fontWeight: '400',
+                letterSpacing: 0,
                 activePreset: null,
                 isOpen: false
             });
@@ -343,68 +420,47 @@
 
             // Uploaded fonts (MyFonts, etc.)
             if (fonts.length > 0) {
-                const uploadedOptions = [];
                 fonts.forEach(font => {
                     if (font.font_faces && font.font_faces.length > 0) {
                         // Get unique font families from this kit
                         const families = [...new Set(font.font_faces.map(face => face.family))];
                         families.forEach(family => {
                             const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
-                            uploadedOptions.push({
-                                label: family,
+                            options.push({
+                                label: `📁 ${family}`,
                                 value: fontValue
                             });
                         });
                     }
                 });
-                if (uploadedOptions.length > 0) {
-                    options.push({
-                        label: __('Uploaded Fonts', 'opentype-stylist'),
-                        options: uploadedOptions
-                    });
-                }
             }
 
             // Adobe Fonts
             if (adobeFonts.length > 0) {
-                const adobeOptions = [];
                 adobeFonts.forEach(font => {
                     if (font.font_families && font.font_families.length > 0) {
                         font.font_families.forEach(family => {
                             const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
-                            adobeOptions.push({
-                                label: family,
+                            options.push({
+                                label: `🅰️ ${family}`,
                                 value: fontValue
                             });
                         });
                     }
                 });
-                if (adobeOptions.length > 0) {
-                    options.push({
-                        label: __('Adobe Fonts', 'opentype-stylist'),
-                        options: adobeOptions
-                    });
-                }
             }
 
             // Manual fonts
             if (manualFonts.length > 0) {
-                const manualOptions = [];
                 manualFonts.forEach(font => {
                     if (font.font_family) {
                         const fontValue = font.fallbacks ? `${font.font_family}, ${font.fallbacks}` : font.font_family;
-                        manualOptions.push({
-                            label: font.name,
+                        options.push({
+                            label: `⚙️ ${font.name}`,
                             value: fontValue
                         });
                     }
                 });
-                if (manualOptions.length > 0) {
-                    options.push({
-                        label: __('Custom Fonts', 'opentype-stylist'),
-                        options: manualOptions
-                    });
-                }
             }
 
             return options;
@@ -469,7 +525,7 @@
 
         render() {
             const { isActive } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, showPreview, previewText } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -484,6 +540,24 @@
             };
             if (selectedFont) {
                 previewStyle.fontFamily = selectedFont;
+            }
+            // Apply font weight to preview
+            previewStyle.fontWeight = fontWeight;
+
+            // Apply letter spacing to preview
+            if (letterSpacing !== 0) {
+                previewStyle.letterSpacing = `${letterSpacing / 1000}em`;
+            }
+
+            // Apply font size to preview based on device selection
+            if (fontSize === 'responsive') {
+                let previewSize = fontSizePreferred;
+                if (previewDevice === 'mobile') {
+                    previewSize = fontSizeMin;
+                } else if (previewDevice === 'desktop') {
+                    previewSize = fontSizeMax;
+                }
+                previewStyle.fontSize = `${previewSize}px`;
             }
 
             return (
@@ -521,6 +595,41 @@
                                         />
                                     </div>
                                 )}
+
+                                {/* Font Weight Control */}
+                                <div className="ots-fontweight-section">
+                                    <h4>{__('Font Weight', 'opentype-stylist')}</h4>
+                                    <SelectControl
+                                        value={fontWeight}
+                                        options={[
+                                            { label: __('100 - Thin', 'opentype-stylist'), value: '100' },
+                                            { label: __('200 - Extra Light', 'opentype-stylist'), value: '200' },
+                                            { label: __('300 - Light', 'opentype-stylist'), value: '300' },
+                                            { label: __('400 - Normal', 'opentype-stylist'), value: '400' },
+                                            { label: __('500 - Medium', 'opentype-stylist'), value: '500' },
+                                            { label: __('600 - Semi Bold', 'opentype-stylist'), value: '600' },
+                                            { label: __('700 - Bold', 'opentype-stylist'), value: '700' },
+                                            { label: __('800 - Extra Bold', 'opentype-stylist'), value: '800' },
+                                            { label: __('900 - Black', 'opentype-stylist'), value: '900' }
+                                        ]}
+                                        onChange={this.setFontWeight}
+                                    />
+                                </div>
+
+                                {/* Letter Spacing Control */}
+                                <div className="ots-letterspacing-section">
+                                    <h4>{__('Letter Spacing', 'opentype-stylist')}</h4>
+                                    <RangeControl
+                                        value={letterSpacing}
+                                        onChange={this.setLetterSpacing}
+                                        min={-200}
+                                        max={200}
+                                        step={1}
+                                        help={letterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${letterSpacing / 1000}em`}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                    />
+                                </div>
 
                                 {/* Font Size Controls */}
                                 <div className="ots-fontsize-section">
@@ -596,7 +705,37 @@
                                 {/* Preview Section */}
                                 {showPreview && (
                                     <div className="ots-preview-section">
-                                        <h4>{__('Preview', 'opentype-stylist')}</h4>
+                                        <div className="ots-preview-header">
+                                            <h4>{__('Preview', 'opentype-stylist')}</h4>
+                                            {fontSize === 'responsive' && (
+                                                <ButtonGroup className="ots-preview-device-toggle">
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'mobile'}
+                                                        isSecondary={previewDevice !== 'mobile'}
+                                                        onClick={() => this.setPreviewDevice('mobile')}
+                                                    >
+                                                        {__('Mobile', 'opentype-stylist')}
+                                                    </Button>
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'tablet'}
+                                                        isSecondary={previewDevice !== 'tablet'}
+                                                        onClick={() => this.setPreviewDevice('tablet')}
+                                                    >
+                                                        {__('Tablet', 'opentype-stylist')}
+                                                    </Button>
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'desktop'}
+                                                        isSecondary={previewDevice !== 'desktop'}
+                                                        onClick={() => this.setPreviewDevice('desktop')}
+                                                    >
+                                                        {__('Desktop', 'opentype-stylist')}
+                                                    </Button>
+                                                </ButtonGroup>
+                                            )}
+                                        </div>
                                         <div
                                             className="ots-preview-text"
                                             style={previewStyle}
@@ -672,6 +811,8 @@
             'data-fontsize-min': 'data-fontsize-min',
             'data-fontsize-preferred': 'data-fontsize-preferred',
             'data-fontsize-max': 'data-fontsize-max',
+            'data-fontweight': 'data-fontweight',
+            'data-letterspacing': 'data-letterspacing',
             'style': 'style'
         },
         edit: compose()(function(props) {

@@ -102,6 +102,7 @@ class OpenType_Stylist {
         // Frontend uses enqueue_frontend_assets() with optimized loading
         if (is_admin()) {
             $this->enqueue_custom_fonts_for_blocks();
+            $this->enqueue_adobe_fonts();
         }
     }
 
@@ -403,6 +404,7 @@ class OpenType_Stylist {
                 // Adobe Fonts strings
                 'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'opentype-stylist'),
                 'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'opentype-stylist'),
+                'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'opentype-stylist'),
                 'adding' => esc_html__('Adding...', 'opentype-stylist'),
                 'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'opentype-stylist'),
                 'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'opentype-stylist'),
@@ -1585,11 +1587,11 @@ class OpenType_Stylist {
 
         $sanitized = array();
         foreach ($fonts as $font) {
-            if (isset($font['id']) && isset($font['script_url'])) {
+            if (isset($font['id']) && isset($font['css_url'])) {
                 $sanitized_font = array(
                     'id' => sanitize_key($font['id']),
                     'name' => isset($font['name']) ? sanitize_text_field($font['name']) : '',
-                    'script_url' => esc_url_raw($font['script_url'], array('https')),
+                    'css_url' => esc_url_raw($font['css_url'], array('https')),
                     'font_families' => isset($font['font_families']) && is_array($font['font_families'])
                         ? array_map('sanitize_text_field', $font['font_families'])
                         : array(),
@@ -1597,8 +1599,8 @@ class OpenType_Stylist {
                     'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : ''
                 );
 
-                // Only add if script URL is valid https
-                if (!empty($sanitized_font['script_url']) && strpos($sanitized_font['script_url'], 'https://') === 0) {
+                // Only add if CSS URL is valid https
+                if (!empty($sanitized_font['css_url']) && strpos($sanitized_font['css_url'], 'https://') === 0) {
                     $sanitized[] = $sanitized_font;
                 }
             }
@@ -1637,28 +1639,39 @@ class OpenType_Stylist {
     }
 
     /**
-     * Parse Adobe Fonts embed code to extract script URL and kit ID
+     * Parse Adobe Fonts embed code to extract CSS URL and kit ID
      */
     public function parse_adobe_fonts_code($embed_code) {
-        // Extract script src from embed code
-        if (preg_match('/<script[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $embed_code, $matches)) {
-            $script_url = $matches[1];
-        } else if (preg_match('/https:\/\/use\.typekit\.net\/[a-z0-9]+\.js/i', $embed_code, $matches)) {
-            // Direct URL without script tags
-            $script_url = $matches[0];
+        // Try modern <link> tag format first
+        if (preg_match('/<link[^>]+href=["\']([^"\']+)["\'][^>]*>/i', $embed_code, $matches)) {
+            $css_url = $matches[1];
+        }
+        // Try legacy <script> tag format
+        else if (preg_match('/<script[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $embed_code, $matches)) {
+            $css_url = $matches[1];
+        }
+        // Try direct CSS URL without tags
+        else if (preg_match('/https:\/\/use\.typekit\.net\/[a-z0-9]+\.css/i', $embed_code, $matches)) {
+            $css_url = $matches[0];
+        }
+        // Try direct JS URL without tags (legacy)
+        else if (preg_match('/https:\/\/use\.typekit\.net\/[a-z0-9]+\.js/i', $embed_code, $matches)) {
+            $css_url = $matches[0];
         } else {
             return false;
         }
 
-        // Validate it's an Adobe Fonts/Typekit URL
-        if (!preg_match('/^https:\/\/use\.typekit\.net\/([a-z0-9]+)\.js$/i', $script_url, $kit_matches)) {
+        // Validate it's an Adobe Fonts/Typekit URL and extract kit ID
+        if (preg_match('/^https:\/\/use\.typekit\.net\/([a-z0-9]+)\.(css|js)$/i', $css_url, $kit_matches)) {
+            $kit_id = $kit_matches[1];
+            // Normalize to CSS URL format
+            $css_url = 'https://use.typekit.net/' . $kit_id . '.css';
+        } else {
             return false;
         }
 
-        $kit_id = $kit_matches[1];
-
         return array(
-            'script_url' => $script_url,
+            'css_url' => $css_url,
             'kit_id' => $kit_id
         );
     }
@@ -1683,13 +1696,13 @@ class OpenType_Stylist {
         // Parse embed code
         $parsed = $this->parse_adobe_fonts_code($params['embed_code']);
         if (!$parsed) {
-            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
         }
 
         // Check if already exists
         $existing_fonts = $this->get_adobe_fonts();
         foreach ($existing_fonts as $font) {
-            if ($font['script_url'] === $parsed['script_url']) {
+            if ($font['css_url'] === $parsed['css_url']) {
                 return new WP_Error('duplicate_script', esc_html__('This Adobe Fonts kit has already been added.', 'opentype-stylist'), array('status' => 400));
             }
         }
@@ -1697,7 +1710,7 @@ class OpenType_Stylist {
         $new_font = array(
             'id' => 'adobe-' . $parsed['kit_id'],
             'name' => !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'],
-            'script_url' => $parsed['script_url'],
+            'css_url' => $parsed['css_url'],
             'font_families' => !empty($params['font_families']) && is_array($params['font_families'])
                 ? array_map('sanitize_text_field', $params['font_families'])
                 : array(),
@@ -1879,13 +1892,12 @@ class OpenType_Stylist {
         }
 
         foreach ($adobe_fonts as $font) {
-            if (!empty($font['script_url'])) {
-                wp_enqueue_script(
+            if (!empty($font['css_url'])) {
+                wp_enqueue_style(
                     'ots-adobe-' . $font['id'],
-                    $font['script_url'],
+                    $font['css_url'],
                     array(),
-                    null,
-                    false // Load in head for fonts
+                    null
                 );
             }
         }

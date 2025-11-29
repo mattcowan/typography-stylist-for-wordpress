@@ -294,10 +294,6 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        // Clear aria-invalid on success
-        $('#ots-adobe-font-name').attr('aria-invalid', 'false');
-        $('#ots-adobe-embed-code').attr('aria-invalid', 'false');
-
         // Parse font families
         var fontFamilies = [];
         if (fontFamiliesInput) {
@@ -307,6 +303,17 @@ jQuery(document).ready(function($) {
                 return f.length > 0;
             });
         }
+
+        if (fontFamilies.length === 0) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeFontFamilies + '</p></div>');
+            $('#ots-adobe-font-families').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        // Clear aria-invalid on success
+        $('#ots-adobe-font-name').attr('aria-invalid', 'false');
+        $('#ots-adobe-embed-code').attr('aria-invalid', 'false');
+        $('#ots-adobe-font-families').attr('aria-invalid', 'false');
 
         // Prepare data
         var data = {

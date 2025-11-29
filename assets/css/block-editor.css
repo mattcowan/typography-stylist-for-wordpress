@@ -188,13 +188,31 @@
     border-bottom: 1px solid #ddd;
 }
 
+.ots-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
 .ots-preview-section h4 {
-    margin: 0 0 12px 0;
+    margin: 0;
     font-size: 13px;
     font-weight: 600;
     color: #1e1e1e;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+.ots-preview-device-toggle {
+    display: flex;
+    gap: 0;
+}
+
+.ots-preview-device-toggle .components-button {
+    min-height: 32px;
+    padding: 4px 12px;
+    font-size: 12px;
 }
 
 .ots-preview-text {
@@ -371,8 +389,10 @@
     }
 }
 
-/* Font and Font Size Sections */
+/* Font, Font Weight, Letter Spacing, and Font Size Sections */
 .ots-font-section,
+.ots-fontweight-section,
+.ots-letterspacing-section,
 .ots-fontsize-section {
     margin: 0 1rem;
     padding: 16px 20px;
@@ -380,6 +400,8 @@
 }
 
 .ots-font-section h4,
+.ots-fontweight-section h4,
+.ots-letterspacing-section h4,
 .ots-fontsize-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
