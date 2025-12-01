@@ -1,9 +1,9 @@
 === OpenType Stylist ===
 Contributors: yourname
-Tags: typography, opentype, ligatures, stylistic-sets, fonts, adobe-fonts, webfonts, accessibility, wcag
+Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.8
-Stable tag: 1.2.0
+Stable tag: 1.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines
 
 == Description ==
 
-OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts from foundries like Sudtipos (Alejandro Paul's Calgary Script, Affair, etc.), this plugin allows you to apply OpenType features directly in the block editor.
+OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts, this plugin allows you to apply OpenType features directly in the block editor.
 
 = Key Features =
 
