@@ -1,0 +1,57 @@
+/**
+ * OpenType Stylist Block - Editor Styles
+ */
+
+.wp-block-opentype-stylist {
+	position: relative;
+}
+
+.wp-block-opentype-stylist .ots-block-content {
+	/* Add subtle border in editor to show block boundaries */
+	outline: 1px dashed rgba(0, 122, 204, 0.2);
+	outline-offset: 4px;
+	transition: outline-color 0.2s;
+}
+
+.wp-block-opentype-stylist .ots-block-content:focus {
+	outline-color: rgba(0, 122, 204, 0.6);
+}
+
+/* Feature category headings in inspector */
+.ots-feature-category {
+	margin-bottom: 16px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid #ddd;
+}
+
+.ots-feature-category:last-child {
+	border-bottom: none;
+}
+
+.ots-feature-category h4 {
+	margin: 0 0 8px 0;
+	font-size: 12px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	color: #1e1e1e;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.ots-feature-category {
+		border-bottom-color: #3e3e3e;
+	}
+
+	.ots-feature-category h4 {
+		color: #fff;
+	}
+
+	.wp-block-opentype-stylist .ots-block-content {
+		outline-color: rgba(100, 150, 200, 0.3);
+	}
+
+	.wp-block-opentype-stylist .ots-block-content:focus {
+		outline-color: rgba(100, 150, 200, 0.7);
+	}
+}

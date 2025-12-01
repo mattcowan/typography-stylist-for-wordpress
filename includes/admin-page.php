@@ -32,6 +32,19 @@ if (isset($_POST['ots_save_settings']) &&
     }
 }
 
+// Save accessibility settings
+if (isset($_POST['ots_save_accessibility_settings']) &&
+    check_admin_referer('ots_accessibility_settings_nonce') &&
+    current_user_can('manage_options')) {
+
+    $enable_aria = isset($_POST['ots_enable_aria_labels']) ? true : false;
+    update_option('ots_enable_aria_labels', $enable_aria);
+
+    echo '<div class="notice notice-success"><p>' .
+         esc_html__('Accessibility settings saved successfully.', 'opentype-stylist') .
+         '</p></div>';
+}
+
 $instance = OpenType_Stylist::get_instance();
 $presets = $instance->get_presets();
 $custom_fonts = get_option('ots_custom_fonts', array());
@@ -75,6 +88,15 @@ $manual_fonts = $instance->get_manual_fonts();
                 aria-controls="ots-tab-features"
                 id="ots-tab-button-features">
                 <?php esc_html_e('Font Features', 'opentype-stylist'); ?>
+            </button>
+            <button
+                class="ots-tab-button"
+                data-tab="accessibility"
+                role="tab"
+                aria-selected="false"
+                aria-controls="ots-tab-accessibility"
+                id="ots-tab-button-accessibility">
+                <?php esc_html_e('Accessibility', 'opentype-stylist'); ?>
             </button>
             <button
                 class="ots-tab-button"
@@ -238,7 +260,7 @@ $manual_fonts = $instance->get_manual_fonts();
             <?php if (!empty($presets)): ?>
             <div class="ots-user-presets-section">
                 <h3><?php esc_html_e('Your Saved Presets', 'opentype-stylist'); ?></h3>
-                <p><?php esc_html_e('These are presets you\'ve created in the block editor.', 'opentype-stylist'); ?></p>
+                <p><?php esc_html_e('These are presets you've created in the block editor.', 'opentype-stylist'); ?></p>
 
                 <div class="ots-presets-grid">
                     <?php foreach ($presets as $preset): ?>
@@ -549,7 +571,7 @@ $manual_fonts = $instance->get_manual_fonts();
                         <li><?php esc_html_e('Paste it above and give your project a name', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Optionally, enter the font family names (e.g., "proxima-nova") to enable them in the preview selector', 'opentype-stylist'); ?></li>
                     </ol>
-                    <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('Adobe Fonts loads directly from Adobe\'s servers. Make sure your domain is authorized in your Adobe Fonts project settings.', 'opentype-stylist'); ?></p>
+                    <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('Adobe Fonts loads directly from Adobe's servers. Make sure your domain is authorized in your Adobe Fonts project settings.', 'opentype-stylist'); ?></p>
                 </div>
             </div>
 
@@ -636,7 +658,7 @@ $manual_fonts = $instance->get_manual_fonts();
                             id="ots-manual-font-family"
                             name="ots-manual-font-family"
                             class="regular-text code"
-                            placeholder="<?php esc_attr_e('e.g., \'Playfair Display\', serif', 'opentype-stylist'); ?>"
+                            placeholder="<?php esc_attr_e('e.g., 'Playfair Display', serif', 'opentype-stylist'); ?>"
                             aria-required="true"
                             aria-describedby="ots-manual-font-family-desc" />
                         <p id="ots-manual-font-family-desc" class="description">
@@ -670,7 +692,7 @@ $manual_fonts = $instance->get_manual_fonts();
                     <h4><?php esc_html_e('How to use:', 'opentype-stylist'); ?></h4>
                     <ol>
                         <li><?php esc_html_e('Make sure your font is already loaded on your site (via theme, plugin, or @font-face)', 'opentype-stylist'); ?></li>
-                        <li><?php esc_html_e('Find the exact font-family name used in CSS (check your theme\'s stylesheet or browser developer tools)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Find the exact font-family name used in CSS (check your theme's stylesheet or browser developer tools)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Enter the font name and CSS font-family value above', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Optionally add fallback fonts for better compatibility', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('The font will be available in the block editor font selector', 'opentype-stylist'); ?></li>
@@ -802,6 +824,65 @@ $manual_fonts = $instance->get_manual_fonts();
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- Accessibility Tab -->
+        <div
+            class="ots-tab-content"
+            id="ots-tab-accessibility"
+            role="tabpanel"
+            aria-labelledby="ots-tab-button-accessibility"
+            hidden="hidden"
+            tabindex="0">
+            <h2><?php esc_html_e('Accessibility Settings', 'opentype-stylist'); ?></h2>
+            <p><?php esc_html_e('Configure screen reader support for inline typography features.', 'opentype-stylist'); ?></p>
+
+            <form method="post" action="">
+                <?php wp_nonce_field('ots_accessibility_settings_nonce'); ?>
+
+                <table class="form-table" role="presentation">
+                    <tbody>
+                        <tr>
+                            <th scope="row">
+                                <label for="ots_enable_aria_labels">
+                                    <?php esc_html_e('Screen Reader Support', 'opentype-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="ots_enable_aria_labels"
+                                    name="ots_enable_aria_labels"
+                                    value="1"
+                                    <?php checked(get_option('ots_enable_aria_labels', false)); ?>
+                                />
+                                <label for="ots_enable_aria_labels">
+                                    <?php esc_html_e('Add aria-label attributes to styled text', 'opentype-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, inline formatted text will include aria-label attributes containing the original text for better screen reader accessibility.', 'opentype-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="submit">
+                    <button type="submit" name="ots_save_accessibility_settings" class="button button-primary">
+                        <?php esc_html_e('Save Accessibility Settings', 'opentype-stylist'); ?>
+                    </button>
+                </p>
+            </form>
+
+            <div class="ots-accessibility-recommendations">
+                <h3><?php esc_html_e('Accessibility Best Practices', 'opentype-stylist'); ?></h3>
+                <ul>
+                    <li><?php esc_html_e('For complex typography with partial word styling, use the OpenType Stylist block instead of inline formats.', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Always select complete words or phrases when applying inline formats to avoid fragmenting text for screen readers.', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Test your styled headings with screen readers like NVDA (Windows) or VoiceOver (macOS) to ensure they read correctly.', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block.', 'opentype-stylist'); ?></li>
+                </ul>
             </div>
         </div>
 

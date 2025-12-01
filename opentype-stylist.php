@@ -82,6 +82,9 @@ class OpenType_Stylist {
         // Add REST API endpoints
         add_action('rest_api_init', array($this, 'register_rest_routes'));
 
+        // Register custom block
+        add_action('init', array($this, 'register_block'));
+
         // Secure upload directory on activation
         register_activation_hook(__FILE__, array($this, 'activate_plugin'));
     }
@@ -161,7 +164,8 @@ class OpenType_Stylist {
                 'adobeFonts' => $this->get_adobe_fonts(),
                 'manualFonts' => $this->get_manual_fonts(),
                 'restUrl' => rest_url('ots/v1/'),
-                'nonce' => wp_create_nonce('wp_rest')
+                'nonce' => wp_create_nonce('wp_rest'),
+                'enableAriaLabels' => get_option('ots_enable_aria_labels', false)
             );
 
             // Cache for 1 hour
@@ -568,6 +572,13 @@ class OpenType_Stylist {
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_manual_fonts')
         ));
+    }
+
+    /**
+     * Register custom block
+     */
+    public function register_block() {
+        register_block_type(OTS_PLUGIN_DIR . 'blocks/opentype-stylist');
     }
 
     /**
@@ -1640,6 +1651,15 @@ class OpenType_Stylist {
 
     /**
      * Parse Adobe Fonts embed code to extract CSS URL and kit ID
+     *
+     * Extracts the CSS URL and kit ID from Adobe Fonts (Typekit) embed code.
+     * Supports both modern <link> tag format and legacy <script> tag format,
+     * as well as direct URLs with or without HTML tags.
+     *
+     * @since 1.1.0
+     *
+     * @param string $embed_code The Adobe Fonts embed code (HTML or URL).
+     * @return array|false Array with 'css_url' and 'kit_id' on success, false on failure.
      */
     public function parse_adobe_fonts_code($embed_code) {
         // Try modern <link> tag format first
@@ -1678,6 +1698,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Get Adobe Fonts
+     *
+     * Returns all configured Adobe Fonts projects.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request The REST request object.
+     * @return WP_REST_Response REST response containing array of Adobe Fonts projects.
      */
     public function get_adobe_fonts_endpoint($request) {
         return rest_ensure_response($this->get_adobe_fonts());
@@ -1685,6 +1712,14 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Add Adobe Font
+     *
+     * Parses Adobe Fonts embed code and adds a new Adobe Fonts project.
+     * Validates the embed code, checks for duplicates, and stores project configuration.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'embed_code', 'name', and 'font_families' params.
+     * @return WP_REST_Response|WP_Error REST response with success status and font data, or error.
      */
     public function add_adobe_font_endpoint($request) {
         $params = $request->get_json_params();
@@ -1729,6 +1764,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Delete Adobe Font
+     *
+     * Removes an Adobe Fonts project from the plugin configuration.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter.
+     * @return WP_REST_Response|WP_Error REST response with success status, or error if not found.
      */
     public function delete_adobe_font_endpoint($request) {
         $id = sanitize_key($request->get_param('id'));
@@ -1755,6 +1797,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Update Adobe Font fallback
+     *
+     * Updates the fallback fonts for an Adobe Fonts project.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter and 'fallbacks' in body.
+     * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
      */
     public function update_adobe_font_fallback_endpoint($request) {
         $id = sanitize_key($request->get_param('id'));
@@ -1787,6 +1836,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Update font fallback (uploaded fonts)
+     *
+     * Updates the fallback fonts for an uploaded custom font kit.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter and 'fallbacks' in body.
+     * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
      */
     public function update_font_fallback_endpoint($request) {
         $id = sanitize_key($request->get_param('id'));
@@ -1819,6 +1875,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Get manual fonts
+     *
+     * Returns all manually configured custom fonts (non-uploaded, non-Adobe).
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request The REST request object.
+     * @return WP_REST_Response REST response containing array of manual fonts.
      */
     public function get_manual_fonts_endpoint($request) {
         return rest_ensure_response($this->get_manual_fonts());
@@ -1826,6 +1889,14 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Add manual font
+     *
+     * Adds a manually configured custom font by specifying name and CSS font-family value.
+     * Used for fonts loaded elsewhere (theme, other plugins) that support OpenType features.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'name', 'font_family', and optional 'fallbacks' params.
+     * @return WP_REST_Response|WP_Error REST response with success status and font data, or error.
      */
     public function add_manual_font_endpoint($request) {
         $params = $request->get_json_params();
@@ -1857,6 +1928,13 @@ class OpenType_Stylist {
 
     /**
      * REST endpoint: Delete manual font
+     *
+     * Removes a manually configured custom font from the plugin configuration.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter.
+     * @return WP_REST_Response|WP_Error REST response with success status, or error if not found.
      */
     public function delete_manual_font_endpoint($request) {
         $id = sanitize_key($request->get_param('id'));
@@ -1883,6 +1961,13 @@ class OpenType_Stylist {
 
     /**
      * Enqueue Adobe Fonts scripts in editor and frontend
+     *
+     * Loads Adobe Fonts (Typekit) CSS stylesheets for all configured projects.
+     * Called in both editor and frontend contexts.
+     *
+     * @since 1.1.0
+     *
+     * @return void
      */
     public function enqueue_adobe_fonts() {
         $adobe_fonts = $this->get_adobe_fonts();
@@ -1905,6 +1990,13 @@ class OpenType_Stylist {
 
     /**
      * Render admin page
+     *
+     * Displays the plugin's settings page in the WordPress admin.
+     * Includes presets, font management, and configuration options.
+     *
+     * @since 1.1.0
+     *
+     * @return void
      */
     public function render_admin_page() {
         // Verify user has permission
@@ -1916,7 +2008,16 @@ class OpenType_Stylist {
     }
 }
 
-// Initialize plugin
+/**
+ * Initialize plugin
+ *
+ * Returns the singleton instance of the OpenType_Stylist plugin class.
+ * Called on 'plugins_loaded' hook.
+ *
+ * @since 1.0.0
+ *
+ * @return OpenType_Stylist The plugin instance.
+ */
 function ots_init() {
     return OpenType_Stylist::get_instance();
 }

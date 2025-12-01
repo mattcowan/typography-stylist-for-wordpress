@@ -754,3 +754,195 @@ msgstr "Annuler"
 #: assets/js/block-editor.js:598
 msgid "Other Features"
 msgstr "Autres Fonctionnalités"
+
+#: assets/js/block-editor.js:588
+msgid "OpenType Stylist"
+msgstr "Styliste OpenType"
+
+#: assets/js/block-editor.js:345
+msgid "For better accessibility, select complete words or phrases rather than partial words."
+msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou des phrases complètes plutôt que des mots partiels."
+
+#: assets/js/block-editor.js:832
+msgid "Convert to OpenType Stylist Block"
+msgstr "Convertir en Bloc Styliste OpenType"
+
+#: assets/js/block-editor.js:842
+msgid "Apply Anyway"
+msgstr "Appliquer Quand Même"
+
+#: assets/js/block-editor.js:470
+msgid "Font Weight"
+msgstr "Graisse de Police"
+
+#: assets/js/block-editor.js:605
+msgid "100 - Thin"
+msgstr "100 - Fine"
+
+#: assets/js/block-editor.js:606
+msgid "200 - Extra Light"
+msgstr "200 - Extra Légère"
+
+#: assets/js/block-editor.js:607
+msgid "300 - Light"
+msgstr "300 - Légère"
+
+#: assets/js/block-editor.js:608
+msgid "400 - Normal"
+msgstr "400 - Normale"
+
+#: assets/js/block-editor.js:609
+msgid "500 - Medium"
+msgstr "500 - Moyenne"
+
+#: assets/js/block-editor.js:610
+msgid "600 - Semi Bold"
+msgstr "600 - Semi Gras"
+
+#: assets/js/block-editor.js:611
+msgid "700 - Bold"
+msgstr "700 - Gras"
+
+#: assets/js/block-editor.js:612
+msgid "800 - Extra Bold"
+msgstr "800 - Extra Gras"
+
+#: assets/js/block-editor.js:613
+msgid "900 - Black"
+msgstr "900 - Noir"
+
+#: assets/js/block-editor.js:622
+msgid "Letter Spacing"
+msgstr "Espacement des Lettres"
+
+#: assets/js/block-editor.js:628
+msgid "Normal"
+msgstr "Normal"
+
+#: assets/js/block-editor.js:548
+msgid "Mobile"
+msgstr "Mobile"
+
+#: assets/js/block-editor.js:555
+msgid "Tablet"
+msgstr "Tablette"
+
+#: assets/js/block-editor.js:562
+msgid "Desktop"
+msgstr "Bureau"
+
+#: includes/admin-page.php:86
+msgid "Accessibility"
+msgstr "Accessibilité"
+
+#: includes/admin-page.php:825
+msgid "Accessibility Settings"
+msgstr "Paramètres d'Accessibilité"
+
+#: includes/admin-page.php:826
+msgid "Configure screen reader support for inline typography features."
+msgstr "Configurer le support des lecteurs d'écran pour les fonctionnalités typographiques en ligne."
+
+#: includes/admin-page.php:836
+msgid "Screen Reader Support"
+msgstr "Support des Lecteurs d'Écran"
+
+#: includes/admin-page.php:848
+msgid "Add aria-label attributes to styled text"
+msgstr "Ajouter des attributs aria-label au texte stylisé"
+
+#: includes/admin-page.php:851
+msgid "When enabled, inline formatted text will include aria-label attributes containing the original text for better screen reader accessibility."
+msgstr "Lorsqu'activé, le texte formaté en ligne inclura des attributs aria-label contenant le texte original pour une meilleure accessibilité des lecteurs d'écran."
+
+#: includes/admin-page.php:860
+msgid "Save Accessibility Settings"
+msgstr "Enregistrer les Paramètres d'Accessibilité"
+
+#: includes/admin-page.php:866
+msgid "Accessibility Best Practices"
+msgstr "Meilleures Pratiques d'Accessibilité"
+
+#: includes/admin-page.php:868
+msgid "For complex typography with partial word styling, use the OpenType Stylist block instead of inline formats."
+msgstr "Pour une typographie complexe avec stylisation de mots partiels, utilisez le bloc Styliste OpenType au lieu des formats en ligne."
+
+#: includes/admin-page.php:869
+msgid "Always select complete words or phrases when applying inline formats to avoid fragmenting text for screen readers."
+msgstr "Sélectionnez toujours des mots ou des phrases complètes lors de l'application de formats en ligne pour éviter de fragmenter le texte pour les lecteurs d'écran."
+
+#: includes/admin-page.php:870
+msgid "Test your styled headings with screen readers like NVDA (Windows) or VoiceOver (macOS) to ensure they read correctly."
+msgstr "Testez vos titres stylisés avec des lecteurs d'écran comme NVDA (Windows) ou VoiceOver (macOS) pour vous assurer qu'ils se lisent correctement."
+
+#: includes/admin-page.php:871
+msgid "The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block."
+msgstr "Le plugin vous avertira si vous tentez d'appliquer une mise en forme à des mots partiels et proposera de convertir en bloc accessible."
+
+#: includes/admin-page.php:44
+msgid "Accessibility settings saved successfully."
+msgstr "Paramètres d'accessibilité enregistrés avec succès."
+
+#: blocks/opentype-stylist/edit.js:5
+msgid "Add text with advanced typography..."
+msgstr "Ajouter du texte avec typographie avancée..."
+
+#: blocks/opentype-stylist/edit.js:156
+msgid "Change heading level"
+msgstr "Changer le niveau de titre"
+
+#: blocks/opentype-stylist/edit.js:159
+msgid "Heading 1"
+msgstr "Titre 1"
+
+#: blocks/opentype-stylist/edit.js:164
+msgid "Heading 2"
+msgstr "Titre 2"
+
+#: blocks/opentype-stylist/edit.js:169
+msgid "Heading 3"
+msgstr "Titre 3"
+
+#: blocks/opentype-stylist/edit.js:174
+msgid "Heading 4"
+msgstr "Titre 4"
+
+#: blocks/opentype-stylist/edit.js:179
+msgid "Heading 5"
+msgstr "Titre 5"
+
+#: blocks/opentype-stylist/edit.js:184
+msgid "Heading 6"
+msgstr "Titre 6"
+
+#: blocks/opentype-stylist/edit.js:189
+msgid "Paragraph"
+msgstr "Paragraphe"
+
+#: blocks/opentype-stylist/edit.js:194
+msgid "Div"
+msgstr "Div"
+
+#: blocks/opentype-stylist/edit.js:295
+msgid "OpenType Features"
+msgstr "Fonctionnalités OpenType"
+
+#: blocks/opentype-stylist/edit.js:310
+msgid "Screen Reader Class"
+msgstr "Classe de Lecteur d'Écran"
+
+#: blocks/opentype-stylist/edit.js:318
+msgid "Custom"
+msgstr "Personnalisé"
+
+#: blocks/opentype-stylist/edit.js:325
+msgid "Custom Class Name"
+msgstr "Nom de Classe Personnalisé"
+
+#: blocks/opentype-stylist/edit.js:328
+msgid "Enter your theme's screen reader class"
+msgstr "Entrez la classe de lecteur d'écran de votre thème"
+
+#: blocks/opentype-stylist/edit.js:332
+msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
+msgstr "La classe sélectionnée sera utilisée pour masquer le texte dupliqué pour les lecteurs d'écran. Assurez-vous que cette classe est définie dans votre thème."

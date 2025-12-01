@@ -410,3 +410,43 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* Accessibility Warning */
+.ots-accessibility-warning {
+    padding: 16px 20px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    margin: 16px 20px;
+}
+
+.ots-warning-message {
+    font-size: 13px;
+    color: #856404;
+    margin: 0 0 12px 0;
+    line-height: 1.5;
+}
+
+.ots-accessibility-warning .components-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.ots-accessibility-warning .components-button {
+    width: 100%;
+    justify-content: center;
+    min-height: 36px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .ots-accessibility-warning {
+        background: #3d3000;
+        border-color: #ffc107;
+    }
+
+    .ots-warning-message {
+        color: #ffecb3;
+    }
+}

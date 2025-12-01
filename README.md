@@ -1,10 +1,11 @@
 # OpenType Stylist
 
-A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview.
+A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection, live preview, and comprehensive accessibility support.
 
-![WordPress Plugin Version](https://img.shields.io/badge/version-1.1.0-blue)
+![WordPress Plugin Version](https://img.shields.io/badge/version-1.2.0-blue)
 ![WordPress Compatibility](https://img.shields.io/badge/wordpress-5.8%2B-green)
 ![PHP Version](https://img.shields.io/badge/php-7.4%2B-purple)
+![Accessibility](https://img.shields.io/badge/WCAG-2.1%20AA-green)
 
 ## Features
 
@@ -19,12 +20,22 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Live preview before applying changes
 - Organized feature categories
 - Visual popover interface
+- Custom "O" icon for easy identification
 
 ### 🚀 Performance & Compatibility
 - Native CSS font-feature-settings (no frontend JavaScript)
 - Works with Gutenberg block editor
 - Compatible with all modern browsers
 - Optimized for script and display fonts
+
+### ♿ Accessibility Features (NEW in 1.2.0)
+- **WCAG 2.1 Level AA Compliant**: Full accessibility support for screen readers
+- **Smart Selection Warnings**: Detects partial word selections that could fragment text
+- **OpenType Stylist Block**: Custom block with proper ARIA markup and semantic HTML
+- **ARIA Label Support**: Optional aria-label attributes for inline formatted text
+- **Screen Reader Classes**: Configurable classes (visually-hidden, sr-only, custom)
+- **One-Click Conversion**: Convert inline formats to accessible blocks
+- **Best Practices Guide**: Built-in accessibility documentation and recommendations
 
 ### 📦 Font Management
 - **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
@@ -126,13 +137,40 @@ font-family: 'Playfair Display', Georgia, serif;
 
 ### Applying Typography Features
 
+#### Method 1: Inline Format (for complete words/phrases)
+
 1. **Create a heading block** in the WordPress editor (H1-H6)
 2. **Type your headline** text
-3. **Select the text** you want to style
-4. **Click the Typography Features button** in the toolbar (decorative "A" icon)
+3. **Select the text** you want to style (complete words or phrases)
+4. **Click the OpenType Stylist button** in the toolbar (circle "O" icon)
 5. **Choose a preset** or toggle individual features
 6. **Preview** your changes in real-time
 7. **Click Apply** to save
+
+**Note:** If you select partial words, you'll see an accessibility warning with options to:
+- Convert to an accessible OpenType Stylist block
+- Apply anyway (not recommended)
+- Cancel
+
+#### Method 2: OpenType Stylist Block (for complex typography)
+
+1. **Add an OpenType Stylist block** from the block inserter
+2. **Select the heading level** (H1-H6, P, or DIV) from the toolbar
+3. **Type your text** directly in the block
+4. **Configure features** in the sidebar Inspector Controls:
+   - Font family
+   - Font weight
+   - Letter spacing
+   - Font size (static or responsive/fluid)
+   - OpenType features by category
+   - Screen reader class
+5. **Preview** changes in real-time in the editor
+
+**Accessibility Benefits:**
+- Proper semantic HTML structure
+- Screen reader-friendly markup with duplicate content
+- Configurable sr-only classes
+- ARIA hidden attributes for visual-only content
 
 ### Recommended Fonts
 
@@ -254,6 +292,45 @@ Yes, this plugin requires fonts that support OpenType features. Most premium scr
 - Connect Adobe Fonts (Typekit) projects
 - Use any font loaded via @font-face in your theme
 
+### Is this plugin accessible?
+
+**Yes!** Version 1.2.0 introduces comprehensive accessibility features:
+
+**For Inline Formats:**
+- Smart validation warns when partial word selections could fragment text
+- Optional aria-label support (configurable in Settings → Accessibility)
+- One-click conversion to accessible block format
+
+**For OpenType Stylist Block:**
+- Dual content approach: clean text for screen readers, styled text for visual display
+- Proper ARIA markup with `aria-hidden="true"` on styled content
+- Configurable screen reader classes (visually-hidden, sr-only, custom)
+- Full WCAG 2.1 Level AA compliance
+- Semantic HTML with selectable tag types (H1-H6, P, DIV)
+
+**Best Practices:**
+- Use inline format for simple, complete word/phrase styling
+- Use OpenType Stylist block for complex or letter-by-letter typography
+- Test with screen readers like NVDA (Windows) or VoiceOver (macOS)
+
+### How does the OpenType Stylist block ensure accessibility?
+
+The block creates two versions of your content:
+
+```html
+<div class="wp-block-opentype-stylist">
+  <!-- For screen readers -->
+  <span class="visually-hidden">Beautiful Typography</span>
+
+  <!-- For visual display -->
+  <h2 class="ots-styled" aria-hidden="true">
+    [Styled content with OpenType features]
+  </h2>
+</div>
+```
+
+Screen readers read the clean, unformatted text while sighted users see the beautifully styled version.
+
 ### How do I know if a font supports OpenType features?
 
 Check the font's documentation or specimen from the foundry. You can also use the plugin to experiment - features that aren't supported simply won't affect the text.
@@ -285,14 +362,65 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 
 No. The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. There's no JavaScript on the frontend. Font loading is optimized to only load fonts used on the current page.
 
+## Changelog
+
+### Version 1.2.0 (Latest)
+
+**Accessibility Enhancements:**
+- ✨ Added comprehensive accessibility features for WCAG 2.1 Level AA compliance
+- ✨ Added OpenType Stylist custom block with proper ARIA support
+- ✨ Added smart selection validation with warnings for partial word selections
+- ✨ Added one-click conversion from inline format to accessible block
+- ✨ Added optional aria-label support for inline formatted text
+- ✨ Added Accessibility settings tab with screen reader configuration
+- ✨ Added screen reader class options (visually-hidden, sr-only, custom)
+- ✨ Added accessibility best practices documentation
+
+**UI/UX Improvements:**
+- 🎨 Updated toolbar button from "A" icon to custom "O" circle icon
+- 🎨 Changed all UI text from "Typography Features" to "OpenType Stylist" for consistency
+- 🌍 Updated Spanish (es_ES) translations for all new features
+- 🌍 Updated French (fr_FR) translations for all new features
+
+**Technical Improvements:**
+- 🔧 Fixed block conversion to use proper WordPress block editor API
+- 🔧 Improved error handling for block insertion
+- 📦 Added new custom block with JSX/React components
+- 📦 Integrated @wordpress/scripts build process
+
+### Version 1.1.0
+
+**Font Management:**
+- Added custom font definitions for fonts loaded through themes, plugins, or CDN
+- Added font fallback support for all font sources
+- Added manual fonts section in Custom Fonts tab
+- Added REST API endpoints for font management
+
 ## Development
 
 ### Prerequisites
 
 - WordPress 5.8 or higher
 - PHP 7.4 or higher
+- Node.js 14+ (for building the custom block)
 
-The plugin works as-is without build tools. Optionally, run `npm install && npm run build` to minify assets, or `npm run watch` for development with automatic rebuilding.
+### Building the Plugin
+
+```bash
+# Install dependencies
+npm install
+
+# Build everything (block + minified assets)
+npm run build
+
+# Build only the custom block
+npm run build:block
+
+# Development mode with auto-rebuild
+npm run watch
+```
+
+The plugin works as-is without build tools for the inline format. The OpenType Stylist block requires building with `npm run build:block`.
 
 ### Extending the Plugin
 
