@@ -326,6 +326,14 @@
                 return { valid: true };
             }
 
+            // Check if we're inside an OpenType Stylist block
+            const { select } = wp.data;
+            const selectedBlock = select('core/block-editor').getSelectedBlock();
+            if (selectedBlock && selectedBlock.name === 'opentype-stylist/block') {
+                // Skip validation - OpenType Stylist block already has proper accessibility
+                return { valid: true };
+            }
+
             // Get the full text and selection
             const fullText = getTextContent(value);
             const { start, end } = value;
@@ -345,7 +353,7 @@
             if (breaksWordStart || breaksWordEnd) {
                 return {
                     valid: false,
-                    message: __('For better accessibility, select complete words or phrases rather than partial words.', 'opentype-stylist')
+                    message: __('For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words.', 'opentype-stylist')
                 };
             }
 

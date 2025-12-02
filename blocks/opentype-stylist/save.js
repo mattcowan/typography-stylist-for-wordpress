@@ -78,6 +78,7 @@ export default function save({ attributes }) {
 				style={styleObj}
 				className="ots-styled"
 				aria-hidden="true"
+				data-font={fontFamily || undefined}
 			/>
 		</div>
 	);

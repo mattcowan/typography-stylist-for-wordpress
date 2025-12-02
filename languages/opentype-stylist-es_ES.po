@@ -759,9 +759,9 @@ msgstr "Otras Características"
 msgid "OpenType Stylist"
 msgstr "Estilista OpenType"
 
-#: assets/js/block-editor.js:345
-msgid "For better accessibility, select complete words or phrases rather than partial words."
-msgstr "Para mejor accesibilidad, selecciona palabras o frases completas en lugar de palabras parciales."
+#: assets/js/block-editor.js:356
+msgid "For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words."
+msgstr "Para mejor accesibilidad, selecciona palabras o frases completas. O conviértelo a un bloque Estilista OpenType para estilizar palabras parciales de forma accesible."
 
 #: assets/js/block-editor.js:832
 msgid "Convert to OpenType Stylist Block"

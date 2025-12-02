@@ -224,20 +224,48 @@ class OpenType_Stylist {
         if (false === $used_fonts) {
             $used_fonts = array();
 
-            // Check both raw content and rendered content (for Gutenberg blocks)
+            // Method 1: Parse block attributes directly (most reliable)
+            $blocks = parse_blocks($post->post_content);
+            $this->extract_fonts_from_blocks($blocks, $used_fonts);
+
+            // Method 2: Look for data-font attributes in HTML (for inline formats and backward compatibility)
             $raw_content = $post->post_content;
             $rendered_content = apply_filters('the_content', $raw_content);
-
-            // Look for data-font attributes in both raw and rendered content
             $content_to_check = $raw_content . ' ' . $rendered_content;
+
             if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
-                $used_fonts = array_unique($matches[1]);
+                $used_fonts = array_merge($used_fonts, $matches[1]);
             }
+
+            // Remove duplicates and empty values
+            $used_fonts = array_filter(array_unique($used_fonts));
 
             set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
         }
 
         return $used_fonts;
+    }
+
+    /**
+     * Recursively extract fontFamily from OpenType Stylist blocks
+     *
+     * @param array $blocks Array of parsed blocks
+     * @param array &$fonts Array to collect font families (passed by reference)
+     */
+    private function extract_fonts_from_blocks($blocks, &$fonts) {
+        foreach ($blocks as $block) {
+            // Check if this is an OpenType Stylist block with a fontFamily attribute
+            if ($block['blockName'] === 'opentype-stylist/block' &&
+                isset($block['attrs']['fontFamily']) &&
+                !empty($block['attrs']['fontFamily'])) {
+                $fonts[] = $block['attrs']['fontFamily'];
+            }
+
+            // Recursively check inner blocks
+            if (!empty($block['innerBlocks'])) {
+                $this->extract_fonts_from_blocks($block['innerBlocks'], $fonts);
+            }
+        }
     }
 
     /**
@@ -296,6 +324,22 @@ class OpenType_Stylist {
             return;
         }
 
+        // Parse font families from CSS font-family values (which may include fallbacks)
+        // E.g., "My Font, Arial, sans-serif" -> ["My Font", "Arial", "sans-serif"]
+        $parsed_font_families = array();
+        foreach ($used_font_families as $font_family_value) {
+            // Split by comma and trim each part
+            $families = array_map('trim', explode(',', $font_family_value));
+            foreach ($families as $family) {
+                // Remove quotes if present
+                $family = trim($family, '"\'');
+                if (!empty($family)) {
+                    $parsed_font_families[] = $family;
+                }
+            }
+        }
+        $parsed_font_families = array_unique($parsed_font_families);
+
         // Build cache key based on used fonts
         $cache_key = 'ots_font_css_' . md5(serialize($used_font_families));
         $combined_css = get_transient($cache_key);
@@ -309,7 +353,7 @@ class OpenType_Stylist {
                     // Check if any face from this font kit is used
                     $font_is_used = false;
                     foreach ($font['font_faces'] as $face) {
-                        if (in_array($face['family'], $used_font_families)) {
+                        if (in_array($face['family'], $parsed_font_families)) {
                             $font_is_used = true;
                             break;
                         }
