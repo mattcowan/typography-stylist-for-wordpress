@@ -177,73 +177,150 @@ class OpenType_Stylist {
     }
 
     /**
-     * Check if current post has styled content
+     * Check if current page has styled content
+     * Works for both singular posts and archive pages with multiple posts
      */
     private function has_styled_content() {
-        global $post;
+        global $wp_query;
 
-        if (!is_singular() || !isset($post->ID)) {
-            return false;
+        if (is_singular()) {
+            // Single post/page - check just this post
+            global $post;
+            if (!isset($post->ID)) {
+                return false;
+            }
+
+            // Cache the result per post
+            $cache_key = 'ots_has_styled_' . $post->ID;
+            $has_styled = get_transient($cache_key);
+
+            if (false === $has_styled) {
+                // Check both raw content and rendered content (for Gutenberg blocks)
+                $raw_content = $post->post_content;
+
+                // Apply content filters to render Gutenberg blocks
+                $rendered_content = apply_filters('the_content', $raw_content);
+
+                // Check if ots-styled class exists in either raw or rendered content
+                $has_styled = (strpos($raw_content, 'ots-styled') !== false ||
+                              strpos($rendered_content, 'ots-styled') !== false) ? 'yes' : 'no';
+
+                set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
+            }
+
+            return $has_styled === 'yes';
+        } else {
+            // Archive page - check all posts in the loop
+            if (empty($wp_query->posts)) {
+                return false;
+            }
+
+            // Build cache key from all post IDs on this page
+            $post_ids = wp_list_pluck($wp_query->posts, 'ID');
+            $cache_key = 'ots_has_styled_archive_' . md5(serialize($post_ids));
+            $has_styled = get_transient($cache_key);
+
+            if (false === $has_styled) {
+                $has_styled = 'no';
+
+                // Check each post in the loop
+                foreach ($wp_query->posts as $loop_post) {
+                    $raw_content = $loop_post->post_content;
+                    $rendered_content = apply_filters('the_content', $raw_content);
+
+                    if (strpos($raw_content, 'ots-styled') !== false ||
+                        strpos($rendered_content, 'ots-styled') !== false) {
+                        $has_styled = 'yes';
+                        break; // Found styled content, no need to check more
+                    }
+                }
+
+                set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
+            }
+
+            return $has_styled === 'yes';
         }
-
-        // Cache the result per post
-        $cache_key = 'ots_has_styled_' . $post->ID;
-        $has_styled = get_transient($cache_key);
-
-        if (false === $has_styled) {
-            // Check both raw content and rendered content (for Gutenberg blocks)
-            $raw_content = $post->post_content;
-
-            // Apply content filters to render Gutenberg blocks
-            $rendered_content = apply_filters('the_content', $raw_content);
-
-            // Check if ots-styled class exists in either raw or rendered content
-            $has_styled = (strpos($raw_content, 'ots-styled') !== false ||
-                          strpos($rendered_content, 'ots-styled') !== false) ? 'yes' : 'no';
-
-            set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
-        }
-
-        return $has_styled === 'yes';
     }
 
     /**
-     * Get fonts used in current post content
+     * Get fonts used in current page content
+     * Works for both singular posts and archive pages with multiple posts
      */
     private function get_used_fonts_in_content() {
-        global $post;
+        global $wp_query;
 
-        if (!is_singular() || !isset($post->ID)) {
-            return array();
-        }
-
-        // Cache the result per post
-        $cache_key = 'ots_used_fonts_' . $post->ID;
-        $used_fonts = get_transient($cache_key);
-
-        if (false === $used_fonts) {
-            $used_fonts = array();
-
-            // Method 1: Parse block attributes directly (most reliable)
-            $blocks = parse_blocks($post->post_content);
-            $this->extract_fonts_from_blocks($blocks, $used_fonts);
-
-            // Method 2: Look for data-font attributes in HTML (for inline formats and backward compatibility)
-            $raw_content = $post->post_content;
-            $rendered_content = apply_filters('the_content', $raw_content);
-            $content_to_check = $raw_content . ' ' . $rendered_content;
-
-            if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
-                $used_fonts = array_merge($used_fonts, $matches[1]);
+        if (is_singular()) {
+            // Single post/page - check just this post
+            global $post;
+            if (!isset($post->ID)) {
+                return array();
             }
 
-            // Remove duplicates and empty values
-            $used_fonts = array_filter(array_unique($used_fonts));
+            // Cache the result per post
+            $cache_key = 'ots_used_fonts_' . $post->ID;
+            $used_fonts = get_transient($cache_key);
 
-            set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
+            if (false === $used_fonts) {
+                $used_fonts = array();
+
+                // Method 1: Parse block attributes directly (most reliable)
+                $blocks = parse_blocks($post->post_content);
+                $this->extract_fonts_from_blocks($blocks, $used_fonts);
+
+                // Method 2: Look for data-font attributes in HTML (for inline formats and backward compatibility)
+                $raw_content = $post->post_content;
+                $rendered_content = apply_filters('the_content', $raw_content);
+                $content_to_check = $raw_content . ' ' . $rendered_content;
+
+                if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
+                    $used_fonts = array_merge($used_fonts, $matches[1]);
+                }
+
+                // Remove duplicates and empty values
+                $used_fonts = array_filter(array_unique($used_fonts));
+
+                set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
+            }
+
+            return $used_fonts;
+        } else {
+            // Archive page - check all posts in the loop
+            if (empty($wp_query->posts)) {
+                return array();
+            }
+
+            // Build cache key from all post IDs on this page
+            $post_ids = wp_list_pluck($wp_query->posts, 'ID');
+            $cache_key = 'ots_used_fonts_archive_' . md5(serialize($post_ids));
+            $used_fonts = get_transient($cache_key);
+
+            if (false === $used_fonts) {
+                $used_fonts = array();
+
+                // Check each post in the loop
+                foreach ($wp_query->posts as $loop_post) {
+                    // Method 1: Parse block attributes directly
+                    $blocks = parse_blocks($loop_post->post_content);
+                    $this->extract_fonts_from_blocks($blocks, $used_fonts);
+
+                    // Method 2: Look for data-font attributes in HTML
+                    $raw_content = $loop_post->post_content;
+                    $rendered_content = apply_filters('the_content', $raw_content);
+                    $content_to_check = $raw_content . ' ' . $rendered_content;
+
+                    if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
+                        $used_fonts = array_merge($used_fonts, $matches[1]);
+                    }
+                }
+
+                // Remove duplicates and empty values
+                $used_fonts = array_filter(array_unique($used_fonts));
+
+                set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
+            }
+
+            return $used_fonts;
         }
-
-        return $used_fonts;
     }
 
     /**
