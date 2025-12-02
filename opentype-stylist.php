@@ -886,6 +886,21 @@ class OpenType_Stylist {
             'ss03' => 'AaBbGgQqRr 1234567890',
             'ss04' => 'AaBbGgQqRr 1234567890',
             'ss05' => 'AaBbGgQqRr 1234567890',
+            'ss06' => 'AaBbGgQqRr 1234567890',
+            'ss07' => 'AaBbGgQqRr 1234567890',
+            'ss08' => 'AaBbGgQqRr 1234567890',
+            'ss09' => 'AaBbGgQqRr 1234567890',
+            'ss10' => 'AaBbGgQqRr 1234567890',
+            'ss11' => 'AaBbGgQqRr 1234567890',
+            'ss12' => 'AaBbGgQqRr 1234567890',
+            'ss13' => 'AaBbGgQqRr 1234567890',
+            'ss14' => 'AaBbGgQqRr 1234567890',
+            'ss15' => 'AaBbGgQqRr 1234567890',
+            'ss16' => 'AaBbGgQqRr 1234567890',
+            'ss17' => 'AaBbGgQqRr 1234567890',
+            'ss18' => 'AaBbGgQqRr 1234567890',
+            'ss19' => 'AaBbGgQqRr 1234567890',
+            'ss20' => 'AaBbGgQqRr 1234567890',
 
             // Swashes & Alternates
             'swsh' => 'Elegant Flourish',
@@ -949,6 +964,96 @@ class OpenType_Stylist {
                 array(
                     'id' => 'ss05',
                     'name' => esc_html__('Stylistic Set 5', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss06',
+                    'name' => esc_html__('Stylistic Set 6', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss07',
+                    'name' => esc_html__('Stylistic Set 7', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss08',
+                    'name' => esc_html__('Stylistic Set 8', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss09',
+                    'name' => esc_html__('Stylistic Set 9', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss10',
+                    'name' => esc_html__('Stylistic Set 10', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss11',
+                    'name' => esc_html__('Stylistic Set 11', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss12',
+                    'name' => esc_html__('Stylistic Set 12', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss13',
+                    'name' => esc_html__('Stylistic Set 13', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss14',
+                    'name' => esc_html__('Stylistic Set 14', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss15',
+                    'name' => esc_html__('Stylistic Set 15', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss16',
+                    'name' => esc_html__('Stylistic Set 16', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss17',
+                    'name' => esc_html__('Stylistic Set 17', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss18',
+                    'name' => esc_html__('Stylistic Set 18', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss19',
+                    'name' => esc_html__('Stylistic Set 19', 'opentype-stylist'),
+                    'category' => 'stylistic-sets',
+                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                ),
+                array(
+                    'id' => 'ss20',
+                    'name' => esc_html__('Stylistic Set 20', 'opentype-stylist'),
                     'category' => 'stylistic-sets',
                     'description' => esc_html__('Alternate character designs', 'opentype-stylist')
                 ),

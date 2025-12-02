@@ -219,6 +219,16 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // Auto-select first non-system font on page load
+    var $fontSelect = $('#ots-preview-font-select');
+    if ($fontSelect.length && $fontSelect.find('option').length > 1) {
+        // Get first option that's not the default (empty value)
+        var $firstFont = $fontSelect.find('option:not([value=""])').first();
+        if ($firstFont.length) {
+            $fontSelect.val($firstFont.val()).trigger('change');
+        }
+    }
+
     // Preview size slider
     $('#ots-preview-size-slider').on('input', function() {
         var size = $(this).val();

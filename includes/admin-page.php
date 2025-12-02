@@ -222,8 +222,10 @@ $manual_fonts = $instance->get_manual_fonts();
             ?>
 
             <?php foreach ($grouped_features as $category => $features): ?>
-            <div class="ots-feature-category-section">
-                <h3><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></h3>
+            <details <?php echo $category === 'ligatures' ? 'open' : ''; ?> class="ots-feature-category-section">
+                <summary class="ots-feature-category-summary">
+                    <h3><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></h3>
+                </summary>
 
                 <div class="ots-feature-demos-grid">
                     <?php foreach ($features as $feature): ?>
@@ -254,7 +256,7 @@ $manual_fonts = $instance->get_manual_fonts();
                     </div>
                     <?php endforeach; ?>
                 </div>
-            </div>
+            </details>
             <?php endforeach; ?>
 
             <?php if (!empty($presets)): ?>
@@ -767,7 +769,7 @@ $manual_fonts = $instance->get_manual_fonts();
                             </tr>
                         </thead>
                         <tbody>
-                            <?php for ($i = 1; $i <= 5; $i++): ?>
+                            <?php for ($i = 1; $i <= 20; $i++): ?>
                             <tr>
                                 <th scope="row"><code lang="en">ss<?php echo esc_html(str_pad($i, 2, '0', STR_PAD_LEFT)); ?></code></th>
                                 <?php /* translators: %d: The stylistic set number (1-20) */ ?>
@@ -775,9 +777,6 @@ $manual_fonts = $instance->get_manual_fonts();
                                 <td><?php esc_html_e('Alternate character designs (font-specific)', 'opentype-stylist'); ?></td>
                             </tr>
                             <?php endfor; ?>
-                            <tr>
-                                <td colspan="3"><em><?php esc_html_e('...and ss06 through ss20', 'opentype-stylist'); ?></em></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
