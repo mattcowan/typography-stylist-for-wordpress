@@ -216,49 +216,41 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.2.0 =
-* Added: Comprehensive accessibility features for WCAG 2.1 Level AA compliance
-* Added: OpenType Stylist custom block for complex typography with proper ARIA support
-* Added: Smart selection validation with warnings for partial word selections
-* Added: One-click conversion from inline format to accessible block
-* Added: Optional aria-label support for inline formatted text
-* Added: Accessibility settings tab with screen reader configuration
-* Added: Screen reader class options (visually-hidden, sr-only, custom)
-* Added: Accessibility best practices documentation
-* Updated: Toolbar button changed from "A" icon to custom "O" circle icon
-* Updated: All UI text changed from "Typography Features" to "OpenType Stylist" for consistency
-* Updated: Spanish (es_ES) translations for new features
-* Updated: French (fr_FR) translations for new features
-* Fixed: Block conversion now uses proper WordPress block editor API
-
-= 1.1.0 =
-* Added: Custom font definitions for fonts loaded through themes, plugins, or CDN
-* Added: Font fallback support for all font sources (uploaded, Adobe, custom)
-* Added: Manual fonts section in Custom Fonts tab
-* Added: REST API endpoints for manual fonts and fallback management
-* Enhanced: Font selector now shows organized optgroups for different font sources
-* Enhanced: Better font organization with separate sections for each source type
-* Improved: Documentation for custom fonts and fallbacks
-
 = 1.0.0 =
-* Initial release
-* Support for ligatures, stylistic sets, swashes, and alternates
-* Quick presets for common typography styles
-* Live preview functionality
-* REST API for preset management
-* Admin settings page
-* Custom font upload system (MyFonts, Fontspring, etc.)
-* Adobe Fonts (Typekit) integration
-* Font preview system with size controls
-* Secure font file handling and storage
+* Accessibility Features: WCAG 2.1 Level AA compliance with screen reader support
+* Accessibility: OpenType Stylist custom block with proper ARIA markup
+* Accessibility: Smart selection validation with warnings for partial word selections
+* Accessibility: One-click conversion from inline format to accessible block
+* Accessibility: Optional aria-label support for inline formatted text
+* Accessibility: Screen reader configuration with visually-hidden, sr-only, and custom classes
+* Accessibility: Best practices documentation
+* Font Management: Upload custom fonts from webfont kits (MyFonts, Fontspring, etc.)
+* Font Management: Adobe Fonts (Typekit) integration with embed code support
+* Font Management: Custom font definitions for theme/plugin/CDN fonts
+* Font Management: Font fallback support for all font sources
+* Font Management: Secure file handling with .htaccess protection
+* Font Management: Font preview system with size controls
+* Typography: Ligatures (liga, dlig, calt)
+* Typography: Stylistic Sets (ss01-ss20)
+* Typography: Swashes (swsh, cswh) and alternates (salt, titl, ornm)
+* Typography: Quick presets and custom preset save functionality
+* UI/UX: Inline text selection in block editor
+* UI/UX: Live preview before applying changes
+* UI/UX: Visual popover interface with organized categories
+* UI/UX: Custom "O" circle icon
+* UI/UX: Spanish (es_ES) and French (fr_FR) translations
+* Technical: Native CSS font-feature-settings (no frontend JavaScript)
+* Technical: WordPress block editor API integration
+* Technical: REST API endpoints for all features
+* Technical: Custom block with JSX/React components
+* Technical: @wordpress/scripts build process
+* Technical: Performance optimization with transient caching
+* Technical: Rate limiting on REST API endpoints
 
 == Upgrade Notice ==
 
-= 1.1.0 =
-New features: Define custom fonts from your theme and set font fallbacks for better browser compatibility.
-
 = 1.0.0 =
-Initial release of OpenType Stylist.
+Initial release of OpenType Stylist with comprehensive accessibility features, font management, and advanced OpenType typography controls.
 
 == Technical Details ==
 

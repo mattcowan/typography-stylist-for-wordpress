@@ -2,7 +2,7 @@
 
 A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection, live preview, and comprehensive accessibility support.
 
-![WordPress Plugin Version](https://img.shields.io/badge/version-1.2.0-blue)
+![WordPress Plugin Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![WordPress Compatibility](https://img.shields.io/badge/wordpress-5.8%2B-green)
 ![PHP Version](https://img.shields.io/badge/php-7.4%2B-purple)
 ![Accessibility](https://img.shields.io/badge/WCAG-2.1%20AA-green)
@@ -364,37 +364,49 @@ No. The plugin uses native CSS `font-feature-settings` which is hardware-acceler
 
 ## Changelog
 
-### Version 1.2.0 (Latest)
+### Version 1.0.0
 
-**Accessibility Enhancements:**
-- ✨ Added comprehensive accessibility features for WCAG 2.1 Level AA compliance
-- ✨ Added OpenType Stylist custom block with proper ARIA support
-- ✨ Added smart selection validation with warnings for partial word selections
-- ✨ Added one-click conversion from inline format to accessible block
-- ✨ Added optional aria-label support for inline formatted text
-- ✨ Added Accessibility settings tab with screen reader configuration
-- ✨ Added screen reader class options (visually-hidden, sr-only, custom)
-- ✨ Added accessibility best practices documentation
-
-**UI/UX Improvements:**
-- 🎨 Updated toolbar button from "A" icon to custom "O" circle icon
-- 🎨 Changed all UI text from "Typography Features" to "OpenType Stylist" for consistency
-- 🌍 Updated Spanish (es_ES) translations for all new features
-- 🌍 Updated French (fr_FR) translations for all new features
-
-**Technical Improvements:**
-- 🔧 Fixed block conversion to use proper WordPress block editor API
-- 🔧 Improved error handling for block insertion
-- 📦 Added new custom block with JSX/React components
-- 📦 Integrated @wordpress/scripts build process
-
-### Version 1.1.0
+**Accessibility Features:**
+- ✨ Comprehensive accessibility features for WCAG 2.1 Level AA compliance
+- ✨ OpenType Stylist custom block with proper ARIA support
+- ✨ Smart selection validation with warnings for partial word selections
+- ✨ One-click conversion from inline format to accessible block
+- ✨ Optional aria-label support for inline formatted text
+- ✨ Accessibility settings tab with screen reader configuration
+- ✨ Screen reader class options (visually-hidden, sr-only, custom)
+- ✨ Accessibility best practices documentation
 
 **Font Management:**
-- Added custom font definitions for fonts loaded through themes, plugins, or CDN
-- Added font fallback support for all font sources
-- Added manual fonts section in Custom Fonts tab
-- Added REST API endpoints for font management
+- 📦 Upload custom fonts from webfont kits (MyFonts, Fontspring, etc.)
+- 📦 Adobe Fonts (Typekit) integration with embed code support
+- 📦 Custom font definitions for fonts loaded through themes, plugins, or CDN
+- 📦 Font fallback support for all font sources
+- 📦 Secure font file handling and storage with .htaccess protection
+- 📦 Font preview system with size controls
+
+**Core Typography Features:**
+- 🎨 Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
+- 🎨 Stylistic Sets: ss01 through ss20
+- 🎨 Swashes: Regular (swsh) and Contextual (cswh)
+- 🎨 Alternates: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
+- 🎨 Quick presets for common typography styles
+- 🎨 Custom presets with save functionality
+
+**UI/UX:**
+- ✨ Inline text selection in block editor
+- ✨ Live preview before applying changes
+- ✨ Visual popover interface with organized feature categories
+- ✨ Custom "O" circle icon for easy identification
+- 🌍 Spanish (es_ES) and French (fr_FR) translations
+
+**Technical:**
+- 🔧 Native CSS font-feature-settings (no frontend JavaScript)
+- 🔧 WordPress block editor API integration
+- 🔧 REST API endpoints for all plugin features
+- 🔧 Custom block with JSX/React components
+- 🔧 Integrated @wordpress/scripts build process
+- 🔧 Performance optimization with transient caching
+- 🔧 Rate limiting on REST API endpoints
 
 ## Development
 

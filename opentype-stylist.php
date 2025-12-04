@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('OTS_VERSION', '1.1.0');
+define('OTS_VERSION', '1.0.0');
 define('OTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OTS_PLUGIN_BASENAME', plugin_basename(__FILE__));
