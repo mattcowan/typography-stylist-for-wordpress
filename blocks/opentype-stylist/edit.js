@@ -18,7 +18,6 @@ import {
 	ToolbarGroup,
 	ToolbarDropdownMenu
 } from '@wordpress/components';
-import { createElement } from '@wordpress/element';
 
 export default function Edit({ attributes, setAttributes }) {
 	const {
