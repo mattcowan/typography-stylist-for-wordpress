@@ -170,7 +170,6 @@
 /* Feature Category Section */
 .ots-feature-category-section {
     margin: 30px 0;
-    padding-bottom: 30px;
     border-bottom: 1px solid #ddd;
 }
 
@@ -178,6 +177,62 @@
     border-bottom: none;
 }
 
+/* Collapsible summary styles */
+.ots-feature-category-summary {
+    cursor: pointer;
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+/* Remove default marker/disclosure triangle */
+.ots-feature-category-summary::-webkit-details-marker,
+.ots-feature-category-summary::marker {
+    display: none;
+}
+
+.ots-feature-category-summary:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 8px;
+}
+
+/* Style the h3 to include the arrow */
+.ots-feature-category-section > summary > h3,
+.ots-feature-category-section > .ots-feature-category-summary > h3 {
+    color: #2271b1;
+    font-size: 18px;
+    margin: 0;
+    padding-bottom: 16px;
+    padding-left: 30px;
+    border-bottom: 2px solid #2271b1;
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Add arrow before h3 */
+.ots-feature-category-section > summary > h3::before,
+.ots-feature-category-section > .ots-feature-category-summary > h3::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: #2271b1;
+    transition: transform 0.2s;
+    display: inline-block;
+    width: 20px;
+}
+
+/* Rotate arrow when open */
+.ots-feature-category-section[open] > summary > h3::before,
+.ots-feature-category-section[open] > .ots-feature-category-summary > h3::before {
+    transform: rotate(90deg);
+}
+
+.ots-feature-category-summary:hover > h3 {
+    opacity: 0.8;
+}
+
+/* Legacy support for non-collapsible sections */
 .ots-feature-category-section > h3 {
     color: #2271b1;
     font-size: 18px;

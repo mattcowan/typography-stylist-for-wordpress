@@ -381,9 +381,6 @@
                 return;
             }
 
-            // Extract text content
-            const textContent = getTextContent(value);
-
             // Determine tag from block name (core/heading, core/paragraph)
             let tagName = 'h2';
             if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
@@ -392,22 +389,79 @@
                 tagName = 'p';
             }
 
-            // Create OpenType Stylist block
-            const otsBlock = createBlock('opentype-stylist/block', {
-                content: textContent,
-                tagName: tagName,
-                features: this.state.selectedFeatures,
-                fontFamily: this.state.selectedFont,
-                fontSize: this.state.fontSize,
-                fontSizeMin: this.state.fontSizeMin,
-                fontSizePreferred: this.state.fontSizePreferred,
-                fontSizeMax: this.state.fontSizeMax,
-                fontWeight: this.state.fontWeight,
-                letterSpacing: this.state.letterSpacing
-            });
+            let contentForBlock;
 
-            // Replace current block
-            dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+            // Check if there's a selection (partial text selected)
+            if (value.start !== value.end) {
+                // User selected a portion of text - apply styling only to that portion
+                const fullText = getTextContent(value);
+                const beforeText = fullText.substring(0, value.start);
+                const selectedText = fullText.substring(value.start, value.end);
+                const afterText = fullText.substring(value.end);
+
+                // Build style string for the selected portion
+                const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+                const styleArray = [];
+
+                if (selectedFeatures.length > 0) {
+                    styleArray.push(`font-feature-settings: ${selectedFeatures.map(f => `"${f}" 1`).join(', ')}`);
+                }
+                if (selectedFont) {
+                    styleArray.push(`font-family: ${selectedFont}`);
+                }
+                if (fontWeight && fontWeight !== '400') {
+                    styleArray.push(`font-weight: ${fontWeight}`);
+                }
+                if (letterSpacing !== 0) {
+                    styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
+                }
+                if (fontSize === 'responsive') {
+                    styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`);
+                }
+
+                const styleString = styleArray.join('; ');
+
+                // Create HTML content with only the selected portion styled
+                contentForBlock = beforeText +
+                    `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
+                    afterText;
+
+                // Create OpenType Stylist block with no global features (only inline styling)
+                const otsBlock = createBlock('opentype-stylist/block', {
+                    content: contentForBlock,
+                    tagName: tagName,
+                    features: [], // No global features
+                    fontFamily: '',
+                    fontSize: 'inherit',
+                    fontSizeMin: 16,
+                    fontSizePreferred: 24,
+                    fontSizeMax: 32,
+                    fontWeight: '400',
+                    letterSpacing: 0
+                });
+
+                // Replace current block
+                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+            } else {
+                // No selection - apply to entire block (original behavior)
+                const textContent = getTextContent(value);
+
+                const otsBlock = createBlock('opentype-stylist/block', {
+                    content: textContent,
+                    tagName: tagName,
+                    features: this.state.selectedFeatures,
+                    fontFamily: this.state.selectedFont,
+                    fontSize: this.state.fontSize,
+                    fontSizeMin: this.state.fontSizeMin,
+                    fontSizePreferred: this.state.fontSizePreferred,
+                    fontSizeMax: this.state.fontSizeMax,
+                    fontWeight: this.state.fontWeight,
+                    letterSpacing: this.state.letterSpacing
+                });
+
+                // Replace current block
+                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+            }
 
             // Close popover
             this.setState({ isOpen: false });
