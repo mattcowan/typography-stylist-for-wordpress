@@ -217,35 +217,36 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.0.0 =
-* Accessibility Features: WCAG 2.1 Level AA compliance with screen reader support
-* Accessibility: OpenType Stylist custom block with proper ARIA markup
-* Accessibility: Smart selection validation with warnings for partial word selections
-* Accessibility: One-click conversion from inline format to accessible block
-* Accessibility: Optional aria-label support for inline formatted text
-* Accessibility: Screen reader configuration with visually-hidden, sr-only, and custom classes
-* Accessibility: Best practices documentation
-* Font Management: Upload custom fonts from webfont kits (MyFonts, Fontspring, etc.)
-* Font Management: Adobe Fonts (Typekit) integration with embed code support
-* Font Management: Custom font definitions for theme/plugin/CDN fonts
-* Font Management: Font fallback support for all font sources
-* Font Management: Secure file handling with .htaccess protection
-* Font Management: Font preview system with size controls
-* Typography: Ligatures (liga, dlig, calt)
-* Typography: Stylistic Sets (ss01-ss20)
-* Typography: Swashes (swsh, cswh) and alternates (salt, titl, ornm)
-* Typography: Quick presets and custom preset save functionality
-* UI/UX: Inline text selection in block editor
-* UI/UX: Live preview before applying changes
-* UI/UX: Visual popover interface with organized categories
-* UI/UX: Custom "O" circle icon
-* UI/UX: Spanish (es_ES) and French (fr_FR) translations
-* Technical: Native CSS font-feature-settings (no frontend JavaScript)
-* Technical: WordPress block editor API integration
-* Technical: REST API endpoints for all features
-* Technical: Custom block with JSX/React components
-* Technical: @wordpress/scripts build process
-* Technical: Performance optimization with transient caching
-* Technical: Rate limiting on REST API endpoints
+* Full WCAG 2.1 Level AA accessibility compliance with comprehensive screen reader support
+* Custom OpenType Stylist block with proper ARIA markup and semantic HTML
+* Smart selection validation warns when partial word selections could fragment text for assistive technology
+* One-click conversion tool transforms inline formats to accessible block structure
+* Configurable aria-label support for inline formatted text
+* Multiple screen reader class options (visually-hidden, sr-only, or custom classes)
+* Built-in accessibility best practices guide and documentation
+* Upload custom font kits from MyFonts, Fontspring, and other webfont providers
+* Direct Adobe Fonts (Typekit) integration via embed code
+* Define fonts already loaded through themes, plugins, or CDN services
+* Comprehensive font fallback system for all font sources
+* Secure font file storage with .htaccess protection against code execution
+* Interactive font preview system with adjustable size controls
+* Complete OpenType feature support: ligatures (liga, dlig, calt)
+* All 20 stylistic sets (ss01-ss20) for maximum typographic flexibility
+* Swashes (swsh, cswh) and alternates (salt, titl, ornm) for decorative typography
+* Quick-apply presets for common typography styles
+* Save custom feature combinations as reusable presets
+* Inline text selection directly within the block editor
+* Real-time live preview shows changes before applying
+* Intuitive popover interface with features organized by category
+* Custom circle "O" icon for easy toolbar identification
+* Internationalization support with Spanish (es_ES) and French (fr_FR) translations
+* Zero-JavaScript frontend using native CSS font-feature-settings
+* Full WordPress block editor (Gutenberg) API integration
+* Complete REST API for programmatic access to all plugin features
+* Modern JSX/React architecture for the custom block
+* WordPress @wordpress/scripts build toolchain integration
+* Performance-optimized with intelligent transient caching
+* Rate-limited REST API endpoints for security (50 requests/minute per user)
 
 == Upgrade Notice ==
 
