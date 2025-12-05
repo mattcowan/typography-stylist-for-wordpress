@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "WordPress plugin for advanced OpenType typography features in Gutenberg headlines",
   "scripts": {
-    "build": "npm run build:js && npm run build:css",
+    "build": "npm run build:block && npm run build:js && npm run build:css",
+    "build:block": "wp-scripts build blocks/opentype-stylist/index.js --output-path=blocks/opentype-stylist/build",
     "build:js": "npm run build:js:editor && npm run build:js:admin",
     "build:js:editor": "babel assets/js/block-editor.js --out-file assets/js/block-editor.min.js",
     "build:js:admin": "terser assets/js/admin-page.js --compress --mangle --output assets/js/admin-page.min.js",
@@ -12,8 +13,8 @@
     "build:css:frontend": "cleancss -o assets/css/frontend.min.css assets/css/frontend.css",
     "build:css:admin": "cleancss -o assets/css/admin-page.min.css assets/css/admin-page.css",
     "watch": "npm run watch:js & npm run watch:css",
-    "watch:js": "nodemon --watch assets/js --ext js --exec \"npm run build:js\"",
-    "watch:css": "nodemon --watch assets/css --ext css --exec \"npm run build:css\"",
+    "watch:js": "nodemon --watch assets/js --ext js --ignore \"*.min.js\" --exec \"npm run build:js\"",
+    "watch:css": "nodemon --watch assets/css --ext css --ignore \"*.min.css\" --exec \"npm run build:css\"",
     "version": "npm run build",
     "package": "npm run build && node scripts/package.js"
   },
@@ -22,6 +23,7 @@
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-react": "^7.28.5",
+    "@wordpress/scripts": "^26.19.0",
     "archiver": "^7.0.1",
     "clean-css-cli": "^5.6.2",
     "nodemon": "^2.0.20",

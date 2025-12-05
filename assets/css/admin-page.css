@@ -3,24 +3,24 @@
  * Headline Ligatures & Styles Plugin
  */
 
-.hls-admin-wrap {
+.ots-admin-wrap {
     max-width: 1200px;
 }
 
-.hls-admin-container {
+.ots-admin-container {
     background: #fff;
     border: 1px solid #ccd0d4;
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
     margin-top: 20px;
 }
 
-.hls-admin-tabs {
+.ots-admin-tabs {
     border-bottom: 1px solid #ccd0d4;
     background: #f6f7f7;
     display: flex;
 }
 
-.hls-tab-button {
+.ots-tab-button {
     background: none;
     border: none;
     padding: 15px 20px;
@@ -31,32 +31,32 @@
     transition: all 0.2s;
 }
 
-.hls-tab-button:hover {
+.ots-tab-button:hover {
     background: #fff;
 }
 
-.hls-tab-button.active {
+.ots-tab-button.active {
     background: #fff;
     border-bottom-color: #2271b1;
     font-weight: 600;
 }
 
-.hls-tab-button:focus {
+.ots-tab-button:focus {
     outline: 2px solid #2271b1;
     outline-offset: -2px;
     box-shadow: inset 0 0 0 1px #2271b1;
 }
 
-.hls-tab-content {
+.ots-tab-content {
     display: none;
     padding: 30px;
 }
 
-.hls-tab-content.active {
+.ots-tab-content.active {
     display: block;
 }
 
-.hls-preset-controls {
+.ots-preset-controls {
     margin: 20px 0;
     padding: 20px;
     background: #f0f6fc;
@@ -64,23 +64,23 @@
     border-radius: 4px;
 }
 
-.hls-preset-font-selector {
+.ots-preset-font-selector {
     margin: 0 15px 20px 15px;
 }
 
-.hls-preset-font-selector:last-child {
+.ots-preset-font-selector:last-child {
     margin-bottom: 0;
 }
 
-.hls-preset-font-selector label,
-.hls-preset-size-control label {
+.ots-preset-font-selector label,
+.ots-preset-size-control label {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 14px;
 }
 
-.hls-font-select {
+.ots-font-select {
     max-width: 400px;
     padding: 8px;
     font-size: 14px;
@@ -88,23 +88,23 @@
     border-radius: 4px;
 }
 
-.hls-font-select:focus {
+.ots-font-select:focus {
     outline: 2px solid #2271b1;
     outline-offset: 0;
 }
 
-.hls-preset-font-selector .description,
-.hls-preset-size-control .description {
+.ots-preset-font-selector .description,
+.ots-preset-size-control .description {
     margin-top: 8px;
     color: #646970;
     font-size: 13px;
 }
 
-.hls-preset-size-control {
+.ots-preset-size-control {
     margin: 20px 15px 0 15px;
 }
 
-.hls-size-value {
+.ots-size-value {
     display: inline-block;
     min-width: 50px;
     text-align: right;
@@ -113,7 +113,7 @@
     margin-left: 8px;
 }
 
-.hls-size-slider {
+.ots-size-slider {
     width: 100%;
     max-width: 400px;
     height: 8px;
@@ -125,7 +125,7 @@
     margin-bottom: 8px;
 }
 
-.hls-size-slider::-webkit-slider-thumb {
+.ots-size-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
@@ -136,11 +136,11 @@
     transition: background 0.2s;
 }
 
-.hls-size-slider::-webkit-slider-thumb:hover {
+.ots-size-slider::-webkit-slider-thumb:hover {
     background: #135e96;
 }
 
-.hls-size-slider::-moz-range-thumb {
+.ots-size-slider::-moz-range-thumb {
     width: 20px;
     height: 20px;
     background: #2271b1;
@@ -150,35 +150,90 @@
     transition: background 0.2s;
 }
 
-.hls-size-slider::-moz-range-thumb:hover {
+.ots-size-slider::-moz-range-thumb:hover {
     background: #135e96;
 }
 
-.hls-size-slider:focus {
+.ots-size-slider:focus {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
 }
 
-.hls-size-slider:focus::-webkit-slider-thumb {
+.ots-size-slider:focus::-webkit-slider-thumb {
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
-.hls-size-slider:focus::-moz-range-thumb {
+.ots-size-slider:focus::-moz-range-thumb {
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
 /* Feature Category Section */
-.hls-feature-category-section {
+.ots-feature-category-section {
     margin: 30px 0;
-    padding-bottom: 30px;
     border-bottom: 1px solid #ddd;
 }
 
-.hls-feature-category-section:last-of-type {
+.ots-feature-category-section:last-of-type {
     border-bottom: none;
 }
 
-.hls-feature-category-section > h3 {
+/* Collapsible summary styles */
+.ots-feature-category-summary {
+    cursor: pointer;
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+/* Remove default marker/disclosure triangle */
+.ots-feature-category-summary::-webkit-details-marker,
+.ots-feature-category-summary::marker {
+    display: none;
+}
+
+.ots-feature-category-summary:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 8px;
+}
+
+/* Style the h3 to include the arrow */
+.ots-feature-category-section > summary > h3,
+.ots-feature-category-section > .ots-feature-category-summary > h3 {
+    color: #2271b1;
+    font-size: 18px;
+    margin: 0;
+    padding-bottom: 16px;
+    padding-left: 30px;
+    border-bottom: 2px solid #2271b1;
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Add arrow before h3 */
+.ots-feature-category-section > summary > h3::before,
+.ots-feature-category-section > .ots-feature-category-summary > h3::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    color: #2271b1;
+    transition: transform 0.2s;
+    display: inline-block;
+    width: 20px;
+}
+
+/* Rotate arrow when open */
+.ots-feature-category-section[open] > summary > h3::before,
+.ots-feature-category-section[open] > .ots-feature-category-summary > h3::before {
+    transform: rotate(90deg);
+}
+
+.ots-feature-category-summary:hover > h3 {
+    opacity: 0.8;
+}
+
+/* Legacy support for non-collapsible sections */
+.ots-feature-category-section > h3 {
     color: #2271b1;
     font-size: 18px;
     margin-bottom: 20px;
@@ -187,14 +242,14 @@
 }
 
 /* Feature Demos Grid */
-.hls-feature-demos-grid {
+.ots-feature-demos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
 
-.hls-feature-demo-card {
+.ots-feature-demo-card {
     border: 1px solid #ddd;
     padding: 20px;
     border-radius: 6px;
@@ -202,24 +257,24 @@
     transition: box-shadow 0.2s;
 }
 
-.hls-feature-demo-card:hover {
+.ots-feature-demo-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.hls-feature-demo-header {
+.ots-feature-demo-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
 
-.hls-feature-demo-header h4 {
+.ots-feature-demo-header h4 {
     margin: 0;
     font-size: 15px;
     color: #1d2327;
 }
 
-.hls-feature-demo-header .hls-feature-code {
+.ots-feature-demo-header .ots-feature-code {
     background: #2271b1;
     color: #fff;
     padding: 4px 8px;
@@ -228,7 +283,7 @@
     font-weight: 600;
 }
 
-.hls-feature-demo-description {
+.ots-feature-demo-description {
     color: #666;
     font-size: 13px;
     margin: 0 0 15px 0;
@@ -236,14 +291,14 @@
 }
 
 /* Feature Comparison */
-.hls-feature-comparison {
+.ots-feature-comparison {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 15px;
 }
 
-.hls-feature-preview-container {
+.ots-feature-preview-container {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -252,7 +307,7 @@
     min-width: 0;
 }
 
-.hls-feature-preview-label {
+.ots-feature-preview-label {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -261,7 +316,7 @@
     letter-spacing: 0.5px;
 }
 
-.hls-feature-preview {
+.ots-feature-preview {
     font-size: 50px;
     line-height: 1.3;
     text-align: center;
@@ -271,54 +326,54 @@
     overflow-wrap: break-word;
 }
 
-.hls-feature-preview-off {
+.ots-feature-preview-off {
     color: #666;
 }
 
-.hls-feature-preview-on {
+.ots-feature-preview-on {
     color: #1d2327;
     font-weight: 500;
 }
 
 /* User Presets Section */
-.hls-user-presets-section {
+.ots-user-presets-section {
     margin-top: 40px;
     padding-top: 30px;
     border-top: 3px solid #2271b1;
 }
 
-.hls-user-presets-section > h3 {
+.ots-user-presets-section > h3 {
     color: #2271b1;
     font-size: 18px;
     margin-bottom: 15px;
 }
 
-.hls-presets-grid {
+.ots-presets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
 
-.hls-preset-card {
+.ots-preset-card {
     border: 1px solid #ddd;
     padding: 20px;
     border-radius: 4px;
     background: #fafafa;
 }
 
-.hls-preset-card h4 {
+.ots-preset-card h4 {
     margin: 0 0 10px 0;
     font-size: 16px;
 }
 
-.hls-preset-description {
+.ots-preset-description {
     color: #666;
     font-size: 13px;
     margin-bottom: 10px;
 }
 
-.hls-preset-features {
+.ots-preset-features {
     font-size: 12px;
     margin-bottom: 15px;
     padding: 8px;
@@ -326,7 +381,7 @@
     border-radius: 3px;
 }
 
-.hls-preset-preview {
+.ots-preset-preview {
     font-size: 50px;
     padding: 15px;
     background: #fff;
@@ -336,46 +391,46 @@
     line-height: 1.2;
 }
 
-.hls-features-list {
+.ots-features-list {
     margin-top: 20px;
 }
 
-.hls-feature-category {
+.ots-feature-category {
     margin-bottom: 30px;
 }
 
-.hls-feature-category h3 {
+.ots-feature-category h3 {
     margin-bottom: 10px;
     padding-bottom: 5px;
     border-bottom: 2px solid #2271b1;
 }
 
-.hls-feature-category table code {
+.ots-feature-category table code {
     background: #f0f0f1;
     padding: 3px 6px;
     border-radius: 3px;
     font-weight: 600;
 }
 
-.hls-help-section {
+.ots-help-section {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #ddd;
 }
 
-.hls-help-section:last-child {
+.ots-help-section:last-child {
     border-bottom: none;
 }
 
-.hls-help-section h3 {
+.ots-help-section h3 {
     color: #2271b1;
 }
 
-.hls-help-section ul, .hls-help-section ol {
+.ots-help-section ul, .ots-help-section ol {
     line-height: 1.8;
 }
 
-.hls-add-preset-section {
+.ots-add-preset-section {
     margin-top: 30px;
     padding: 20px;
     background: #f0f6fc;
@@ -383,11 +438,11 @@
 }
 
 /* Fonts Tab Styles */
-.hls-fonts-list {
+.ots-fonts-list {
     margin: 20px 0;
 }
 
-.hls-font-card {
+.ots-font-card {
     border: 1px solid #ddd;
     padding: 15px;
     margin-bottom: 15px;
@@ -395,19 +450,19 @@
     background: #fafafa;
 }
 
-.hls-font-header {
+.ots-font-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
 }
 
-.hls-font-header h4 {
+.ots-font-header h4 {
     margin: 0;
     font-size: 16px;
 }
 
-.hls-font-families {
+.ots-font-families {
     padding: 10px;
     background: #fff;
     border-radius: 3px;
@@ -415,12 +470,12 @@
     font-size: 13px;
 }
 
-.hls-font-meta {
+.ots-font-meta {
     color: #666;
     font-size: 12px;
 }
 
-.hls-upload-font-section {
+.ots-upload-font-section {
     margin-top: 30px;
     padding: 20px;
     background: #fff;
@@ -428,36 +483,36 @@
     border-radius: 4px;
 }
 
-.hls-upload-form {
+.ots-upload-form {
     margin: 20px 0;
 }
 
-.hls-form-field {
+.ots-form-field {
     margin-bottom: 15px;
 }
 
-.hls-form-field label {
+.ots-form-field label {
     display: block;
     margin-bottom: 5px;
     font-weight: 600;
 }
 
-.hls-font-help {
+.ots-font-help {
     margin-top: 30px;
     padding: 15px;
     background: #f0f6fc;
     border-left: 4px solid #2271b1;
 }
 
-.hls-font-help h4 {
+.ots-font-help h4 {
     margin-top: 0;
 }
 
-.hls-font-help ol {
+.ots-font-help ol {
     line-height: 1.8;
 }
 
-.hls-empty-state {
+.ots-empty-state {
     padding: 40px;
     text-align: center;
     color: #666;
@@ -466,33 +521,33 @@
     border-radius: 4px;
 }
 
-.hls-upload-method-buttons {
+.ots-upload-method-buttons {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
 }
 
-.hls-upload-method-buttons .button {
+.ots-upload-method-buttons .button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     min-height: 44px;
 }
 
-.hls-upload-method-buttons .dashicons {
+.ots-upload-method-buttons .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
 }
 
-.hls-or-separator {
+.ots-or-separator {
     color: #666;
     font-style: italic;
     font-size: 13px;
 }
 
-.hls-selected-file {
+.ots-selected-file {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -503,20 +558,20 @@
     margin-bottom: 10px;
 }
 
-.hls-selected-file .dashicons-media-document {
+.ots-selected-file .dashicons-media-document {
     color: #2271b1;
     font-size: 18px;
     width: 18px;
     height: 18px;
 }
 
-.hls-selected-file #hls-file-name {
+.ots-selected-file #ots-file-name {
     flex: 1;
     font-weight: 500;
     color: #2271b1;
 }
 
-.hls-selected-file .button-link {
+.ots-selected-file .button-link {
     color: #b32d2e;
     text-decoration: none;
     padding: 0;
@@ -525,27 +580,27 @@
     cursor: pointer;
 }
 
-.hls-selected-file .button-link .dashicons {
+.ots-selected-file .button-link .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
 }
 
-.hls-selected-file .button-link:hover {
+.ots-selected-file .button-link:hover {
     color: #dc3232;
 }
 
-.hls-file-size {
+.ots-file-size {
     color: #666;
     font-size: 12px;
     margin-left: 8px;
 }
 
-.hls-upload-progress {
+.ots-upload-progress {
     margin-top: 15px;
 }
 
-.hls-progress-bar {
+.ots-progress-bar {
     width: 100%;
     height: 30px;
     background: #f0f0f1;
@@ -554,7 +609,7 @@
     position: relative;
 }
 
-.hls-progress-fill {
+.ots-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #2271b1 0%, #135e96 100%);
     transition: width 0.3s ease;
@@ -563,14 +618,14 @@
     justify-content: center;
 }
 
-.hls-progress-text {
+.ots-progress-text {
     text-align: center;
     margin-top: 8px;
     font-size: 13px;
     color: #666;
 }
 
-.hls-selected-file .dashicons-media-archive {
+.ots-selected-file .dashicons-media-archive {
     color: #2271b1;
     font-size: 18px;
     width: 18px;
@@ -611,13 +666,167 @@
     z-index: 100000;
 }
 
-#hls-upload-font-btn,
-#hls-select-file-btn,
-#hls-clear-file-btn {
+#ots-upload-font-btn,
+#ots-select-file-btn,
+#ots-clear-file-btn {
     min-height: 44px;
     min-width: 44px;
 }
 
-.hls-font-section, .hls-fontsize-section {
+.ots-font-section, .ots-fontsize-section {
     margin: 0 1rem;
+}
+
+/* Adobe Fonts Section */
+.ots-adobe-fonts-section {
+    margin-top: 40px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.ots-adobe-fonts-section h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2271b1;
+}
+
+.ots-adobe-fonts-list {
+    margin: 20px 0;
+}
+
+.ots-adobe-fonts-list h4 {
+    font-size: 15px;
+    margin-bottom: 15px;
+}
+
+.ots-adobe-font-card {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    background: #f8fbff;
+}
+
+.ots-adobe-font-card h5 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.ots-add-adobe-font-form {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.ots-add-adobe-font-form h4 {
+    margin-top: 0;
+}
+
+.ots-adobe-help {
+    margin-top: 30px;
+    padding: 15px;
+    background: #f0f6fc;
+    border-left: 4px solid #2271b1;
+    border-radius: 4px;
+}
+
+.ots-adobe-help h4 {
+    margin-top: 0;
+}
+
+.ots-adobe-help ol {
+    line-height: 1.8;
+}
+
+.ots-delete-adobe-font {
+    color: #b32d2e;
+}
+
+.ots-delete-adobe-font:hover {
+    color: #d63638;
+}
+
+/* Manual Fonts Section */
+.ots-manual-fonts-section {
+    margin-top: 40px;
+    padding-top: 40px;
+    border-top: 1px solid #dcdcde;
+}
+
+.ots-manual-fonts-list {
+    margin: 20px 0;
+}
+
+.ots-manual-font-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.ots-manual-font-card .ots-font-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ots-manual-font-card h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.ots-manual-font-card .ots-font-families,
+.ots-manual-font-card .ots-font-fallbacks {
+    margin: 10px 0;
+}
+
+.ots-manual-font-card .ots-font-families code,
+.ots-manual-font-card .ots-font-fallbacks code {
+    background: #f6f7f7;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.ots-add-manual-font-form {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.ots-manual-help {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f0f6fc;
+    border-left: 4px solid #0073aa;
+    border-radius: 4px;
+}
+
+.ots-manual-help h4 {
+    margin-top: 0;
+}
+
+.ots-manual-help ol {
+    line-height: 1.8;
+}
+
+.ots-manual-help code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.ots-delete-manual-font {
+    color: #b32d2e;
+}
+
+.ots-delete-manual-font:hover {
+    color: #d63638;
 }

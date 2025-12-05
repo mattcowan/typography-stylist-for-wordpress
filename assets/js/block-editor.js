@@ -15,6 +15,27 @@
     const FORMAT_TYPE = 'ots/typography-features';
 
     /**
+     * Custom "O" icon for OpenType Stylist
+     */
+    const OTSIcon = () => (
+        wp.element.createElement('svg', {
+            width: 20,
+            height: 20,
+            viewBox: '0 0 20 20',
+            xmlns: 'http://www.w3.org/2000/svg'
+        },
+            wp.element.createElement('circle', {
+                cx: 10,
+                cy: 10,
+                r: 7,
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 2
+            })
+        )
+    );
+
+    /**
      * Typography Features Component
      */
     class TypographyFeaturesControl extends Component {
@@ -29,9 +50,14 @@
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
+                fontWeight: this.getActiveFontWeight() || '400',
+                letterSpacing: this.getActiveLetterSpacing() || 0,
                 showPreview: true,
                 activePreset: null,
-                previewText: ''
+                previewText: '',
+                previewDevice: 'tablet',
+                showAccessibilityWarning: false,
+                warningMessage: ''
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -44,6 +70,12 @@
             this.setFontSizeMin = this.setFontSizeMin.bind(this);
             this.setFontSizePreferred = this.setFontSizePreferred.bind(this);
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
+            this.setFontWeight = this.setFontWeight.bind(this);
+            this.setLetterSpacing = this.setLetterSpacing.bind(this);
+            this.setPreviewDevice = this.setPreviewDevice.bind(this);
+            this.validateSelection = this.validateSelection.bind(this);
+            this.convertToBlock = this.convertToBlock.bind(this);
+            this.applyFeaturesForce = this.applyFeaturesForce.bind(this);
         }
 
         /**
@@ -131,6 +163,34 @@
         }
 
         /**
+         * Get currently active font weight from format
+         */
+        getActiveFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontweight']) {
+                return activeFormat.attributes['data-fontweight'];
+            }
+
+            return '400';
+        }
+
+        /**
+         * Get currently active letter spacing from format
+         */
+        getActiveLetterSpacing() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-letterspacing']) {
+                return parseInt(activeFormat.attributes['data-letterspacing'], 10);
+            }
+
+            return 0;
+        }
+
+        /**
          * Toggle popover visibility
          */
         togglePopover() {
@@ -157,6 +217,8 @@
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
+                fontWeight: this.getActiveFontWeight() || '400',
+                letterSpacing: this.getActiveLetterSpacing() || 0,
                 previewText: extractedText
             }));
         }
@@ -207,6 +269,33 @@
         }
 
         /**
+         * Set font weight
+         */
+        setFontWeight(value) {
+            this.setState({
+                fontWeight: value
+            });
+        }
+
+        /**
+         * Set letter spacing
+         */
+        setLetterSpacing(value) {
+            this.setState({
+                letterSpacing: value
+            });
+        }
+
+        /**
+         * Set preview device
+         */
+        setPreviewDevice(device) {
+            this.setState({
+                previewDevice: device
+            });
+        }
+
+        /**
          * Toggle individual feature
          */
         toggleFeature(featureId) {
@@ -228,14 +317,176 @@
         }
 
         /**
+         * Validate selection to detect word boundary issues
+         */
+        validateSelection() {
+            const { value } = this.props;
+
+            if (!value || value.start === value.end) {
+                return { valid: true };
+            }
+
+            // Check if we're inside an OpenType Stylist block
+            const { select } = wp.data;
+            const selectedBlock = select('core/block-editor').getSelectedBlock();
+            if (selectedBlock && selectedBlock.name === 'opentype-stylist/block') {
+                // Skip validation - OpenType Stylist block already has proper accessibility
+                return { valid: true };
+            }
+
+            // Get the full text and selection
+            const fullText = getTextContent(value);
+            const { start, end } = value;
+
+            // Check if selection breaks word boundaries
+            const beforeChar = start > 0 ? fullText[start - 1] : ' ';
+            const afterChar = end < fullText.length ? fullText[end] : ' ';
+            const selectedText = fullText.substring(start, end);
+
+            // Word boundary regex - letters/numbers are part of words
+            const isWordChar = (char) => /[a-zA-Z0-9]/.test(char);
+
+            // Check if we're breaking a word (selected text doesn't start/end at word boundaries)
+            const breaksWordStart = isWordChar(beforeChar) && isWordChar(selectedText[0]);
+            const breaksWordEnd = isWordChar(selectedText[selectedText.length - 1]) && isWordChar(afterChar);
+
+            if (breaksWordStart || breaksWordEnd) {
+                return {
+                    valid: false,
+                    message: __('For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words.', 'opentype-stylist')
+                };
+            }
+
+            return { valid: true };
+        }
+
+        /**
+         * Convert current heading to OpenType Stylist block
+         */
+        convertToBlock() {
+            const { value } = this.props;
+            const { dispatch, select } = wp.data;
+            const { createBlock } = wp.blocks;
+
+            // Get the currently selected block
+            const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+            if (!selectedBlockClientId) {
+                console.error('No block selected');
+                return;
+            }
+
+            const currentBlock = select('core/block-editor').getBlock(selectedBlockClientId);
+            if (!currentBlock) {
+                console.error('Could not get current block');
+                return;
+            }
+
+            // Determine tag from block name (core/heading, core/paragraph)
+            let tagName = 'h2';
+            if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
+                tagName = `h${currentBlock.attributes.level}`;
+            } else if (currentBlock.name === 'core/paragraph') {
+                tagName = 'p';
+            }
+
+            let contentForBlock;
+
+            // Check if there's a selection (partial text selected)
+            if (value.start !== value.end) {
+                // User selected a portion of text - apply styling only to that portion
+                const fullText = getTextContent(value);
+                const beforeText = fullText.substring(0, value.start);
+                const selectedText = fullText.substring(value.start, value.end);
+                const afterText = fullText.substring(value.end);
+
+                // Build style string for the selected portion
+                const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+                const styleArray = [];
+
+                if (selectedFeatures.length > 0) {
+                    styleArray.push(`font-feature-settings: ${selectedFeatures.map(f => `"${f}" 1`).join(', ')}`);
+                }
+                if (selectedFont) {
+                    styleArray.push(`font-family: ${selectedFont}`);
+                }
+                if (fontWeight && fontWeight !== '400') {
+                    styleArray.push(`font-weight: ${fontWeight}`);
+                }
+                if (letterSpacing !== 0) {
+                    styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
+                }
+                if (fontSize === 'responsive') {
+                    styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`);
+                }
+
+                const styleString = styleArray.join('; ');
+
+                // Create HTML content with only the selected portion styled
+                contentForBlock = beforeText +
+                    `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
+                    afterText;
+
+                // Create OpenType Stylist block with no global features (only inline styling)
+                const otsBlock = createBlock('opentype-stylist/block', {
+                    content: contentForBlock,
+                    tagName: tagName,
+                    features: [], // No global features
+                    fontFamily: '',
+                    fontSize: 'inherit',
+                    fontSizeMin: 16,
+                    fontSizePreferred: 24,
+                    fontSizeMax: 32,
+                    fontWeight: '400',
+                    letterSpacing: 0
+                });
+
+                // Replace current block
+                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+            } else {
+                // No selection - apply to entire block (original behavior)
+                const textContent = getTextContent(value);
+
+                const otsBlock = createBlock('opentype-stylist/block', {
+                    content: textContent,
+                    tagName: tagName,
+                    features: this.state.selectedFeatures,
+                    fontFamily: this.state.selectedFont,
+                    fontSize: this.state.fontSize,
+                    fontSizeMin: this.state.fontSizeMin,
+                    fontSizePreferred: this.state.fontSizePreferred,
+                    fontSizeMax: this.state.fontSizeMax,
+                    fontWeight: this.state.fontWeight,
+                    letterSpacing: this.state.letterSpacing
+                });
+
+                // Replace current block
+                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+            }
+
+            // Close popover
+            this.setState({ isOpen: false });
+        }
+
+        /**
          * Apply selected features
          */
         applyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax } = this.state;
+            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit') {
-                // Remove format if no features, font, or font size selected
+            // Validate selection
+            const validation = this.validateSelection();
+            if (!validation.valid) {
+                // Show warning with options
+                this.setState({
+                    showAccessibilityWarning: true,
+                    warningMessage: validation.message
+                });
+                return;
+            }
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
+                // Remove format if no features, font, font size, weight, or letter spacing selected
                 onChange(removeFormat(value, FORMAT_TYPE));
             } else {
                 // Build attributes
@@ -256,6 +507,18 @@
                     styleString += `font-family: ${selectedFont}`;
                 }
 
+                // Add font weight (always apply, default to normal)
+                attributes['data-fontweight'] = fontWeight;
+                if (styleString) styleString += '; ';
+                styleString += `font-weight: ${fontWeight}`;
+
+                // Add letter spacing
+                if (letterSpacing !== 0) {
+                    attributes['data-letterspacing'] = letterSpacing.toString();
+                    if (styleString) styleString += '; ';
+                    styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                }
+
                 // Add font size
                 if (fontSize !== 'inherit') {
                     attributes['data-fontsize'] = fontSize;
@@ -268,6 +531,82 @@
                 }
 
                 attributes['style'] = styleString;
+
+                // Add aria-label if enabled for accessibility
+                if (otsData.enableAriaLabels && value) {
+                    const selectedText = value.start !== value.end
+                        ? getTextContent(slice(value, value.start, value.end))
+                        : getTextContent(value);
+                    if (selectedText) {
+                        attributes['aria-label'] = selectedText;
+                    }
+                }
+
+                onChange(applyFormat(value, {
+                    type: FORMAT_TYPE,
+                    attributes: attributes
+                }));
+            }
+
+            this.setState({ isOpen: false });
+        }
+
+        /**
+         * Apply features without validation (force apply)
+         */
+        applyFeaturesForce() {
+            const { value, onChange } = this.props;
+            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
+                onChange(removeFormat(value, FORMAT_TYPE));
+            } else {
+                const attributes = {};
+                let styleString = '';
+
+                if (selectedFeatures.length > 0) {
+                    const cssValue = this.featuresToCSS(selectedFeatures);
+                    attributes['data-features'] = selectedFeatures.join(',');
+                    styleString += `font-feature-settings: ${cssValue}`;
+                }
+
+                if (selectedFont) {
+                    attributes['data-font'] = selectedFont;
+                    if (styleString) styleString += '; ';
+                    styleString += `font-family: ${selectedFont}`;
+                }
+
+                attributes['data-fontweight'] = fontWeight;
+                if (styleString) styleString += '; ';
+                styleString += `font-weight: ${fontWeight}`;
+
+                if (letterSpacing !== 0) {
+                    attributes['data-letterspacing'] = letterSpacing.toString();
+                    if (styleString) styleString += '; ';
+                    styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                }
+
+                if (fontSize !== 'inherit') {
+                    attributes['data-fontsize'] = fontSize;
+                    attributes['data-fontsize-min'] = fontSizeMin.toString();
+                    attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
+                    attributes['data-fontsize-max'] = fontSizeMax.toString();
+
+                    if (styleString) styleString += '; ';
+                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`;
+                }
+
+                attributes['style'] = styleString;
+
+                // Add aria-label if enabled for accessibility (in force apply)
+                if (otsData.enableAriaLabels && value) {
+                    const selectedText = value.start !== value.end
+                        ? getTextContent(slice(value, value.start, value.end))
+                        : getTextContent(value);
+                    if (selectedText) {
+                        attributes['aria-label'] = selectedText;
+                    }
+                }
 
                 onChange(applyFormat(value, {
                     type: FORMAT_TYPE,
@@ -302,6 +641,8 @@
                 fontSizeMin: 16,
                 fontSizePreferred: 24,
                 fontSizeMax: 32,
+                fontWeight: '400',
+                letterSpacing: 0,
                 activePreset: null,
                 isOpen: false
             });
@@ -337,20 +678,54 @@
          */
         getFontOptions() {
             const fonts = otsData.fonts || [];
+            const adobeFonts = otsData.adobeFonts || [];
+            const manualFonts = otsData.manualFonts || [];
             const options = [];
 
-            fonts.forEach(font => {
-                if (font.font_faces && font.font_faces.length > 0) {
-                    // Get unique font families from this kit
-                    const families = [...new Set(font.font_faces.map(face => face.family))];
-                    families.forEach(family => {
-                        options.push({
-                            label: family,
-                            value: family
+            // Uploaded fonts (MyFonts, etc.)
+            if (fonts.length > 0) {
+                fonts.forEach(font => {
+                    if (font.font_faces && font.font_faces.length > 0) {
+                        // Get unique font families from this kit
+                        const families = [...new Set(font.font_faces.map(face => face.family))];
+                        families.forEach(family => {
+                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
+                            options.push({
+                                label: `📁 ${family}`,
+                                value: fontValue
+                            });
                         });
-                    });
-                }
-            });
+                    }
+                });
+            }
+
+            // Adobe Fonts
+            if (adobeFonts.length > 0) {
+                adobeFonts.forEach(font => {
+                    if (font.font_families && font.font_families.length > 0) {
+                        font.font_families.forEach(family => {
+                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
+                            options.push({
+                                label: `🅰️ ${family}`,
+                                value: fontValue
+                            });
+                        });
+                    }
+                });
+            }
+
+            // Manual fonts
+            if (manualFonts.length > 0) {
+                manualFonts.forEach(font => {
+                    if (font.font_family) {
+                        const fontValue = font.fallbacks ? `${font.font_family}, ${font.fallbacks}` : font.font_family;
+                        options.push({
+                            label: `⚙️ ${font.name}`,
+                            value: fontValue
+                        });
+                    }
+                });
+            }
 
             return options;
         }
@@ -414,10 +789,11 @@
 
         render() {
             const { isActive } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, showPreview, previewText } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
-            const fonts = otsData.fonts || [];
+            const fontOptions = this.getFontOptions();
+            const hasFonts = fontOptions.length > 0;
 
             // Use stored preview text or fallback
             const displayText = previewText || __('Elegant Typography & Flourish', 'opentype-stylist');
@@ -429,12 +805,30 @@
             if (selectedFont) {
                 previewStyle.fontFamily = selectedFont;
             }
+            // Apply font weight to preview
+            previewStyle.fontWeight = fontWeight;
+
+            // Apply letter spacing to preview
+            if (letterSpacing !== 0) {
+                previewStyle.letterSpacing = `${letterSpacing / 1000}em`;
+            }
+
+            // Apply font size to preview based on device selection
+            if (fontSize === 'responsive') {
+                let previewSize = fontSizePreferred;
+                if (previewDevice === 'mobile') {
+                    previewSize = fontSizeMin;
+                } else if (previewDevice === 'desktop') {
+                    previewSize = fontSizeMax;
+                }
+                previewStyle.fontSize = `${previewSize}px`;
+            }
 
             return (
                 <Fragment>
                     <RichTextToolbarButton
-                        icon="editor-textcolor"
-                        title={__('Typography Features', 'opentype-stylist')}
+                        icon={OTSIcon}
+                        title={__('OpenType Stylist', 'opentype-stylist')}
                         onClick={this.togglePopover}
                         isActive={isActive}
                         className="ots-toolbar-button"
@@ -448,23 +842,58 @@
                         >
                             <div className="ots-popover-content">
                                 <div className="ots-popover-header">
-                                    <h3>{__('Typography Features', 'opentype-stylist')}</h3>
+                                    <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
                                 </div>
 
                                 {/* Font Selector */}
-                                {fonts.length > 0 && (
+                                {hasFonts && (
                                     <div className="ots-font-section">
                                         <h4>{__('Font Family', 'opentype-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFont}
                                             options={[
                                                 { label: __('(Default)', 'opentype-stylist'), value: '' },
-                                                ...this.getFontOptions()
+                                                ...fontOptions
                                             ]}
                                             onChange={this.setFont}
                                         />
                                     </div>
                                 )}
+
+                                {/* Font Weight Control */}
+                                <div className="ots-fontweight-section">
+                                    <h4>{__('Font Weight', 'opentype-stylist')}</h4>
+                                    <SelectControl
+                                        value={fontWeight}
+                                        options={[
+                                            { label: __('100 - Thin', 'opentype-stylist'), value: '100' },
+                                            { label: __('200 - Extra Light', 'opentype-stylist'), value: '200' },
+                                            { label: __('300 - Light', 'opentype-stylist'), value: '300' },
+                                            { label: __('400 - Normal', 'opentype-stylist'), value: '400' },
+                                            { label: __('500 - Medium', 'opentype-stylist'), value: '500' },
+                                            { label: __('600 - Semi Bold', 'opentype-stylist'), value: '600' },
+                                            { label: __('700 - Bold', 'opentype-stylist'), value: '700' },
+                                            { label: __('800 - Extra Bold', 'opentype-stylist'), value: '800' },
+                                            { label: __('900 - Black', 'opentype-stylist'), value: '900' }
+                                        ]}
+                                        onChange={this.setFontWeight}
+                                    />
+                                </div>
+
+                                {/* Letter Spacing Control */}
+                                <div className="ots-letterspacing-section">
+                                    <h4>{__('Letter Spacing', 'opentype-stylist')}</h4>
+                                    <RangeControl
+                                        value={letterSpacing}
+                                        onChange={this.setLetterSpacing}
+                                        min={-200}
+                                        max={200}
+                                        step={1}
+                                        help={letterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${letterSpacing / 1000}em`}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                    />
+                                </div>
 
                                 {/* Font Size Controls */}
                                 <div className="ots-fontsize-section">
@@ -537,10 +966,73 @@
                                     ))}
                                 </div>
 
+                                {/* Accessibility Warning */}
+                                {showAccessibilityWarning && (
+                                    <div className="ots-accessibility-warning">
+                                        <p className="ots-warning-message">
+                                            ⚠️ {warningMessage}
+                                        </p>
+                                        <ButtonGroup>
+                                            <Button
+                                                isPrimary
+                                                onClick={this.convertToBlock}
+                                            >
+                                                {__('Convert to OpenType Stylist Block', 'opentype-stylist')}
+                                            </Button>
+                                            <Button
+                                                isSecondary
+                                                onClick={() => {
+                                                    this.setState({ showAccessibilityWarning: false });
+                                                    // Apply anyway - bypass validation
+                                                    this.applyFeaturesForce();
+                                                }}
+                                            >
+                                                {__('Apply Anyway', 'opentype-stylist')}
+                                            </Button>
+                                            <Button
+                                                isTertiary
+                                                onClick={() => this.setState({ showAccessibilityWarning: false })}
+                                            >
+                                                {__('Cancel', 'opentype-stylist')}
+                                            </Button>
+                                        </ButtonGroup>
+                                    </div>
+                                )}
+
                                 {/* Preview Section */}
-                                {showPreview && (
+                                {showPreview && !showAccessibilityWarning && (
                                     <div className="ots-preview-section">
-                                        <h4>{__('Preview', 'opentype-stylist')}</h4>
+                                        <div className="ots-preview-header">
+                                            <h4>{__('Preview', 'opentype-stylist')}</h4>
+                                            {fontSize === 'responsive' && (
+                                                <ButtonGroup className="ots-preview-device-toggle">
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'mobile'}
+                                                        isSecondary={previewDevice !== 'mobile'}
+                                                        onClick={() => this.setPreviewDevice('mobile')}
+                                                    >
+                                                        {__('Mobile', 'opentype-stylist')}
+                                                    </Button>
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'tablet'}
+                                                        isSecondary={previewDevice !== 'tablet'}
+                                                        onClick={() => this.setPreviewDevice('tablet')}
+                                                    >
+                                                        {__('Tablet', 'opentype-stylist')}
+                                                    </Button>
+                                                    <Button
+                                                        isSmall
+                                                        isPrimary={previewDevice === 'desktop'}
+                                                        isSecondary={previewDevice !== 'desktop'}
+                                                        onClick={() => this.setPreviewDevice('desktop')}
+                                                    >
+                                                        {__('Desktop', 'opentype-stylist')}
+                                                    </Button>
+                                                </ButtonGroup>
+                                            )}
+                                        </div>
                                         <div
                                             className="ots-preview-text"
                                             style={previewStyle}
@@ -606,7 +1098,7 @@
      * Register the format type
      */
     registerFormatType(FORMAT_TYPE, {
-        title: __('Typography Features', 'opentype-stylist'),
+        title: __('OpenType Stylist', 'opentype-stylist'),
         tagName: 'span',
         className: 'ots-styled',
         attributes: {
@@ -616,7 +1108,10 @@
             'data-fontsize-min': 'data-fontsize-min',
             'data-fontsize-preferred': 'data-fontsize-preferred',
             'data-fontsize-max': 'data-fontsize-max',
-            'style': 'style'
+            'data-fontweight': 'data-fontweight',
+            'data-letterspacing': 'data-letterspacing',
+            'style': 'style',
+            'aria-label': 'aria-label'
         },
         edit: compose()(function(props) {
             return (

@@ -81,6 +81,66 @@ msgstr "Procesando..."
 msgid "Upload Font Kit"
 msgstr "Cargar Kit de Fuentes"
 
+#: opentype-stylist.php:404
+msgid "Please enter a project name."
+msgstr "Por favor, introduce un nombre de proyecto."
+
+#: opentype-stylist.php:405
+msgid "Please paste the Adobe Fonts embed code."
+msgstr "Por favor, pega el código de inserción de Adobe Fonts."
+
+#: opentype-stylist.php:406
+msgid "Adding..."
+msgstr "Añadiendo..."
+
+#: opentype-stylist.php:407
+msgid "Adobe Fonts project added successfully! Reloading page..."
+msgstr "¡Proyecto de Adobe Fonts añadido con éxito! Recargando página..."
+
+#: opentype-stylist.php:408
+msgid "Failed to add Adobe Fonts project."
+msgstr "Error al añadir el proyecto de Adobe Fonts."
+
+#: opentype-stylist.php:409
+msgid "Add Adobe Fonts Project"
+msgstr "Añadir Proyecto de Adobe Fonts"
+
+#: opentype-stylist.php:410
+msgid "Are you sure you want to delete this Adobe Fonts project?"
+msgstr "¿Estás seguro de que quieres eliminar este proyecto de Adobe Fonts?"
+
+#: opentype-stylist.php:411
+msgid "Failed to delete Adobe Fonts project."
+msgstr "Error al eliminar el proyecto de Adobe Fonts."
+
+#: opentype-stylist.php:413
+msgid "Please enter a font name."
+msgstr "Por favor, introduce un nombre de fuente."
+
+#: opentype-stylist.php:414
+msgid "Please enter a CSS font-family value."
+msgstr "Por favor, introduce un valor CSS font-family."
+
+#: opentype-stylist.php:415
+msgid "Custom font added successfully! Reloading page..."
+msgstr "¡Fuente personalizada añadida con éxito! Recargando página..."
+
+#: opentype-stylist.php:416
+msgid "Failed to add custom font."
+msgstr "Error al añadir la fuente personalizada."
+
+#: opentype-stylist.php:417
+msgid "Add Custom Font"
+msgstr "Añadir Fuente Personalizada"
+
+#: opentype-stylist.php:418
+msgid "Are you sure you want to delete this custom font?"
+msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
+
+#: opentype-stylist.php:419
+msgid "Failed to delete custom font."
+msgstr "Error al eliminar la fuente personalizada."
+
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
 msgstr "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde."
@@ -694,3 +754,195 @@ msgstr "Cancelar"
 #: assets/js/block-editor.js:598
 msgid "Other Features"
 msgstr "Otras Características"
+
+#: assets/js/block-editor.js:588
+msgid "OpenType Stylist"
+msgstr "Estilista OpenType"
+
+#: assets/js/block-editor.js:356
+msgid "For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words."
+msgstr "Para mejor accesibilidad, selecciona palabras o frases completas. O conviértelo a un bloque Estilista OpenType para estilizar palabras parciales de forma accesible."
+
+#: assets/js/block-editor.js:832
+msgid "Convert to OpenType Stylist Block"
+msgstr "Convertir a Bloque Estilista OpenType"
+
+#: assets/js/block-editor.js:842
+msgid "Apply Anyway"
+msgstr "Aplicar de Todas Formas"
+
+#: assets/js/block-editor.js:470
+msgid "Font Weight"
+msgstr "Peso de Fuente"
+
+#: assets/js/block-editor.js:605
+msgid "100 - Thin"
+msgstr "100 - Fina"
+
+#: assets/js/block-editor.js:606
+msgid "200 - Extra Light"
+msgstr "200 - Extra Ligera"
+
+#: assets/js/block-editor.js:607
+msgid "300 - Light"
+msgstr "300 - Ligera"
+
+#: assets/js/block-editor.js:608
+msgid "400 - Normal"
+msgstr "400 - Normal"
+
+#: assets/js/block-editor.js:609
+msgid "500 - Medium"
+msgstr "500 - Media"
+
+#: assets/js/block-editor.js:610
+msgid "600 - Semi Bold"
+msgstr "600 - Semi Negrita"
+
+#: assets/js/block-editor.js:611
+msgid "700 - Bold"
+msgstr "700 - Negrita"
+
+#: assets/js/block-editor.js:612
+msgid "800 - Extra Bold"
+msgstr "800 - Extra Negrita"
+
+#: assets/js/block-editor.js:613
+msgid "900 - Black"
+msgstr "900 - Negra"
+
+#: assets/js/block-editor.js:622
+msgid "Letter Spacing"
+msgstr "Espaciado de Letras"
+
+#: assets/js/block-editor.js:628
+msgid "Normal"
+msgstr "Normal"
+
+#: assets/js/block-editor.js:548
+msgid "Mobile"
+msgstr "Móvil"
+
+#: assets/js/block-editor.js:555
+msgid "Tablet"
+msgstr "Tableta"
+
+#: assets/js/block-editor.js:562
+msgid "Desktop"
+msgstr "Escritorio"
+
+#: includes/admin-page.php:86
+msgid "Accessibility"
+msgstr "Accesibilidad"
+
+#: includes/admin-page.php:825
+msgid "Accessibility Settings"
+msgstr "Configuración de Accesibilidad"
+
+#: includes/admin-page.php:826
+msgid "Configure screen reader support for inline typography features."
+msgstr "Configurar soporte de lector de pantalla para características tipográficas en línea."
+
+#: includes/admin-page.php:836
+msgid "Screen Reader Support"
+msgstr "Soporte de Lector de Pantalla"
+
+#: includes/admin-page.php:848
+msgid "Add aria-label attributes to styled text"
+msgstr "Añadir atributos aria-label al texto estilizado"
+
+#: includes/admin-page.php:851
+msgid "When enabled, inline formatted text will include aria-label attributes containing the original text for better screen reader accessibility."
+msgstr "Cuando está habilitado, el texto formateado en línea incluirá atributos aria-label con el texto original para mejorar la accesibilidad con lectores de pantalla."
+
+#: includes/admin-page.php:860
+msgid "Save Accessibility Settings"
+msgstr "Guardar Configuración de Accesibilidad"
+
+#: includes/admin-page.php:866
+msgid "Accessibility Best Practices"
+msgstr "Mejores Prácticas de Accesibilidad"
+
+#: includes/admin-page.php:868
+msgid "For complex typography with partial word styling, use the OpenType Stylist block instead of inline formats."
+msgstr "Para tipografía compleja con estilizado de palabras parciales, usa el bloque Estilista OpenType en lugar de formatos en línea."
+
+#: includes/admin-page.php:869
+msgid "Always select complete words or phrases when applying inline formats to avoid fragmenting text for screen readers."
+msgstr "Siempre selecciona palabras o frases completas al aplicar formatos en línea para evitar fragmentar el texto para lectores de pantalla."
+
+#: includes/admin-page.php:870
+msgid "Test your styled headings with screen readers like NVDA (Windows) or VoiceOver (macOS) to ensure they read correctly."
+msgstr "Prueba tus encabezados estilizados con lectores de pantalla como NVDA (Windows) o VoiceOver (macOS) para asegurar que se lean correctamente."
+
+#: includes/admin-page.php:871
+msgid "The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block."
+msgstr "El plugin te advertirá si intentas aplicar formato a palabras parciales y ofrecerá convertir a un bloque accesible."
+
+#: includes/admin-page.php:44
+msgid "Accessibility settings saved successfully."
+msgstr "Configuración de accesibilidad guardada correctamente."
+
+#: blocks/opentype-stylist/edit.js:5
+msgid "Add text with advanced typography..."
+msgstr "Añadir texto con tipografía avanzada..."
+
+#: blocks/opentype-stylist/edit.js:156
+msgid "Change heading level"
+msgstr "Cambiar nivel de encabezado"
+
+#: blocks/opentype-stylist/edit.js:159
+msgid "Heading 1"
+msgstr "Encabezado 1"
+
+#: blocks/opentype-stylist/edit.js:164
+msgid "Heading 2"
+msgstr "Encabezado 2"
+
+#: blocks/opentype-stylist/edit.js:169
+msgid "Heading 3"
+msgstr "Encabezado 3"
+
+#: blocks/opentype-stylist/edit.js:174
+msgid "Heading 4"
+msgstr "Encabezado 4"
+
+#: blocks/opentype-stylist/edit.js:179
+msgid "Heading 5"
+msgstr "Encabezado 5"
+
+#: blocks/opentype-stylist/edit.js:184
+msgid "Heading 6"
+msgstr "Encabezado 6"
+
+#: blocks/opentype-stylist/edit.js:189
+msgid "Paragraph"
+msgstr "Párrafo"
+
+#: blocks/opentype-stylist/edit.js:194
+msgid "Div"
+msgstr "Div"
+
+#: blocks/opentype-stylist/edit.js:295
+msgid "OpenType Features"
+msgstr "Características OpenType"
+
+#: blocks/opentype-stylist/edit.js:310
+msgid "Screen Reader Class"
+msgstr "Clase de Lector de Pantalla"
+
+#: blocks/opentype-stylist/edit.js:318
+msgid "Custom"
+msgstr "Personalizado"
+
+#: blocks/opentype-stylist/edit.js:325
+msgid "Custom Class Name"
+msgstr "Nombre de Clase Personalizado"
+
+#: blocks/opentype-stylist/edit.js:328
+msgid "Enter your theme's screen reader class"
+msgstr "Introduce la clase de lector de pantalla de tu tema"
+
+#: blocks/opentype-stylist/edit.js:332
+msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
+msgstr "La clase seleccionada se usará para ocultar texto duplicado para lectores de pantalla. Asegúrate de que esta clase esté definida en tu tema."

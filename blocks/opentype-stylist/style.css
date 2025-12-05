@@ -1,0 +1,29 @@
+/**
+ * OpenType Stylist Block - Frontend Styles
+ */
+
+.wp-block-opentype-stylist {
+	position: relative;
+}
+
+/* Screen reader only classes - ensure they exist */
+.visually-hidden,
+.sr-only,
+.screen-reader-text {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
+}
+
+/* Styled content */
+.wp-block-opentype-stylist .ots-styled {
+	/* Inherit all spacing from parent */
+	margin: 0;
+	padding: 0;
+}

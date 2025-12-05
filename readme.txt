@@ -1,6 +1,6 @@
 === OpenType Stylist ===
 Contributors: yourname
-Tags: typography, opentype, ligatures, stylistic-sets, fonts
+Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.8
 Stable tag: 1.0.0
@@ -8,11 +8,11 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
+Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection, live preview, and full accessibility support. Upload custom fonts, connect Adobe Fonts, or define theme fonts.
 
 == Description ==
 
-OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts from foundries like Sudtipos (Alejandro Paul's Calgary Script, Affair, etc.), this plugin allows you to apply OpenType features directly in the block editor.
+OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts, this plugin allows you to apply OpenType features directly in the block editor.
 
 = Key Features =
 
@@ -23,6 +23,15 @@ OpenType Stylist brings professional typography control to WordPress headlines. 
 * **Custom Presets**: Save your favorite feature combinations for reuse
 * **Visual Interface**: User-friendly popover with organized feature categories
 * **Block Editor Native**: Seamlessly integrates with Gutenberg
+* **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
+* **Adobe Fonts Integration**: Connect Adobe Fonts (Typekit) projects by pasting embed codes
+* **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
+* **Font Fallbacks**: Set fallback fonts for all font sources for better compatibility
+* **Font Preview**: Test OpenType features with any uploaded or connected font
+* **✨ NEW: Accessibility Features**: Full WCAG 2.1 Level AA compliance with screen reader support
+* **✨ NEW: OpenType Stylist Block**: Custom block for complex typography with proper accessibility
+* **✨ NEW: Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
+* **✨ NEW: ARIA Label Support**: Optional aria-label attributes for better screen reader compatibility
 
 = Supported OpenType Features =
 
@@ -93,7 +102,93 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 = Can I use this with custom web fonts? =
 
-Absolutely! Load your fonts using @font-face in your theme or use a font plugin, then apply features with this plugin.
+Absolutely! You have four options:
+
+1. **Upload webfont kits** from MyFonts, Fontspring, or other providers using the plugin's Custom Fonts tab
+2. **Connect Adobe Fonts** (Typekit) by pasting your project's embed code
+3. **Define custom fonts** loaded through your theme, plugins, or CDN (like Google Fonts)
+4. **Load fonts manually** using @font-face in your theme
+
+The plugin can apply OpenType features to any font loaded on your site.
+
+= How do I upload custom fonts? =
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Enter a name for your font kit
+3. Click "Choose ZIP File" and select your webfont kit ZIP
+4. Click "Upload Font Kit"
+
+The plugin will extract the fonts and make them available in the editor and preview selector.
+
+= How do I add Adobe Fonts? =
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Scroll to "Adobe Fonts (Typekit)" section
+3. Enter a project name
+4. Paste your Adobe Fonts embed code (the <script> tag)
+5. Optionally enter font family names for the preview selector
+6. Click "Add Adobe Fonts Project"
+
+Make sure your domain is authorized in your Adobe Fonts project settings.
+
+= How do I define custom fonts from my theme? =
+
+If you have fonts already loaded through your theme, another plugin, or a CDN:
+
+1. Go to Settings → OpenType Stylist → Custom Fonts tab
+2. Scroll to "Custom Font Definitions" section
+3. Enter a display name for the font
+4. Enter the exact CSS font-family value (e.g., 'Playfair Display', serif)
+5. Optionally add fallback fonts separated by commas
+6. Click "Add Custom Font"
+
+The font will be available in the block editor font selector.
+
+= Can I set fallback fonts? =
+
+Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can specify fallback fonts. These will be used if the primary font fails to load. Fallbacks are automatically included in the CSS font-family declaration.
+
+= Is this plugin accessible? =
+
+Yes! Version 1.2.0 introduces comprehensive accessibility features:
+
+* **Inline Format Warnings**: The plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
+* **OpenType Stylist Block**: A custom block designed for complex typography that includes proper ARIA markup with screen reader-accessible text
+* **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → OpenType Stylist → Accessibility)
+* **Screen Reader Classes**: The OpenType Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
+* **WCAG 2.1 Level AA Compliance**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
+
+= How does the accessibility block work? =
+
+The OpenType Stylist block creates two versions of your text:
+
+1. **For screen readers**: Clean, unformatted text wrapped in a `visually-hidden` class
+2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content
+
+This ensures both visual beauty and full accessibility compliance.
+
+= Should I use the inline format or the block? =
+
+* **Use Inline Format** when applying features to complete words or phrases in existing heading blocks
+* **Use OpenType Stylist Block** when you need letter-by-letter styling, complex typography, or maximum accessibility control
+
+The plugin will warn you if an inline selection might cause accessibility issues.
+
+= What file formats are supported for font uploads? =
+
+The plugin accepts ZIP files containing:
+- CSS files with @font-face declarations
+- Font files: WOFF, WOFF2, TTF, OTF, EOT, SVG
+
+= Is font upload secure? =
+
+Yes! The plugin implements multiple security measures:
+- File type validation
+- ZIP extraction security
+- Path traversal protection
+- CSS sanitization
+- 10MB size limit for uploads
+- Secure storage with .htaccess protection
 
 = Is this compatible with page builders? =
 
@@ -122,17 +217,41 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.0.0 =
-* Initial release
-* Support for ligatures, stylistic sets, swashes, and alternates
-* Quick presets for common typography styles
-* Live preview functionality
-* REST API for preset management
-* Admin settings page
+* Full WCAG 2.1 Level AA accessibility compliance with comprehensive screen reader support
+* Custom OpenType Stylist block with proper ARIA markup and semantic HTML
+* Smart selection validation warns when partial word selections could fragment text for assistive technology
+* One-click conversion tool transforms inline formats to accessible block structure
+* Configurable aria-label support for inline formatted text
+* Multiple screen reader class options (visually-hidden, sr-only, or custom classes)
+* Built-in accessibility best practices guide and documentation
+* Upload custom font kits from MyFonts, Fontspring, and other webfont providers
+* Direct Adobe Fonts (Typekit) integration via embed code
+* Define fonts already loaded through themes, plugins, or CDN services
+* Comprehensive font fallback system for all font sources
+* Secure font file storage with .htaccess protection against code execution
+* Interactive font preview system with adjustable size controls
+* Complete OpenType feature support: ligatures (liga, dlig, calt)
+* All 20 stylistic sets (ss01-ss20) for maximum typographic flexibility
+* Swashes (swsh, cswh) and alternates (salt, titl, ornm) for decorative typography
+* Quick-apply presets for common typography styles
+* Save custom feature combinations as reusable presets
+* Inline text selection directly within the block editor
+* Real-time live preview shows changes before applying
+* Intuitive popover interface with features organized by category
+* Custom circle "O" icon for easy toolbar identification
+* Internationalization support with Spanish (es_ES) and French (fr_FR) translations
+* Zero-JavaScript frontend using native CSS font-feature-settings
+* Full WordPress block editor (Gutenberg) API integration
+* Complete REST API for programmatic access to all plugin features
+* Modern JSX/React architecture for the custom block
+* WordPress @wordpress/scripts build toolchain integration
+* Performance-optimized with intelligent transient caching
+* Rate-limited REST API endpoints for security (50 requests/minute per user)
 
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of OpenType Stylist.
+Initial release of OpenType Stylist with comprehensive accessibility features, font management, and advanced OpenType typography controls.
 
 == Technical Details ==
 
@@ -153,7 +272,22 @@ Typography features are stored as inline styles and data attributes within post 
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/hls/v1/`.
+Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/ots/v1/`.
+
+= Font Management =
+
+The plugin provides three ways to add custom fonts:
+
+**Upload Webfont Kits:**
+Upload complete webfont kits (ZIP files) from MyFonts, Fontspring, or other providers. The plugin extracts fonts, processes CSS, and stores files securely in your WordPress uploads directory.
+
+**Adobe Fonts Integration:**
+Connect Adobe Fonts (Typekit) projects by pasting the embed code. Fonts load directly from Adobe's servers.
+
+**Custom Font Definitions:**
+Define fonts that are already loaded through your theme, plugins, or CDN (like Google Fonts). Simply provide the font family name and optional fallbacks. No files are uploaded to WordPress—fonts continue loading from their original source.
+
+All three methods make fonts available in the block editor and preview selector.
 
 == Credits ==
 

@@ -7,15 +7,15 @@ jQuery(document).ready(function($) {
     'use strict';
 
     // Tab switching with ARIA support
-    $('.hls-tab-button').on('click', function() {
+    $('.ots-tab-button').on('click', function() {
         var tab = $(this).data('tab');
 
         // Update ARIA states
-        $('.hls-tab-button').removeClass('active').attr('aria-selected', 'false');
+        $('.ots-tab-button').removeClass('active').attr('aria-selected', 'false');
         $(this).addClass('active').attr('aria-selected', 'true');
 
-        $('.hls-tab-content').removeClass('active').attr('hidden', 'true');
-        var $panel = $('#hls-tab-' + tab);
+        $('.ots-tab-content').removeClass('active').attr('hidden', 'true');
+        var $panel = $('#ots-tab-' + tab);
         $panel.addClass('active').removeAttr('hidden');
 
         // Move focus to panel for screen readers
@@ -23,8 +23,8 @@ jQuery(document).ready(function($) {
     });
 
     // Add keyboard navigation (arrow keys for tabs)
-    $('.hls-tab-button').on('keydown', function(e) {
-        var $tabs = $('.hls-tab-button');
+    $('.ots-tab-button').on('keydown', function(e) {
+        var $tabs = $('.ots-tab-button');
         var currentIndex = $tabs.index(this);
         var newIndex;
 
@@ -49,8 +49,8 @@ jQuery(document).ready(function($) {
     var selectedFile = null;
 
     // Trigger file input when button is clicked
-    $('#hls-select-file-btn').on('click', function() {
-        $('#hls-font-file').click();
+    $('#ots-select-file-btn').on('click', function() {
+        $('#ots-font-file').click();
     });
 
     // Format file size
@@ -63,13 +63,13 @@ jQuery(document).ready(function($) {
     }
 
     // Handle file selection
-    $('#hls-font-file').on('change', function(e) {
+    $('#ots-font-file').on('change', function(e) {
         var file = e.target.files[0];
         if (!file) return;
 
         // Validate file type
         if (!file.name.endsWith('.zip')) {
-            alert(hlsAdmin.strings.selectZip);
+            alert(otsAdmin.strings.selectZip);
             $(this).val('');
             return;
         }
@@ -77,55 +77,55 @@ jQuery(document).ready(function($) {
         selectedFile = file;
 
         // Show file name and size
-        $('#hls-file-name').text(file.name);
-        $('#hls-file-size').text('(' + formatFileSize(file.size) + ')');
-        $('#hls-selected-file').show();
+        $('#ots-file-name').text(file.name);
+        $('#ots-file-size').text('(' + formatFileSize(file.size) + ')');
+        $('#ots-selected-file').show();
 
         // Enable upload button
-        $('#hls-upload-font-btn').prop('disabled', false);
+        $('#ots-upload-font-btn').prop('disabled', false);
 
         // Auto-fill kit name from filename if empty
-        if (!$('#hls-font-name').val()) {
+        if (!$('#ots-font-name').val()) {
             var kitName = file.name.replace(/\.(zip)$/i, '');
-            $('#hls-font-name').val(kitName);
+            $('#ots-font-name').val(kitName);
         }
     });
 
     // Clear file selection
-    $('#hls-clear-file-btn').on('click', function() {
+    $('#ots-clear-file-btn').on('click', function() {
         selectedFile = null;
-        $('#hls-font-file').val('');
-        $('#hls-selected-file').hide();
-        $('#hls-upload-font-btn').prop('disabled', true);
+        $('#ots-font-file').val('');
+        $('#ots-selected-file').hide();
+        $('#ots-upload-font-btn').prop('disabled', true);
     });
 
     // Upload font kit
-    $('#hls-upload-font-btn').on('click', function() {
+    $('#ots-upload-font-btn').on('click', function() {
         var $btn = $(this);
-        var $message = $('#hls-font-message');
-        var $progress = $('#hls-upload-progress');
-        var $progressFill = $('.hls-progress-fill');
-        var $progressText = $('.hls-progress-text');
-        var $progressBar = $('.hls-progress-bar');
-        var fontName = $('#hls-font-name').val().trim();
+        var $message = $('#ots-font-message');
+        var $progress = $('#ots-upload-progress');
+        var $progressFill = $('.ots-progress-fill');
+        var $progressText = $('.ots-progress-text');
+        var $progressBar = $('.ots-progress-bar');
+        var fontName = $('#ots-font-name').val().trim();
 
         // Clear previous message
         $message.html('');
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + hlsAdmin.strings.enterName + '</p></div>');
-            $('#hls-font-name').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterName + '</p></div>');
+            $('#ots-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!selectedFile) {
-            $message.html('<div class="notice notice-error inline"><p>' + hlsAdmin.strings.selectFile + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.selectFile + '</p></div>');
             return;
         }
 
         // Clear aria-invalid on success
-        $('#hls-font-name').attr('aria-invalid', 'false');
+        $('#ots-font-name').attr('aria-invalid', 'false');
 
         // Prepare FormData
         var formData = new FormData();
@@ -133,22 +133,22 @@ jQuery(document).ready(function($) {
         formData.append('name', fontName);
 
         // Disable button, show progress, and add aria-busy
-        $('.hls-upload-form').attr('aria-busy', 'true');
-        $btn.prop('disabled', true).text(hlsAdmin.strings.uploading);
+        $('.ots-upload-form').attr('aria-busy', 'true');
+        $btn.prop('disabled', true).text(otsAdmin.strings.uploading);
         $progress.show();
         $progressFill.css('width', '0%');
-        $progressText.text(hlsAdmin.strings.uploadingZip);
+        $progressText.text(otsAdmin.strings.uploadingZip);
         $progressBar.attr('aria-valuenow', '0');
 
         // Upload via REST API
         $.ajax({
-            url: hlsAdmin.restUrl + 'fonts',
+            url: otsAdmin.restUrl + 'fonts',
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', hlsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
             },
             xhr: function() {
                 var xhr = new window.XMLHttpRequest();
@@ -158,23 +158,23 @@ jQuery(document).ready(function($) {
                         var percentComplete = Math.round((e.loaded / e.total) * 100);
                         $progressFill.css('width', percentComplete + '%');
                         $progressBar.attr('aria-valuenow', percentComplete);
-                        $progressText.text(hlsAdmin.strings.uploading + ' ' + percentComplete + '%');
+                        $progressText.text(otsAdmin.strings.uploading + ' ' + percentComplete + '%');
                     }
                 }, false);
                 return xhr;
             },
             success: function(response) {
-                $progressText.text(hlsAdmin.strings.processing);
+                $progressText.text(otsAdmin.strings.processing);
                 $progressFill.css('width', '100%');
                 $progressBar.attr('aria-valuenow', '100');
 
-                $message.html('<div class="notice notice-success inline"><p>' + hlsAdmin.strings.uploadSuccess + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.uploadSuccess + '</p></div>');
 
                 // Reset form
                 selectedFile = null;
-                $('#hls-font-name').val('');
-                $('#hls-font-file').val('');
-                $('#hls-selected-file').hide();
+                $('#ots-font-name').val('');
+                $('#ots-font-file').val('');
+                $('#ots-selected-file').hide();
 
                 // Refresh page after 2 seconds
                 setTimeout(function() {
@@ -182,7 +182,7 @@ jQuery(document).ready(function($) {
                 }, 2000);
             },
             error: function(xhr) {
-                var errorMsg = hlsAdmin.strings.uploadError;
+                var errorMsg = otsAdmin.strings.uploadError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -190,18 +190,18 @@ jQuery(document).ready(function($) {
                 $progress.hide();
             },
             complete: function() {
-                $('.hls-upload-form').attr('aria-busy', 'false');
-                $btn.prop('disabled', false).text(hlsAdmin.strings.uploadButton);
+                $('.ots-upload-form').attr('aria-busy', 'false');
+                $btn.prop('disabled', false).text(otsAdmin.strings.uploadButton);
             }
         });
     });
 
     // Font preview selector
-    $('#hls-preview-font-select').on('change', function() {
+    $('#ots-preview-font-select').on('change', function() {
         var selectedFont = $(this).val();
 
         // Update all feature demo previews
-        $('.hls-feature-preview').each(function() {
+        $('.ots-feature-preview').each(function() {
             if (selectedFont) {
                 $(this).css('font-family', selectedFont);
             } else {
@@ -210,7 +210,7 @@ jQuery(document).ready(function($) {
         });
 
         // Update all preset previews (if any exist)
-        $('.hls-preset-preview').each(function() {
+        $('.ots-preset-preview').each(function() {
             if (selectedFont) {
                 $(this).css('font-family', selectedFont);
             } else {
@@ -219,28 +219,38 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // Auto-select first non-system font on page load
+    var $fontSelect = $('#ots-preview-font-select');
+    if ($fontSelect.length && $fontSelect.find('option').length > 1) {
+        // Get first option that's not the default (empty value)
+        var $firstFont = $fontSelect.find('option:not([value=""])').first();
+        if ($firstFont.length) {
+            $fontSelect.val($firstFont.val()).trigger('change');
+        }
+    }
+
     // Preview size slider
-    $('#hls-preview-size-slider').on('input', function() {
+    $('#ots-preview-size-slider').on('input', function() {
         var size = $(this).val();
         var $slider = $(this);
 
         // Update the displayed value
-        $('#hls-preview-size-value').text(size + 'px');
+        $('#ots-preview-size-value').text(size + 'px');
 
         // Update ARIA attributes
         $slider.attr('aria-valuenow', size);
         $slider.attr('aria-valuetext', size + ' pixels');
 
         // Update all feature demo previews
-        $('.hls-feature-preview').css('font-size', size + 'px');
+        $('.ots-feature-preview').css('font-size', size + 'px');
 
         // Update all preset previews (if any exist)
-        $('.hls-preset-preview').css('font-size', size + 'px');
+        $('.ots-preset-preview').css('font-size', size + 'px');
     });
 
     // Delete font
-    $('.hls-delete-font').on('click', function() {
-        if (!confirm(hlsAdmin.strings.confirmDelete)) {
+    $('.ots-delete-font').on('click', function() {
+        if (!confirm(otsAdmin.strings.confirmDelete)) {
             return;
         }
 
@@ -250,21 +260,250 @@ jQuery(document).ready(function($) {
         $btn.prop('disabled', true);
 
         $.ajax({
-            url: hlsAdmin.restUrl + 'fonts/' + fontId,
+            url: otsAdmin.restUrl + 'fonts/' + fontId,
             method: 'DELETE',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', hlsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
             },
             success: function() {
-                $btn.closest('.hls-font-card').fadeOut(function() {
+                $btn.closest('.ots-font-card').fadeOut(function() {
                     $(this).remove();
-                    if ($('.hls-font-card').length === 0) {
-                        $('.hls-fonts-list').replaceWith('<div class="hls-empty-state" role="status"><p><strong>' + hlsAdmin.strings.noFonts + '</strong></p><p>' + hlsAdmin.strings.uploadPrompt + '</p></div>');
+                    if ($('.ots-font-card').length === 0) {
+                        $('.ots-fonts-list').replaceWith('<div class="ots-empty-state" role="status"><p><strong>' + otsAdmin.strings.noFonts + '</strong></p><p>' + otsAdmin.strings.uploadPrompt + '</p></div>');
                     }
                 });
             },
             error: function() {
-                alert(hlsAdmin.strings.deleteError);
+                alert(otsAdmin.strings.deleteError);
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
+    // Add Adobe Font
+    $('#ots-add-adobe-font-btn').on('click', function() {
+        var $btn = $(this);
+        var $message = $('#ots-adobe-font-message');
+        var fontName = $('#ots-adobe-font-name').val().trim();
+        var embedCode = $('#ots-adobe-embed-code').val().trim();
+        var fontFamiliesInput = $('#ots-adobe-font-families').val().trim();
+
+        // Clear previous message
+        $message.html('');
+
+        // Validate
+        if (!fontName) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeProjectName + '</p></div>');
+            $('#ots-adobe-font-name').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        if (!embedCode) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeEmbedCode + '</p></div>');
+            $('#ots-adobe-embed-code').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        // Parse font families
+        var fontFamilies = [];
+        if (fontFamiliesInput) {
+            fontFamilies = fontFamiliesInput.split(',').map(function(f) {
+                return f.trim();
+            }).filter(function(f) {
+                return f.length > 0;
+            });
+        }
+
+        if (fontFamilies.length === 0) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeFontFamilies + '</p></div>');
+            $('#ots-adobe-font-families').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        // Clear aria-invalid on success
+        $('#ots-adobe-font-name').attr('aria-invalid', 'false');
+        $('#ots-adobe-embed-code').attr('aria-invalid', 'false');
+        $('#ots-adobe-font-families').attr('aria-invalid', 'false');
+
+        // Prepare data
+        var data = {
+            name: fontName,
+            embed_code: embedCode,
+            font_families: fontFamilies
+        };
+
+        // Disable button
+        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
+
+        // Add via REST API
+        $.ajax({
+            url: otsAdmin.restUrl + 'adobe-fonts',
+            method: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function(response) {
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.adobeFontSuccess + '</p></div>');
+
+                // Reset form
+                $('#ots-adobe-font-name').val('');
+                $('#ots-adobe-embed-code').val('');
+                $('#ots-adobe-font-families').val('');
+
+                // Refresh page after 1.5 seconds
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = otsAdmin.strings.addAdobeFontError;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(otsAdmin.strings.addAdobeFontButton);
+            }
+        });
+    });
+
+    // Delete Adobe Font
+    $('.ots-delete-adobe-font').on('click', function() {
+        if (!confirm(otsAdmin.strings.confirmDeleteAdobeFont)) {
+            return;
+        }
+
+        var $btn = $(this);
+        var fontId = $btn.data('font-id');
+
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'adobe-fonts/' + fontId,
+            method: 'DELETE',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $btn.closest('.ots-adobe-font-card').fadeOut(function() {
+                    $(this).remove();
+                    // Check if there are any Adobe fonts left
+                    if ($('.ots-adobe-font-card').length === 0) {
+                        $('.ots-adobe-fonts-list').remove();
+                    }
+                });
+            },
+            error: function() {
+                alert(otsAdmin.strings.deleteAdobeFontError);
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
+    // Add Manual Font
+    $('#ots-add-manual-font-btn').on('click', function() {
+        var $btn = $(this);
+        var $message = $('#ots-manual-font-message');
+        var fontName = $('#ots-manual-font-name').val().trim();
+        var fontFamily = $('#ots-manual-font-family').val().trim();
+        var fontFallbacks = $('#ots-manual-font-fallbacks').val().trim();
+
+        // Clear previous message
+        $message.html('');
+
+        // Validate
+        if (!fontName) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterManualFontName + '</p></div>');
+            $('#ots-manual-font-name').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        if (!fontFamily) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterFontFamily + '</p></div>');
+            $('#ots-manual-font-family').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        // Clear aria-invalid on success
+        $('#ots-manual-font-name').attr('aria-invalid', 'false');
+        $('#ots-manual-font-family').attr('aria-invalid', 'false');
+
+        // Prepare data
+        var data = {
+            name: fontName,
+            font_family: fontFamily,
+            fallbacks: fontFallbacks
+        };
+
+        // Disable button
+        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
+
+        // Add via REST API
+        $.ajax({
+            url: otsAdmin.restUrl + 'manual-fonts',
+            method: 'POST',
+            data: JSON.stringify(data),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function(response) {
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.manualFontSuccess + '</p></div>');
+
+                // Reset form
+                $('#ots-manual-font-name').val('');
+                $('#ots-manual-font-family').val('');
+                $('#ots-manual-font-fallbacks').val('');
+
+                // Refresh page after 1.5 seconds
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = otsAdmin.strings.addManualFontError;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(otsAdmin.strings.addManualFontButton);
+            }
+        });
+    });
+
+    // Delete Manual Font
+    $('.ots-delete-manual-font').on('click', function() {
+        if (!confirm(otsAdmin.strings.confirmDeleteManualFont)) {
+            return;
+        }
+
+        var $btn = $(this);
+        var fontId = $btn.data('font-id');
+
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'manual-fonts/' + fontId,
+            method: 'DELETE',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $btn.closest('.ots-manual-font-card').fadeOut(function() {
+                    $(this).remove();
+                    // Check if there are any manual fonts left
+                    if ($('.ots-manual-font-card').length === 0) {
+                        $('.ots-manual-fonts-list').remove();
+                    }
+                });
+            },
+            error: function() {
+                alert(otsAdmin.strings.deleteManualFontError);
                 $btn.prop('disabled', false);
             }
         });

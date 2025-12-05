@@ -1,0 +1,79 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "opentype-stylist/block",
+	"title": "OpenType Stylist",
+	"category": "text",
+	"icon": "editor-textcolor",
+	"description": "Advanced OpenType typography with full accessibility support",
+	"keywords": ["typography", "opentype", "ligatures", "heading", "accessibility"],
+	"textdomain": "opentype-stylist",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"anchor": true,
+		"color": {
+			"text": true,
+			"background": true,
+			"link": false
+		},
+		"spacing": {
+			"margin": true,
+			"padding": true
+		},
+		"typography": {
+			"fontSize": false,
+			"lineHeight": true
+		}
+	},
+	"attributes": {
+		"content": {
+			"type": "string",
+			"default": ""
+		},
+		"tagName": {
+			"type": "string",
+			"default": "h2"
+		},
+		"features": {
+			"type": "array",
+			"default": []
+		},
+		"fontFamily": {
+			"type": "string",
+			"default": ""
+		},
+		"fontSize": {
+			"type": "string",
+			"default": "inherit"
+		},
+		"fontSizeMin": {
+			"type": "number",
+			"default": 16
+		},
+		"fontSizePreferred": {
+			"type": "number",
+			"default": 24
+		},
+		"fontSizeMax": {
+			"type": "number",
+			"default": 32
+		},
+		"fontWeight": {
+			"type": "string",
+			"default": "400"
+		},
+		"letterSpacing": {
+			"type": "number",
+			"default": 0
+		},
+		"screenReaderClass": {
+			"type": "string",
+			"default": "visually-hidden"
+		}
+	},
+	"editorScript": "file:./build/index.js",
+	"editorStyle": "file:./editor.css",
+	"style": "file:./style.css",
+	"viewScript": "file:./view.js"
+}
