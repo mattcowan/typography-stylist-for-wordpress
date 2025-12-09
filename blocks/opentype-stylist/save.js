@@ -16,7 +16,8 @@ export default function save({ attributes }) {
 		fontSizeMax,
 		fontWeight,
 		letterSpacing,
-		screenReaderClass
+		screenReaderClass,
+		textAlign
 	} = attributes;
 
 	// Build inline style
@@ -41,6 +42,10 @@ export default function save({ attributes }) {
 
 		if (fontSize === 'responsive') {
 			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`);
+		}
+
+		if (textAlign) {
+			styleArray.push(`text-align: ${textAlign}`);
 		}
 
 		return styleArray.join('; ');

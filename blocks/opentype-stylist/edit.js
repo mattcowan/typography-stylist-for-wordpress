@@ -7,6 +7,7 @@ import {
 	useBlockProps,
 	InspectorControls,
 	BlockControls,
+	AlignmentToolbar,
 	RichText
 } from '@wordpress/block-editor';
 import {
@@ -31,7 +32,8 @@ export default function Edit({ attributes, setAttributes }) {
 		fontSizeMax,
 		fontWeight,
 		letterSpacing,
-		screenReaderClass
+		screenReaderClass,
+		textAlign
 	} = attributes;
 
 	const blockProps = useBlockProps({
@@ -129,6 +131,10 @@ export default function Edit({ attributes, setAttributes }) {
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
+		if (textAlign) {
+			styles.textAlign = textAlign;
+		}
+
 		return styles;
 	};
 
@@ -195,6 +201,10 @@ export default function Edit({ attributes, setAttributes }) {
 						]}
 					/>
 				</ToolbarGroup>
+				<AlignmentToolbar
+					value={textAlign}
+					onChange={(newAlign) => setAttributes({ textAlign: newAlign })}
+				/>
 			</BlockControls>
 
 			<InspectorControls>
