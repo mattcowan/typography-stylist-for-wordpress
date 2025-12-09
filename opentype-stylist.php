@@ -178,15 +178,16 @@ class OpenType_Stylist {
 
     /**
      * Check if current page has styled content
-     * Works for both singular posts and archive pages with multiple posts
+     * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
     private function has_styled_content() {
         global $wp_query;
 
         if (is_singular()) {
-            // Single post/page - check just this post
-            global $post;
-            if (!isset($post->ID)) {
+            // Single post/page/CPT - check just this post
+            // Use get_queried_object() for reliable post data across all post types
+            $post = get_queried_object();
+            if (!$post || !isset($post->ID) || !isset($post->post_content)) {
                 return false;
             }
 
@@ -244,15 +245,16 @@ class OpenType_Stylist {
 
     /**
      * Get fonts used in current page content
-     * Works for both singular posts and archive pages with multiple posts
+     * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
     private function get_used_fonts_in_content() {
         global $wp_query;
 
         if (is_singular()) {
-            // Single post/page - check just this post
-            global $post;
-            if (!isset($post->ID)) {
+            // Single post/page/CPT - check just this post
+            // Use get_queried_object() for reliable post data across all post types
+            $post = get_queried_object();
+            if (!$post || !isset($post->ID) || !isset($post->post_content)) {
                 return array();
             }
 
@@ -349,15 +351,10 @@ class OpenType_Stylist {
      * Enqueue frontend assets
      */
     public function enqueue_frontend_assets() {
-        // Debug: Always enqueue to test
         $has_styled = $this->has_styled_content();
 
         // Only enqueue if content has styled headlines
         if (!$has_styled) {
-            // DEBUG: Add HTML comment to see why fonts aren't loading
-            add_action('wp_footer', function() {
-                echo '<!-- OTS Debug: No styled content detected on this page -->';
-            });
             return;
         }
 
@@ -375,12 +372,6 @@ class OpenType_Stylist {
 
         // Enqueue Adobe Fonts (always load if configured, they're lightweight)
         $this->enqueue_adobe_fonts();
-
-        // DEBUG: Add info about what fonts were detected
-        $used_fonts = $this->get_used_fonts_in_content();
-        add_action('wp_footer', function() use ($used_fonts) {
-            echo '<!-- OTS Debug: Styled content found. Used fonts: ' . esc_html(implode(', ', $used_fonts)) . ' -->';
-        });
     }
 
     /**
@@ -452,17 +443,6 @@ class OpenType_Stylist {
 
         if (!empty($combined_css)) {
             wp_add_inline_style('ots-frontend', $combined_css);
-
-            // DEBUG: Confirm fonts were added
-            add_action('wp_footer', function() use ($combined_css) {
-                $css_length = strlen($combined_css);
-                echo '<!-- OTS Debug: Font CSS added (' . esc_html($css_length) . ' bytes) -->';
-            });
-        } else {
-            // DEBUG: No CSS to add
-            add_action('wp_footer', function() use ($all_fonts, $used_font_families) {
-                echo '<!-- OTS Debug: No font CSS generated. Total font kits: ' . absint(count($all_fonts)) . ', Used families: ' . absint(count($used_font_families)) . ' -->';
-            });
         }
     }
 

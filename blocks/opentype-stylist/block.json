@@ -24,7 +24,8 @@
 		"typography": {
 			"fontSize": false,
 			"lineHeight": true
-		}
+		},
+		"__experimentalTextAlign": true
 	},
 	"attributes": {
 		"content": {
@@ -70,6 +71,9 @@
 		"screenReaderClass": {
 			"type": "string",
 			"default": "visually-hidden"
+		},
+		"textAlign": {
+			"type": "string"
 		}
 	},
 	"editorScript": "file:./build/index.js",
