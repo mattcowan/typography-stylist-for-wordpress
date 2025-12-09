@@ -5,8 +5,7 @@
  * but we need to import and use the edit/save functions here.
  */
 
-import { registerBlockType } from '@wordpress/blocks';
-import { createBlock } from '@wordpress/blocks';
+import { registerBlockType, createBlock } from '@wordpress/blocks';
 import Edit from './edit';
 import save from './save';
 
