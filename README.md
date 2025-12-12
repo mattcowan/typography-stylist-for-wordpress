@@ -1,49 +1,39 @@
 # OpenType Stylist
 
-A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection, live preview, and comprehensive accessibility support.
-
-![WordPress Plugin Version](https://img.shields.io/badge/version-1.0.0-blue)
-![WordPress Compatibility](https://img.shields.io/badge/wordpress-5.8%2B-green)
-![PHP Version](https://img.shields.io/badge/php-7.4%2B-purple)
-![Accessibility](https://img.shields.io/badge/WCAG-2.1%20AA-green)
+A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview in the Gutenberg block editor.
 
 ## Features
 
-### 🎨 Rich Typography Control
-- **Ligatures**: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
-- **Stylistic Sets**: ss01 through ss20
-- **Swashes**: Regular (swsh) and Contextual (cswh)
-- **Alternates**: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
+### Typography Control
+- Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
+- Stylistic Sets: ss01 through ss20
+- Swashes: Regular (swsh) and Contextual (cswh)
+- Alternates: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
 
-### ✨ User-Friendly Interface
+### User Interface
 - Inline text selection in the block editor
 - Live preview before applying changes
 - Organized feature categories
 - Visual popover interface
-- Custom "O" icon for easy identification
 
-### 🚀 Performance & Compatibility
-- Native CSS font-feature-settings (no frontend JavaScript)
-- Works with Gutenberg block editor
-- Compatible with all modern browsers
-- Optimized for script and display fonts
+### Technical Implementation
+- Native CSS font-feature-settings
+- Gutenberg block editor integration
+- Supports modern browsers with OpenType feature support
 
-### ♿ Accessibility Features (NEW in 1.2.0)
-- **WCAG 2.1 Level AA Compliant**: Full accessibility support for screen readers
-- **Smart Selection Warnings**: Detects partial word selections that could fragment text
-- **OpenType Stylist Block**: Custom block with proper ARIA markup and semantic HTML
-- **ARIA Label Support**: Optional aria-label attributes for inline formatted text
-- **Screen Reader Classes**: Configurable classes (visually-hidden, sr-only, custom)
-- **One-Click Conversion**: Convert inline formats to accessible blocks
-- **Best Practices Guide**: Built-in accessibility documentation and recommendations
+### Accessibility Features
+- Smart selection warnings for partial word selections
+- OpenType Stylist block with ARIA markup and semantic HTML
+- Optional aria-label attributes for inline formatted text
+- Configurable screen reader classes (visually-hidden, sr-only, custom)
+- Conversion tool from inline formats to accessible blocks
 
-### 📦 Font Management
-- **Upload Custom Fonts**: Upload webfont kits from MyFonts, Fontspring, or other providers
-- **Adobe Fonts Integration**: Add fonts from Adobe Fonts (Typekit) by pasting embed codes
-- **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
-- **Font Fallbacks**: Set fallback fonts for all font sources for better browser compatibility
-- **Font Preview**: Test OpenType features with any uploaded or connected font
-- **Automatic Font Loading**: Optimized font delivery on frontend and in the editor
+### Font Management
+- Upload webfont kits from MyFonts, Fontspring, or other providers
+- Adobe Fonts (Typekit) integration via embed codes
+- Custom font definitions for fonts loaded through themes, plugins, or CDN
+- Font fallback configuration
+- Font preview with OpenType feature testing
 
 ## Installation
 
@@ -174,21 +164,14 @@ font-family: 'Playfair Display', Georgia, serif;
 
 ### Recommended Fonts
 
-This plugin works best with fonts that support OpenType features:
+This plugin requires fonts that support OpenType features. Many premium script fonts and professional typefaces include these features.
 
-#### Script Fonts by Alejandro Paul (Sudtipos)
-- **Calgary Script** - Elegant connecting script
-- **Affair** - Romantic calligraphy
-- **Adios Script** - Casual handwritten style
-- **Parfumerie Script** - Vintage commercial script
-- **Samantha** - Upright script with flourishes
+**Examples of fonts with OpenType features:**
+- Script fonts by Alejandro Paul (Sudtipos): Calgary Script, Affair, Adios Script, Parfumerie Script, Samantha
+- Google Fonts: Playfair Display, Cormorant (limited OpenType support)
+- Professional typefaces: Adobe Caslon Pro, Freight Display Pro
 
-#### Other Compatible Fonts
-- **Playfair Display** (Google Fonts)
-- **Cormorant** (Google Fonts)
-- **Adobe Caslon Pro**
-- **Freight Display Pro**
-- Most professional typefaces
+**Note:** Check the font's documentation or specimen to verify which OpenType features are supported. Not all fonts include all features, and feature support varies by font.
 
 ### Example: Wedding Invitation Headline
 
@@ -226,7 +209,7 @@ opentype-stylist/
 
 **Block Editor (Gutenberg)**
 - Uses `@wordpress/format-api` for inline formatting
-- Registers custom format type: `hls/typography-features`
+- Registers custom format type: `ots/typography-features`
 - React-based UI components
 
 **REST API Endpoints**
@@ -275,13 +258,15 @@ Features are applied using the `font-feature-settings` CSS property:
 
 ### Browser Support
 
-| Browser | Support |
-|---------|---------|
-| Chrome 48+ | ✅ Full |
-| Firefox 34+ | ✅ Full |
-| Safari 9.1+ | ✅ Full |
-| Edge 79+ | ✅ Full |
-| IE 10-11 | ⚠️ Partial |
+The plugin uses CSS `font-feature-settings` which is supported in modern browsers:
+
+- Chrome 48+
+- Firefox 34+
+- Safari 9.1+
+- Edge 79+
+- Internet Explorer 10-11 (partial support)
+
+Actual OpenType feature rendering depends on both browser support and font file capabilities.
 
 ## Frequently Asked Questions
 
@@ -294,24 +279,23 @@ Yes, this plugin requires fonts that support OpenType features. Most premium scr
 
 ### Is this plugin accessible?
 
-**Yes!** Version 1.2.0 introduces comprehensive accessibility features:
+The plugin includes accessibility features for screen reader compatibility:
 
 **For Inline Formats:**
-- Smart validation warns when partial word selections could fragment text
+- Warns when partial word selections could fragment text
 - Optional aria-label support (configurable in Settings → Accessibility)
-- One-click conversion to accessible block format
+- Conversion tool to accessible block format
 
 **For OpenType Stylist Block:**
 - Dual content approach: clean text for screen readers, styled text for visual display
-- Proper ARIA markup with `aria-hidden="true"` on styled content
+- ARIA markup with `aria-hidden="true"` on styled content
 - Configurable screen reader classes (visually-hidden, sr-only, custom)
-- Full WCAG 2.1 Level AA compliance
 - Semantic HTML with selectable tag types (H1-H6, P, DIV)
 
-**Best Practices:**
+**Recommended Usage:**
 - Use inline format for simple, complete word/phrase styling
 - Use OpenType Stylist block for complex or letter-by-letter typography
-- Test with screen readers like NVDA (Windows) or VoiceOver (macOS)
+- Test with screen readers like NVDA (Windows) or VoiceOver (macOS) to verify compatibility with your content
 
 ### How does the OpenType Stylist block ensure accessibility?
 
@@ -360,53 +344,51 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 
 ### Does this slow down my site?
 
-No. The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. There's no JavaScript on the frontend. Font loading is optimized to only load fonts used on the current page.
+The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
 
 ### Version 1.0.0
 
 **Accessibility Features:**
-- ✨ Comprehensive accessibility features for WCAG 2.1 Level AA compliance
-- ✨ OpenType Stylist custom block with proper ARIA support
-- ✨ Smart selection validation with warnings for partial word selections
-- ✨ One-click conversion from inline format to accessible block
-- ✨ Optional aria-label support for inline formatted text
-- ✨ Accessibility settings tab with screen reader configuration
-- ✨ Screen reader class options (visually-hidden, sr-only, custom)
-- ✨ Accessibility best practices documentation
+- OpenType Stylist custom block with ARIA support
+- Smart selection validation with warnings for partial word selections
+- Conversion from inline format to accessible block
+- Optional aria-label support for inline formatted text
+- Accessibility settings tab with screen reader configuration
+- Screen reader class options (visually-hidden, sr-only, custom)
+- Accessibility documentation
 
 **Font Management:**
-- 📦 Upload custom fonts from webfont kits (MyFonts, Fontspring, etc.)
-- 📦 Adobe Fonts (Typekit) integration with embed code support
-- 📦 Custom font definitions for fonts loaded through themes, plugins, or CDN
-- 📦 Font fallback support for all font sources
-- 📦 Secure font file handling and storage with .htaccess protection
-- 📦 Font preview system with size controls
+- Upload custom fonts from webfont kits (MyFonts, Fontspring, etc.)
+- Adobe Fonts (Typekit) integration with embed code support
+- Custom font definitions for fonts loaded through themes, plugins, or CDN
+- Font fallback support
+- Secure font file handling and storage with .htaccess protection
+- Font preview system with size controls
 
 **Core Typography Features:**
-- 🎨 Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
-- 🎨 Stylistic Sets: ss01 through ss20
-- 🎨 Swashes: Regular (swsh) and Contextual (cswh)
-- 🎨 Alternates: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
-- 🎨 Quick presets for common typography styles
-- 🎨 Custom presets with save functionality
+- Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
+- Stylistic Sets: ss01 through ss20
+- Swashes: Regular (swsh) and Contextual (cswh)
+- Alternates: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
+- Quick presets for common typography styles
+- Custom presets with save functionality
 
 **UI/UX:**
-- ✨ Inline text selection in block editor
-- ✨ Live preview before applying changes
-- ✨ Visual popover interface with organized feature categories
-- ✨ Custom "O" circle icon for easy identification
-- 🌍 Spanish (es_ES) and French (fr_FR) translations
+- Inline text selection in block editor
+- Live preview before applying changes
+- Visual popover interface with organized feature categories
+- Spanish (es_ES) and French (fr_FR) translations
 
 **Technical:**
-- 🔧 Native CSS font-feature-settings (no frontend JavaScript)
-- 🔧 WordPress block editor API integration
-- 🔧 REST API endpoints for all plugin features
-- 🔧 Custom block with JSX/React components
-- 🔧 Integrated @wordpress/scripts build process
-- 🔧 Performance optimization with transient caching
-- 🔧 Rate limiting on REST API endpoints
+- Native CSS font-feature-settings
+- WordPress block editor API integration
+- REST API endpoints for plugin features
+- Custom block with JSX/React components
+- Integrated @wordpress/scripts build process
+- Transient caching
+- Rate limiting on REST API endpoints
 
 ## Development
 
@@ -499,13 +481,6 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 
 **Developed by:** Matthew Neil Cowan (github: mattcowan)
 
-**Inspired by:** Beautiful typography and the amazing work of type designers like Alejandro Paul
-
 **Special Thanks:**
 - The WordPress community
-- Type designers who create fonts with rich OpenType features
-- Everyone who appreciates good typography
-
----
-
-Made with ❤️ for typography enthusiasts
+- Type designers who create fonts with OpenType features
