@@ -403,6 +403,52 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // Handle Adobe Font "Load on all pages" checkbox
+    $('.ots-adobe-font-load-all-pages').on('change', function() {
+        var $checkbox = $(this);
+        var fontId = $checkbox.data('font-id');
+        var loadOnAllPages = $checkbox.is(':checked');
+        var originalState = !loadOnAllPages; // Store original state for rollback
+
+        // Disable checkbox while saving
+        $checkbox.prop('disabled', true);
+
+        // Update via REST API
+        $.ajax({
+            url: otsAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
+            method: 'PATCH',
+            data: JSON.stringify({
+                load_on_all_pages: loadOnAllPages
+            }),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function(response) {
+                // Visual feedback: briefly highlight the checkbox label
+                var $label = $checkbox.closest('label');
+                $label.addClass('ots-success-flash');
+                setTimeout(function() {
+                    $label.removeClass('ots-success-flash');
+                }, 500);
+            },
+            error: function(xhr) {
+                // Revert checkbox to original state
+                $checkbox.prop('checked', originalState);
+
+                var errorMsg = 'Failed to update setting.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                alert(errorMsg);
+            },
+            complete: function() {
+                // Re-enable checkbox
+                $checkbox.prop('disabled', false);
+            }
+        });
+    });
+
     // Add Manual Font
     $('#ots-add-manual-font-btn').on('click', function() {
         var $btn = $(this);

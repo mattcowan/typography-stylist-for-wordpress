@@ -177,6 +177,53 @@ class OpenType_Stylist {
     }
 
     /**
+     * Get content that will be displayed for a post on archive pages
+     * Determines whether to check excerpt, content before more tag, or full content
+     *
+     * This uses a simple heuristic:
+     * 1. If manual excerpt exists, use it
+     * 2. If <!--more--> tag exists, use content before it
+     * 3. Otherwise, assume full content (since auto-excerpts are plain text without styled content)
+     *
+     * Theme authors can override this behavior using the 'ots_archive_post_content' filter.
+     *
+     * @param WP_Post $post Post object
+     * @return string Content to check
+     */
+    private function get_archive_post_content($post) {
+        $content_to_check = '';
+
+        if ($post->post_excerpt) {
+            // Has manual excerpt - check excerpt only
+            $content_to_check = $post->post_excerpt;
+        } elseif (strpos($post->post_content, '<!--more-->') !== false) {
+            // Has more tag - check content before more tag
+            $content_parts = explode('<!--more-->', $post->post_content, 2);
+            $content_to_check = $content_parts[0];
+        } else {
+            // No manual excerpt or more tag
+            // Skip expensive get_the_excerpt() call since auto-excerpts are plain text
+            // with no HTML/blocks, so they won't contain styled content anyway
+            // Default to full content for themes that show full posts on archives
+            $content_to_check = $post->post_content;
+        }
+
+        /**
+         * Filter the content to check for a post on archive pages
+         *
+         * Allows themes to override the default heuristic for determining what content
+         * is displayed on archive pages. This is useful if your theme has custom logic
+         * for showing excerpts vs full content.
+         *
+         * @since 1.0.0
+         *
+         * @param string  $content_to_check The content determined by the default heuristic
+         * @param WP_Post $post             The post object being checked
+         */
+        return apply_filters('ots_archive_post_content', $content_to_check, $post);
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -226,10 +273,12 @@ class OpenType_Stylist {
 
                 // Check each post in the loop
                 foreach ($wp_query->posts as $loop_post) {
-                    $raw_content = $loop_post->post_content;
-                    $rendered_content = apply_filters('the_content', $raw_content);
+                    $content_to_check = $this->get_archive_post_content($loop_post);
 
-                    if (strpos($raw_content, 'ots-styled') !== false ||
+                    // Apply content filters to render blocks
+                    $rendered_content = apply_filters('the_content', $content_to_check);
+
+                    if (strpos($content_to_check, 'ots-styled') !== false ||
                         strpos($rendered_content, 'ots-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
@@ -301,16 +350,17 @@ class OpenType_Stylist {
 
                 // Check each post in the loop
                 foreach ($wp_query->posts as $loop_post) {
-                    // Method 1: Parse block attributes directly
-                    $blocks = parse_blocks($loop_post->post_content);
+                    $content_to_check = $this->get_archive_post_content($loop_post);
+
+                    // Method 1: Parse block attributes directly from the portion that will be shown
+                    $blocks = parse_blocks($content_to_check);
                     $this->extract_fonts_from_blocks($blocks, $used_fonts);
 
                     // Method 2: Look for data-font attributes in HTML
-                    $raw_content = $loop_post->post_content;
-                    $rendered_content = apply_filters('the_content', $raw_content);
-                    $content_to_check = $raw_content . ' ' . $rendered_content;
+                    $rendered_content = apply_filters('the_content', $content_to_check);
+                    $combined_content = $content_to_check . ' ' . $rendered_content;
 
-                    if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
+                    if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $combined_content, $matches)) {
                         $used_fonts = array_merge($used_fonts, $matches[1]);
                     }
                 }
@@ -759,6 +809,14 @@ class OpenType_Stylist {
         register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_fallback_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+            'methods' => 'PATCH',
+            'callback' => array($this, 'update_adobe_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
                 return current_user_can('edit_posts');
             }
@@ -1813,7 +1871,8 @@ class OpenType_Stylist {
                         ? array_map('sanitize_text_field', $font['font_families'])
                         : array(),
                     'added_date' => isset($font['added_date']) ? sanitize_text_field($font['added_date']) : current_time('mysql'),
-                    'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : ''
+                    'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : '',
+                    'load_on_all_pages' => isset($font['load_on_all_pages']) ? (bool) $font['load_on_all_pages'] : false
                 );
 
                 // Only add if CSS URL is valid https
@@ -2041,6 +2100,45 @@ class OpenType_Stylist {
     }
 
     /**
+     * REST endpoint: Update Adobe Font load on all pages setting
+     *
+     * Updates whether an Adobe Font should be loaded on all pages or only when used.
+     *
+     * @since 1.1.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter and 'load_on_all_pages' in body.
+     * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
+     */
+    public function update_adobe_font_load_on_all_pages_endpoint($request) {
+        $id = sanitize_key($request->get_param('id'));
+        $params = $request->get_json_params();
+
+        if (!isset($params['load_on_all_pages'])) {
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $fonts = $this->get_adobe_fonts();
+        $found = false;
+
+        foreach ($fonts as $key => $font) {
+            if ($font['id'] === $id) {
+                $fonts[$key]['load_on_all_pages'] = (bool) $params['load_on_all_pages'];
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'opentype-stylist'), array('status' => 404));
+        }
+
+        update_option('ots_adobe_fonts', $fonts);
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
+    }
+
+    /**
      * REST endpoint: Update font fallback (uploaded fonts)
      *
      * Updates the fallback fonts for an uploaded custom font kit.
@@ -2168,8 +2266,11 @@ class OpenType_Stylist {
     /**
      * Enqueue Adobe Fonts scripts in editor and frontend
      *
-     * Loads Adobe Fonts (Typekit) CSS stylesheets for all configured projects.
-     * Called in both editor and frontend contexts.
+     * Loads Adobe Fonts (Typekit) CSS stylesheets for configured projects.
+     * In editor contexts: loads all fonts for preview.
+     * On frontend: only loads fonts that are either:
+     *   - Set to "load on all pages" OR
+     *   - Actually used on the current page
      *
      * @since 1.1.0
      *
@@ -2182,8 +2283,57 @@ class OpenType_Stylist {
             return;
         }
 
+        // In admin/editor, always load all fonts for preview
+        $is_editor = is_admin();
+
+        // Get fonts used on current page (only needed for frontend conditional loading)
+        $used_font_families = array();
+        if (!$is_editor) {
+            $used_font_families = $this->get_used_fonts_in_content();
+
+            // Parse font families from CSS font-family values
+            $parsed_font_families = array();
+            foreach ($used_font_families as $font_family_value) {
+                $families = array_map('trim', explode(',', $font_family_value));
+                foreach ($families as $family) {
+                    $family = trim($family, '"\'');
+                    if (!empty($family)) {
+                        $parsed_font_families[] = $family;
+                    }
+                }
+            }
+            $used_font_families = array_unique($parsed_font_families);
+        }
+
         foreach ($adobe_fonts as $font) {
-            if (!empty($font['css_url'])) {
+            if (empty($font['css_url'])) {
+                continue;
+            }
+
+            // Determine if this font should be loaded
+            $should_load = false;
+
+            if ($is_editor) {
+                // Always load in editor for preview
+                $should_load = true;
+            } else {
+                // On frontend, check load_on_all_pages setting
+                if (!empty($font['load_on_all_pages'])) {
+                    $should_load = true;
+                } else {
+                    // Check if any of this font's families are used on the page
+                    if (!empty($font['font_families'])) {
+                        foreach ($font['font_families'] as $family) {
+                            if (in_array($family, $used_font_families)) {
+                                $should_load = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if ($should_load) {
                 wp_enqueue_style(
                     'ots-adobe-' . $font['id'],
                     $font['css_url'],

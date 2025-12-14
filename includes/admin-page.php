@@ -479,6 +479,20 @@ $manual_fonts = $instance->get_manual_fonts();
                             <?php echo esc_html(implode(', ', $font['font_families'])); ?>
                         </div>
                         <?php endif; ?>
+                        <div class="ots-font-loading-option">
+                            <label>
+                                <input
+                                    type="checkbox"
+                                    class="ots-adobe-font-load-all-pages"
+                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
+                                    <?php checked(!empty($font['load_on_all_pages'])); ?>
+                                    aria-describedby="ots-load-all-pages-desc-<?php echo esc_attr($font['id']); ?>" />
+                                <?php esc_html_e('Load on all pages', 'opentype-stylist'); ?>
+                            </label>
+                            <p id="ots-load-all-pages-desc-<?php echo esc_attr($font['id']); ?>" class="description">
+                                <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'opentype-stylist'); ?>
+                            </p>
+                        </div>
                         <div class="ots-font-meta">
                             <small>
                                 <code><?php echo esc_html($font['css_url']); ?></code>
