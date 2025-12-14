@@ -8,11 +8,11 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection, live preview, and full accessibility support. Upload custom fonts, connect Adobe Fonts, or define theme fonts.
+Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview. Upload custom fonts, connect Adobe Fonts, or define theme fonts.
 
 == Description ==
 
-OpenType Stylist brings professional typography control to WordPress headlines. Perfect for designers working with premium script fonts, this plugin allows you to apply OpenType features directly in the block editor.
+OpenType Stylist provides typography control for WordPress headlines. This plugin allows you to apply OpenType features directly in the block editor.
 
 = Key Features =
 
@@ -28,10 +28,10 @@ OpenType Stylist brings professional typography control to WordPress headlines. 
 * **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
 * **Font Fallbacks**: Set fallback fonts for all font sources for better compatibility
 * **Font Preview**: Test OpenType features with any uploaded or connected font
-* **✨ NEW: Accessibility Features**: Full WCAG 2.1 Level AA compliance with screen reader support
-* **✨ NEW: OpenType Stylist Block**: Custom block for complex typography with proper accessibility
-* **✨ NEW: Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
-* **✨ NEW: ARIA Label Support**: Optional aria-label attributes for better screen reader compatibility
+* **Accessibility Features**: Screen reader support with ARIA markup
+* **OpenType Stylist Block**: Custom block for complex typography with accessibility features
+* **Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
+* **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility
 
 = Supported OpenType Features =
 
@@ -61,13 +61,13 @@ OpenType Stylist brings professional typography control to WordPress headlines. 
 
 = Recommended Fonts =
 
-This plugin works best with fonts that support OpenType features:
+This plugin requires fonts that support OpenType features. Many premium script fonts and professional typefaces include these features.
 
-* **Calgary Script** by Alejandro Paul
-* **Affair** by Alejandro Paul
-* **Adios Script** by Alejandro Paul
-* **Parfumerie Script** by Alejandro Paul
-* Any font with OpenType feature support
+Examples:
+* Script fonts by Alejandro Paul (Calgary Script, Affair, Adios Script, Parfumerie Script)
+* Professional typefaces with OpenType support
+
+Check the font's documentation or specimen to verify which OpenType features are supported.
 
 = How It Works =
 
@@ -150,13 +150,13 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 
 = Is this plugin accessible? =
 
-Yes! Version 1.2.0 introduces comprehensive accessibility features:
+The plugin includes accessibility features for screen reader compatibility:
 
-* **Inline Format Warnings**: The plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
-* **OpenType Stylist Block**: A custom block designed for complex typography that includes proper ARIA markup with screen reader-accessible text
+* **Inline Format Warnings**: Detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
+* **OpenType Stylist Block**: Custom block designed for complex typography that includes ARIA markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → OpenType Stylist → Accessibility)
 * **Screen Reader Classes**: The OpenType Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
-* **WCAG 2.1 Level AA Compliance**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
+* **Dual Content Approach**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
 
 = How does the accessibility block work? =
 
@@ -165,7 +165,7 @@ The OpenType Stylist block creates two versions of your text:
 1. **For screen readers**: Clean, unformatted text wrapped in a `visually-hidden` class
 2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content
 
-This ensures both visual beauty and full accessibility compliance.
+This approach provides both styled visual presentation and screen reader compatibility.
 
 = Should I use the inline format or the block? =
 
@@ -196,7 +196,7 @@ This plugin is designed for the WordPress block editor (Gutenberg). Compatibilit
 
 = Will this slow down my site? =
 
-No. The plugin uses CSS font-feature-settings which is a native browser capability. There's no JavaScript on the frontend.
+The plugin uses CSS font-feature-settings which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 = Can I apply features to body text? =
 
@@ -217,41 +217,39 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.0.0 =
-* Full WCAG 2.1 Level AA accessibility compliance with comprehensive screen reader support
-* Custom OpenType Stylist block with proper ARIA markup and semantic HTML
-* Smart selection validation warns when partial word selections could fragment text for assistive technology
-* One-click conversion tool transforms inline formats to accessible block structure
+* OpenType Stylist block with ARIA markup and semantic HTML
+* Smart selection validation warns when partial word selections could fragment text
+* Conversion tool from inline formats to accessible block structure
 * Configurable aria-label support for inline formatted text
-* Multiple screen reader class options (visually-hidden, sr-only, or custom classes)
-* Built-in accessibility best practices guide and documentation
+* Screen reader class options (visually-hidden, sr-only, or custom classes)
+* Accessibility documentation
 * Upload custom font kits from MyFonts, Fontspring, and other webfont providers
-* Direct Adobe Fonts (Typekit) integration via embed code
-* Define fonts already loaded through themes, plugins, or CDN services
-* Comprehensive font fallback system for all font sources
-* Secure font file storage with .htaccess protection against code execution
-* Interactive font preview system with adjustable size controls
-* Complete OpenType feature support: ligatures (liga, dlig, calt)
-* All 20 stylistic sets (ss01-ss20) for maximum typographic flexibility
-* Swashes (swsh, cswh) and alternates (salt, titl, ornm) for decorative typography
+* Adobe Fonts (Typekit) integration via embed code
+* Define fonts loaded through themes, plugins, or CDN services
+* Font fallback system
+* Secure font file storage with .htaccess protection
+* Font preview system with size controls
+* OpenType feature support: ligatures (liga, dlig, calt)
+* Stylistic sets (ss01-ss20)
+* Swashes (swsh, cswh) and alternates (salt, titl, ornm)
 * Quick-apply presets for common typography styles
-* Save custom feature combinations as reusable presets
-* Inline text selection directly within the block editor
-* Real-time live preview shows changes before applying
-* Intuitive popover interface with features organized by category
-* Custom circle "O" icon for easy toolbar identification
-* Internationalization support with Spanish (es_ES) and French (fr_FR) translations
-* Zero-JavaScript frontend using native CSS font-feature-settings
-* Full WordPress block editor (Gutenberg) API integration
-* Complete REST API for programmatic access to all plugin features
-* Modern JSX/React architecture for the custom block
-* WordPress @wordpress/scripts build toolchain integration
-* Performance-optimized with intelligent transient caching
-* Rate-limited REST API endpoints for security (50 requests/minute per user)
+* Custom preset creation and saving
+* Inline text selection in the block editor
+* Live preview before applying changes
+* Popover interface with features organized by category
+* Spanish (es_ES) and French (fr_FR) translations
+* Native CSS font-feature-settings
+* WordPress block editor (Gutenberg) API integration
+* REST API for plugin features
+* JSX/React architecture for the custom block
+* WordPress @wordpress/scripts build toolchain
+* Transient caching
+* Rate-limited REST API endpoints (50 requests/minute per user)
 
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial release of OpenType Stylist with comprehensive accessibility features, font management, and advanced OpenType typography controls.
+Initial release of OpenType Stylist with accessibility features, font management, and OpenType typography controls.
 
 == Technical Details ==
 
@@ -264,7 +262,7 @@ Initial release of OpenType Stylist with comprehensive accessibility features, f
 
 = Performance =
 
-Features are applied using CSS font-feature-settings, which is hardware-accelerated in modern browsers. No JavaScript runs on the frontend.
+Features are applied using CSS font-feature-settings, which is hardware-accelerated in modern browsers. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 = Data Storage =
 
@@ -291,6 +289,6 @@ All three methods make fonts available in the block editor and preview selector.
 
 == Credits ==
 
-Developed with ❤️ for typography enthusiasts.
+Developed by Matthew Cowan.
 
-Special thanks to type designers like Alejandro Paul whose beautiful fonts inspire better web typography.
+Special thanks to type designers who create fonts with OpenType features.
