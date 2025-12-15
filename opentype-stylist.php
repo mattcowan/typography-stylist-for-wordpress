@@ -2292,17 +2292,17 @@ class OpenType_Stylist {
             $used_font_families = $this->get_used_fonts_in_content();
 
             // Parse font families from CSS font-family values
-            $parsed_font_families = array();
+            $individual_font_families = array();
             foreach ($used_font_families as $font_family_value) {
                 $families = array_map('trim', explode(',', $font_family_value));
                 foreach ($families as $family) {
                     $family = trim($family, '"\'');
                     if (!empty($family)) {
-                        $parsed_font_families[] = $family;
+                        $individual_font_families[] = $family;
                     }
                 }
             }
-            $used_font_families = array_unique($parsed_font_families);
+            $used_font_families = array_unique($individual_font_families);
         }
 
         foreach ($adobe_fonts as $font) {
