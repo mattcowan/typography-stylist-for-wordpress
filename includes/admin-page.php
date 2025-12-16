@@ -480,11 +480,12 @@ $manual_fonts = $instance->get_manual_fonts();
                         </div>
                         <?php endif; ?>
                         <div class="ots-font-loading-option">
-                            <label>
+                            <label for="ots-load-all-pages-<?php echo esc_attr($font['id']); ?>">
                                 <input
                                     type="checkbox"
                                     class="ots-adobe-font-load-all-pages"
                                     data-font-id="<?php echo esc_attr($font['id']); ?>"
+                                    id="ots-load-all-pages-<?php echo esc_attr($font['id']); ?>"
                                     <?php checked(!empty($font['load_on_all_pages'])); ?>
                                     aria-describedby="ots-load-all-pages-desc-<?php echo esc_attr($font['id']); ?>" />
                                 <?php esc_html_e('Load on all pages', 'opentype-stylist'); ?>
