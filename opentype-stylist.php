@@ -202,10 +202,22 @@ class OpenType_Stylist {
             $content_to_check = $content_parts[0];
         } else {
             // No manual excerpt or more tag
-            // Skip expensive get_the_excerpt() call since auto-excerpts are plain text
-            // with no HTML/blocks, so they won't contain styled content anyway
-            // Default to full content for themes that show full posts on archives
-            $content_to_check = $post->post_content;
+            // Only check full content if theme is configured to show full posts on archives
+            // Otherwise assume auto-excerpt (plain text) contains no custom fonts
+            /**
+             * Filter whether to check full post content on archive pages when no excerpt or more tag exists
+             *
+             * By default, posts without manual excerpts or more tags are not checked for custom fonts
+             * on archive pages, since auto-generated excerpts are plain text without formatting.
+             * Set this to true if your theme shows full post content on archives.
+             *
+             * @since 1.0.0
+             *
+             * @param bool    $check_full_content Whether to check full content (default: false)
+             * @param WP_Post $post               The post object being checked
+             */
+            $check_full_content = apply_filters('ots_check_full_content_on_archives', false, $post);
+            $content_to_check = $check_full_content ? $post->post_content : '';
         }
 
         /**
