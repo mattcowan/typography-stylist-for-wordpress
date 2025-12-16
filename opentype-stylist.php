@@ -224,6 +224,48 @@ class OpenType_Stylist {
     }
 
     /**
+     * Render content for font detection with optional full content filter
+     *
+     * By default uses do_blocks() which only processes block markup without triggering:
+     * - Shortcode processing (prevents arbitrary code execution)
+     * - oEmbed transformations (prevents external API calls)
+     * - wpautop formatting (unnecessary for font detection)
+     * - Third-party 'the_content' filter hooks (prevents side effects)
+     *
+     * This improves performance and prevents unintended side effects on archive pages
+     * (like incrementing view counters, sending notifications, executing shortcodes).
+     *
+     * SECURITY WARNING: Enabling full 'the_content' filter will execute shortcodes and
+     * third-party hooks, which may:
+     * - Execute arbitrary code through shortcodes
+     * - Trigger unintended actions (analytics, notifications, view counters)
+     * - Cause significant performance degradation on archive pages
+     * - Make external API calls (oEmbeds, etc.)
+     *
+     * Only enable if you have a specific plugin that injects font information via
+     * 'the_content' filter and you understand the security/performance implications.
+     *
+     * To enable (not recommended unless absolutely necessary):
+     * add_filter('ots_use_full_content_filter', '__return_true');
+     *
+     * @param string $content Raw post content to render
+     * @return string Rendered content
+     */
+    private function render_content_for_detection($content) {
+        $use_full_content_filter = apply_filters('ots_use_full_content_filter', false);
+
+        if ($use_full_content_filter) {
+            // Log warning in debug mode when full filter is enabled
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('OpenType Stylist: Using full the_content filter (ots_use_full_content_filter enabled). This may impact performance.');
+            }
+            return apply_filters('the_content', $content);
+        }
+
+        return function_exists('do_blocks') ? do_blocks($content) : $content;
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -247,7 +289,7 @@ class OpenType_Stylist {
                 $raw_content = $post->post_content;
 
                 // Apply content filters to render Gutenberg blocks
-                $rendered_content = apply_filters('the_content', $raw_content);
+                $rendered_content = $this->render_content_for_detection($raw_content);
 
                 // Check if ots-styled class exists in either raw or rendered content
                 $has_styled = (strpos($raw_content, 'ots-styled') !== false ||
@@ -276,7 +318,7 @@ class OpenType_Stylist {
                     $content_to_check = $this->get_archive_post_content($loop_post);
 
                     // Apply content filters to render blocks
-                    $rendered_content = apply_filters('the_content', $content_to_check);
+                    $rendered_content = $this->render_content_for_detection($content_to_check);
 
                     if (strpos($content_to_check, 'ots-styled') !== false ||
                         strpos($rendered_content, 'ots-styled') !== false) {
@@ -320,7 +362,7 @@ class OpenType_Stylist {
 
                 // Method 2: Look for data-font attributes in HTML (for inline formats and backward compatibility)
                 $raw_content = $post->post_content;
-                $rendered_content = apply_filters('the_content', $raw_content);
+                $rendered_content = $this->render_content_for_detection($raw_content);
                 $content_to_check = $raw_content . ' ' . $rendered_content;
 
                 if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $content_to_check, $matches)) {
@@ -357,7 +399,7 @@ class OpenType_Stylist {
                     $this->extract_fonts_from_blocks($blocks, $used_fonts);
 
                     // Method 2: Look for data-font attributes in HTML
-                    $rendered_content = apply_filters('the_content', $content_to_check);
+                    $rendered_content = $this->render_content_for_detection($content_to_check);
                     $combined_content = $content_to_check . ' ' . $rendered_content;
 
                     if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $combined_content, $matches)) {
