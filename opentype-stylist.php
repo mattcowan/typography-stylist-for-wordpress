@@ -196,9 +196,9 @@ class OpenType_Stylist {
         if ($post->post_excerpt) {
             // Has manual excerpt - check excerpt only
             $content_to_check = $post->post_excerpt;
-        } elseif (strpos($post->post_content, '<!--more-->') !== false) {
-            // Has more tag - check content before more tag
-            $content_parts = explode('<!--more-->', $post->post_content, 2);
+        } elseif (preg_match('/<!--more(\s[^>]*)?-->/', $post->post_content)) {
+            // Has more tag (including custom text) - check content before first more tag
+            $content_parts = preg_split('/<!--more(\s[^>]*)?-->/', $post->post_content, 2);
             $content_to_check = $content_parts[0];
         } else {
             // No manual excerpt or more tag
