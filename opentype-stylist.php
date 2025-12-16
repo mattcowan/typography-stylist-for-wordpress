@@ -2343,14 +2343,23 @@ class OpenType_Stylist {
         // In admin/editor, always load all fonts for preview
         $is_editor = is_admin();
 
-        // Get fonts used on current page (only needed for frontend conditional loading)
+        // Only get used fonts if at least one font is set to load conditionally
         $used_font_families = array();
+        $has_conditional_fonts = false;
         if (!$is_editor) {
-            $used_font_families = $this->get_used_fonts_in_content();
+            foreach ($adobe_fonts as $font) {
+                if (empty($font['load_on_all_pages'])) {
+                    $has_conditional_fonts = true;
+                    break;
+                }
+            }
+            if ($has_conditional_fonts) {
+                $used_font_families = $this->get_used_fonts_in_content();
 
-            // Parse font families from CSS font-family values
-            $individual_font_families = $this->parse_font_family_list($used_font_families);
-            $used_font_families = array_unique($individual_font_families);
+                // Parse font families from CSS font-family values
+                $individual_font_families = $this->parse_font_family_list($used_font_families);
+                $used_font_families = array_unique($individual_font_families);
+            }
         }
 
         foreach ($adobe_fonts as $font) {
