@@ -196,9 +196,9 @@ class OpenType_Stylist {
         if ($post->post_excerpt) {
             // Has manual excerpt - check excerpt only
             $content_to_check = $post->post_excerpt;
-        } elseif (preg_match('/<!--more(\s[^>]*)?-->/', $post->post_content)) {
+        } elseif (preg_match('/<!--more(?:\s[^>]*)?-->/', $post->post_content)) {
             // Has more tag (including custom text) - check content before first more tag
-            $content_parts = preg_split('/<!--more(\s[^>]*)?-->/', $post->post_content, 2);
+            $content_parts = preg_split('/<!--more(?:\s[^>]*)?-->/', $post->post_content, 2);
             $content_to_check = $content_parts[0];
         } else {
             // No manual excerpt or more tag
@@ -586,7 +586,9 @@ class OpenType_Stylist {
                 'addManualFontError' => esc_html__('Failed to add custom font.', 'opentype-stylist'),
                 'addManualFontButton' => esc_html__('Add Custom Font', 'opentype-stylist'),
                 'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'opentype-stylist'),
-                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'opentype-stylist')
+                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'opentype-stylist'),
+                // Font loading setting strings
+                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'opentype-stylist')
             )
         ));
     }

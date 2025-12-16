@@ -436,7 +436,7 @@ jQuery(document).ready(function($) {
                 // Revert checkbox to original state
                 $checkbox.prop('checked', originalState);
 
-                var errorMsg = 'Failed to update setting.';
+                var errorMsg = (otsAdmin.strings && otsAdmin.strings.updateSettingError) ? otsAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }

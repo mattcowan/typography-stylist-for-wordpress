@@ -3,8 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
-"POT-Creation-Date: 2025-11-24 20:08+0000\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/opentype-stylist\n"
+"POT-Creation-Date: 2025-12-16 14:47+0000\n"
 "PO-Revision-Date: 2025-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -13,233 +13,301 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Custom PHP Script\n"
-"X-Domain: headline-ligatures-styles\n"
+"X-Domain: opentype-stylist\n"
 
-#: headline-ligatures-styles.php:348
+#: opentype-stylist.php:348
 msgid "Headline Ligatures & Styles"
 msgstr ""
 
-#: headline-ligatures-styles.php:349
+#: opentype-stylist.php:349
 msgid "Headline Typography"
 msgstr ""
 
-#: headline-ligatures-styles.php:1464
+#: opentype-stylist.php:1464
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
-#: headline-ligatures-styles.php:389
+#: opentype-stylist.php:559
 msgid "Are you sure you want to delete this font kit?"
 msgstr ""
 
-#: headline-ligatures-styles.php:390
+#: opentype-stylist.php:560
 msgid "Failed to upload font kit."
 msgstr ""
 
-#: headline-ligatures-styles.php:391
+#: opentype-stylist.php:561
 msgid "Please select a ZIP file (.zip)"
 msgstr ""
 
-#: headline-ligatures-styles.php:392
+#: opentype-stylist.php:562
 msgid "Please enter a font kit name."
 msgstr ""
 
-#: headline-ligatures-styles.php:393
+#: opentype-stylist.php:563
 msgid "Please select a ZIP file."
 msgstr ""
 
-#: headline-ligatures-styles.php:394
+#: opentype-stylist.php:564
 msgid "Font kit uploaded and processed successfully! Reloading page..."
 msgstr ""
 
-#: headline-ligatures-styles.php:395
+#: opentype-stylist.php:565
 msgid "Failed to delete font kit."
 msgstr ""
 
-#: headline-ligatures-styles.php:396
+#: opentype-stylist.php:566
 msgid "No custom fonts uploaded yet."
 msgstr ""
 
-#: headline-ligatures-styles.php:397
+#: opentype-stylist.php:567
 msgid "Upload a webfont kit using the form below to add custom fonts with OpenType features."
 msgstr ""
 
-#: headline-ligatures-styles.php:398
+#: opentype-stylist.php:568
 msgid "Uploading"
 msgstr ""
 
-#: headline-ligatures-styles.php:399
+#: opentype-stylist.php:569
 msgid "Uploading ZIP file..."
 msgstr ""
 
-#: headline-ligatures-styles.php:400
+#: opentype-stylist.php:570
 msgid "Processing..."
 msgstr ""
 
-#: headline-ligatures-styles.php:401
+#: opentype-stylist.php:571
 msgid "Upload Font Kit"
 msgstr ""
 
-#: headline-ligatures-styles.php:618
+#: opentype-stylist.php:573
+msgid "Please enter a project name."
+msgstr ""
+
+#: opentype-stylist.php:574
+msgid "Please paste the Adobe Fonts embed code."
+msgstr ""
+
+#: opentype-stylist.php:575
+msgid "Please enter at least one font family name."
+msgstr ""
+
+#: opentype-stylist.php:576
+msgid "Adding..."
+msgstr ""
+
+#: opentype-stylist.php:577
+msgid "Adobe Fonts project added successfully! Reloading page..."
+msgstr ""
+
+#: opentype-stylist.php:578
+msgid "Failed to add Adobe Fonts project."
+msgstr ""
+
+#: opentype-stylist.php:579
+msgid "Add Adobe Fonts Project"
+msgstr ""
+
+#: opentype-stylist.php:580
+msgid "Are you sure you want to delete this Adobe Fonts project?"
+msgstr ""
+
+#: opentype-stylist.php:581
+msgid "Failed to delete Adobe Fonts project."
+msgstr ""
+
+#: opentype-stylist.php:583
+msgid "Please enter a font name."
+msgstr ""
+
+#: opentype-stylist.php:584
+msgid "Please enter a CSS font-family value."
+msgstr ""
+
+#: opentype-stylist.php:585
+msgid "Custom font added successfully! Reloading page..."
+msgstr ""
+
+#: opentype-stylist.php:586
+msgid "Failed to add custom font."
+msgstr ""
+
+#: opentype-stylist.php:587
+msgid "Add Custom Font"
+msgstr ""
+
+#: opentype-stylist.php:588
+msgid "Are you sure you want to delete this custom font?"
+msgstr ""
+
+#: opentype-stylist.php:589
+msgid "Failed to delete custom font."
+msgstr ""
+
+#: opentype-stylist.php:591
+msgid "Failed to update font loading setting."
+msgstr ""
+
+#: opentype-stylist.php:618
 msgid "Too many requests. Please try again later."
 msgstr ""
 
-#: headline-ligatures-styles.php:682
+#: opentype-stylist.php:682
 msgid "Standard Ligatures"
 msgstr ""
 
-#: headline-ligatures-styles.php:684
+#: opentype-stylist.php:684
 msgid "Common letter combinations like fi, fl"
 msgstr ""
 
-#: headline-ligatures-styles.php:688
+#: opentype-stylist.php:688
 msgid "Discretionary Ligatures"
 msgstr ""
 
-#: headline-ligatures-styles.php:690
+#: opentype-stylist.php:690
 msgid "Optional decorative ligatures"
 msgstr ""
 
-#: headline-ligatures-styles.php:694
+#: opentype-stylist.php:694
 msgid "Contextual Alternates"
 msgstr ""
 
-#: headline-ligatures-styles.php:696
+#: opentype-stylist.php:696
 msgid "Context-aware letter forms"
 msgstr ""
 
-#: headline-ligatures-styles.php:700
+#: opentype-stylist.php:700
 msgid "Stylistic Set 1"
 msgstr ""
 
-#: headline-ligatures-styles.php:706
+#: opentype-stylist.php:706
 msgid "Stylistic Set 2"
 msgstr ""
 
-#: headline-ligatures-styles.php:712
+#: opentype-stylist.php:712
 msgid "Stylistic Set 3"
 msgstr ""
 
-#: headline-ligatures-styles.php:718
+#: opentype-stylist.php:718
 msgid "Stylistic Set 4"
 msgstr ""
 
-#: headline-ligatures-styles.php:724
+#: opentype-stylist.php:724
 msgid "Stylistic Set 5"
 msgstr ""
 
-#: headline-ligatures-styles.php:702
+#: opentype-stylist.php:702
 msgid "Alternate character designs"
 msgstr ""
 
-#: headline-ligatures-styles.php:730
+#: opentype-stylist.php:730
 msgid "Swashes"
 msgstr ""
 
-#: headline-ligatures-styles.php:732
+#: opentype-stylist.php:732
 msgid "Decorative flourishes"
 msgstr ""
 
-#: headline-ligatures-styles.php:736
+#: opentype-stylist.php:736
 msgid "Contextual Swashes"
 msgstr ""
 
-#: headline-ligatures-styles.php:738
+#: opentype-stylist.php:738
 msgid "Context-aware decorative flourishes"
 msgstr ""
 
-#: headline-ligatures-styles.php:742
+#: opentype-stylist.php:742
 msgid "Stylistic Alternates"
 msgstr ""
 
-#: headline-ligatures-styles.php:744
+#: opentype-stylist.php:744
 msgid "Alternative character forms"
 msgstr ""
 
-#: headline-ligatures-styles.php:748
+#: opentype-stylist.php:748
 msgid "Titling"
 msgstr ""
 
-#: headline-ligatures-styles.php:750
+#: opentype-stylist.php:750
 msgid "Optimized for large titles"
 msgstr ""
 
-#: headline-ligatures-styles.php:754
+#: opentype-stylist.php:754
 msgid "Ornaments"
 msgstr ""
 
-#: headline-ligatures-styles.php:756
+#: opentype-stylist.php:756
 msgid "Decorative ornaments"
 msgstr ""
 
-#: headline-ligatures-styles.php:871
+#: opentype-stylist.php:871
 msgid "Missing required parameters"
 msgstr ""
 
-#: headline-ligatures-styles.php:875
+#: opentype-stylist.php:875
 msgid "Features must be a non-empty array"
 msgstr ""
 
-#: headline-ligatures-styles.php:882
+#: opentype-stylist.php:882
 msgid "Invalid feature ID: %s"
 msgstr ""
 
-#: headline-ligatures-styles.php:923
+#: opentype-stylist.php:923
 msgid "Preset not found"
 msgstr ""
 
-#: headline-ligatures-styles.php:1150
+#: opentype-stylist.php:1150
 msgid "Missing required font data"
 msgstr ""
 
-#: headline-ligatures-styles.php:1161
+#: opentype-stylist.php:1161
 msgid "Invalid file type"
 msgstr ""
 
-#: headline-ligatures-styles.php:1165
+#: opentype-stylist.php:1165
 msgid "Please upload a valid ZIP file"
 msgstr ""
 
-#: headline-ligatures-styles.php:1171
+#: opentype-stylist.php:1171
 msgid "File size exceeds maximum allowed (%s)"
 msgstr ""
 
-#: headline-ligatures-styles.php:1176
+#: opentype-stylist.php:1176
 msgid "File upload error"
 msgstr ""
 
-#: headline-ligatures-styles.php:1234
+#: opentype-stylist.php:1234
 msgid "Font not found"
 msgstr ""
 
-#: headline-ligatures-styles.php:1262
+#: opentype-stylist.php:1262
 msgid "Failed to create upload directory"
 msgstr ""
 
-#: headline-ligatures-styles.php:1279
+#: opentype-stylist.php:1279
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr ""
 
-#: headline-ligatures-styles.php:1324
+#: opentype-stylist.php:1324
 msgid "No CSS file found in the font kit"
 msgstr ""
 
-#: headline-ligatures-styles.php:1330
+#: opentype-stylist.php:1330
 msgid "Invalid CSS file"
 msgstr ""
 
-#: headline-ligatures-styles.php:1337
+#: opentype-stylist.php:1337
 msgid "CSS file is too large (max 1MB)"
 msgstr ""
 
-#: headline-ligatures-styles.php:1345
+#: opentype-stylist.php:1345
 msgid "Could not read CSS file"
 msgstr ""
 
-#: headline-ligatures-styles.php:1351
+#: opentype-stylist.php:1351
 msgid "CSS file does not contain @font-face declarations"
 msgstr ""
 
-#: headline-ligatures-styles.php:1372
+#: opentype-stylist.php:1372
 msgid "No valid @font-face rules found in CSS"
 msgstr ""
 
@@ -337,6 +405,14 @@ msgstr ""
 
 #: includes/admin-page.php:218
 msgid "Features:"
+msgstr ""
+
+#: includes/admin-page.php:230
+msgid "Create Custom Presets"
+msgstr ""
+
+#: includes/admin-page.php:231
+msgid "Custom presets can be created directly in the block editor by selecting features and clicking \"Save as Preset\". Your saved presets will appear here."
 msgstr ""
 
 #: includes/admin-page.php:245

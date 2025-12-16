@@ -141,6 +141,10 @@ msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
 msgid "Failed to delete custom font."
 msgstr "Échec de la suppression de la police personnalisée."
 
+#: opentype-stylist.php:591
+msgid "Failed to update font loading setting."
+msgstr "Échec de la mise à jour du paramètre de chargement des polices."
+
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
 msgstr "Trop de requêtes. Veuillez réessayer plus tard."
