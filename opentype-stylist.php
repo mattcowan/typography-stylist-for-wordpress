@@ -867,7 +867,7 @@ class OpenType_Stylist {
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_fallback_endpoint'),
             'permission_callback' => function() {
-                return current_user_can('edit_posts');
+                return current_user_can('upload_files');
             }
         ));
 
@@ -875,7 +875,7 @@ class OpenType_Stylist {
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
-                return current_user_can('edit_posts');
+                return current_user_can('upload_files');
             }
         ));
 
