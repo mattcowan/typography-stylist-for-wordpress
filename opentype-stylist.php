@@ -1978,7 +1978,7 @@ class OpenType_Stylist {
      * Supports both modern <link> tag format and legacy <script> tag format,
      * as well as direct URLs with or without HTML tags.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param string $embed_code The Adobe Fonts embed code (HTML or URL).
      * @return array|false Array with 'css_url' and 'kit_id' on success, false on failure.
@@ -2023,7 +2023,7 @@ class OpenType_Stylist {
      *
      * Returns all configured Adobe Fonts projects.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request The REST request object.
      * @return WP_REST_Response REST response containing array of Adobe Fonts projects.
@@ -2038,7 +2038,7 @@ class OpenType_Stylist {
      * Parses Adobe Fonts embed code and adds a new Adobe Fonts project.
      * Validates the embed code, checks for duplicates, and stores project configuration.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'embed_code', 'name', and 'font_families' params.
      * @return WP_REST_Response|WP_Error REST response with success status and font data, or error.
@@ -2089,7 +2089,7 @@ class OpenType_Stylist {
      *
      * Removes an Adobe Fonts project from the plugin configuration.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'id' parameter.
      * @return WP_REST_Response|WP_Error REST response with success status, or error if not found.
@@ -2122,7 +2122,7 @@ class OpenType_Stylist {
      *
      * Updates the fallback fonts for an Adobe Fonts project.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'id' parameter and 'fallbacks' in body.
      * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
@@ -2161,7 +2161,7 @@ class OpenType_Stylist {
      *
      * Updates whether an Adobe Font should be loaded on all pages or only when used.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'id' parameter and 'load_on_all_pages' in body.
      * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
@@ -2200,7 +2200,7 @@ class OpenType_Stylist {
      *
      * Updates the fallback fonts for an uploaded custom font kit.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'id' parameter and 'fallbacks' in body.
      * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
@@ -2239,7 +2239,7 @@ class OpenType_Stylist {
      *
      * Returns all manually configured custom fonts (non-uploaded, non-Adobe).
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request The REST request object.
      * @return WP_REST_Response REST response containing array of manual fonts.
@@ -2254,7 +2254,7 @@ class OpenType_Stylist {
      * Adds a manually configured custom font by specifying name and CSS font-family value.
      * Used for fonts loaded elsewhere (theme, other plugins) that support OpenType features.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'name', 'font_family', and optional 'fallbacks' params.
      * @return WP_REST_Response|WP_Error REST response with success status and font data, or error.
@@ -2292,7 +2292,7 @@ class OpenType_Stylist {
      *
      * Removes a manually configured custom font from the plugin configuration.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @param WP_REST_Request $request REST request with 'id' parameter.
      * @return WP_REST_Response|WP_Error REST response with success status, or error if not found.
@@ -2329,7 +2329,7 @@ class OpenType_Stylist {
      *   - Set to "load on all pages" OR
      *   - Actually used on the current page
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @return void
      */
@@ -2398,7 +2398,7 @@ class OpenType_Stylist {
      * Displays the plugin's settings page in the WordPress admin.
      * Includes presets, font management, and configuration options.
      *
-     * @since 1.1.0
+     * @since 1.0.0
      *
      * @return void
      */
