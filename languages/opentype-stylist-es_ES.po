@@ -141,6 +141,10 @@ msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
 msgid "Failed to delete custom font."
 msgstr "Error al eliminar la fuente personalizada."
 
+#: opentype-stylist.php:591
+msgid "Failed to update font loading setting."
+msgstr "Error al actualizar la configuración de carga de fuentes."
+
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
 msgstr "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde."
