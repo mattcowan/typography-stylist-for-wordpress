@@ -425,6 +425,31 @@ class OpenType_Stylist {
     }
 
     /**
+     * Parse font families from CSS font-family values
+     *
+     * Splits comma-separated font-family strings and removes quotes.
+     * E.g., "My Font, Arial, sans-serif" -> ["My Font", "Arial", "sans-serif"]
+     *
+     * @param array $font_family_values Array of CSS font-family values
+     * @return array Array of individual font family names
+     */
+    private function parse_font_family_list($font_family_values) {
+        $parsed_font_families = array();
+        foreach ($font_family_values as $font_family_value) {
+            // Split by comma and trim each part
+            $families = array_map('trim', explode(',', $font_family_value));
+            foreach ($families as $family) {
+                // Remove quotes if present
+                $family = trim($family, '"\'');
+                if (!empty($family)) {
+                    $parsed_font_families[] = $family;
+                }
+            }
+        }
+        return $parsed_font_families;
+    }
+
+    /**
      * Optimized font enqueuing with caching - only loads fonts used on current page
      */
     public function enqueue_custom_fonts_optimized() {
@@ -443,19 +468,7 @@ class OpenType_Stylist {
         }
 
         // Parse font families from CSS font-family values (which may include fallbacks)
-        // E.g., "My Font, Arial, sans-serif" -> ["My Font", "Arial", "sans-serif"]
-        $parsed_font_families = array();
-        foreach ($used_font_families as $font_family_value) {
-            // Split by comma and trim each part
-            $families = array_map('trim', explode(',', $font_family_value));
-            foreach ($families as $family) {
-                // Remove quotes if present
-                $family = trim($family, '"\'');
-                if (!empty($family)) {
-                    $parsed_font_families[] = $family;
-                }
-            }
-        }
+        $parsed_font_families = $this->parse_font_family_list($used_font_families);
         $parsed_font_families = array_unique($parsed_font_families);
 
         // Build cache key based on used fonts
@@ -2292,16 +2305,7 @@ class OpenType_Stylist {
             $used_font_families = $this->get_used_fonts_in_content();
 
             // Parse font families from CSS font-family values
-            $individual_font_families = array();
-            foreach ($used_font_families as $font_family_value) {
-                $families = array_map('trim', explode(',', $font_family_value));
-                foreach ($families as $family) {
-                    $family = trim($family, '"\'');
-                    if (!empty($family)) {
-                        $individual_font_families[] = $family;
-                    }
-                }
-            }
+            $individual_font_families = $this->parse_font_family_list($used_font_families);
             $used_font_families = array_unique($individual_font_families);
         }
 
