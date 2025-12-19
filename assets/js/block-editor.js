@@ -769,8 +769,7 @@
                 fontSizePreferred,
                 fontSizeMax,
                 fontWeight,
-                letterSpacing,
-                timestamp: Date.now()
+                letterSpacing
             };
 
             // Limit history to last 20 changes
@@ -786,9 +785,10 @@
             const { selectedFeatures } = this.state;
 
             // Save current state to history before making changes
+            // (consistent with toggleFeature behavior - always create history entry)
             this.saveToHistory();
 
-            // Add feature if not already active
+            // Add feature if not already active (idempotent operation)
             if (!selectedFeatures.includes(featureId)) {
                 this.setState({
                     selectedFeatures: [...selectedFeatures, featureId]

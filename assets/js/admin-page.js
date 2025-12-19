@@ -236,7 +236,7 @@ jQuery(document).ready(function($) {
     // WeakMap doesn't prevent DOM elements from being garbage collected.
     var featureHistoryMap = new WeakMap();
 
-    $('.ots-feature-apply-btn').on('click', function() {
+    $(document).on('click', '.ots-feature-apply-btn', function() {
         var $btn = $(this);
         var $card = $btn.closest('.ots-feature-demo-card');
         var $undoContainer = $card.find('.ots-feature-undo-container');
@@ -253,8 +253,7 @@ jQuery(document).ready(function($) {
         // Save current state to history
         var currentStyle = $btn.attr('style') || '';
         history.push({
-            style: currentStyle,
-            text: $btn.text()
+            style: currentStyle
         });
 
         // Parse existing font-feature-settings
@@ -296,15 +295,24 @@ jQuery(document).ready(function($) {
         // Show undo button
         $undoContainer.slideDown(200);
 
-        // Announce to screen readers
-        var announcement = featureName + ' applied';
+        // Announce to screen readers (translatable)
+        var announcement;
+        if (window.wp && window.wp.i18n && typeof window.wp.i18n.__ === 'function' && typeof window.wp.i18n.sprintf === 'function') {
+            announcement = window.wp.i18n.sprintf(
+                window.wp.i18n.__('%s applied', 'opentype-stylist'),
+                featureName
+            );
+        } else {
+            // Fallback for environments without wp.i18n
+            announcement = featureName + ' applied';
+        }
         if (window.wp && window.wp.a11y) {
             window.wp.a11y.speak(announcement);
         }
     });
 
     // Undo last change
-    $('.ots-feature-undo-btn').on('click', function() {
+    $(document).on('click', '.ots-feature-undo-btn', function() {
         var $undoBtn = $(this);
         var $card = $undoBtn.closest('.ots-feature-demo-card');
         var $btn = $card.find('.ots-feature-apply-btn');
@@ -330,7 +338,10 @@ jQuery(document).ready(function($) {
 
             // Announce to screen readers
             if (window.wp && window.wp.a11y) {
-                window.wp.a11y.speak('Change undone');
+                var undoMessage = (window.wp.i18n && typeof window.wp.i18n.__ === 'function')
+                    ? window.wp.i18n.__('Change undone', 'opentype-stylist')
+                    : 'Change undone';
+                window.wp.a11y.speak(undoMessage);
             }
         }
 
