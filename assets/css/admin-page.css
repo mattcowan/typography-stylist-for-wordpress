@@ -335,6 +335,77 @@
     font-weight: 500;
 }
 
+/* Interactive button styles for preview */
+.ots-feature-apply-btn {
+    width: 100%;
+    background: #fff;
+    border: 2px solid #ddd;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.ots-feature-apply-btn:hover {
+    border-color: #2271b1;
+    background: #f0f6fc;
+    box-shadow: 0 2px 4px rgba(34, 113, 177, 0.15);
+    transform: translateY(-1px);
+}
+
+.ots-feature-apply-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(34, 113, 177, 0.2);
+}
+
+.ots-feature-apply-btn:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+}
+
+/* Applied state animation */
+@media (prefers-reduced-motion: no-preference) {
+    .ots-feature-applied-flash {
+        animation: featureApplied 0.5s ease;
+    }
+
+    @keyframes featureApplied {
+        0% {
+            background: #d7f0ff;
+            border-color: #2271b1;
+        }
+        100% {
+            background: #fff;
+            border-color: #ddd;
+        }
+    }
+}
+
+/* Undo button container */
+.ots-feature-undo-container {
+    margin-top: 10px;
+    text-align: center;
+    padding: 8px;
+}
+
+.ots-feature-undo-btn {
+    background: #f6f7f7;
+    border-color: #8c8f94;
+    color: #2c3338;
+    transition: all 0.2s ease;
+    min-height: 32px;
+}
+
+.ots-feature-undo-btn:hover {
+    background: #f0f0f1;
+    border-color: #646970;
+    color: #1d2327;
+}
+
+.ots-feature-undo-btn:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 1px;
+}
+
 /* User Presets Section */
 .ots-user-presets-section {
     margin-top: 40px;

@@ -8,7 +8,7 @@
     const { RichTextToolbarButton } = wp.blockEditor;
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, TextControl, SelectControl, PanelBody, RangeControl } = wp.components;
-    const { __ } = wp.i18n;
+    const { __, sprintf } = wp.i18n;
     const { compose } = wp.compose;
 
     // Define the format type name
@@ -57,7 +57,8 @@
                 previewText: '',
                 previewDevice: 'tablet',
                 showAccessibilityWarning: false,
-                warningMessage: ''
+                warningMessage: '',
+                changeHistory: []
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -76,6 +77,9 @@
             this.validateSelection = this.validateSelection.bind(this);
             this.convertToBlock = this.convertToBlock.bind(this);
             this.applyFeaturesForce = this.applyFeaturesForce.bind(this);
+            this.applyFeatureFromPreview = this.applyFeatureFromPreview.bind(this);
+            this.undoLastChange = this.undoLastChange.bind(this);
+            this.saveToHistory = this.saveToHistory.bind(this);
         }
 
         /**
@@ -227,6 +231,9 @@
          * Set font family
          */
         setFont(fontFamily) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState({
                 selectedFont: fontFamily
             });
@@ -236,6 +243,9 @@
          * Set font size mode
          */
         setFontSize(mode) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState({
                 fontSize: mode
             });
@@ -272,6 +282,9 @@
          * Set font weight
          */
         setFontWeight(value) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState({
                 fontWeight: value
             });
@@ -281,6 +294,9 @@
          * Set letter spacing
          */
         setLetterSpacing(value) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState({
                 letterSpacing: value
             });
@@ -299,6 +315,9 @@
          * Toggle individual feature
          */
         toggleFeature(featureId) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState(state => {
                 const features = [...state.selectedFeatures];
                 const index = features.indexOf(featureId);
@@ -621,6 +640,9 @@
          * Apply preset
          */
         applyPreset(preset) {
+            // Save to history before making changes
+            this.saveToHistory();
+
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
@@ -632,6 +654,9 @@
          * Clear all features
          */
         clearFeatures() {
+            // Save to history before clearing
+            this.saveToHistory();
+
             const { value, onChange } = this.props;
             onChange(removeFormat(value, FORMAT_TYPE));
             this.setState({
@@ -731,6 +756,73 @@
         }
 
         /**
+         * Save current state to history
+         */
+        saveToHistory() {
+            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, changeHistory } = this.state;
+
+            const snapshot = {
+                selectedFeatures: [...selectedFeatures],
+                selectedFont,
+                fontSize,
+                fontSizeMin,
+                fontSizePreferred,
+                fontSizeMax,
+                fontWeight,
+                letterSpacing,
+                timestamp: Date.now()
+            };
+
+            // Limit history to last 20 changes
+            const newHistory = [...changeHistory, snapshot].slice(-20);
+
+            this.setState({ changeHistory: newHistory });
+        }
+
+        /**
+         * Apply feature from preview button
+         */
+        applyFeatureFromPreview(featureId) {
+            const { selectedFeatures } = this.state;
+
+            // Save current state to history before making changes
+            this.saveToHistory();
+
+            // Add feature if not already active
+            if (!selectedFeatures.includes(featureId)) {
+                this.setState({
+                    selectedFeatures: [...selectedFeatures, featureId]
+                });
+            }
+        }
+
+        /**
+         * Undo last change - restore previous state from history
+         */
+        undoLastChange() {
+            const { changeHistory } = this.state;
+
+            if (changeHistory.length > 0) {
+                // Get the last history entry
+                const newHistory = [...changeHistory];
+                const previousState = newHistory.pop();
+
+                // Restore previous state
+                this.setState({
+                    selectedFeatures: previousState.selectedFeatures,
+                    selectedFont: previousState.selectedFont,
+                    fontSize: previousState.fontSize,
+                    fontSizeMin: previousState.fontSizeMin,
+                    fontSizePreferred: previousState.fontSizePreferred,
+                    fontSizeMax: previousState.fontSizeMax,
+                    fontWeight: previousState.fontWeight,
+                    letterSpacing: previousState.letterSpacing,
+                    changeHistory: newHistory
+                });
+            }
+        }
+
+        /**
          * Render feature toggle
          */
         renderFeatureToggle(feature) {
@@ -758,9 +850,15 @@
                     />
                     <code className="ots-feature-code">{feature.id}</code>
                     <div className="ots-feature-preview">
-                        <span className="ots-feature-preview-on" style={previewStyle}>
+                        <Button
+                            className="ots-feature-preview-on ots-feature-apply-btn"
+                            onClick={() => this.applyFeatureFromPreview(feature.id)}
+                            style={previewStyle}
+                            aria-label={sprintf(__('Click to apply %s feature', 'opentype-stylist'), feature.name)}
+                            title={sprintf(__('Click to apply %s', 'opentype-stylist'), feature.name)}
+                        >
                             {sampleText}
-                        </span>
+                        </Button>
                     </div>
                 </div>
             );
@@ -1057,6 +1155,15 @@
                                         >
                                             {__('Apply', 'opentype-stylist')}
                                         </Button>
+                                        {this.state.changeHistory.length > 0 && (
+                                            <Button
+                                                isSecondary
+                                                onClick={this.undoLastChange}
+                                                title={__('Undo last change', 'opentype-stylist')}
+                                            >
+                                                {__('Undo', 'opentype-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
+                                            </Button>
+                                        )}
                                         <Button
                                             isSecondary
                                             onClick={this.clearFeatures}

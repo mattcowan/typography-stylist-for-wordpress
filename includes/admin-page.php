@@ -246,12 +246,21 @@ $manual_fonts = $instance->get_manual_fonts();
 
                             <div class="ots-feature-preview-container">
                                 <div class="ots-feature-preview-label"><?php esc_html_e('With Feature:', 'opentype-stylist'); ?></div>
-                                <div
-                                    class="ots-feature-preview ots-feature-preview-on"
-                                    style="font-feature-settings: '<?php echo esc_attr($feature['id']); ?>' 1;">
+                                <button
+                                    type="button"
+                                    class="ots-feature-preview ots-feature-preview-on ots-feature-apply-btn"
+                                    data-feature-id="<?php echo esc_attr($feature['id']); ?>"
+                                    data-feature-name="<?php echo esc_attr($feature['name']); ?>"
+                                    style="font-feature-settings: '<?php echo esc_attr($feature['id']); ?>' 1;"
+                                    aria-label="<?php echo esc_attr(sprintf(__('Click to apply %s feature', 'opentype-stylist'), $feature['name'])); ?>">
                                     <?php echo esc_html($instance->get_feature_demo_text($feature['id'])); ?>
-                                </div>
+                                </button>
                             </div>
+                        </div>
+                        <div class="ots-feature-undo-container" style="display: none;">
+                            <button type="button" class="ots-feature-undo-btn button button-small">
+                                <?php esc_html_e('Undo Last Change', 'opentype-stylist'); ?>
+                            </button>
                         </div>
                     </div>
                     <?php endforeach; ?>
