@@ -175,34 +175,35 @@
 }
 
 /* Interactive Feature Preview Button */
-.ots-feature-apply-btn {
-    width: 100%;
-    padding: 10px 14px;
+.ots-feature-apply-btn,
+.components-button.ots-feature-apply-btn,
+.editor-visual-editor .components-button.ots-feature-apply-btn {
+    width: 100% !important;
+    padding: 20px !important;
     background: #fff;
     border: 2px solid #e0e0e0 !important;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 28px;
-    line-height: 1.4;
+    font-size: 54px !important;
+    line-height: 1 !important;
     color: #000;
     font-weight: 500;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
-    box-shadow: none;
-    min-height: auto;
+    box-shadow: none !important;
+    min-height: auto !important;
+    height: auto !important;
 }
 
 .ots-feature-apply-btn:hover {
     background: #f0f6fc;
     border-color: #2271b1 !important;
     box-shadow: 0 2px 4px rgba(34, 113, 177, 0.15);
-    transform: translateY(-1px);
 }
 
 .ots-feature-apply-btn:active {
-    transform: translateY(0);
     box-shadow: 0 1px 2px rgba(34, 113, 177, 0.2);
 }
 
@@ -210,6 +211,21 @@
     outline: 2px solid #2271b1;
     outline-offset: 2px;
     box-shadow: none;
+}
+
+/* Hover and active transforms - only when motion is preferred */
+@media (prefers-reduced-motion: no-preference) {
+    .ots-feature-apply-btn:hover,
+    .components-button.ots-feature-apply-btn:hover,
+    .editor-visual-editor .components-button.ots-feature-apply-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .ots-feature-apply-btn:active,
+    .components-button.ots-feature-apply-btn:active,
+    .editor-visual-editor .components-button.ots-feature-apply-btn:active {
+        transform: translateY(0);
+    }
 }
 
 /* Preview Section */

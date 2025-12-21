@@ -788,6 +788,15 @@ msgstr ""
 msgid "Undo"
 msgstr ""
 
+#: assets/js/admin-page.js:302
+#, php-format
+msgid "%s applied"
+msgstr ""
+
+#: assets/js/admin-page.js:342
+msgid "Change undone"
+msgstr ""
+
 #: includes/admin-page.php:262
 msgid "Undo Last Change"
 msgstr ""
