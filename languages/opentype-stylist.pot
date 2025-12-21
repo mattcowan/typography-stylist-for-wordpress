@@ -768,3 +768,35 @@ msgstr ""
 #: assets/js/block-editor.js:598
 msgid "Other Features"
 msgstr ""
+
+#: assets/js/block-editor.js:857
+#: includes/admin-page.php:255
+#, php-format
+msgid "Click to apply %s feature"
+msgstr ""
+
+#: assets/js/block-editor.js:858
+#, php-format
+msgid "Click to apply %s"
+msgstr ""
+
+#: assets/js/block-editor.js:1162
+msgid "Undo last change"
+msgstr ""
+
+#: assets/js/block-editor.js:1163
+msgid "Undo"
+msgstr ""
+
+#: assets/js/admin-page.js:302
+#, php-format
+msgid "%s applied"
+msgstr ""
+
+#: assets/js/admin-page.js:342
+msgid "Change undone"
+msgstr ""
+
+#: includes/admin-page.php:262
+msgid "Undo Last Change"
+msgstr ""

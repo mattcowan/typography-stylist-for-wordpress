@@ -950,3 +950,12 @@ msgstr "Entrez la classe de lecteur d'écran de votre thème"
 #: blocks/opentype-stylist/edit.js:332
 msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
 msgstr "La classe sélectionnée sera utilisée pour masquer le texte dupliqué pour les lecteurs d'écran. Assurez-vous que cette classe est définie dans votre thème."
+
+#: assets/js/admin-page.js:302
+#, php-format
+msgid "%s applied"
+msgstr "%s appliqué"
+
+#: assets/js/admin-page.js:342
+msgid "Change undone"
+msgstr "Modification annulée"

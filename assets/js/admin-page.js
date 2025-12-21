@@ -229,6 +229,128 @@ jQuery(document).ready(function($) {
         }
     }
 
+    // Feature preview interaction - apply features on click
+    // Store history per demo card using WeakMap for memory efficiency.
+    // WeakMap allows garbage collection of history when DOM elements are removed
+    // (e.g., when collapsing/expanding feature categories). Unlike Map,
+    // WeakMap doesn't prevent DOM elements from being garbage collected.
+    var featureHistoryMap = new WeakMap();
+
+    $(document).on('click', '.ots-feature-apply-btn', function() {
+        var $btn = $(this);
+        var $card = $btn.closest('.ots-feature-demo-card');
+        var $undoContainer = $card.find('.ots-feature-undo-container');
+        var featureId = $btn.data('feature-id');
+        var featureName = $btn.data('feature-name');
+
+        // Get or initialize history for this card
+        var cardElement = $card[0];
+        if (!featureHistoryMap.has(cardElement)) {
+            featureHistoryMap.set(cardElement, []);
+        }
+        var history = featureHistoryMap.get(cardElement);
+
+        // Save current state to history
+        var currentStyle = $btn.attr('style') || '';
+        history.push({
+            style: currentStyle
+        });
+
+        // Parse existing font-feature-settings
+        var currentSettings = $btn.css('font-feature-settings');
+        var newFeature = "'" + featureId + "' 1";
+
+        // Build new font-feature-settings
+        var newSettings;
+        if (!currentSettings || currentSettings === 'normal' || currentSettings === 'none') {
+            newSettings = newFeature;
+        } else {
+            // Check if this feature is already applied
+            // Escape special regex characters in featureId for safety
+            var escapedFeatureId = featureId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            var featureRegex = new RegExp("'" + escapedFeatureId + "'\\s+\\d+");
+            if (featureRegex.test(currentSettings)) {
+                // Feature already applied, just flash to indicate
+                $btn.addClass('ots-feature-applied-flash');
+                setTimeout(function() {
+                    $btn.removeClass('ots-feature-applied-flash');
+                }, 500);
+                // Remove last history entry since we're not actually changing
+                history.pop();
+                return;
+            }
+            // Append new feature
+            newSettings = currentSettings + ', ' + newFeature;
+        }
+
+        // Apply new settings
+        $btn.css('font-feature-settings', newSettings);
+
+        // Visual feedback - flash animation
+        $btn.addClass('ots-feature-applied-flash');
+        setTimeout(function() {
+            $btn.removeClass('ots-feature-applied-flash');
+        }, 500);
+
+        // Show undo button
+        $undoContainer.slideDown(200);
+
+        // Announce to screen readers (translatable)
+        var announcement;
+        if (window.wp && window.wp.i18n && typeof window.wp.i18n.__ === 'function' && typeof window.wp.i18n.sprintf === 'function') {
+            announcement = window.wp.i18n.sprintf(
+                window.wp.i18n.__('%s applied', 'opentype-stylist'),
+                featureName
+            );
+        } else {
+            // Fallback for environments without wp.i18n
+            announcement = featureName + ' applied';
+        }
+        if (window.wp && window.wp.a11y) {
+            window.wp.a11y.speak(announcement);
+        }
+    });
+
+    // Undo last change
+    $(document).on('click', '.ots-feature-undo-btn', function() {
+        var $undoBtn = $(this);
+        var $card = $undoBtn.closest('.ots-feature-demo-card');
+        var $btn = $card.find('.ots-feature-apply-btn');
+        var cardElement = $card[0];
+
+        // Get history for this card
+        if (!featureHistoryMap.has(cardElement)) {
+            return;
+        }
+        var history = featureHistoryMap.get(cardElement);
+
+        // Pop last state
+        var lastState = history.pop();
+        if (lastState) {
+            // Restore previous style
+            $btn.attr('style', lastState.style);
+
+            // Visual feedback
+            $btn.addClass('ots-feature-applied-flash');
+            setTimeout(function() {
+                $btn.removeClass('ots-feature-applied-flash');
+            }, 500);
+
+            // Announce to screen readers
+            if (window.wp && window.wp.a11y) {
+                var undoMessage = (window.wp.i18n && typeof window.wp.i18n.__ === 'function')
+                    ? window.wp.i18n.__('Change undone', 'opentype-stylist')
+                    : 'Change undone';
+                window.wp.a11y.speak(undoMessage);
+            }
+        }
+
+        // Hide undo button if no more history
+        if (history.length === 0) {
+            $undoBtn.closest('.ots-feature-undo-container').slideUp(200);
+        }
+    });
+
     // Preview size slider
     $('#ots-preview-size-slider').on('input', function() {
         var size = $(this).val();
