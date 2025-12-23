@@ -40,6 +40,12 @@ if (isset($_POST['ots_save_accessibility_settings']) &&
     $enable_aria = isset($_POST['ots_enable_aria_labels']) ? true : false;
     update_option('ots_enable_aria_labels', $enable_aria);
 
+    $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']);
+    update_option('ots_show_clear_confirmation', $show_clear_confirmation);
+
+    // Clear cache for all users
+    OpenType_Stylist::get_instance()->clear_cache();
+
     echo '<div class="notice notice-success"><p>' .
          esc_html__('Accessibility settings saved successfully.', 'opentype-stylist') .
          '</p></div>';
@@ -885,6 +891,28 @@ $manual_fonts = $instance->get_manual_fonts();
                                 </label>
                                 <p class="description">
                                     <?php esc_html_e('When enabled, inline formatted text will include aria-label attributes containing the original text for better screen reader accessibility.', 'opentype-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="ots_show_clear_confirmation">
+                                    <?php esc_html_e('Clear Button Confirmation', 'opentype-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="ots_show_clear_confirmation"
+                                    name="ots_show_clear_confirmation"
+                                    value="1"
+                                    <?php checked(get_option('ots_show_clear_confirmation', true)); ?>
+                                />
+                                <label for="ots_show_clear_confirmation">
+                                    <?php esc_html_e('Show confirmation when clearing typography features', 'opentype-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis.', 'opentype-stylist'); ?>
                                 </p>
                             </td>
                         </tr>

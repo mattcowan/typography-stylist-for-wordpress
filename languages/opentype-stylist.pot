@@ -800,3 +800,43 @@ msgstr ""
 #: includes/admin-page.php:262
 msgid "Undo Last Change"
 msgstr ""
+
+#: includes/admin-page.php:900
+msgid "Clear Button Confirmation"
+msgstr ""
+
+#: includes/admin-page.php:912
+msgid "Show confirmation when clearing typography features"
+msgstr ""
+
+#: includes/admin-page.php:915
+msgid "When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis."
+msgstr ""
+
+#: assets/js/block-editor.js:1245
+msgid "Clear All Formatting?"
+msgstr ""
+
+#: assets/js/block-editor.js:1250
+msgid "This will remove all typography features, font selections, and styling. This action cannot be undone."
+msgstr ""
+
+#: assets/js/block-editor.js:1253
+msgid "Do not show this warning again (this session)"
+msgstr ""
+
+#: assets/js/block-editor.js:1262
+msgid "Clear Formatting"
+msgstr ""
+
+#: blocks/opentype-stylist/edit.js:171
+msgid "OpenType Features"
+msgstr ""
+
+#: blocks/opentype-stylist/edit.js:182
+msgid "Quick Feature Toggles"
+msgstr ""
+
+#: blocks/opentype-stylist/edit.js:244
+msgid "For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar."
+msgstr ""

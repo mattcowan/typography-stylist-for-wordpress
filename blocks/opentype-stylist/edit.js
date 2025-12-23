@@ -8,7 +8,9 @@ import {
 	InspectorControls,
 	BlockControls,
 	AlignmentToolbar,
-	RichText
+	RichText,
+	RichTextToolbarButton,
+	store as blockEditorStore
 } from '@wordpress/block-editor';
 import {
 	PanelBody,
@@ -17,10 +19,23 @@ import {
 	RangeControl,
 	TextControl,
 	ToolbarGroup,
-	ToolbarDropdownMenu
+	ToolbarDropdownMenu,
+	ToolbarButton,
+	Popover,
+	Button
 } from '@wordpress/components';
+import { useState, useRef, useEffect } from '@wordpress/element';
+import { useSelect } from '@wordpress/data';
+import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
 
-export default function Edit({ attributes, setAttributes }) {
+// Custom "O" icon for OpenType Stylist
+const OTSIcon = () => (
+	<svg width={20} height={20} viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+		<circle cx={10} cy={10} r={7} fill="none" stroke="currentColor" strokeWidth={2} />
+	</svg>
+);
+
+export default function Edit({ attributes, setAttributes, clientId }) {
 	const {
 		content,
 		tagName,
@@ -35,6 +50,260 @@ export default function Edit({ attributes, setAttributes }) {
 		screenReaderClass,
 		textAlign
 	} = attributes;
+
+	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+	const [previewText, setPreviewText] = useState('');
+	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
+	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
+
+	// Get selection from block editor store
+	const { selectionStart, selectionEnd } = useSelect(
+		(select) => {
+			const {
+				getSelectionStart,
+				getSelectionEnd,
+			} = select(blockEditorStore);
+
+			return {
+				selectionStart: getSelectionStart(),
+				selectionEnd: getSelectionEnd(),
+			};
+		},
+		[]
+	);
+
+	// Extract plain text from HTML content for previews
+	const getPlainText = (htmlContent) => {
+		if (!htmlContent) return 'Sample Text AE ffi ffl Th';
+		// Create a temporary div to parse HTML and extract text
+		const temp = document.createElement('div');
+		temp.innerHTML = htmlContent;
+		const text = temp.textContent || temp.innerText || '';
+		return text.trim() || 'Sample Text AE ffi ffl Th';
+	};
+
+	// Store original letter spacing when opening popover
+	const originalLetterSpacingRef = useRef(letterSpacing);
+
+	// Handle toolbar button click
+	const handleToolbarClick = () => {
+		// Extract selected text using RichText API
+		let extractedText = '';
+
+		if (content) {
+			// Create a rich text value from the HTML content
+			const richTextValue = create({ html: content });
+
+			// Check if we have a selection within this block
+			if (selectionStart && selectionEnd &&
+			    selectionStart.clientId === clientId &&
+			    selectionEnd.clientId === clientId) {
+
+				const start = selectionStart.offset || 0;
+				const end = selectionEnd.offset || 0;
+
+				if (start !== end) {
+					// There's a selection - extract it
+					const slicedValue = sliceRichText(richTextValue, start, end);
+					extractedText = getTextContent(slicedValue);
+				} else {
+					// No selection - use entire text
+					extractedText = getTextContent(richTextValue);
+				}
+			} else {
+				// No valid selection in this block - use entire text
+				extractedText = getTextContent(richTextValue);
+			}
+		}
+
+		// Store original letter spacing when opening
+		if (!isPopoverOpen) {
+			originalLetterSpacingRef.current = letterSpacing;
+		}
+
+		setPreviewText(extractedText);
+		setIsPopoverOpen(!isPopoverOpen);
+	};
+
+	// Handle popover close - reset to original if not applied
+	const handlePopoverClose = () => {
+		// Restore original content if we were previewing
+		if (originalContentRef.current) {
+			setAttributes({ content: originalContentRef.current });
+			originalContentRef.current = null;
+		}
+		setInlineLetterSpacing(0);
+		setPreviewLetterSpacing(0);
+		setIsPopoverOpen(false);
+	};
+
+	// Store the original content before preview
+	const originalContentRef = useRef(null);
+
+	// Handle letter spacing change with live preview
+	const handleLetterSpacingChange = (value) => {
+		setInlineLetterSpacing(value);
+		setPreviewLetterSpacing(value);
+
+		// Apply preview by temporarily wrapping the selected text
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end && content) {
+				// Store original content if not already stored
+				if (!originalContentRef.current) {
+					originalContentRef.current = content;
+				}
+
+				// Create a rich text value from the HTML content (preserves existing HTML)
+				const richTextValue = create({ html: originalContentRef.current });
+
+				// Extract just the selected portion while preserving HTML structure
+				const slicedValue = sliceRichText(richTextValue, start, end);
+				const selectedText = getTextContent(slicedValue);
+
+				// Parse the current content as HTML and wrap the selection for preview
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${originalContentRef.current}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				// Use a tree walker to find the text position
+				let currentOffset = 0;
+				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+				let textNode;
+				let startNode, startOffset, endNode, endOffset;
+
+				while ((textNode = walker.nextNode())) {
+					const nodeLength = textNode.nodeValue.length;
+
+					if (currentOffset + nodeLength > start && !startNode) {
+						startNode = textNode;
+						startOffset = start - currentOffset;
+					}
+
+					if (currentOffset + nodeLength >= end && !endNode) {
+						endNode = textNode;
+						endOffset = end - currentOffset;
+						break;
+					}
+
+					currentOffset += nodeLength;
+				}
+
+				if (startNode && endNode) {
+					const range = doc.createRange();
+					range.setStart(startNode, startOffset);
+					range.setEnd(endNode, endOffset);
+
+					// Create the preview span wrapper
+					const span = doc.createElement('span');
+					span.className = 'ots-preview-temp';
+					span.style.letterSpacing = `${value / 1000}em`;
+					span.style.backgroundColor = 'rgba(34, 113, 177, 0.1)'; // Light blue highlight
+
+					// Wrap the range content
+					try {
+						range.surroundContents(span);
+
+						// Get the updated HTML and set it temporarily
+						const previewContent = container.innerHTML;
+						setAttributes({ content: previewContent });
+					} catch (e) {
+						console.log('OTS Block - Preview wrap failed:', e);
+					}
+				}
+			}
+		}
+	};
+
+	// Clear letter spacing (reset to 0)
+	const clearLetterSpacing = () => {
+		setInlineLetterSpacing(0);
+		setPreviewLetterSpacing(0);
+		// Restore original content
+		if (originalContentRef.current) {
+			setAttributes({ content: originalContentRef.current });
+			originalContentRef.current = null;
+		}
+	};
+
+	// Apply live preview letter spacing by wrapping selected text temporarily
+	useEffect(() => {
+		console.log('OTS Block - Preview effect running:', {
+			isPopoverOpen,
+			previewLetterSpacing,
+			clientId,
+			hasSelection: !!(selectionStart && selectionEnd)
+		});
+
+		if (!isPopoverOpen) return;
+
+		console.log('OTS Block - Selection details:', {
+			selectionStart,
+			selectionEnd,
+			currentClientId: clientId,
+			startMatches: selectionStart?.clientId === clientId,
+			endMatches: selectionEnd?.clientId === clientId
+		});
+
+		// Only apply preview if we have a selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			console.log('OTS Block - Selection passed, offsets:', { start, end });
+
+			if (start !== end && content) {
+				// Find the block wrapper first
+				const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
+				console.log('OTS Block - Block wrapper:', blockWrapper);
+
+				// Find the RichText element within the block
+				let blockElement = blockWrapper?.querySelector('.ots-block-content');
+
+				if (!blockElement) {
+					// Try finding by the actual tag name (h1, h2, p, etc.)
+					blockElement = blockWrapper?.querySelector(tagName);
+					console.log('OTS Block - Trying tagName selector:', tagName, blockElement);
+				}
+
+				if (!blockElement) {
+					// Last resort: try the rich-text role
+					blockElement = blockWrapper?.querySelector('[role="textbox"]');
+					console.log('OTS Block - Trying textbox role:', blockElement);
+				}
+
+				console.log('OTS Block - Final block element:', blockElement);
+				console.log('OTS Block - Preview spacing:', previewLetterSpacing);
+
+				if (blockElement && previewLetterSpacing !== 0) {
+					// Apply letter-spacing style directly to the RichText element
+					const spacingValue = `${previewLetterSpacing / 1000}em`;
+					console.log('OTS Block - Applying spacing:', spacingValue);
+					blockElement.style.letterSpacing = spacingValue;
+				} else if (blockElement) {
+					// Remove preview styling
+					console.log('OTS Block - Removing spacing');
+					blockElement.style.letterSpacing = '';
+				}
+			}
+		}
+
+		// Cleanup when popover closes
+		return () => {
+			const blockElement = document.querySelector(`[data-block="${clientId}"] .ots-block-content`);
+			if (blockElement) {
+				blockElement.style.letterSpacing = '';
+			}
+		};
+	}, [previewLetterSpacing, clientId, selectionStart, selectionEnd, isPopoverOpen, content]);
 
 	const blockProps = useBlockProps({
 		className: 'wp-block-opentype-stylist'
@@ -95,7 +364,7 @@ export default function Edit({ attributes, setAttributes }) {
 		}
 	});
 
-	// Toggle feature
+	// Toggle feature (for block-level application)
 	const toggleFeature = (featureId) => {
 		const newFeatures = [...features];
 		const index = newFeatures.indexOf(featureId);
@@ -105,6 +374,184 @@ export default function Edit({ attributes, setAttributes }) {
 			newFeatures.push(featureId);
 		}
 		setAttributes({ features: newFeatures });
+	};
+
+	// Apply letter spacing only (no feature)
+	const applyLetterSpacingOnly = () => {
+		if (!content || inlineLetterSpacing === 0) return;
+
+		// Check if we have a valid selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				// Create a rich text value from the HTML content (preserves existing HTML)
+				const richTextValue = create({ html: content });
+
+				// Extract just the selected portion while preserving HTML structure
+				const slicedValue = sliceRichText(richTextValue, start, end);
+				const selectedText = getTextContent(slicedValue);
+
+				// Build the styled span with ONLY letter spacing
+				const styleArray = [];
+
+				if (fontFamily) {
+					styleArray.push(`font-family: ${fontFamily}`);
+				}
+
+				styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
+
+				const styleString = styleArray.join('; ');
+				console.log('OTS Block - Applying letter spacing only:', styleString);
+
+				// Parse the current content as HTML and wrap the selection
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				// Use a tree walker to find the text position
+				let currentOffset = 0;
+				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+				let textNode;
+				let startNode, startOffset, endNode, endOffset;
+
+				while ((textNode = walker.nextNode())) {
+					const nodeLength = textNode.nodeValue.length;
+
+					if (currentOffset + nodeLength > start && !startNode) {
+						startNode = textNode;
+						startOffset = start - currentOffset;
+					}
+
+					if (currentOffset + nodeLength >= end && !endNode) {
+						endNode = textNode;
+						endOffset = end - currentOffset;
+						break;
+					}
+
+					currentOffset += nodeLength;
+				}
+
+				if (startNode && endNode) {
+					const range = doc.createRange();
+					range.setStart(startNode, startOffset);
+					range.setEnd(endNode, endOffset);
+
+					// Create the span wrapper
+					const span = doc.createElement('span');
+					span.className = 'ots-styled';
+					span.setAttribute('style', styleString);
+
+					// Wrap the range content
+					range.surroundContents(span);
+
+					// Get the updated HTML
+					const newContent = container.innerHTML;
+					setAttributes({ content: newContent });
+				}
+
+				// Clear the original content ref since we're committing the change
+				originalContentRef.current = null;
+
+				// Close the popover after applying
+				setIsPopoverOpen(false);
+			}
+		}
+	};
+
+	// Apply feature to selected text only (inline) - never applies to whole block
+	const applyFeatureToSelection = (featureId) => {
+		if (!content) return;
+
+		// Check if we have a valid selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				// Create a rich text value from the HTML content (preserves existing HTML)
+				const richTextValue = create({ html: content });
+
+				// Extract just the selected portion while preserving HTML structure
+				const slicedValue = sliceRichText(richTextValue, start, end);
+				const selectedText = getTextContent(slicedValue);
+
+				// Build the styled span with feature and letter spacing
+				const styleArray = [];
+				styleArray.push(`font-feature-settings: '${featureId}' 1`);
+
+				if (fontFamily) {
+					styleArray.push(`font-family: ${fontFamily}`);
+				}
+
+				// Always include letter-spacing, even if 0
+				if (inlineLetterSpacing !== 0) {
+					styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
+				}
+
+				const styleString = styleArray.join('; ');
+				console.log('OTS Block - Applying styles:', styleString);
+				console.log('OTS Block - Letter spacing value:', inlineLetterSpacing);
+				const styledSpan = `<span class="ots-styled" style="${styleString}">${selectedText}</span>`;
+
+				// Parse the current content as HTML, find the text node at the selection, and wrap it
+				// This is a workaround since we need to work with HTML directly
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				// Use a tree walker to find the text position
+				let currentOffset = 0;
+				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+				let textNode;
+				let startNode, startOffset, endNode, endOffset;
+
+				while ((textNode = walker.nextNode())) {
+					const nodeLength = textNode.nodeValue.length;
+
+					if (currentOffset + nodeLength > start && !startNode) {
+						startNode = textNode;
+						startOffset = start - currentOffset;
+					}
+
+					if (currentOffset + nodeLength >= end && !endNode) {
+						endNode = textNode;
+						endOffset = end - currentOffset;
+						break;
+					}
+
+					currentOffset += nodeLength;
+				}
+
+				if (startNode && endNode) {
+					const range = doc.createRange();
+					range.setStart(startNode, startOffset);
+					range.setEnd(endNode, endOffset);
+
+					// Create the span wrapper
+					const span = doc.createElement('span');
+					span.className = 'ots-styled';
+					span.setAttribute('style', styleString);
+
+					// Wrap the range content
+					range.surroundContents(span);
+
+					// Get the updated HTML
+					const newContent = container.innerHTML;
+					setAttributes({ content: newContent });
+				}
+
+				// Close the popover after applying
+				setIsPopoverOpen(false);
+			}
+		}
 	};
 
 	// Build inline style for preview
@@ -153,6 +600,112 @@ export default function Edit({ attributes, setAttributes }) {
 	return (
 		<>
 			<BlockControls>
+				<ToolbarGroup>
+					<ToolbarButton
+						icon={OTSIcon}
+						label={__('OpenType Features', 'opentype-stylist')}
+						onClick={handleToolbarClick}
+						isActive={features.length > 0}
+					/>
+					{isPopoverOpen && (
+						<Popover
+							position="middle right"
+							onClose={handlePopoverClose}
+							className="ots-block-popover"
+							noArrow={false}
+						>
+							<div style={{ padding: '16px', minWidth: '400px', maxWidth: '500px', maxHeight: '500px', overflowY: 'auto' }}>
+								<h4 style={{ marginTop: 0 }}>{__('Quick Feature Toggles', 'opentype-stylist')}</h4>
+
+								{/* Letter Spacing Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<RangeControl
+										label={__('Letter Spacing (for selected text)', 'opentype-stylist')}
+										value={inlineLetterSpacing}
+										onChange={handleLetterSpacingChange}
+										min={-200}
+										max={200}
+										step={1}
+										help={inlineLetterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${inlineLetterSpacing / 1000}em`}
+										allowReset
+										resetFallbackValue={0}
+									/>
+									{inlineLetterSpacing !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLetterSpacingOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Letter Spacing', 'opentype-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLetterSpacing}
+												isDestructive
+											>
+												{__('Clear', 'opentype-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLetterSpacing !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'opentype-stylist')}
+										</p>
+									)}
+								</div>
+
+								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
+									<PanelBody
+										key={category}
+										title={getCategoryTitle(category)}
+										initialOpen={category === 'ligatures'}
+										className="ots-feature-category-panel"
+									>
+										{categoryFeatures.map(feature => {
+											const sampleText = previewText || 'ffi ffl Th AE';
+											const isActive = features.includes(feature.id);
+											return (
+												<div key={feature.id} style={{ marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '8px' }}>
+													<div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+														<label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }}>
+															<input
+																type="checkbox"
+																checked={isActive}
+																onChange={() => toggleFeature(feature.id)}
+																style={{ marginRight: '8px' }}
+															/>
+															<span style={{ fontSize: '13px', fontWeight: 500 }}>{feature.name}</span>
+															<code style={{ fontSize: '11px', marginLeft: '8px', color: '#666' }}>{feature.id}</code>
+														</label>
+													</div>
+													<div style={{ fontSize: '12px', color: '#666', marginBottom: '6px', marginLeft: '24px' }}>
+														{feature.description}
+													</div>
+													<div className="ots-feature-preview" style={{ marginLeft: '24px' }}>
+														<Button
+															className="ots-feature-preview-on ots-feature-apply-btn"
+															onClick={() => applyFeatureToSelection(feature.id)}
+															style={{
+																fontFeatureSettings: `"${feature.id}" 1`,
+																fontFamily: fontFamily || 'inherit'
+															}}
+														>
+															{sampleText}
+														</Button>
+													</div>
+												</div>
+											);
+										})}
+									</PanelBody>
+								))}
+								<p style={{ fontSize: '12px', color: '#757575', marginBottom: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ddd' }}>
+									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'opentype-stylist')}
+								</p>
+							</div>
+						</Popover>
+					)}
+				</ToolbarGroup>
 				<ToolbarGroup>
 					<ToolbarDropdownMenu
 						icon="heading"
