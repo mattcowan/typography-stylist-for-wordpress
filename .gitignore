@@ -9,3 +9,5 @@ CLAUDE.md
 *.zip
 clear-cache.php
 playwright-profile/
+coverage/
+.playwright-mcp/
