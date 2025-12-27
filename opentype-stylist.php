@@ -166,7 +166,7 @@ class OpenType_Stylist {
                 'restUrl' => rest_url('ots/v1/'),
                 'nonce' => wp_create_nonce('wp_rest'),
                 'enableAriaLabels' => get_option('ots_enable_aria_labels', false),
-                'show_clear_confirmation' => get_option('ots_show_clear_confirmation', true)
+                'showClearConfirmation' => get_option('ots_show_clear_confirmation', true)
             );
 
             // Cache for 1 hour

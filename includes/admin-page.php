@@ -37,14 +37,19 @@ if (isset($_POST['ots_save_accessibility_settings']) &&
     check_admin_referer('ots_accessibility_settings_nonce') &&
     current_user_can('manage_options')) {
 
-    $enable_aria = isset($_POST['ots_enable_aria_labels']) ? true : false;
+    // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
+    $enable_aria = isset($_POST['ots_enable_aria_labels']) ? '1' : '0';
     update_option('ots_enable_aria_labels', $enable_aria);
 
-    $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']);
+    // Get previous value to detect changes
+    $previous_show_clear_confirmation = (bool) get_option('ots_show_clear_confirmation', true);
+    $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']) ? '1' : '0';
     update_option('ots_show_clear_confirmation', $show_clear_confirmation);
 
-    // Clear cache for all users
-    OpenType_Stylist::get_instance()->clear_cache();
+    // Clear cache for all users only when the clear confirmation setting changes
+    if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
+        OpenType_Stylist::get_instance()->clear_cache();
+    }
 
     echo '<div class="notice notice-success"><p>' .
          esc_html__('Accessibility settings saved successfully.', 'opentype-stylist') .

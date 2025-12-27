@@ -7,7 +7,7 @@
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
     const { RichTextToolbarButton } = wp.blockEditor;
     const { Component, Fragment } = wp.element;
-    const { Popover, Button, ButtonGroup, ToggleControl, TextControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl } = wp.components;
+    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl } = wp.components;
     const { __, sprintf } = wp.i18n;
     const { compose } = wp.compose;
 
@@ -48,6 +48,9 @@
                 hideWarning = sessionStorage.getItem('ots_hide_clear_warning') === 'true';
             } catch (e) {
                 // Session storage might not be available
+                if (window && window.console && typeof window.console.warn === 'function') {
+                    window.console.warn('OpenType Stylist: sessionStorage is not available; "don\'t show again" preference for clear warning will not persist.', e);
+                }
             }
 
             this.state = {
@@ -683,19 +686,29 @@
          * Confirm clear action
          */
         confirmClear() {
-            // Update setting if user checked "don't show again"
-            if (this.state.dontShowClearWarning) {
-                // Store in session storage so it persists for this session only
-                try {
-                    sessionStorage.setItem('ots_hide_clear_warning', 'true');
-                } catch (e) {
-                    // Session storage might not be available
+            try {
+                // Attempt to clear features first
+                this.clearFeatures();
+
+                // Update setting only if user checked "don't show again" and clear succeeded
+                if (this.state.dontShowClearWarning) {
+                    // Store in session storage so it persists for this session only
+                    try {
+                        sessionStorage.setItem('ots_hide_clear_warning', 'true');
+                    } catch (e) {
+                        // Session storage might not be available
+                    }
+                }
+
+                // Hide confirmation modal after successful clear
+                this.setState({ showClearConfirmation: false });
+            } catch (error) {
+                // If clearing features fails, do not persist the "don't show again" preference
+                // Optionally, log the error for debugging
+                if (window && window.console && typeof window.console.error === 'function') {
+                    window.console.error('Failed to clear OpenType Stylist features:', error);
                 }
             }
-
-            this.setState({ showClearConfirmation: false }, () => {
-                this.clearFeatures();
-            });
         }
 
         /**
@@ -703,8 +716,7 @@
          */
         cancelClear() {
             this.setState({
-                showClearConfirmation: false,
-                dontShowClearWarning: false
+                showClearConfirmation: false
             });
         }
 
@@ -995,7 +1007,7 @@
                             position="bottom center"
                             onClose={this.togglePopover}
                             className="ots-popover"
-                            focusOnMount={!showClearConfirmation}
+                            focusOnMount="firstElement"
                         >
                             <div className="ots-popover-content">
                                 <div className="ots-popover-header">
@@ -1243,7 +1255,7 @@
 
                     {showClearConfirmation && (
                         <Modal
-                            title={__('Clear All Formatting?', 'opentype-stylist')}
+                            title={__('Clear Typography Settings?', 'opentype-stylist')}
                             onRequestClose={this.cancelClear}
                             className="ots-clear-confirmation-modal"
                         >
@@ -1260,7 +1272,7 @@
                                     isPrimary
                                     onClick={this.confirmClear}
                                 >
-                                    {__('Clear Formatting', 'opentype-stylist')}
+                                    {__('Clear Typography Settings', 'opentype-stylist')}
                                 </Button>
                                 <Button
                                     isSecondary

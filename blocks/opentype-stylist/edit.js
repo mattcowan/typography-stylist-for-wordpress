@@ -72,18 +72,56 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		[]
 	);
 
-	// Extract plain text from HTML content for previews
-	const getPlainText = (htmlContent) => {
-		if (!htmlContent) return 'Sample Text AE ffi ffl Th';
-		// Create a temporary div to parse HTML and extract text
-		const temp = document.createElement('div');
-		temp.innerHTML = htmlContent;
-		const text = temp.textContent || temp.innerText || '';
-		return text.trim() || 'Sample Text AE ffi ffl Th';
-	};
-
 	// Store original letter spacing when opening popover
 	const originalLetterSpacingRef = useRef(letterSpacing);
+
+	// Store the original content before preview
+	const originalContentRef = useRef(null);
+
+	// Sanitize font family value to prevent injection
+	const sanitizeFontFamily = (font) => {
+		if (!font) return '';
+		// Remove quotes and semicolons that could break style string
+		return font.replace(/["';]/g, '');
+	};
+
+	// Helper to create a Range for the given linear text offsets within a container
+	const getRangeForOffsets = (rootNode, startOffset, endOffset, docContext) => {
+		let currentOffset = 0;
+		const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
+		let textNode;
+		let rangeStartNode = null;
+		let rangeStartOffset = 0;
+		let rangeEndNode = null;
+		let rangeEndOffset = 0;
+
+		while ((textNode = walker.nextNode())) {
+			const nodeLength = textNode.nodeValue.length;
+
+			if (currentOffset + nodeLength > startOffset && !rangeStartNode) {
+				rangeStartNode = textNode;
+				rangeStartOffset = startOffset - currentOffset;
+			}
+
+			if (currentOffset + nodeLength >= endOffset && !rangeEndNode) {
+				rangeEndNode = textNode;
+				rangeEndOffset = endOffset - currentOffset;
+				break;
+			}
+
+			currentOffset += nodeLength;
+		}
+
+		if (!rangeStartNode || !rangeEndNode) {
+			return null;
+		}
+
+		const range = docContext.createRange();
+		range.setStart(rangeStartNode, rangeStartOffset);
+		range.setEnd(rangeEndNode, rangeEndOffset);
+
+		return range;
+	};
 
 	// Handle toolbar button click
 	const handleToolbarClick = () => {
@@ -137,9 +175,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setIsPopoverOpen(false);
 	};
 
-	// Store the original content before preview
-	const originalContentRef = useRef(null);
-
 	// Handle letter spacing change with live preview
 	const handleLetterSpacingChange = (value) => {
 		setInlineLetterSpacing(value);
@@ -159,45 +194,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					originalContentRef.current = content;
 				}
 
-				// Create a rich text value from the HTML content (preserves existing HTML)
-				const richTextValue = create({ html: originalContentRef.current });
-
-				// Extract just the selected portion while preserving HTML structure
-				const slicedValue = sliceRichText(richTextValue, start, end);
-				const selectedText = getTextContent(slicedValue);
-
 				// Parse the current content as HTML and wrap the selection for preview
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${originalContentRef.current}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
-				// Use a tree walker to find the text position
-				let currentOffset = 0;
-				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-				let textNode;
-				let startNode, startOffset, endNode, endOffset;
+				const range = getRangeForOffsets(container, start, end, doc);
 
-				while ((textNode = walker.nextNode())) {
-					const nodeLength = textNode.nodeValue.length;
-
-					if (currentOffset + nodeLength > start && !startNode) {
-						startNode = textNode;
-						startOffset = start - currentOffset;
-					}
-
-					if (currentOffset + nodeLength >= end && !endNode) {
-						endNode = textNode;
-						endOffset = end - currentOffset;
-						break;
-					}
-
-					currentOffset += nodeLength;
-				}
-
-				if (startNode && endNode) {
-					const range = doc.createRange();
-					range.setStart(startNode, startOffset);
-					range.setEnd(endNode, endOffset);
+				if (range) {
 
 					// Create the preview span wrapper
 					const span = doc.createElement('span');
@@ -213,7 +217,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						const previewContent = container.innerHTML;
 						setAttributes({ content: previewContent });
 					} catch (e) {
-						console.log('OTS Block - Preview wrap failed:', e);
+						// Range cannot be wrapped (e.g., intersects element boundaries)
+						// Silently fail for preview - user can still apply manually
 					}
 				}
 			}
@@ -233,22 +238,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	// Apply live preview letter spacing by wrapping selected text temporarily
 	useEffect(() => {
-		console.log('OTS Block - Preview effect running:', {
-			isPopoverOpen,
-			previewLetterSpacing,
-			clientId,
-			hasSelection: !!(selectionStart && selectionEnd)
-		});
-
 		if (!isPopoverOpen) return;
-
-		console.log('OTS Block - Selection details:', {
-			selectionStart,
-			selectionEnd,
-			currentClientId: clientId,
-			startMatches: selectionStart?.clientId === clientId,
-			endMatches: selectionEnd?.clientId === clientId
-		});
 
 		// Only apply preview if we have a selection
 		if (selectionStart && selectionEnd &&
@@ -258,12 +248,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const start = selectionStart.offset || 0;
 			const end = selectionEnd.offset || 0;
 
-			console.log('OTS Block - Selection passed, offsets:', { start, end });
-
 			if (start !== end && content) {
 				// Find the block wrapper first
 				const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
-				console.log('OTS Block - Block wrapper:', blockWrapper);
 
 				// Find the RichText element within the block
 				let blockElement = blockWrapper?.querySelector('.ots-block-content');
@@ -271,26 +258,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (!blockElement) {
 					// Try finding by the actual tag name (h1, h2, p, etc.)
 					blockElement = blockWrapper?.querySelector(tagName);
-					console.log('OTS Block - Trying tagName selector:', tagName, blockElement);
 				}
 
 				if (!blockElement) {
 					// Last resort: try the rich-text role
 					blockElement = blockWrapper?.querySelector('[role="textbox"]');
-					console.log('OTS Block - Trying textbox role:', blockElement);
 				}
-
-				console.log('OTS Block - Final block element:', blockElement);
-				console.log('OTS Block - Preview spacing:', previewLetterSpacing);
 
 				if (blockElement && previewLetterSpacing !== 0) {
 					// Apply letter-spacing style directly to the RichText element
 					const spacingValue = `${previewLetterSpacing / 1000}em`;
-					console.log('OTS Block - Applying spacing:', spacingValue);
 					blockElement.style.letterSpacing = spacingValue;
 				} else if (blockElement) {
 					// Remove preview styling
-					console.log('OTS Block - Removing spacing');
 					blockElement.style.letterSpacing = '';
 				}
 			}
@@ -298,9 +278,35 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		// Cleanup when popover closes
 		return () => {
-			const blockElement = document.querySelector(`[data-block="${clientId}"] .ots-block-content`);
-			if (blockElement) {
-				blockElement.style.letterSpacing = '';
+			// Use the same robust lookup as above to find the content element
+			const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
+			if (blockWrapper) {
+				let blockElement = blockWrapper.querySelector('.ots-block-content');
+
+				if (!blockElement && tagName) {
+					blockElement = blockWrapper.querySelector(tagName);
+				}
+
+				if (!blockElement) {
+					blockElement = blockWrapper.querySelector('[role="textbox"]');
+				}
+
+				if (blockElement) {
+					blockElement.style.letterSpacing = '';
+				}
+
+				// Remove any temporary preview wrapper spans
+				const tempSpans = blockWrapper.querySelectorAll('.ots-preview-temp');
+				tempSpans.forEach((span) => {
+					const parent = span.parentNode;
+					if (!parent) {
+						return;
+					}
+					while (span.firstChild) {
+						parent.insertBefore(span.firstChild, span);
+					}
+					parent.removeChild(span);
+				});
 			}
 		};
 	}, [previewLetterSpacing, clientId, selectionStart, selectionEnd, isPopoverOpen, content]);
@@ -364,8 +370,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	});
 
-	// Toggle feature (for block-level application)
 	const toggleFeature = (featureId) => {
+		// Check if we have a valid selection - if so, apply inline instead
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			// If there's a selection, apply inline instead of toggling block-level
+			if (start !== end) {
+				applyFeatureToSelection(featureId);
+				return;
+			}
+		}
+
+		// No selection - toggle block-level feature
 		const newFeatures = [...features];
 		const index = newFeatures.indexOf(featureId);
 		if (index > -1) {
@@ -389,57 +410,26 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
-				// Create a rich text value from the HTML content (preserves existing HTML)
-				const richTextValue = create({ html: content });
-
-				// Extract just the selected portion while preserving HTML structure
-				const slicedValue = sliceRichText(richTextValue, start, end);
-				const selectedText = getTextContent(slicedValue);
-
 				// Build the styled span with ONLY letter spacing
 				const styleArray = [];
 
 				if (fontFamily) {
-					styleArray.push(`font-family: ${fontFamily}`);
+					const sanitizedFont = sanitizeFontFamily(fontFamily);
+					styleArray.push(`font-family: ${sanitizedFont}`);
 				}
 
 				styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
 
 				const styleString = styleArray.join('; ');
-				console.log('OTS Block - Applying letter spacing only:', styleString);
 
 				// Parse the current content as HTML and wrap the selection
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
-				// Use a tree walker to find the text position
-				let currentOffset = 0;
-				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-				let textNode;
-				let startNode, startOffset, endNode, endOffset;
+				const range = getRangeForOffsets(container, start, end, doc);
 
-				while ((textNode = walker.nextNode())) {
-					const nodeLength = textNode.nodeValue.length;
-
-					if (currentOffset + nodeLength > start && !startNode) {
-						startNode = textNode;
-						startOffset = start - currentOffset;
-					}
-
-					if (currentOffset + nodeLength >= end && !endNode) {
-						endNode = textNode;
-						endOffset = end - currentOffset;
-						break;
-					}
-
-					currentOffset += nodeLength;
-				}
-
-				if (startNode && endNode) {
-					const range = doc.createRange();
-					range.setStart(startNode, startOffset);
-					range.setEnd(endNode, endOffset);
+				if (range) {
 
 					// Create the span wrapper
 					const span = doc.createElement('span');
@@ -447,11 +437,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					span.setAttribute('style', styleString);
 
 					// Wrap the range content
-					range.surroundContents(span);
+					try {
+						range.surroundContents(span);
 
-					// Get the updated HTML
-					const newContent = container.innerHTML;
-					setAttributes({ content: newContent });
+						// Get the updated HTML
+						const newContent = container.innerHTML;
+						setAttributes({ content: newContent });
+					} catch (error) {
+						// Avoid breaking the editor if the range cannot be wrapped
+						// (e.g., when it intersects element boundaries)
+						// eslint-disable-next-line no-console
+						console.error('OTS Block - Failed to apply letter spacing to selection:', error);
+					}
 				}
 
 				// Clear the original content ref since we're committing the change
@@ -476,19 +473,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
-				// Create a rich text value from the HTML content (preserves existing HTML)
-				const richTextValue = create({ html: content });
-
-				// Extract just the selected portion while preserving HTML structure
-				const slicedValue = sliceRichText(richTextValue, start, end);
-				const selectedText = getTextContent(slicedValue);
-
 				// Build the styled span with feature and letter spacing
 				const styleArray = [];
 				styleArray.push(`font-feature-settings: '${featureId}' 1`);
 
 				if (fontFamily) {
-					styleArray.push(`font-family: ${fontFamily}`);
+					const sanitizedFont = sanitizeFontFamily(fontFamily);
+					styleArray.push(`font-family: ${sanitizedFont}`);
 				}
 
 				// Always include letter-spacing, even if 0
@@ -497,9 +488,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}
 
 				const styleString = styleArray.join('; ');
-				console.log('OTS Block - Applying styles:', styleString);
-				console.log('OTS Block - Letter spacing value:', inlineLetterSpacing);
-				const styledSpan = `<span class="ots-styled" style="${styleString}">${selectedText}</span>`;
 
 				// Parse the current content as HTML, find the text node at the selection, and wrap it
 				// This is a workaround since we need to work with HTML directly
@@ -507,33 +495,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
-				// Use a tree walker to find the text position
-				let currentOffset = 0;
-				const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-				let textNode;
-				let startNode, startOffset, endNode, endOffset;
+				const range = getRangeForOffsets(container, start, end, doc);
 
-				while ((textNode = walker.nextNode())) {
-					const nodeLength = textNode.nodeValue.length;
-
-					if (currentOffset + nodeLength > start && !startNode) {
-						startNode = textNode;
-						startOffset = start - currentOffset;
-					}
-
-					if (currentOffset + nodeLength >= end && !endNode) {
-						endNode = textNode;
-						endOffset = end - currentOffset;
-						break;
-					}
-
-					currentOffset += nodeLength;
-				}
-
-				if (startNode && endNode) {
-					const range = doc.createRange();
-					range.setStart(startNode, startOffset);
-					range.setEnd(endNode, endOffset);
+				if (range) {
 
 					// Create the span wrapper
 					const span = doc.createElement('span');
@@ -541,11 +505,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					span.setAttribute('style', styleString);
 
 					// Wrap the range content
-					range.surroundContents(span);
+					try {
+						range.surroundContents(span);
 
-					// Get the updated HTML
-					const newContent = container.innerHTML;
-					setAttributes({ content: newContent });
+						// Get the updated HTML
+						const newContent = container.innerHTML;
+						setAttributes({ content: newContent });
+					} catch (error) {
+						// Avoid breaking the editor if the range cannot be wrapped
+						// (e.g., when it intersects element boundaries)
+						// eslint-disable-next-line no-console
+						console.error('OTS Block - Failed to apply feature to selection:', error);
+					}
 				}
 
 				// Close the popover after applying
