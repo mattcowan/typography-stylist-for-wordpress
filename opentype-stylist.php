@@ -165,7 +165,8 @@ class OpenType_Stylist {
                 'manualFonts' => $this->get_manual_fonts(),
                 'restUrl' => rest_url('ots/v1/'),
                 'nonce' => wp_create_nonce('wp_rest'),
-                'enableAriaLabels' => get_option('ots_enable_aria_labels', false)
+                'enableAriaLabels' => get_option('ots_enable_aria_labels', false),
+                'showClearConfirmation' => get_option('ots_show_clear_confirmation', true)
             );
 
             // Cache for 1 hour

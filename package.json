@@ -15,6 +15,8 @@
     "watch": "npm run watch:js & npm run watch:css",
     "watch:js": "nodemon --watch assets/js --ext js --ignore \"*.min.js\" --exec \"npm run build:js\"",
     "watch:css": "nodemon --watch assets/css --ext css --ignore \"*.min.css\" --exec \"npm run build:css\"",
+    "test": "wp-scripts test-unit-js",
+    "test:watch": "wp-scripts test-unit-js --watch",
     "version": "npm run build",
     "package": "npm run build && node scripts/package.js"
   },
@@ -23,6 +25,8 @@
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-react": "^7.28.5",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
     "@wordpress/scripts": "^26.19.0",
     "archiver": "^7.0.1",
     "clean-css-cli": "^5.6.2",

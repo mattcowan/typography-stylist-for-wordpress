@@ -7,7 +7,7 @@
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
     const { RichTextToolbarButton } = wp.blockEditor;
     const { Component, Fragment } = wp.element;
-    const { Popover, Button, ButtonGroup, ToggleControl, TextControl, SelectControl, PanelBody, RangeControl } = wp.components;
+    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl } = wp.components;
     const { __, sprintf } = wp.i18n;
     const { compose } = wp.compose;
 
@@ -42,6 +42,17 @@
         constructor(props) {
             super(props);
 
+            // Check if user has disabled warning for this session
+            let hideWarning = false;
+            try {
+                hideWarning = sessionStorage.getItem('ots_hide_clear_warning') === 'true';
+            } catch (e) {
+                // Session storage might not be available
+                if (window && window.console && typeof window.console.warn === 'function') {
+                    window.console.warn('OpenType Stylist: sessionStorage is not available; "don\'t show again" preference for clear warning will not persist.', e);
+                }
+            }
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -58,7 +69,9 @@
                 previewDevice: 'tablet',
                 showAccessibilityWarning: false,
                 warningMessage: '',
-                changeHistory: []
+                changeHistory: [],
+                showClearConfirmation: false,
+                dontShowClearWarning: hideWarning
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -66,6 +79,9 @@
             this.applyFeatures = this.applyFeatures.bind(this);
             this.applyPreset = this.applyPreset.bind(this);
             this.clearFeatures = this.clearFeatures.bind(this);
+            this.handleClearClick = this.handleClearClick.bind(this);
+            this.confirmClear = this.confirmClear.bind(this);
+            this.cancelClear = this.cancelClear.bind(this);
             this.setFont = this.setFont.bind(this);
             this.setFontSize = this.setFontSize.bind(this);
             this.setFontSizeMin = this.setFontSizeMin.bind(this);
@@ -651,6 +667,60 @@
         }
 
         /**
+         * Handle clear button click - show confirmation if enabled
+         */
+        handleClearClick() {
+            // Check if confirmation is enabled globally and not disabled for this session
+            const showConfirmation = otsData.showClearConfirmation && !this.state.dontShowClearWarning;
+
+            if (showConfirmation) {
+                // Show confirmation modal
+                this.setState({ showClearConfirmation: true });
+            } else {
+                // Clear immediately
+                this.clearFeatures();
+            }
+        }
+
+        /**
+         * Confirm clear action
+         */
+        confirmClear() {
+            try {
+                // Attempt to clear features first
+                this.clearFeatures();
+
+                // Update setting only if user checked "don't show again" and clear succeeded
+                if (this.state.dontShowClearWarning) {
+                    // Store in session storage so it persists for this session only
+                    try {
+                        sessionStorage.setItem('ots_hide_clear_warning', 'true');
+                    } catch (e) {
+                        // Session storage might not be available
+                    }
+                }
+
+                // Hide confirmation modal after successful clear
+                this.setState({ showClearConfirmation: false });
+            } catch (error) {
+                // If clearing features fails, do not persist the "don't show again" preference
+                // Optionally, log the error for debugging
+                if (window && window.console && typeof window.console.error === 'function') {
+                    window.console.error('Failed to clear OpenType Stylist features:', error);
+                }
+            }
+        }
+
+        /**
+         * Cancel clear action
+         */
+        cancelClear() {
+            this.setState({
+                showClearConfirmation: false
+            });
+        }
+
+        /**
          * Clear all features
          */
         clearFeatures() {
@@ -887,7 +957,7 @@
 
         render() {
             const { isActive } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -937,6 +1007,7 @@
                             position="bottom center"
                             onClose={this.togglePopover}
                             className="ots-popover"
+                            focusOnMount="firstElement"
                         >
                             <div className="ots-popover-content">
                                 <div className="ots-popover-header">
@@ -1166,7 +1237,7 @@
                                         )}
                                         <Button
                                             isSecondary
-                                            onClick={this.clearFeatures}
+                                            onClick={this.handleClearClick}
                                         >
                                             {__('Clear', 'opentype-stylist')}
                                         </Button>
@@ -1180,6 +1251,37 @@
                                 </div>
                             </div>
                         </Popover>
+                    )}
+
+                    {showClearConfirmation && (
+                        <Modal
+                            title={__('Clear Typography Settings?', 'opentype-stylist')}
+                            onRequestClose={this.cancelClear}
+                            className="ots-clear-confirmation-modal"
+                        >
+                            <p>
+                                {__('This will remove all typography features, font selections, and styling. This action cannot be undone.', 'opentype-stylist')}
+                            </p>
+                            <CheckboxControl
+                                label={__('Do not show this warning again (this session)', 'opentype-stylist')}
+                                checked={dontShowClearWarning}
+                                onChange={(checked) => this.setState({ dontShowClearWarning: checked })}
+                            />
+                            <ButtonGroup>
+                                <Button
+                                    isPrimary
+                                    onClick={this.confirmClear}
+                                >
+                                    {__('Clear Typography Settings', 'opentype-stylist')}
+                                </Button>
+                                <Button
+                                    isSecondary
+                                    onClick={this.cancelClear}
+                                >
+                                    {__('Cancel', 'opentype-stylist')}
+                                </Button>
+                            </ButtonGroup>
+                        </Modal>
                     )}
                 </Fragment>
             );
