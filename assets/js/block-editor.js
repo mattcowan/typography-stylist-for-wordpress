@@ -396,7 +396,7 @@
         }
 
         /**
-         * Convert current heading to OpenType Stylist block
+         * Convert current heading/paragraph to OpenType Stylist block, or update existing OpenType Stylist block
          */
         convertToBlock() {
             const { value } = this.props;
@@ -416,9 +416,14 @@
                 return;
             }
 
-            // Determine tag from block name (core/heading, core/paragraph)
+            // Check if we're already in an OpenType Stylist block
+            const isAlreadyOTSBlock = currentBlock.name === 'opentype-stylist/block';
+
+            // Determine tag from block name (core/heading, core/paragraph, or existing OTS block)
             let tagName = 'h2';
-            if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
+            if (isAlreadyOTSBlock) {
+                tagName = currentBlock.attributes.tagName || 'h2';
+            } else if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
                 tagName = `h${currentBlock.attributes.level}`;
             } else if (currentBlock.name === 'core/paragraph') {
                 tagName = 'p';
@@ -429,10 +434,9 @@
             // Check if there's a selection (partial text selected)
             if (value.start !== value.end) {
                 // User selected a portion of text - apply styling only to that portion
+                // Use the current block's HTML content to preserve existing spans
+                const existingContent = currentBlock.attributes.content || '';
                 const fullText = getTextContent(value);
-                const beforeText = fullText.substring(0, value.start);
-                const selectedText = fullText.substring(value.start, value.end);
-                const afterText = fullText.substring(value.end);
 
                 // Build style string for the selected portion
                 const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
@@ -456,46 +460,148 @@
 
                 const styleString = styleArray.join('; ');
 
-                // Create HTML content with only the selected portion styled
-                contentForBlock = beforeText +
-                    `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
-                    afterText;
+                // If we have existing HTML content with spans, we need to preserve it
+                if (existingContent && existingContent.includes('<')) {
+                    // Parse the HTML to work with it
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(`<div>${existingContent}</div>`, 'text/html');
+                    const container = doc.body.firstChild;
 
-                // Create OpenType Stylist block with no global features (only inline styling)
-                const otsBlock = createBlock('opentype-stylist/block', {
-                    content: contentForBlock,
-                    tagName: tagName,
-                    features: [], // No global features
-                    fontFamily: '',
-                    fontSize: 'inherit',
-                    fontSizeMin: 16,
-                    fontSizePreferred: 24,
-                    fontSizeMax: 32,
-                    fontWeight: '400',
-                    letterSpacing: 0
-                });
+                    // Get plain text for offset calculation
+                    const plainText = container.textContent;
 
-                // Replace current block
-                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    // Create a range for the selection
+                    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+                    let currentOffset = 0;
+                    let startNode = null, startOffset = 0;
+                    let endNode = null, endOffset = 0;
+
+                    let textNode;
+                    while ((textNode = walker.nextNode())) {
+                        const nodeLength = textNode.nodeValue.length;
+
+                        if (!startNode && currentOffset + nodeLength >= value.start) {
+                            startNode = textNode;
+                            startOffset = value.start - currentOffset;
+                        }
+
+                        if (!endNode && currentOffset + nodeLength >= value.end) {
+                            endNode = textNode;
+                            endOffset = value.end - currentOffset;
+                            break;
+                        }
+
+                        currentOffset += nodeLength;
+                    }
+
+                    // If we found the nodes, wrap the selection
+                    if (startNode && endNode) {
+                        const range = doc.createRange();
+                        range.setStart(startNode, startOffset);
+                        range.setEnd(endNode, endOffset);
+
+                        const span = doc.createElement('span');
+                        span.className = 'ots-styled';
+                        span.setAttribute('style', styleString);
+
+                        try {
+                            range.surroundContents(span);
+                            contentForBlock = container.innerHTML;
+                        } catch (e) {
+                            // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
+                            const beforeText = fullText.substring(0, value.start);
+                            const selectedText = fullText.substring(value.start, value.end);
+                            const afterText = fullText.substring(value.end);
+                            contentForBlock = beforeText +
+                                `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
+                                afterText;
+                        }
+                    } else {
+                        // Fall back to simple text replacement
+                        const beforeText = fullText.substring(0, value.start);
+                        const selectedText = fullText.substring(value.start, value.end);
+                        const afterText = fullText.substring(value.end);
+                        contentForBlock = beforeText +
+                            `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
+                            afterText;
+                    }
+                } else {
+                    // No existing HTML, use simple text replacement
+                    const beforeText = fullText.substring(0, value.start);
+                    const selectedText = fullText.substring(value.start, value.end);
+                    const afterText = fullText.substring(value.end);
+                    contentForBlock = beforeText +
+                        `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
+                        afterText;
+                }
+
+                // If already an OTS block, just update its attributes
+                if (isAlreadyOTSBlock) {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                        content: contentForBlock,
+                        // Preserve existing block-level features, don't apply inline features globally
+                        features: currentBlock.attributes.features || [],
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+                } else {
+                    // Create new OpenType Stylist block preserving user's settings from inline editor
+                    // Don't apply inline features globally - they're only for the selection
+                    const otsBlock = createBlock('opentype-stylist/block', {
+                        content: contentForBlock,
+                        tagName: tagName,
+                        features: [],
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+
+                    // Replace current block
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                }
             } else {
                 // No selection - apply to entire block (original behavior)
-                const textContent = getTextContent(value);
+                const existingContent = currentBlock.attributes.content || '';
+                const textContent = existingContent || getTextContent(value);
 
-                const otsBlock = createBlock('opentype-stylist/block', {
-                    content: textContent,
-                    tagName: tagName,
-                    features: this.state.selectedFeatures,
-                    fontFamily: this.state.selectedFont,
-                    fontSize: this.state.fontSize,
-                    fontSizeMin: this.state.fontSizeMin,
-                    fontSizePreferred: this.state.fontSizePreferred,
-                    fontSizeMax: this.state.fontSizeMax,
-                    fontWeight: this.state.fontWeight,
-                    letterSpacing: this.state.letterSpacing
-                });
+                // If already an OTS block, just update its attributes
+                if (isAlreadyOTSBlock) {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                        features: this.state.selectedFeatures,
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+                } else {
+                    const otsBlock = createBlock('opentype-stylist/block', {
+                        content: textContent,
+                        tagName: tagName,
+                        features: this.state.selectedFeatures,
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
 
-                // Replace current block
-                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    // Replace current block
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                }
             }
 
             // Close popover
@@ -963,6 +1069,11 @@
             const fontOptions = this.getFontOptions();
             const hasFonts = fontOptions.length > 0;
 
+            // Check if we're inside an OpenType Stylist block
+            const { select } = wp.data;
+            const selectedBlock = select('core/block-editor').getSelectedBlock();
+            const isInOTSBlock = selectedBlock && selectedBlock.name === 'opentype-stylist/block';
+
             // Use stored preview text or fallback
             const displayText = previewText || __('Elegant Typography & Flourish', 'opentype-stylist');
 
@@ -994,13 +1105,16 @@
 
             return (
                 <Fragment>
-                    <RichTextToolbarButton
-                        icon={OTSIcon}
-                        title={__('OpenType Stylist', 'opentype-stylist')}
-                        onClick={this.togglePopover}
-                        isActive={isActive}
-                        className="ots-toolbar-button"
-                    />
+                    {/* Only show button if NOT in an OpenType Stylist block */}
+                    {!isInOTSBlock && (
+                        <RichTextToolbarButton
+                            icon={OTSIcon}
+                            title={__('OpenType Stylist', 'opentype-stylist')}
+                            onClick={this.togglePopover}
+                            isActive={isActive}
+                            className="ots-toolbar-button"
+                        />
+                    )}
 
                     {isOpen && (
                         <Popover
