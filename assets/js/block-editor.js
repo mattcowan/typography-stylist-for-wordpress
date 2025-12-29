@@ -153,7 +153,10 @@
                 warningMessage: '',
                 changeHistory: [],
                 showClearConfirmation: false,
-                dontShowClearWarning: hideWarning
+                dontShowClearWarning: hideWarning,
+                // Inline features cached when popover opens (for inline editor toolbar)
+                // Note: OTS block sidebar (edit.js) uses useMemo for similar optimization
+                inlineFeatures: []
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -262,8 +265,49 @@
         }
 
         /**
+         * Get inline features from styled spans at current selection in OTS blocks
+         * Optimized version - only called when popover opens, not on every render
+         * @return {Array} Array of feature codes from the styled span at selection
+         * @private
+         */
+        getInlineFeaturesForOTSBlock() {
+            const styledSpan = this.getStyledSpanAtSelection();
+
+            if (styledSpan) {
+                // Extract features from data attribute (preferred - faster and more reliable)
+                const dataFeatures = styledSpan.getAttribute('data-features');
+                if (dataFeatures) {
+                    return dataFeatures.split(',');
+                }
+
+                // Fallback: parse from style attribute
+                // For backward compatibility with content created before data-features attribute was added
+                // All new content (created after this change) will have data-features set
+                const style = styledSpan.getAttribute('style') || '';
+                const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
+
+                if (featureMatch) {
+                    // Parse feature codes from CSS
+                    const featuresParsed = featureMatch[1]
+                        .split(',')
+                        .map(f => {
+                            const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
+                            return match;
+                        })
+                        .filter(m => m)
+                        .map(m => m[1] || m[2]);
+
+                    return featuresParsed;
+                }
+            }
+
+            return [];
+        }
+
+        /**
          * Get currently active features from format
          * Also checks for inline <span class="ots-styled"> elements in OTS blocks
+         * Uses cached inline features when popover is open for performance
          */
         getActiveFeatures() {
             const { value } = this.props;
@@ -274,38 +318,14 @@
                 return activeFormat.attributes['data-features'].split(',');
             }
 
-            // Check for styled span in OTS block
-            const styledSpan = this.getStyledSpanAtSelection();
-
-            if (styledSpan) {
-                // Extract features from data attribute
-                const dataFeatures = styledSpan.getAttribute('data-features');
-                if (dataFeatures) {
-                    return dataFeatures.split(',');
-                }
-
-                // Fallback: parse from style attribute
-                const style = styledSpan.getAttribute('style') || '';
-                const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
-
-                if (featureMatch) {
-                    // The DOMParser converts HTML entities, so &quot; becomes actual "
-                    // Parse both 'liga' and "liga" formats, handling HTML entities
-                    const features = featureMatch[1]
-                        .split(',')
-                        .map(f => {
-                            // Match both quote types: "ss02" or 'ss02' or &quot;ss02&quot;
-                            const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
-                            return match;
-                        })
-                        .filter(m => m)
-                        .map(m => m[1] || m[2]); // Use whichever capture group matched
-
-                    return features;
-                }
+            // Use cached inline features if popover is open (performance optimization)
+            // Check for array type, not length - empty array [] is a valid cached result
+            if (this.state && this.state.isOpen && Array.isArray(this.state.inlineFeatures)) {
+                return this.state.inlineFeatures;
             }
 
-            return [];
+            // Otherwise compute inline features for OTS blocks
+            return this.getInlineFeaturesForOTSBlock();
         }
 
         /**
@@ -449,8 +469,9 @@
         togglePopover() {
             const { value } = this.props;
 
-            // Extract selected text when opening popover
+            // Extract selected text and compute inline features when opening popover
             let extractedText = '';
+            let computedInlineFeatures = [];
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
                     // There's a selection - extract it
@@ -460,6 +481,9 @@
                     // No selection - use entire text
                     extractedText = getTextContent(value);
                 }
+
+                // Compute inline features only when opening (performance optimization)
+                computedInlineFeatures = this.getInlineFeaturesForOTSBlock();
             }
 
             this.setState(state => ({
@@ -472,7 +496,8 @@
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
-                previewText: extractedText
+                previewText: extractedText,
+                inlineFeatures: computedInlineFeatures
             }));
         }
 
@@ -732,7 +757,7 @@
                             startOffset = value.start - currentOffset;
                         }
 
-                        if (!endNode && currentOffset + nodeLength >= value.end) {
+                        if (currentOffset + nodeLength >= value.end) {
                             endNode = textNode;
                             endOffset = value.end - currentOffset;
                             break;
@@ -749,6 +774,9 @@
 
                         const span = doc.createElement('span');
                         span.className = 'ots-styled';
+                        // Always set data-features for new content (faster parsing than style attribute)
+                        // Note: getInlineFeaturesForOTSBlock() includes fallback for backward compatibility
+                        span.setAttribute('data-features', selectedFeatures.join(','));
                         span.setAttribute('style', styleString);
 
                         try {
@@ -761,7 +789,7 @@
                             const selectedText = fullText.substring(value.start, value.end);
                             const afterText = fullText.substring(value.end);
                             contentForBlock = escapeHTML(beforeText) +
-                                `<span class="ots-styled" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                                `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                                 escapeHTML(afterText);
                         }
                     } else {
@@ -770,7 +798,7 @@
                         const selectedText = fullText.substring(value.start, value.end);
                         const afterText = fullText.substring(value.end);
                         contentForBlock = escapeHTML(beforeText) +
-                            `<span class="ots-styled" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                            `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                             escapeHTML(afterText);
                     }
                 } else {
@@ -779,7 +807,7 @@
                     const selectedText = fullText.substring(value.start, value.end);
                     const afterText = fullText.substring(value.end);
                     contentForBlock = escapeHTML(beforeText) +
-                        `<span class="ots-styled" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                        `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                         escapeHTML(afterText);
                 }
 
@@ -823,6 +851,7 @@
                 // If already an OTS block, just update its attributes
                 if (isAlreadyOTSBlock) {
                     dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                        content: textContent,
                         features: this.state.selectedFeatures,
                         fontFamily: this.state.selectedFont,
                         fontSize: this.state.fontSize,

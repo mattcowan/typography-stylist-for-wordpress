@@ -18,6 +18,12 @@
  */
 
 /**
+ * Import shared utilities
+ * This ensures we're testing the actual production code
+ */
+import { parseInlineFeaturesAtCursor } from '../utils';
+
+/**
  * Load the block-editor.js file to access utilities
  * This ensures we're testing the actual production code
  *
@@ -477,89 +483,11 @@ describe('OpenType Stylist - Block Attribute Preservation', () => {
  * are correctly detected when the cursor is positioned inside styled spans.
  */
 describe('OpenType Stylist - Inline Feature Detection', () => {
-	/**
-	 * Helper: Parse inline features from HTML at cursor position
-	 * Simulates the getStyledSpanAtSelection() and feature parsing logic
-	 */
-	const parseInlineFeaturesAtCursor = (htmlContent, cursorOffset) => {
-		if (!htmlContent || cursorOffset === undefined) {
-			return [];
-		}
-
-		// Parse HTML to find styled spans
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
-		const container = doc.body.firstChild;
-		const styledSpans = container.querySelectorAll('span.ots-styled');
-
-		// Find the smallest span containing the cursor
-		let smallestMatchingSpan = null;
-		let smallestSpanSize = Infinity;
-
-		for (const span of styledSpans) {
-			const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-			let spanStart = 0;
-			let spanEnd = 0;
-			let found = false;
-			let offset = 0;
-
-			let node;
-			while ((node = walker.nextNode())) {
-				const nodeLength = node.nodeValue.length;
-
-				if (span.contains(node)) {
-					if (!found) {
-						spanStart = offset;
-						found = true;
-					}
-					spanEnd = offset + nodeLength;
-				}
-
-				offset += nodeLength;
-			}
-
-			// Check if cursor is inside this span
-			if (found && cursorOffset >= spanStart && cursorOffset <= spanEnd) {
-				const spanSize = spanEnd - spanStart;
-				if (spanSize < smallestSpanSize) {
-					smallestMatchingSpan = span;
-					smallestSpanSize = spanSize;
-				}
-			}
-		}
-
-		if (!smallestMatchingSpan) {
-			return [];
-		}
-
-		// Try data-features attribute first
-		const dataFeatures = smallestMatchingSpan.getAttribute('data-features');
-		if (dataFeatures) {
-			return dataFeatures.split(',');
-		}
-
-		// Fallback: parse from style attribute
-		const style = smallestMatchingSpan.getAttribute('style') || '';
-		const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
-
-		if (featureMatch) {
-			return featureMatch[1]
-				.split(',')
-				.map(f => {
-					const match = f.trim().match(/["']([^"']+)["']/);
-					return match ? match[1] : null;
-				})
-				.filter(f => f);
-		}
-
-		return [];
-	};
-
 	it('should detect features from inline span at cursor position', () => {
 		const html = 'Test <span class="ots-styled" style="font-feature-settings: \'ss02\' 1">H</span>ere';
 		const cursorAt = 5; // Inside the "H"
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt); // cursor position (start === end)
 
 		expect(features).toEqual(['ss02']);
 	});
@@ -568,7 +496,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = 'Test <span class="ots-styled" data-features="liga,dlig">text</span> here';
 		const cursorAt = 8; // Inside "text"
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual(['liga', 'dlig']);
 	});
@@ -577,7 +505,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = 'Test <span class="ots-styled" data-features="ss01" style="font-feature-settings: \'ss02\' 1">text</span>';
 		const cursorAt = 7;
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual(['ss01']); // Should use data-features, not style
 	});
@@ -586,7 +514,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = '<span class="ots-styled" data-features="liga">Outer <span class="ots-styled" data-features="ss02">Inner</span> text</span>';
 		const cursorAt = 8; // Inside "Inner"
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual(['ss02']); // Should find innermost span
 	});
@@ -595,7 +523,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = 'Plain <span class="ots-styled" data-features="ss02">styled</span> text';
 		const cursorAt = 2; // In "Plain", before the span
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual([]);
 	});
@@ -604,7 +532,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = '<span class="ots-styled" style="font-feature-settings: \'liga\' 1, \'dlig\' 1, \'ss02\' 1">text</span>';
 		const cursorAt = 2;
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual(['liga', 'dlig', 'ss02']);
 	});
@@ -613,7 +541,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = 'Just plain text';
 		const cursorAt = 5;
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		expect(features).toEqual([]);
 	});
@@ -622,10 +550,106 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		const html = '<span class="ots-styled" style="font-feature-settings: &quot;ss02&quot; 1">text</span>';
 		const cursorAt = 2;
 
-		const features = parseInlineFeaturesAtCursor(html, cursorAt);
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
 
 		// DOMParser converts &quot; to actual quotes
 		expect(features).toEqual(['ss02']);
+	});
+});
+
+/**
+ * Test Suite: Edit.js Sidebar Feature Highlighting
+ *
+ * These tests verify that the OTS block sidebar correctly highlights
+ * features when the user clicks on styled text in the editor.
+ * This prevents regression of the feature detection functionality.
+ */
+describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
+	/**
+	 * This test simulates the getInlineFeaturesAtSelection() function
+	 * from edit.js to ensure it works correctly
+	 */
+	it('should highlight features in sidebar when cursor is on styled text', () => {
+		// Arrange: Create content with inline styled text
+		const content = 'Hello <span class="ots-styled" data-features="ss02,swsh">World</span> text';
+		const cursorOffset = 8; // Cursor inside "World"
+
+		// Act: Parse inline features at cursor position
+		const inlineFeatures = parseInlineFeaturesAtCursor(content, cursorOffset, cursorOffset);
+
+		// Assert: Should detect both features
+		expect(inlineFeatures).toContain('ss02');
+		expect(inlineFeatures).toContain('swsh');
+		expect(inlineFeatures).toHaveLength(2);
+	});
+
+	it('should not highlight features when cursor is on unstyled text', () => {
+		// Arrange: Content with styled span, but cursor outside it
+		const content = 'Hello <span class="ots-styled" data-features="ss02">World</span> text';
+		const cursorOffset = 2; // Cursor in "Hello" (unstyled)
+
+		// Act: Parse inline features at cursor position
+		const inlineFeatures = parseInlineFeaturesAtCursor(content, cursorOffset, cursorOffset);
+
+		// Assert: Should return empty array
+		expect(inlineFeatures).toEqual([]);
+	});
+
+	it('should highlight innermost features when spans are nested', () => {
+		// Arrange: Nested styled spans with different features
+		// Text content is "Outer Inner text" (Outer=0-4, Inner=6-10, text=12-15)
+		const content = '<span class="ots-styled" data-features="liga">Outer <span class="ots-styled" data-features="ss02">Inner</span> text</span>';
+		const cursorOffset = 8; // Cursor inside "Inner"
+
+		// Act: Parse inline features at cursor position
+		const inlineFeatures = parseInlineFeaturesAtCursor(content, cursorOffset, cursorOffset);
+
+		// Assert: Should return innermost span's features
+		expect(inlineFeatures).toEqual(['ss02']);
+		expect(inlineFeatures).not.toContain('liga');
+	});
+
+	it('should work with multiple styled spans in same block', () => {
+		// Arrange: Multiple styled spans with different features
+		// Text content is "First and Second" (offsets: First=0-4, " and "=5-9, Second=10-15)
+		const content = '<span class="ots-styled" data-features="ss01">First</span> and <span class="ots-styled" data-features="ss02">Second</span>';
+		const cursorOffset = 11; // Cursor inside "Second" (offset 10-15)
+
+		// Act: Parse inline features at cursor position
+		const inlineFeatures = parseInlineFeaturesAtCursor(content, cursorOffset, cursorOffset);
+
+		// Assert: Should detect only the second span's features
+		expect(inlineFeatures).toEqual(['ss02']);
+		expect(inlineFeatures).not.toContain('ss01');
+	});
+
+	it('should combine block-level and inline features for isActive state', () => {
+		// Arrange: Simulating the checkbox isActive logic from edit.js
+		const blockLevelFeatures = ['liga', 'dlig'];
+		const inlineFeatures = ['ss02', 'swsh'];
+
+		// Act: Simulate the isActive check for different features
+		const ligaActive = blockLevelFeatures.includes('liga') || inlineFeatures.includes('liga');
+		const ss02Active = blockLevelFeatures.includes('ss02') || inlineFeatures.includes('ss02');
+		const caltActive = blockLevelFeatures.includes('calt') || inlineFeatures.includes('calt');
+
+		// Assert: Should correctly combine both sources
+		expect(ligaActive).toBe(true); // From block-level
+		expect(ss02Active).toBe(true); // From inline
+		expect(caltActive).toBe(false); // Not in either
+	});
+
+	it('should fallback to style attribute when data-features is missing', () => {
+		// Arrange: Legacy content without data-features attribute
+		const content = '<span class="ots-styled" style="font-feature-settings: \'ss02\' 1, \'liga\' 1">Text</span>';
+		const cursorOffset = 2;
+
+		// Act: Parse inline features at cursor position
+		const inlineFeatures = parseInlineFeaturesAtCursor(content, cursorOffset, cursorOffset);
+
+		// Assert: Should parse from style attribute
+		expect(inlineFeatures).toContain('ss02');
+		expect(inlineFeatures).toContain('liga');
 	});
 });
 
