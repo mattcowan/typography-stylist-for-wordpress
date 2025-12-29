@@ -85,6 +85,95 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		return font.replace(/["';]/g, '');
 	};
 
+	// Get features from inline styled span at cursor/selection position
+	const getInlineFeatures = () => {
+		if (!content) return [];
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return [];
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		// Parse HTML to find styled spans
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		const styledSpans = container.querySelectorAll('span.ots-styled');
+
+		// Find the smallest (innermost) span that matches the cursor/selection
+		let smallestMatchingSpan = null;
+		let smallestSpanSize = Infinity;
+
+		for (const span of styledSpans) {
+			// Find this span's position in the text
+			const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+			let spanStart = 0;
+			let spanEnd = 0;
+			let found = false;
+			let offset = 0;
+
+			let node;
+			while ((node = walker.nextNode())) {
+				const nodeLength = node.nodeValue.length;
+
+				// Check if this text node is inside our span
+				if (span.contains(node)) {
+					if (!found) {
+						spanStart = offset;
+						found = true;
+					}
+					spanEnd = offset + nodeLength;
+				}
+
+				offset += nodeLength;
+			}
+
+			// Check if the cursor/selection overlaps with this span
+			const isCursor = start === end;
+			const isInside = isCursor && found && start >= spanStart && start <= spanEnd;
+			const overlaps = !isCursor && found && start < spanEnd && end > spanStart;
+
+			if (found && (isInside || overlaps)) {
+				const spanSize = spanEnd - spanStart;
+
+				// Keep track of the smallest matching span
+				if (spanSize < smallestSpanSize) {
+					smallestMatchingSpan = span;
+					smallestSpanSize = spanSize;
+				}
+			}
+		}
+
+		if (smallestMatchingSpan) {
+			// Extract features from data attribute
+			const dataFeatures = smallestMatchingSpan.getAttribute('data-features');
+			if (dataFeatures) {
+				return dataFeatures.split(',');
+			}
+
+			// Fallback: parse from style attribute
+			const style = smallestMatchingSpan.getAttribute('style') || '';
+			const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
+
+			if (featureMatch) {
+				// Parse feature codes from CSS
+				const featuresParsed = featureMatch[1]
+					.split(',')
+					.map(f => {
+						const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
+						return match;
+					})
+					.filter(m => m)
+					.map(m => m[1] || m[2]);
+
+				return featuresParsed;
+			}
+		}
+
+		return [];
+	};
+
 	// Helper to create a Range for the given linear text offsets within a container
 	const getRangeForOffsets = (rootNode, startOffset, endOffset, docContext) => {
 		let currentOffset = 0;
@@ -635,7 +724,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									>
 										{categoryFeatures.map(feature => {
 											const sampleText = previewText || 'ffi ffl Th AE';
-											const isActive = features.includes(feature.id);
+											// Check both block-level features and inline features at cursor
+											const inlineFeatures = getInlineFeatures();
+											const isActive = features.includes(feature.id) || inlineFeatures.includes(feature.id);
 											return (
 												<div key={feature.id} style={{ marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '8px' }}>
 													<div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
