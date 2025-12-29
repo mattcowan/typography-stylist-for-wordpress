@@ -24,9 +24,10 @@ import {
 	Popover,
 	Button
 } from '@wordpress/components';
-import { useState, useRef, useEffect } from '@wordpress/element';
+import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
+import { parseInlineFeaturesAtCursor } from './utils';
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
@@ -84,6 +85,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		// Remove quotes and semicolons that could break style string
 		return font.replace(/["';]/g, '');
 	};
+
+	// Get inline features at current cursor/selection position (for OTS block sidebar)
+	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
+	// Uses selectionStart/End offset only (not full object) to avoid re-computation on every selection change
+	// Note: Inline editor toolbar (block-editor.js) uses component state for similar optimization
+	const inlineFeaturesAtSelection = useMemo(() => {
+		if (!content) return [];
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return [];
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineFeaturesAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
 
 	// Helper to create a Range for the given linear text offsets within a container
 	const getRangeForOffsets = (rootNode, startOffset, endOffset, docContext) => {
@@ -635,7 +652,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									>
 										{categoryFeatures.map(feature => {
 											const sampleText = previewText || 'ffi ffl Th AE';
-											const isActive = features.includes(feature.id);
+											// Check both block-level features and inline features at cursor
+											const isActive = features.includes(feature.id) || inlineFeaturesAtSelection.includes(feature.id);
 											return (
 												<div key={feature.id} style={{ marginBottom: '12px', borderBottom: '1px solid #ddd', paddingBottom: '8px' }}>
 													<div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>

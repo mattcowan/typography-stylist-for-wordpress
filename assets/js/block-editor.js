@@ -15,6 +15,88 @@
     const FORMAT_TYPE = 'ots/typography-features';
 
     /**
+     * Shared utility functions
+     * These are extracted here so tests can import and verify the actual implementation
+     */
+
+    /**
+     * HTML-escape text to prevent XSS
+     * @param {string} text - Text to escape
+     * @return {string} HTML-escaped text
+     */
+    function escapeHTML(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Check if content contains actual HTML tags (not just < characters)
+     * @param {string} content - Content to check
+     * @return {boolean} True if content contains HTML tags
+     */
+    function hasHTMLTags(content) {
+        if (!content) return false;
+        return /<[^>]+>/.test(content);
+    }
+
+    /**
+     * Validate selection bounds
+     * @param {number} start - Selection start offset
+     * @param {number} end - Selection end offset
+     * @param {number} textLength - Total text length
+     * @return {object} Validation result with valid flag and optional error message
+     */
+    function validateSelectionBounds(start, end, textLength) {
+        if (start < 0 || end < 0) {
+            return { valid: false, error: 'Selection offsets cannot be negative' };
+        }
+        if (start > end) {
+            return { valid: false, error: 'Start offset cannot be greater than end offset' };
+        }
+        if (end > textLength) {
+            return { valid: false, error: 'Selection end exceeds text length' };
+        }
+        return { valid: true };
+    }
+
+    /**
+     * Sanitize font family value to prevent CSS injection
+     * Removes characters that could break out of CSS style strings
+     * @param {string} font - Font family name
+     * @return {string} Sanitized font family name
+     */
+    function sanitizeFontFamily(font) {
+        if (!font) return '';
+        // Remove quotes, semicolons, and angle brackets that could break style string or inject HTML
+        return font.replace(/["';<>]/g, '');
+    }
+
+    /**
+     * Sanitize CSS value to prevent injection
+     * @param {string|number} value - CSS value
+     * @return {string} Sanitized CSS value
+     */
+    function sanitizeCSSValue(value) {
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        // Remove dangerous characters that could break out of CSS
+        return stringValue.replace(/[;<>"']/g, '');
+    }
+
+    // Expose utilities for testing
+    if (typeof window !== 'undefined') {
+        window.otsUtils = {
+            escapeHTML,
+            hasHTMLTags,
+            validateSelectionBounds,
+            sanitizeFontFamily,
+            sanitizeCSSValue
+        };
+    }
+
+    /**
      * Custom "O" icon for OpenType Stylist
      */
     const OTSIcon = () => (
@@ -71,7 +153,10 @@
                 warningMessage: '',
                 changeHistory: [],
                 showClearConfirmation: false,
-                dontShowClearWarning: hideWarning
+                dontShowClearWarning: hideWarning,
+                // Inline features cached when popover opens (for inline editor toolbar)
+                // Note: OTS block sidebar (edit.js) uses useMemo for similar optimization
+                inlineFeatures: []
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -99,28 +184,177 @@
         }
 
         /**
-         * Get currently active features from format
+         * Get styled span element at current selection in OTS blocks
+         * Returns the span element if found, null otherwise
+         * @private
          */
-        getActiveFeatures() {
+        getStyledSpanAtSelection() {
             const { value } = this.props;
-            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            const { select } = wp.data;
+            const selectedBlock = select('core/block-editor').getSelectedBlock();
 
-            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-features']) {
-                return activeFormat.attributes['data-features'].split(',');
+            if (!selectedBlock || selectedBlock.name !== 'opentype-stylist/block') {
+                return null;
+            }
+
+            const content = selectedBlock.attributes.content || '';
+
+            if (!value || value.start === undefined || value.end === undefined) {
+                return null;
+            }
+
+            // Allow cursor position (start === end) as well as selections
+            // This lets us detect features at the cursor position
+
+            // Parse the HTML to find styled spans
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+            const container = doc.body.firstChild;
+
+            // Find all styled spans
+            const styledSpans = container.querySelectorAll('span.ots-styled');
+
+            // Find the smallest (most specific/innermost) span that matches
+            let smallestMatchingSpan = null;
+            let smallestSpanSize = Infinity;
+
+            // Calculate character offset for each span
+            for (const span of styledSpans) {
+                // Find this span's position in the text
+                const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+                let spanStart = 0;
+                let spanEnd = 0;
+                let found = false;
+                let offset = 0;
+
+                let node;
+                while ((node = walker.nextNode())) {
+                    const nodeLength = node.nodeValue.length;
+
+                    // Check if this text node is inside our span
+                    if (span.contains(node)) {
+                        if (!found) {
+                            spanStart = offset;
+                            found = true;
+                        }
+                        spanEnd = offset + nodeLength;
+                    }
+
+                    offset += nodeLength;
+                }
+
+                // Check if the selection overlaps with this span
+                // For cursor position (start === end), check if cursor is inside the span
+                // For selection (start !== end), check if selection overlaps with span
+                const isCursor = value.start === value.end;
+                const isInside = isCursor && found && value.start >= spanStart && value.start <= spanEnd;
+                const overlaps = !isCursor && found && value.start < spanEnd && value.end > spanStart;
+
+                if (found && (isInside || overlaps)) {
+                    const spanSize = spanEnd - spanStart;
+
+                    // Keep track of the smallest matching span
+                    if (spanSize < smallestSpanSize) {
+                        smallestMatchingSpan = span;
+                        smallestSpanSize = spanSize;
+                    }
+                }
+            }
+
+            return smallestMatchingSpan;
+        }
+
+        /**
+         * Get inline features from styled spans at current selection in OTS blocks
+         * Optimized version - only called when popover opens, not on every render
+         * @return {Array} Array of feature codes from the styled span at selection
+         * @private
+         */
+        getInlineFeaturesForOTSBlock() {
+            const styledSpan = this.getStyledSpanAtSelection();
+
+            if (styledSpan) {
+                // Extract features from data attribute (preferred - faster and more reliable)
+                const dataFeatures = styledSpan.getAttribute('data-features');
+                if (dataFeatures) {
+                    return dataFeatures.split(',');
+                }
+
+                // Fallback: parse from style attribute
+                // For backward compatibility with content created before data-features attribute was added
+                // All new content (created after this change) will have data-features set
+                const style = styledSpan.getAttribute('style') || '';
+                const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
+
+                if (featureMatch) {
+                    // Parse feature codes from CSS
+                    const featuresParsed = featureMatch[1]
+                        .split(',')
+                        .map(f => {
+                            const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
+                            return match;
+                        })
+                        .filter(m => m)
+                        .map(m => m[1] || m[2]);
+
+                    return featuresParsed;
+                }
             }
 
             return [];
         }
 
         /**
+         * Get currently active features from format
+         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
+         * Uses cached inline features when popover is open for performance
+         */
+        getActiveFeatures() {
+            const { value } = this.props;
+
+            // First, try the standard format API (for inline editor formats)
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-features']) {
+                return activeFormat.attributes['data-features'].split(',');
+            }
+
+            // Use cached inline features if popover is open (performance optimization)
+            // Check for array type, not length - empty array [] is a valid cached result
+            if (this.state && this.state.isOpen && Array.isArray(this.state.inlineFeatures)) {
+                return this.state.inlineFeatures;
+            }
+
+            // Otherwise compute inline features for OTS blocks
+            return this.getInlineFeaturesForOTSBlock();
+        }
+
+        /**
          * Get currently active font from format
+         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
          */
         getActiveFont() {
             const { value } = this.props;
-            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
 
+            // First, try the standard format API
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
             if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font']) {
                 return activeFormat.attributes['data-font'];
+            }
+
+            // Check for styled span in OTS block
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const dataFont = styledSpan.getAttribute('data-font');
+                if (dataFont) {
+                    return dataFont;
+                }
+
+                // Fallback: parse from style attribute
+                const style = styledSpan.getAttribute('style') || '';
+                const fontMatch = style.match(/font-family:\s*([^;]+)/);
+                if (fontMatch) {
+                    return fontMatch[1].trim();
+                }
             }
 
             return '';
@@ -198,13 +432,32 @@
 
         /**
          * Get currently active letter spacing from format
+         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
          */
         getActiveLetterSpacing() {
             const { value } = this.props;
-            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
 
+            // First, try the standard format API
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
             if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-letterspacing']) {
                 return parseInt(activeFormat.attributes['data-letterspacing'], 10);
+            }
+
+            // Check for styled span in OTS block
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const dataSpacing = styledSpan.getAttribute('data-letterspacing');
+                if (dataSpacing) {
+                    return parseInt(dataSpacing, 10);
+                }
+
+                // Fallback: parse from style attribute
+                const style = styledSpan.getAttribute('style') || '';
+                const spacingMatch = style.match(/letter-spacing:\s*([-\d.]+)em/);
+                if (spacingMatch) {
+                    // Convert from em back to the integer value (multiply by 1000)
+                    return Math.round(parseFloat(spacingMatch[1]) * 1000);
+                }
             }
 
             return 0;
@@ -216,8 +469,9 @@
         togglePopover() {
             const { value } = this.props;
 
-            // Extract selected text when opening popover
+            // Extract selected text and compute inline features when opening popover
             let extractedText = '';
+            let computedInlineFeatures = [];
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
                     // There's a selection - extract it
@@ -227,6 +481,9 @@
                     // No selection - use entire text
                     extractedText = getTextContent(value);
                 }
+
+                // Compute inline features only when opening (performance optimization)
+                computedInlineFeatures = this.getInlineFeaturesForOTSBlock();
             }
 
             this.setState(state => ({
@@ -239,7 +496,8 @@
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
-                previewText: extractedText
+                previewText: extractedText,
+                inlineFeatures: computedInlineFeatures
             }));
         }
 
@@ -396,7 +654,7 @@
         }
 
         /**
-         * Convert current heading to OpenType Stylist block
+         * Convert current heading/paragraph to OpenType Stylist block, or update existing OpenType Stylist block
          */
         convertToBlock() {
             const { value } = this.props;
@@ -416,9 +674,14 @@
                 return;
             }
 
-            // Determine tag from block name (core/heading, core/paragraph)
+            // Check if we're already in an OpenType Stylist block
+            const isAlreadyOTSBlock = currentBlock.name === 'opentype-stylist/block';
+
+            // Determine tag from block name (core/heading, core/paragraph, or existing OTS block)
             let tagName = 'h2';
-            if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
+            if (isAlreadyOTSBlock) {
+                tagName = currentBlock.attributes.tagName || 'h2';
+            } else if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
                 tagName = `h${currentBlock.attributes.level}`;
             } else if (currentBlock.name === 'core/paragraph') {
                 tagName = 'p';
@@ -429,73 +692,192 @@
             // Check if there's a selection (partial text selected)
             if (value.start !== value.end) {
                 // User selected a portion of text - apply styling only to that portion
+                // Use the current block's HTML content to preserve existing spans
+                const existingContent = currentBlock.attributes.content || '';
                 const fullText = getTextContent(value);
-                const beforeText = fullText.substring(0, value.start);
-                const selectedText = fullText.substring(value.start, value.end);
-                const afterText = fullText.substring(value.end);
 
                 // Build style string for the selected portion
                 const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
                 const styleArray = [];
 
                 if (selectedFeatures.length > 0) {
-                    styleArray.push(`font-feature-settings: ${selectedFeatures.map(f => `"${f}" 1`).join(', ')}`);
+                    // Sanitize each feature ID to prevent injection
+                    const sanitizedFeatures = selectedFeatures.map(f => sanitizeCSSValue(f));
+                    styleArray.push(`font-feature-settings: ${sanitizedFeatures.map(f => `"${f}" 1`).join(', ')}`);
                 }
                 if (selectedFont) {
-                    styleArray.push(`font-family: ${selectedFont}`);
+                    const sanitizedFont = sanitizeFontFamily(selectedFont);
+                    styleArray.push(`font-family: ${sanitizedFont}`);
                 }
                 if (fontWeight && fontWeight !== '400') {
-                    styleArray.push(`font-weight: ${fontWeight}`);
+                    const sanitizedWeight = sanitizeCSSValue(fontWeight);
+                    styleArray.push(`font-weight: ${sanitizedWeight}`);
                 }
                 if (letterSpacing !== 0) {
-                    styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
+                    const sanitizedSpacing = parseFloat(letterSpacing) || 0;
+                    styleArray.push(`letter-spacing: ${sanitizedSpacing / 1000}em`);
                 }
                 if (fontSize === 'responsive') {
-                    styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`);
+                    // Ensure all numeric values are actually numbers
+                    const minPx = parseFloat(fontSizeMin) || 16;
+                    const prefRem = parseFloat(fontSizePreferred) || 24;
+                    const maxPx = parseFloat(fontSizeMax) || 32;
+                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (1920 - 320)) * 100}vw, ${maxPx}px)`);
                 }
 
                 const styleString = styleArray.join('; ');
 
-                // Create HTML content with only the selected portion styled
-                contentForBlock = beforeText +
-                    `<span class="ots-styled" style="${styleString}">${selectedText}</span>` +
-                    afterText;
+                // If we have existing HTML content with spans, we need to preserve it
+                if (hasHTMLTags(existingContent)) {
+                    // Parse the HTML to work with it
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(`<div>${existingContent}</div>`, 'text/html');
+                    const container = doc.body.firstChild;
 
-                // Create OpenType Stylist block with no global features (only inline styling)
-                const otsBlock = createBlock('opentype-stylist/block', {
-                    content: contentForBlock,
-                    tagName: tagName,
-                    features: [], // No global features
-                    fontFamily: '',
-                    fontSize: 'inherit',
-                    fontSizeMin: 16,
-                    fontSizePreferred: 24,
-                    fontSizeMax: 32,
-                    fontWeight: '400',
-                    letterSpacing: 0
-                });
+                    // Validate selection bounds
+                    const textLength = container.textContent.length;
+                    const validationResult = validateSelectionBounds(value.start, value.end, textLength);
+                    if (!validationResult.valid) {
+                        console.error('OTS Inline Editor - Invalid selection bounds:', validationResult.error, { start: value.start, end: value.end, textLength });
+                        return;
+                    }
 
-                // Replace current block
-                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    // Create a range for the selection
+                    const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+                    let currentOffset = 0;
+                    let startNode = null, startOffset = 0;
+                    let endNode = null, endOffset = 0;
+
+                    let textNode;
+                    while ((textNode = walker.nextNode())) {
+                        const nodeLength = textNode.nodeValue.length;
+
+                        if (!startNode && currentOffset + nodeLength >= value.start) {
+                            startNode = textNode;
+                            startOffset = value.start - currentOffset;
+                        }
+
+                        if (currentOffset + nodeLength >= value.end) {
+                            endNode = textNode;
+                            endOffset = value.end - currentOffset;
+                            break;
+                        }
+
+                        currentOffset += nodeLength;
+                    }
+
+                    // If we found the nodes, wrap the selection
+                    if (startNode && endNode) {
+                        const range = doc.createRange();
+                        range.setStart(startNode, startOffset);
+                        range.setEnd(endNode, endOffset);
+
+                        const span = doc.createElement('span');
+                        span.className = 'ots-styled';
+                        // Always set data-features for new content (faster parsing than style attribute)
+                        // Note: getInlineFeaturesForOTSBlock() includes fallback for backward compatibility
+                        span.setAttribute('data-features', selectedFeatures.join(','));
+                        span.setAttribute('style', styleString);
+
+                        try {
+                            range.surroundContents(span);
+                            contentForBlock = container.innerHTML;
+                        } catch (e) {
+                            console.error('OTS Inline Editor - Failed to wrap selection, using fallback:', e);
+                            // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
+                            const beforeText = fullText.substring(0, value.start);
+                            const selectedText = fullText.substring(value.start, value.end);
+                            const afterText = fullText.substring(value.end);
+                            contentForBlock = escapeHTML(beforeText) +
+                                `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                                escapeHTML(afterText);
+                        }
+                    } else {
+                        // Fall back to simple text replacement
+                        const beforeText = fullText.substring(0, value.start);
+                        const selectedText = fullText.substring(value.start, value.end);
+                        const afterText = fullText.substring(value.end);
+                        contentForBlock = escapeHTML(beforeText) +
+                            `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                            escapeHTML(afterText);
+                    }
+                } else {
+                    // No existing HTML, use simple text replacement
+                    const beforeText = fullText.substring(0, value.start);
+                    const selectedText = fullText.substring(value.start, value.end);
+                    const afterText = fullText.substring(value.end);
+                    contentForBlock = escapeHTML(beforeText) +
+                        `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                        escapeHTML(afterText);
+                }
+
+                // If already an OTS block, just update its attributes
+                if (isAlreadyOTSBlock) {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                        content: contentForBlock,
+                        // Preserve existing block-level features, don't apply inline features globally
+                        features: currentBlock.attributes.features || [],
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+                } else {
+                    // Create new OpenType Stylist block preserving user's settings from inline editor
+                    // Don't apply inline features globally - they're only for the selection
+                    const otsBlock = createBlock('opentype-stylist/block', {
+                        content: contentForBlock,
+                        tagName: tagName,
+                        features: [],
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+
+                    // Replace current block
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                }
             } else {
                 // No selection - apply to entire block (original behavior)
-                const textContent = getTextContent(value);
+                const textContent = currentBlock.attributes.content || getTextContent(value);
 
-                const otsBlock = createBlock('opentype-stylist/block', {
-                    content: textContent,
-                    tagName: tagName,
-                    features: this.state.selectedFeatures,
-                    fontFamily: this.state.selectedFont,
-                    fontSize: this.state.fontSize,
-                    fontSizeMin: this.state.fontSizeMin,
-                    fontSizePreferred: this.state.fontSizePreferred,
-                    fontSizeMax: this.state.fontSizeMax,
-                    fontWeight: this.state.fontWeight,
-                    letterSpacing: this.state.letterSpacing
-                });
+                // If already an OTS block, just update its attributes
+                if (isAlreadyOTSBlock) {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                        content: textContent,
+                        features: this.state.selectedFeatures,
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
+                } else {
+                    const otsBlock = createBlock('opentype-stylist/block', {
+                        content: textContent,
+                        tagName: tagName,
+                        features: this.state.selectedFeatures,
+                        fontFamily: this.state.selectedFont,
+                        fontSize: this.state.fontSize,
+                        fontSizeMin: this.state.fontSizeMin,
+                        fontSizePreferred: this.state.fontSizePreferred,
+                        fontSizeMax: this.state.fontSizeMax,
+                        fontWeight: this.state.fontWeight,
+                        letterSpacing: this.state.letterSpacing
+                    });
 
-                // Replace current block
-                dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    // Replace current block
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                }
             }
 
             // Close popover
@@ -956,7 +1338,7 @@
         }
 
         render() {
-            const { isActive } = this.props;
+            const { isActive, isInOTSBlock = false } = this.props;
             const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
@@ -994,13 +1376,16 @@
 
             return (
                 <Fragment>
-                    <RichTextToolbarButton
-                        icon={OTSIcon}
-                        title={__('OpenType Stylist', 'opentype-stylist')}
-                        onClick={this.togglePopover}
-                        isActive={isActive}
-                        className="ots-toolbar-button"
-                    />
+                    {/* Only show button if NOT in an OpenType Stylist block */}
+                    {!isInOTSBlock && (
+                        <RichTextToolbarButton
+                            icon={OTSIcon}
+                            title={__('OpenType Stylist', 'opentype-stylist')}
+                            onClick={this.togglePopover}
+                            isActive={isActive}
+                            className="ots-toolbar-button"
+                        />
+                    )}
 
                     {isOpen && (
                         <Popover
@@ -1322,7 +1707,14 @@
             'style': 'style',
             'aria-label': 'aria-label'
         },
-        edit: compose()(function(props) {
+        edit: compose(
+            wp.data.withSelect((select) => {
+                const selectedBlock = select('core/block-editor').getSelectedBlock();
+                return {
+                    isInOTSBlock: selectedBlock && selectedBlock.name === 'opentype-stylist/block'
+                };
+            })
+        )(function(props) {
             return (
                 <TypographyFeaturesControl {...props} />
             );
