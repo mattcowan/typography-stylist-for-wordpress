@@ -156,7 +156,9 @@
                 dontShowClearWarning: hideWarning,
                 // Inline features cached when popover opens (for inline editor toolbar)
                 // Note: OTS block sidebar (edit.js) uses useMemo for similar optimization
-                inlineFeatures: []
+                inlineFeatures: [],
+                // Font inherited from block's computed styles (when Default font is selected)
+                blockInheritedFont: ''
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -431,6 +433,70 @@
         }
 
         /**
+         * Get block's inherited font-family from computed styles
+         * Detects the current font applied by theme or block settings
+         * @return {string} Font family string from computed styles, or empty string if not found
+         */
+        getBlockInheritedFont() {
+            const { select } = wp.data;
+            const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+
+            if (!selectedBlockClientId) {
+                return '';
+            }
+
+            // Get the selected block to determine its type
+            const selectedBlock = select('core/block-editor').getBlock(selectedBlockClientId);
+            if (!selectedBlock) {
+                return '';
+            }
+
+            // WordPress editor uses an iframe for the canvas
+            const editorIframe = document.querySelector('iframe[name="editor-canvas"]');
+            const targetDocument = editorIframe?.contentDocument || document;
+            const targetWindow = editorIframe?.contentWindow || window;
+
+            // Find the block wrapper element
+            const blockWrapper = targetDocument.querySelector(`[data-block="${selectedBlockClientId}"]`);
+            if (!blockWrapper) {
+                return '';
+            }
+
+            // Find the actual text element based on block type
+            let textElement = null;
+
+            // Core heading blocks (h1-h6)
+            if (selectedBlock.name === 'core/heading') {
+                textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6');
+            }
+            // Core paragraph blocks
+            else if (selectedBlock.name === 'core/paragraph') {
+                textElement = blockWrapper.querySelector('p');
+            }
+            // GenerateBlocks headline blocks
+            else if (selectedBlock.name === 'generateblocks/headline') {
+                textElement = blockWrapper.querySelector('[class*="gb-headline"]');
+            }
+            // OpenType Stylist blocks
+            else if (selectedBlock.name === 'opentype-stylist/block') {
+                textElement = blockWrapper.querySelector('.ots-block-content');
+            }
+            // Fallback: try common RichText elements
+            else {
+                textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6, p, [contenteditable="true"]');
+            }
+
+            // If we found a text element, get its computed font
+            if (textElement) {
+                const computedStyle = targetWindow.getComputedStyle(textElement);
+                const fontFamily = computedStyle.getPropertyValue('font-family');
+                return fontFamily ? fontFamily.replace(/['"]/g, '') : '';
+            }
+
+            return '';
+        }
+
+        /**
          * Get currently active letter spacing from format
          * Also checks for inline <span class="ots-styled"> elements in OTS blocks
          */
@@ -472,6 +538,7 @@
             // Extract selected text and compute inline features when opening popover
             let extractedText = '';
             let computedInlineFeatures = [];
+            let inheritedFont = '';
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
                     // There's a selection - extract it
@@ -484,6 +551,9 @@
 
                 // Compute inline features only when opening (performance optimization)
                 computedInlineFeatures = this.getInlineFeaturesForOTSBlock();
+
+                // Detect block's inherited font for preview (when Default font is selected)
+                inheritedFont = this.getBlockInheritedFont();
             }
 
             this.setState(state => ({
@@ -497,7 +567,8 @@
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 previewText: extractedText,
-                inlineFeatures: computedInlineFeatures
+                inlineFeatures: computedInlineFeatures,
+                blockInheritedFont: inheritedFont
             }));
         }
 
@@ -1278,7 +1349,7 @@
          * Render feature toggle
          */
         renderFeatureToggle(feature) {
-            const { selectedFeatures, selectedFont, previewText } = this.state;
+            const { selectedFeatures, selectedFont, previewText, blockInheritedFont } = this.state;
             const isActive = selectedFeatures.includes(feature.id);
 
             // Use preview text or default sample text
@@ -1288,8 +1359,10 @@
             const previewStyle = {
                 fontFeatureSettings: `"${feature.id}" 1`
             };
-            if (selectedFont) {
-                previewStyle.fontFamily = selectedFont;
+            // Use selected font, or fallback to block's inherited font when Default is selected
+            const fontToUse = selectedFont || blockInheritedFont;
+            if (fontToUse) {
+                previewStyle.fontFamily = fontToUse;
             }
 
             return (
@@ -1339,7 +1412,7 @@
 
         render() {
             const { isActive, isInOTSBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -1352,8 +1425,10 @@
             const previewStyle = {
                 fontFeatureSettings: this.featuresToCSS(selectedFeatures)
             };
-            if (selectedFont) {
-                previewStyle.fontFamily = selectedFont;
+            // Use selected font, or fallback to block's inherited font when Default is selected
+            const fontToUse = selectedFont || blockInheritedFont;
+            if (fontToUse) {
+                previewStyle.fontFamily = fontToUse;
             }
             // Apply font weight to preview
             previewStyle.fontWeight = fontWeight;

@@ -11,3 +11,4 @@ clear-cache.php
 playwright-profile/
 coverage/
 .playwright-mcp/
+blocks/*/build/

@@ -3,7 +3,7 @@
  * Plugin Name: OpenType Stylist
  * Plugin URI: https://github.com/mattcowan/opentype-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.0.0
+ * Version: 1.0.6
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('OTS_VERSION', '1.0.0');
+define('OTS_VERSION', '1.0.6');
 define('OTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('OTS_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('OTS_PLUGIN_BASENAME', plugin_basename(__FILE__));
