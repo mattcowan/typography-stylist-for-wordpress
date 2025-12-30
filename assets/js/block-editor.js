@@ -7,7 +7,7 @@
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
     const { RichTextToolbarButton } = wp.blockEditor;
     const { Component, Fragment } = wp.element;
-    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl } = wp.components;
+    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
     const { compose } = wp.compose;
 
@@ -85,6 +85,65 @@
         return stringValue.replace(/[;<>"']/g, '');
     }
 
+    /**
+     * Get block's inherited font-family from computed styles
+     * Detects the current font applied by theme or block settings
+     *
+     * @param {string} blockClientId - Block's client ID
+     * @param {string} blockName - Block type name (e.g., 'core/heading')
+     * @param {Document} targetDocument - Document to query (defaults to document)
+     * @param {Window} targetWindow - Window context for getComputedStyle (defaults to window)
+     * @return {string} Font family string from computed styles, or empty string if not found
+     */
+    function getBlockInheritedFont(blockClientId, blockName, targetDocument, targetWindow) {
+        if (!blockClientId || !blockName) {
+            return '';
+        }
+
+        // Use provided document/window or defaults
+        const doc = targetDocument || document;
+        const win = targetWindow || window;
+
+        // Find the block wrapper element
+        const blockWrapper = doc.querySelector(`[data-block="${blockClientId}"]`);
+        if (!blockWrapper) {
+            return '';
+        }
+
+        // Find the actual text element based on block type
+        let textElement = null;
+
+        // Core heading blocks (h1-h6)
+        if (blockName === 'core/heading') {
+            textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6');
+        }
+        // Core paragraph blocks
+        else if (blockName === 'core/paragraph') {
+            textElement = blockWrapper.querySelector('p');
+        }
+        // GenerateBlocks headline blocks
+        else if (blockName === 'generateblocks/headline') {
+            textElement = blockWrapper.querySelector('[class*="gb-headline"]');
+        }
+        // OpenType Stylist blocks
+        else if (blockName === 'opentype-stylist/block') {
+            textElement = blockWrapper.querySelector('.ots-block-content');
+        }
+        // Fallback: try common RichText elements
+        else {
+            textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6, p, [contenteditable="true"]');
+        }
+
+        // If we found a text element, get its computed font
+        if (textElement) {
+            const computedStyle = win.getComputedStyle(textElement);
+            const fontFamily = computedStyle.getPropertyValue('font-family');
+            return fontFamily ? fontFamily.replace(/['"]/g, '') : '';
+        }
+
+        return '';
+    }
+
     // Expose utilities for testing
     if (typeof window !== 'undefined') {
         window.otsUtils = {
@@ -92,7 +151,8 @@
             hasHTMLTags,
             validateSelectionBounds,
             sanitizeFontFamily,
-            sanitizeCSSValue
+            sanitizeCSSValue,
+            getBlockInheritedFont
         };
     }
 
@@ -156,7 +216,11 @@
                 dontShowClearWarning: hideWarning,
                 // Inline features cached when popover opens (for inline editor toolbar)
                 // Note: OTS block sidebar (edit.js) uses useMemo for similar optimization
-                inlineFeatures: []
+                inlineFeatures: [],
+                // Font inherited from block's computed styles (when Default font is selected)
+                blockInheritedFont: '',
+                // Flag to track if font detection failed (no text element found)
+                fontDetectionFailed: false
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -431,6 +495,39 @@
         }
 
         /**
+         * Get block's inherited font-family from computed styles
+         * Detects the current font applied by theme or block settings
+         * @return {string} Font family string from computed styles, or empty string if not found
+         */
+        getBlockInheritedFont() {
+            const { select } = wp.data;
+            const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+
+            if (!selectedBlockClientId) {
+                return '';
+            }
+
+            // Get the selected block to determine its type
+            const selectedBlock = select('core/block-editor').getBlock(selectedBlockClientId);
+            if (!selectedBlock) {
+                return '';
+            }
+
+            // WordPress editor uses an iframe for the canvas
+            const editorIframe = document.querySelector('iframe[name="editor-canvas"]');
+            const targetDocument = editorIframe?.contentDocument || document;
+            const targetWindow = editorIframe?.contentWindow || window;
+
+            // Use the standalone utility function
+            return getBlockInheritedFont(
+                selectedBlockClientId,
+                selectedBlock.name,
+                targetDocument,
+                targetWindow
+            );
+        }
+
+        /**
          * Get currently active letter spacing from format
          * Also checks for inline <span class="ots-styled"> elements in OTS blocks
          */
@@ -472,6 +569,8 @@
             // Extract selected text and compute inline features when opening popover
             let extractedText = '';
             let computedInlineFeatures = [];
+            let inheritedFont = '';
+            let detectionFailed = false;
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
                     // There's a selection - extract it
@@ -484,6 +583,14 @@
 
                 // Compute inline features only when opening (performance optimization)
                 computedInlineFeatures = this.getInlineFeaturesForOTSBlock();
+
+                // Detect block's inherited font for preview (when Default font is selected)
+                inheritedFont = this.getBlockInheritedFont();
+
+                // Check if font detection failed (no font found and user hasn't selected a custom font)
+                if (!inheritedFont && !this.getActiveFont()) {
+                    detectionFailed = true;
+                }
             }
 
             this.setState(state => ({
@@ -497,7 +604,9 @@
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 previewText: extractedText,
-                inlineFeatures: computedInlineFeatures
+                inlineFeatures: computedInlineFeatures,
+                blockInheritedFont: inheritedFont,
+                fontDetectionFailed: detectionFailed
             }));
         }
 
@@ -1278,7 +1387,7 @@
          * Render feature toggle
          */
         renderFeatureToggle(feature) {
-            const { selectedFeatures, selectedFont, previewText } = this.state;
+            const { selectedFeatures, selectedFont, previewText, blockInheritedFont } = this.state;
             const isActive = selectedFeatures.includes(feature.id);
 
             // Use preview text or default sample text
@@ -1288,8 +1397,10 @@
             const previewStyle = {
                 fontFeatureSettings: `"${feature.id}" 1`
             };
-            if (selectedFont) {
-                previewStyle.fontFamily = selectedFont;
+            // Use selected font, or fallback to block's inherited font when Default is selected
+            const fontToUse = selectedFont || blockInheritedFont;
+            if (fontToUse) {
+                previewStyle.fontFamily = fontToUse;
             }
 
             return (
@@ -1339,7 +1450,7 @@
 
         render() {
             const { isActive, isInOTSBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -1352,8 +1463,10 @@
             const previewStyle = {
                 fontFeatureSettings: this.featuresToCSS(selectedFeatures)
             };
-            if (selectedFont) {
-                previewStyle.fontFamily = selectedFont;
+            // Use selected font, or fallback to block's inherited font when Default is selected
+            const fontToUse = selectedFont || blockInheritedFont;
+            if (fontToUse) {
+                previewStyle.fontFamily = fontToUse;
             }
             // Apply font weight to preview
             previewStyle.fontWeight = fontWeight;
@@ -1398,6 +1511,22 @@
                                 <div className="ots-popover-header">
                                     <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
                                 </div>
+
+                                {/* Font Detection Warning */}
+                                {fontDetectionFailed && !selectedFont && (
+                                    wp.element.createElement(Notice, {
+                                        status: 'warning',
+                                        isDismissible: false,
+                                        className: 'ots-font-detection-notice'
+                                    },
+                                        wp.element.createElement('p', { style: { margin: 0 } },
+                                            __('Font could not be detected for this block type.', 'opentype-stylist')
+                                        ),
+                                        wp.element.createElement('p', { style: { margin: '8px 0 0 0', fontSize: '12px' } },
+                                            __('For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar.', 'opentype-stylist')
+                                        )
+                                    )
+                                )}
 
                                 {/* Font Selector */}
                                 {hasFonts && (

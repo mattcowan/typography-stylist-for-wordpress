@@ -27,7 +27,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from './utils';
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
@@ -56,6 +56,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewText, setPreviewText] = useState('');
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
+	const [computedFont, setComputedFont] = useState('');
 
 	// Get selection from block editor store
 	const { selectionStart, selectionEnd } = useSelect(
@@ -85,6 +86,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		// Remove quotes and semicolons that could break style string
 		return font.replace(/["';]/g, '');
 	};
+
+	// Detect block's computed font-family after component mounts
+	// This runs after the DOM is ready and styles are applied
+	useEffect(() => {
+		// Only detect if fontFamily attribute is not set (using default/inherited font)
+		if (!fontFamily) {
+			// Use the utility function from utils.js for testability
+			const detectedFont = detectBlockComputedFont(clientId);
+			setComputedFont(detectedFont);
+		} else {
+			// If fontFamily is set, use it directly
+			setComputedFont('');
+		}
+	}, [fontFamily, clientId]); // Re-run when fontFamily or clientId changes
 
 	// Get inline features at current cursor/selection position (for OTS block sidebar)
 	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
@@ -464,6 +479,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					// Create the span wrapper
 					const span = doc.createElement('span');
 					span.className = 'ots-styled';
+					span.setAttribute('data-features', '');
 					span.setAttribute('style', styleString);
 
 					// Wrap the range content
@@ -505,7 +521,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			if (start !== end) {
 				// Build the styled span with feature and letter spacing
 				const styleArray = [];
-				styleArray.push(`font-feature-settings: '${featureId}' 1`);
+				styleArray.push(`font-feature-settings: "${featureId}" 1`);
 
 				if (fontFamily) {
 					const sanitizedFont = sanitizeFontFamily(fontFamily);
@@ -532,6 +548,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					// Create the span wrapper
 					const span = doc.createElement('span');
 					span.className = 'ots-styled';
+					span.setAttribute('data-features', featureId);
 					span.setAttribute('style', styleString);
 
 					// Wrap the range content
@@ -690,7 +707,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 															onClick={() => applyFeatureToSelection(feature.id)}
 															style={{
 																fontFeatureSettings: `"${feature.id}" 1`,
-																fontFamily: fontFamily || 'inherit'
+																fontFamily: fontFamily || computedFont || 'inherit'
 															}}
 														>
 															{sampleText}

@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -835,6 +835,354 @@ describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
 		// Assert: Should parse from style attribute
 		expect(inlineFeatures).toContain('ss02');
 		expect(inlineFeatures).toContain('liga');
+	});
+});
+
+/**
+ * Test Suite: Block Font Inheritance (block-editor.js)
+ *
+ * Tests for the getBlockInheritedFont() utility function that detects
+ * computed fonts from DOM elements in different block types.
+ */
+describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
+	// Get the utility function from window.otsUtils
+	const { getBlockInheritedFont } = window.otsUtils || {};
+
+	// Helper to create mock DOM elements for testing
+	function createMockBlockDOM(blockId, blockName, tagName, fontFamily) {
+		// Create a mock block wrapper
+		const blockWrapper = document.createElement('div');
+		blockWrapper.setAttribute('data-block', blockId);
+
+		// Create the text element based on block type
+		let textElement;
+		if (blockName === 'core/heading') {
+			textElement = document.createElement(tagName || 'h2');
+		} else if (blockName === 'core/paragraph') {
+			textElement = document.createElement('p');
+		} else if (blockName === 'generateblocks/headline') {
+			textElement = document.createElement('div');
+			textElement.className = 'gb-headline-text';
+		} else if (blockName === 'opentype-stylist/block') {
+			textElement = document.createElement('div');
+			textElement.className = 'ots-block-content';
+		} else {
+			textElement = document.createElement('div');
+			textElement.setAttribute('contenteditable', 'true');
+		}
+
+		textElement.textContent = 'Sample text';
+		blockWrapper.appendChild(textElement);
+		document.body.appendChild(blockWrapper);
+
+		// Mock getComputedStyle to return our test font
+		const originalGetComputedStyle = window.getComputedStyle;
+		window.getComputedStyle = (element) => {
+			if (element === textElement) {
+				return {
+					getPropertyValue: (prop) => {
+						if (prop === 'font-family') {
+							return fontFamily;
+						}
+						return '';
+					}
+				};
+			}
+			return originalGetComputedStyle(element);
+		};
+
+		return {
+			blockWrapper,
+			textElement,
+			cleanup: () => {
+				window.getComputedStyle = originalGetComputedStyle;
+				if (blockWrapper.parentNode) {
+					blockWrapper.parentNode.removeChild(blockWrapper);
+				}
+			}
+		};
+	}
+
+	it('should detect font from core/heading blocks', () => {
+		const mock = createMockBlockDOM('test-block-1', 'core/heading', 'h2', 'Hipster Script Pro, cursive');
+
+		const result = getBlockInheritedFont('test-block-1', 'core/heading', document, window);
+
+		expect(result).toBe('Hipster Script Pro, cursive');
+		mock.cleanup();
+	});
+
+	it('should detect font from core/paragraph blocks', () => {
+		const mock = createMockBlockDOM('test-block-2', 'core/paragraph', 'p', 'Georgia, serif');
+
+		const result = getBlockInheritedFont('test-block-2', 'core/paragraph', document, window);
+
+		expect(result).toBe('Georgia, serif');
+		mock.cleanup();
+	});
+
+	it('should detect font from generateblocks/headline blocks', () => {
+		const mock = createMockBlockDOM('test-block-3', 'generateblocks/headline', null, 'Roboto, sans-serif');
+
+		const result = getBlockInheritedFont('test-block-3', 'generateblocks/headline', document, window);
+
+		expect(result).toBe('Roboto, sans-serif');
+		mock.cleanup();
+	});
+
+	it('should detect font from opentype-stylist/block blocks', () => {
+		const mock = createMockBlockDOM('test-block-4', 'opentype-stylist/block', null, 'Playfair Display, serif');
+
+		const result = getBlockInheritedFont('test-block-4', 'opentype-stylist/block', document, window);
+
+		expect(result).toBe('Playfair Display, serif');
+		mock.cleanup();
+	});
+
+	it('should use fallback selector for unknown block types', () => {
+		const mock = createMockBlockDOM('test-block-5', 'custom/unknown-block', null, 'Arial, sans-serif');
+
+		const result = getBlockInheritedFont('test-block-5', 'custom/unknown-block', document, window);
+
+		expect(result).toBe('Arial, sans-serif');
+		mock.cleanup();
+	});
+
+	it('should remove quotes from font-family values', () => {
+		const mock = createMockBlockDOM('test-block-6', 'core/heading', 'h3', '"Hipster Script Pro", cursive');
+
+		const result = getBlockInheritedFont('test-block-6', 'core/heading', document, window);
+
+		expect(result).toBe('Hipster Script Pro, cursive');
+		expect(result).not.toContain('"');
+		mock.cleanup();
+	});
+
+	it('should remove single quotes from font-family values', () => {
+		const mock = createMockBlockDOM('test-block-7', 'core/heading', 'h4', "'Times New Roman', serif");
+
+		const result = getBlockInheritedFont('test-block-7', 'core/heading', document, window);
+
+		expect(result).toBe('Times New Roman, serif');
+		expect(result).not.toContain("'");
+		mock.cleanup();
+	});
+
+	it('should return empty string when block wrapper not found', () => {
+		const result = getBlockInheritedFont('nonexistent-block', 'core/heading', document, window);
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when text element not found', () => {
+		// Create a block wrapper without the expected text element
+		const blockWrapper = document.createElement('div');
+		blockWrapper.setAttribute('data-block', 'empty-block');
+		document.body.appendChild(blockWrapper);
+
+		const result = getBlockInheritedFont('empty-block', 'core/heading', document, window);
+
+		expect(result).toBe('');
+		blockWrapper.parentNode.removeChild(blockWrapper);
+	});
+
+	it('should return empty string when blockClientId is missing', () => {
+		const result = getBlockInheritedFont('', 'core/heading', document, window);
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when blockName is missing', () => {
+		const result = getBlockInheritedFont('test-block', '', document, window);
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when font-family is empty', () => {
+		const mock = createMockBlockDOM('test-block-8', 'core/heading', 'h2', '');
+
+		const result = getBlockInheritedFont('test-block-8', 'core/heading', document, window);
+
+		expect(result).toBe('');
+		mock.cleanup();
+	});
+});
+
+/**
+ * Test Suite: Font Detection in OTS Blocks
+ *
+ * Tests for the detectBlockComputedFont() utility function from utils.js
+ * that detects computed fonts for OpenType Stylist blocks.
+ */
+describe('OpenType Stylist - Font Detection in OTS Blocks', () => {
+	// Helper to create mock DOM elements for testing
+	function createMockOTSBlock(clientId, fontFamily) {
+		// Create a mock block wrapper
+		const blockWrapper = document.createElement('div');
+		blockWrapper.setAttribute('data-block', clientId);
+
+		// Create the RichText element (.ots-block-content)
+		const richTextElement = document.createElement('div');
+		richTextElement.className = 'ots-block-content';
+		richTextElement.textContent = 'Sample text';
+		blockWrapper.appendChild(richTextElement);
+		document.body.appendChild(blockWrapper);
+
+		// Mock getComputedStyle to return our test font
+		const originalGetComputedStyle = window.getComputedStyle;
+		window.getComputedStyle = (element) => {
+			if (element === richTextElement) {
+				return {
+					getPropertyValue: (prop) => {
+						if (prop === 'font-family') {
+							return fontFamily;
+						}
+						return '';
+					}
+				};
+			}
+			return originalGetComputedStyle(element);
+		};
+
+		return {
+			blockWrapper,
+			richTextElement,
+			cleanup: () => {
+				window.getComputedStyle = originalGetComputedStyle;
+				if (blockWrapper.parentNode) {
+					blockWrapper.parentNode.removeChild(blockWrapper);
+				}
+			}
+		};
+	}
+
+	it('should detect font from RichText element when fontFamily not set', () => {
+		const mock = createMockOTSBlock('ots-block-1', 'Hipster Script Pro, cursive');
+
+		const result = detectBlockComputedFont('ots-block-1');
+
+		expect(result).toBe('Hipster Script Pro, cursive');
+		mock.cleanup();
+	});
+
+	it('should remove quotes from detected font', () => {
+		const mock = createMockOTSBlock('ots-block-2', '"Playfair Display", serif');
+
+		const result = detectBlockComputedFont('ots-block-2');
+
+		expect(result).toBe('Playfair Display, serif');
+		expect(result).not.toContain('"');
+		mock.cleanup();
+	});
+
+	it('should remove single quotes from detected font', () => {
+		const mock = createMockOTSBlock('ots-block-3', "'Times New Roman', serif");
+
+		const result = detectBlockComputedFont('ots-block-3');
+
+		expect(result).toBe('Times New Roman, serif');
+		expect(result).not.toContain("'");
+		mock.cleanup();
+	});
+
+	it('should return empty string when block wrapper not found', () => {
+		const result = detectBlockComputedFont('nonexistent-block');
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when RichText element not found', () => {
+		// Create a block wrapper without .ots-block-content
+		const blockWrapper = document.createElement('div');
+		blockWrapper.setAttribute('data-block', 'empty-ots-block');
+		document.body.appendChild(blockWrapper);
+
+		const result = detectBlockComputedFont('empty-ots-block');
+
+		expect(result).toBe('');
+		blockWrapper.parentNode.removeChild(blockWrapper);
+	});
+
+	it('should return empty string when clientId is missing', () => {
+		const result = detectBlockComputedFont('');
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when clientId is null', () => {
+		const result = detectBlockComputedFont(null);
+
+		expect(result).toBe('');
+	});
+
+	it('should return empty string when font-family is empty', () => {
+		const mock = createMockOTSBlock('ots-block-4', '');
+
+		const result = detectBlockComputedFont('ots-block-4');
+
+		expect(result).toBe('');
+		mock.cleanup();
+	});
+
+	it('should support custom element selector', () => {
+		// Create a block with a custom selector
+		const blockWrapper = document.createElement('div');
+		blockWrapper.setAttribute('data-block', 'custom-block');
+
+		const customElement = document.createElement('div');
+		customElement.className = 'custom-richtext';
+		customElement.textContent = 'Custom text';
+		blockWrapper.appendChild(customElement);
+		document.body.appendChild(blockWrapper);
+
+		// Mock getComputedStyle
+		const originalGetComputedStyle = window.getComputedStyle;
+		window.getComputedStyle = (element) => {
+			if (element === customElement) {
+				return {
+					getPropertyValue: (prop) => {
+						if (prop === 'font-family') {
+							return 'Custom Font, sans-serif';
+						}
+						return '';
+					}
+				};
+			}
+			return originalGetComputedStyle(element);
+		};
+
+		const result = detectBlockComputedFont('custom-block', '.custom-richtext');
+
+		expect(result).toBe('Custom Font, sans-serif');
+
+		// Cleanup
+		window.getComputedStyle = originalGetComputedStyle;
+		blockWrapper.parentNode.removeChild(blockWrapper);
+	});
+
+	it('should handle errors gracefully', () => {
+		// Create a scenario that would throw an error
+		// Mock getComputedStyle to throw
+		const mock = createMockOTSBlock('error-block', 'Arial');
+		const originalGetComputedStyle = window.getComputedStyle;
+		const originalConsoleError = console.error;
+
+		// Suppress expected console.error during this test
+		console.error = jest.fn();
+
+		window.getComputedStyle = () => {
+			throw new Error('Test error');
+		};
+
+		const result = detectBlockComputedFont('error-block');
+
+		expect(result).toBe('');
+		expect(console.error).toHaveBeenCalled();
+
+		// Restore and cleanup
+		console.error = originalConsoleError;
+		window.getComputedStyle = originalGetComputedStyle;
+		mock.cleanup();
 	});
 });
 
