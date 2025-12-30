@@ -17,16 +17,6 @@ module.exports = {
 	setupFilesAfterEnv: [
 		'<rootDir>/jest.setup.js',
 	],
-	// Module paths - tells Jest where to find WordPress packages
-	moduleNameMapper: {
-		'^@wordpress/block-editor$': '<rootDir>/node_modules/@wordpress/block-editor',
-		'^@wordpress/components$': '<rootDir>/node_modules/@wordpress/components',
-		'^@wordpress/data$': '<rootDir>/node_modules/@wordpress/data',
-		'^@wordpress/element$': '<rootDir>/node_modules/@wordpress/element',
-		'^@wordpress/i18n$': '<rootDir>/node_modules/@wordpress/i18n',
-		'^@wordpress/rich-text$': '<rootDir>/node_modules/@wordpress/rich-text',
-		'^@wordpress/compose$': '<rootDir>/node_modules/@wordpress/compose',
-	},
 	// Test environment
 	testEnvironment: 'jsdom',
 };

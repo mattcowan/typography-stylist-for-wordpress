@@ -6,10 +6,10 @@
 	position: relative;
 }
 
-/* Screen reader only classes - ensure they exist */
-.visually-hidden,
-.sr-only,
-.screen-reader-text {
+/* Screen reader only classes - ensure they exist and prevent layout impact */
+.wp-block-opentype-stylist .visually-hidden,
+.wp-block-opentype-stylist .sr-only,
+.wp-block-opentype-stylist .screen-reader-text {
 	position: absolute;
 	width: 1px;
 	height: 1px;

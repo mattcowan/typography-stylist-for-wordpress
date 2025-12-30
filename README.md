@@ -23,7 +23,8 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ### Accessibility Features
 - Smart selection warnings for partial word selections
-- OpenType Stylist block with ARIA markup and semantic HTML
+- OpenType Stylist block maintains proper heading semantics for both screen reader and visual views
+- ARIA markup ensures screen reader compatibility while enabling complex typography
 - Optional aria-label attributes for inline formatted text
 - Configurable screen reader classes (visually-hidden, sr-only, custom)
 - Conversion tool from inline formats to accessible blocks
@@ -303,8 +304,8 @@ The block creates two versions of your content:
 
 ```html
 <div class="wp-block-opentype-stylist">
-  <!-- For screen readers -->
-  <span class="visually-hidden">Beautiful Typography</span>
+  <!-- For screen readers - maintains semantic heading structure -->
+  <h2 class="visually-hidden">Beautiful Typography</h2>
 
   <!-- For visual display -->
   <h2 class="ots-styled" aria-hidden="true">
@@ -313,7 +314,7 @@ The block creates two versions of your content:
 </div>
 ```
 
-Screen readers read the clean, unformatted text while sighted users see the beautifully styled version.
+Screen readers read the clean, unformatted text in a proper semantic heading (preserving document outline and heading navigation) while sighted users see the beautifully styled version.
 
 ### How do I know if a font supports OpenType features?
 
