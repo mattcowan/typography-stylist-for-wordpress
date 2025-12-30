@@ -5,7 +5,7 @@
 	"title": "OpenType Stylist",
 	"category": "text",
 	"icon": "editor-textcolor",
-	"description": "Advanced OpenType typography with full accessibility support",
+	"description": "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections.",
 	"keywords": ["typography", "opentype", "ligatures", "heading", "accessibility"],
 	"textdomain": "opentype-stylist",
 	"supports": {

@@ -951,6 +951,18 @@ msgstr "Entrez la classe de lecteur d'écran de votre thème"
 msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
 msgstr "La classe sélectionnée sera utilisée pour masquer le texte dupliqué pour les lecteurs d'écran. Assurez-vous que cette classe est définie dans votre thème."
 
+#: blocks/opentype-stylist/edit.js:799
+msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr "Ce contrôle applique l'espacement des lettres à l'ensemble du bloc. Pour appliquer l'espacement des lettres à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
+
+#: blocks/opentype-stylist/edit.js:855
+msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr "Ces contrôles appliquent des fonctionnalités à l'ensemble du bloc. Pour appliquer des fonctionnalités à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
+
+#: blocks/opentype-stylist/block.json:8
+msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
+msgstr "Typographie OpenType avancée avec prise en charge complète de l'accessibilité. Les paramètres du panneau de bloc s'appliquent à l'ensemble du bloc ; utilisez le bouton Basculer les fonctionnalités rapides pour les sélections individuelles."
+
 #: assets/js/admin-page.js:302
 #, php-format
 msgid "%s applied"
