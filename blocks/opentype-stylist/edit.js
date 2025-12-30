@@ -414,6 +414,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setAttributes({ features: newFeatures });
 	};
 
+	// Toggle block-level feature (always applies to entire block, ignores selection)
+	// Used by sidebar controls - for inline/selection control, use Quick Features Toggle
+	const toggleBlockFeature = (featureId) => {
+		const newFeatures = [...features];
+		const index = newFeatures.indexOf(featureId);
+		if (index > -1) {
+			newFeatures.splice(index, 1);
+		} else {
+			newFeatures.push(featureId);
+		}
+		setAttributes({ features: newFeatures });
+	};
+
 	// Apply letter spacing only (no feature)
 	const applyLetterSpacingOnly = () => {
 		if (!content || inlineLetterSpacing === 0) return;
@@ -782,6 +795,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				</PanelBody>
 
 				<PanelBody title={__('Letter Spacing', 'opentype-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'opentype-stylist')}
+					</p>
 					<RangeControl
 						value={letterSpacing}
 						onChange={(value) => setAttributes({ letterSpacing: value })}
@@ -838,6 +854,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				</PanelBody>
 
 				<PanelBody title={__('OpenType Features', 'opentype-stylist')} initialOpen={true}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'opentype-stylist')}
+					</p>
 					{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
 						<div key={category} className="ots-feature-category">
 							<h4>{getCategoryTitle(category)}</h4>
@@ -847,7 +866,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									label={feature.name}
 									help={feature.description}
 									checked={features.includes(feature.id)}
-									onChange={() => toggleFeature(feature.id)}
+									onChange={() => toggleBlockFeature(feature.id)}
 								/>
 							))}
 						</div>

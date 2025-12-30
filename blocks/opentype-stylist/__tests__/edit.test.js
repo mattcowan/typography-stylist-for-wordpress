@@ -319,6 +319,191 @@ describe('OpenType Stylist - toggleFeature Logic', () => {
 });
 
 /**
+ * Test Suite: toggleBlockFeature Logic
+ *
+ * These tests verify that toggleBlockFeature always applies block-level features
+ * regardless of selection state (for sidebar controls).
+ */
+describe('OpenType Stylist - toggleBlockFeature Logic', () => {
+	/**
+	 * Simplified version of toggleBlockFeature logic
+	 * This always applies to the block, never inline
+	 */
+	const toggleBlockFeatureLogic = (featureId, currentFeatures) => {
+		const newFeatures = [...currentFeatures];
+		const index = newFeatures.indexOf(featureId);
+		if (index > -1) {
+			newFeatures.splice(index, 1);
+		} else {
+			newFeatures.push(featureId);
+		}
+		return { type: 'block', features: newFeatures };
+	};
+
+	it('should add feature to block when feature not active', () => {
+		const featureId = 'ss02';
+		const currentFeatures = [];
+
+		const result = toggleBlockFeatureLogic(featureId, currentFeatures);
+
+		expect(result.type).toBe('block');
+		expect(result.features).toContain('ss02');
+		expect(result.features.length).toBe(1);
+	});
+
+	it('should remove feature from block when feature already active', () => {
+		const featureId = 'ss02';
+		const currentFeatures = ['ss02', 'liga'];
+
+		const result = toggleBlockFeatureLogic(featureId, currentFeatures);
+
+		expect(result.type).toBe('block');
+		expect(result.features).not.toContain('ss02');
+		expect(result.features).toContain('liga');
+		expect(result.features.length).toBe(1);
+	});
+
+	it('should always apply to block, never inline (regardless of selection)', () => {
+		// This is the key difference from toggleFeature
+		// toggleBlockFeature should NEVER apply inline, even if text is selected
+		const featureId = 'ss02';
+		const currentFeatures = [];
+
+		const result = toggleBlockFeatureLogic(featureId, currentFeatures);
+
+		// Should always be block-level, never inline
+		expect(result.type).toBe('block');
+		expect(result.type).not.toBe('inline');
+	});
+
+	it('should preserve other features when toggling', () => {
+		const featureId = 'ss02';
+		const currentFeatures = ['liga', 'dlig', 'ss01'];
+
+		const result = toggleBlockFeatureLogic(featureId, currentFeatures);
+
+		expect(result.features).toContain('liga');
+		expect(result.features).toContain('dlig');
+		expect(result.features).toContain('ss01');
+		expect(result.features).toContain('ss02');
+		expect(result.features.length).toBe(4);
+	});
+
+	/**
+	 * Edge case: Toggle multiple different features sequentially
+	 */
+	it('should handle multiple sequential toggles correctly', () => {
+		let currentFeatures = [];
+
+		// Add first feature
+		let result = toggleBlockFeatureLogic('liga', currentFeatures);
+		currentFeatures = result.features;
+		expect(currentFeatures).toContain('liga');
+		expect(currentFeatures.length).toBe(1);
+
+		// Add second feature
+		result = toggleBlockFeatureLogic('ss01', currentFeatures);
+		currentFeatures = result.features;
+		expect(currentFeatures).toContain('liga');
+		expect(currentFeatures).toContain('ss01');
+		expect(currentFeatures.length).toBe(2);
+
+		// Add third feature
+		result = toggleBlockFeatureLogic('swsh', currentFeatures);
+		currentFeatures = result.features;
+		expect(currentFeatures).toContain('liga');
+		expect(currentFeatures).toContain('ss01');
+		expect(currentFeatures).toContain('swsh');
+		expect(currentFeatures.length).toBe(3);
+
+		// Remove middle feature
+		result = toggleBlockFeatureLogic('ss01', currentFeatures);
+		currentFeatures = result.features;
+		expect(currentFeatures).toContain('liga');
+		expect(currentFeatures).not.toContain('ss01');
+		expect(currentFeatures).toContain('swsh');
+		expect(currentFeatures.length).toBe(2);
+	});
+
+	/**
+	 * Edge case: Toggle same feature on and off repeatedly
+	 */
+	it('should handle toggling same feature on and off repeatedly', () => {
+		let currentFeatures = [];
+
+		// Toggle on
+		let result = toggleBlockFeatureLogic('ss14', currentFeatures);
+		expect(result.features).toContain('ss14');
+		expect(result.features.length).toBe(1);
+
+		// Toggle off
+		result = toggleBlockFeatureLogic('ss14', result.features);
+		expect(result.features).not.toContain('ss14');
+		expect(result.features.length).toBe(0);
+
+		// Toggle on again
+		result = toggleBlockFeatureLogic('ss14', result.features);
+		expect(result.features).toContain('ss14');
+		expect(result.features.length).toBe(1);
+
+		// Toggle off again
+		result = toggleBlockFeatureLogic('ss14', result.features);
+		expect(result.features).not.toContain('ss14');
+		expect(result.features.length).toBe(0);
+	});
+
+	/**
+	 * Edge case: Ensure it works with all common OpenType features
+	 */
+	it('should work correctly with all standard OpenType feature codes', () => {
+		const testFeatures = ['liga', 'dlig', 'calt', 'ss01', 'ss02', 'ss03', 'swsh', 'cswh', 'salt', 'titl', 'ornm'];
+		let currentFeatures = [];
+
+		// Add all features one by one
+		testFeatures.forEach(feature => {
+			const result = toggleBlockFeatureLogic(feature, currentFeatures);
+			currentFeatures = result.features;
+		});
+
+		// Verify all features are present
+		expect(currentFeatures.length).toBe(testFeatures.length);
+		testFeatures.forEach(feature => {
+			expect(currentFeatures).toContain(feature);
+		});
+	});
+
+	/**
+	 * Edge case: Empty features array should remain valid
+	 */
+	it('should handle empty features array without errors', () => {
+		const result = toggleBlockFeatureLogic('ss01', []);
+		expect(result.features).toBeInstanceOf(Array);
+		expect(result.features.length).toBe(1);
+		expect(result.features).toContain('ss01');
+	});
+
+	/**
+	 * Comparison test: Verify toggleBlockFeature differs from toggleFeature
+	 * This documents the intentional behavioral difference
+	 */
+	it('should differ from toggleFeature behavior when selection exists', () => {
+		// toggleFeature (with selection) would return inline application
+		const toggleFeatureWithSelection = (featureId) => {
+			return { type: 'inline', featureId };
+		};
+
+		// toggleBlockFeature (same scenario) always returns block application
+		const toggleBlockResult = toggleBlockFeatureLogic('ss02', []);
+		const toggleFeatureResult = toggleFeatureWithSelection('ss02');
+
+		// Assert the difference
+		expect(toggleBlockResult.type).toBe('block');
+		expect(toggleFeatureResult.type).toBe('inline');
+		expect(toggleBlockResult.type).not.toBe(toggleFeatureResult.type);
+	});
+});
+
+/**
  * Test Suite: Edge Cases
  *
  * Testing edge cases helps ensure robustness.

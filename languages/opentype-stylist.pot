@@ -840,3 +840,15 @@ msgstr ""
 #: blocks/opentype-stylist/edit.js:244
 msgid "For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar."
 msgstr ""
+
+#: blocks/opentype-stylist/edit.js:799
+msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr ""
+
+#: blocks/opentype-stylist/edit.js:855
+msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr ""
+
+#: blocks/opentype-stylist/block.json:8
+msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
+msgstr ""
