@@ -11,7 +11,6 @@
  * 4. Confirm both elements use the same tagName for semantic consistency
  */
 
-import React from 'react';
 import { create } from 'react-test-renderer';
 
 /**
@@ -53,7 +52,7 @@ describe('OpenType Stylist - Save Component (Frontend Rendering)', () => {
 			expect(tree.children[1].type).toBe('h2');
 		});
 
-		it('should use different heading tags when tagName changes', () => {
+		it('should use h1 tags when tagName is h1', () => {
 			const attributesH1 = {
 				content: 'Title',
 				tagName: 'h1',
