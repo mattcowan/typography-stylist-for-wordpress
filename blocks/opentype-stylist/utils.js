@@ -103,3 +103,55 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 
 	return [];
 }
+
+/**
+ * Detect block's computed font from DOM
+ *
+ * Finds a block's RichText element in the DOM and extracts its computed font-family.
+ * Handles iframe context detection for WordPress block editor.
+ *
+ * @param {string} clientId - Block's client ID
+ * @param {string} elementSelector - CSS selector for the text element (e.g., '.ots-block-content')
+ * @return {string} Computed font-family (with quotes removed) or empty string if not found
+ */
+export function detectBlockComputedFont(clientId, elementSelector = '.ots-block-content') {
+	if (!clientId) {
+		return '';
+	}
+
+	try {
+		// WordPress editor content is in an iframe
+		const editorIframe = typeof document !== 'undefined' ? document.querySelector('iframe[name="editor-canvas"]') : null;
+		const targetDocument = editorIframe?.contentDocument || (typeof document !== 'undefined' ? document : null);
+		const targetWindow = editorIframe?.contentWindow || (typeof window !== 'undefined' ? window : null);
+
+		if (!targetDocument || !targetWindow) {
+			return '';
+		}
+
+		// Find the block wrapper in the correct document context
+		const blockWrapper = targetDocument.querySelector(`[data-block="${clientId}"]`);
+		if (!blockWrapper) {
+			return '';
+		}
+
+		// Find the RichText element
+		const richTextElement = blockWrapper.querySelector(elementSelector);
+		if (!richTextElement) {
+			return '';
+		}
+
+		// Get computed styles using the correct window context
+		const computedStyle = targetWindow.getComputedStyle(richTextElement);
+		const detectedFont = computedStyle.getPropertyValue('font-family');
+
+		// Return the font (removing quotes)
+		return detectedFont ? detectedFont.replace(/['"]/g, '') : '';
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		if (typeof console !== 'undefined' && console.error) {
+			console.error('OTS Block - Failed to detect computed font:', error);
+		}
+		return '';
+	}
+}

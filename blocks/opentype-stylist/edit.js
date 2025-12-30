@@ -27,7 +27,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from './utils';
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
@@ -92,33 +92,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	useEffect(() => {
 		// Only detect if fontFamily attribute is not set (using default/inherited font)
 		if (!fontFamily) {
-			try {
-				// WordPress editor content is in an iframe
-				const editorIframe = document.querySelector('iframe[name="editor-canvas"]');
-				const targetDocument = editorIframe?.contentDocument || document;
-				const targetWindow = editorIframe?.contentWindow || window;
-
-				// Find the block wrapper in the correct document context
-				const blockWrapper = targetDocument.querySelector(`[data-block="${clientId}"]`);
-				if (blockWrapper) {
-					// Find the RichText element (.ots-block-content)
-					const richTextElement = blockWrapper.querySelector('.ots-block-content');
-
-					if (richTextElement) {
-						// Get computed styles using the correct window context
-						const computedStyle = targetWindow.getComputedStyle(richTextElement);
-						const detectedFont = computedStyle.getPropertyValue('font-family');
-
-						// Store the detected font (removing quotes)
-						if (detectedFont) {
-							setComputedFont(detectedFont.replace(/['"]/g, ''));
-						}
-					}
-				}
-			} catch (error) {
-				// eslint-disable-next-line no-console
-				console.error('OTS Block - Failed to detect computed font:', error);
-			}
+			// Use the utility function from utils.js for testability
+			const detectedFont = detectBlockComputedFont(clientId);
+			setComputedFont(detectedFont);
 		} else {
 			// If fontFamily is set, use it directly
 			setComputedFont('');

@@ -852,3 +852,11 @@ msgstr ""
 #: blocks/opentype-stylist/block.json:8
 msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
 msgstr ""
+
+#: assets/js/block-editor.js:1523
+msgid "Font could not be detected for this block type."
+msgstr ""
+
+#: assets/js/block-editor.js:1526
+msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
+msgstr ""
