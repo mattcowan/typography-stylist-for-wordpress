@@ -23,9 +23,12 @@ npm test -- --coverage
 opentype-stylist/
 ├── blocks/
 │   └── opentype-stylist/
-│       ├── edit.js                    # Component code
+│       ├── edit.js                    # Editor component code
+│       ├── save.js                    # Frontend rendering component
+│       ├── utils.js                   # Shared utility functions
 │       └── __tests__/                 # Tests
-│           └── edit.test.js           # Test file
+│           ├── edit.test.js           # Editor logic tests
+│           └── save.test.js           # Frontend rendering tests
 ├── jest.config.js                     # Jest configuration
 └── jest.setup.js                      # Test setup (runs before each test)
 ```
@@ -64,7 +67,29 @@ it('should apply inline when text is selected', () => {
 });
 ```
 
-### 3. **Edge Cases**
+### 3. **Frontend Rendering** (save.js)
+Tests for the HTML output that WordPress saves to the database:
+- Semantic heading structure (both screen reader and visual versions)
+- ARIA attributes (`aria-hidden="true"` on visual content)
+- Screen reader class assignment
+- HTML stripping for clean text accessibility
+
+Example:
+```javascript
+it('should render both versions with same heading tag', () => {
+  const attributes = { tagName: 'h2', content: 'Test', ... };
+  const component = create(save({ attributes }));
+  const tree = component.toJSON();
+
+  // Both children should be H2 elements
+  expect(tree.children[0].type).toBe('h2');
+  expect(tree.children[1].type).toBe('h2');
+});
+```
+
+**Why This Matters:** These tests prevent regressions in accessibility. If someone accidentally changes the screen reader version back to a `<span>`, tests will fail, protecting users who rely on assistive technology.
+
+### 4. **Edge Cases**
 Tests for unusual inputs like:
 - `null` or `undefined` values
 - Empty strings

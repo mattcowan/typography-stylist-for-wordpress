@@ -28,8 +28,8 @@ OpenType Stylist provides typography control for WordPress headlines. This plugi
 * **Custom Font Definitions**: Define fonts loaded through your theme, plugins, or CDN
 * **Font Fallbacks**: Set fallback fonts for all font sources for better compatibility
 * **Font Preview**: Test OpenType features with any uploaded or connected font
-* **Accessibility Features**: Screen reader support with ARIA markup
-* **OpenType Stylist Block**: Custom block for complex typography with accessibility features
+* **Accessibility Features**: Screen reader support with ARIA markup and a heading structure that maintains proper semantics for both screen reader and visual views
+* **OpenType Stylist Block**: Custom block for complex typography that preserves the document outline (maintains proper heading levels for assistive technology navigation)
 * **Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
 * **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility
 
@@ -162,10 +162,10 @@ The plugin includes accessibility features for screen reader compatibility:
 
 The OpenType Stylist block creates two versions of your text:
 
-1. **For screen readers**: Clean, unformatted text wrapped in a `visually-hidden` class
-2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content
+1. **For screen readers**: Clean, unformatted text in a semantic heading element (H1-H6) with the `visually-hidden` class applied. This maintains the document outline and heading navigation for assistive technology users.
+2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content with complex OpenType features.
 
-This approach provides both styled visual presentation and screen reader compatibility.
+This approach provides both styled visual presentation and screen reader compatibility while preserving semantic document structure.
 
 = Should I use the inline format or the block? =
 

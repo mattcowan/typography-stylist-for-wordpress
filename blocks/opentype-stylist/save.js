@@ -71,10 +71,12 @@ export default function save({ attributes }) {
 
 	return (
 		<div className="wp-block-opentype-stylist">
-			{/* Screen reader accessible text (hidden visually) */}
-			<span className={screenReaderClass || 'visually-hidden'}>
-				{cleanText}
-			</span>
+			{/* Screen reader accessible text (hidden visually, maintains semantic heading structure) */}
+			<RichText.Content
+				tagName={tagName}
+				value={cleanText}
+				className={screenReaderClass || 'visually-hidden'}
+			/>
 
 			{/* Visually styled text (hidden from screen readers) */}
 			<RichText.Content
