@@ -458,8 +458,31 @@ class OpenType_Stylist {
     public function enqueue_frontend_assets() {
         $has_styled = $this->has_styled_content();
 
-        // Only enqueue if content has styled headlines
-        if (!$has_styled) {
+        // Check if any fonts are set to load on all pages
+        $has_always_load_fonts = false;
+
+        // Check uploaded fonts
+        $custom_fonts = $this->get_custom_fonts();
+        foreach ($custom_fonts as $font) {
+            if (!empty($font['load_on_all_pages'])) {
+                $has_always_load_fonts = true;
+                break;
+            }
+        }
+
+        // Check Adobe fonts if needed
+        if (!$has_always_load_fonts) {
+            $adobe_fonts = $this->get_adobe_fonts();
+            foreach ($adobe_fonts as $font) {
+                if (!empty($font['load_on_all_pages'])) {
+                    $has_always_load_fonts = true;
+                    break;
+                }
+            }
+        }
+
+        // Only return early if NO styled content AND NO always-load fonts
+        if (!$has_styled && !$has_always_load_fonts) {
             return;
         }
 
@@ -514,38 +537,56 @@ class OpenType_Stylist {
             return;
         }
 
-        // Get fonts actually used in this post's content
-        $used_font_families = $this->get_used_fonts_in_content();
-
-        // If no custom fonts are used, don't load any
-        if (empty($used_font_families)) {
-            return;
+        // Check if we need to scan content for used fonts
+        $has_conditional_fonts = false;
+        foreach ($all_fonts as $font) {
+            if (empty($font['load_on_all_pages'])) {
+                $has_conditional_fonts = true;
+                break;
+            }
         }
 
-        // Parse font families from CSS font-family values (which may include fallbacks)
-        $parsed_font_families = $this->parse_font_family_list($used_font_families);
-        $parsed_font_families = array_unique($parsed_font_families);
+        // Only get used fonts if at least one font is conditional
+        $used_font_families = array();
+        if ($has_conditional_fonts) {
+            $used_font_families = $this->get_used_fonts_in_content();
 
-        // Build cache key based on used fonts
-        $cache_key = 'ots_font_css_' . md5(serialize($used_font_families));
+            if (!empty($used_font_families)) {
+                // Parse font families from CSS font-family values (which may include fallbacks)
+                $parsed_font_families = $this->parse_font_family_list($used_font_families);
+                $used_font_families = array_unique($parsed_font_families);
+            }
+        }
+
+        // Build cache key including load_on_all_pages settings
+        $load_settings = wp_list_pluck($all_fonts, 'load_on_all_pages', 'id');
+        $cache_key = 'ots_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
             $combined_css = '';
 
-            // Only include fonts that are actually used
+            // Only include fonts that are actually used OR set to load on all pages
             foreach ($all_fonts as $font) {
                 if (!empty($font['css_content']) && !empty($font['font_faces'])) {
-                    // Check if any face from this font kit is used
-                    $font_is_used = false;
-                    foreach ($font['font_faces'] as $face) {
-                        if (in_array($face['family'], $parsed_font_families)) {
-                            $font_is_used = true;
-                            break;
+                    $should_load = false;
+
+                    // Check if font should be loaded on all pages
+                    if (!empty($font['load_on_all_pages'])) {
+                        $should_load = true;
+                    } else {
+                        // Check if any face from this font kit is used
+                        if (!empty($used_font_families)) {
+                            foreach ($font['font_faces'] as $face) {
+                                if (in_array($face['family'], $used_font_families)) {
+                                    $should_load = true;
+                                    break;
+                                }
+                            }
                         }
                     }
 
-                    if ($font_is_used) {
+                    if ($should_load) {
                         // Sanitize CSS before adding
                         $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
                     }
@@ -643,7 +684,14 @@ class OpenType_Stylist {
                 'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'opentype-stylist'),
                 'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'opentype-stylist'),
                 // Font loading setting strings
-                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'opentype-stylist')
+                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'opentype-stylist'),
+                // Edit font strings
+                'saving' => esc_html__('Saving...', 'opentype-stylist'),
+                'saveChanges' => esc_html__('Save Changes', 'opentype-stylist'),
+                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'opentype-stylist'),
+                'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'opentype-stylist'),
+                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'opentype-stylist'),
+                'updateFontError' => esc_html__('Failed to update font.', 'opentype-stylist')
             )
         ));
     }
@@ -915,10 +963,27 @@ class OpenType_Stylist {
             }
         ));
 
+        register_rest_route('ots/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+            'methods' => 'PATCH',
+            'callback' => array($this, 'update_manual_font_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
         // Fallback endpoint for uploaded fonts
         register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_fallback_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('upload_files');
+            }
+        ));
+
+        // Load on all pages endpoint for uploaded fonts
+        register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+            'methods' => 'PATCH',
+            'callback' => array($this, 'update_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
                 return current_user_can('upload_files');
             }
@@ -1576,7 +1641,8 @@ class OpenType_Stylist {
                     'css_content' => $sanitized_css,
                     'font_faces' => isset($font['font_faces']) ? $font['font_faces'] : array(),
                     'uploaded_date' => isset($font['uploaded_date']) ? sanitize_text_field($font['uploaded_date']) : current_time('mysql'),
-                    'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : ''
+                    'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : '',
+                    'load_on_all_pages' => isset($font['load_on_all_pages']) ? (bool) $font['load_on_all_pages'] : false
                 );
 
                 // Add path/url fields if they exist
@@ -2248,6 +2314,45 @@ class OpenType_Stylist {
     }
 
     /**
+     * REST endpoint: Update font load on all pages setting (uploaded fonts)
+     *
+     * Updates whether an uploaded font should be loaded on all pages or only when used.
+     *
+     * @since 1.0.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter and 'load_on_all_pages' in body.
+     * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
+     */
+    public function update_font_load_on_all_pages_endpoint($request) {
+        $id = sanitize_key($request->get_param('id'));
+        $params = $request->get_json_params();
+
+        if (!isset($params['load_on_all_pages'])) {
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $fonts = $this->get_custom_fonts();
+        $found = false;
+
+        foreach ($fonts as $key => $font) {
+            if ($font['id'] === $id) {
+                $fonts[$key]['load_on_all_pages'] = (bool) $params['load_on_all_pages'];
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
+        }
+
+        update_option('ots_custom_fonts', $fonts);
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
+    }
+
+    /**
      * REST endpoint: Get manual fonts
      *
      * Returns all manually configured custom fonts (non-uploaded, non-Adobe).
@@ -2331,6 +2436,46 @@ class OpenType_Stylist {
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
+    }
+
+    /**
+     * REST endpoint: Update manual font
+     *
+     * Updates a manually configured custom font's font_family and fallbacks.
+     *
+     * @since 1.0.0
+     *
+     * @param WP_REST_Request $request REST request with 'id' parameter and 'font_family', 'fallbacks' in body.
+     * @return WP_REST_Response|WP_Error REST response with updated font data, or error if not found.
+     */
+    public function update_manual_font_endpoint($request) {
+        $id = sanitize_key($request->get_param('id'));
+        $params = $request->get_json_params();
+
+        if (!isset($params['font_family'])) {
+            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $fonts = $this->get_manual_fonts();
+        $found = false;
+
+        foreach ($fonts as $key => $font) {
+            if ($font['id'] === $id) {
+                $fonts[$key]['font_family'] = sanitize_text_field($params['font_family']);
+                $fonts[$key]['fallbacks'] = isset($params['fallbacks']) ? sanitize_text_field($params['fallbacks']) : '';
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'opentype-stylist'), array('status' => 404));
+        }
+
+        update_option('ots_manual_fonts', $fonts);
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }
 
     /**

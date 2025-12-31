@@ -208,11 +208,14 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Screenshots ==
 
-1. Typography Features popover with preset selection
-2. Individual feature toggles organized by category
-3. Live preview of applied features
-4. Admin settings page with preset management
-5. Example of script font with and without features
+1. Admin settings - Presets tab showing OpenType feature demonstrations with live preview
+2. Admin settings - Custom Fonts tab for uploading webfont kits, Adobe Fonts integration, and custom font definitions
+3. Admin settings - Font Features tab displaying all available OpenType features organized by category
+4. Admin settings - Accessibility tab with screen reader support options and best practices
+5. Admin settings - Help tab with usage instructions and recommended fonts
+6. Block editor showing multiple OpenType Stylist blocks with advanced typography applied
+7. Block editor with OpenType Stylist block selected (same as screenshot 6 - shows block in use)
+8. Block editor with settings sidebar (same as screenshot 6 - demonstrates inspector controls)
 
 == Changelog ==
 
