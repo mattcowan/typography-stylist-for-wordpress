@@ -676,4 +676,234 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // Handle MyFonts "Load on all pages" checkbox
+    $('.ots-font-load-all-pages').on('change', function() {
+        var $checkbox = $(this);
+        var fontId = $checkbox.data('font-id');
+        var loadOnAllPages = $checkbox.is(':checked');
+        var originalState = !loadOnAllPages; // Store original state for rollback
+
+        // Disable checkbox while saving
+        $checkbox.prop('disabled', true);
+
+        // Update via REST API
+        $.ajax({
+            url: otsAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
+            method: 'PATCH',
+            data: JSON.stringify({
+                load_on_all_pages: loadOnAllPages
+            }),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function(response) {
+                // Visual feedback: briefly highlight the checkbox label
+                var $label = $checkbox.closest('label');
+                $label.addClass('ots-success-flash');
+                setTimeout(function() {
+                    $label.removeClass('ots-success-flash');
+                }, 500);
+            },
+            error: function(xhr) {
+                // Revert checkbox to original state
+                $checkbox.prop('checked', originalState);
+
+                var errorMsg = (otsAdmin.strings && otsAdmin.strings.updateSettingError) ? otsAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                alert(errorMsg);
+            },
+            complete: function() {
+                // Re-enable checkbox
+                $checkbox.prop('disabled', false);
+            }
+        });
+    });
+
+    // Edit MyFonts (uploaded fonts) fallback
+    $('.ots-edit-font').on('click', function() {
+        var $card = $(this).closest('.ots-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Hide card content, show edit form (keep loading-option visible)
+        $card.find('.ots-font-families, .ots-font-meta, .ots-font-actions').hide();
+        $editForm.show();
+    });
+
+    $('.ots-cancel-font-edit').on('click', function() {
+        var $card = $(this).closest('.ots-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Show card content, hide edit form
+        $card.find('.ots-font-families, .ots-font-meta, .ots-font-actions').show();
+        $editForm.hide();
+        $editForm.find('.ots-font-edit-message').html('');
+    });
+
+    $('.ots-save-font-edit').on('click', function() {
+        var $btn = $(this);
+        var $card = $btn.closest('.ots-font-card');
+        var $message = $card.find('.ots-font-edit-message');
+        var fontId = $card.find('.ots-edit-font').data('font-id');
+        var fallbacks = $card.find('.ots-font-fallback-input').val().trim();
+
+        $message.html('');
+        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'fonts/' + fontId + '/fallback',
+            method: 'PATCH',
+            data: JSON.stringify({ fallbacks: fallbacks }),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fallbacksUpdated + '</p></div>');
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = otsAdmin.strings.updateFallbacksError;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+            }
+        });
+    });
+
+    // Edit Adobe Fonts fallback
+    $('.ots-edit-adobe-font').on('click', function() {
+        var $card = $(this).closest('.ots-adobe-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Hide card content, show edit form
+        $card.find('.ots-font-families, .ots-font-loading-option, .ots-font-meta, .ots-font-actions').hide();
+        $editForm.show();
+    });
+
+    $('.ots-cancel-adobe-font-edit').on('click', function() {
+        var $card = $(this).closest('.ots-adobe-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Show card content, hide edit form
+        $card.find('.ots-font-families, .ots-font-loading-option, .ots-font-meta, .ots-font-actions').show();
+        $editForm.hide();
+        $editForm.find('.ots-adobe-font-edit-message').html('');
+    });
+
+    $('.ots-save-adobe-font-edit').on('click', function() {
+        var $btn = $(this);
+        var $card = $btn.closest('.ots-adobe-font-card');
+        var $message = $card.find('.ots-adobe-font-edit-message');
+        var fontId = $card.find('.ots-edit-adobe-font').data('font-id');
+        var fallbacks = $card.find('.ots-adobe-font-fallback-input').val().trim();
+
+        $message.html('');
+        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
+            method: 'PATCH',
+            data: JSON.stringify({ fallbacks: fallbacks }),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fallbacksUpdated + '</p></div>');
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = otsAdmin.strings.updateFallbacksError;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+            }
+        });
+    });
+
+    // Edit Manual Font
+    $('.ots-edit-manual-font').on('click', function() {
+        var $card = $(this).closest('.ots-manual-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Hide card content, show edit form
+        $card.find('.ots-font-families, .ots-font-fallbacks, .ots-font-meta, .ots-font-actions').hide();
+        $editForm.show();
+    });
+
+    $('.ots-cancel-manual-font-edit').on('click', function() {
+        var $card = $(this).closest('.ots-manual-font-card');
+        var $editForm = $card.find('.ots-font-edit-form');
+
+        // Show card content, hide edit form
+        $card.find('.ots-font-families, .ots-font-fallbacks, .ots-font-meta, .ots-font-actions').show();
+        $editForm.hide();
+        $editForm.find('.ots-manual-font-edit-message').html('');
+    });
+
+    $('.ots-save-manual-font-edit').on('click', function() {
+        var $btn = $(this);
+        var $card = $btn.closest('.ots-manual-font-card');
+        var $message = $card.find('.ots-manual-font-edit-message');
+        var fontId = $card.find('.ots-edit-manual-font').data('font-id');
+        var fontFamily = $card.find('.ots-manual-font-family-input').val().trim();
+        var fallbacks = $card.find('.ots-manual-font-fallback-input').val().trim();
+
+        $message.html('');
+
+        // Validate
+        if (!fontFamily) {
+            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterFontFamily + '</p></div>');
+            $card.find('.ots-manual-font-family-input').focus().attr('aria-invalid', 'true');
+            return;
+        }
+
+        $card.find('.ots-manual-font-family-input').attr('aria-invalid', 'false');
+        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+
+        $.ajax({
+            url: otsAdmin.restUrl + 'manual-fonts/' + fontId,
+            method: 'PATCH',
+            data: JSON.stringify({
+                font_family: fontFamily,
+                fallbacks: fallbacks
+            }),
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+            },
+            success: function() {
+                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fontUpdated + '</p></div>');
+                setTimeout(function() {
+                    location.reload();
+                }, 1500);
+            },
+            error: function(xhr) {
+                var errorMsg = otsAdmin.strings.updateFontError;
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMsg = xhr.responseJSON.message;
+                }
+                $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+            }
+        });
+    });
 });

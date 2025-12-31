@@ -860,3 +860,84 @@ msgstr ""
 #: assets/js/block-editor.js:1526
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr ""
+
+#: includes/admin-page.php:729
+msgid "How to use custom font definitions:"
+msgstr ""
+
+#: includes/admin-page.php:315
+msgid "Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor, and you can edit fallback fonts for each kit."
+msgstr ""
+
+#: includes/admin-page.php:527
+msgid "Add fonts from Adobe Fonts by pasting the embed code from your Adobe Fonts project. Once added, you can edit fallback fonts for each project."
+msgstr ""
+
+#: includes/admin-page.php:331
+#, php-format
+msgid "Edit fallback fonts for: %s"
+msgstr ""
+
+#: includes/admin-page.php:333
+#: includes/admin-page.php:544
+msgid "Edit Fallbacks"
+msgstr ""
+
+#: includes/admin-page.php:395
+#: includes/admin-page.php:606
+msgid "Fallback Fonts (optional):"
+msgstr ""
+
+#: includes/admin-page.php:410
+#: includes/admin-page.php:621
+#: includes/admin-page.php:803
+msgid "Save Changes"
+msgstr ""
+
+#: includes/admin-page.php:413
+#: includes/admin-page.php:624
+#: includes/admin-page.php:806
+msgid "Cancel"
+msgstr ""
+
+#: includes/admin-page.php:728
+#, php-format
+msgid "Edit custom font: %s"
+msgstr ""
+
+#: includes/admin-page.php:730
+msgid "Edit"
+msgstr ""
+
+#: opentype-stylist.php:648
+msgid "Saving..."
+msgstr ""
+
+#: opentype-stylist.php:650
+msgid "Fallback fonts updated successfully! Reloading page..."
+msgstr ""
+
+#: opentype-stylist.php:651
+msgid "Failed to update fallback fonts."
+msgstr ""
+
+#: opentype-stylist.php:652
+msgid "Font updated successfully! Reloading page..."
+msgstr ""
+
+#: opentype-stylist.php:653
+msgid "Failed to update font."
+msgstr ""
+
+#: opentype-stylist.php:2148
+#: opentype-stylist.php:2226
+msgid "Fallbacks parameter is required"
+msgstr ""
+
+#: opentype-stylist.php:2359
+msgid "Font family parameter is required"
+msgstr ""
+
+#: opentype-stylist.php:2375
+msgid "Manual font not found"
+msgstr ""

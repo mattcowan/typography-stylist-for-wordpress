@@ -239,7 +239,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					const span = doc.createElement('span');
 					span.className = 'ots-preview-temp';
 					span.style.letterSpacing = `${value / 1000}em`;
-					span.style.backgroundColor = 'rgba(34, 113, 177, 0.1)'; // Light blue highlight
 
 					// Wrap the range content
 					try {
