@@ -62,7 +62,30 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
 	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('400');
-	const [showResetConfirm, setShowResetConfirm] = useState(false);
+	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
+	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
+
+	/**
+	 * Ensure font size values maintain valid range: min <= preferred <= max
+	 * @param {number} min - Minimum font size
+	 * @param {number} preferred - Preferred font size
+	 * @param {number} max - Maximum font size
+	 * @return {Object} Validated and adjusted values
+	 */
+	const ensureValidFontSizeRange = (min, preferred, max) => {
+		// Ensure min doesn't exceed preferred or max
+		const validMin = Math.min(min, preferred, max);
+		// Ensure max isn't less than preferred or min
+		const validMax = Math.max(min, preferred, max);
+		// Ensure preferred is between min and max
+		const validPreferred = Math.max(validMin, Math.min(preferred, validMax));
+
+		return {
+			min: validMin,
+			preferred: validPreferred,
+			max: validMax
+		};
+	};
 
 	// Get selection from block editor store
 	const { selectionStart, selectionEnd } = useSelect(
@@ -725,12 +748,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		// Get the updated HTML
 		const newContent = container.innerHTML;
 		setAttributes({ content: newContent });
-		setShowResetConfirm(false);
+		setShowInlineResetConfirm(false);
 	};
 
 	// Reset entire block (both inline and block-level features/styles)
 	const resetEntireBlock = () => {
-		// First clear inline features
+		// Clear inline features and reset block-level attributes in a single setAttributes call
+		let newContent = content;
+
 		if (content) {
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
@@ -744,12 +769,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					span.parentNode.removeChild(span);
 				}
 			});
-			const newContent = container.innerHTML;
-			setAttributes({ content: newContent });
+			newContent = container.innerHTML;
 		}
 
-		// Reset block-level attributes
+		// Single setAttributes call for both content and block-level attributes
 		setAttributes({
+			content: newContent,
 			features: [],
 			fontFamily: '',
 			fontWeight: '',
@@ -760,7 +785,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			fontSizeMax: 64
 		});
 
-		setShowResetConfirm(false);
+		setShowInlineResetConfirm(false);
+		setShowFullResetConfirm(false);
 	};
 
 	// Build inline style for preview
@@ -804,6 +830,100 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			'other': __('Other Features', 'opentype-stylist')
 		};
 		return titles[category] || category;
+	};
+
+	// Render reset panel content based on confirmation state
+	const renderResetPanelContent = () => {
+		// Show confirmation for clearing inline features
+		if (showInlineResetConfirm) {
+			return (
+				<div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
+					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
+						⚠️ {__('Are you sure?', 'opentype-stylist')}
+					</p>
+					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
+						{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'opentype-stylist')}
+					</p>
+					<div style={{ display: 'flex', gap: '8px' }}>
+						<Button
+							variant="primary"
+							isDestructive
+							onClick={clearAllInlineFeatures}
+							style={{ flex: 1 }}
+						>
+							{__('Yes, Clear', 'opentype-stylist')}
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={() => setShowInlineResetConfirm(false)}
+							style={{ flex: 1 }}
+						>
+							{__('Cancel', 'opentype-stylist')}
+						</Button>
+					</div>
+				</div>
+			);
+		}
+
+		// Show confirmation for full reset
+		if (showFullResetConfirm) {
+			return (
+				<div style={{ padding: '16px', backgroundColor: '#ffe5e5', border: '1px solid #dc3232', borderRadius: '4px' }}>
+					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#a00' }}>
+						🚨 {__('Reset Entire Block?', 'opentype-stylist')}
+					</p>
+					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
+						{__('This will completely reset this block, removing both inline features AND all block-level settings (font, features, spacing, etc.). This cannot be undone.', 'opentype-stylist')}
+					</p>
+					<div style={{ display: 'flex', gap: '8px' }}>
+						<Button
+							variant="primary"
+							isDestructive
+							onClick={resetEntireBlock}
+							style={{ flex: 1 }}
+						>
+							{__('Yes, Reset All', 'opentype-stylist')}
+						</Button>
+						<Button
+							variant="secondary"
+							onClick={() => setShowFullResetConfirm(false)}
+							style={{ flex: 1 }}
+						>
+							{__('Cancel', 'opentype-stylist')}
+						</Button>
+					</div>
+				</div>
+			);
+		}
+
+		// Default: show both reset buttons
+		return (
+			<>
+				<Button
+					variant="secondary"
+					isDestructive
+					onClick={() => setShowInlineResetConfirm(true)}
+					style={{ marginBottom: '12px', width: '100%', justifyContent: 'center' }}
+				>
+					{__('Clear Individual Features', 'opentype-stylist')}
+				</Button>
+				<p style={{ fontSize: '11px', color: '#666', margin: '0 0 16px 0' }}>
+					{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'opentype-stylist')}
+				</p>
+
+				<Button
+					variant="secondary"
+					isDestructive
+					onClick={() => setShowFullResetConfirm(true)}
+					style={{ width: '100%', justifyContent: 'center' }}
+				>
+					{__('Reset Entire Block', 'opentype-stylist')}
+				</Button>
+				<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
+					{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'opentype-stylist')}
+				</p>
+			</>
+		);
 	};
 
 	return (
@@ -880,7 +1000,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											<RangeControl
 												label={__('Min Size (px)', 'opentype-stylist')}
 												value={inlineFontSizeMin}
-												onChange={(value) => setInlineFontSizeMin(value)}
+												onChange={(value) => {
+													const validated = ensureValidFontSizeRange(value, inlineFontSizePreferred, inlineFontSizeMax);
+													setInlineFontSizeMin(validated.min);
+													setInlineFontSizePreferred(validated.preferred);
+													setInlineFontSizeMax(validated.max);
+												}}
 												min={8}
 												max={200}
 												step={1}
@@ -888,15 +1013,25 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											<RangeControl
 												label={__('Preferred Size (px)', 'opentype-stylist')}
 												value={inlineFontSizePreferred}
-												onChange={(value) => setInlineFontSizePreferred(value)}
-												min={8}
-												max={300}
+												onChange={(value) => {
+													const validated = ensureValidFontSizeRange(inlineFontSizeMin, value, inlineFontSizeMax);
+													setInlineFontSizeMin(validated.min);
+													setInlineFontSizePreferred(validated.preferred);
+													setInlineFontSizeMax(validated.max);
+												}}
+												min={inlineFontSizeMin}
+												max={inlineFontSizeMax}
 												step={1}
 											/>
 											<RangeControl
 												label={__('Max Size (px)', 'opentype-stylist')}
 												value={inlineFontSizeMax}
-												onChange={(value) => setInlineFontSizeMax(value)}
+												onChange={(value) => {
+													const validated = ensureValidFontSizeRange(inlineFontSizeMin, inlineFontSizePreferred, value);
+													setInlineFontSizeMin(validated.min);
+													setInlineFontSizePreferred(validated.preferred);
+													setInlineFontSizeMax(validated.max);
+												}}
 												min={8}
 												max={400}
 												step={1}
@@ -1232,59 +1367,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						{__('Clear features and styling applied to this block.', 'opentype-stylist')}
 					</p>
 
-					{!showResetConfirm ? (
-						<>
-							<Button
-								variant="secondary"
-								isDestructive
-								onClick={() => setShowResetConfirm(true)}
-								style={{ marginBottom: '12px', width: '100%', justifyContent: 'center' }}
-							>
-								{__('Clear Individual Features', 'opentype-stylist')}
-							</Button>
-							<p style={{ fontSize: '11px', color: '#666', margin: '0 0 16px 0' }}>
-								{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'opentype-stylist')}
-							</p>
-
-							<Button
-								variant="secondary"
-								isDestructive
-								onClick={resetEntireBlock}
-								style={{ width: '100%', justifyContent: 'center' }}
-							>
-								{__('Reset Entire Block', 'opentype-stylist')}
-							</Button>
-							<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
-								{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'opentype-stylist')}
-							</p>
-						</>
-					) : (
-						<div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
-							<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
-								⚠️ {__('Are you sure?', 'opentype-stylist')}
-							</p>
-							<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
-								{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'opentype-stylist')}
-							</p>
-							<div style={{ display: 'flex', gap: '8px' }}>
-								<Button
-									variant="primary"
-									isDestructive
-									onClick={clearAllInlineFeatures}
-									style={{ flex: 1 }}
-								>
-									{__('Yes, Clear', 'opentype-stylist')}
-								</Button>
-								<Button
-									variant="secondary"
-									onClick={() => setShowResetConfirm(false)}
-									style={{ flex: 1 }}
-								>
-									{__('Cancel', 'opentype-stylist')}
-								</Button>
-							</div>
-						</div>
-					)}
+					{renderResetPanelContent()}
 				</PanelBody>
 			</InspectorControls>
 

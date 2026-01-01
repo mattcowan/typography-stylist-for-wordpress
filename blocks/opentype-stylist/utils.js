@@ -114,33 +114,43 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 	const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
 
 	if (featureMatch) {
-		// Parse feature codes from CSS
-		const featuresParsed = featureMatch[1]
+		// Parse feature codes from CSS and collect into Set
+		const styleFeaturesSet = new Set();
+		featureMatch[1]
 			.split(',')
-			.map(f => {
+			.forEach(f => {
 				const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
-				return match;
-			})
-			.filter(m => m)
-			.map(m => m[1] || m[2]);
+				if (match) {
+					const feature = match[1] || match[2];
+					if (feature) {
+						styleFeaturesSet.add(feature);
+					}
+				}
+			});
 
-		return featuresParsed;
-	}
+		// Also check nested spans for style-based features (fallback)
+		// Collect all style-based features from nested spans, consistent with data-attribute logic
+		for (const nested of nestedStyledSpans) {
+			const nestedStyle = nested.getAttribute('style') || '';
+			const nestedMatch = nestedStyle.match(/font-feature-settings:\s*([^;]+)/);
+			if (nestedMatch) {
+				nestedMatch[1]
+					.split(',')
+					.forEach(f => {
+						const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
+						if (match) {
+							const feature = match[1] || match[2];
+							if (feature) {
+								styleFeaturesSet.add(feature);
+							}
+						}
+					});
+			}
+		}
 
-	// Also check nested spans for style-based features (fallback)
-	for (const nested of nestedStyledSpans) {
-		const nestedStyle = nested.getAttribute('style') || '';
-		const nestedMatch = nestedStyle.match(/font-feature-settings:\s*([^;]+)/);
-		if (nestedMatch) {
-			const features = nestedMatch[1]
-				.split(',')
-				.map(f => {
-					const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
-					return match;
-				})
-				.filter(m => m)
-				.map(m => m[1] || m[2]);
-			return features;
+		// Return combined style-based features if any were found
+		if (styleFeaturesSet.size > 0) {
+			return Array.from(styleFeaturesSet);
 		}
 	}
 
