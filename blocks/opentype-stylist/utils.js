@@ -75,10 +75,36 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 		return [];
 	}
 
+	// Collect ALL features from this span and any nested ots-styled spans
+	// This handles the case where font-size/weight wraps feature spans:
+	// <span data-fontsize="..." class="ots-styled"><span data-features="ss01" class="ots-styled">M</span></span>
+	const allFeatures = new Set();
+
 	// Extract features from data attribute (preferred - faster and more reliable)
 	const dataFeatures = smallestMatchingSpan.getAttribute('data-features');
 	if (dataFeatures) {
-		return dataFeatures.split(',');
+		dataFeatures.split(',').forEach(f => {
+			const trimmed = f.trim();
+			if (trimmed) allFeatures.add(trimmed);
+		});
+	}
+
+	// ALSO check for ots-styled spans INSIDE this one (nested case)
+	// This fixes detection when font-sizing wraps a feature-styled span
+	const nestedStyledSpans = smallestMatchingSpan.querySelectorAll('span.ots-styled');
+	for (const nested of nestedStyledSpans) {
+		const nestedFeatures = nested.getAttribute('data-features');
+		if (nestedFeatures) {
+			nestedFeatures.split(',').forEach(f => {
+				const trimmed = f.trim();
+				if (trimmed) allFeatures.add(trimmed);
+			});
+		}
+	}
+
+	// If we found features from data attributes, return them
+	if (allFeatures.size > 0) {
+		return Array.from(allFeatures);
 	}
 
 	// Fallback: parse from style attribute
@@ -88,20 +114,151 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 	const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
 
 	if (featureMatch) {
-		// Parse feature codes from CSS
-		const featuresParsed = featureMatch[1]
+		// Parse feature codes from CSS and collect into Set
+		const styleFeaturesSet = new Set();
+		featureMatch[1]
 			.split(',')
-			.map(f => {
+			.forEach(f => {
 				const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
-				return match;
-			})
-			.filter(m => m)
-			.map(m => m[1] || m[2]);
+				if (match) {
+					const feature = match[1] || match[2];
+					if (feature) {
+						styleFeaturesSet.add(feature);
+					}
+				}
+			});
 
-		return featuresParsed;
+		// Also check nested spans for style-based features (fallback)
+		// Collect all style-based features from nested spans, consistent with data-attribute logic
+		for (const nested of nestedStyledSpans) {
+			const nestedStyle = nested.getAttribute('style') || '';
+			const nestedMatch = nestedStyle.match(/font-feature-settings:\s*([^;]+)/);
+			if (nestedMatch) {
+				nestedMatch[1]
+					.split(',')
+					.forEach(f => {
+						const match = f.trim().match(/["']([^"']+)["']|&quot;([^&]+)&quot;/);
+						if (match) {
+							const feature = match[1] || match[2];
+							if (feature) {
+								styleFeaturesSet.add(feature);
+							}
+						}
+					});
+			}
+		}
+
+		// Return combined style-based features if any were found
+		if (styleFeaturesSet.size > 0) {
+			return Array.from(styleFeaturesSet);
+		}
 	}
 
 	return [];
+}
+
+/**
+ * Apply or merge styling to a selection, avoiding nested ots-styled spans
+ *
+ * This function checks if the selected range is already inside an ots-styled span.
+ * If yes, it merges the new attributes into the existing span.
+ * If no, it creates a new span wrapper.
+ *
+ * @param {Range} range - DOM range representing the selection
+ * @param {Object} attributes - Attributes to apply (data-features, data-fontsize, etc.)
+ * @param {string} styleString - CSS style string to apply
+ * @param {Document} doc - Document context for creating elements
+ * @return {boolean} True if successful, false otherwise
+ */
+export function applyOrMergeStyling(range, attributes, styleString, doc) {
+	try {
+		// Check if the range is entirely within a single ots-styled span
+		let commonAncestor = range.commonAncestorContainer;
+
+		// If the common ancestor is a text node, get its parent element
+		if (commonAncestor.nodeType === Node.TEXT_NODE) {
+			commonAncestor = commonAncestor.parentElement;
+		}
+
+		// Find the closest ots-styled span (if any)
+		const existingSpan = commonAncestor.closest('span.ots-styled');
+
+		if (existingSpan) {
+			// Check if the entire selection is within this span
+			const isEntirelyWithin = existingSpan.contains(range.startContainer) &&
+			                        existingSpan.contains(range.endContainer);
+
+			if (isEntirelyWithin) {
+				// Merge attributes into existing span
+				Object.keys(attributes).forEach(key => {
+					if (key === 'data-features') {
+						// Merge features (combine existing + new, deduplicate)
+						const existingFeatures = existingSpan.getAttribute('data-features') || '';
+						const existingArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()) : [];
+						const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
+						const combined = [...new Set([...existingArray, ...newFeatures])].filter(f => f);
+						if (combined.length > 0) {
+							existingSpan.setAttribute('data-features', combined.join(','));
+						}
+					} else {
+						// For other attributes, new value overwrites old
+						existingSpan.setAttribute(key, attributes[key]);
+					}
+				});
+
+				// Merge styles
+				const existingStyle = existingSpan.getAttribute('style') || '';
+				const newStyleObj = {};
+
+				// Parse existing styles
+				existingStyle.split(';').forEach(rule => {
+					const [prop, value] = rule.split(':').map(s => s.trim());
+					if (prop && value) {
+						newStyleObj[prop] = value;
+					}
+				});
+
+				// Parse new styles (overwrite existing)
+				styleString.split(';').forEach(rule => {
+					const [prop, value] = rule.split(':').map(s => s.trim());
+					if (prop && value) {
+						newStyleObj[prop] = value;
+					}
+				});
+
+				// Rebuild style string
+				const mergedStyle = Object.entries(newStyleObj)
+					.map(([prop, value]) => `${prop}: ${value}`)
+					.join('; ');
+
+				existingSpan.setAttribute('style', mergedStyle);
+
+				return true; // Successfully merged
+			}
+		}
+
+		// No existing span found or selection spans multiple elements - create new wrapper
+		const span = doc.createElement('span');
+		span.className = 'ots-styled';
+
+		Object.keys(attributes).forEach(key => {
+			span.setAttribute(key, attributes[key]);
+		});
+
+		if (styleString) {
+			span.setAttribute('style', styleString);
+		}
+
+		range.surroundContents(span);
+		return true;
+
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		if (typeof console !== 'undefined' && console.error) {
+			console.error('OTS Block - Failed to apply or merge styling:', error);
+		}
+		return false;
+	}
 }
 
 /**

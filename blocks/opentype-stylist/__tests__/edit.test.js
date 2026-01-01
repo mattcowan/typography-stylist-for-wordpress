@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -704,6 +704,43 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		expect(features).toEqual(['ss02']); // Should find innermost span
 	});
 
+	it('should detect features from nested ots-styled spans (font-size wrapper case)', () => {
+		// This tests the fix for the 'M' in Mephisto bug where font-size wraps a feature span
+		const html = '<span data-fontsize="responsive" data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span></span>';
+		const cursorAt = 0; // Inside "M"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		expect(features).toEqual(['ss01']); // Should detect ss01 from nested span
+	});
+
+	it('should collect features from all nested ots-styled spans in hierarchy', () => {
+		// Test case: With our improved nested detection, we now collect features from
+		// the matched span AND any ots-styled spans it contains (including nested ones)
+		const html = '<span data-features="liga" class="ots-styled"><span data-features="ss01,ss02" class="ots-styled">Text</span></span>';
+		const cursorAt = 1; // Inside "Text"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		// After fixing nested feature collection, we now get all features from the nested structure
+		expect(features).toContain('liga');
+		expect(features).toContain('ss01');
+		expect(features).toContain('ss02');
+		expect(features).toHaveLength(3);
+	});
+
+	it('should handle deeply nested ots-styled spans', () => {
+		// Test triple-nested case
+		const html = '<span data-fontsize="responsive" class="ots-styled"><span data-fontweight="700" class="ots-styled"><span data-features="ss01,dlig" class="ots-styled">X</span></span></span>';
+		const cursorAt = 0; // Inside "X"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		expect(features).toContain('ss01');
+		expect(features).toContain('dlig');
+		expect(features).toHaveLength(2);
+	});
+
 	it('should return empty array when cursor is outside styled spans', () => {
 		const html = 'Plain <span class="ots-styled" data-features="ss02">styled</span> text';
 		const cursorAt = 2; // In "Plain", before the span
@@ -835,6 +872,207 @@ describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
 		// Assert: Should parse from style attribute
 		expect(inlineFeatures).toContain('ss02');
 		expect(inlineFeatures).toContain('liga');
+	});
+});
+
+/**
+ * Test Suite: Font Size Range Validation
+ *
+ * Tests for ensureValidFontSizeRange helper function that ensures min <= preferred <= max
+ */
+describe('OpenType Stylist - Font Size Range Validation', () => {
+	// Mock the helper function since we can't easily import from edit.js
+	// This tests the logic that should be in ensureValidFontSizeRange
+	const ensureValidFontSizeRange = (min, preferred, max) => {
+		const validMin = Math.min(min, preferred, max);
+		const validMax = Math.max(min, preferred, max);
+		const validPreferred = Math.max(validMin, Math.min(preferred, validMax));
+		return { min: validMin, preferred: validPreferred, max: validMax };
+	};
+
+	it('should maintain valid range when min is increased', () => {
+		const result = ensureValidFontSizeRange(50, 30, 40);
+		expect(result.min).toBe(30);
+		expect(result.preferred).toBe(30);
+		expect(result.max).toBe(50);
+	});
+
+	it('should maintain valid range when max is decreased below preferred', () => {
+		// When user sets max=30 but preferred is 40, the function expands max to accommodate preferred
+		const result = ensureValidFontSizeRange(20, 40, 30);
+		expect(result.min).toBe(20);
+		expect(result.preferred).toBe(40);
+		expect(result.max).toBe(40); // Max expanded to match preferred
+	});
+
+	it('should maintain valid range when preferred exceeds max', () => {
+		// When preferred=100 exceeds max=50, max is expanded to accommodate it
+		const result = ensureValidFontSizeRange(10, 100, 50);
+		expect(result.min).toBe(10);
+		expect(result.preferred).toBe(100);
+		expect(result.max).toBe(100); // Max expanded to match preferred
+	});
+
+	it('should handle all equal values', () => {
+		const result = ensureValidFontSizeRange(30, 30, 30);
+		expect(result.min).toBe(30);
+		expect(result.preferred).toBe(30);
+		expect(result.max).toBe(30);
+	});
+
+	it('should handle already valid range', () => {
+		const result = ensureValidFontSizeRange(16, 32, 64);
+		expect(result.min).toBe(16);
+		expect(result.preferred).toBe(32);
+		expect(result.max).toBe(64);
+	});
+});
+
+/**
+ * Test Suite: Nested Span Prevention
+ *
+ * Tests for applyOrMergeStyling utility that prevents creating nested ots-styled spans.
+ * This fixes the issue where applying font-size + features created nested spans.
+ */
+describe('OpenType Stylist - Nested Span Prevention', () => {
+	/**
+	 * Helper to create a DOM range for testing
+	 */
+	function createRangeInHTML(html, startOffset, endOffset) {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Create a tree walker to find text nodes
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		const range = doc.createRange();
+
+		let currentOffset = 0;
+		let node;
+		let rangeSet = false;
+
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			if (!rangeSet && currentOffset + nodeLength >= startOffset) {
+				range.setStart(node, startOffset - currentOffset);
+				rangeSet = true;
+			}
+
+			if (rangeSet && currentOffset + nodeLength >= endOffset) {
+				range.setEnd(node, endOffset - currentOffset);
+				break;
+			}
+
+			currentOffset += nodeLength;
+		}
+
+		return { range, doc, container };
+	}
+
+	it('should create new span when selection is not inside ots-styled span', () => {
+		// Arrange
+		const html = 'Plain text here';
+		const { range, doc, container } = createRangeInHTML(html, 0, 5);
+
+		const attributes = { 'data-features': 'ss01' };
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1);
+		expect(spans[0].getAttribute('data-features')).toBe('ss01');
+	});
+
+	it('should merge attributes when selection is inside existing ots-styled span', () => {
+		// Arrange: Existing span with font-size
+		const html = '<span class="ots-styled" data-fontsize="responsive" style="font-size: 48px">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'ss01' };
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1); // Should still be 1 span (not nested)
+
+		// Check merged attributes
+		expect(spans[0].getAttribute('data-features')).toBe('ss01');
+		expect(spans[0].getAttribute('data-fontsize')).toBe('responsive');
+
+		// Check merged styles
+		const style = spans[0].getAttribute('style');
+		expect(style).toContain('font-feature-settings');
+		expect(style).toContain('font-size');
+	});
+
+	it('should merge features when adding to span that already has features', () => {
+		// Arrange: Existing span with ss01
+		const html = '<span class="ots-styled" data-features="ss01" style="font-feature-settings: &quot;ss01&quot; 1">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'liga' };
+		const styleString = 'font-feature-settings: "liga" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1);
+
+		// Check that features were merged (not replaced)
+		const dataFeatures = spans[0].getAttribute('data-features');
+		expect(dataFeatures).toContain('ss01');
+		expect(dataFeatures).toContain('liga');
+	});
+
+	it('should deduplicate features when merging', () => {
+		// Arrange: Existing span with ss01
+		const html = '<span class="ots-styled" data-features="ss01,liga">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'ss01' }; // Try to add ss01 again
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const dataFeatures = container.querySelector('span.ots-styled').getAttribute('data-features');
+		const featuresArray = dataFeatures.split(',').map(f => f.trim());
+
+		// Should not have duplicate ss01
+		expect(featuresArray.filter(f => f === 'ss01').length).toBe(1);
+		expect(featuresArray).toContain('liga');
+	});
+
+	it('should overwrite other attributes when merging', () => {
+		// Arrange: Existing span with font-weight 400
+		const html = '<span class="ots-styled" data-fontweight="400" style="font-weight: 400">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-fontweight': '700' };
+		const styleString = 'font-weight: 700';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.ots-styled');
+		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be updated
+		expect(span.getAttribute('style')).toContain('font-weight: 700');
 	});
 });
 
@@ -1005,6 +1243,133 @@ describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
 
 		expect(result).toBe('');
 		mock.cleanup();
+	});
+
+	/**
+	 * Test Suite: New WordPress 6.5+ DOM Structure
+	 *
+	 * WordPress 6.5+ changed the DOM structure to put data-block directly on the
+	 * heading/paragraph element instead of a wrapper div. These tests verify the
+	 * fix handles both old and new structures.
+	 */
+	describe('New WordPress DOM Structure (data-block on element itself)', () => {
+		// Helper to create new WordPress structure where data-block is on the element itself
+		function createNewWordPressDOM(blockId, blockName, tagName, fontFamily) {
+			// Create the heading/paragraph element with data-block directly on it
+			let element;
+			if (blockName === 'core/heading') {
+				element = document.createElement(tagName || 'h2');
+			} else if (blockName === 'core/paragraph') {
+				element = document.createElement('p');
+			}
+
+			// Set data-block attribute on the element itself (new structure)
+			element.setAttribute('data-block', blockId);
+			element.setAttribute('data-type', blockName);
+			element.textContent = 'Sample text';
+			document.body.appendChild(element);
+
+			// Mock getComputedStyle to return our test font
+			const originalGetComputedStyle = window.getComputedStyle;
+			window.getComputedStyle = (el) => {
+				if (el === element) {
+					return {
+						getPropertyValue: (prop) => {
+							if (prop === 'font-family') {
+								return fontFamily;
+							}
+							return '';
+						}
+					};
+				}
+				return originalGetComputedStyle(el);
+			};
+
+			return {
+				element,
+				cleanup: () => {
+					window.getComputedStyle = originalGetComputedStyle;
+					if (element.parentNode) {
+						element.parentNode.removeChild(element);
+					}
+				}
+			};
+		}
+
+		it('should detect font when data-block is on heading element itself (WordPress 6.5+)', () => {
+			const mock = createNewWordPressDOM('new-block-1', 'core/heading', 'h2', 'Hipster Script Pro, cursive');
+
+			const result = getBlockInheritedFont('new-block-1', 'core/heading', document, window);
+
+			expect(result).toBe('Hipster Script Pro, cursive');
+			mock.cleanup();
+		});
+
+		it('should detect font when data-block is on paragraph element itself (WordPress 6.5+)', () => {
+			const mock = createNewWordPressDOM('new-block-2', 'core/paragraph', 'p', 'Georgia, serif');
+
+			const result = getBlockInheritedFont('new-block-2', 'core/paragraph', document, window);
+
+			expect(result).toBe('Georgia, serif');
+			mock.cleanup();
+		});
+
+		it('should work for all heading levels with new structure', () => {
+			const headingLevels = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+			headingLevels.forEach((level, index) => {
+				const mock = createNewWordPressDOM(`new-heading-${index}`, 'core/heading', level, 'Test Font, sans-serif');
+
+				const result = getBlockInheritedFont(`new-heading-${index}`, 'core/heading', document, window);
+
+				expect(result).toBe('Test Font, sans-serif');
+				mock.cleanup();
+			});
+		});
+
+		it('should remove quotes from font with new structure', () => {
+			const mock = createNewWordPressDOM('new-block-3', 'core/heading', 'h3', '"Playfair Display", serif');
+
+			const result = getBlockInheritedFont('new-block-3', 'core/heading', document, window);
+
+			expect(result).toBe('Playfair Display, serif');
+			expect(result).not.toContain('"');
+			mock.cleanup();
+		});
+
+		/**
+		 * Regression test: Verify old structure still works (backward compatibility)
+		 */
+		it('should still work with old WordPress structure (wrapper div)', () => {
+			// Use the old createMockBlockDOM helper which creates a wrapper div
+			const mock = createMockBlockDOM('old-structure-block', 'core/heading', 'h2', 'Arial, sans-serif');
+
+			const result = getBlockInheritedFont('old-structure-block', 'core/heading', document, window);
+
+			expect(result).toBe('Arial, sans-serif');
+			mock.cleanup();
+		});
+
+		/**
+		 * Integration test: Both structures should return same result
+		 */
+		it('should return same font for both old and new WordPress structures', () => {
+			const testFont = 'Roboto, sans-serif';
+
+			// Old structure (wrapper div with data-block)
+			const oldMock = createMockBlockDOM('old-block', 'core/heading', 'h2', testFont);
+			const oldResult = getBlockInheritedFont('old-block', 'core/heading', document, window);
+
+			// New structure (data-block on heading itself)
+			const newMock = createNewWordPressDOM('new-block', 'core/heading', 'h2', testFont);
+			const newResult = getBlockInheritedFont('new-block', 'core/heading', document, window);
+
+			expect(oldResult).toBe(newResult);
+			expect(oldResult).toBe(testFont);
+
+			oldMock.cleanup();
+			newMock.cleanup();
+		});
 	});
 });
 

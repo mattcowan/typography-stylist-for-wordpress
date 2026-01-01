@@ -497,3 +497,13 @@
         color: #ffecb3;
     }
 }
+
+/* Active Feature Panel Highlighting */
+.ots-feature-category-panel.has-active-features > .components-panel__body-title {
+    background-color: #f0f6fc !important;
+}
+
+.ots-feature-category-panel.has-active-features > .components-panel__body-title button {
+    color: #0783be !important;
+    font-weight: 600 !important;
+}

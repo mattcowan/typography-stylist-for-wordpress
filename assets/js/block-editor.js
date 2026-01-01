@@ -111,15 +111,29 @@
         }
 
         // Find the actual text element based on block type
+        // Note: WordPress 6.5+ puts data-block directly on the element (e.g., <h2 data-block="...">)
+        // Older versions use a wrapper div. We support both structures.
         let textElement = null;
 
         // Core heading blocks (h1-h6)
         if (blockName === 'core/heading') {
-            textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6');
+            // Check if blockWrapper itself is the heading (new WordPress structure)
+            if (blockWrapper.matches('h1, h2, h3, h4, h5, h6')) {
+                textElement = blockWrapper;
+            } else {
+                // Fall back to finding heading inside wrapper (old WordPress structure)
+                textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6');
+            }
         }
         // Core paragraph blocks
         else if (blockName === 'core/paragraph') {
-            textElement = blockWrapper.querySelector('p');
+            // Check if blockWrapper itself is the paragraph (new WordPress structure)
+            if (blockWrapper.matches('p')) {
+                textElement = blockWrapper;
+            } else {
+                // Fall back to finding paragraph inside wrapper (old WordPress structure)
+                textElement = blockWrapper.querySelector('p');
+            }
         }
         // GenerateBlocks headline blocks
         else if (blockName === 'generateblocks/headline') {
