@@ -1006,6 +1006,133 @@ describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
 		expect(result).toBe('');
 		mock.cleanup();
 	});
+
+	/**
+	 * Test Suite: New WordPress 6.5+ DOM Structure
+	 *
+	 * WordPress 6.5+ changed the DOM structure to put data-block directly on the
+	 * heading/paragraph element instead of a wrapper div. These tests verify the
+	 * fix handles both old and new structures.
+	 */
+	describe('New WordPress DOM Structure (data-block on element itself)', () => {
+		// Helper to create new WordPress structure where data-block is on the element itself
+		function createNewWordPressDOM(blockId, blockName, tagName, fontFamily) {
+			// Create the heading/paragraph element with data-block directly on it
+			let element;
+			if (blockName === 'core/heading') {
+				element = document.createElement(tagName || 'h2');
+			} else if (blockName === 'core/paragraph') {
+				element = document.createElement('p');
+			}
+
+			// Set data-block attribute on the element itself (new structure)
+			element.setAttribute('data-block', blockId);
+			element.setAttribute('data-type', blockName);
+			element.textContent = 'Sample text';
+			document.body.appendChild(element);
+
+			// Mock getComputedStyle to return our test font
+			const originalGetComputedStyle = window.getComputedStyle;
+			window.getComputedStyle = (el) => {
+				if (el === element) {
+					return {
+						getPropertyValue: (prop) => {
+							if (prop === 'font-family') {
+								return fontFamily;
+							}
+							return '';
+						}
+					};
+				}
+				return originalGetComputedStyle(el);
+			};
+
+			return {
+				element,
+				cleanup: () => {
+					window.getComputedStyle = originalGetComputedStyle;
+					if (element.parentNode) {
+						element.parentNode.removeChild(element);
+					}
+				}
+			};
+		}
+
+		it('should detect font when data-block is on heading element itself (WordPress 6.5+)', () => {
+			const mock = createNewWordPressDOM('new-block-1', 'core/heading', 'h2', 'Hipster Script Pro, cursive');
+
+			const result = getBlockInheritedFont('new-block-1', 'core/heading', document, window);
+
+			expect(result).toBe('Hipster Script Pro, cursive');
+			mock.cleanup();
+		});
+
+		it('should detect font when data-block is on paragraph element itself (WordPress 6.5+)', () => {
+			const mock = createNewWordPressDOM('new-block-2', 'core/paragraph', 'p', 'Georgia, serif');
+
+			const result = getBlockInheritedFont('new-block-2', 'core/paragraph', document, window);
+
+			expect(result).toBe('Georgia, serif');
+			mock.cleanup();
+		});
+
+		it('should work for all heading levels with new structure', () => {
+			const headingLevels = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+			headingLevels.forEach((level, index) => {
+				const mock = createNewWordPressDOM(`new-heading-${index}`, 'core/heading', level, 'Test Font, sans-serif');
+
+				const result = getBlockInheritedFont(`new-heading-${index}`, 'core/heading', document, window);
+
+				expect(result).toBe('Test Font, sans-serif');
+				mock.cleanup();
+			});
+		});
+
+		it('should remove quotes from font with new structure', () => {
+			const mock = createNewWordPressDOM('new-block-3', 'core/heading', 'h3', '"Playfair Display", serif');
+
+			const result = getBlockInheritedFont('new-block-3', 'core/heading', document, window);
+
+			expect(result).toBe('Playfair Display, serif');
+			expect(result).not.toContain('"');
+			mock.cleanup();
+		});
+
+		/**
+		 * Regression test: Verify old structure still works (backward compatibility)
+		 */
+		it('should still work with old WordPress structure (wrapper div)', () => {
+			// Use the old createMockBlockDOM helper which creates a wrapper div
+			const mock = createMockBlockDOM('old-structure-block', 'core/heading', 'h2', 'Arial, sans-serif');
+
+			const result = getBlockInheritedFont('old-structure-block', 'core/heading', document, window);
+
+			expect(result).toBe('Arial, sans-serif');
+			mock.cleanup();
+		});
+
+		/**
+		 * Integration test: Both structures should return same result
+		 */
+		it('should return same font for both old and new WordPress structures', () => {
+			const testFont = 'Roboto, sans-serif';
+
+			// Old structure (wrapper div with data-block)
+			const oldMock = createMockBlockDOM('old-block', 'core/heading', 'h2', testFont);
+			const oldResult = getBlockInheritedFont('old-block', 'core/heading', document, window);
+
+			// New structure (data-block on heading itself)
+			const newMock = createNewWordPressDOM('new-block', 'core/heading', 'h2', testFont);
+			const newResult = getBlockInheritedFont('new-block', 'core/heading', document, window);
+
+			expect(oldResult).toBe(newResult);
+			expect(oldResult).toBe(testFont);
+
+			oldMock.cleanup();
+			newMock.cleanup();
+		});
+	});
 });
 
 /**
