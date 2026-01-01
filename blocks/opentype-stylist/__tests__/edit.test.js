@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -704,6 +704,42 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		expect(features).toEqual(['ss02']); // Should find innermost span
 	});
 
+	it('should detect features from nested ots-styled spans (font-size wrapper case)', () => {
+		// This tests the fix for the 'M' in Mephisto bug where font-size wraps a feature span
+		const html = '<span data-fontsize="responsive" data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span></span>';
+		const cursorAt = 0; // Inside "M"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		expect(features).toEqual(['ss01']); // Should detect ss01 from nested span
+	});
+
+	it('should collect features from both outer and inner nested ots-styled spans', () => {
+		// Test case where both outer and inner spans have features (should combine them)
+		const html = '<span data-features="liga" class="ots-styled"><span data-features="ss01,ss02" class="ots-styled">Text</span></span>';
+		const cursorAt = 1; // Inside "Text"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		// Should find all features from both spans
+		expect(features).toContain('liga');
+		expect(features).toContain('ss01');
+		expect(features).toContain('ss02');
+		expect(features).toHaveLength(3);
+	});
+
+	it('should handle deeply nested ots-styled spans', () => {
+		// Test triple-nested case
+		const html = '<span data-fontsize="responsive" class="ots-styled"><span data-fontweight="700" class="ots-styled"><span data-features="ss01,dlig" class="ots-styled">X</span></span></span>';
+		const cursorAt = 0; // Inside "X"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		expect(features).toContain('ss01');
+		expect(features).toContain('dlig');
+		expect(features).toHaveLength(2);
+	});
+
 	it('should return empty array when cursor is outside styled spans', () => {
 		const html = 'Plain <span class="ots-styled" data-features="ss02">styled</span> text';
 		const cursorAt = 2; // In "Plain", before the span
@@ -835,6 +871,154 @@ describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
 		// Assert: Should parse from style attribute
 		expect(inlineFeatures).toContain('ss02');
 		expect(inlineFeatures).toContain('liga');
+	});
+});
+
+/**
+ * Test Suite: Nested Span Prevention
+ *
+ * Tests for applyOrMergeStyling utility that prevents creating nested ots-styled spans.
+ * This fixes the issue where applying font-size + features created nested spans.
+ */
+describe('OpenType Stylist - Nested Span Prevention', () => {
+	/**
+	 * Helper to create a DOM range for testing
+	 */
+	function createRangeInHTML(html, startOffset, endOffset) {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Create a tree walker to find text nodes
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		const range = doc.createRange();
+
+		let currentOffset = 0;
+		let node;
+		let rangeSet = false;
+
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			if (!rangeSet && currentOffset + nodeLength >= startOffset) {
+				range.setStart(node, startOffset - currentOffset);
+				rangeSet = true;
+			}
+
+			if (rangeSet && currentOffset + nodeLength >= endOffset) {
+				range.setEnd(node, endOffset - currentOffset);
+				break;
+			}
+
+			currentOffset += nodeLength;
+		}
+
+		return { range, doc, container };
+	}
+
+	it('should create new span when selection is not inside ots-styled span', () => {
+		// Arrange
+		const html = 'Plain text here';
+		const { range, doc, container } = createRangeInHTML(html, 0, 5);
+
+		const attributes = { 'data-features': 'ss01' };
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1);
+		expect(spans[0].getAttribute('data-features')).toBe('ss01');
+	});
+
+	it('should merge attributes when selection is inside existing ots-styled span', () => {
+		// Arrange: Existing span with font-size
+		const html = '<span class="ots-styled" data-fontsize="responsive" style="font-size: 48px">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'ss01' };
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1); // Should still be 1 span (not nested)
+
+		// Check merged attributes
+		expect(spans[0].getAttribute('data-features')).toBe('ss01');
+		expect(spans[0].getAttribute('data-fontsize')).toBe('responsive');
+
+		// Check merged styles
+		const style = spans[0].getAttribute('style');
+		expect(style).toContain('font-feature-settings');
+		expect(style).toContain('font-size');
+	});
+
+	it('should merge features when adding to span that already has features', () => {
+		// Arrange: Existing span with ss01
+		const html = '<span class="ots-styled" data-features="ss01" style="font-feature-settings: &quot;ss01&quot; 1">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'liga' };
+		const styleString = 'font-feature-settings: "liga" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const spans = container.querySelectorAll('span.ots-styled');
+		expect(spans.length).toBe(1);
+
+		// Check that features were merged (not replaced)
+		const dataFeatures = spans[0].getAttribute('data-features');
+		expect(dataFeatures).toContain('ss01');
+		expect(dataFeatures).toContain('liga');
+	});
+
+	it('should deduplicate features when merging', () => {
+		// Arrange: Existing span with ss01
+		const html = '<span class="ots-styled" data-features="ss01,liga">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': 'ss01' }; // Try to add ss01 again
+		const styleString = 'font-feature-settings: "ss01" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const dataFeatures = container.querySelector('span.ots-styled').getAttribute('data-features');
+		const featuresArray = dataFeatures.split(',').map(f => f.trim());
+
+		// Should not have duplicate ss01
+		expect(featuresArray.filter(f => f === 'ss01').length).toBe(1);
+		expect(featuresArray).toContain('liga');
+	});
+
+	it('should overwrite other attributes when merging', () => {
+		// Arrange: Existing span with font-weight 400
+		const html = '<span class="ots-styled" data-fontweight="400" style="font-weight: 400">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-fontweight': '700' };
+		const styleString = 'font-weight: 700';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.ots-styled');
+		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be updated
+		expect(span.getAttribute('style')).toContain('font-weight: 700');
 	});
 });
 

@@ -27,7 +27,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from './utils';
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
@@ -57,6 +57,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
+	const [inlineFontSize, setInlineFontSize] = useState('inherit');
+	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
+	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
+	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
+	const [inlineFontWeight, setInlineFontWeight] = useState('400');
+	const [showResetConfirm, setShowResetConfirm] = useState(false);
 
 	// Get selection from block editor store
 	const { selectionStart, selectionEnd } = useSelect(
@@ -474,25 +480,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const range = getRangeForOffsets(container, start, end, doc);
 
 				if (range) {
+					// Use the new helper to apply or merge styling (avoids nested ots-styled spans)
+					const attributes = {
+						'data-features': ''
+					};
 
-					// Create the span wrapper
-					const span = doc.createElement('span');
-					span.className = 'ots-styled';
-					span.setAttribute('data-features', '');
-					span.setAttribute('style', styleString);
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
 
-					// Wrap the range content
-					try {
-						range.surroundContents(span);
-
+					if (success) {
 						// Get the updated HTML
 						const newContent = container.innerHTML;
 						setAttributes({ content: newContent });
-					} catch (error) {
-						// Avoid breaking the editor if the range cannot be wrapped
-						// (e.g., when it intersects element boundaries)
-						// eslint-disable-next-line no-console
-						console.error('OTS Block - Failed to apply letter spacing to selection:', error);
 					}
 				}
 
@@ -500,6 +498,145 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				originalContentRef.current = null;
 
 				// Close the popover after applying
+				setIsPopoverOpen(false);
+			}
+		}
+	};
+
+	// Clear all inline formatting from selected text (removes ots-styled spans)
+	// This does NOT remove block-level features/styles
+	const clearInlineFormatting = () => {
+		if (!content) return;
+
+		// Check if we have a valid selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				// Parse the current content as HTML
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					// Find all ots-styled spans within the range
+					const commonAncestor = range.commonAncestorContainer;
+					let searchRoot = commonAncestor.nodeType === Node.TEXT_NODE
+						? commonAncestor.parentElement
+						: commonAncestor;
+
+					// Check if the selection itself is inside an ots-styled span
+					const parentSpan = searchRoot.closest('span.ots-styled');
+					if (parentSpan) {
+						searchRoot = parentSpan;
+					}
+
+					const styledSpans = searchRoot.querySelectorAll('span.ots-styled');
+
+					// Also check if searchRoot itself is an ots-styled span
+					const spansToUnwrap = [];
+					if (searchRoot.classList && searchRoot.classList.contains('ots-styled')) {
+						spansToUnwrap.push(searchRoot);
+					}
+					styledSpans.forEach(span => spansToUnwrap.push(span));
+
+					// Unwrap each span (replace it with its contents)
+					spansToUnwrap.forEach(span => {
+						if (span.parentNode) {
+							while (span.firstChild) {
+								span.parentNode.insertBefore(span.firstChild, span);
+							}
+							span.parentNode.removeChild(span);
+						}
+					});
+
+					// Get the updated HTML
+					const newContent = container.innerHTML;
+					setAttributes({ content: newContent });
+
+					// Close the popover
+					setIsPopoverOpen(false);
+				}
+			}
+		}
+	};
+
+	// Apply font size to selected text only (inline)
+	const applyInlineFontSize = () => {
+		if (!content || inlineFontSize === 'inherit') return;
+
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					const attributes = {
+						'data-fontsize': inlineFontSize
+					};
+
+					let styleString = '';
+					if (inlineFontSize === 'responsive') {
+						attributes['data-fontsize-min'] = inlineFontSizeMin.toString();
+						attributes['data-fontsize-preferred'] = inlineFontSizePreferred.toString();
+						attributes['data-fontsize-max'] = inlineFontSizeMax.toString();
+						styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (1920 - 320)) * 100}vw, ${inlineFontSizeMax}px)`;
+					}
+
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+					if (success) {
+						setAttributes({ content: container.innerHTML });
+					}
+				}
+
+				setIsPopoverOpen(false);
+			}
+		}
+	};
+
+	// Apply font weight to selected text only (inline)
+	const applyInlineFontWeight = () => {
+		if (!content) return;
+
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					const attributes = {
+						'data-fontweight': inlineFontWeight
+					};
+					const styleString = `font-weight: ${inlineFontWeight}`;
+
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+					if (success) {
+						setAttributes({ content: container.innerHTML });
+					}
+				}
+
 				setIsPopoverOpen(false);
 			}
 		}
@@ -543,25 +680,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const range = getRangeForOffsets(container, start, end, doc);
 
 				if (range) {
+					// Use the new helper to apply or merge styling (avoids nested ots-styled spans)
+					const attributes = {
+						'data-features': featureId
+					};
 
-					// Create the span wrapper
-					const span = doc.createElement('span');
-					span.className = 'ots-styled';
-					span.setAttribute('data-features', featureId);
-					span.setAttribute('style', styleString);
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
 
-					// Wrap the range content
-					try {
-						range.surroundContents(span);
-
+					if (success) {
 						// Get the updated HTML
 						const newContent = container.innerHTML;
 						setAttributes({ content: newContent });
-					} catch (error) {
-						// Avoid breaking the editor if the range cannot be wrapped
-						// (e.g., when it intersects element boundaries)
-						// eslint-disable-next-line no-console
-						console.error('OTS Block - Failed to apply feature to selection:', error);
 					}
 				}
 
@@ -569,6 +698,69 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				setIsPopoverOpen(false);
 			}
 		}
+	};
+
+	// Clear all inline ots-styled spans from content (doesn't affect block-level settings)
+	const clearAllInlineFeatures = () => {
+		if (!content) return;
+
+		// Parse the content and remove all ots-styled spans
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Find all ots-styled spans
+		const styledSpans = container.querySelectorAll('span.ots-styled');
+
+		// Unwrap each span (replace it with its contents)
+		styledSpans.forEach(span => {
+			if (span.parentNode) {
+				while (span.firstChild) {
+					span.parentNode.insertBefore(span.firstChild, span);
+				}
+				span.parentNode.removeChild(span);
+			}
+		});
+
+		// Get the updated HTML
+		const newContent = container.innerHTML;
+		setAttributes({ content: newContent });
+		setShowResetConfirm(false);
+	};
+
+	// Reset entire block (both inline and block-level features/styles)
+	const resetEntireBlock = () => {
+		// First clear inline features
+		if (content) {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+			const container = doc.body.firstChild;
+			const styledSpans = container.querySelectorAll('span.ots-styled');
+			styledSpans.forEach(span => {
+				if (span.parentNode) {
+					while (span.firstChild) {
+						span.parentNode.insertBefore(span.firstChild, span);
+					}
+					span.parentNode.removeChild(span);
+				}
+			});
+			const newContent = container.innerHTML;
+			setAttributes({ content: newContent });
+		}
+
+		// Reset block-level attributes
+		setAttributes({
+			features: [],
+			fontFamily: '',
+			fontWeight: '',
+			letterSpacing: 0,
+			fontSize: 'responsive',
+			fontSizeMin: 16,
+			fontSizePreferred: 32,
+			fontSizeMax: 64
+		});
+
+		setShowResetConfirm(false);
 	};
 
 	// Build inline style for preview
@@ -672,13 +864,94 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
-								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
-									<PanelBody
-										key={category}
-										title={getCategoryTitle(category)}
-										initialOpen={category === 'ligatures'}
-										className="ots-feature-category-panel"
+								{/* Font Size Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Font Size (for selected text)', 'opentype-stylist')}
+										value={inlineFontSize}
+										onChange={(value) => setInlineFontSize(value)}
+										options={[
+											{ label: __('Inherit from block', 'opentype-stylist'), value: 'inherit' },
+											{ label: __('Responsive (fluid)', 'opentype-stylist'), value: 'responsive' }
+										]}
+									/>
+									{inlineFontSize === 'responsive' && (
+										<>
+											<RangeControl
+												label={__('Min Size (px)', 'opentype-stylist')}
+												value={inlineFontSizeMin}
+												onChange={(value) => setInlineFontSizeMin(value)}
+												min={8}
+												max={200}
+												step={1}
+											/>
+											<RangeControl
+												label={__('Preferred Size (px)', 'opentype-stylist')}
+												value={inlineFontSizePreferred}
+												onChange={(value) => setInlineFontSizePreferred(value)}
+												min={8}
+												max={300}
+												step={1}
+											/>
+											<RangeControl
+												label={__('Max Size (px)', 'opentype-stylist')}
+												value={inlineFontSizeMax}
+												onChange={(value) => setInlineFontSizeMax(value)}
+												min={8}
+												max={400}
+												step={1}
+											/>
+											<Button
+												variant="primary"
+												onClick={applyInlineFontSize}
+												style={{ marginTop: '8px', width: '100%' }}
+											>
+												{__('Apply Font Size', 'opentype-stylist')}
+											</Button>
+										</>
+									)}
+								</div>
+
+								{/* Font Weight Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Font Weight (for selected text)', 'opentype-stylist')}
+										value={inlineFontWeight}
+										onChange={(value) => setInlineFontWeight(value)}
+										options={[
+											{ label: '100 - Thin', value: '100' },
+											{ label: '200 - Extra Light', value: '200' },
+											{ label: '300 - Light', value: '300' },
+											{ label: '400 - Normal', value: '400' },
+											{ label: '500 - Medium', value: '500' },
+											{ label: '600 - Semi Bold', value: '600' },
+											{ label: '700 - Bold', value: '700' },
+											{ label: '800 - Extra Bold', value: '800' },
+											{ label: '900 - Black', value: '900' }
+										]}
+									/>
+									<Button
+										variant="primary"
+										onClick={applyInlineFontWeight}
+										style={{ marginTop: '8px', width: '100%' }}
 									>
+										{__('Apply Font Weight', 'opentype-stylist')}
+									</Button>
+								</div>
+
+								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => {
+									// Check if any features in this category are active
+									const hasActiveFeatures = categoryFeatures.some(feature =>
+										features.includes(feature.id) || inlineFeaturesAtSelection.includes(feature.id)
+									);
+
+									return (
+										<PanelBody
+											key={category}
+											title={getCategoryTitle(category)}
+											initialOpen={hasActiveFeatures}
+											className={`ots-feature-category-panel ${hasActiveFeatures ? 'has-active-features' : ''}`}
+										>
 										{categoryFeatures.map(feature => {
 											const sampleText = previewText || 'ffi ffl Th AE';
 											// Check both block-level features and inline features at cursor
@@ -716,7 +989,47 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											);
 										})}
 									</PanelBody>
-								))}
+									);
+								})}
+
+								{/* Active Features Summary */}
+								{inlineFeaturesAtSelection.length > 0 && (
+									<div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f6fc', borderRadius: '4px', border: '1px solid #0783be' }}>
+										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+											<h5 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#0783be' }}>
+												{__('Active Features:', 'opentype-stylist')}
+											</h5>
+											<Button
+												variant="secondary"
+												isDestructive
+												isSmall
+												onClick={clearInlineFormatting}
+												style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											>
+												{__('Clear All', 'opentype-stylist')}
+											</Button>
+										</div>
+										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+											{inlineFeaturesAtSelection.map(featureId => {
+												const featureName = availableFeatures.find(f => f.id === featureId)?.name || featureId;
+												return (
+													<code key={featureId} style={{
+														fontSize: '11px',
+														padding: '4px 8px',
+														backgroundColor: '#fff',
+														border: '1px solid #0783be',
+														borderRadius: '3px',
+														color: '#0783be',
+														fontWeight: 500
+													}}>
+														{featureName} ({featureId})
+													</code>
+												);
+											})}
+										</div>
+									</div>
+								)}
+
 								<p style={{ fontSize: '12px', color: '#757575', marginBottom: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ddd' }}>
 									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'opentype-stylist')}
 								</p>
@@ -912,6 +1225,66 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					<p className="description">
 						{__('The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme.', 'opentype-stylist')}
 					</p>
+				</PanelBody>
+
+				<PanelBody title={__('Reset Features', 'opentype-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px' }}>
+						{__('Clear features and styling applied to this block.', 'opentype-stylist')}
+					</p>
+
+					{!showResetConfirm ? (
+						<>
+							<Button
+								variant="secondary"
+								isDestructive
+								onClick={() => setShowResetConfirm(true)}
+								style={{ marginBottom: '12px', width: '100%', justifyContent: 'center' }}
+							>
+								{__('Clear Individual Features', 'opentype-stylist')}
+							</Button>
+							<p style={{ fontSize: '11px', color: '#666', margin: '0 0 16px 0' }}>
+								{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'opentype-stylist')}
+							</p>
+
+							<Button
+								variant="secondary"
+								isDestructive
+								onClick={resetEntireBlock}
+								style={{ width: '100%', justifyContent: 'center' }}
+							>
+								{__('Reset Entire Block', 'opentype-stylist')}
+							</Button>
+							<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
+								{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'opentype-stylist')}
+							</p>
+						</>
+					) : (
+						<div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
+							<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
+								⚠️ {__('Are you sure?', 'opentype-stylist')}
+							</p>
+							<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
+								{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'opentype-stylist')}
+							</p>
+							<div style={{ display: 'flex', gap: '8px' }}>
+								<Button
+									variant="primary"
+									isDestructive
+									onClick={clearAllInlineFeatures}
+									style={{ flex: 1 }}
+								>
+									{__('Yes, Clear', 'opentype-stylist')}
+								</Button>
+								<Button
+									variant="secondary"
+									onClick={() => setShowResetConfirm(false)}
+									style={{ flex: 1 }}
+								>
+									{__('Cancel', 'opentype-stylist')}
+								</Button>
+							</div>
+						</div>
+					)}
 				</PanelBody>
 			</InspectorControls>
 
