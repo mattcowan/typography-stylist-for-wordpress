@@ -992,10 +992,10 @@ msgstr "¿Borrar Todas las Configuraciones Tipográficas?"
 msgid "This will remove all typography features, font selections, and styling."
 msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."
 
-#: assets/js/block-editor.js:1804
+#: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "No volver a mostrar esta advertencia (esta sesión)"
 
-#: assets/js/block-editor.js:1812
+#: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
 msgstr "Borrar Todas las Configuraciones"

@@ -750,6 +750,28 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
 		expect(features).toEqual([]);
 	});
 
+	it('should NOT detect features when cursor is immediately after styled span (boundary bug)', () => {
+		// Reproduces the Moriarty bug: cursor on "o" should not detect ss01 from "M"
+		const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+		// Text positions: M=0, o=1, r=2, i=3, a=4, r=5, t=6, y=7
+		const cursorAt = 1; // On "o" - immediately after the styled "M"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		// Should return empty - cursor is NOT inside the span
+		expect(features).toEqual([]);
+	});
+
+	it('should detect features when cursor is at start of styled span', () => {
+		const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+		const cursorAt = 0; // At start of "M"
+
+		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
+
+		// Should detect ss01 - cursor IS inside the span
+		expect(features).toEqual(['ss01']);
+	});
+
 	it('should handle multiple features in style attribute', () => {
 		const html = '<span class="ots-styled" style="font-feature-settings: \'liga\' 1, \'dlig\' 1, \'ss02\' 1">text</span>';
 		const cursorAt = 2;
@@ -1548,6 +1570,247 @@ describe('OpenType Stylist - Font Detection in OTS Blocks', () => {
 		console.error = originalConsoleError;
 		window.getComputedStyle = originalGetComputedStyle;
 		mock.cleanup();
+	});
+});
+
+/**
+ * Test Suite: Block Conversion - Inline Feature Analysis
+ *
+ * These tests verify the logic for analyzing inline features during block conversion
+ * to determine whether features should be extracted to block-level or preserved inline.
+ *
+ * This fixes the bug where converting a heading with partial inline features (e.g., ss01 on
+ * first letter only) would incorrectly apply those features to the entire block.
+ */
+describe('Block Conversion - Inline Feature Analysis', () => {
+	/**
+	 * Import the utility functions we're testing
+	 * Note: We need to import from utils.js after implementing them
+	 */
+	const { analyzeInlineFeatures, stripInlineFeatures } = require('../utils');
+
+	describe('analyzeInlineFeatures', () => {
+		it('should detect no inline features in plain text', () => {
+			const html = 'Plain text without any features';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(false);
+			expect(result.coverage).toBe('none');
+			expect(result.commonFeatures).toEqual([]);
+			expect(result.shouldExtractToBlock).toBe(false);
+		});
+
+		it('should detect partial inline features (first letter only)', () => {
+			const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('partial');
+			expect(result.commonFeatures).toEqual([]);
+			expect(result.shouldExtractToBlock).toBe(false);
+		});
+
+		it('should detect full coverage with uniform features', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('full');
+			expect(result.commonFeatures).toEqual(['ss01']);
+			expect(result.shouldExtractToBlock).toBe(true);
+		});
+
+		it('should detect full coverage with multiple uniform features', () => {
+			const html = '<span class="ots-styled" data-features="ss01,liga,dlig">Complete Text</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('full');
+			expect(result.commonFeatures).toEqual(['ss01', 'liga', 'dlig']);
+			expect(result.shouldExtractToBlock).toBe(true);
+		});
+
+		it('should not extract when coverage is full but features are mixed', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Mor</span><span class="ots-styled" data-features="ss02">iarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('full');
+			expect(result.shouldExtractToBlock).toBe(false); // Different features per span
+		});
+
+		it('should handle nested spans (font-size wrapper case)', () => {
+			const html = '<span class="ots-styled" data-fontsize="responsive"><span class="ots-styled" data-features="ss01">M</span>oriarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('partial'); // Features only on "M"
+			expect(result.shouldExtractToBlock).toBe(false);
+		});
+
+		it('should handle content with whitespace', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>  ';
+
+			const result = analyzeInlineFeatures(html);
+
+			// Note: textContent.trim() removes trailing whitespace, so this is actually full coverage
+			// If we want to preserve trailing whitespace, we'd need to use innerHTML length instead
+			expect(result.coverage).toBe('full');
+			expect(result.shouldExtractToBlock).toBe(true);
+		});
+
+		it('should handle empty content', () => {
+			const html = '';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.hasInlineFeatures).toBe(false);
+			expect(result.coverage).toBe('none');
+		});
+
+		it('should handle content with only ots-styled spans but no features', () => {
+			const html = '<span class="ots-styled" data-fontweight="700">Moriarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			// Has ots-styled but no OpenType features
+			expect(result.hasInlineFeatures).toBe(false);
+			expect(result.coverage).toBe('none');
+			expect(result.shouldExtractToBlock).toBe(false);
+		});
+	});
+
+	describe('stripInlineFeatures', () => {
+		it('should remove ots-styled spans while keeping text', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+
+			const result = stripInlineFeatures(html);
+
+			expect(result).toBe('Moriarty');
+		});
+
+		it('should remove multiple ots-styled spans', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Mor</span><span class="ots-styled" data-features="ss02">iarty</span>';
+
+			const result = stripInlineFeatures(html);
+
+			expect(result).toBe('Moriarty');
+		});
+
+		it('should preserve non-ots-styled markup', () => {
+			const html = '<strong><span class="ots-styled" data-features="ss01">Moriarty</span></strong>';
+
+			const result = stripInlineFeatures(html);
+
+			expect(result).toBe('<strong>Moriarty</strong>');
+		});
+
+		it('should handle nested ots-styled spans', () => {
+			const html = '<span class="ots-styled" data-fontsize="responsive"><span class="ots-styled" data-features="ss01">Moriarty</span></span>';
+
+			const result = stripInlineFeatures(html);
+
+			expect(result).toBe('Moriarty');
+		});
+
+		it('should handle plain text without spans', () => {
+			const html = 'Plain text';
+
+			const result = stripInlineFeatures(html);
+
+			expect(result).toBe('Plain text');
+		});
+
+		it('should preserve text content exactly', () => {
+			const html = '<span class="ots-styled" data-features="ss01">Test&nbsp;Text</span>';
+
+			const result = stripInlineFeatures(html);
+
+			// Should preserve HTML entities
+			expect(result).toContain('Test');
+			expect(result).toContain('Text');
+		});
+	});
+
+	describe('Block Conversion Transform Integration', () => {
+		it('should preserve partial inline features during conversion', () => {
+			// Simulate what happens when converting a heading with partial features
+			const sourceContent = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+
+			const analysis = analyzeInlineFeatures(sourceContent);
+
+			// Should NOT extract to block level
+			expect(analysis.shouldExtractToBlock).toBe(false);
+
+			// Content should remain unchanged
+			expect(sourceContent).toContain('data-features="ss01"');
+		});
+
+		it('should extract full-coverage features to block level during conversion', () => {
+			const sourceContent = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+
+			const analysis = analyzeInlineFeatures(sourceContent);
+
+			// Should extract to block level
+			expect(analysis.shouldExtractToBlock).toBe(true);
+			expect(analysis.commonFeatures).toEqual(['ss01']);
+
+			// After stripping, content should have no spans
+			const strippedContent = stripInlineFeatures(sourceContent);
+			expect(strippedContent).toBe('Moriarty');
+			expect(strippedContent).not.toContain('span');
+		});
+
+		it('should handle mixed features correctly', () => {
+			const sourceContent = '<span class="ots-styled" data-features="ss01">M</span><span class="ots-styled" data-features="ss02">oriarty</span>';
+
+			const analysis = analyzeInlineFeatures(sourceContent);
+
+			// Should NOT extract because features are different
+			expect(analysis.shouldExtractToBlock).toBe(false);
+			expect(analysis.coverage).toBe('full'); // Full coverage but mixed features
+		});
+	});
+
+	describe('Nested span cursor detection', () => {
+		it('should NOT detect features when cursor is in outer wrapper but outside inner feature span', () => {
+			// This reproduces the Moriarty bug: outer wrapper with font-weight, inner span with ss01 on "M"
+			const html = '<span data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty.</span>';
+
+			// Cursor on "o" (position 1)
+			const featuresOnO = parseInlineFeaturesAtCursor(html, 1, 1);
+			expect(featuresOnO).toEqual([]); // Should NOT detect ss01
+
+			// Cursor on "r" (position 2)
+			const featuresOnR = parseInlineFeaturesAtCursor(html, 2, 2);
+			expect(featuresOnR).toEqual([]); // Should NOT detect ss01
+
+			// Cursor on "i" (position 3)
+			const featuresOnI = parseInlineFeaturesAtCursor(html, 3, 3);
+			expect(featuresOnI).toEqual([]); // Should NOT detect ss01
+		});
+
+		it('should detect features when cursor is inside inner feature span', () => {
+			const html = '<span data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty.</span>';
+
+			// Cursor on "M" (position 0)
+			const featuresOnM = parseInlineFeaturesAtCursor(html, 0, 0);
+			expect(featuresOnM).toContain('ss01'); // Should detect ss01
+		});
+
+		it('should detect both outer and inner features when cursor is in nested feature span', () => {
+			const html = '<span data-fontsize="24px" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty</span>';
+
+			// Cursor on "M" (position 0) - inside both spans
+			const featuresOnM = parseInlineFeaturesAtCursor(html, 0, 0);
+			expect(featuresOnM).toContain('ss01');
+		});
 	});
 });
 

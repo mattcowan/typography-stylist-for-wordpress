@@ -242,7 +242,6 @@
             };
 
             this.togglePopover = this.togglePopover.bind(this);
-            this.scrollToApplyButton = this.scrollToApplyButton.bind(this);
             this.toggleFeature = this.toggleFeature.bind(this);
             this.applyFeatures = this.applyFeatures.bind(this);
             this.applyPreset = this.applyPreset.bind(this);
@@ -580,20 +579,6 @@
         }
 
         /**
-         * Scroll to Apply button at bottom of popover
-         */
-        scrollToApplyButton() {
-            // Find the scrollable content container and scroll to bottom
-            const scrollableContent = document.querySelector('.ots-scrollable-content');
-            if (scrollableContent) {
-                scrollableContent.scrollTo({
-                    top: scrollableContent.scrollHeight,
-                    behavior: 'smooth'
-                });
-            }
-        }
-
-        /**
          * Toggle popover visibility
          */
         togglePopover() {
@@ -654,7 +639,9 @@
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
                 fontDetectionFailed: detectionFailed,
-                initialState: capturedInitialState
+                initialState: capturedInitialState,
+                // Reset hasChanges when closing popover (discarding unapplied changes)
+                hasChanges: state.isOpen ? false : state.hasChanges
             }));
         }
 
@@ -1426,9 +1413,9 @@
                 // Check if we're back to initial state (when popover opened)
                 let isBackToInitialState = false;
                 if (initialState) {
-                    // Compare against initial state
+                    // Compare against initial state (use spread to avoid mutating arrays)
                     isBackToInitialState =
-                        JSON.stringify(previousState.selectedFeatures.sort()) === JSON.stringify(initialState.selectedFeatures.sort()) &&
+                        JSON.stringify([...(previousState.selectedFeatures || [])].sort()) === JSON.stringify([...(initialState.selectedFeatures || [])].sort()) &&
                         previousState.selectedFont === initialState.selectedFont &&
                         previousState.fontSize === initialState.fontSize &&
                         previousState.fontSizeMin === initialState.fontSizeMin &&

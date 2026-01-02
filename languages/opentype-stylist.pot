@@ -821,11 +821,11 @@ msgstr ""
 msgid "This will remove all typography features, font selections, and styling."
 msgstr ""
 
-#: assets/js/block-editor.js:1804
+#: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr ""
 
-#: assets/js/block-editor.js:1812
+#: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
 msgstr ""
 

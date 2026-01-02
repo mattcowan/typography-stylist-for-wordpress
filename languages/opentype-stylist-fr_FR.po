@@ -992,10 +992,10 @@ msgstr "Effacer Tous les Paramètres Typographiques ?"
 msgid "This will remove all typography features, font selections, and styling."
 msgstr "Cela supprimera toutes les fonctionnalités typographiques, sélections de polices et styles."
 
-#: assets/js/block-editor.js:1804
+#: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "Ne plus afficher cet avertissement (cette session)"
 
-#: assets/js/block-editor.js:1812
+#: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
 msgstr "Effacer Tous les Paramètres"

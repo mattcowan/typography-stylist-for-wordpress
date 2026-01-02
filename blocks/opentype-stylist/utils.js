@@ -57,7 +57,7 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 
 		// Check if the cursor/selection overlaps with this span
 		const isCursor = cursorStart === cursorEnd;
-		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart <= spanEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd; // Fixed: < instead of <=
 		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
 
 		if (found && (isInside || overlaps)) {
@@ -91,14 +91,44 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 
 	// ALSO check for ots-styled spans INSIDE this one (nested case)
 	// This fixes detection when font-sizing wraps a feature-styled span
+	// BUT only include features if cursor is ACTUALLY inside the nested span
 	const nestedStyledSpans = smallestMatchingSpan.querySelectorAll('span.ots-styled');
 	for (const nested of nestedStyledSpans) {
-		const nestedFeatures = nested.getAttribute('data-features');
-		if (nestedFeatures) {
-			nestedFeatures.split(',').forEach(f => {
-				const trimmed = f.trim();
-				if (trimmed) allFeatures.add(trimmed);
-			});
+		// Calculate the text position range for this nested span
+		const nestedWalker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let nestedStart = 0;
+		let nestedEnd = 0;
+		let nestedFound = false;
+		let nestedOffset = 0;
+
+		let nestedNode;
+		while ((nestedNode = nestedWalker.nextNode())) {
+			const nestedNodeLength = nestedNode.nodeValue.length;
+
+			if (nested.contains(nestedNode)) {
+				if (!nestedFound) {
+					nestedStart = nestedOffset;
+					nestedFound = true;
+				}
+				nestedEnd = nestedOffset + nestedNodeLength;
+			}
+
+			nestedOffset += nestedNodeLength;
+		}
+
+		// Only include features if cursor is inside this nested span
+		const isCursor = cursorStart === cursorEnd;
+		const isInsideNested = isCursor && nestedFound && cursorStart >= nestedStart && cursorStart < nestedEnd;
+		const overlapsNested = !isCursor && nestedFound && cursorStart < nestedEnd && cursorEnd > nestedStart;
+
+		if (nestedFound && (isInsideNested || overlapsNested)) {
+			const nestedFeatures = nested.getAttribute('data-features');
+			if (nestedFeatures) {
+				nestedFeatures.split(',').forEach(f => {
+					const trimmed = f.trim();
+					if (trimmed) allFeatures.add(trimmed);
+				});
+			}
 		}
 	}
 
@@ -310,5 +340,184 @@ export function detectBlockComputedFont(clientId, elementSelector = '.ots-block-
 			console.error('OTS Block - Failed to detect computed font:', error);
 		}
 		return '';
+	}
+}
+
+/**
+ * Analyze inline features in HTML content for block conversion
+ *
+ * This function determines whether inline OpenType features should be extracted
+ * to block-level during conversion, or preserved as inline spans.
+ *
+ * Rules:
+ * - If no inline features exist, return 'none' coverage
+ * - If inline features cover less than 100% of text, return 'partial' coverage
+ * - If inline features cover 100% AND all have the same features, extract to block level
+ * - If inline features cover 100% BUT have different features, keep inline (mixed)
+ *
+ * @param {string} htmlContent - HTML content to analyze
+ * @return {Object} Analysis result with:
+ *   - hasInlineFeatures {boolean} - Whether any ots-styled spans with features exist
+ *   - coverage {string} - 'none', 'partial', or 'full'
+ *   - commonFeatures {Array<string>} - Features common to all text (if full coverage)
+ *   - shouldExtractToBlock {boolean} - Whether features should be extracted to block level
+ */
+export function analyzeInlineFeatures(htmlContent) {
+	// Default result for no features
+	const defaultResult = {
+		hasInlineFeatures: false,
+		coverage: 'none',
+		commonFeatures: [],
+		shouldExtractToBlock: false
+	};
+
+	if (!htmlContent || typeof htmlContent !== 'string') {
+		return defaultResult;
+	}
+
+	try {
+		// Parse HTML
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Get total text length
+		const totalText = container.textContent || '';
+		const totalLength = totalText.trim().length;
+
+		if (totalLength === 0) {
+			return defaultResult;
+		}
+
+		// Find all ots-styled spans that have OpenType features
+		const styledSpans = Array.from(container.querySelectorAll('span.ots-styled')).filter(span => {
+			const features = span.getAttribute('data-features');
+			return features && features.trim().length > 0;
+		});
+
+		if (styledSpans.length === 0) {
+			return defaultResult;
+		}
+
+		// Calculate how much text is covered by styled spans with features
+		let coveredLength = 0;
+		const featureSets = [];
+
+		styledSpans.forEach(span => {
+			const spanText = span.textContent || '';
+			const spanLength = spanText.length;
+			coveredLength += spanLength;
+
+			// Extract features from this span
+			const featuresAttr = span.getAttribute('data-features') || '';
+			const features = featuresAttr.split(',').map(f => f.trim()).filter(f => f);
+			featureSets.push(features.sort().join(',')); // Sort for comparison
+		});
+
+		// Determine coverage
+		const coverageRatio = coveredLength / totalLength;
+		let coverage = 'none';
+
+		if (coverageRatio === 0) {
+			coverage = 'none';
+		} else if (coverageRatio < 0.95) { // Allow small rounding errors
+			coverage = 'partial';
+		} else {
+			coverage = 'full';
+		}
+
+		// If not full coverage, return partial result
+		if (coverage !== 'full') {
+			return {
+				hasInlineFeatures: true,
+				coverage: coverage,
+				commonFeatures: [],
+				shouldExtractToBlock: false
+			};
+		}
+
+		// Full coverage - check if all spans have the same features
+		const uniqueFeatureSets = [...new Set(featureSets)];
+
+		if (uniqueFeatureSets.length === 1) {
+			// All spans have the same features - extract to block level
+			const commonFeaturesAttr = styledSpans[0].getAttribute('data-features') || '';
+			const commonFeatures = commonFeaturesAttr.split(',').map(f => f.trim()).filter(f => f);
+
+			return {
+				hasInlineFeatures: true,
+				coverage: 'full',
+				commonFeatures: commonFeatures,
+				shouldExtractToBlock: true
+			};
+		} else {
+			// Full coverage but mixed features - keep inline
+			return {
+				hasInlineFeatures: true,
+				coverage: 'full',
+				commonFeatures: [],
+				shouldExtractToBlock: false
+			};
+		}
+
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		if (typeof console !== 'undefined' && console.error) {
+			console.error('OTS Block - Failed to analyze inline features:', error);
+		}
+		return defaultResult;
+	}
+}
+
+/**
+ * Strip inline OpenType feature spans from HTML content
+ *
+ * Removes all <span class="ots-styled"> elements while preserving their text content
+ * and any other non-ots-styled markup.
+ *
+ * Used during block conversion when features should be extracted to block level.
+ *
+ * @param {string} htmlContent - HTML content with inline ots-styled spans
+ * @return {string} HTML content with ots-styled spans removed
+ */
+export function stripInlineFeatures(htmlContent) {
+	if (!htmlContent || typeof htmlContent !== 'string') {
+		return htmlContent || '';
+	}
+
+	try {
+		// Parse HTML
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Find all ots-styled spans (including nested ones)
+		const styledSpans = container.querySelectorAll('span.ots-styled');
+
+		// Remove each span while keeping its content
+		styledSpans.forEach(span => {
+			// Get parent node before removing
+			const parent = span.parentNode;
+
+			if (parent) {
+				// Move all child nodes out of the span
+				while (span.firstChild) {
+					parent.insertBefore(span.firstChild, span);
+				}
+
+				// Remove the now-empty span
+				parent.removeChild(span);
+			}
+		});
+
+		// Return the cleaned HTML
+		return container.innerHTML;
+
+	} catch (error) {
+		// eslint-disable-next-line no-console
+		if (typeof console !== 'undefined' && console.error) {
+			console.error('OTS Block - Failed to strip inline features:', error);
+		}
+		return htmlContent;
 	}
 }
