@@ -234,10 +234,13 @@
                 // Font inherited from block's computed styles (when Default font is selected)
                 blockInheritedFont: '',
                 // Flag to track if font detection failed (no text element found)
-                fontDetectionFailed: false
+                fontDetectionFailed: false,
+                // Track if user has made changes to show apply notice
+                hasChanges: false
             };
 
             this.togglePopover = this.togglePopover.bind(this);
+            this.scrollToApplyButton = this.scrollToApplyButton.bind(this);
             this.toggleFeature = this.toggleFeature.bind(this);
             this.applyFeatures = this.applyFeatures.bind(this);
             this.applyPreset = this.applyPreset.bind(this);
@@ -575,6 +578,20 @@
         }
 
         /**
+         * Scroll to Apply button at bottom of popover
+         */
+        scrollToApplyButton() {
+            // Find the scrollable content container and scroll to bottom
+            const scrollableContent = document.querySelector('.ots-scrollable-content');
+            if (scrollableContent) {
+                scrollableContent.scrollTo({
+                    top: scrollableContent.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        /**
          * Toggle popover visibility
          */
         togglePopover() {
@@ -632,7 +649,8 @@
             this.saveToHistory();
 
             this.setState({
-                selectedFont: fontFamily
+                selectedFont: fontFamily,
+                hasChanges: true
             });
         }
 
@@ -644,7 +662,8 @@
             this.saveToHistory();
 
             this.setState({
-                fontSize: mode
+                fontSize: mode,
+                hasChanges: true
             });
         }
 
@@ -683,7 +702,8 @@
             this.saveToHistory();
 
             this.setState({
-                fontWeight: value
+                fontWeight: value,
+                hasChanges: true
             });
         }
 
@@ -695,7 +715,8 @@
             this.saveToHistory();
 
             this.setState({
-                letterSpacing: value
+                letterSpacing: value,
+                hasChanges: true
             });
         }
 
@@ -727,7 +748,8 @@
 
                 return {
                     selectedFeatures: features,
-                    activePreset: null
+                    activePreset: null,
+                    hasChanges: true
                 };
             });
         }
@@ -1167,7 +1189,8 @@
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
-                activePreset: preset.id
+                activePreset: preset.id,
+                hasChanges: true
             });
         }
 
@@ -1526,6 +1549,23 @@
                                     <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
                                 </div>
 
+                                {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
+                                {this.state.hasChanges && (
+                                    <div className="ots-sticky-notice-wrapper">
+                                        {wp.element.createElement(Notice, {
+                                            status: 'info',
+                                            isDismissible: false,
+                                            className: 'ots-apply-notice'
+                                        },
+                                            wp.element.createElement('p', { style: { margin: 0 } },
+                                                __('Click Apply below the preview to confirm changes.', 'opentype-stylist')
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Scrollable Content Wrapper */}
+                                <div className="ots-scrollable-content">
                                 {/* Font Detection Warning */}
                                 {fontDetectionFailed && !selectedFont && (
                                     wp.element.createElement(Notice, {
@@ -1738,8 +1778,8 @@
                                         </div>
                                         {selectedFeatures.length > 0 && (
                                             <div className="ots-preview-features">
-                                                {__('Active: ', 'opentype-stylist')}
-                                                <code>{selectedFeatures.join(', ')}</code>
+                                                <strong>{__('Active: ', 'opentype-stylist')}</strong>
+                                                {selectedFeatures.join(', ')}
                                             </div>
                                         )}
                                     </div>
@@ -1777,6 +1817,7 @@
                                         </Button>
                                     </ButtonGroup>
                                 </div>
+                                </div>{/* End ots-scrollable-content */}
                             </div>
                         </Popover>
                     )}

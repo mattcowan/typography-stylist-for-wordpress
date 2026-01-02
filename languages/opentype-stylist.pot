@@ -861,6 +861,10 @@ msgstr ""
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr ""
 
+#: assets/js/block-editor.js:1561
+msgid "Click Apply below the preview to confirm changes."
+msgstr ""
+
 #: includes/admin-page.php:729
 msgid "How to use custom font definitions:"
 msgstr ""

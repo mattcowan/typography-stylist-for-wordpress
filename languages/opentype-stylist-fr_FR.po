@@ -971,6 +971,10 @@ msgstr "La police n'a pas pu être détectée pour ce type de bloc."
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envisagez d'utiliser le bloc OpenType Stylist au lieu de la barre d'outils en ligne."
 
+#: assets/js/block-editor.js:1561
+msgid "Click Apply below the preview to confirm changes."
+msgstr "Cliquez sur Appliquer sous l'aperçu pour confirmer les modifications."
+
 #: assets/js/admin-page.js:302
 #, php-format
 msgid "%s applied"

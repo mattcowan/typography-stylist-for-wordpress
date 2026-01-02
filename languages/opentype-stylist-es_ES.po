@@ -971,6 +971,10 @@ msgstr "No se pudo detectar la fuente para este tipo de bloque."
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere usar el bloque OpenType Stylist en lugar de la barra de herramientas en línea."
 
+#: assets/js/block-editor.js:1561
+msgid "Click Apply below the preview to confirm changes."
+msgstr "Haga clic en Aplicar debajo de la vista previa para confirmar los cambios."
+
 #: assets/js/admin-page.js:302
 #, php-format
 msgid "%s applied"
