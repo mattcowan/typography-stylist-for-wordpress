@@ -971,9 +971,9 @@ msgstr "La police n'a pas pu être détectée pour ce type de bloc."
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envisagez d'utiliser le bloc OpenType Stylist au lieu de la barre d'outils en ligne."
 
-#: assets/js/block-editor.js:1561
-msgid "Click Apply below the preview to confirm changes."
-msgstr "Cliquez sur Appliquer sous l'aperçu pour confirmer les modifications."
+#: assets/js/block-editor.js:1572
+msgid "Click \"Apply\" below the preview to confirm changes."
+msgstr "Cliquez sur « Appliquer » sous l'aperçu pour confirmer les modifications."
 
 #: assets/js/admin-page.js:302
 #, php-format
@@ -983,3 +983,19 @@ msgstr "%s appliqué"
 #: assets/js/admin-page.js:342
 msgid "Change undone"
 msgstr "Modification annulée"
+
+#: assets/js/block-editor.js:1832
+msgid "Clear All Typography Settings?"
+msgstr "Effacer Tous les Paramètres Typographiques ?"
+
+#: assets/js/block-editor.js:1835
+msgid "This will remove all typography features, font selections, and styling."
+msgstr "Cela supprimera toutes les fonctionnalités typographiques, sélections de polices et styles."
+
+#: assets/js/block-editor.js:1804
+msgid "Do not show this warning again (this session)"
+msgstr "Ne plus afficher cet avertissement (cette session)"
+
+#: assets/js/block-editor.js:1812
+msgid "Clear All Settings"
+msgstr "Effacer Tous les Paramètres"

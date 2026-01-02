@@ -813,20 +813,20 @@ msgstr ""
 msgid "When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis."
 msgstr ""
 
-#: assets/js/block-editor.js:1245
-msgid "Clear All Formatting?"
+#: assets/js/block-editor.js:1832
+msgid "Clear All Typography Settings?"
 msgstr ""
 
-#: assets/js/block-editor.js:1250
-msgid "This will remove all typography features, font selections, and styling. This action cannot be undone."
+#: assets/js/block-editor.js:1835
+msgid "This will remove all typography features, font selections, and styling."
 msgstr ""
 
-#: assets/js/block-editor.js:1253
+#: assets/js/block-editor.js:1804
 msgid "Do not show this warning again (this session)"
 msgstr ""
 
-#: assets/js/block-editor.js:1262
-msgid "Clear Formatting"
+#: assets/js/block-editor.js:1812
+msgid "Clear All Settings"
 msgstr ""
 
 #: blocks/opentype-stylist/edit.js:171
@@ -861,8 +861,8 @@ msgstr ""
 msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
 msgstr ""
 
-#: assets/js/block-editor.js:1561
-msgid "Click Apply below the preview to confirm changes."
+#: assets/js/block-editor.js:1572
+msgid "Click \"Apply\" below the preview to confirm changes."
 msgstr ""
 
 #: includes/admin-page.php:729
