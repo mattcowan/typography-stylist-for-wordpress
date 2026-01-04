@@ -234,7 +234,11 @@
                 // Font inherited from block's computed styles (when Default font is selected)
                 blockInheritedFont: '',
                 // Flag to track if font detection failed (no text element found)
-                fontDetectionFailed: false
+                fontDetectionFailed: false,
+                // Track if user has made changes to show apply notice
+                hasChanges: false,
+                // Initial state when popover opens (for comparing on undo)
+                initialState: null
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -585,6 +589,8 @@
             let computedInlineFeatures = [];
             let inheritedFont = '';
             let detectionFailed = false;
+            let capturedInitialState = null;
+
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
                     // There's a selection - extract it
@@ -605,6 +611,18 @@
                 if (!inheritedFont && !this.getActiveFont()) {
                     detectionFailed = true;
                 }
+
+                // Capture initial state when opening popover (for undo comparison)
+                capturedInitialState = {
+                    selectedFeatures: this.getActiveFeatures() || [],
+                    selectedFont: this.getActiveFont() || '',
+                    fontSize: this.getActiveFontSize() || 'inherit',
+                    fontSizeMin: this.getActiveFontSizeMin() || 16,
+                    fontSizePreferred: this.getActiveFontSizePreferred() || 24,
+                    fontSizeMax: this.getActiveFontSizeMax() || 32,
+                    fontWeight: this.getActiveFontWeight() || '400',
+                    letterSpacing: this.getActiveLetterSpacing() || 0
+                };
             }
 
             this.setState(state => ({
@@ -620,7 +638,10 @@
                 previewText: extractedText,
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
-                fontDetectionFailed: detectionFailed
+                fontDetectionFailed: detectionFailed,
+                initialState: capturedInitialState,
+                // Reset hasChanges when closing popover (discarding unapplied changes)
+                hasChanges: state.isOpen ? false : state.hasChanges
             }));
         }
 
@@ -632,7 +653,8 @@
             this.saveToHistory();
 
             this.setState({
-                selectedFont: fontFamily
+                selectedFont: fontFamily,
+                hasChanges: true
             });
         }
 
@@ -644,7 +666,8 @@
             this.saveToHistory();
 
             this.setState({
-                fontSize: mode
+                fontSize: mode,
+                hasChanges: true
             });
         }
 
@@ -683,7 +706,8 @@
             this.saveToHistory();
 
             this.setState({
-                fontWeight: value
+                fontWeight: value,
+                hasChanges: true
             });
         }
 
@@ -695,7 +719,8 @@
             this.saveToHistory();
 
             this.setState({
-                letterSpacing: value
+                letterSpacing: value,
+                hasChanges: true
             });
         }
 
@@ -727,7 +752,8 @@
 
                 return {
                     selectedFeatures: features,
-                    activePreset: null
+                    activePreset: null,
+                    hasChanges: true
                 };
             });
         }
@@ -1088,7 +1114,7 @@
                 }));
             }
 
-            this.setState({ isOpen: false });
+            this.setState({ isOpen: false, hasChanges: false });
         }
 
         /**
@@ -1154,7 +1180,7 @@
                 }));
             }
 
-            this.setState({ isOpen: false });
+            this.setState({ isOpen: false, hasChanges: false });
         }
 
         /**
@@ -1167,7 +1193,8 @@
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
-                activePreset: preset.id
+                activePreset: preset.id,
+                hasChanges: true
             });
         }
 
@@ -1244,7 +1271,8 @@
                 fontWeight: '400',
                 letterSpacing: 0,
                 activePreset: null,
-                isOpen: false
+                hasChanges: false
+                // Note: Keep popover open (isOpen: true) so user can see cleared state
             });
         }
 
@@ -1375,12 +1403,27 @@
          * Undo last change - restore previous state from history
          */
         undoLastChange() {
-            const { changeHistory } = this.state;
+            const { changeHistory, initialState } = this.state;
 
             if (changeHistory.length > 0) {
                 // Get the last history entry
                 const newHistory = [...changeHistory];
                 const previousState = newHistory.pop();
+
+                // Check if we're back to initial state (when popover opened)
+                let isBackToInitialState = false;
+                if (initialState) {
+                    // Compare against initial state (use spread to avoid mutating arrays)
+                    isBackToInitialState =
+                        JSON.stringify([...(previousState.selectedFeatures || [])].sort()) === JSON.stringify([...(initialState.selectedFeatures || [])].sort()) &&
+                        previousState.selectedFont === initialState.selectedFont &&
+                        previousState.fontSize === initialState.fontSize &&
+                        previousState.fontSizeMin === initialState.fontSizeMin &&
+                        previousState.fontSizePreferred === initialState.fontSizePreferred &&
+                        previousState.fontSizeMax === initialState.fontSizeMax &&
+                        previousState.fontWeight === initialState.fontWeight &&
+                        previousState.letterSpacing === initialState.letterSpacing;
+                }
 
                 // Restore previous state
                 this.setState({
@@ -1392,7 +1435,9 @@
                     fontSizeMax: previousState.fontSizeMax,
                     fontWeight: previousState.fontWeight,
                     letterSpacing: previousState.letterSpacing,
-                    changeHistory: newHistory
+                    changeHistory: newHistory,
+                    // Reset hasChanges if we're back to initial state
+                    hasChanges: !isBackToInitialState
                 });
             }
         }
@@ -1526,6 +1571,23 @@
                                     <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
                                 </div>
 
+                                {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
+                                {this.state.hasChanges && (
+                                    <div className="ots-sticky-notice-wrapper">
+                                        {wp.element.createElement(Notice, {
+                                            status: 'info',
+                                            isDismissible: false,
+                                            className: 'ots-apply-notice'
+                                        },
+                                            wp.element.createElement('p', { style: { margin: 0 } },
+                                                __('Click "Apply" below the preview to confirm changes.', 'opentype-stylist')
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Scrollable Content Wrapper */}
+                                <div className="ots-scrollable-content">
                                 {/* Font Detection Warning */}
                                 {fontDetectionFailed && !selectedFont && (
                                     wp.element.createElement(Notice, {
@@ -1738,78 +1800,83 @@
                                         </div>
                                         {selectedFeatures.length > 0 && (
                                             <div className="ots-preview-features">
-                                                {__('Active: ', 'opentype-stylist')}
-                                                <code>{selectedFeatures.join(', ')}</code>
+                                                <strong>{__('Active: ', 'opentype-stylist')}</strong>
+                                                {selectedFeatures.join(', ')}
                                             </div>
                                         )}
                                     </div>
                                 )}
 
+                                {/* Clear Confirmation - Inline */}
+                                {showClearConfirmation && (
+                                    <div className="ots-clear-confirmation-inline">
+                                        {wp.element.createElement(Notice, {
+                                            status: 'warning',
+                                            isDismissible: false,
+                                            className: 'ots-clear-warning'
+                                        },
+                                            wp.element.createElement('p', { style: { margin: '0 0 12px 0', fontWeight: '600' } },
+                                                __('Clear All Typography Settings?', 'opentype-stylist')
+                                            ),
+                                            wp.element.createElement('p', { style: { margin: '0 0 12px 0', fontSize: '13px' } },
+                                                __('This will remove all typography features, font selections, and styling.', 'opentype-stylist')
+                                            ),
+                                            wp.element.createElement(CheckboxControl, {
+                                                label: __('Do not show this warning again (this session)', 'opentype-stylist'),
+                                                checked: dontShowClearWarning,
+                                                onChange: (checked) => this.setState({ dontShowClearWarning: checked })
+                                            }),
+                                            wp.element.createElement(ButtonGroup, { style: { marginTop: '12px' } },
+                                                wp.element.createElement(Button, {
+                                                    isPrimary: true,
+                                                    onClick: this.confirmClear
+                                                }, __('Clear All Settings', 'opentype-stylist')),
+                                                wp.element.createElement(Button, {
+                                                    isSecondary: true,
+                                                    onClick: this.cancelClear
+                                                }, __('Cancel', 'opentype-stylist'))
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
                                 {/* Action Buttons */}
-                                <div className="ots-popover-actions">
-                                    <ButtonGroup>
-                                        <Button
-                                            isPrimary
-                                            onClick={this.applyFeatures}
-                                        >
-                                            {__('Apply', 'opentype-stylist')}
-                                        </Button>
-                                        {this.state.changeHistory.length > 0 && (
+                                {!showClearConfirmation && (
+                                    <div className="ots-popover-actions">
+                                        <ButtonGroup>
+                                            <Button
+                                                isPrimary
+                                                onClick={this.applyFeatures}
+                                            >
+                                                {__('Apply', 'opentype-stylist')}
+                                            </Button>
+                                            {this.state.changeHistory.length > 0 && (
+                                                <Button
+                                                    isSecondary
+                                                    onClick={this.undoLastChange}
+                                                    title={__('Undo last change', 'opentype-stylist')}
+                                                >
+                                                    {__('Undo', 'opentype-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
+                                                </Button>
+                                            )}
                                             <Button
                                                 isSecondary
-                                                onClick={this.undoLastChange}
-                                                title={__('Undo last change', 'opentype-stylist')}
+                                                onClick={this.handleClearClick}
                                             >
-                                                {__('Undo', 'opentype-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
+                                                {__('Clear', 'opentype-stylist')}
                                             </Button>
-                                        )}
-                                        <Button
-                                            isSecondary
-                                            onClick={this.handleClearClick}
-                                        >
-                                            {__('Clear', 'opentype-stylist')}
-                                        </Button>
-                                        <Button
-                                            isTertiary
-                                            onClick={this.togglePopover}
-                                        >
-                                            {__('Cancel', 'opentype-stylist')}
-                                        </Button>
-                                    </ButtonGroup>
-                                </div>
+                                            <Button
+                                                isTertiary
+                                                onClick={this.togglePopover}
+                                            >
+                                                {__('Cancel', 'opentype-stylist')}
+                                            </Button>
+                                        </ButtonGroup>
+                                    </div>
+                                )}
+                                </div>{/* End ots-scrollable-content */}
                             </div>
                         </Popover>
-                    )}
-
-                    {showClearConfirmation && (
-                        <Modal
-                            title={__('Clear Typography Settings?', 'opentype-stylist')}
-                            onRequestClose={this.cancelClear}
-                            className="ots-clear-confirmation-modal"
-                        >
-                            <p>
-                                {__('This will remove all typography features, font selections, and styling. This action cannot be undone.', 'opentype-stylist')}
-                            </p>
-                            <CheckboxControl
-                                label={__('Do not show this warning again (this session)', 'opentype-stylist')}
-                                checked={dontShowClearWarning}
-                                onChange={(checked) => this.setState({ dontShowClearWarning: checked })}
-                            />
-                            <ButtonGroup>
-                                <Button
-                                    isPrimary
-                                    onClick={this.confirmClear}
-                                >
-                                    {__('Clear Typography Settings', 'opentype-stylist')}
-                                </Button>
-                                <Button
-                                    isSecondary
-                                    onClick={this.cancelClear}
-                                >
-                                    {__('Cancel', 'opentype-stylist')}
-                                </Button>
-                            </ButtonGroup>
-                        </Modal>
                     )}
                 </Fragment>
             );

@@ -26,11 +26,37 @@
     min-width: 400px;
     max-width: 500px;
     max-height: 600px;
-    overflow-y: auto;
+    overflow-y: hidden; /* Prevent outer scroll, let inner scrollable-content handle it */
+    display: flex;
+    flex-direction: column;
 }
 
 .ots-popover-content {
     padding: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 600px;
+}
+
+/* Sticky Notice Wrapper */
+.ots-sticky-notice-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+.ots-sticky-notice-wrapper .components-notice {
+    margin: 0;
+    border-radius: 0;
+}
+
+/* Scrollable Content Wrapper */
+.ots-scrollable-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .ots-popover-header {
@@ -275,15 +301,35 @@
 
 .ots-preview-features {
     font-size: 13px;
-    color: #5e5e5e;
+    color: #1e1e1e;
+    font-family: monospace;
 }
 
-.ots-preview-features code {
-    background: #fff;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 11px;
-    margin-left: 4px;
+.ots-preview-features strong {
+    font-weight: 600;
+    color: #1e1e1e;
+}
+
+/* Clear Confirmation - Inline */
+.ots-clear-confirmation-inline {
+    padding: 0;
+    margin: 0;
+}
+
+.ots-clear-confirmation-inline .components-notice {
+    margin: 0;
+    border-radius: 0;
+}
+
+.ots-clear-confirmation-inline .components-button-group {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.ots-clear-confirmation-inline .components-button {
+    flex: 1;
+    justify-content: center;
 }
 
 /* Action Buttons */
@@ -361,6 +407,11 @@
         background: #1e1e1e;
     }
 
+    .ots-sticky-notice-wrapper {
+        background: #1e1e1e;
+        border-bottom-color: #3e3e3e;
+    }
+
     .ots-popover-header h3,
     .ots-features-section h4,
     .ots-preview-section h4,
@@ -374,9 +425,13 @@
         color: #fff;
     }
 
-    .ots-feature-code,
-    .ots-preview-features code {
+    .ots-feature-code {
         background: #2e2e2e;
+        color: #fff;
+    }
+
+    .ots-preview-features,
+    .ots-preview-features strong {
         color: #fff;
     }
 
