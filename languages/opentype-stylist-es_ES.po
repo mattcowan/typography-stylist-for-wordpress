@@ -984,18 +984,18 @@ msgstr "%s aplicado"
 msgid "Change undone"
 msgstr "Cambio deshecho"
 
-#: assets/js/block-editor.js:1832
-msgid "Clear All Typography Settings?"
-msgstr "¿Borrar Todas las Configuraciones Tipográficas?"
-
-#: assets/js/block-editor.js:1835
-msgid "This will remove all typography features, font selections, and styling."
-msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."
-
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "No volver a mostrar esta advertencia (esta sesión)"
 
+#: assets/js/block-editor.js:1832
+msgid "Clear All Typography Settings?"
+msgstr "¿Borrar Todas las Configuraciones Tipográficas?"
+
 #: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
 msgstr "Borrar Todas las Configuraciones"
+
+#: assets/js/block-editor.js:1835
+msgid "This will remove all typography features, font selections, and styling."
+msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."

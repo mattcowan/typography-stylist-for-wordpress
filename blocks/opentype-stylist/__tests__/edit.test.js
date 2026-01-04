@@ -1654,6 +1654,21 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 			expect(result.shouldExtractToBlock).toBe(false);
 		});
 
+		it('should handle leading/trailing whitespace correctly (coverage bug fix)', () => {
+			// This tests the fix for the trim() inconsistency bug
+			// HTML with leading space in the styled span
+			const html = '<span class="ots-styled" data-features="ss01"> Moriarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			// Coverage should be 1.0 (full), not >1.0
+			// Before fix: totalLength = "Moriarty".length (8), spanLength = " Moriarty".length (9) = ratio 1.125
+			// After fix: totalLength = "Moriarty".length (8), spanLength = "Moriarty".length (8) = ratio 1.0
+			expect(result.hasInlineFeatures).toBe(true);
+			expect(result.coverage).toBe('full');
+			expect(result.shouldExtractToBlock).toBe(true);
+		});
+
 		it('should handle content with whitespace', () => {
 			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>  ';
 

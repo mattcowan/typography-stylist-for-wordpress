@@ -405,7 +405,7 @@ export function analyzeInlineFeatures(htmlContent) {
 
 		styledSpans.forEach(span => {
 			const spanText = span.textContent || '';
-			const spanLength = spanText.length;
+			const spanLength = spanText.trim().length;
 			coveredLength += spanLength;
 
 			// Extract features from this span

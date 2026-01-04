@@ -813,20 +813,20 @@ msgstr ""
 msgid "When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis."
 msgstr ""
 
-#: assets/js/block-editor.js:1832
-msgid "Clear All Typography Settings?"
-msgstr ""
-
-#: assets/js/block-editor.js:1835
-msgid "This will remove all typography features, font selections, and styling."
-msgstr ""
-
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr ""
 
+#: assets/js/block-editor.js:1832
+msgid "Clear All Typography Settings?"
+msgstr ""
+
 #: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
+msgstr ""
+
+#: assets/js/block-editor.js:1835
+msgid "This will remove all typography features, font selections, and styling."
 msgstr ""
 
 #: blocks/opentype-stylist/edit.js:171
