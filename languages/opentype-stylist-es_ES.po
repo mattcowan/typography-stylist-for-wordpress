@@ -337,13 +337,13 @@ msgstr "Características de Fuente"
 msgid "Help"
 msgstr "Ayuda"
 
-#: includes/admin-page.php:95
-msgid "Feature Demonstrations"
-msgstr "Demostraciones de Características"
+#: includes/admin-page.php:153
+msgid "Font Features"
+msgstr "Características de Fuente"
 
-#: includes/admin-page.php:96
-msgid "See how each OpenType feature affects your text. Compare the default rendering with each feature enabled."
-msgstr "Observa cómo cada característica OpenType afecta a tu texto. Compara la visualización predeterminada con cada característica activada."
+#: includes/admin-page.php:154
+msgid "Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography."
+msgstr "Explora las características de OpenType con vistas previas en vivo. Escribe texto personalizado o usa las muestras predeterminadas para ver cómo cada característica afecta tu tipografía."
 
 #: includes/admin-page.php:102
 msgid "Preview with Font:"
@@ -369,6 +369,26 @@ msgstr "Ajustar tamaño del texto de vista previa"
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr "Ajusta el tamaño del texto de vista previa para ver mejor las características tipográficas."
 
+#: includes/admin-page.php:243
+msgid "Custom Preview Text:"
+msgstr "Texto de Vista Previa Personalizado:"
+
+#: includes/admin-page.php:249
+msgid "Type your own text to preview features..."
+msgstr "Escribe tu propio texto para previsualizar características..."
+
+#: includes/admin-page.php:250
+msgid "Enter custom text to preview features"
+msgstr "Introduce texto personalizado para previsualizar características"
+
+#: includes/admin-page.php:256
+msgid "Reset to Defaults"
+msgstr "Restablecer a Valores Predeterminados"
+
+#: includes/admin-page.php:259
+msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
+msgstr "Escribe tu propio texto para ver cómo cada característica lo afecta, o déjalo en blanco para usar las muestras predeterminadas."
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr "Ligaduras"
@@ -385,11 +405,7 @@ msgstr "Florituras y Alternativas"
 msgid "Decorative"
 msgstr "Decorativo"
 
-#: includes/admin-page.php:186
-msgid "Default:"
-msgstr "Predeterminado:"
-
-#: includes/admin-page.php:193
+#: includes/admin-page.php:302
 msgid "With Feature:"
 msgstr "Con Característica:"
 
@@ -699,6 +715,16 @@ msgstr "Tipografía Elegante y Florituras"
 msgid "Font Family"
 msgstr "Familia de Fuentes"
 
+#: includes/admin-page.php:366
+msgid "%d font"
+msgid_plural "%d fonts"
+msgstr[0] "%d fuente"
+msgstr[1] "%d fuentes"
+
+#: includes/admin-page.php:413
+msgid "Font Family:"
+msgstr "Familia de Fuentes:"
+
 #: assets/js/block-editor.js:461
 msgid "(Default)"
 msgstr "(Predeterminada)"
@@ -975,15 +1001,6 @@ msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere 
 msgid "Click \"Apply\" below the preview to confirm changes."
 msgstr "Haga clic en \"Aplicar\" debajo de la vista previa para confirmar los cambios."
 
-#: assets/js/admin-page.js:302
-#, php-format
-msgid "%s applied"
-msgstr "%s aplicado"
-
-#: assets/js/admin-page.js:342
-msgid "Change undone"
-msgstr "Cambio deshecho"
-
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "No volver a mostrar esta advertencia (esta sesión)"
@@ -999,3 +1016,43 @@ msgstr "Borrar Todas las Configuraciones"
 #: assets/js/block-editor.js:1835
 msgid "This will remove all typography features, font selections, and styling."
 msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."
+
+#: includes/admin-page.php:1305
+msgid "Add New Replacement Mapping"
+msgstr "Agregar Nuevo Mapeo de Reemplazo"
+
+#: includes/admin-page.php:1306
+msgid "Manually create a replacement mapping for a font ID that was previously deleted."
+msgstr "Crear manualmente un mapeo de reemplazo para un ID de fuente que fue eliminado previamente."
+
+#: includes/admin-page.php:1311
+msgid "Deleted Font ID:"
+msgstr "ID de Fuente Eliminada:"
+
+#: includes/admin-page.php:1314
+msgid "Select a deleted font ID..."
+msgstr "Seleccionar un ID de fuente eliminada..."
+
+#: includes/admin-page.php:1318
+msgid "Select a font ID that was previously deleted (available IDs shown)"
+msgstr "Seleccionar un ID de fuente que fue eliminado previamente (IDs disponibles mostrados)"
+
+#: includes/admin-page.php:1324
+msgid "Replacement Font:"
+msgstr "Fuente de Reemplazo:"
+
+#: includes/admin-page.php:1327
+msgid "Select a replacement font..."
+msgstr "Seleccionar una fuente de reemplazo..."
+
+#: includes/admin-page.php:1331
+msgid "Select which active font should replace the deleted font"
+msgstr "Seleccionar qué fuente activa debe reemplazar la fuente eliminada"
+
+#: includes/admin-page.php:1337
+msgid "Add Replacement"
+msgstr "Agregar Reemplazo"
+
+#: opentype-stylist.php:2799
+msgid "Invalid font ID (0). Font IDs must be greater than 0."
+msgstr "ID de fuente inválido (0). Los IDs de fuente deben ser mayores que 0."

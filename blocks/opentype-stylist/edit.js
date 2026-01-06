@@ -42,6 +42,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		tagName,
 		features,
 		fontFamily,
+		fontId,
 		fontSize,
 		fontSizeMin,
 		fontSizePreferred,
@@ -388,45 +389,52 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	// Get font options
 	const fontOptions = [];
+	const fontIdMap = {}; // Map font ID to font object
 	const fonts = window.otsData?.fonts || [];
 	const adobeFonts = window.otsData?.adobeFonts || [];
 	const manualFonts = window.otsData?.manualFonts || [];
 
 	// Add uploaded fonts
 	fonts.forEach(font => {
-		if (font.font_faces && font.font_faces.length > 0) {
+		if (font.font_faces && font.font_faces.length > 0 && font.font_id) {
 			const families = [...new Set(font.font_faces.map(face => face.family))];
 			families.forEach(family => {
-				const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
 				fontOptions.push({
 					label: `📁 ${family}`,
-					value: fontValue
+					value: String(font.font_id),
+					fontFamily: family,
+					fontId: font.font_id
 				});
+				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
 			});
 		}
 	});
 
 	// Add Adobe fonts
 	adobeFonts.forEach(font => {
-		if (font.font_families && font.font_families.length > 0) {
+		if (font.font_families && font.font_families.length > 0 && font.font_id) {
 			font.font_families.forEach(family => {
-				const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
 				fontOptions.push({
 					label: `🅰️ ${family}`,
-					value: fontValue
+					value: String(font.font_id),
+					fontFamily: family,
+					fontId: font.font_id
 				});
+				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
 			});
 		}
 	});
 
 	// Add manual fonts
 	manualFonts.forEach(font => {
-		if (font.font_family) {
-			const fontValue = font.fallbacks ? `${font.font_family}, ${font.fallbacks}` : font.font_family;
+		if (font.font_family && font.font_id) {
 			fontOptions.push({
 				label: `⚙️ ${font.name}`,
-				value: fontValue
+				value: String(font.font_id),
+				fontFamily: font.font_family,
+				fontId: font.font_id
 			});
+			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
 		}
 	});
 
@@ -1230,12 +1238,33 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				{fontOptions.length > 0 && (
 					<PanelBody title={__('Font Family', 'opentype-stylist')} initialOpen={false}>
 						<SelectControl
-							value={fontFamily}
+							value={fontId ? String(fontId) : (fontFamily || '')}
 							options={[
 								{ label: __('(Default)', 'opentype-stylist'), value: '' },
 								...fontOptions
 							]}
-							onChange={(value) => setAttributes({ fontFamily: value })}
+							onChange={(value) => {
+								if (value === '') {
+									setAttributes({ fontFamily: '', fontId: 0 });
+								} else {
+									// Try to parse as ID (new system)
+									const selectedFontId = parseInt(value, 10);
+									if (!isNaN(selectedFontId) && fontIdMap[selectedFontId]) {
+										// New ID-based system
+										const fontData = fontIdMap[selectedFontId];
+										setAttributes({
+											fontFamily: fontData.family,
+											fontId: selectedFontId
+										});
+									} else {
+										// Old string-based system (backward compatibility)
+										setAttributes({
+											fontFamily: value,
+											fontId: 0
+										});
+									}
+								}
+							}}
 						/>
 					</PanelBody>
 				)}
