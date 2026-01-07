@@ -3,7 +3,7 @@
  * Plugin Name: OpenType Stylist
  * Plugin URI: https://github.com/mattcowan/opentype-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -90,6 +90,9 @@ class OpenType_Stylist {
         // Register custom block
         add_action('init', array($this, 'register_block'));
 
+        // Add Settings link on plugins page
+        add_filter('plugin_action_links_' . OTS_PLUGIN_BASENAME, array($this, 'add_plugin_action_links'));
+
         // Secure upload directory on activation
         register_activation_hook(__FILE__, array($this, 'activate_plugin'));
     }
@@ -114,7 +117,7 @@ class OpenType_Stylist {
 
             // Add CSS variables inline for editor iframe
             // We need to create a dummy style handle to attach inline CSS
-            wp_register_style('ots-editor-variables', false);
+            wp_register_style('ots-editor-variables', false, array(), OTS_VERSION);
             wp_enqueue_style('ots-editor-variables');
 
             $css_vars = $this->get_font_css_variables();
@@ -283,9 +286,14 @@ class OpenType_Stylist {
         $use_full_content_filter = apply_filters('ots_use_full_content_filter', false);
 
         if ($use_full_content_filter) {
-            // Log warning in debug mode when full filter is enabled
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('OpenType Stylist: Using full the_content filter (ots_use_full_content_filter enabled). This may impact performance.');
+            // Log warning when debug logging is enabled (throttled to once per hour)
+            // WP_DEBUG_LOG must be explicitly enabled for error_log() to be used
+            if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+                $log_key = 'ots_full_filter_warning';
+                if (false === get_transient($log_key)) {
+                    error_log('OpenType Stylist: Using full the_content filter (ots_use_full_content_filter enabled). This may impact performance. Will log again in 1 hour.');
+                    set_transient($log_key, true, HOUR_IN_SECONDS);
+                }
             }
             return apply_filters('the_content', $content);
         }
@@ -345,11 +353,15 @@ class OpenType_Stylist {
                 foreach ($wp_query->posts as $loop_post) {
                     $content_to_check = $this->get_archive_post_content($loop_post);
 
-                    // Apply content filters to render blocks
-                    $rendered_content = $this->render_content_for_detection($content_to_check);
+                    // Check raw content first (cheap operation)
+                    if (strpos($content_to_check, 'ots-styled') !== false) {
+                        $has_styled = 'yes';
+                        break; // Found styled content, no need to check more
+                    }
 
-                    if (strpos($content_to_check, 'ots-styled') !== false ||
-                        strpos($rendered_content, 'ots-styled') !== false) {
+                    // Only render blocks if not found in raw content (expensive operation)
+                    $rendered_content = $this->render_content_for_detection($content_to_check);
+                    if (strpos($rendered_content, 'ots-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
                     }
@@ -654,8 +666,10 @@ class OpenType_Stylist {
                 }
             }
 
-            // Minify (remove extra whitespace)
+            // Minify (remove CSS comments, then collapse whitespace)
+            $combined_css = preg_replace('/\/\*.*?\*\//s', '', $combined_css);
             $combined_css = preg_replace('/\s+/', ' ', $combined_css);
+            $combined_css = trim($combined_css);
 
             // Cache for 24 hours
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
@@ -681,6 +695,24 @@ class OpenType_Stylist {
         // Enqueue admin assets only on plugin page
         add_action('admin_print_styles-' . $hook, array($this, 'enqueue_admin_assets'));
         add_action('admin_print_scripts-' . $hook, array($this, 'enqueue_admin_assets'));
+    }
+
+    /**
+     * Add Settings link to plugin action links on plugins page
+     *
+     * @param array $links Existing plugin action links
+     * @return array Modified plugin action links
+     */
+    public function add_plugin_action_links($links) {
+        $settings_link = sprintf(
+            '<a href="%s">%s</a>',
+            esc_url(admin_url('options-general.php?page=opentype-stylist')),
+            esc_html__('Settings', 'opentype-stylist')
+        );
+
+        array_unshift($links, $settings_link);
+
+        return $links;
     }
 
     /**
@@ -785,8 +817,10 @@ class OpenType_Stylist {
                 }
             }
 
-            // Minify (remove extra whitespace)
+            // Minify (remove CSS comments, then collapse whitespace)
+            $combined_css = preg_replace('/\/\*.*?\*\//s', '', $combined_css);
             $combined_css = preg_replace('/\s+/', ' ', $combined_css);
+            $combined_css = trim($combined_css);
 
             // Cache for 24 hours
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
@@ -821,8 +855,10 @@ class OpenType_Stylist {
                 }
             }
 
-            // Minify (remove extra whitespace)
+            // Minify (remove CSS comments, then collapse whitespace)
+            $combined_css = preg_replace('/\/\*.*?\*\//s', '', $combined_css);
             $combined_css = preg_replace('/\s+/', ' ', $combined_css);
+            $combined_css = trim($combined_css);
 
             // Cache for 24 hours
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
@@ -859,8 +895,10 @@ class OpenType_Stylist {
                 }
             }
 
-            // Minify (remove extra whitespace)
+            // Minify (remove CSS comments, then collapse whitespace)
+            $combined_css = preg_replace('/\/\*.*?\*\//s', '', $combined_css);
             $combined_css = preg_replace('/\s+/', ' ', $combined_css);
+            $combined_css = trim($combined_css);
 
             // Cache for 24 hours
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
@@ -1603,6 +1641,7 @@ class OpenType_Stylist {
         delete_transient('ots_admin_font_css');
         delete_transient('ots_editor_font_css');
         delete_transient('ots_block_font_css');
+        delete_transient('ots_css_variables');
 
         // Clear per-page font caches (all cached variations)
         // Direct database call is required here for bulk deletion of transients with wildcard patterns.
@@ -1669,7 +1708,8 @@ class OpenType_Stylist {
         $fonts = array();
 
         // Extract @font-face rules
-        preg_match_all('/@font-face\s*\{([^}]+)\}/s', $css_content, $matches);
+        // Updated regex to properly handle multi-line @font-face with nested braces
+        preg_match_all('/@font-face\s*\{((?:[^{}]+|\{[^{}]*\})*)\}/is', $css_content, $matches);
 
         foreach ($matches[1] as $font_face) {
             $font_data = array();
@@ -1755,6 +1795,7 @@ class OpenType_Stylist {
                 $sanitized_font = array(
                     'id' => sanitize_key($font['id']),
                     'name' => sanitize_text_field($font['name']),
+                    'font_id' => isset($font['font_id']) ? absint($font['font_id']) : 0,
                     'css_content' => $sanitized_css,
                     'font_faces' => isset($font['font_faces']) ? $font['font_faces'] : array(),
                     'uploaded_date' => isset($font['uploaded_date']) ? sanitize_text_field($font['uploaded_date']) : current_time('mysql'),
@@ -1771,6 +1812,11 @@ class OpenType_Stylist {
                 }
                 if (isset($font['file_count'])) {
                     $sanitized_font['file_count'] = absint($font['file_count']);
+                }
+
+                // Auto-generate font_id if missing
+                if ($sanitized_font['font_id'] === 0) {
+                    $sanitized_font['font_id'] = $this->generate_font_id();
                 }
 
                 $sanitized[] = $sanitized_font;
@@ -1791,63 +1837,68 @@ class OpenType_Stylist {
      * REST endpoint: Upload font kit
      */
     public function upload_font_endpoint($request) {
-        // Get uploaded file
-        $files = $request->get_file_params();
-        $params = $request->get_params();
+        try {
+            // Get uploaded file
+            $files = $request->get_file_params();
+            $params = $request->get_params();
 
-        if (empty($files['zip_file']) || empty($params['name'])) {
-            return new WP_Error('missing_data', esc_html__('Missing required font data', 'opentype-stylist'), array('status' => 400));
+            if (empty($files['zip_file']) || empty($params['name'])) {
+                return new WP_Error('missing_data', esc_html__('Missing required font data', 'opentype-stylist'), array('status' => 400));
+            }
+
+            $uploaded_file = $files['zip_file'];
+
+            // Validate file type and extension more securely
+            $file_info = wp_check_filetype_and_ext($uploaded_file['tmp_name'], $uploaded_file['name']);
+            $ext = $file_info['ext'];
+            $type = $file_info['type'];
+
+            if (!$ext || !$type) {
+                return new WP_Error('invalid_file', esc_html__('Invalid file type', 'opentype-stylist'), array('status' => 400));
+            }
+
+            if ($ext !== 'zip' || !in_array($type, array('application/zip', 'application/x-zip-compressed'), true)) {
+                return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'opentype-stylist'), array('status' => 400));
+            }
+
+            // Validate file size (max 10MB)
+            $max_size = 10 * 1024 * 1024; // 10MB
+            if ($uploaded_file['size'] > $max_size) {
+                /* translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB") */
+                return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'opentype-stylist'), size_format($max_size)), array('status' => 400));
+            }
+
+            // Check for upload errors
+            if ($uploaded_file['error'] !== UPLOAD_ERR_OK) {
+                return new WP_Error('upload_error', esc_html__('File upload error', 'opentype-stylist'), array('status' => 400));
+            }
+
+            // Process the ZIP file - returns array of font entries
+            $font_entries = $this->process_font_kit_zip($uploaded_file, sanitize_text_field($params['name']));
+
+            if (is_wp_error($font_entries)) {
+                return $font_entries;
+            }
+
+            // Add all font entries from the kit
+            $fonts = $this->get_custom_fonts();
+            foreach ($font_entries as $font_entry) {
+                $fonts[] = $font_entry;
+            }
+            update_option('ots_custom_fonts', $fonts);
+
+            // Clear cache
+            $this->clear_cache();
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'fonts' => $font_entries,
+                'count' => count($font_entries)
+            ));
+        } catch (Exception $e) {
+            error_log('OTS Upload Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            return new WP_Error('upload_exception', 'Upload failed: ' . $e->getMessage(), array('status' => 500));
         }
-
-        $uploaded_file = $files['zip_file'];
-
-        // Validate file type and extension more securely
-        $file_info = wp_check_filetype_and_ext($uploaded_file['tmp_name'], $uploaded_file['name']);
-        $ext = $file_info['ext'];
-        $type = $file_info['type'];
-
-        if (!$ext || !$type) {
-            return new WP_Error('invalid_file', esc_html__('Invalid file type', 'opentype-stylist'), array('status' => 400));
-        }
-
-        if ($ext !== 'zip' || !in_array($type, array('application/zip', 'application/x-zip-compressed'), true)) {
-            return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'opentype-stylist'), array('status' => 400));
-        }
-
-        // Validate file size (max 10MB)
-        $max_size = 10 * 1024 * 1024; // 10MB
-        if ($uploaded_file['size'] > $max_size) {
-            /* translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB") */
-            return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'opentype-stylist'), size_format($max_size)), array('status' => 400));
-        }
-
-        // Check for upload errors
-        if ($uploaded_file['error'] !== UPLOAD_ERR_OK) {
-            return new WP_Error('upload_error', esc_html__('File upload error', 'opentype-stylist'), array('status' => 400));
-        }
-
-        // Process the ZIP file - returns array of font entries
-        $font_entries = $this->process_font_kit_zip($uploaded_file, sanitize_text_field($params['name']));
-
-        if (is_wp_error($font_entries)) {
-            return $font_entries;
-        }
-
-        // Add all font entries from the kit
-        $fonts = $this->get_custom_fonts();
-        foreach ($font_entries as $font_entry) {
-            $fonts[] = $font_entry;
-        }
-        update_option('ots_custom_fonts', $fonts);
-
-        // Clear cache
-        $this->clear_cache();
-
-        return rest_ensure_response(array(
-            'success' => true,
-            'fonts' => $font_entries,
-            'count' => count($font_entries)
-        ));
     }
 
     /**
@@ -1951,11 +2002,13 @@ class OpenType_Stylist {
             // Delete any non-allowed file types
             if (!in_array($file_ext, $allowed_extensions, true)) {
                 wp_delete_file($file);
+                continue;
             }
 
             // Prevent PHP execution
             if (in_array($file_ext, array('php', 'php3', 'php4', 'php5', 'phtml', 'phps'), true)) {
                 wp_delete_file($file);
+                continue;
             }
 
             // Validate file is within expected directory
@@ -1963,6 +2016,14 @@ class OpenType_Stylist {
             $real_base = realpath($kit_base_path);
             if ($real_path === false || $real_base === false || strpos($real_path, $real_base) !== 0) {
                 wp_delete_file($file);
+                continue;
+            }
+
+            // Validate font files by magic number (file signature)
+            if (in_array($file_ext, array('woff', 'woff2', 'ttf', 'otf', 'eot'), true)) {
+                if (!$this->is_valid_font_file($file)) {
+                    wp_delete_file($file); // Not a real font file
+                }
             }
         }
 
@@ -2024,6 +2085,15 @@ class OpenType_Stylist {
 
         // Rewrite URLs in CSS to point to WordPress uploads
         $css_content = $this->rewrite_css_urls($css_content, $css_base_url);
+
+        // Sanitize CSS content to remove dangerous rules and external URLs
+        $css_content = $this->sanitize_font_css($css_content);
+
+        // Check if sanitization removed all content
+        if (empty($css_content)) {
+            $wp_filesystem->rmdir($kit_base_path, true);
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face declarations found after sanitization', 'opentype-stylist'));
+        }
 
         // Parse font families
         $font_faces = $this->parse_webfont_kit($css_content);
@@ -2097,7 +2167,8 @@ class OpenType_Stylist {
         $family_css = '';
 
         // Find all @font-face blocks that match this family
-        preg_match_all('/@font-face\s*\{([^}]+)\}/s', $css_content, $matches, PREG_SET_ORDER);
+        // Updated regex to properly handle multi-line @font-face with nested braces
+        preg_match_all('/@font-face\s*\{((?:[^{}]+|\{[^{}]*\})*)\}/is', $css_content, $matches, PREG_SET_ORDER);
 
         foreach ($matches as $match) {
             $font_face_block = $match[0];
@@ -2148,17 +2219,24 @@ class OpenType_Stylist {
             wp_mkdir_p($font_dir);
         }
 
-        // Add .htaccess to prevent PHP execution
+        // Add .htaccess to prevent PHP execution - Compatible with Apache 2.2 and 2.4+
         $htaccess_file = $font_dir . '/.htaccess';
         if (!file_exists($htaccess_file)) {
             $htaccess_content = "# Prevent PHP execution\n";
-            $htaccess_content .= "<FilesMatch \"\\.php$\">\n";
-            $htaccess_content .= "    Deny from all\n";
-            $htaccess_content .= "</FilesMatch>\n";
+            $htaccess_content .= "# Apache 2.4+\n";
+            $htaccess_content .= "<IfModule mod_authz_core.c>\n";
+            $htaccess_content .= "    <FilesMatch \"\\.php$\">\n";
+            $htaccess_content .= "        Require all denied\n";
+            $htaccess_content .= "    </FilesMatch>\n";
+            $htaccess_content .= "</IfModule>\n";
+            $htaccess_content .= "# Apache 2.2\n";
+            $htaccess_content .= "<IfModule !mod_authz_core.c>\n";
+            $htaccess_content .= "    <FilesMatch \"\\.php$\">\n";
+            $htaccess_content .= "        Deny from all\n";
+            $htaccess_content .= "    </FilesMatch>\n";
+            $htaccess_content .= "</IfModule>\n";
             $htaccess_content .= "# Prevent directory listing\n";
             $htaccess_content .= "Options -Indexes\n";
-
-            @file_put_contents($htaccess_file, $htaccess_content);
         }
 
         // Add index.php to prevent directory listing
@@ -2189,6 +2267,7 @@ class OpenType_Stylist {
                 $sanitized_font = array(
                     'id' => sanitize_key($font['id']),
                     'name' => isset($font['name']) ? sanitize_text_field($font['name']) : '',
+                    'font_id' => isset($font['font_id']) ? absint($font['font_id']) : 0,
                     'css_url' => esc_url_raw($font['css_url'], array('https')),
                     'font_families' => isset($font['font_families']) && is_array($font['font_families'])
                         ? array_map('sanitize_text_field', $font['font_families'])
@@ -2197,6 +2276,11 @@ class OpenType_Stylist {
                     'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : '',
                     'load_on_all_pages' => isset($font['load_on_all_pages']) ? (bool) $font['load_on_all_pages'] : false
                 );
+
+                // Auto-generate font_id if missing
+                if ($sanitized_font['font_id'] === 0) {
+                    $sanitized_font['font_id'] = $this->generate_font_id();
+                }
 
                 // Only add if CSS URL is valid https
                 if (!empty($sanitized_font['css_url']) && strpos($sanitized_font['css_url'], 'https://') === 0) {
@@ -2222,10 +2306,16 @@ class OpenType_Stylist {
                 $sanitized_font = array(
                     'id' => sanitize_key($font['id']),
                     'name' => isset($font['name']) ? sanitize_text_field($font['name']) : '',
+                    'font_id' => isset($font['font_id']) ? absint($font['font_id']) : 0,
                     'font_family' => sanitize_text_field($font['font_family']),
                     'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : '',
                     'added_date' => isset($font['added_date']) ? sanitize_text_field($font['added_date']) : current_time('mysql')
                 );
+
+                // Auto-generate font_id if missing
+                if ($sanitized_font['font_id'] === 0) {
+                    $sanitized_font['font_id'] = $this->generate_font_id();
+                }
 
                 // Only add if font_family is not empty
                 if (!empty($sanitized_font['font_family'])) {
@@ -2805,9 +2895,9 @@ class OpenType_Stylist {
         foreach ($css_urls_to_load as $handle_id => $css_url) {
             wp_enqueue_style(
                 'ots-adobe-' . $handle_id,
-                $css_url,
+                esc_url($css_url, array('https')),
                 array(),
-                null
+                $handle_id  // Use kit ID as version for cache busting when Adobe updates fonts
             );
         }
     }
@@ -3105,6 +3195,14 @@ class OpenType_Stylist {
      * @return string CSS variables string
      */
     public function get_font_css_variables() {
+        // Check transient cache first
+        $cache_key = 'ots_css_variables';
+        $cached_css = get_transient($cache_key);
+
+        if (false !== $cached_css) {
+            return $cached_css;
+        }
+
         $css_vars = array();
         $replacements = $this->get_font_replacements();
 
@@ -3112,9 +3210,9 @@ class OpenType_Stylist {
         $custom_fonts = $this->get_custom_fonts();
         foreach ($custom_fonts as $font) {
             if (isset($font['font_id']) && !empty($font['font_faces'][0])) {
-                // Use first face for main variable
-                $family = esc_attr($font['font_faces'][0]['family']);
-                $fallback = isset($font['fallbacks']) ? ', ' . esc_attr($font['fallbacks']) : '';
+                // Use first face for main variable - sanitize for CSS context
+                $family = $this->sanitize_css_value($font['font_faces'][0]['family']);
+                $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                 $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
             }
         }
@@ -3125,17 +3223,17 @@ class OpenType_Stylist {
             if (isset($font['font_id'])) {
                 $family = '';
 
-                // New structure: font_family (single string)
+                // New structure: font_family (single string) - sanitize for CSS context
                 if (!empty($font['font_family'])) {
-                    $family = esc_attr($font['font_family']);
+                    $family = $this->sanitize_css_value($font['font_family']);
                 }
                 // Legacy structure: font_families (array, use first)
                 elseif (!empty($font['font_families'][0])) {
-                    $family = esc_attr($font['font_families'][0]);
+                    $family = $this->sanitize_css_value($font['font_families'][0]);
                 }
 
                 if ($family) {
-                    $fallback = isset($font['fallbacks']) ? ', ' . esc_attr($font['fallbacks']) : '';
+                    $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                     $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
                 }
             }
@@ -3148,18 +3246,18 @@ class OpenType_Stylist {
                 $family_raw = $font['font_family'];
 
                 // Check if font_family already contains commas (indicating fallbacks are included)
-                // and whether there are separate fallbacks defined
+                // and whether there are separate fallbacks defined - sanitize for CSS context
                 if (!empty($font['fallbacks'])) {
                     if (strpos($family_raw, ',') === false) {
                         // Separate fallbacks provided and font_family is a single family
-                        $family = '"' . esc_attr($family_raw) . '", ' . esc_attr($font['fallbacks']);
+                        $family = '"' . $this->sanitize_css_value($family_raw) . '", ' . $this->sanitize_css_value($font['fallbacks']);
                     } else {
                         // font_family already provides a stack; append additional fallbacks
-                        $family = esc_attr($family_raw) . ', ' . esc_attr($font['fallbacks']);
+                        $family = $this->sanitize_css_value($family_raw) . ', ' . $this->sanitize_css_value($font['fallbacks']);
                     }
                 } else {
                     // No separate fallbacks defined; use font_family as provided
-                    $family = esc_attr($family_raw);
+                    $family = $this->sanitize_css_value($family_raw);
                 }
 
                 $css_vars[] = sprintf('--font-%d: %s', $font['font_id'], $family);
@@ -3175,7 +3273,12 @@ class OpenType_Stylist {
             return '';
         }
 
-        return ":root {\n    " . implode(";\n    ", $css_vars) . ";\n}";
+        $css = ":root {\n    " . implode(";\n    ", $css_vars) . ";\n}";
+
+        // Cache for 24 hours
+        set_transient($cache_key, $css, DAY_IN_SECONDS);
+
+        return $css;
     }
 
     /**
@@ -3196,8 +3299,239 @@ class OpenType_Stylist {
 
         $css = $this->get_font_css_variables();
         if (!empty($css)) {
-            echo "<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n";
+            // Sanitize CSS output - allow only safe CSS for :root variables
+            $allowed_css = array(
+                'style' => array(
+                    'id' => array(),
+                    'type' => array()
+                )
+            );
+            // Output CSS with proper escaping - CSS is already sanitized in get_font_css_variables()
+            echo wp_kses("<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
         }
+    }
+
+    /**
+     * Sanitize uploaded font CSS content
+     *
+     * Removes dangerous CSS rules like @import, external URLs, and non-@font-face declarations
+     * to prevent CSS injection attacks and data exfiltration.
+     *
+     * @param string $css_content Raw CSS content from uploaded font kit
+     * @return string Sanitized CSS content containing only safe @font-face rules
+     */
+    private function sanitize_font_css($css_content) {
+        // Remove @import statements (can load external stylesheets)
+        $css_content = preg_replace('/@import\s+[^;]+;/i', '', $css_content);
+
+        // Extract only @font-face blocks
+        // Updated regex to properly handle multi-line @font-face with nested braces
+        // Note: We only extract @font-face blocks (whitelisting), so no need to
+        // explicitly remove other @-rules - they're ignored automatically.
+        preg_match_all(
+            '/@font-face\s*\{(?:[^{}]+|\{[^{}]*\})*\}/is',
+            $css_content,
+            $matches
+        );
+
+        if (empty($matches[0])) {
+            return '';
+        }
+
+        $sanitized_font_faces = array();
+        foreach ($matches[0] as $font_face) {
+            // Validate each @font-face block
+            if ($this->validate_font_face_block($font_face)) {
+                $sanitized_font_faces[] = $font_face;
+            }
+        }
+
+        return implode("\n\n", $sanitized_font_faces);
+    }
+
+    /**
+     * Validate a single @font-face block
+     *
+     * Ensures the @font-face block contains required properties and no external URLs.
+     * URLs are validated against the WordPress uploads directory path, not the site URL,
+     * to handle protocol mismatches and CDN configurations.
+     *
+     * @param string $font_face_block A single @font-face {...} block
+     * @return bool True if valid and safe
+     */
+    private function validate_font_face_block($font_face_block) {
+        // Must contain font-family
+        if (!preg_match('/font-family\s*:/i', $font_face_block)) {
+            return false;
+        }
+
+        // Must contain src with valid URL or local()
+        if (!preg_match('/src\s*:/i', $font_face_block)) {
+            return false;
+        }
+
+        // Extract all URLs from the @font-face block
+        preg_match_all('/url\s*\(\s*[\'"]?([^\)\'"\s]+)[\'"]?\s*\)/i', $font_face_block, $url_matches);
+
+        if (empty($url_matches[1])) {
+            // No URLs found - might use local() only, which is fine
+            return true;
+        }
+
+        // Get hosts for validation (cache in static variables for performance)
+        static $upload_host = null;
+        static $site_host = null;
+
+        if ($upload_host === null) {
+            $upload_dir = wp_upload_dir();
+            $upload_url_parts = wp_parse_url($upload_dir['baseurl']);
+            $upload_host = isset($upload_url_parts['host']) ? strtolower($upload_url_parts['host']) : '';
+
+            $site_url_parts = wp_parse_url(get_site_url());
+            $site_host = isset($site_url_parts['host']) ? strtolower($site_url_parts['host']) : '';
+        }
+
+        // Check each URL
+        foreach ($url_matches[1] as $url) {
+            // Allow data URIs (embedded fonts)
+            if (stripos($url, 'data:') === 0) {
+                continue;
+            }
+
+            // Check if this is an absolute URL (contains ://)
+            if (preg_match('/^https?:\/\//i', $url)) {
+                // Parse the URL
+                $url_parts = wp_parse_url($url);
+                if ($url_parts === false) {
+                    return false; // Malformed URL
+                }
+
+                $url_host = isset($url_parts['host']) ? strtolower($url_parts['host']) : '';
+                $url_path = isset($url_parts['path']) ? $url_parts['path'] : '';
+
+                // Validate the URL is from our WordPress installation
+                // Check both upload host and site host to handle CDN configurations
+                $is_local_host = (
+                    $url_host === $upload_host ||
+                    $url_host === $site_host ||
+                    $url_host === 'localhost' ||
+                    $url_host === '127.0.0.1' ||
+                    $url_host === '[::1]'  // IPv6 localhost
+                );
+
+                if (!$is_local_host) {
+                    // External host detected - reject
+                    return false;
+                }
+
+                // Verify the path points to our uploads directory
+                if (strpos($url_path, '/wp-content/uploads/ots/fonts/') === false) {
+                    // URL is from our host but not in our uploads directory - reject
+                    return false;
+                }
+            }
+            // Relative URLs are fine - they'll be rewritten by rewrite_css_urls()
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate file is actually a font file by checking magic numbers
+     *
+     * Prevents PHP files or other malicious content from being uploaded with font extensions.
+     * Uses WP_Filesystem API for file operations as required by WordPress.org guidelines.
+     *
+     * @param string $file_path Path to file
+     * @return bool True if valid font file
+     */
+    private function is_valid_font_file($file_path) {
+        // Initialize WP_Filesystem
+        global $wp_filesystem;
+        if (empty($wp_filesystem)) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            WP_Filesystem();
+        }
+
+        // Check if file exists using WP_Filesystem
+        if (!$wp_filesystem->exists($file_path)) {
+            return false;
+        }
+
+        // Get file size to validate it's not empty
+        $size = $wp_filesystem->size($file_path);
+        if ($size === false || $size < 4) {
+            return false;
+        }
+
+        // Read file contents using WP_Filesystem
+        // Note: WP_Filesystem doesn't support partial reads, but font files are typically small (<500KB)
+        $contents = $wp_filesystem->get_contents($file_path);
+        if ($contents === false || strlen($contents) < 4) {
+            return false;
+        }
+
+        // Extract first 4 bytes (magic number/file signature)
+        $magic = substr($contents, 0, 4);
+
+        // Check for known font file magic numbers (signatures)
+        $valid_signatures = array(
+            'wOFF', // WOFF
+            'wOF2', // WOFF2
+            "\x00\x01\x00\x00", // TrueType/OpenType with TrueType outlines
+            "OTTO", // OpenType with CFF outlines
+            "true", // TrueType (old Mac)
+            "typ1", // PostScript Type 1
+        );
+
+        foreach ($valid_signatures as $signature) {
+            if (substr($magic, 0, strlen($signature)) === $signature) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Sanitize CSS value for use in font-family and similar CSS properties
+     *
+     * Removes HTML tags, dangerous CSS characters, and potential injection vectors
+     * while preserving valid font family syntax.
+     *
+     * @param string $value Raw CSS value
+     * @return string Sanitized CSS value
+     */
+    private function sanitize_css_value($value) {
+        // Remove any HTML tags
+        $value = wp_strip_all_tags($value);
+
+        // Remove dangerous CSS metacharacters that could break CSS syntax
+        $value = str_replace(array('{', '}', ';', '<', '>', '(', ')', '[', ']', '\\'), '', $value);
+
+        // Only allow letters, numbers, spaces, commas, hyphens, single quotes, double quotes, and periods
+        $value = preg_replace('/[^a-zA-Z0-9\s,\-\'".]/', '', $value);
+
+        // Escape for attribute context
+        return esc_attr(trim($value));
+    }
+
+    /**
+     * Sanitize fallback fonts for CSS use
+     *
+     * @param string $fallbacks Comma-separated fallback font list
+     * @return string Sanitized fallback fonts
+     */
+    private function sanitize_fallback_fonts($fallbacks) {
+        if (empty($fallbacks)) {
+            return '';
+        }
+
+        // Remove HTML
+        $fallbacks = sanitize_text_field($fallbacks);
+
+        // Use CSS-specific sanitization
+        return $this->sanitize_css_value($fallbacks);
     }
 
     /**

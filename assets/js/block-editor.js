@@ -1394,7 +1394,18 @@
             // Adobe Fonts
             if (adobeFonts.length > 0) {
                 adobeFonts.forEach(font => {
-                    if (font.font_families && font.font_families.length > 0 && font.font_id) {
+                    // Handle new structure: font_family (singular string - one entry per family)
+                    if (font.font_family && font.font_id) {
+                        options.push({
+                            label: `🅰️ ${font.font_family}`,
+                            value: String(font.font_id),
+                            fontFamily: font.font_family,
+                            fontId: font.font_id
+                        });
+                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+                    }
+                    // Handle legacy structure: font_families (plural array - multiple families per entry)
+                    else if (font.font_families && font.font_families.length > 0 && font.font_id) {
                         font.font_families.forEach(family => {
                             options.push({
                                 label: `🅰️ ${family}`,

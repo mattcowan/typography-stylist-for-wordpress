@@ -84,7 +84,7 @@ $manual_fonts = $instance->get_manual_fonts();
         <?php esc_html_e('Skip to main content', 'opentype-stylist'); ?>
     </a>
 
-    <div class="ots-admin-container">
+    <div class="ots-admin-container" id="ots-main-content" tabindex="-1">
         <div class="ots-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'opentype-stylist'); ?>">
             <button
                 class="ots-tab-button active"
@@ -401,7 +401,10 @@ $manual_fonts = $instance->get_manual_fonts();
                                 <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
                                 <?php echo esc_html($kit_data['kit_name']); ?>
                             </button>
-                            <span class="ots-kit-font-count"><?php echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts']))); ?></span>
+                            <span class="ots-kit-font-count"><?php
+                                /* translators: %d: number of fonts in the kit */
+                                echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
+                            ?></span>
                         </h4>
                         <div class="ots-font-meta">
                             <small>
@@ -791,7 +794,10 @@ $manual_fonts = $instance->get_manual_fonts();
                                     <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
                                     <?php echo esc_html($kit_data['kit_name']); ?>
                                 </button>
-                                <span class="ots-kit-font-count"><?php echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts']))); ?></span>
+                                <span class="ots-kit-font-count"><?php
+                                    /* translators: %d: number of fonts in the Adobe Fonts kit */
+                                    echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
+                                ?></span>
                             </h4>
                             <div class="ots-font-meta">
                                 <small>

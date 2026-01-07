@@ -1,14 +1,14 @@
 === OpenType Stylist ===
-Contributors: yourname
+Contributors: mattcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
-Tested up to: 6.8
-Stable tag: 1.0.0
+Tested up to: 6.9
+Stable tag: 1.0.7
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview. Upload custom fonts, connect Adobe Fonts, or define theme fonts.
+Add advanced OpenType features to headlines with inline text selection and live preview. Upload fonts, connect Adobe Fonts.
 
 == Description ==
 
