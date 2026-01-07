@@ -213,6 +213,7 @@
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
                 selectedFont: this.getActiveFont() || '',
+                selectedFontId: this.getActiveFontId() || 0,
                 fontSize: this.getActiveFontSize() || 'inherit',
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
@@ -443,6 +444,30 @@
         }
 
         /**
+         * Get currently active font ID from format
+         */
+        getActiveFontId() {
+            const { value } = this.props;
+
+            // First, try the standard format API
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font-id']) {
+                return parseInt(activeFormat.attributes['data-font-id'], 10);
+            }
+
+            // Check for styled span in OTS block
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const dataFontId = styledSpan.getAttribute('data-font-id');
+                if (dataFontId) {
+                    return parseInt(dataFontId, 10);
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Get currently active font size mode from format
          */
         getActiveFontSize() {
@@ -646,16 +671,39 @@
         }
 
         /**
-         * Set font family
+         * Set font family (value can be font ID or font family string)
          */
-        setFont(fontFamily) {
+        setFont(value) {
             // Save to history before making changes
             this.saveToHistory();
 
-            this.setState({
-                selectedFont: fontFamily,
-                hasChanges: true
-            });
+            if (value === '') {
+                // Reset to default
+                this.setState({
+                    selectedFont: '',
+                    selectedFontId: 0,
+                    hasChanges: true
+                });
+            } else {
+                // Try to parse as ID (new system)
+                const fontId = parseInt(value, 10);
+                const fontData = this.fontIdMap && this.fontIdMap[fontId];
+                if (!isNaN(fontId) && fontData) {
+                    // New ID-based system
+                    this.setState({
+                        selectedFont: fontData.family,
+                        selectedFontId: fontId,
+                        hasChanges: true
+                    });
+                } else {
+                    // Old string-based system (backward compatibility)
+                    this.setState({
+                        selectedFont: value,
+                        selectedFontId: 0,
+                        hasChanges: true
+                    });
+                }
+            }
         }
 
         /**
@@ -1038,7 +1086,7 @@
          */
         applyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
 
             // Validate selection
             const validation = this.validateSelection();
@@ -1066,8 +1114,13 @@
                     styleString += `font-feature-settings: ${cssValue}`;
                 }
 
-                // Add font family
-                if (selectedFont) {
+                // Add font family - use CSS variable if fontId is available
+                if (selectedFontId) {
+                    attributes['data-font'] = selectedFont;
+                    attributes['data-font-id'] = String(selectedFontId);
+                    if (styleString) styleString += '; ';
+                    styleString += `font-family: var(--font-${selectedFontId})`;
+                } else if (selectedFont) {
                     attributes['data-font'] = selectedFont;
                     if (styleString) styleString += '; ';
                     styleString += `font-family: ${selectedFont}`;
@@ -1122,7 +1175,7 @@
          */
         applyFeaturesForce() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
 
             if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
                 onChange(removeFormat(value, FORMAT_TYPE));
@@ -1136,7 +1189,13 @@
                     styleString += `font-feature-settings: ${cssValue}`;
                 }
 
-                if (selectedFont) {
+                // Add font family - use CSS variable if fontId is available
+                if (selectedFontId) {
+                    attributes['data-font'] = selectedFont;
+                    attributes['data-font-id'] = String(selectedFontId);
+                    if (styleString) styleString += '; ';
+                    styleString += `font-family: var(--font-${selectedFontId})`;
+                } else if (selectedFont) {
                     attributes['data-font'] = selectedFont;
                     if (styleString) styleString += '; ';
                     styleString += `font-family: ${selectedFont}`;
@@ -1310,18 +1369,23 @@
             const manualFonts = otsData.manualFonts || [];
             const options = [];
 
+            // Build font ID map for quick lookup (clear before repopulating)
+            this.fontIdMap = {};
+
             // Uploaded fonts (MyFonts, etc.)
             if (fonts.length > 0) {
                 fonts.forEach(font => {
-                    if (font.font_faces && font.font_faces.length > 0) {
+                    if (font.font_faces && font.font_faces.length > 0 && font.font_id) {
                         // Get unique font families from this kit
                         const families = [...new Set(font.font_faces.map(face => face.family))];
                         families.forEach(family => {
-                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
                             options.push({
                                 label: `📁 ${family}`,
-                                value: fontValue
+                                value: String(font.font_id),
+                                fontFamily: family,
+                                fontId: font.font_id
                             });
+                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
                         });
                     }
                 });
@@ -1330,13 +1394,15 @@
             // Adobe Fonts
             if (adobeFonts.length > 0) {
                 adobeFonts.forEach(font => {
-                    if (font.font_families && font.font_families.length > 0) {
+                    if (font.font_families && font.font_families.length > 0 && font.font_id) {
                         font.font_families.forEach(family => {
-                            const fontValue = font.fallbacks ? `${family}, ${font.fallbacks}` : family;
                             options.push({
                                 label: `🅰️ ${family}`,
-                                value: fontValue
+                                value: String(font.font_id),
+                                fontFamily: family,
+                                fontId: font.font_id
                             });
+                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
                         });
                     }
                 });
@@ -1345,12 +1411,14 @@
             // Manual fonts
             if (manualFonts.length > 0) {
                 manualFonts.forEach(font => {
-                    if (font.font_family) {
-                        const fontValue = font.fallbacks ? `${font.font_family}, ${font.fallbacks}` : font.font_family;
+                    if (font.font_family && font.font_id) {
                         options.push({
                             label: `⚙️ ${font.name}`,
-                            value: fontValue
+                            value: String(font.font_id),
+                            fontFamily: font.font_family,
+                            fontId: font.font_id
                         });
+                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
                     }
                 });
             }
@@ -1509,7 +1577,7 @@
 
         render() {
             const { isActive, isInOTSBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = otsData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -1609,7 +1677,7 @@
                                     <div className="ots-font-section">
                                         <h4>{__('Font Family', 'opentype-stylist')}</h4>
                                         <SelectControl
-                                            value={selectedFont}
+                                            value={selectedFontId ? String(selectedFontId) : ''}
                                             options={[
                                                 { label: __('(Default)', 'opentype-stylist'), value: '' },
                                                 ...fontOptions
@@ -1908,6 +1976,7 @@
         attributes: {
             'data-features': 'data-features',
             'data-font': 'data-font',
+            'data-font-id': 'data-font-id',
             'data-fontsize': 'data-fontsize',
             'data-fontsize-min': 'data-fontsize-min',
             'data-fontsize-preferred': 'data-fontsize-preferred',

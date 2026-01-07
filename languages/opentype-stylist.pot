@@ -339,12 +339,12 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
-#: includes/admin-page.php:95
-msgid "Feature Demonstrations"
+#: includes/admin-page.php:153
+msgid "Font Features"
 msgstr ""
 
-#: includes/admin-page.php:96
-msgid "See how each OpenType feature affects your text. Compare the default rendering with each feature enabled."
+#: includes/admin-page.php:154
+msgid "Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography."
 msgstr ""
 
 #: includes/admin-page.php:102
@@ -371,6 +371,34 @@ msgstr ""
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr ""
 
+#: includes/admin-page.php:243
+msgid "Custom Preview Text:"
+msgstr ""
+
+#: includes/admin-page.php:249
+msgid "Type your own text to preview features..."
+msgstr ""
+
+#: includes/admin-page.php:250
+msgid "Enter custom text to preview features"
+msgstr ""
+
+#: includes/admin-page.php:256
+msgid "Reset to Defaults"
+msgstr ""
+
+#: includes/admin-page.php:259
+msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
+msgstr ""
+
+#: includes/admin-page.php:266
+msgid "Font Preview (No Features Applied)"
+msgstr ""
+
+#: includes/admin-page.php:268
+msgid "This shows how the selected font looks without any OpenType features applied."
+msgstr ""
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr ""
@@ -387,11 +415,7 @@ msgstr ""
 msgid "Decorative"
 msgstr ""
 
-#: includes/admin-page.php:186
-msgid "Default:"
-msgstr ""
-
-#: includes/admin-page.php:193
+#: includes/admin-page.php:302
 msgid "With Feature:"
 msgstr ""
 
@@ -709,6 +733,16 @@ msgstr ""
 msgid "Font Family"
 msgstr ""
 
+#: includes/admin-page.php:366
+msgid "%d font"
+msgid_plural "%d fonts"
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin-page.php:413
+msgid "Font Family:"
+msgstr ""
+
 #: assets/js/block-editor.js:461
 msgid "(Default)"
 msgstr ""
@@ -770,7 +804,6 @@ msgid "Other Features"
 msgstr ""
 
 #: assets/js/block-editor.js:857
-#: includes/admin-page.php:255
 #, php-format
 msgid "Click to apply %s feature"
 msgstr ""
@@ -786,19 +819,6 @@ msgstr ""
 
 #: assets/js/block-editor.js:1163
 msgid "Undo"
-msgstr ""
-
-#: assets/js/admin-page.js:302
-#, php-format
-msgid "%s applied"
-msgstr ""
-
-#: assets/js/admin-page.js:342
-msgid "Change undone"
-msgstr ""
-
-#: includes/admin-page.php:262
-msgid "Undo Last Change"
 msgstr ""
 
 #: includes/admin-page.php:900
@@ -873,8 +893,8 @@ msgstr ""
 msgid "Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor, and you can edit fallback fonts for each kit."
 msgstr ""
 
-#: includes/admin-page.php:527
-msgid "Add fonts from Adobe Fonts by pasting the embed code from your Adobe Fonts project. Once added, you can edit fallback fonts for each project."
+#: includes/admin-page.php:713
+msgid "Add fonts from Adobe Fonts by pasting the embed code from your Adobe Fonts project. Once added, you can edit fallback fonts for each font family."
 msgstr ""
 
 #: includes/admin-page.php:331
@@ -944,4 +964,124 @@ msgstr ""
 
 #: opentype-stylist.php:2375
 msgid "Manual font not found"
+msgstr ""
+
+#: includes/admin-page.php:119
+msgid "Replacement Fonts"
+msgstr ""
+
+#: includes/admin-page.php:1138
+msgid "When a font is deleted, you can map it to a replacement font. Content using the deleted font will automatically display with the replacement."
+msgstr ""
+
+#: includes/admin-page.php:1143
+msgid "No font replacements configured."
+msgstr ""
+
+#: includes/admin-page.php:1305
+msgid "Add New Replacement Mapping"
+msgstr ""
+
+#: includes/admin-page.php:1306
+msgid "Manually create a replacement mapping for a font ID that was previously deleted."
+msgstr ""
+
+#: includes/admin-page.php:1311
+msgid "Deleted Font ID:"
+msgstr ""
+
+#: includes/admin-page.php:1314
+msgid "Select a deleted font ID..."
+msgstr ""
+
+#: includes/admin-page.php:1318
+msgid "Select a font ID that was previously deleted (available IDs shown)"
+msgstr ""
+
+#: includes/admin-page.php:1324
+msgid "Replacement Font:"
+msgstr ""
+
+#: includes/admin-page.php:1327
+msgid "Select a replacement font..."
+msgstr ""
+
+#: includes/admin-page.php:1331
+msgid "Select which active font should replace the deleted font"
+msgstr ""
+
+#: includes/admin-page.php:1337
+msgid "Add Replacement"
+msgstr ""
+
+#: opentype-stylist.php:2799
+msgid "Invalid font ID (0). Font IDs must be greater than 0."
+msgstr ""
+
+#: includes/admin-page.php:1147
+msgid "Unassigned Font IDs"
+msgstr ""
+
+#: includes/admin-page.php:1148
+msgid "These font IDs are referenced in your replacement mappings but no longer have active fonts. Assign replacements to restore functionality."
+msgstr ""
+
+#: includes/admin-page.php:1213
+msgid "Delete Font"
+msgstr ""
+
+#: includes/admin-page.php:1214
+msgid "Close"
+msgstr ""
+
+#: includes/admin-page.php:1217
+msgid "Assign a fallback for existing uses of this font?"
+msgstr ""
+
+#: includes/admin-page.php:1218
+msgid "Content will automatically use the replacement font. You can change this later in Replacement Fonts."
+msgstr ""
+
+#: includes/admin-page.php:1222
+msgid "Replacement Font:"
+msgstr ""
+
+#: includes/admin-page.php:1225
+msgid "— No Replacement (Skip) —"
+msgstr ""
+
+#: includes/admin-page.php:1233
+msgid "Load replacement globally"
+msgstr ""
+
+#: includes/admin-page.php:1235
+msgid "Forces this replacement to load on all pages, even if the deleted font is not detected."
+msgstr ""
+
+#: includes/admin-page.php:1239
+msgid "Cancel"
+msgstr ""
+
+#: opentype-stylist.php:2707
+msgid "Missing required parameters."
+msgstr ""
+
+#: opentype-stylist.php:2716
+msgid "Failed to add font replacement."
+msgstr ""
+
+#: opentype-stylist.php:2728
+msgid "Missing font ID."
+msgstr ""
+
+#: opentype-stylist.php:2737
+msgid "Failed to update font replacement."
+msgstr ""
+
+#: opentype-stylist.php:2756
+msgid "Failed to delete font replacement."
+msgstr ""
+
+#: opentype-stylist.php:720
+msgid "Font deleted successfully! Reloading page..."
 msgstr ""

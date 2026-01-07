@@ -167,6 +167,46 @@
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
+/* Baseline Preview Section */
+.ots-baseline-preview-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.ots-baseline-preview-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #1d2327;
+}
+
+.ots-baseline-preview-section .description {
+    margin: 0 0 20px 0;
+    color: #666;
+    font-size: 13px;
+}
+
+.ots-baseline-preview-container {
+    background: #fff;
+    border: 2px solid #2271b1;
+    border-radius: 4px;
+    padding: 30px;
+    overflow: hidden;
+}
+
+.ots-baseline-preview {
+    font-size: 50px;
+    line-height: 1.4;
+    text-align: center;
+    font-family: Georgia, serif;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: #1d2327;
+    hyphens: auto;
+}
+
 /* Feature Category Section */
 .ots-feature-category-section {
     margin: 30px 0;
@@ -318,12 +358,14 @@
 
 .ots-feature-preview {
     font-size: 54px;
-    line-height: 1;
+    line-height: 1.2;
     text-align: center;
     padding: 20px;
     font-family: Georgia, serif;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    overflow: hidden;
+    hyphens: auto;
 }
 
 .ots-feature-preview-off {
@@ -333,84 +375,12 @@
 .ots-feature-preview-on {
     color: #1d2327;
     font-weight: 500;
-}
-
-/* Interactive button styles for preview */
-.ots-feature-apply-btn {
     width: 100%;
     background: #fff;
     border: 2px solid #ddd;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    border-radius: 4px;
     position: relative;
-}
-
-.ots-feature-apply-btn:hover {
-    border-color: #2271b1;
-    background: #f0f6fc;
-    box-shadow: 0 2px 4px rgba(34, 113, 177, 0.15);
-}
-
-.ots-feature-apply-btn:active {
-    box-shadow: 0 1px 2px rgba(34, 113, 177, 0.2);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .ots-feature-apply-btn:hover {
-        transform: translateY(-1px);
-    }
-
-    .ots-feature-apply-btn:active {
-        transform: translateY(0);
-    }
-}
-.ots-feature-apply-btn:focus {
-    outline: 2px solid #2271b1;
-    outline-offset: 2px;
-}
-
-/* Applied state animation */
-@media (prefers-reduced-motion: no-preference) {
-    .ots-feature-applied-flash {
-        animation: featureApplied 0.5s ease;
-    }
-
-    @keyframes featureApplied {
-        0% {
-            background: #d7f0ff;
-            border-color: #2271b1;
-        }
-        100% {
-            background: #fff;
-            border-color: #ddd;
-        }
-    }
-}
-
-/* Undo button container */
-.ots-feature-undo-container {
-    margin-top: 10px;
-    text-align: center;
-    padding: 8px;
-}
-
-.ots-feature-undo-btn {
-    background: #f6f7f7;
-    border-color: #8c8f94;
-    color: #2c3338;
-    transition: all 0.2s ease;
-    min-height: 32px;
-}
-
-.ots-feature-undo-btn:hover {
-    background: #f0f0f1;
-    border-color: #646970;
-    color: #1d2327;
-}
-
-.ots-feature-undo-btn:focus {
-    outline: 2px solid #2271b1;
-    outline-offset: 1px;
+    box-sizing: border-box;
 }
 
 /* User Presets Section */
@@ -526,6 +496,80 @@
     margin-bottom: 15px;
     border-radius: 4px;
     background: #fafafa;
+}
+
+/* Kit grouping styles */
+.ots-font-kit-card {
+    border: 1px solid #c3c4c7;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.ots-font-kit-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f0f0f1;
+    border-bottom: 1px solid #c3c4c7;
+}
+
+.ots-font-kit-header h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.ots-toggle-kit {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #1d2327;
+}
+
+.ots-toggle-kit:hover {
+    color: #2271b1;
+}
+
+.ots-toggle-kit:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.ots-toggle-kit .dashicons {
+    transition: transform 0.2s;
+}
+
+.ots-kit-font-count {
+    font-size: 13px;
+    font-weight: 400;
+    color: #646970;
+}
+
+.ots-kit-fonts {
+    padding: 15px;
+    background: #f6f7f7;
+}
+
+.ots-kit-fonts .ots-font-card {
+    background: #fff;
+    border: 1px solid #ddd;
+}
+
+.ots-kit-font .ots-font-header h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .ots-font-header {
@@ -907,4 +951,131 @@
 
 .ots-delete-manual-font:hover {
     color: #d63638;
+}
+
+/* =========================================================================
+   FONT DELETION MODAL & REPLACEMENT MANAGEMENT
+   ========================================================================= */
+
+.ots-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ots-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1;
+}
+
+.ots-modal-content {
+    position: relative;
+    background: #fff;
+    max-width: 500px;
+    width: 90%;
+    z-index: 2;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.ots-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #dcdcde;
+    position: relative;
+}
+
+.ots-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ots-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: #50575e;
+    padding: 5px 10px;
+}
+
+.ots-modal-close:hover {
+    color: #135e96;
+}
+
+.ots-modal-body {
+    padding: 20px;
+}
+
+.ots-modal-field {
+    margin-bottom: 20px;
+}
+
+.ots-modal-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.ots-modal-field select {
+    width: 100%;
+}
+
+.ots-modal-field .description {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #646970;
+}
+
+.ots-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dcdcde;
+    text-align: right;
+}
+
+.ots-modal-footer .button {
+    margin-left: 10px;
+}
+
+/* Replacements table */
+#ots-replacements-list table {
+    margin-top: 20px;
+}
+
+#ots-replacements-list th {
+    font-weight: 600;
+}
+
+.ots-no-replacements {
+    padding: 40px 20px;
+    text-align: center;
+    color: #646970;
+    background: #f6f7f7;
+    border-radius: 4px;
+}
+
+#ots-unassigned-fonts {
+    padding: 20px;
+    background: #fcf9e8;
+    border-left: 4px solid #dba617;
+    border-radius: 4px;
+}
+
+#ots-unassigned-fonts h3 {
+    margin-top: 0;
+    color: #996800;
 }

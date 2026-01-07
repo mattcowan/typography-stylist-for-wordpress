@@ -42,6 +42,7 @@ class OpenType_Stylist {
     private $fonts_cache = null;
     private $features_cache = null;
     private $manual_fonts_cache = null;
+    private $font_replacements_cache = null;
 
     /**
      * Get instance
@@ -72,6 +73,10 @@ class OpenType_Stylist {
 
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+
+        // Output CSS variables for fonts
+        add_action('wp_head', array($this, 'output_font_css_variables'), 5);
+        add_action('admin_head', array($this, 'output_font_css_variables'), 5);
 
         // Add admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
@@ -106,6 +111,16 @@ class OpenType_Stylist {
         if (is_admin()) {
             $this->enqueue_custom_fonts_for_blocks();
             $this->enqueue_adobe_fonts();
+
+            // Add CSS variables inline for editor iframe
+            // We need to create a dummy style handle to attach inline CSS
+            wp_register_style('ots-editor-variables', false);
+            wp_enqueue_style('ots-editor-variables');
+
+            $css_vars = $this->get_font_css_variables();
+            if (!empty($css_vars)) {
+                wp_add_inline_style('ots-editor-variables', $css_vars);
+            }
         }
     }
 
@@ -382,6 +397,21 @@ class OpenType_Stylist {
                     $used_fonts = array_merge($used_fonts, $matches[1]);
                 }
 
+                // Method 3: Look for CSS variable references --font-{ID}
+                if (preg_match_all('/--font-(\d+)/', $content_to_check, $matches)) {
+                    // Store font IDs as "id:{ID}" to differentiate from font names
+                    foreach ($matches[1] as $font_id) {
+                        $used_fonts[] = 'id:' . $font_id;
+                    }
+                }
+
+                // Method 4: Look for data-font-id attributes
+                if (preg_match_all('/data-font-id=["\'](\d+)["\']/', $content_to_check, $matches)) {
+                    foreach ($matches[1] as $font_id) {
+                        $used_fonts[] = 'id:' . $font_id;
+                    }
+                }
+
                 // Remove duplicates and empty values
                 $used_fonts = array_filter(array_unique($used_fonts));
 
@@ -417,6 +447,20 @@ class OpenType_Stylist {
 
                     if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $combined_content, $matches)) {
                         $used_fonts = array_merge($used_fonts, $matches[1]);
+                    }
+
+                    // Method 3: Look for CSS variable references --font-{ID}
+                    if (preg_match_all('/--font-(\d+)/', $combined_content, $matches)) {
+                        foreach ($matches[1] as $font_id) {
+                            $used_fonts[] = 'id:' . $font_id;
+                        }
+                    }
+
+                    // Method 4: Look for data-font-id attributes
+                    if (preg_match_all('/data-font-id=["\'](\d+)["\']/', $combined_content, $matches)) {
+                        foreach ($matches[1] as $font_id) {
+                            $used_fonts[] = 'id:' . $font_id;
+                        }
                     }
                 }
 
@@ -548,8 +592,20 @@ class OpenType_Stylist {
 
         // Only get used fonts if at least one font is conditional
         $used_font_families = array();
+        $used_font_ids = array();
         if ($has_conditional_fonts) {
-            $used_font_families = $this->get_used_fonts_in_content();
+            $used_fonts_raw = $this->get_used_fonts_in_content();
+
+            // Separate font IDs from font family names
+            foreach ($used_fonts_raw as $font_ref) {
+                if (strpos($font_ref, 'id:') === 0) {
+                    // This is a font ID reference
+                    $used_font_ids[] = (int) substr($font_ref, 3);
+                } else {
+                    // This is a font family name
+                    $used_font_families[] = $font_ref;
+                }
+            }
 
             if (!empty($used_font_families)) {
                 // Parse font families from CSS font-family values (which may include fallbacks)
@@ -575,8 +631,13 @@ class OpenType_Stylist {
                     if (!empty($font['load_on_all_pages'])) {
                         $should_load = true;
                     } else {
-                        // Check if any face from this font kit is used
-                        if (!empty($used_font_families)) {
+                        // Check if font ID is used
+                        if (isset($font['font_id']) && in_array($font['font_id'], $used_font_ids)) {
+                            $should_load = true;
+                        }
+
+                        // Check if any face from this font kit is used (backward compatibility)
+                        if (!$should_load && !empty($used_font_families)) {
                             foreach ($font['font_faces'] as $face) {
                                 if (in_array($face['family'], $used_font_families)) {
                                     $should_load = true;
@@ -651,6 +712,10 @@ class OpenType_Stylist {
         wp_localize_script('ots-admin', 'otsAdmin', array(
             'restUrl' => rest_url('ots/v1/'),
             'nonce' => wp_create_nonce('wp_rest'),
+            'fonts' => $this->get_custom_fonts(),
+            'adobeFonts' => $this->get_adobe_fonts(),
+            'manualFonts' => $this->get_manual_fonts(),
+            'replacements' => $this->get_font_replacements(),
             'strings' => array(
                 'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'opentype-stylist'),
                 'uploadError' => esc_html__('Failed to upload font kit.', 'opentype-stylist'),
@@ -659,6 +724,7 @@ class OpenType_Stylist {
                 'selectFile' => esc_html__('Please select a ZIP file.', 'opentype-stylist'),
                 'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'opentype-stylist'),
                 'deleteError' => esc_html__('Failed to delete font kit.', 'opentype-stylist'),
+                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'opentype-stylist'),
                 'noFonts' => esc_html__('No custom fonts uploaded yet.', 'opentype-stylist'),
                 'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'opentype-stylist'),
                 'uploading' => esc_html__('Uploading', 'opentype-stylist'),
@@ -841,6 +907,20 @@ class OpenType_Stylist {
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_manual_fonts')
         ));
+
+        register_setting('ots_settings', 'ots_font_replacements', array(
+            'type' => 'array',
+            'default' => array(
+                'mappings' => array(),
+                'global_load' => array(),
+                'next_id' => array(
+                    'custom' => 10,
+                    'adobe' => 20,
+                    'manual' => 30
+                )
+            ),
+            'sanitize_callback' => array($this, 'sanitize_font_replacements')
+        ));
     }
 
     /**
@@ -987,6 +1067,43 @@ class OpenType_Stylist {
             'permission_callback' => function() {
                 return current_user_can('upload_files');
             }
+        ));
+
+        // Font replacement endpoints
+        register_rest_route('ots/v1', '/font-replacements', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_font_replacements_endpoint'),
+            'permission_callback' => array($this, 'check_permissions')
+        ));
+
+        register_rest_route('ots/v1', '/font-replacements', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'add_font_replacement_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_rest_route('ots/v1', '/font-replacements/(?P<id>\d+)', array(
+            'methods' => 'PATCH',
+            'callback' => array($this, 'update_font_replacement_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_rest_route('ots/v1', '/font-replacements/(?P<id>\d+)', array(
+            'methods' => 'DELETE',
+            'callback' => array($this, 'delete_font_replacement_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
+        register_rest_route('ots/v1', '/font-replacements/orphans', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_unassigned_fonts_endpoint'),
+            'permission_callback' => array($this, 'check_permissions')
         ));
     }
 
@@ -1709,21 +1826,28 @@ class OpenType_Stylist {
             return new WP_Error('upload_error', esc_html__('File upload error', 'opentype-stylist'), array('status' => 400));
         }
 
-        // Process the ZIP file
-        $result = $this->process_font_kit_zip($uploaded_file, sanitize_text_field($params['name']));
+        // Process the ZIP file - returns array of font entries
+        $font_entries = $this->process_font_kit_zip($uploaded_file, sanitize_text_field($params['name']));
 
-        if (is_wp_error($result)) {
-            return $result;
+        if (is_wp_error($font_entries)) {
+            return $font_entries;
         }
 
+        // Add all font entries from the kit
         $fonts = $this->get_custom_fonts();
-        $fonts[] = $result;
+        foreach ($font_entries as $font_entry) {
+            $fonts[] = $font_entry;
+        }
         update_option('ots_custom_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
 
-        return rest_ensure_response(array('success' => true, 'font' => $result));
+        return rest_ensure_response(array(
+            'success' => true,
+            'fonts' => $font_entries,
+            'count' => count($font_entries)
+        ));
     }
 
     /**
@@ -1733,7 +1857,7 @@ class OpenType_Stylist {
         $id = sanitize_key($request->get_param('id'));
         $fonts = $this->get_custom_fonts();
 
-        // Find the font to delete and clean up files
+        // Find the font to delete
         $font_to_delete = null;
         foreach ($fonts as $font) {
             if ($font['id'] === $id) {
@@ -1742,8 +1866,24 @@ class OpenType_Stylist {
             }
         }
 
-        // Delete uploaded files if path exists
-        if ($font_to_delete && !empty($font_to_delete['upload_path'])) {
+        if (!$font_to_delete) {
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
+        }
+
+        // Check if this is the last font in the kit
+        $kit_id = isset($font_to_delete['kit_id']) ? $font_to_delete['kit_id'] : null;
+        $remaining_kit_fonts = 0;
+
+        if ($kit_id) {
+            foreach ($fonts as $font) {
+                if (isset($font['kit_id']) && $font['kit_id'] === $kit_id && $font['id'] !== $id) {
+                    $remaining_kit_fonts++;
+                }
+            }
+        }
+
+        // If this is the last font in the kit, delete the shared directory
+        if ($kit_id && $remaining_kit_fonts === 0 && !empty($font_to_delete['upload_path'])) {
             require_once(ABSPATH . 'wp-admin/includes/file.php');
             WP_Filesystem();
             global $wp_filesystem;
@@ -1761,10 +1901,6 @@ class OpenType_Stylist {
                 $found = true;
                 break;
             }
-        }
-
-        if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
         }
 
         update_option('ots_custom_fonts', array_values($fonts));
@@ -1913,16 +2049,67 @@ class OpenType_Stylist {
             // Continue anyway, font_count will just be 0
         }
 
-        return array(
-            'id' => sanitize_key($kit_id),
-            'name' => sanitize_text_field($kit_name),
-            'css_content' => $css_content,
-            'font_faces' => $font_faces,
-            'upload_path' => $kit_base_path,
-            'upload_url' => $kit_base_url,
-            'file_count' => $font_count,
-            'uploaded_date' => current_time('mysql')
-        );
+        // Group font faces by family name to create individual font entries
+        $fonts_by_family = array();
+        foreach ($font_faces as $face) {
+            $family = $face['family'];
+            if (!isset($fonts_by_family[$family])) {
+                $fonts_by_family[$family] = array();
+            }
+            $fonts_by_family[$family][] = $face;
+        }
+
+        // Create individual font entries for each family
+        $font_entries = array();
+        foreach ($fonts_by_family as $family => $faces) {
+            // Create unique ID for this font (not the kit)
+            $family_slug = sanitize_title($family);
+            $composite_font_id = $kit_id . '-' . $family_slug;
+
+            // Extract just the @font-face rules for this family from CSS
+            $family_css = $this->extract_font_face_css($css_content, $family);
+
+            $font_entries[] = array(
+                'id' => sanitize_key($composite_font_id),
+                'name' => sanitize_text_field($family), // Use family name as font name
+                'font_id' => $this->generate_font_id(),
+                'kit_id' => sanitize_key($kit_id),       // Link back to original kit
+                'kit_name' => sanitize_text_field($kit_name), // For display/grouping
+                'css_content' => $family_css,
+                'font_faces' => $faces,                  // Only this family's faces
+                'upload_path' => $kit_base_path,         // Shared directory
+                'upload_url' => $kit_base_url,
+                'uploaded_date' => current_time('mysql')
+            );
+        }
+
+        return $font_entries;
+    }
+
+    /**
+     * Extract @font-face CSS rules for a specific font family
+     *
+     * @param string $css_content Full CSS content
+     * @param string $family Font family name
+     * @return string CSS containing only @font-face rules for this family
+     */
+    private function extract_font_face_css($css_content, $family) {
+        $family_css = '';
+
+        // Find all @font-face blocks that match this family
+        preg_match_all('/@font-face\s*\{([^}]+)\}/s', $css_content, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $font_face_block = $match[0];
+            $font_face_content = $match[1];
+
+            // Check if this block contains the target family
+            if (preg_match('/font-family:\s*["\']?' . preg_quote($family, '/') . '["\']?/i', $font_face_content)) {
+                $family_css .= $font_face_block . "\n\n";
+            }
+        }
+
+        return $family_css;
     }
 
     /**
@@ -2135,32 +2322,63 @@ class OpenType_Stylist {
             return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
         }
 
-        // Check if already exists
-        $existing_fonts = $this->get_adobe_fonts();
-        foreach ($existing_fonts as $font) {
-            if ($font['css_url'] === $parsed['css_url']) {
-                return new WP_Error('duplicate_script', esc_html__('This Adobe Fonts kit has already been added.', 'opentype-stylist'), array('status' => 400));
-            }
+        // Parse font families from user input
+        $font_families_input = !empty($params['font_families']) && is_array($params['font_families'])
+            ? array_map('sanitize_text_field', $params['font_families'])
+            : array();
+
+        if (empty($font_families_input)) {
+            return new WP_Error('missing_families', esc_html__('At least one font family is required', 'opentype-stylist'), array('status' => 400));
         }
 
-        $new_font = array(
-            'id' => 'adobe-' . $parsed['kit_id'],
-            'name' => !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'],
-            'css_url' => $parsed['css_url'],
-            'font_families' => !empty($params['font_families']) && is_array($params['font_families'])
-                ? array_map('sanitize_text_field', $params['font_families'])
-                : array(),
-            'added_date' => current_time('mysql')
-        );
+        // Create kit metadata
+        $kit_id = 'adobe-' . $parsed['kit_id'];
 
+        // Check for duplicate kit ID or CSS URL
+        $existing_fonts = $this->get_adobe_fonts();
+        foreach ($existing_fonts as $font) {
+            $is_duplicate_kit_id = isset($font['kit_id']) && $font['kit_id'] === $kit_id;
+            $is_duplicate_css_url = isset($font['css_url'], $parsed['css_url']) && $font['css_url'] === $parsed['css_url'];
+
+            if ($is_duplicate_kit_id || $is_duplicate_css_url) {
+                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'opentype-stylist'), array('status' => 400));
+            }
+        }
+        $kit_name = !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'];
+
+        // Create individual font entries for each family (similar to MyFonts kits)
+        $font_entries = array();
+        foreach ($font_families_input as $family) {
+            $family_slug = sanitize_title($family);
+            $composite_font_id = $kit_id . '-' . $family_slug;
+
+            $font_entries[] = array(
+                'id' => sanitize_key($composite_font_id),
+                'name' => sanitize_text_field($family), // Use family name as font name
+                'font_id' => $this->generate_font_id(),
+                'font_family' => sanitize_text_field($family), // Single family per entry
+                'kit_id' => sanitize_key($kit_id),       // Link back to original kit
+                'kit_name' => sanitize_text_field($kit_name), // For display/grouping
+                'css_url' => $parsed['css_url'],         // Same CSS URL for all fonts in kit
+                'added_date' => current_time('mysql')
+            );
+        }
+
+        // Add all font entries from the kit
         $fonts = $this->get_adobe_fonts();
-        $fonts[] = $new_font;
+        foreach ($font_entries as $font_entry) {
+            $fonts[] = $font_entry;
+        }
         update_option('ots_adobe_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
 
-        return rest_ensure_response(array('success' => true, 'font' => $new_font));
+        return rest_ensure_response(array(
+            'success' => true,
+            'fonts' => $font_entries,
+            'count' => count($font_entries)
+        ));
     }
 
     /**
@@ -2390,6 +2608,7 @@ class OpenType_Stylist {
         $new_font = array(
             'id' => $font_id,
             'name' => sanitize_text_field($params['name']),
+            'font_id' => $this->generate_font_id(),
             'font_family' => sanitize_text_field($params['font_family']),
             'fallbacks' => isset($params['fallbacks']) ? sanitize_text_field($params['fallbacks']) : '',
             'added_date' => current_time('mysql')
@@ -2503,6 +2722,7 @@ class OpenType_Stylist {
 
         // Only get used fonts if at least one font is set to load conditionally
         $used_font_families = array();
+        $used_font_ids = array();
         $has_conditional_fonts = false;
         if (!$is_editor) {
             foreach ($adobe_fonts as $font) {
@@ -2512,13 +2732,27 @@ class OpenType_Stylist {
                 }
             }
             if ($has_conditional_fonts) {
-                $used_font_families = $this->get_used_fonts_in_content();
+                $used_fonts_raw = $this->get_used_fonts_in_content();
+
+                // Separate font IDs from font family names
+                foreach ($used_fonts_raw as $font_ref) {
+                    if (strpos($font_ref, 'id:') === 0) {
+                        $used_font_ids[] = (int) substr($font_ref, 3);
+                    } else {
+                        $used_font_families[] = $font_ref;
+                    }
+                }
 
                 // Parse font families from CSS font-family values
-                $individual_font_families = $this->parse_font_family_list($used_font_families);
-                $used_font_families = array_unique($individual_font_families);
+                if (!empty($used_font_families)) {
+                    $individual_font_families = $this->parse_font_family_list($used_font_families);
+                    $used_font_families = array_unique($individual_font_families);
+                }
             }
         }
+
+        // Track which CSS URLs should be loaded (to avoid duplicates when fonts are from same kit)
+        $css_urls_to_load = array();
 
         foreach ($adobe_fonts as $font) {
             if (empty($font['css_url'])) {
@@ -2536,8 +2770,20 @@ class OpenType_Stylist {
                 if (!empty($font['load_on_all_pages'])) {
                     $should_load = true;
                 } else {
-                    // Check if any of this font's families are used on the page
-                    if (!empty($font['font_families'])) {
+                    // Check if font ID is used
+                    if (isset($font['font_id']) && in_array($font['font_id'], $used_font_ids)) {
+                        $should_load = true;
+                    }
+
+                    // Check if font_family is used (new structure: single string)
+                    if (!$should_load && !empty($font['font_family'])) {
+                        if (in_array($font['font_family'], $used_font_families)) {
+                            $should_load = true;
+                        }
+                    }
+
+                    // Check if any of font_families are used (legacy structure: array)
+                    if (!$should_load && !empty($font['font_families'])) {
                         foreach ($font['font_families'] as $family) {
                             if (in_array($family, $used_font_families)) {
                                 $should_load = true;
@@ -2549,15 +2795,460 @@ class OpenType_Stylist {
             }
 
             if ($should_load) {
-                wp_enqueue_style(
-                    'ots-adobe-' . $font['id'],
-                    $font['css_url'],
-                    array(),
-                    null
-                );
+                // Use kit_id for handle if available, otherwise fall back to font id
+                $handle_id = !empty($font['kit_id']) ? $font['kit_id'] : $font['id'];
+                $css_urls_to_load[$handle_id] = $font['css_url'];
             }
         }
+
+        // Enqueue each unique CSS URL once
+        foreach ($css_urls_to_load as $handle_id => $css_url) {
+            wp_enqueue_style(
+                'ots-adobe-' . $handle_id,
+                $css_url,
+                array(),
+                null
+            );
+        }
     }
+
+    /**
+     * =========================================================================
+     * FONT ID AND REPLACEMENT MANAGEMENT
+     * =========================================================================
+     */
+
+    /**
+     * REST API: Get all font replacements
+     */
+    public function get_font_replacements_endpoint($request) {
+        $replacements = $this->get_font_replacements();
+        return rest_ensure_response($replacements);
+    }
+
+    /**
+     * REST API: Add font replacement
+     */
+    public function add_font_replacement_endpoint($request) {
+        $deleted_id = $request->get_param('deleted_id');
+        $replacement_id = $request->get_param('replacement_id');
+        $global_load = $request->get_param('global_load');
+
+        if (empty($deleted_id) || empty($replacement_id)) {
+            return new WP_Error('missing_params', __('Missing required parameters.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
+
+        if ($success === false) {
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        if ($success) {
+            return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
+        }
+
+        return new WP_Error('failed', __('Failed to add font replacement.', 'opentype-stylist'), array('status' => 500));
+    }
+
+    /**
+     * REST API: Update font replacement
+     */
+    public function update_font_replacement_endpoint($request) {
+        $deleted_id = $request->get_param('id');
+        $replacement_id = $request->get_param('replacement_id');
+        $global_load = $request->get_param('global_load');
+
+        if (empty($deleted_id)) {
+            return new WP_Error('missing_id', __('Missing font ID.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
+
+        if ($success === false) {
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        if ($success) {
+            return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
+        }
+
+        return new WP_Error('failed', __('Failed to update font replacement.', 'opentype-stylist'), array('status' => 500));
+    }
+
+    /**
+     * REST API: Delete font replacement
+     */
+    public function delete_font_replacement_endpoint($request) {
+        $deleted_id = $request->get_param('id');
+
+        if (empty($deleted_id)) {
+            return new WP_Error('missing_id', __('Missing font ID.', 'opentype-stylist'), array('status' => 400));
+        }
+
+        $success = $this->remove_font_replacement((int) $deleted_id);
+
+        if ($success) {
+            return rest_ensure_response(array('success' => true));
+        }
+
+        return new WP_Error('failed', __('Failed to delete font replacement.', 'opentype-stylist'), array('status' => 500));
+    }
+
+    /**
+     * REST API: Get unassigned fonts
+     */
+    public function get_unassigned_fonts_endpoint($request) {
+        $unassigned = $this->get_unassigned_font_ids();
+        return rest_ensure_response(array('orphaned_ids' => $unassigned));
+    }
+
+    /**
+     * Get font replacements data
+     *
+     * @return array Font replacement mappings and settings
+     */
+    private function get_font_replacements() {
+        if (null === $this->font_replacements_cache) {
+            $this->font_replacements_cache = get_option('ots_font_replacements', array(
+                'mappings' => array(),
+                'global_load' => array(),
+                'next_id' => 1
+            ));
+        }
+        return $this->font_replacements_cache;
+    }
+
+    /**
+     * Generate next available font ID
+     *
+     * Uses simple sequential allocation starting from 1
+     * All fonts (custom, adobe, manual) share the same ID sequence
+     *
+     * @return int Next available ID
+     */
+    private function generate_font_id() {
+        $replacements = $this->get_font_replacements();
+
+        // Get next ID (starts at 1)
+        $next_id = isset($replacements['next_id']) ? $replacements['next_id'] : 1;
+        $current_id = $next_id;
+
+        // Increment for next time
+        $replacements['next_id'] = $next_id + 1;
+        update_option('ots_font_replacements', $replacements);
+        $this->font_replacements_cache = $replacements;
+
+        return $current_id;
+    }
+
+    /**
+     * Get all font IDs currently in use
+     *
+     * @return array Array of all active font IDs
+     */
+    private function get_all_active_font_ids() {
+        $ids = array();
+
+        // Get custom fonts
+        $custom_fonts = $this->get_custom_fonts();
+        foreach ($custom_fonts as $font) {
+            if (isset($font['font_id'])) {
+                $ids[] = $font['font_id'];
+            }
+        }
+
+        // Get Adobe fonts
+        $adobe_fonts = $this->get_adobe_fonts();
+        foreach ($adobe_fonts as $font) {
+            if (isset($font['font_id'])) {
+                $ids[] = $font['font_id'];
+            }
+        }
+
+        // Get manual fonts
+        $manual_fonts = $this->get_manual_fonts();
+        foreach ($manual_fonts as $font) {
+            if (isset($font['font_id'])) {
+                $ids[] = $font['font_id'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Flatten replacement chain
+     *
+     * If A→B and B→C exist, this updates to A→C (removes intermediate mappings)
+     * Prevents circular references
+     *
+     * @param array $mappings Current replacement mappings
+     * @return array Flattened mappings
+     */
+    private function flatten_replacement_chain($mappings) {
+        $flattened = array();
+        $seen = array();
+
+        foreach ($mappings as $deleted_id => $replacement_id) {
+            // Detect circular references
+            if (isset($seen[$deleted_id])) {
+                continue; // Skip circular reference
+            }
+
+            $seen[$deleted_id] = true;
+            $current = $replacement_id;
+            $depth = 0;
+            $max_depth = 10; // Safety limit
+
+            // Follow the chain to the end
+            while (isset($mappings[$current]) && $depth < $max_depth) {
+                $current = $mappings[$current];
+                $depth++;
+            }
+
+            // Store the final target
+            $flattened[$deleted_id] = $current;
+        }
+
+        return $flattened;
+    }
+
+    /**
+     * Add or update font replacement mapping
+     *
+     * @param int $deleted_id Font ID that was deleted
+     * @param int $replacement_id Font ID to use as replacement
+     * @param bool $global_load Whether to load this replacement globally
+     * @return bool Success
+     */
+    public function add_font_replacement($deleted_id, $replacement_id, $global_load = false) {
+        // Validate IDs are not 0
+        if ((int) $deleted_id === 0 || (int) $replacement_id === 0) {
+            return false;
+        }
+
+        $replacements = $this->get_font_replacements();
+
+        // Add mapping
+        $replacements['mappings'][$deleted_id] = $replacement_id;
+
+        // Flatten chains
+        $replacements['mappings'] = $this->flatten_replacement_chain($replacements['mappings']);
+
+        // Update global load setting
+        if ($global_load) {
+            if (!in_array($deleted_id, $replacements['global_load'])) {
+                $replacements['global_load'][] = $deleted_id;
+            }
+        } else {
+            $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
+        }
+
+        update_option('ots_font_replacements', $replacements);
+        $this->font_replacements_cache = $replacements;
+        $this->clear_cache();
+
+        return true;
+    }
+
+    /**
+     * Remove font replacement mapping
+     *
+     * @param int $deleted_id Font ID to remove mapping for
+     * @return bool Success
+     */
+    public function remove_font_replacement($deleted_id) {
+        $replacements = $this->get_font_replacements();
+
+        unset($replacements['mappings'][$deleted_id]);
+        $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
+
+        update_option('ots_font_replacements', $replacements);
+        $this->font_replacements_cache = $replacements;
+        $this->clear_cache();
+
+        return true;
+    }
+
+    /**
+     * Get unassigned font IDs
+     *
+     * Returns font IDs that are referenced in replacement mappings
+     * but no longer exist as active fonts
+     *
+     * @return array Array of unassigned font IDs
+     */
+    public function get_unassigned_font_ids() {
+        $replacements = $this->get_font_replacements();
+        $active_ids = $this->get_all_active_font_ids();
+        $unassigned = array();
+
+        // Check both deleted IDs (keys) and replacement IDs (values) in mappings
+        foreach ($replacements['mappings'] as $deleted_id => $replacement_id) {
+            // Check if replacement target still exists as an active font
+            if (!in_array($replacement_id, $active_ids)) {
+                // Replacement ID no longer exists - this mapping is broken
+                $unassigned[] = $deleted_id;
+            }
+        }
+
+        return $unassigned;
+    }
+
+    /**
+     * Get CSS variables string for all fonts
+     *
+     * Returns CSS string with :root { --font-ID: "Family Name", fallback; } declarations
+     * Includes aliases for deleted fonts with replacements
+     *
+     * @return string CSS variables string
+     */
+    public function get_font_css_variables() {
+        $css_vars = array();
+        $replacements = $this->get_font_replacements();
+
+        // Process custom fonts
+        $custom_fonts = $this->get_custom_fonts();
+        foreach ($custom_fonts as $font) {
+            if (isset($font['font_id']) && !empty($font['font_faces'][0])) {
+                // Use first face for main variable
+                $family = esc_attr($font['font_faces'][0]['family']);
+                $fallback = isset($font['fallbacks']) ? ', ' . esc_attr($font['fallbacks']) : '';
+                $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
+            }
+        }
+
+        // Process Adobe fonts
+        $adobe_fonts = $this->get_adobe_fonts();
+        foreach ($adobe_fonts as $font) {
+            if (isset($font['font_id'])) {
+                $family = '';
+
+                // New structure: font_family (single string)
+                if (!empty($font['font_family'])) {
+                    $family = esc_attr($font['font_family']);
+                }
+                // Legacy structure: font_families (array, use first)
+                elseif (!empty($font['font_families'][0])) {
+                    $family = esc_attr($font['font_families'][0]);
+                }
+
+                if ($family) {
+                    $fallback = isset($font['fallbacks']) ? ', ' . esc_attr($font['fallbacks']) : '';
+                    $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
+                }
+            }
+        }
+
+        // Process manual fonts
+        $manual_fonts = $this->get_manual_fonts();
+        foreach ($manual_fonts as $font) {
+            if (isset($font['font_id']) && !empty($font['font_family'])) {
+                $family_raw = $font['font_family'];
+
+                // Check if font_family already contains commas (indicating fallbacks are included)
+                // and whether there are separate fallbacks defined
+                if (!empty($font['fallbacks'])) {
+                    if (strpos($family_raw, ',') === false) {
+                        // Separate fallbacks provided and font_family is a single family
+                        $family = '"' . esc_attr($family_raw) . '", ' . esc_attr($font['fallbacks']);
+                    } else {
+                        // font_family already provides a stack; append additional fallbacks
+                        $family = esc_attr($family_raw) . ', ' . esc_attr($font['fallbacks']);
+                    }
+                } else {
+                    // No separate fallbacks defined; use font_family as provided
+                    $family = esc_attr($family_raw);
+                }
+
+                $css_vars[] = sprintf('--font-%d: %s', $font['font_id'], $family);
+            }
+        }
+
+        // Add replacement aliases
+        foreach ($replacements['mappings'] as $deleted_id => $replacement_id) {
+            $css_vars[] = sprintf('--font-%d: var(--font-%d)', (int) $deleted_id, (int) $replacement_id);
+        }
+
+        if (empty($css_vars)) {
+            return '';
+        }
+
+        return ":root {\n    " . implode(";\n    ", $css_vars) . ";\n}";
+    }
+
+    /**
+     * Output CSS variables for all fonts
+     *
+     * Generates :root { --font-ID: "Family Name", fallback; } declarations
+     * Includes aliases for deleted fonts with replacements
+     */
+    public function output_font_css_variables() {
+        // Only output in appropriate contexts
+        if (!is_admin() && !$this->has_styled_content()) {
+            $replacements = $this->get_font_replacements();
+            // Check if any replacements are set to global load
+            if (empty($replacements['global_load'])) {
+                return;
+            }
+        }
+
+        $css = $this->get_font_css_variables();
+        if (!empty($css)) {
+            echo "<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n";
+        }
+    }
+
+    /**
+     * Sanitize font replacements data
+     *
+     * @param array $input Input data
+     * @return array Sanitized data
+     */
+    public function sanitize_font_replacements($input) {
+        if (!is_array($input)) {
+            return array(
+                'mappings' => array(),
+                'global_load' => array(),
+                'next_id' => array(
+                    'custom' => 10,
+                    'adobe' => 20,
+                    'manual' => 30
+                )
+            );
+        }
+
+        $sanitized = array(
+            'mappings' => array(),
+            'global_load' => array(),
+            'next_id' => isset($input['next_id']) ? $input['next_id'] : array(
+                'custom' => 10,
+                'adobe' => 20,
+                'manual' => 30
+            )
+        );
+
+        // Sanitize mappings
+        if (isset($input['mappings']) && is_array($input['mappings'])) {
+            foreach ($input['mappings'] as $deleted_id => $replacement_id) {
+                $sanitized['mappings'][(int) $deleted_id] = (int) $replacement_id;
+            }
+        }
+
+        // Sanitize global_load
+        if (isset($input['global_load']) && is_array($input['global_load'])) {
+            foreach ($input['global_load'] as $id) {
+                $sanitized['global_load'][] = (int) $id;
+            }
+        }
+
+        return $sanitized;
+    }
+
+
+
+
 
     /**
      * Render admin page

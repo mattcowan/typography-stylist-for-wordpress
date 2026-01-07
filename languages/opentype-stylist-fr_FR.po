@@ -337,13 +337,13 @@ msgstr "Fonctionnalités de Police"
 msgid "Help"
 msgstr "Aide"
 
-#: includes/admin-page.php:95
-msgid "Feature Demonstrations"
-msgstr "Démonstrations des Fonctionnalités"
+#: includes/admin-page.php:153
+msgid "Font Features"
+msgstr "Fonctionnalités de Police"
 
-#: includes/admin-page.php:96
-msgid "See how each OpenType feature affects your text. Compare the default rendering with each feature enabled."
-msgstr "Découvrez comment chaque fonctionnalité OpenType affecte votre texte. Comparez le rendu par défaut avec chaque fonctionnalité activée."
+#: includes/admin-page.php:154
+msgid "Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography."
+msgstr "Explorez les fonctionnalités OpenType avec des aperçus en direct. Saisissez du texte personnalisé ou utilisez les échantillons par défaut pour voir comment chaque fonctionnalité affecte votre typographie."
 
 #: includes/admin-page.php:102
 msgid "Preview with Font:"
@@ -369,6 +369,34 @@ msgstr "Ajuster la taille du texte d'aperçu"
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr "Ajustez la taille du texte d'aperçu pour mieux voir les fonctionnalités typographiques."
 
+#: includes/admin-page.php:243
+msgid "Custom Preview Text:"
+msgstr "Texte d'Aperçu Personnalisé :"
+
+#: includes/admin-page.php:249
+msgid "Type your own text to preview features..."
+msgstr "Saisissez votre propre texte pour prévisualiser les fonctionnalités..."
+
+#: includes/admin-page.php:250
+msgid "Enter custom text to preview features"
+msgstr "Saisir du texte personnalisé pour prévisualiser les fonctionnalités"
+
+#: includes/admin-page.php:256
+msgid "Reset to Defaults"
+msgstr "Réinitialiser aux Valeurs par Défaut"
+
+#: includes/admin-page.php:259
+msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
+msgstr "Saisissez votre propre texte pour voir comment chaque fonctionnalité l'affecte, ou laissez vide pour utiliser les échantillons par défaut."
+
+#: includes/admin-page.php:266
+msgid "Font Preview (No Features Applied)"
+msgstr "Aperçu de Police (Sans Fonctionnalités Appliquées)"
+
+#: includes/admin-page.php:268
+msgid "This shows how the selected font looks without any OpenType features applied."
+msgstr "Ceci montre comment la police sélectionnée apparaît sans aucune fonctionnalité OpenType appliquée."
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr "Ligatures"
@@ -385,11 +413,7 @@ msgstr "Lettrines et Alternatives"
 msgid "Decorative"
 msgstr "Décoratif"
 
-#: includes/admin-page.php:186
-msgid "Default:"
-msgstr "Par défaut :"
-
-#: includes/admin-page.php:193
+#: includes/admin-page.php:302
 msgid "With Feature:"
 msgstr "Avec la fonctionnalité :"
 
@@ -699,6 +723,16 @@ msgstr "Typographie Élégante et Ornements"
 msgid "Font Family"
 msgstr "Famille de Polices"
 
+#: includes/admin-page.php:366
+msgid "%d font"
+msgid_plural "%d fonts"
+msgstr[0] "%d police"
+msgstr[1] "%d polices"
+
+#: includes/admin-page.php:413
+msgid "Font Family:"
+msgstr "Famille de Polices :"
+
 #: assets/js/block-editor.js:461
 msgid "(Default)"
 msgstr "(Par défaut)"
@@ -975,15 +1009,6 @@ msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envis
 msgid "Click \"Apply\" below the preview to confirm changes."
 msgstr "Cliquez sur « Appliquer » sous l'aperçu pour confirmer les modifications."
 
-#: assets/js/admin-page.js:302
-#, php-format
-msgid "%s applied"
-msgstr "%s appliqué"
-
-#: assets/js/admin-page.js:342
-msgid "Change undone"
-msgstr "Modification annulée"
-
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "Ne plus afficher cet avertissement (cette session)"
@@ -999,3 +1024,43 @@ msgstr "Effacer Tous les Paramètres"
 #: assets/js/block-editor.js:1835
 msgid "This will remove all typography features, font selections, and styling."
 msgstr "Cela supprimera toutes les fonctionnalités typographiques, sélections de polices et styles."
+
+#: includes/admin-page.php:1305
+msgid "Add New Replacement Mapping"
+msgstr "Ajouter un Nouveau Mappage de Remplacement"
+
+#: includes/admin-page.php:1306
+msgid "Manually create a replacement mapping for a font ID that was previously deleted."
+msgstr "Créer manuellement un mappage de remplacement pour un ID de police précédemment supprimé."
+
+#: includes/admin-page.php:1311
+msgid "Deleted Font ID:"
+msgstr "ID de Police Supprimée :"
+
+#: includes/admin-page.php:1314
+msgid "Select a deleted font ID..."
+msgstr "Sélectionner un ID de police supprimée..."
+
+#: includes/admin-page.php:1318
+msgid "Select a font ID that was previously deleted (available IDs shown)"
+msgstr "Sélectionner un ID de police précédemment supprimé (IDs disponibles affichés)"
+
+#: includes/admin-page.php:1324
+msgid "Replacement Font:"
+msgstr "Police de Remplacement :"
+
+#: includes/admin-page.php:1327
+msgid "Select a replacement font..."
+msgstr "Sélectionner une police de remplacement..."
+
+#: includes/admin-page.php:1331
+msgid "Select which active font should replace the deleted font"
+msgstr "Sélectionner quelle police active doit remplacer la police supprimée"
+
+#: includes/admin-page.php:1337
+msgid "Add Replacement"
+msgstr "Ajouter un Remplacement"
+
+#: opentype-stylist.php:2799
+msgid "Invalid font ID (0). Font IDs must be greater than 0."
+msgstr "ID de police invalide (0). Les IDs de police doivent être supérieurs à 0."

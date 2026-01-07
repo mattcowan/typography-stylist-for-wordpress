@@ -10,6 +10,7 @@ export default function save({ attributes }) {
 		tagName,
 		features,
 		fontFamily,
+		fontId,
 		fontSize,
 		fontSizeMin,
 		fontSizePreferred,
@@ -28,7 +29,10 @@ export default function save({ attributes }) {
 			styleArray.push(`font-feature-settings: ${features.map(f => `"${f}" 1`).join(', ')}`);
 		}
 
-		if (fontFamily) {
+		// Use CSS variable if fontId is present, otherwise fall back to fontFamily
+		if (fontId) {
+			styleArray.push(`font-family: var(--font-${fontId})`);
+		} else if (fontFamily) {
 			styleArray.push(`font-family: ${fontFamily}`);
 		}
 
@@ -86,6 +90,7 @@ export default function save({ attributes }) {
 				className="ots-styled"
 				aria-hidden="true"
 				data-font={fontFamily || undefined}
+				data-font-id={fontId || undefined}
 			/>
 		</div>
 	);
