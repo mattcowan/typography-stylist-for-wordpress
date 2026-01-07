@@ -389,6 +389,14 @@ msgstr "Restablecer a Valores Predeterminados"
 msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
 msgstr "Escribe tu propio texto para ver cómo cada característica lo afecta, o déjalo en blanco para usar las muestras predeterminadas."
 
+#: includes/admin-page.php:266
+msgid "Font Preview (No Features Applied)"
+msgstr "Vista Previa de Fuente (Sin Características Aplicadas)"
+
+#: includes/admin-page.php:268
+msgid "This shows how the selected font looks without any OpenType features applied."
+msgstr "Esto muestra cómo se ve la fuente seleccionada sin ninguna característica OpenType aplicada."
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr "Ligaduras"

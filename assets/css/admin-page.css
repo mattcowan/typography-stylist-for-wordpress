@@ -167,6 +167,46 @@
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
+/* Baseline Preview Section */
+.ots-baseline-preview-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.ots-baseline-preview-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    color: #1d2327;
+}
+
+.ots-baseline-preview-section .description {
+    margin: 0 0 20px 0;
+    color: #666;
+    font-size: 13px;
+}
+
+.ots-baseline-preview-container {
+    background: #fff;
+    border: 2px solid #2271b1;
+    border-radius: 4px;
+    padding: 30px;
+    overflow: hidden;
+}
+
+.ots-baseline-preview {
+    font-size: 50px;
+    line-height: 1.4;
+    text-align: center;
+    font-family: Georgia, serif;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: #1d2327;
+    hyphens: auto;
+}
+
 /* Feature Category Section */
 .ots-feature-category-section {
     margin: 30px 0;
@@ -318,12 +358,14 @@
 
 .ots-feature-preview {
     font-size: 54px;
-    line-height: 1;
+    line-height: 1.2;
     text-align: center;
     padding: 20px;
     font-family: Georgia, serif;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    overflow: hidden;
+    hyphens: auto;
 }
 
 .ots-feature-preview-off {
@@ -336,7 +378,9 @@
     width: 100%;
     background: #fff;
     border: 2px solid #ddd;
+    border-radius: 4px;
     position: relative;
+    box-sizing: border-box;
 }
 
 /* User Presets Section */

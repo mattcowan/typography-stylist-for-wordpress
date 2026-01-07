@@ -391,6 +391,14 @@ msgstr ""
 msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
 msgstr ""
 
+#: includes/admin-page.php:266
+msgid "Font Preview (No Features Applied)"
+msgstr ""
+
+#: includes/admin-page.php:268
+msgid "This shows how the selected font looks without any OpenType features applied."
+msgstr ""
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr ""

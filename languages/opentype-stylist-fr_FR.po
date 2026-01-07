@@ -389,6 +389,14 @@ msgstr "Réinitialiser aux Valeurs par Défaut"
 msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
 msgstr "Saisissez votre propre texte pour voir comment chaque fonctionnalité l'affecte, ou laissez vide pour utiliser les échantillons par défaut."
 
+#: includes/admin-page.php:266
+msgid "Font Preview (No Features Applied)"
+msgstr "Aperçu de Police (Sans Fonctionnalités Appliquées)"
+
+#: includes/admin-page.php:268
+msgid "This shows how the selected font looks without any OpenType features applied."
+msgstr "Ceci montre comment la police sélectionnée apparaît sans aucune fonctionnalité OpenType appliquée."
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr "Ligatures"

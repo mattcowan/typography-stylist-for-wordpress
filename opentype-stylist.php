@@ -2064,13 +2064,13 @@ class OpenType_Stylist {
         foreach ($fonts_by_family as $family => $faces) {
             // Create unique ID for this font (not the kit)
             $family_slug = sanitize_title($family);
-            $font_id_string = $kit_id . '-' . $family_slug;
+            $composite_font_id = $kit_id . '-' . $family_slug;
 
             // Extract just the @font-face rules for this family from CSS
             $family_css = $this->extract_font_face_css($css_content, $family);
 
             $font_entries[] = array(
-                'id' => sanitize_key($font_id_string),
+                'id' => sanitize_key($composite_font_id),
                 'name' => sanitize_text_field($family), // Use family name as font name
                 'font_id' => $this->generate_font_id(),
                 'kit_id' => sanitize_key($kit_id),       // Link back to original kit
@@ -2322,14 +2322,6 @@ class OpenType_Stylist {
             return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
         }
 
-        // Check if already exists
-        $existing_fonts = $this->get_adobe_fonts();
-        foreach ($existing_fonts as $font) {
-            if ($font['css_url'] === $parsed['css_url']) {
-                return new WP_Error('duplicate_script', esc_html__('This Adobe Fonts kit has already been added.', 'opentype-stylist'), array('status' => 400));
-            }
-        }
-
         // Parse font families from user input
         $font_families_input = !empty($params['font_families']) && is_array($params['font_families'])
             ? array_map('sanitize_text_field', $params['font_families'])
@@ -2341,16 +2333,27 @@ class OpenType_Stylist {
 
         // Create kit metadata
         $kit_id = 'adobe-' . $parsed['kit_id'];
+
+        // Check for duplicate kit ID or CSS URL
+        $existing_fonts = $this->get_adobe_fonts();
+        foreach ($existing_fonts as $font) {
+            $is_duplicate_kit_id = isset($font['kit_id']) && $font['kit_id'] === $kit_id;
+            $is_duplicate_css_url = isset($font['css_url'], $parsed['css_url']) && $font['css_url'] === $parsed['css_url'];
+
+            if ($is_duplicate_kit_id || $is_duplicate_css_url) {
+                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'opentype-stylist'), array('status' => 400));
+            }
+        }
         $kit_name = !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'];
 
         // Create individual font entries for each family (similar to MyFonts kits)
         $font_entries = array();
         foreach ($font_families_input as $family) {
             $family_slug = sanitize_title($family);
-            $font_id_string = $kit_id . '-' . $family_slug;
+            $composite_font_id = $kit_id . '-' . $family_slug;
 
             $font_entries[] = array(
-                'id' => sanitize_key($font_id_string),
+                'id' => sanitize_key($composite_font_id),
                 'name' => sanitize_text_field($family), // Use family name as font name
                 'font_id' => $this->generate_font_id(),
                 'font_family' => sanitize_text_field($family), // Single family per entry
@@ -2835,12 +2838,11 @@ class OpenType_Stylist {
             return new WP_Error('missing_params', __('Missing required parameters.', 'opentype-stylist'), array('status' => 400));
         }
 
-        // Validate IDs are not 0
-        if ((int) $deleted_id === 0 || (int) $replacement_id === 0) {
+        $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
+
+        if ($success === false) {
             return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
         }
-
-        $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
@@ -2862,6 +2864,10 @@ class OpenType_Stylist {
         }
 
         $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
+
+        if ($success === false) {
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
+        }
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
@@ -3017,6 +3023,11 @@ class OpenType_Stylist {
      * @return bool Success
      */
     public function add_font_replacement($deleted_id, $replacement_id, $global_load = false) {
+        // Validate IDs are not 0
+        if ((int) $deleted_id === 0 || (int) $replacement_id === 0) {
+            return false;
+        }
+
         $replacements = $this->get_font_replacements();
 
         // Add mapping
@@ -3073,10 +3084,11 @@ class OpenType_Stylist {
         $active_ids = $this->get_all_active_font_ids();
         $unassigned = array();
 
-        // Check deleted IDs (keys in mappings)
-        foreach (array_keys($replacements['mappings']) as $deleted_id) {
-            if (in_array($deleted_id, $active_ids)) {
-                // Deleted ID shouldn't exist in active fonts
+        // Check both deleted IDs (keys) and replacement IDs (values) in mappings
+        foreach ($replacements['mappings'] as $deleted_id => $replacement_id) {
+            // Check if replacement target still exists as an active font
+            if (!in_array($replacement_id, $active_ids)) {
+                // Replacement ID no longer exists - this mapping is broken
                 $unassigned[] = $deleted_id;
             }
         }
@@ -3133,8 +3145,24 @@ class OpenType_Stylist {
         $manual_fonts = $this->get_manual_fonts();
         foreach ($manual_fonts as $font) {
             if (isset($font['font_id']) && !empty($font['font_family'])) {
-                // Font family now includes fallbacks directly, so just use it as-is
-                $css_vars[] = sprintf('--font-%d: %s', $font['font_id'], esc_attr($font['font_family']));
+                $family_raw = $font['font_family'];
+
+                // Check if font_family already contains commas (indicating fallbacks are included)
+                // and whether there are separate fallbacks defined
+                if (!empty($font['fallbacks'])) {
+                    if (strpos($family_raw, ',') === false) {
+                        // Separate fallbacks provided and font_family is a single family
+                        $family = '"' . esc_attr($family_raw) . '", ' . esc_attr($font['fallbacks']);
+                    } else {
+                        // font_family already provides a stack; append additional fallbacks
+                        $family = esc_attr($family_raw) . ', ' . esc_attr($font['fallbacks']);
+                    }
+                } else {
+                    // No separate fallbacks defined; use font_family as provided
+                    $family = esc_attr($family_raw);
+                }
+
+                $css_vars[] = sprintf('--font-%d: %s', $font['font_id'], $family);
             }
         }
 

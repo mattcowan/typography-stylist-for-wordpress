@@ -261,6 +261,19 @@ $manual_fonts = $instance->get_manual_fonts();
                 </div>
             </div>
 
+            <!-- Baseline Font Preview -->
+            <div class="ots-baseline-preview-section">
+                <h3><?php esc_html_e('Font Preview (No Features Applied)', 'opentype-stylist'); ?></h3>
+                <p class="description">
+                    <?php esc_html_e('This shows how the selected font looks without any OpenType features applied.', 'opentype-stylist'); ?>
+                </p>
+                <div class="ots-baseline-preview-container">
+                    <div class="ots-baseline-preview" id="ots-baseline-preview" data-default-text="The quick brown fox jumps over the lazy dog">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                </div>
+            </div>
+
             <?php
             $available_features = $instance->get_available_features();
             $grouped_features = array();

@@ -1369,10 +1369,8 @@
             const manualFonts = otsData.manualFonts || [];
             const options = [];
 
-            // Build font ID map for quick lookup
-            if (!this.fontIdMap) {
-                this.fontIdMap = {};
-            }
+            // Build font ID map for quick lookup (clear before repopulating)
+            this.fontIdMap = {};
 
             // Uploaded fonts (MyFonts, etc.)
             if (fonts.length > 0) {

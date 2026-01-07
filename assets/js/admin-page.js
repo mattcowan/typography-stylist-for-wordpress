@@ -234,6 +234,13 @@ jQuery(document).ready(function($) {
                 $(this).css('font-family', 'Georgia, serif');
             }
         });
+
+        // Update baseline preview
+        if (selectedFont) {
+            $('#ots-baseline-preview').css('font-family', selectedFont);
+        } else {
+            $('#ots-baseline-preview').css('font-family', 'Georgia, serif');
+        }
     });
 
     // Auto-select first non-system font on page load
@@ -263,12 +270,16 @@ jQuery(document).ready(function($) {
 
         // Update all preset previews (if any exist)
         $('.ots-preset-preview').css('font-size', size + 'px');
+
+        // Update baseline preview
+        $('#ots-baseline-preview').css('font-size', size + 'px');
     });
 
     // Custom preview text input
     $('#ots-preview-custom-text').on('input', function() {
         var customText = $(this).val();
         var $resetBtn = $('#ots-preview-reset-text');
+        var $baselinePreview = $('#ots-baseline-preview');
 
         if (customText && customText.trim()) {
             // Show reset button
@@ -278,6 +289,9 @@ jQuery(document).ready(function($) {
             $('.ots-feature-preview').each(function() {
                 $(this).text(customText);
             });
+
+            // Update baseline preview with custom text
+            $baselinePreview.text(customText);
         } else {
             // Hide reset button
             $resetBtn.hide();
@@ -289,6 +303,12 @@ jQuery(document).ready(function($) {
                     $(this).text(defaultText);
                 }
             });
+
+            // Restore baseline preview default text
+            var baselineDefault = $baselinePreview.data('default-text');
+            if (baselineDefault) {
+                $baselinePreview.text(baselineDefault);
+            }
         }
     });
 
@@ -816,7 +836,7 @@ jQuery(document).ready(function($) {
         // Add all fonts except the one being deleted
         if (otsAdmin.fonts) {
             otsAdmin.fonts.forEach(function(font) {
-                if (font.font_id && font.font_id != fontId && font.font_faces) {
+                if (font.font_id && font.font_id !== fontId && font.font_faces) {
                     font.font_faces.forEach(function(face) {
                         $select.append('<option value="' + font.font_id + '">📁 ' + face.family + '</option>');
                     });
@@ -826,7 +846,7 @@ jQuery(document).ready(function($) {
 
         if (otsAdmin.adobeFonts) {
             otsAdmin.adobeFonts.forEach(function(font) {
-                if (font.font_id && font.font_id != fontId) {
+                if (font.font_id && font.font_id !== fontId) {
                     // New structure: font_family (single string)
                     if (font.font_family) {
                         $select.append('<option value="' + font.font_id + '">🅰️ ' + font.font_family + '</option>');
@@ -843,7 +863,7 @@ jQuery(document).ready(function($) {
 
         if (otsAdmin.manualFonts) {
             otsAdmin.manualFonts.forEach(function(font) {
-                if (font.font_id && font.font_id != fontId && font.font_family) {
+                if (font.font_id && font.font_id !== fontId && font.font_family) {
                     $select.append('<option value="' + font.font_id + '">⚙️ ' + font.name + '</option>');
                 }
             });
