@@ -817,7 +817,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 
 		if (fontFamily) {
-			styles.fontFamily = fontFamily;
+			// Use CSS variable if fontId is set (for font replacements)
+			// Otherwise use literal font name for legacy/custom fonts
+			styles.fontFamily = fontId ? `var(--font-${fontId})` : fontFamily;
 		}
 
 		if (fontWeight) {

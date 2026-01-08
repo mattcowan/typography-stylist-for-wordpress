@@ -153,15 +153,39 @@ class OpenType_Stylist {
             $this->enqueue_custom_fonts_for_blocks();
             $this->enqueue_adobe_fonts();
 
-            // Add CSS variables inline for editor iframe
-            // We need to create a dummy style handle to attach inline CSS
-            wp_register_style('ots-editor-variables', false, array(), OTS_VERSION);
-            wp_enqueue_style('ots-editor-variables');
+            // Note: CSS variables are now output via admin_print_styles hook
+            // in output_font_css_variables_iframe() method for reliable iframe injection
+        }
+    }
 
-            $css_vars = $this->get_font_css_variables();
-            if (!empty($css_vars)) {
-                wp_add_inline_style('ots-editor-variables', $css_vars);
-            }
+    /**
+     * Output CSS variables for block editor iframe
+     *
+     * The block editor uses an iframe for content rendering. CSS variables
+     * must be injected directly into the iframe's head, not via wp_add_inline_style()
+     * on dummy handles (which is unreliable in iframe context).
+     *
+     * This method fires on admin_print_styles which runs in both main admin
+     * and iframe contexts, ensuring CSS variables are available everywhere.
+     */
+    public function output_font_css_variables_iframe() {
+        // Only in admin context
+        if (!is_admin()) {
+            return;
+        }
+
+        $css = $this->get_font_css_variables();
+        if (!empty($css)) {
+            $css = $this->sanitize_output_css($css);
+            $allowed_css = array(
+                'style' => array(
+                    'id' => array(),
+                    'type' => array()
+                )
+            );
+            // Output style block directly - matches pattern from output_font_css_variables()
+            // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
+            echo wp_kses("<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
         }
     }
 
@@ -897,11 +921,20 @@ class OpenType_Stylist {
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
         }
 
+        // Always register/enqueue handle even if no custom fonts, so we can attach CSS variables
+        wp_register_style('ots-block-fonts', false, array(), OTS_VERSION);
+        wp_enqueue_style('ots-block-fonts');
+
         if (!empty($combined_css)) {
-            // Register and enqueue font CSS for blocks in editor iframe
-            wp_register_style('ots-block-fonts', false, array(), OTS_VERSION);
-            wp_enqueue_style('ots-block-fonts');
             wp_add_inline_style('ots-block-fonts', $combined_css);
+        }
+
+        // Add CSS variables for font replacements to work in editor iframe
+        $css_vars = $this->get_font_css_variables();
+        if (!empty($css_vars)) {
+            // CSS variables must be added as proper CSS (not wrapped in <style> tags)
+            // wp_add_inline_style expects raw CSS content
+            wp_add_inline_style('ots-block-fonts', $css_vars);
         }
     }
 
