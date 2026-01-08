@@ -42,6 +42,10 @@ if (isset($_POST['ots_save_options_settings']) &&
     $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']) ? '1' : '0';
     update_option('ots_show_clear_confirmation', $show_clear_confirmation);
 
+    // Save variable weight setting
+    $allow_variable = isset($_POST['ots_allow_variable_weights']) ? '1' : '0';
+    update_option('ots_allow_variable_weights', $allow_variable);
+
     // Clear cache for all users only when the clear confirmation setting changes
     if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
         OpenType_Stylist::get_instance()->clear_cache();
@@ -402,7 +406,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                 <?php echo esc_html($kit_data['kit_name']); ?>
                             </button>
                             <span class="ots-kit-font-count"><?php
-                                /* translators: %d: number of fonts in the kit */
+                                /* translators: %d: number of fonts in the custom font kit (Custom Fonts tab) */
                                 echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
                             ?></span>
                         </h4>
@@ -796,7 +800,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                     <?php echo esc_html($kit_data['kit_name']); ?>
                                 </button>
                                 <span class="ots-kit-font-count"><?php
-                                    /* translators: %d: number of fonts in the Adobe Fonts kit */
+                                    /* translators: %d: number of fonts in the Adobe Fonts kit (Adobe Fonts tab) */
                                     echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
                                 ?></span>
                             </h4>
@@ -1280,6 +1284,28 @@ $manual_fonts = $instance->get_manual_fonts();
                                 </label>
                                 <p class="description">
                                     <?php esc_html_e('When enabled, the Clear button in the block editor will show a confirmation dialog before removing all formatting. This helps prevent accidental data loss. Users can disable this on a per-session basis.', 'opentype-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="ots_allow_variable_weights">
+                                    <?php esc_html_e('Variable Font Weights', 'opentype-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="ots_allow_variable_weights"
+                                    name="ots_allow_variable_weights"
+                                    value="1"
+                                    <?php checked(get_option('ots_allow_variable_weights', false)); ?>
+                                />
+                                <label for="ots_allow_variable_weights">
+                                    <?php esc_html_e('Allow custom font-weight values (1-1000) for variable fonts', 'opentype-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts.', 'opentype-stylist'); ?>
                                 </p>
                             </td>
                         </tr>

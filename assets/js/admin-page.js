@@ -914,13 +914,16 @@ jQuery(document).ready(function($) {
         // Remove any existing focus trap
         $modal.off('keydown.focustrap');
 
-        // Get all focusable elements within modal
-        var focusableElements = $modal.find('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        var firstFocusable = focusableElements.first();
-        var lastFocusable = focusableElements.last();
+        // Recalculate focusable elements on each interaction to handle dynamic content
+        function getFocusableElements() {
+            return $modal.find('button, input, select, textarea, [tabindex]:not([tabindex="-1"])').filter(':visible');
+        }
 
-        // Handle ESC key
+        // Handle ESC and Tab keys
         $modal.on('keydown.focustrap', function(e) {
+            var focusableElements = getFocusableElements();
+            var firstFocusable = focusableElements.first();
+            var lastFocusable = focusableElements.last();
             // ESC key closes modal
             if (e.key === 'Escape' || e.keyCode === 27) {
                 e.preventDefault();

@@ -20,7 +20,7 @@ if (!defined('OTS_PLUGIN_BASENAME')) {
     define('OTS_PLUGIN_BASENAME', 'opentype-stylist/opentype-stylist.php');
 }
 if (!defined('OTS_VERSION')) {
-    define('OTS_VERSION', '1.0.7');
+    define('OTS_VERSION', 'test-version');
 }
 
 // Define WordPress constants

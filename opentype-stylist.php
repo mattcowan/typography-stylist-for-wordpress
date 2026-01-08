@@ -1925,17 +1925,33 @@ class OpenType_Stylist {
 
             // Sanitize weight
             if (isset($face['weight'])) {
-                // Weight should be numeric (100-900) or keyword (normal, bold)
+                // Weight should be numeric (100-900 by default, 1-1000 for variable fonts) or keyword (normal, bold)
                 $weight = sanitize_text_field($face['weight']);
+
+                // Check if variable weights are enabled
+                $allow_variable = get_option('ots_allow_variable_weights', false);
+
                 // Validate it's a known weight value
                 $valid_weights = array('normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900');
+
                 if (!in_array($weight, $valid_weights, true)) {
                     // Try to coerce to number
                     $weight_num = absint($weight);
-                    if ($weight_num >= 100 && $weight_num <= 900 && $weight_num % 100 === 0) {
-                        $sanitized_face['weight'] = (string) $weight_num;
+
+                    if ($allow_variable) {
+                        // Variable fonts: accept any weight 1-1000
+                        if ($weight_num >= 1 && $weight_num <= 1000) {
+                            $sanitized_face['weight'] = (string) $weight_num;
+                        } else {
+                            $sanitized_face['weight'] = 'normal'; // Default fallback
+                        }
                     } else {
-                        $sanitized_face['weight'] = 'normal'; // Default fallback
+                        // Standard fonts: only multiples of 100 between 100-900
+                        if ($weight_num >= 100 && $weight_num <= 900 && $weight_num % 100 === 0) {
+                            $sanitized_face['weight'] = (string) $weight_num;
+                        } else {
+                            $sanitized_face['weight'] = 'normal'; // Default fallback
+                        }
                     }
                 } else {
                     $sanitized_face['weight'] = $weight;
@@ -3655,9 +3671,15 @@ class OpenType_Stylist {
                 )
             );
             // Direct style output required (not wp_add_inline_style) because:
-            // 1. Must be available globally across all admin contexts (block editor)
-            // 2. Conditional logic requires early wp_head hook (priority 5)
-            // 3. Stylesheet handles aren't uniformly enqueued across contexts
+            // 1. Must be available globally across all admin contexts (block editor, settings, iframe)
+            // 2. Conditional logic requires early wp_head hook (priority 5) - stylesheets not enqueued yet
+            // 3. Stylesheet handles aren't uniformly enqueued across contexts (esp. block editor iframe)
+            // 4. wp_add_inline_style() on dummy handles is unreliable in iframe context
+            // 5. CSS variables must be in DOM before any blocks render to prevent FOUC
+            // Alternative approaches tested:
+            // - Dummy handle + wp_add_inline_style: Failed in iframe, timing issues in editor
+            // - Per-context enqueue: Caused duplication and cache invalidation problems
+            // - admin_print_styles hook: Too late for some editor initialization contexts
             // Output is sanitized via sanitize_output_css() and wp_kses()
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
             echo wp_kses("<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
@@ -3817,7 +3839,11 @@ class OpenType_Stylist {
                 }
 
                 // Verify the path points to our uploads directory
-                if (strpos($url_path, '/wp-content/uploads/ots/fonts/') === false) {
+                // Normalize path to prevent traversal attacks (e.g., /malicious/../wp-content/uploads/ots/fonts/)
+                $normalized_path = preg_replace('#/+#', '/', $url_path); // Collapse multiple slashes
+                $normalized_path = preg_replace('#/\.\./|/\./#', '/', $normalized_path); // Remove . and ..
+
+                if (strpos($normalized_path, '/wp-content/uploads/ots/fonts/') === false) {
                     // URL is from our host but not in our uploads directory - reject
                     return false;
                 }
@@ -3909,10 +3935,10 @@ class OpenType_Stylist {
             }
         }
 
-        // EOT (Embedded OpenType) - starts with specific byte pattern
-        // Reject for now as EOT is rarely used in modern web and validation is complex
-        if (strlen($magic) >= 4 && substr($magic, 0, 2) === "\x00\x00") {
-            return false;
+        // EOT (Embedded OpenType) - basic detection
+        // EOT headers typically start with two 0x00 bytes
+        if (strlen($magic) >= 2 && substr($magic, 0, 2) === "\x00\x00") {
+            return true;
         }
 
         return false;
@@ -3932,10 +3958,13 @@ class OpenType_Stylist {
         $value = wp_strip_all_tags($value);
 
         // Remove dangerous CSS metacharacters that could break CSS syntax
+        // Parentheses are removed for security (prevent CSS function injection like url(), calc(), expression())
+        // Font names containing parentheses should be properly quoted per CSS specifications
         $value = str_replace(array('{', '}', ';', '<', '>', '(', ')', '[', ']', '\\'), '', $value);
 
-        // Only allow letters, numbers, spaces, commas, hyphens, single quotes, double quotes, and periods
-        $value = preg_replace('/[^a-zA-Z0-9\s,\-\'".]/', '', $value);
+        // Only allow letters, numbers, spaces, commas, hyphens, single quotes, and double quotes
+        // Periods are not valid in unquoted font-family names per CSS spec
+        $value = preg_replace('/[^a-zA-Z0-9\s,\-\'"]/', '', $value);
 
         // Return trimmed value (esc_attr removed - output is in <style> tag, not HTML attribute)
         // Multiple sanitization layers above prevent injection: wp_strip_all_tags, character filtering,
@@ -3967,9 +3996,9 @@ class OpenType_Stylist {
                 $url = $matches[1];
                 // Allow only safe protocols for fonts
                 // - http/https for external fonts
-                // - data: for embedded fonts (data:font/woff2;base64,...)
+                // - data: for embedded fonts (data:font/woff2;charset=utf-8;base64,...)
                 // - Relative paths starting with / or ../
-                if (preg_match('/^(https?:|data:(?:font\/|application\/(?:font-)?(?:woff2?|opentype|truetype))[;,]|\.\.?\/)/i', $url)) {
+                if (preg_match('/^(https?:|data:(?:font\/|application\/(?:font-)?(?:woff2?|opentype|truetype))(?:[^,]*)[;,]|\.\.?\/)/i', $url)) {
                     // URL seems valid, return original match
                     return $matches[0];
                 }

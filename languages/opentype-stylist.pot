@@ -846,6 +846,18 @@ msgstr ""
 msgid "When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis."
 msgstr ""
 
+#: includes/admin-page.php:1289
+msgid "Variable Font Weights"
+msgstr ""
+
+#: includes/admin-page.php:1301
+msgid "Allow custom font-weight values (1-1000) for variable fonts"
+msgstr ""
+
+#: includes/admin-page.php:1304
+msgid "When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts."
+msgstr ""
+
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr ""

@@ -1077,3 +1077,15 @@ msgstr "Ajouter un Remplacement"
 #: opentype-stylist.php:2799
 msgid "Invalid font ID (0). Font IDs must be greater than 0."
 msgstr "ID de police invalide (0). Les IDs de police doivent être supérieurs à 0."
+
+#: includes/admin-page.php:1289
+msgid "Variable Font Weights"
+msgstr "Poids de Police Variable"
+
+#: includes/admin-page.php:1301
+msgid "Allow custom font-weight values (1-1000) for variable fonts"
+msgstr "Autoriser les valeurs de font-weight personnalisées (1-1000) pour les polices variables"
+
+#: includes/admin-page.php:1304
+msgid "When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts."
+msgstr "Lorsqu'elle est activée, autorise les valeurs de font-weight de 1 à 1000 au lieu des poids standards uniquement (100, 200, ..., 900). Activez cette option si vous utilisez des polices variables qui prennent en charge des poids intermédiaires comme 450 ou 350. Désactivée par défaut pour la compatibilité avec les polices standard."
