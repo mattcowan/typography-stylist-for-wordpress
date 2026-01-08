@@ -732,7 +732,7 @@ $manual_fonts = $instance->get_manual_fonts();
                 <div class="ots-font-help">
                     <h4><?php esc_html_e('How to use:', 'opentype-stylist'); ?></h4>
                     <ol>
-                        <li><?php esc_html_e('Download your webfont kit from MyFonts, Fontspring, or another provider', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Download your webfont kit from your font provider', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Give your kit a descriptive name and click "Upload Font Kit"', 'opentype-stylist'); ?></li>
@@ -740,10 +740,11 @@ $manual_fonts = $instance->get_manual_fonts();
                     </ol>
                     <p><strong><?php esc_html_e('What should the ZIP contain:', 'opentype-stylist'); ?></strong></p>
                     <ul>
-                        <li><?php esc_html_e('A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('The directory structure must match the paths in the CSS file', 'opentype-stylist'); ?></li>
                     </ul>
+                    <p><strong><?php esc_html_e('Compatibility Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories).', 'opentype-stylist'); ?></p>
                     <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server.', 'opentype-stylist'); ?></p>
                 </div>
             </div>

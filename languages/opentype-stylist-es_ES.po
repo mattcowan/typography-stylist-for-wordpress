@@ -285,11 +285,16 @@ msgstr "Error al crear el directorio de carga"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Error al extraer el archivo ZIP. Por favor, asegúrate de que el archivo es un archivo ZIP válido."
 
-#: headline-ligatures-styles.php:1324
+#: opentype-stylist.php:2159
 msgid "No CSS file found in the font kit"
 msgstr "No se encontró ningún archivo CSS en el kit de fuentes"
 
-#: headline-ligatures-styles.php:1330
+#: opentype-stylist.php:2393
+#, php-format
+msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
+msgstr "Se encontraron %d archivo(s) CSS en el kit de fuentes, pero ninguno contiene declaraciones @font-face válidas. Por favor, asegúrate de que el archivo ZIP contiene una hoja de estilo webfont adecuada."
+
+#: opentype-stylist.php:2172
 msgid "Invalid CSS file"
 msgstr "Archivo CSS inválido"
 
@@ -503,47 +508,55 @@ msgstr "Cargando..."
 msgid "How to use:"
 msgstr "Cómo usar:"
 
-#: includes/admin-page.php:376
-msgid "Download your webfont kit from MyFonts, Fontspring, or another provider"
-msgstr "Descarga tu kit de fuentes web desde MyFonts, Fontspring u otro proveedor"
+#: includes/admin-page.php:735
+msgid "Download your webfont kit from your font provider"
+msgstr "Descarga tu kit de fuentes web desde tu proveedor de fuentes"
 
-#: includes/admin-page.php:377
+#: includes/admin-page.php:736
 msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
 msgstr "Si el kit no está comprimido, crea un archivo ZIP que contenga toda la carpeta del kit (incluyendo el archivo CSS y todos los archivos de fuentes en sus directorios)"
 
-#: includes/admin-page.php:378
+#: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr "Haz clic en \"Elegir Archivo ZIP\" y selecciona tu archivo ZIP del kit de fuentes web"
 
-#: includes/admin-page.php:379
+#: includes/admin-page.php:738
 msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
 msgstr "Dale a tu kit un nombre descriptivo y haz clic en \"Cargar Kit de Fuentes\""
 
-#: includes/admin-page.php:380
+#: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
 msgstr "El plugin extraerá el ZIP, procesará las fuentes y las hará disponibles en el editor de bloques"
 
-#: includes/admin-page.php:382
+#: includes/admin-page.php:741
 msgid "What should the ZIP contain:"
 msgstr "Qué debe contener el ZIP:"
 
-#: includes/admin-page.php:384
-msgid "A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)"
-msgstr "Un archivo CSS con declaraciones @font-face (ej., MyWebfontsKit.css)"
+#: includes/admin-page.php:743
+msgid "A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)"
+msgstr "Un archivo CSS con declaraciones @font-face (ej., stylesheet.css o MyWebfontsKit.css)"
 
-#: includes/admin-page.php:385
+#: includes/admin-page.php:744
 msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
 msgstr "Archivos de fuentes en sus subdirectorios (ej., webFonts/NombreFuente/fuente.woff2)"
 
-#: includes/admin-page.php:386
+#: includes/admin-page.php:745
 msgid "The directory structure must match the paths in the CSS file"
 msgstr "La estructura de directorios debe coincidir con las rutas en el archivo CSS"
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:747
+msgid "Compatibility Note:"
+msgstr "Nota de Compatibilidad:"
+
+#: includes/admin-page.php:747
+msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
+msgstr "Este plugin ha sido probado con kits de fuentes web de MyFonts. Otros proveedores deberían funcionar si siguen una estructura similar (archivo CSS con declaraciones @font-face y archivos de fuentes en subdirectorios)."
+
+#: includes/admin-page.php:748
 msgid "Note:"
 msgstr "Nota:"
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:748
 msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
 msgstr "El plugin reescribe automáticamente las rutas CSS y almacena todos los archivos en tu directorio de cargas de WordPress. Todas las fuentes y sus archivos se organizarán correctamente y se servirán desde tu servidor."
 

@@ -287,11 +287,16 @@ msgstr ""
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr ""
 
-#: opentype-stylist.php:1324
+#: opentype-stylist.php:2159
 msgid "No CSS file found in the font kit"
 msgstr ""
 
-#: opentype-stylist.php:1330
+#: opentype-stylist.php:2393
+#, php-format
+msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
+msgstr ""
+
+#: opentype-stylist.php:2172
 msgid "Invalid CSS file"
 msgstr ""
 
@@ -513,47 +518,55 @@ msgstr ""
 msgid "How to use:"
 msgstr ""
 
-#: includes/admin-page.php:376
-msgid "Download your webfont kit from MyFonts, Fontspring, or another provider"
+#: includes/admin-page.php:735
+msgid "Download your webfont kit from your font provider"
 msgstr ""
 
-#: includes/admin-page.php:377
+#: includes/admin-page.php:736
 msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
 msgstr ""
 
-#: includes/admin-page.php:378
+#: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr ""
 
-#: includes/admin-page.php:379
+#: includes/admin-page.php:738
 msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
 msgstr ""
 
-#: includes/admin-page.php:380
+#: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
 msgstr ""
 
-#: includes/admin-page.php:382
+#: includes/admin-page.php:741
 msgid "What should the ZIP contain:"
 msgstr ""
 
-#: includes/admin-page.php:384
-msgid "A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)"
+#: includes/admin-page.php:743
+msgid "A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)"
 msgstr ""
 
-#: includes/admin-page.php:385
+#: includes/admin-page.php:744
 msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
 msgstr ""
 
-#: includes/admin-page.php:386
+#: includes/admin-page.php:745
 msgid "The directory structure must match the paths in the CSS file"
 msgstr ""
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:747
+msgid "Compatibility Note:"
+msgstr ""
+
+#: includes/admin-page.php:747
+msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
+msgstr ""
+
+#: includes/admin-page.php:748
 msgid "Note:"
 msgstr ""
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:748
 msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
 msgstr ""
 

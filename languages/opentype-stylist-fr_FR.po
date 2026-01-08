@@ -285,11 +285,16 @@ msgstr "Échec de la création du répertoire de téléversement"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Échec de l'extraction du fichier ZIP. Veuillez vous assurer que le fichier est une archive ZIP valide."
 
-#: headline-ligatures-styles.php:1324
+#: opentype-stylist.php:2159
 msgid "No CSS file found in the font kit"
 msgstr "Aucun fichier CSS trouvé dans le kit de polices"
 
-#: headline-ligatures-styles.php:1330
+#: opentype-stylist.php:2393
+#, php-format
+msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
+msgstr "%d fichier(s) CSS trouvé(s) dans le kit de polices, mais aucun ne contient de déclarations @font-face valides. Veuillez vous assurer que le fichier ZIP contient une feuille de style webfont appropriée."
+
+#: opentype-stylist.php:2172
 msgid "Invalid CSS file"
 msgstr "Fichier CSS invalide"
 
@@ -503,47 +508,55 @@ msgstr "Téléversement..."
 msgid "How to use:"
 msgstr "Comment utiliser :"
 
-#: includes/admin-page.php:376
-msgid "Download your webfont kit from MyFonts, Fontspring, or another provider"
-msgstr "Téléchargez votre kit de polices web depuis MyFonts, Fontspring ou un autre fournisseur"
+#: includes/admin-page.php:735
+msgid "Download your webfont kit from your font provider"
+msgstr "Téléchargez votre kit de polices web depuis votre fournisseur de polices"
 
-#: includes/admin-page.php:377
+#: includes/admin-page.php:736
 msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
 msgstr "Si le kit n'est pas déjà compressé, créez un fichier ZIP contenant l'ensemble du dossier du kit (y compris le fichier CSS et tous les fichiers de polices dans leurs répertoires)"
 
-#: includes/admin-page.php:378
+#: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr "Cliquez sur « Choisir un Fichier ZIP » et sélectionnez votre fichier ZIP du kit de polices web"
 
-#: includes/admin-page.php:379
+#: includes/admin-page.php:738
 msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
 msgstr "Donnez à votre kit un nom descriptif et cliquez sur « Téléverser un Kit de Polices »"
 
-#: includes/admin-page.php:380
+#: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
 msgstr "Le plugin extraira le ZIP, traitera les polices et les rendra disponibles dans l'éditeur de blocs"
 
-#: includes/admin-page.php:382
+#: includes/admin-page.php:741
 msgid "What should the ZIP contain:"
 msgstr "Que doit contenir le ZIP :"
 
-#: includes/admin-page.php:384
-msgid "A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)"
-msgstr "Un fichier CSS avec des déclarations @font-face (par ex., MyWebfontsKit.css)"
+#: includes/admin-page.php:743
+msgid "A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)"
+msgstr "Un fichier CSS avec des déclarations @font-face (par ex., stylesheet.css ou MyWebfontsKit.css)"
 
-#: includes/admin-page.php:385
+#: includes/admin-page.php:744
 msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
 msgstr "Les fichiers de polices dans leurs sous-répertoires (par ex., webFonts/NomPolice/police.woff2)"
 
-#: includes/admin-page.php:386
+#: includes/admin-page.php:745
 msgid "The directory structure must match the paths in the CSS file"
 msgstr "La structure des répertoires doit correspondre aux chemins dans le fichier CSS"
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:747
+msgid "Compatibility Note:"
+msgstr "Note de Compatibilité :"
+
+#: includes/admin-page.php:747
+msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
+msgstr "Ce plugin a été testé avec des kits de polices web de MyFonts. D'autres fournisseurs devraient fonctionner s'ils suivent une structure similaire (fichier CSS avec déclarations @font-face et fichiers de polices dans des sous-répertoires)."
+
+#: includes/admin-page.php:748
 msgid "Note:"
 msgstr "Remarque :"
 
-#: includes/admin-page.php:388
+#: includes/admin-page.php:748
 msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
 msgstr "Le plugin réécrit automatiquement les chemins CSS et stocke tous les fichiers dans votre répertoire de téléversements WordPress. Toutes les polices et leurs fichiers seront correctement organisés et servis depuis votre serveur."
 
