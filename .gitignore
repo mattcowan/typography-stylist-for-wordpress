@@ -11,3 +11,14 @@ playwright-profile/
 coverage/
 .playwright-mcp/
 blocks/*/build/
+
+# PHP dependencies
+vendor/
+composer.phar
+
+# Testing and cache files
+.phpunit.result.cache
+phpunit.xml
+
+# Windows/system artifacts
+nul

@@ -42,6 +42,10 @@ if (isset($_POST['ots_save_options_settings']) &&
     $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']) ? '1' : '0';
     update_option('ots_show_clear_confirmation', $show_clear_confirmation);
 
+    // Save variable weight setting
+    $allow_variable = isset($_POST['ots_allow_variable_weights']) ? '1' : '0';
+    update_option('ots_allow_variable_weights', $allow_variable);
+
     // Clear cache for all users only when the clear confirmation setting changes
     if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
         OpenType_Stylist::get_instance()->clear_cache();
@@ -84,7 +88,7 @@ $manual_fonts = $instance->get_manual_fonts();
         <?php esc_html_e('Skip to main content', 'opentype-stylist'); ?>
     </a>
 
-    <div class="ots-admin-container">
+    <div class="ots-admin-container" id="ots-main-content" tabindex="-1">
         <div class="ots-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'opentype-stylist'); ?>">
             <button
                 class="ots-tab-button active"
@@ -401,7 +405,10 @@ $manual_fonts = $instance->get_manual_fonts();
                                 <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
                                 <?php echo esc_html($kit_data['kit_name']); ?>
                             </button>
-                            <span class="ots-kit-font-count"><?php echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts']))); ?></span>
+                            <span class="ots-kit-font-count"><?php
+                                /* translators: %d: number of fonts in the custom font kit (Custom Fonts tab) */
+                                echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
+                            ?></span>
                         </h4>
                         <div class="ots-font-meta">
                             <small>
@@ -729,7 +736,7 @@ $manual_fonts = $instance->get_manual_fonts();
                 <div class="ots-font-help">
                     <h4><?php esc_html_e('How to use:', 'opentype-stylist'); ?></h4>
                     <ol>
-                        <li><?php esc_html_e('Download your webfont kit from MyFonts, Fontspring, or another provider', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('Download your webfont kit from your font provider', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Give your kit a descriptive name and click "Upload Font Kit"', 'opentype-stylist'); ?></li>
@@ -737,10 +744,11 @@ $manual_fonts = $instance->get_manual_fonts();
                     </ol>
                     <p><strong><?php esc_html_e('What should the ZIP contain:', 'opentype-stylist'); ?></strong></p>
                     <ul>
-                        <li><?php esc_html_e('A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)', 'opentype-stylist'); ?></li>
+                        <li><?php esc_html_e('A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)', 'opentype-stylist'); ?></li>
                         <li><?php esc_html_e('The directory structure must match the paths in the CSS file', 'opentype-stylist'); ?></li>
                     </ul>
+                    <p><strong><?php esc_html_e('Compatibility Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories).', 'opentype-stylist'); ?></p>
                     <p><strong><?php esc_html_e('Note:', 'opentype-stylist'); ?></strong> <?php esc_html_e('The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server.', 'opentype-stylist'); ?></p>
                 </div>
             </div>
@@ -791,7 +799,10 @@ $manual_fonts = $instance->get_manual_fonts();
                                     <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
                                     <?php echo esc_html($kit_data['kit_name']); ?>
                                 </button>
-                                <span class="ots-kit-font-count"><?php echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts']))); ?></span>
+                                <span class="ots-kit-font-count"><?php
+                                    /* translators: %d: number of fonts in the Adobe Fonts kit (Adobe Fonts tab) */
+                                    echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'opentype-stylist'), count($kit_data['fonts'])));
+                                ?></span>
                             </h4>
                             <div class="ots-font-meta">
                                 <small>
@@ -1273,6 +1284,28 @@ $manual_fonts = $instance->get_manual_fonts();
                                 </label>
                                 <p class="description">
                                     <?php esc_html_e('When enabled, the Clear button in the block editor will show a confirmation dialog before removing all formatting. This helps prevent accidental data loss. Users can disable this on a per-session basis.', 'opentype-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="ots_allow_variable_weights">
+                                    <?php esc_html_e('Variable Font Weights', 'opentype-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="ots_allow_variable_weights"
+                                    name="ots_allow_variable_weights"
+                                    value="1"
+                                    <?php checked(get_option('ots_allow_variable_weights', false)); ?>
+                                />
+                                <label for="ots_allow_variable_weights">
+                                    <?php esc_html_e('Allow custom font-weight values (1-1000) for variable fonts', 'opentype-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts.', 'opentype-stylist'); ?>
                                 </p>
                             </td>
                         </tr>

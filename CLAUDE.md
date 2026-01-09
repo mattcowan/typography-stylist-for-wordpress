@@ -198,6 +198,19 @@ npm test -- --coverage    # See test coverage report
 
 **Localization:** All strings use `__()` with text domain `opentype-stylist`
 
+**Debug Logging:**
+- Do NOT add error_log() statements to production code
+- Only use error_log() temporarily when debugging specific issues locally
+- Remove all error_log() statements before committing changes
+- If persistent logging is needed, use WordPress debugging functions with WP_DEBUG_LOG
+
+**WordPress Coding Standards Exceptions:**
+- Use `// phpcs:disable RuleName -- Reason` to suppress specific PHPCS warnings when justified
+- Always provide a clear reason after `--` explaining why the exception is necessary
+- Re-enable the rule with `// phpcs:enable RuleName` as soon as possible
+- Common valid reasons: performance optimization, security requirements, backward compatibility
+- Example: Performance-critical code that reads only 4 bytes vs loading entire multi-MB files
+
 **Translation Management:**
 - All user-facing strings MUST be wrapped in translation functions (`__()`, `esc_html__()`, `esc_attr__()`, `sprintf()`)
 - After adding new translatable strings, update ALL translation files in this order:

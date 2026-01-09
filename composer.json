@@ -1,0 +1,19 @@
+{
+  "name": "opentype-stylist/opentype-stylist",
+  "description": "WordPress plugin for advanced OpenType typography features",
+  "type": "wordpress-plugin",
+  "require-dev": {
+    "phpunit/phpunit": "^9.5",
+    "yoast/phpunit-polyfills": "^1.0",
+    "brain/monkey": "^2.6"
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "OpenTypeStylist\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": "phpunit",
+    "test:coverage": "phpunit --coverage-html coverage"
+  }
+}

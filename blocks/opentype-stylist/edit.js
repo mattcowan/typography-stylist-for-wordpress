@@ -412,7 +412,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	// Add Adobe fonts
 	adobeFonts.forEach(font => {
-		if (font.font_families && font.font_families.length > 0 && font.font_id) {
+		// Handle new structure: font_family (singular string - one entry per family)
+		if (font.font_family && font.font_id) {
+			fontOptions.push({
+				label: `🅰️ ${font.font_family}`,
+				value: String(font.font_id),
+				fontFamily: font.font_family,
+				fontId: font.font_id
+			});
+			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+		}
+		// Handle legacy structure: font_families (plural array - multiple families per entry)
+		else if (font.font_families && font.font_families.length > 0 && font.font_id) {
 			font.font_families.forEach(family => {
 				fontOptions.push({
 					label: `🅰️ ${family}`,
@@ -806,7 +817,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 
 		if (fontFamily) {
-			styles.fontFamily = fontFamily;
+			// Use CSS variable if fontId is set (for font replacements)
+			// Otherwise use literal font name for legacy/custom fonts
+			styles.fontFamily = fontId ? `var(--font-${fontId})` : fontFamily;
 		}
 
 		if (fontWeight) {

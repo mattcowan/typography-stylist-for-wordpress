@@ -17,6 +17,9 @@
     "watch:css": "nodemon --watch assets/css --ext css --ignore \"*.min.css\" --exec \"npm run build:css\"",
     "test": "wp-scripts test-unit-js",
     "test:watch": "wp-scripts test-unit-js --watch",
+    "test:php": "vendor/bin/phpunit",
+    "test:php:coverage": "vendor/bin/phpunit --coverage-html coverage",
+    "test:all": "npm test && npm run test:php",
     "version": "npm run build",
     "package": "npm run build && node scripts/package.js"
   },

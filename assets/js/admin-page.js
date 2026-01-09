@@ -502,7 +502,6 @@ jQuery(document).ready(function($) {
         var $message = $('#ots-manual-font-message');
         var fontName = $('#ots-manual-font-name').val().trim();
         var fontFamily = $('#ots-manual-font-family').val().trim();
-        var fontFallbacks = $('#ots-manual-font-fallbacks').val().trim();
 
         // Clear previous message
         $message.html('');
@@ -527,8 +526,7 @@ jQuery(document).ready(function($) {
         // Prepare data
         var data = {
             name: fontName,
-            font_family: fontFamily,
-            fallbacks: fontFallbacks
+            font_family: fontFamily
         };
 
         // Disable button
@@ -549,7 +547,6 @@ jQuery(document).ready(function($) {
                 // Reset form
                 $('#ots-manual-font-name').val('');
                 $('#ots-manual-font-family').val('');
-                $('#ots-manual-font-fallbacks').val('');
 
                 // Refresh page after 1.5 seconds
                 setTimeout(function() {
@@ -823,12 +820,18 @@ jQuery(document).ready(function($) {
     // FONT REPLACEMENT & DELETION MODAL
     // =========================================================================
 
+    // Store previously focused element for modal focus management
+    var previouslyFocusedElement = null;
+
     /**
      * Show deletion modal with replacement options
      */
     function showDeletionModal(fontId) {
         var $modal = $('#ots-delete-font-modal');
         var $select = $('#ots-replacement-font-select');
+
+        // Store currently focused element
+        previouslyFocusedElement = document.activeElement;
 
         // Build font options (exclude the font being deleted)
         $select.find('option:not(:first)').remove();
@@ -874,16 +877,77 @@ jQuery(document).ready(function($) {
         $('#ots-replacement-global-load').prop('checked', false);
 
         // Show modal
-        $modal.fadeIn(200);
-        $modal.find('.ots-modal-content').focus();
+        $modal.fadeIn(200, function() {
+            // Move focus to modal content
+            var $modalContent = $modal.find('.ots-modal-content');
+            $modalContent.attr('tabindex', '-1').focus();
+
+            // Set up focus trap
+            setupModalFocusTrap($modal);
+        });
     }
 
     /**
      * Close deletion modal
      */
     function closeDeletionModal() {
-        $('#ots-delete-font-modal').fadeOut(200);
+        var $modal = $('#ots-delete-font-modal');
+
+        // Remove focus trap event listeners
+        $modal.off('keydown.focustrap');
+
+        $modal.fadeOut(200, function() {
+            // Restore focus to previously focused element
+            if (previouslyFocusedElement && previouslyFocusedElement.focus) {
+                previouslyFocusedElement.focus();
+            }
+            previouslyFocusedElement = null;
+        });
+
         deleteFontContext = null;
+    }
+
+    /**
+     * Set up focus trap for modal
+     */
+    function setupModalFocusTrap($modal) {
+        // Remove any existing focus trap
+        $modal.off('keydown.focustrap');
+
+        // Recalculate focusable elements on each interaction to handle dynamic content
+        function getFocusableElements() {
+            return $modal.find('button, input, select, textarea, [tabindex]:not([tabindex="-1"])').filter(':visible');
+        }
+
+        // Handle ESC and Tab keys
+        $modal.on('keydown.focustrap', function(e) {
+            var focusableElements = getFocusableElements();
+            var firstFocusable = focusableElements.first();
+            var lastFocusable = focusableElements.last();
+            // ESC key closes modal
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                e.preventDefault();
+                closeDeletionModal();
+                return;
+            }
+
+            // TAB key traps focus
+            if (e.key === 'Tab' || e.keyCode === 9) {
+                if (e.shiftKey) {
+                    // Shift+Tab: if on first element, jump to last
+                    if (document.activeElement === firstFocusable[0]) {
+                        e.preventDefault();
+                        lastFocusable.focus();
+                    }
+                } else {
+                    // Tab: if on last element, jump to first
+                    if (document.activeElement === lastFocusable[0]) {
+                        e.preventDefault();
+                        firstFocusable.focus();
+                    }
+                }
+            }
+        });
     }
 
     // Modal close handlers

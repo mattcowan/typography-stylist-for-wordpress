@@ -16,6 +16,12 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 // Delete plugin options from database
 delete_option('ots_presets');
 delete_option('ots_custom_fonts');
+delete_option('ots_adobe_fonts');
+delete_option('ots_manual_fonts');
+delete_option('ots_font_replacements');
+delete_option('ots_htaccess_verified');
+delete_option('ots_enable_aria_labels');
+delete_option('ots_show_clear_confirmation');
 delete_option('ots_global_settings');
 
 // Delete transients
@@ -89,7 +95,7 @@ if (file_exists($font_dir)) {
     if (WP_Filesystem()) {
         global $wp_filesystem;
 
-        // Remove entire HLS directory including fonts
+        // Remove entire ots directory including fonts
         $wp_filesystem->rmdir($font_dir, true);
     } else {
         // Fallback to PHP functions if WP_Filesystem fails
@@ -114,8 +120,3 @@ if (file_exists($font_dir)) {
 
 // Clean up any orphaned post meta (though this plugin doesn't use post meta, good practice)
 // Features are stored inline in post content, so no cleanup needed there
-
-// Log completion for debugging (if WP_DEBUG is enabled)
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('OpenType Stylist: Plugin uninstalled and all data removed');
-}
