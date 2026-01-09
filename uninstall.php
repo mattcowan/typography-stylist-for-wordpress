@@ -95,7 +95,7 @@ if (file_exists($font_dir)) {
     if (WP_Filesystem()) {
         global $wp_filesystem;
 
-        // Remove entire HLS directory including fonts
+        // Remove entire ots directory including fonts
         $wp_filesystem->rmdir($font_dir, true);
     } else {
         // Fallback to PHP functions if WP_Filesystem fails
@@ -120,8 +120,3 @@ if (file_exists($font_dir)) {
 
 // Clean up any orphaned post meta (though this plugin doesn't use post meta, good practice)
 // Features are stored inline in post content, so no cleanup needed there
-
-// Log completion for debugging (if WP_DEBUG is enabled)
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('OpenType Stylist: Plugin uninstalled and all data removed');
-}

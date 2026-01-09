@@ -2398,17 +2398,6 @@ class OpenType_Stylist {
                 'relative_path' => $relative_path,
                 'size' => filesize($css_path)
             );
-
-            // Debug logging if WP_DEBUG is enabled
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log(sprintf(
-                    'OpenType Stylist: CSS candidate %s - Score: %d, Has @font-face: %s, Size: %d bytes',
-                    $basename,
-                    $score,
-                    $has_font_face ? 'YES' : 'NO',
-                    filesize($css_path)
-                ));
-            }
         }
 
         // Sort by score (highest first)
@@ -2419,13 +2408,6 @@ class OpenType_Stylist {
         // Select the best candidate that has @font-face
         foreach ($candidates as $candidate) {
             if ($candidate['has_font_face']) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log(sprintf(
-                        'OpenType Stylist: Selected CSS file: %s (score: %d)',
-                        basename($candidate['path']),
-                        $candidate['score']
-                    ));
-                }
                 return $candidate['path'];
             }
         }
@@ -3877,17 +3859,23 @@ class OpenType_Stylist {
         }
 
         // Try native PHP file reading first (most performant - only reads 4 bytes)
+        // phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Performance: only reads 4 bytes vs loading entire 1-3MB font file
         if (function_exists('fopen') && ini_get('allow_url_fopen')) {
             $handle = @fopen($file_path, 'rb');
             if ($handle !== false) {
+                // phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fread -- Performance: only reads 4 bytes vs loading entire font file
                 $magic = fread($handle, 4);
+                // phpcs:enable WordPress.WP.AlternativeFunctions.file_system_operations_fread
+                // phpcs:disable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
                 fclose($handle);
+                // phpcs:enable WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 
                 if ($magic !== false && strlen($magic) === 4) {
                     return $this->validate_font_magic_number($magic);
                 }
             }
         }
+        // phpcs:enable WordPress.WP.AlternativeFunctions.file_system_operations_fopen
 
         // Fallback to WP_Filesystem for compatibility
         // This loads entire file but ensures compatibility with restrictive environments
