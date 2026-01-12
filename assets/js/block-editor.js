@@ -4,11 +4,11 @@
  */
 
 // Import drag/resize utilities (CommonJS for browserify)
-const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCursor } = require('./modal-drag-resize.js');
+const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
-    const { RichTextToolbarButton, BlockControls } = wp.blockEditor;
+    const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
@@ -1642,26 +1642,16 @@ const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCurso
          * Modal drag handlers
          */
         handleDragStart(e) {
-            console.log('🔵 handleDragStart called', {
-                target: e.target,
-                currentTarget: e.currentTarget,
-                classList: e.target.classList,
-                closest: e.target.closest('.ots-modal-header')
-            });
-
             // Don't drag if clicking the close button
             if (e.target.closest('.ots-modal-close-button')) {
-                console.log('❌ Not dragging - clicked close button');
                 return;
             }
 
             // Only drag from header area
             if (!e.target.closest('.ots-modal-header')) {
-                console.log('❌ Not dragging - not from header');
                 return;
             }
 
-            console.log('✅ Starting drag from header');
             e.preventDefault();
             e.stopPropagation();
 
@@ -1708,13 +1698,17 @@ const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCurso
             e.preventDefault();
             e.stopPropagation();
 
+            const { modalWidth, modalHeight, modalX, modalY } = this.state;
+
             this.setState({
                 isResizing: true,
                 resizeDirection: direction,
                 resizeStartX: e.clientX,
                 resizeStartY: e.clientY,
-                resizeStartWidth: this.state.modalWidth,
-                resizeStartHeight: this.state.modalHeight
+                resizeStartWidth: modalWidth,
+                resizeStartHeight: modalHeight,
+                resizeStartModalX: modalX,
+                resizeStartModalY: modalY
             });
 
             document.addEventListener('mousemove', this.handleResizeMove);
@@ -1730,8 +1724,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCurso
                 resizeStartY,
                 resizeStartWidth,
                 resizeStartHeight,
-                modalX,
-                modalY
+                resizeStartModalX,
+                resizeStartModalY
             } = this.state;
 
             const newDimensions = calculateResize(e, resizeDirection, {
@@ -1739,8 +1733,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCurso
                 startY: resizeStartY,
                 startWidth: resizeStartWidth,
                 startHeight: resizeStartHeight,
-                startModalX: modalX,
-                startModalY: modalY
+                startModalX: resizeStartModalX,
+                startModalY: resizeStartModalY
             });
 
             this.setState({
@@ -1869,11 +1863,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize, getResizeCurso
                             shouldCloseOnEsc={true}
                             __experimentalHideHeader={true}
                             onMouseDown={(e) => {
-                                console.log('🟢 Modal onMouseDown', e.target);
                                 // Only trigger drag if clicking on header, not content
                                 if (e.target.classList.contains('ots-modal-header') ||
                                     e.target.closest('.ots-modal-header')) {
-                                    console.log('🟢 Modal onMouseDown - header clicked, calling handleDragStart');
                                     this.handleDragStart(e);
                                 }
                             }}

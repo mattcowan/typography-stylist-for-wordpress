@@ -15,14 +15,22 @@
  * @param {number} height - Modal height
  * @return {Object} Constrained { x, y }
  */
-function constrainToViewport(x, y, width, height) {
+function constrainToViewport(x, y, width, height) { // eslint-disable-line no-unused-vars
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const MIN_VISIBLE = 50; // Keep at least 50px of header visible
 
+    // Ensure at least MIN_VISIBLE pixels of the modal remain visible
+    // Note: width and height kept in signature for API consistency but not used
+    // Simple constraint: don't allow dragging past left/top edges, keep MIN_VISIBLE on right/bottom
+    const minX = 0;
+    const maxX = Math.max(0, viewportWidth - MIN_VISIBLE);
+    const minY = 0;
+    const maxY = Math.max(0, viewportHeight - MIN_VISIBLE);
+
     return {
-        x: Math.max(0, Math.min(x, viewportWidth - MIN_VISIBLE)),
-        y: Math.max(0, Math.min(y, viewportHeight - MIN_VISIBLE))
+        x: Math.max(minX, Math.min(x, maxX)),
+        y: Math.max(minY, Math.min(y, maxY))
     };
 }
 

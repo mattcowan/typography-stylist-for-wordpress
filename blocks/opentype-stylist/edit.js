@@ -30,6 +30,7 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
 import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from './utils';
+import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
@@ -283,45 +284,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const handleResizeMove = (e) => {
 		if (!isResizing) return;
 
-		const deltaX = e.clientX - resizeStartX;
-		const deltaY = e.clientY - resizeStartY;
+		const newDimensions = calculateResize(e, resizeDirection, {
+			startX: resizeStartX,
+			startY: resizeStartY,
+			startWidth: resizeStartWidth,
+			startHeight: resizeStartHeight,
+			startModalX: resizeStartModalX,
+			startModalY: resizeStartModalY
+		});
 
-		const MIN_WIDTH = 300;
-		const MIN_HEIGHT = 200;
-		const MAX_WIDTH = window.innerWidth - 20;
-		const MAX_HEIGHT = window.innerHeight - 20;
-
-		let newWidth = resizeStartWidth;
-		let newHeight = resizeStartHeight;
-		let newX = resizeStartModalX;
-		let newY = resizeStartModalY;
-
-		// Apply deltas based on direction
-		if (resizeDirection.includes('e')) {
-			newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, resizeStartWidth + deltaX));
-		}
-		if (resizeDirection.includes('s')) {
-			newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, resizeStartHeight + deltaY));
-		}
-		if (resizeDirection.includes('w')) {
-			const proposedWidth = resizeStartWidth - deltaX;
-			if (proposedWidth >= MIN_WIDTH && proposedWidth <= MAX_WIDTH) {
-				newWidth = proposedWidth;
-				newX = resizeStartModalX + deltaX;
-			}
-		}
-		if (resizeDirection.includes('n')) {
-			const proposedHeight = resizeStartHeight - deltaY;
-			if (proposedHeight >= MIN_HEIGHT && proposedHeight <= MAX_HEIGHT) {
-				newHeight = proposedHeight;
-				newY = resizeStartModalY + deltaY;
-			}
-		}
-
-		setModalWidth(newWidth);
-		setModalHeight(newHeight);
-		setModalX(newX);
-		setModalY(newY);
+		setModalWidth(newDimensions.width);
+		setModalHeight(newDimensions.height);
+		setModalX(newDimensions.x);
+		setModalY(newDimensions.y);
 	};
 
 	const handleResizeEnd = () => {
