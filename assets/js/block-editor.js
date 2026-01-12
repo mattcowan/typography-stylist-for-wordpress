@@ -3,9 +3,13 @@
  * Adds custom format type for OpenType features
  */
 
+// Import drag/resize utilities (CommonJS for browserify)
+const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
+
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
-    const { RichTextToolbarButton } = wp.blockEditor;
+    const { BlockControls } = wp.blockEditor;
+    const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
@@ -177,17 +181,15 @@
         wp.element.createElement('svg', {
             width: 20,
             height: 20,
-            viewBox: '0 0 20 20',
+            viewBox: '0 0 256 256',
             xmlns: 'http://www.w3.org/2000/svg'
         },
-            wp.element.createElement('circle', {
-                cx: 10,
-                cy: 10,
-                r: 7,
-                fill: 'none',
-                stroke: 'currentColor',
-                strokeWidth: 2
-            })
+            wp.element.createElement('g', {},
+                wp.element.createElement('path', {
+                    d: 'M95.72,23.871C74.545,42.158,63.316,75.524,63.316,131.028c0,57.75,15.4,99.778,63.524,99.778c47.804,0,63.524-42.028,63.524-99.778c0-58.07-17.004-97.854-50.691-97.854c-19.891,0-35.933,14.438-35.933,37.537c0,15.4,6.737,25.346,17.004,25.346c11.55,0,13.154-8.983,23.741-8.983c13.154,0,21.496,9.946,21.496,22.458c0,15.4-12.513,25.987-33.688,25.987c-25.346,0-48.445-21.816-48.445-57.107c0-38.5,28.233-64.487,63.524-64.487c48.445,0,91.116,47.804,91.116,117.104c0,69.3-42.35,117.104-111.649,117.104c-69.62,0-111.649-47.804-111.649-117.104c0-67.695,38.5-101.062,76.358-114.537L95.72,23.871z',
+                    fill: 'currentColor'
+                })
+            )
         )
     );
 
@@ -239,7 +241,23 @@
                 // Track if user has made changes to show apply notice
                 hasChanges: false,
                 // Initial state when popover opens (for comparing on undo)
-                initialState: null
+                initialState: null,
+                // Modal position and size (for draggable/resizable modal)
+                modalX: 0,
+                modalY: 0,
+                modalWidth: 500,
+                modalHeight: 600,
+                // Drag state
+                isDragging: false,
+                dragStartX: 0,
+                dragStartY: 0,
+                // Resize state
+                isResizing: false,
+                resizeStartX: 0,
+                resizeStartY: 0,
+                resizeStartWidth: 0,
+                resizeStartHeight: 0,
+                resizeDirection: null
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -264,6 +282,15 @@
             this.applyFeatureFromPreview = this.applyFeatureFromPreview.bind(this);
             this.undoLastChange = this.undoLastChange.bind(this);
             this.saveToHistory = this.saveToHistory.bind(this);
+            // Modal drag/resize handlers
+            this.initializeModalPosition = this.initializeModalPosition.bind(this);
+            this.handleDragStart = this.handleDragStart.bind(this);
+            this.handleDragMove = this.handleDragMove.bind(this);
+            this.handleDragEnd = this.handleDragEnd.bind(this);
+            this.handleResizeStart = this.handleResizeStart.bind(this);
+            this.handleResizeMove = this.handleResizeMove.bind(this);
+            this.handleResizeEnd = this.handleResizeEnd.bind(this);
+            this.handleHeaderKeyDown = this.handleHeaderKeyDown.bind(this);
         }
 
         /**
@@ -604,6 +631,23 @@
         }
 
         /**
+         * Initialize modal position (center in viewport)
+         */
+        initializeModalPosition() {
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const modalWidth = 500;
+            const modalHeight = 600;
+
+            return {
+                modalX: Math.max(0, (viewportWidth - modalWidth) / 2),
+                modalY: Math.max(0, (viewportHeight - modalHeight) / 2),
+                modalWidth,
+                modalHeight
+            };
+        }
+
+        /**
          * Toggle popover visibility
          */
         togglePopover() {
@@ -615,6 +659,7 @@
             let inheritedFont = '';
             let detectionFailed = false;
             let capturedInitialState = null;
+            let modalPosition = {};
 
             if (!this.state.isOpen && value) {
                 if (value.start !== value.end) {
@@ -648,6 +693,9 @@
                     fontWeight: this.getActiveFontWeight() || '400',
                     letterSpacing: this.getActiveLetterSpacing() || 0
                 };
+
+                // Initialize modal position when opening
+                modalPosition = this.initializeModalPosition();
             }
 
             this.setState(state => ({
@@ -666,7 +714,11 @@
                 fontDetectionFailed: detectionFailed,
                 initialState: capturedInitialState,
                 // Reset hasChanges when closing popover (discarding unapplied changes)
-                hasChanges: state.isOpen ? false : state.hasChanges
+                hasChanges: state.isOpen ? false : state.hasChanges,
+                // Reset modal position and drag/resize state
+                ...(!state.isOpen && modalPosition),
+                isDragging: false,
+                isResizing: false
             }));
         }
 
@@ -1586,6 +1638,165 @@
             );
         }
 
+        /**
+         * Modal drag handlers
+         */
+        handleDragStart(e) {
+            // Don't drag if clicking the close button
+            if (e.target.closest('.ots-modal-close-button')) {
+                return;
+            }
+
+            // Only drag from header area
+            if (!e.target.closest('.ots-modal-header')) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.setState({
+                isDragging: true,
+                dragStartX: e.clientX,
+                dragStartY: e.clientY
+            });
+
+            // Add global listeners
+            document.addEventListener('mousemove', this.handleDragMove);
+            document.addEventListener('mouseup', this.handleDragEnd);
+        }
+
+        handleDragMove(e) {
+            if (!this.state.isDragging) return;
+
+            const { dragStartX, dragStartY, modalX, modalY, modalWidth, modalHeight } = this.state;
+            const { deltaX, deltaY } = calculateDragDelta(e, dragStartX, dragStartY);
+
+            const newX = modalX + deltaX;
+            const newY = modalY + deltaY;
+
+            const constrained = constrainToViewport(newX, newY, modalWidth, modalHeight);
+
+            this.setState({
+                modalX: constrained.x,
+                modalY: constrained.y,
+                dragStartX: e.clientX,
+                dragStartY: e.clientY
+            });
+        }
+
+        handleDragEnd(e) {
+            this.setState({ isDragging: false });
+            document.removeEventListener('mousemove', this.handleDragMove);
+            document.removeEventListener('mouseup', this.handleDragEnd);
+        }
+
+        /**
+         * Modal resize handlers
+         */
+        handleResizeStart(e, direction) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const { modalWidth, modalHeight, modalX, modalY } = this.state;
+
+            this.setState({
+                isResizing: true,
+                resizeDirection: direction,
+                resizeStartX: e.clientX,
+                resizeStartY: e.clientY,
+                resizeStartWidth: modalWidth,
+                resizeStartHeight: modalHeight,
+                resizeStartModalX: modalX,
+                resizeStartModalY: modalY
+            });
+
+            document.addEventListener('mousemove', this.handleResizeMove);
+            document.addEventListener('mouseup', this.handleResizeEnd);
+        }
+
+        handleResizeMove(e) {
+            if (!this.state.isResizing) return;
+
+            const {
+                resizeDirection,
+                resizeStartX,
+                resizeStartY,
+                resizeStartWidth,
+                resizeStartHeight,
+                resizeStartModalX,
+                resizeStartModalY
+            } = this.state;
+
+            const newDimensions = calculateResize(e, resizeDirection, {
+                startX: resizeStartX,
+                startY: resizeStartY,
+                startWidth: resizeStartWidth,
+                startHeight: resizeStartHeight,
+                startModalX: resizeStartModalX,
+                startModalY: resizeStartModalY
+            });
+
+            this.setState({
+                modalWidth: newDimensions.width,
+                modalHeight: newDimensions.height,
+                modalX: newDimensions.x,
+                modalY: newDimensions.y
+            });
+        }
+
+        handleResizeEnd(e) {
+            this.setState({
+                isResizing: false,
+                resizeDirection: null
+            });
+            document.removeEventListener('mousemove', this.handleResizeMove);
+            document.removeEventListener('mouseup', this.handleResizeEnd);
+        }
+
+        /**
+         * Keyboard handler for arrow key positioning
+         */
+        handleHeaderKeyDown(e) {
+            const STEP = 10;
+            let { modalX, modalY } = this.state;
+            let moved = false;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    modalY = Math.max(0, modalY - STEP);
+                    moved = true;
+                    break;
+                case 'ArrowDown':
+                    modalY = Math.min(window.innerHeight - 100, modalY + STEP);
+                    moved = true;
+                    break;
+                case 'ArrowLeft':
+                    modalX = Math.max(0, modalX - STEP);
+                    moved = true;
+                    break;
+                case 'ArrowRight':
+                    modalX = Math.min(window.innerWidth - 100, modalX + STEP);
+                    moved = true;
+                    break;
+            }
+
+            if (moved) {
+                e.preventDefault();
+                this.setState({ modalX, modalY });
+            }
+        }
+
+        /**
+         * Cleanup event listeners when component unmounts
+         */
+        componentWillUnmount() {
+            document.removeEventListener('mousemove', this.handleDragMove);
+            document.removeEventListener('mouseup', this.handleDragEnd);
+            document.removeEventListener('mousemove', this.handleResizeMove);
+            document.removeEventListener('mouseup', this.handleResizeEnd);
+        }
+
         render() {
             const { isActive, isInOTSBlock = false } = this.props;
             const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
@@ -1629,25 +1840,83 @@
                 <Fragment>
                     {/* Only show button if NOT in an OpenType Stylist block */}
                     {!isInOTSBlock && (
-                        <RichTextToolbarButton
-                            icon={OTSIcon}
-                            title={__('OpenType Stylist', 'opentype-stylist')}
-                            onClick={this.togglePopover}
-                            isActive={isActive}
-                            className="ots-toolbar-button"
-                        />
+                        <BlockControls>
+                            <ToolbarGroup>
+                                <ToolbarButton
+                                    icon={OTSIcon}
+                                    title={__('OpenType Stylist', 'opentype-stylist')}
+                                    onClick={this.togglePopover}
+                                    isActive={isActive}
+                                    className="ots-toolbar-button"
+                                />
+                            </ToolbarGroup>
+                        </BlockControls>
                     )}
 
                     {isOpen && (
-                        <Popover
-                            position="bottom center"
-                            onClose={this.togglePopover}
-                            className="ots-popover"
-                            focusOnMount="firstElement"
+                        <Modal
+                            title=""
+                            onRequestClose={this.togglePopover}
+                            className={`ots-modal ${this.state.isDragging ? 'is-dragging' : ''} ${this.state.isResizing ? 'is-resizing' : ''}`}
+                            isDismissible={true}
+                            shouldCloseOnClickOutside={false}
+                            shouldCloseOnEsc={true}
+                            __experimentalHideHeader={true}
+                            onMouseDown={(e) => {
+                                // Only trigger drag if clicking on header, not content
+                                if (e.target.classList.contains('ots-modal-header') ||
+                                    e.target.closest('.ots-modal-header')) {
+                                    this.handleDragStart(e);
+                                }
+                            }}
+                            style={{
+                                position: 'fixed',
+                                top: `${this.state.modalY}px`,
+                                left: `${this.state.modalX}px`,
+                                width: `${this.state.modalWidth}px`,
+                                height: `${this.state.modalHeight}px`,
+                                maxWidth: 'none',
+                                maxHeight: 'none',
+                                transform: 'none'
+                            }}
                         >
-                            <div className="ots-popover-content">
-                                <div className="ots-popover-header">
-                                    <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
+                            {/* Custom draggable header */}
+                            <div
+                                className="ots-modal-header"
+                                onMouseDown={this.handleDragStart}
+                                onKeyDown={this.handleHeaderKeyDown}
+                                role="toolbar"
+                                aria-label={__('Drag to reposition modal', 'opentype-stylist')}
+                                tabIndex={0}
+                                style={{ cursor: this.state.isDragging ? 'grabbing' : 'grab' }}
+                            >
+                                <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
+                                <Button
+                                    icon="no-alt"
+                                    label={__('Close', 'opentype-stylist')}
+                                    onClick={this.togglePopover}
+                                    className="ots-modal-close-button"
+                                />
+                            </div>
+
+                            {/* Modal content wrapper with scroll */}
+                            <div className="ots-modal-content" style={{
+                                height: `calc(${this.state.modalHeight}px - 60px)`,
+                                overflowY: 'auto'
+                            }}>
+                                <div className="ots-popover-content">
+
+                                {/* Drag instruction notice - always visible */}
+                                <div className="ots-sticky-notice-wrapper">
+                                    {wp.element.createElement(Notice, {
+                                        status: 'info',
+                                        isDismissible: false,
+                                        className: 'ots-drag-notice'
+                                    },
+                                        wp.element.createElement('p', { style: { margin: 0 } },
+                                            '💡 ' + __('Tip: Drag the title bar to reposition this panel', 'opentype-stylist')
+                                        )
+                                    )}
                                 </div>
 
                                 {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
@@ -1954,8 +2223,77 @@
                                     </div>
                                 )}
                                 </div>{/* End ots-scrollable-content */}
+                            </div>{/* End ots-popover-content */}
+                            </div>{/* End ots-modal-content */}
+
+                            {/* Resize handles - 8 directions */}
+                            <div className="ots-resize-handles">
+                                <div
+                                    className="ots-resize-handle ots-resize-n"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'n')}
+                                    role="slider"
+                                    aria-label={__('Resize modal vertically', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'ns-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-ne"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'ne')}
+                                    role="slider"
+                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'nesw-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-e"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'e')}
+                                    role="slider"
+                                    aria-label={__('Resize modal horizontally', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'ew-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-se"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'se')}
+                                    role="slider"
+                                    aria-label={__('Resize modal', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'nwse-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-s"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 's')}
+                                    role="slider"
+                                    aria-label={__('Resize modal vertically', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'ns-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-sw"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'sw')}
+                                    role="slider"
+                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'nesw-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-w"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'w')}
+                                    role="slider"
+                                    aria-label={__('Resize modal horizontally', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'ew-resize' }}
+                                />
+                                <div
+                                    className="ots-resize-handle ots-resize-nw"
+                                    onMouseDown={(e) => this.handleResizeStart(e, 'nw')}
+                                    role="slider"
+                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    tabIndex={0}
+                                    style={{ cursor: 'nwse-resize' }}
+                                />
                             </div>
-                        </Popover>
+                        </Modal>
                     )}
                 </Fragment>
             );
