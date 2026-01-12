@@ -399,52 +399,6 @@
     }
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-    .ots-popover-header,
-    .ots-preview-section,
-    .ots-popover-actions {
-        background: #1e1e1e;
-    }
-
-    .ots-sticky-notice-wrapper {
-        background: #1e1e1e;
-        border-bottom-color: #3e3e3e;
-    }
-
-    .ots-popover-header h3,
-    .ots-features-section h4,
-    .ots-preview-section h4,
-    .ots-presets-section h4 {
-        color: #fff;
-    }
-
-    .ots-preview-text {
-        background: #2e2e2e;
-        border-color: #3e3e3e;
-        color: #fff;
-    }
-
-    .ots-feature-code {
-        background: #2e2e2e;
-        color: #fff;
-    }
-
-    .ots-preview-features,
-    .ots-preview-features strong {
-        color: #fff;
-    }
-
-    .ots-feature-preview {
-        background: #fff;
-        border-color: #3e3e3e;
-    }
-
-    .ots-feature-preview-on {
-        color: #000;
-    }
-}
-
 /* Animation - Respect reduced motion preference */
 @media (prefers-reduced-motion: no-preference) {
     @keyframes hlsFadeIn {
@@ -478,16 +432,6 @@
         transform: none;
         box-shadow: 0 0 0 2px #0073aa;
         transition: none;
-    }
-}
-
-/* Dark Mode Focus Indicators */
-@media (prefers-color-scheme: dark) {
-    .ots-toolbar-button:focus,
-    .ots-preset-button:focus,
-    .ots-popover-actions .components-button:focus {
-        outline-color: #4f94d4;
-        box-shadow: 0 0 0 1px #1e1e1e, 0 0 0 3px #4f94d4;
     }
 }
 
@@ -542,17 +486,6 @@
     min-height: 36px;
 }
 
-@media (prefers-color-scheme: dark) {
-    .ots-accessibility-warning {
-        background: #3d3000;
-        border-color: #ffc107;
-    }
-
-    .ots-warning-message {
-        color: #ffecb3;
-    }
-}
-
 /* Active Feature Panel Highlighting */
 .ots-feature-category-panel.has-active-features > .components-panel__body-title {
     background-color: #f0f6fc !important;
@@ -561,4 +494,238 @@
 .ots-feature-category-panel.has-active-features > .components-panel__body-title button {
     color: #0783be !important;
     font-weight: 600 !important;
+}
+
+/* ========================================
+   Modal Styles - Draggable & Resizable
+   ======================================== */
+
+/* Reduce background dimming - much more transparent */
+.ots-modal .components-modal__screen-overlay {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Modal frame positioning overrides */
+.ots-modal .components-modal__frame {
+    position: fixed !important;
+    transform: none !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+/* Override WordPress modal content padding */
+.ots-modal .components-modal__content,
+.ots-modal .components-modal__content.hide-header {
+    margin-top: 0 !important;
+    padding: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Draggable header */
+.ots-modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #ddd;
+    background: #f9f9f9;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 20;
+    flex-shrink: 0;
+}
+
+.ots-modal-header:active {
+    cursor: grabbing;
+}
+
+.ots-modal.is-dragging .ots-modal-header {
+    cursor: grabbing;
+}
+
+.ots-modal-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e1e1e;
+    pointer-events: none;
+    flex: 1;
+}
+
+.ots-modal-header:focus {
+    outline: 2px solid #0073aa;
+    outline-offset: -2px;
+}
+
+/* Close button styling */
+.ots-modal-close-button {
+    flex-shrink: 0;
+    margin-left: 16px;
+    pointer-events: auto;
+}
+
+.ots-modal-close-button:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+/* Modal content wrapper with scroll */
+.ots-modal-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #fff;
+}
+
+/* Scrollbar styling for modal content */
+.ots-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ots-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.ots-modal-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.ots-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Resize handles container */
+.ots-resize-handles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+/* Individual resize handles */
+.ots-resize-handle {
+    position: absolute;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+/* Corner handles - larger hit area (16px) */
+.ots-resize-handle-ne,
+.ots-resize-handle-nw,
+.ots-resize-handle-se,
+.ots-resize-handle-sw {
+    width: 16px;
+    height: 16px;
+}
+
+/* Edge handles - 8px hit area */
+.ots-resize-handle-n,
+.ots-resize-handle-s {
+    left: 16px;
+    right: 16px;
+    height: 8px;
+}
+
+.ots-resize-handle-e,
+.ots-resize-handle-w {
+    top: 16px;
+    bottom: 16px;
+    width: 8px;
+}
+
+/* Positioning */
+.ots-resize-handle-n {
+    top: 0;
+    cursor: ns-resize;
+}
+
+.ots-resize-handle-ne {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+}
+
+.ots-resize-handle-e {
+    right: 0;
+    cursor: ew-resize;
+}
+
+.ots-resize-handle-se {
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+
+.ots-resize-handle-s {
+    bottom: 0;
+    cursor: ns-resize;
+}
+
+.ots-resize-handle-sw {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+}
+
+.ots-resize-handle-w {
+    left: 0;
+    cursor: ew-resize;
+}
+
+.ots-resize-handle-nw {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+}
+
+/* Visual indicator for SE corner (most common resize) */
+.ots-resize-handle-se::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background-image: linear-gradient(
+        135deg,
+        transparent 0%,
+        transparent 46%,
+        #999 46%,
+        #999 54%,
+        transparent 54%
+    );
+    opacity: 0.4;
+}
+
+.ots-modal.is-resizing .ots-resize-handle-se::after {
+    opacity: 0.8;
+}
+
+/* Modal state classes */
+.ots-modal.is-dragging {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.ots-modal.is-resizing {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .ots-modal .components-modal__frame {
+        transition: none !important;
+    }
 }

@@ -22,7 +22,9 @@ import {
 	ToolbarDropdownMenu,
 	ToolbarButton,
 	Popover,
-	Button
+	Modal,
+	Button,
+	Notice
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
@@ -31,8 +33,10 @@ import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyli
 
 // Custom "O" icon for OpenType Stylist
 const OTSIcon = () => (
-	<svg width={20} height={20} viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-		<circle cx={10} cy={10} r={7} fill="none" stroke="currentColor" strokeWidth={2} />
+	<svg width={20} height={20} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+		<g>
+			<path d="M95.72,23.871C74.545,42.158,63.316,75.524,63.316,131.028c0,57.75,15.4,99.778,63.524,99.778c47.804,0,63.524-42.028,63.524-99.778c0-58.07-17.004-97.854-50.691-97.854c-19.891,0-35.933,14.438-35.933,37.537c0,15.4,6.737,25.346,17.004,25.346c11.55,0,13.154-8.983,23.741-8.983c13.154,0,21.496,9.946,21.496,22.458c0,15.4-12.513,25.987-33.688,25.987c-25.346,0-48.445-21.816-48.445-57.107c0-38.5,28.233-64.487,63.524-64.487c48.445,0,91.116,47.804,91.116,117.104c0,69.3-42.35,117.104-111.649,117.104c-69.62,0-111.649-47.804-111.649-117.104c0-67.695,38.5-101.062,76.358-114.537L95.72,23.871z" fill="currentColor" />
+		</g>
 	</svg>
 );
 
@@ -65,6 +69,35 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineFontWeight, setInlineFontWeight] = useState('400');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
+
+	// Modal position and size state
+	const [modalX, setModalX] = useState(() => {
+		const viewportWidth = window.innerWidth;
+		const modalWidth = 500;
+		return Math.max(0, (viewportWidth - modalWidth) / 2);
+	});
+	const [modalY, setModalY] = useState(() => {
+		const viewportHeight = window.innerHeight;
+		const modalHeight = 600;
+		return Math.max(0, (viewportHeight - modalHeight) / 2);
+	});
+	const [modalWidth, setModalWidth] = useState(500);
+	const [modalHeight, setModalHeight] = useState(600);
+
+	// Drag state
+	const [isDragging, setIsDragging] = useState(false);
+	const [dragStartX, setDragStartX] = useState(0);
+	const [dragStartY, setDragStartY] = useState(0);
+
+	// Resize state
+	const [isResizing, setIsResizing] = useState(false);
+	const [resizeStartX, setResizeStartX] = useState(0);
+	const [resizeStartY, setResizeStartY] = useState(0);
+	const [resizeStartWidth, setResizeStartWidth] = useState(0);
+	const [resizeStartHeight, setResizeStartHeight] = useState(0);
+	const [resizeStartModalX, setResizeStartModalX] = useState(0);
+	const [resizeStartModalY, setResizeStartModalY] = useState(0);
+	const [resizeDirection, setResizeDirection] = useState(null);
 
 	/**
 	 * Ensure font size values maintain valid range: min <= preferred <= max
@@ -184,6 +217,140 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		return range;
 	};
+
+	// Drag handlers
+	const handleDragStart = (e) => {
+		// Don't drag if clicking close button
+		if (e.target.closest('.ots-modal-close-button')) {
+			return;
+		}
+
+		// Only drag from header
+		if (!e.target.closest('.ots-modal-header')) {
+			return;
+		}
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		setIsDragging(true);
+		setDragStartX(e.clientX);
+		setDragStartY(e.clientY);
+	};
+
+	const handleDragMove = (e) => {
+		if (!isDragging) return;
+
+		const deltaX = e.clientX - dragStartX;
+		const deltaY = e.clientY - dragStartY;
+
+		const newX = modalX + deltaX;
+		const newY = modalY + deltaY;
+
+		// Constrain to viewport
+		const viewportWidth = window.innerWidth;
+		const viewportHeight = window.innerHeight;
+		const MIN_VISIBLE = 50;
+
+		const constrainedX = Math.max(0, Math.min(newX, viewportWidth - MIN_VISIBLE));
+		const constrainedY = Math.max(0, Math.min(newY, viewportHeight - MIN_VISIBLE));
+
+		setModalX(constrainedX);
+		setModalY(constrainedY);
+		setDragStartX(e.clientX);
+		setDragStartY(e.clientY);
+	};
+
+	const handleDragEnd = () => {
+		setIsDragging(false);
+	};
+
+	// Resize handlers
+	const handleResizeStart = (e, direction) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		setIsResizing(true);
+		setResizeDirection(direction);
+		setResizeStartX(e.clientX);
+		setResizeStartY(e.clientY);
+		setResizeStartWidth(modalWidth);
+		setResizeStartHeight(modalHeight);
+		setResizeStartModalX(modalX);
+		setResizeStartModalY(modalY);
+	};
+
+	const handleResizeMove = (e) => {
+		if (!isResizing) return;
+
+		const deltaX = e.clientX - resizeStartX;
+		const deltaY = e.clientY - resizeStartY;
+
+		const MIN_WIDTH = 300;
+		const MIN_HEIGHT = 200;
+		const MAX_WIDTH = window.innerWidth - 20;
+		const MAX_HEIGHT = window.innerHeight - 20;
+
+		let newWidth = resizeStartWidth;
+		let newHeight = resizeStartHeight;
+		let newX = resizeStartModalX;
+		let newY = resizeStartModalY;
+
+		// Apply deltas based on direction
+		if (resizeDirection.includes('e')) {
+			newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, resizeStartWidth + deltaX));
+		}
+		if (resizeDirection.includes('s')) {
+			newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, resizeStartHeight + deltaY));
+		}
+		if (resizeDirection.includes('w')) {
+			const proposedWidth = resizeStartWidth - deltaX;
+			if (proposedWidth >= MIN_WIDTH && proposedWidth <= MAX_WIDTH) {
+				newWidth = proposedWidth;
+				newX = resizeStartModalX + deltaX;
+			}
+		}
+		if (resizeDirection.includes('n')) {
+			const proposedHeight = resizeStartHeight - deltaY;
+			if (proposedHeight >= MIN_HEIGHT && proposedHeight <= MAX_HEIGHT) {
+				newHeight = proposedHeight;
+				newY = resizeStartModalY + deltaY;
+			}
+		}
+
+		setModalWidth(newWidth);
+		setModalHeight(newHeight);
+		setModalX(newX);
+		setModalY(newY);
+	};
+
+	const handleResizeEnd = () => {
+		setIsResizing(false);
+		setResizeDirection(null);
+	};
+
+	// Add/remove drag and resize event listeners
+	useEffect(() => {
+		if (isDragging) {
+			document.addEventListener('mousemove', handleDragMove);
+			document.addEventListener('mouseup', handleDragEnd);
+			return () => {
+				document.removeEventListener('mousemove', handleDragMove);
+				document.removeEventListener('mouseup', handleDragEnd);
+			};
+		}
+	}, [isDragging, dragStartX, dragStartY, modalX, modalY]);
+
+	useEffect(() => {
+		if (isResizing) {
+			document.addEventListener('mousemove', handleResizeMove);
+			document.addEventListener('mouseup', handleResizeEnd);
+			return () => {
+				document.removeEventListener('mousemove', handleResizeMove);
+				document.removeEventListener('mouseup', handleResizeEnd);
+			};
+		}
+	}, [isResizing, resizeStartX, resizeStartY, resizeStartWidth, resizeStartHeight, resizeStartModalX, resizeStartModalY, resizeDirection, modalWidth, modalHeight, modalX, modalY]);
 
 	// Handle toolbar button click
 	const handleToolbarClick = () => {
@@ -539,8 +706,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// Clear the original content ref since we're committing the change
 				originalContentRef.current = null;
 
-				// Close the popover after applying
-				setIsPopoverOpen(false);
 			}
 		}
 	};
@@ -602,8 +767,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					const newContent = container.innerHTML;
 					setAttributes({ content: newContent });
 
-					// Close the popover
-					setIsPopoverOpen(false);
 				}
 			}
 		}
@@ -645,7 +808,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					}
 				}
 
-				setIsPopoverOpen(false);
 			}
 		}
 	};
@@ -679,7 +841,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					}
 				}
 
-				setIsPopoverOpen(false);
 			}
 		}
 	};
@@ -736,8 +897,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					}
 				}
 
-				// Close the popover after applying
-				setIsPopoverOpen(false);
 			}
 		}
 	};
@@ -958,14 +1117,68 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						isActive={features.length > 0}
 					/>
 					{isPopoverOpen && (
-						<Popover
-							position="middle right"
-							onClose={handlePopoverClose}
-							className="ots-block-popover"
-							noArrow={false}
+						<Modal
+							title=""
+							onRequestClose={handlePopoverClose}
+							className={`ots-modal ots-block-modal ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''}`}
+							isDismissible={true}
+							shouldCloseOnClickOutside={false}
+							shouldCloseOnEsc={true}
+							__experimentalHideHeader={true}
+							onMouseDown={(e) => {
+								// Only trigger drag if clicking on header, not content
+								if (e.target.classList.contains('ots-modal-header') ||
+									e.target.closest('.ots-modal-header')) {
+									handleDragStart(e);
+								}
+							}}
+							style={{
+								position: 'fixed',
+								top: `${modalY}px`,
+								left: `${modalX}px`,
+								width: `${modalWidth}px`,
+								height: `${modalHeight}px`,
+								maxWidth: 'none',
+								maxHeight: 'none',
+								transform: 'none'
+							}}
 						>
-							<div style={{ padding: '16px', minWidth: '400px', maxWidth: '500px', maxHeight: '500px', overflowY: 'auto' }}>
-								<h4 style={{ marginTop: 0 }}>{__('Quick Feature Toggles', 'opentype-stylist')}</h4>
+							{/* Custom draggable header */}
+							<div
+								className="ots-modal-header"
+								onMouseDown={handleDragStart}
+								role="toolbar"
+								aria-label={__('Drag to reposition modal', 'opentype-stylist')}
+								tabIndex={0}
+								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+							>
+								<h3>{__('Quick Feature Toggles', 'opentype-stylist')}</h3>
+								<Button
+									icon="no-alt"
+									label={__('Close', 'opentype-stylist')}
+									onClick={handlePopoverClose}
+									className="ots-modal-close-button"
+								/>
+							</div>
+
+							{/* Modal content wrapper with scroll */}
+							<div className="ots-modal-content" style={{
+								height: `calc(${modalHeight}px - 60px)`,
+								overflowY: 'auto'
+							}}>
+								{/* Drag instruction notice */}
+								<Notice
+									status="info"
+									isDismissible={false}
+									className="ots-drag-notice"
+									style={{ margin: '0 0 16px 0' }}
+								>
+									<p style={{ margin: 0 }}>
+										{'💡 ' + __('Tip: Drag the title bar to reposition this panel', 'opentype-stylist')}
+									</p>
+								</Notice>
+
+								<div style={{ padding: '0 16px 16px 16px' }}>
 
 								{/* Letter Spacing Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
@@ -1189,8 +1402,21 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								<p style={{ fontSize: '12px', color: '#757575', marginBottom: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ddd' }}>
 									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'opentype-stylist')}
 								</p>
+								</div>
 							</div>
-						</Popover>
+
+							{/* Resize handles */}
+							<div className="ots-resize-handles">
+								<div className="ots-resize-handle ots-resize-handle-n" onMouseDown={(e) => handleResizeStart(e, 'n')} />
+								<div className="ots-resize-handle ots-resize-handle-ne" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+								<div className="ots-resize-handle ots-resize-handle-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+								<div className="ots-resize-handle ots-resize-handle-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+								<div className="ots-resize-handle ots-resize-handle-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
+								<div className="ots-resize-handle ots-resize-handle-sw" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+								<div className="ots-resize-handle ots-resize-handle-w" onMouseDown={(e) => handleResizeStart(e, 'w')} />
+								<div className="ots-resize-handle ots-resize-handle-nw" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+							</div>
+						</Modal>
 					)}
 				</ToolbarGroup>
 				<ToolbarGroup>
