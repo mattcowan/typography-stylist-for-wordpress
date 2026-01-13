@@ -3951,8 +3951,9 @@ class OpenType_Stylist {
         $value = str_replace(array('{', '}', ';', '<', '>', '(', ')', '[', ']', '\\'), '', $value);
 
         // Only allow letters, numbers, spaces, commas, hyphens, underscores, single quotes, and double quotes
-        // Underscores are valid in CSS font-family names per CSS spec
-        // Periods are not valid in unquoted font-family names per CSS spec
+        // Underscores and hyphens are valid in CSS font-family names per CSS spec
+        // Periods are not allowed because: (1) they're invalid in unquoted CSS identifiers, and
+        // (2) they often indicate file extensions (e.g., "Arial.ttf") which should not be in font-family names
         $value = preg_replace('/[^a-zA-Z0-9\s,\-_\'"]/', '', $value);
 
         // Return trimmed value (esc_attr removed - output is in <style> tag, not HTML attribute)
