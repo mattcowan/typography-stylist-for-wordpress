@@ -1287,6 +1287,13 @@ $manual_fonts = $instance->get_manual_fonts();
                                 </p>
                             </td>
                         </tr>
+                        <?php
+                        /*
+                         * Variable Font Weights option - commented out for future version
+                         * Backend functionality remains in place, UI option hidden until ready for release
+                         */
+                        ?>
+                        <?php /* ?>
                         <tr>
                             <th scope="row">
                                 <label for="ots_allow_variable_weights">
@@ -1309,6 +1316,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                 </p>
                             </td>
                         </tr>
+                        <?php */ ?>
                     </tbody>
                 </table>
 
