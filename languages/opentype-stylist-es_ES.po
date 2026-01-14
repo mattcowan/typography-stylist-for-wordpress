@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
-"POT-Creation-Date: 2025-11-24 20:08+0000\n"
-"PO-Revision-Date: 2025-11-24 20:30+0000\n"
+"POT-Creation-Date: 2026-01-13 10:00+0000\n"
+"PO-Revision-Date: 2026-01-13 10:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: Spanish (Spain)\n"
 "Language: es_ES\n"
@@ -628,101 +628,173 @@ msgstr "Formas optimizadas para tamaños de visualización grandes"
 msgid "Decorative ornaments and symbols"
 msgstr "Ornamentos y símbolos decorativos"
 
-#: includes/admin-page.php:519
+#: includes/admin-page.php:1480
 msgid "How to Use"
-msgstr "Cómo Usar"
+msgstr "Cómo usar"
 
-#: includes/admin-page.php:522
-msgid "Basic Usage"
-msgstr "Uso Básico"
+#: includes/admin-page.php:1482
+msgid "Method 1: Inline Format (Quick Styling)"
+msgstr "Método 1: Formato en línea (Estilo rápido)"
 
-#: includes/admin-page.php:524
-msgid "Create or edit a heading block (H1-H6) in the block editor"
-msgstr "Crea o edita un bloque de encabezado (H1-H6) en el editor de bloques"
+#: includes/admin-page.php:1483
+msgid "Use this method for applying features to complete words or phrases in any heading or paragraph block."
+msgstr "Utiliza este método para aplicar características a palabras o frases completas en cualquier bloque de encabezado o párrafo."
 
-#: includes/admin-page.php:525
-msgid "Type your headline text"
-msgstr "Escribe tu texto de encabezado"
+#: includes/admin-page.php:1485
+msgid "Create or edit a heading (H1-H6) or paragraph block"
+msgstr "Crea o edita un bloque de encabezado (H1-H6) o párrafo"
 
-#: includes/admin-page.php:526
-msgid "Select the text you want to style"
-msgstr "Selecciona el texto que quieres estilizar"
+#: includes/admin-page.php:1486
+msgid "Select the complete word(s) you want to style"
+msgstr "Selecciona la(s) palabra(s) completa(s) que deseas estilizar"
 
-#: includes/admin-page.php:527
-msgid "Click the \"Typography Features\" button in the toolbar (icon with decorative \"A\")"
-msgstr "Haz clic en el botón \"Características Tipográficas\" en la barra de herramientas (icono con \"A\" decorativa)"
+#: includes/admin-page.php:1487
+msgid "Click the \"Typography Features\" button in the toolbar"
+msgstr "Haz clic en el botón \"Características Tipográficas\" en la barra de herramientas"
 
-#: includes/admin-page.php:528
-msgid "Choose a preset or select individual features"
-msgstr "Elige un preajuste o selecciona características individuales"
+#: includes/admin-page.php:1488
+msgid "Choose a preset or toggle individual features"
+msgstr "Elige un preajuste o activa características individuales"
 
-#: includes/admin-page.php:529
-msgid "See the live preview and save"
-msgstr "Observa la vista previa en vivo y guarda"
+#: includes/admin-page.php:1489
+msgid "Preview the changes and click Apply"
+msgstr "Previsualiza los cambios y haz clic en Aplicar"
 
-#: includes/admin-page.php:534
-msgid "Best Fonts for Advanced Typography"
-msgstr "Mejores Fuentes para Tipografía Avanzada"
+#: includes/admin-page.php:1492
+msgid "Method 2: OpenType Stylist Block (Advanced)"
+msgstr "Método 2: Bloque OpenType Stylist (Avanzado)"
 
-#: includes/admin-page.php:535
-msgid "This plugin works best with fonts that support OpenType features. Recommended script fonts:"
-msgstr "Este plugin funciona mejor con fuentes que admiten características OpenType. Fuentes script recomendadas:"
+#: includes/admin-page.php:1493
+msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
+msgstr "Utiliza este método para tipografía compleja, estilo letra por letra o cuando se necesiten funciones de accesibilidad."
 
-#: includes/admin-page.php:537
-msgid "by Alejandro Paul - Elegant connecting script"
-msgstr "por Alejandro Paul - Script de conexión elegante"
+#: includes/admin-page.php:1495
+msgid "Add the \"OpenType Stylist\" block from the block inserter"
+msgstr "Añade el bloque \"OpenType Stylist\" desde el insertador de bloques"
 
-#: includes/admin-page.php:538
-msgid "by Alejandro Paul - Romantic calligraphy"
-msgstr "por Alejandro Paul - Caligrafía romántica"
+#: includes/admin-page.php:1496
+msgid "Choose heading level (H1-H6) in the sidebar"
+msgstr "Elige el nivel de encabezado (H1-H6) en la barra lateral"
 
-#: includes/admin-page.php:539
-msgid "by Alejandro Paul - Casual handwritten style"
-msgstr "por Alejandro Paul - Estilo manuscrito casual"
+#: includes/admin-page.php:1497
+msgid "Use sidebar controls for font family, size, and OpenType features"
+msgstr "Utiliza los controles de la barra lateral para familia de fuente, tamaño y características OpenType"
 
-#: includes/admin-page.php:540
-msgid "by Alejandro Paul - Vintage commercial script"
-msgstr "por Alejandro Paul - Script comercial vintage"
+#: includes/admin-page.php:1498
+msgid "For inline text styling, select text to show the quick feature popover"
+msgstr "Para estilo de texto en línea, selecciona texto para mostrar la ventana emergente de características rápidas"
 
-#: includes/admin-page.php:542
-msgid "Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts."
-msgstr "Carga tus fuentes usando @font-face en tu tema o un plugin como Adobe Fonts o Google Fonts."
+#: includes/admin-page.php:1503
+msgid "Choosing Fonts for OpenType Features"
+msgstr "Elegir fuentes para características OpenType"
 
-#: includes/admin-page.php:546
-msgid "Tips for Script Fonts"
-msgstr "Consejos para Fuentes Script"
+#: includes/admin-page.php:1504
+msgid "This plugin works with fonts that include advanced typographical features and alternate glyphs."
+msgstr "Este plugin funciona con fuentes que incluyen características tipográficas avanzadas y glifos alternativos."
 
-#: includes/admin-page.php:548
-msgid "Enable \"Contextual Alternates\" (calt) for natural letter connections"
-msgstr "Activa \"Alternativas Contextuales\" (calt) para conexiones naturales de letras"
+#: includes/admin-page.php:1506
+msgid "Font Types with OpenType Support:"
+msgstr "Tipos de fuentes con soporte OpenType:"
 
-#: includes/admin-page.php:549
-msgid "Use swashes sparingly on first or last letters only"
-msgstr "Usa florituras con moderación solo en las primeras o últimas letras"
+#: includes/admin-page.php:1508
+msgid "Script & Calligraphy Fonts"
+msgstr "Fuentes script y caligráficas"
 
-#: includes/admin-page.php:550
-msgid "Try different stylistic sets to find the best look"
-msgstr "Prueba diferentes conjuntos estilísticos para encontrar el mejor aspecto"
+#: includes/admin-page.php:1508
+msgid "Often include contextual alternates, swashes, and stylistic sets"
+msgstr "A menudo incluyen alternativas contextuales, florituras y conjuntos estilísticos"
 
-#: includes/admin-page.php:551
-msgid "Test your headlines at the actual display size"
-msgstr "Prueba tus encabezados al tamaño de visualización real"
+#: includes/admin-page.php:1509
+msgid "Serif Display Fonts"
+msgstr "Fuentes de visualización con serifa"
 
-#: includes/admin-page.php:552
-msgid "Not all fonts support all features - experiment!"
-msgstr "¡No todas las fuentes admiten todas las características - experimenta!"
+#: includes/admin-page.php:1509
+msgid "May feature titling alternates and ligatures"
+msgstr "Pueden incluir alternativas de título y ligaduras"
 
-#: includes/admin-page.php:557
+#: includes/admin-page.php:1510
+msgid "Professional Typefaces"
+msgstr "Tipografías profesionales"
+
+#: includes/admin-page.php:1510
+msgid "Many include discretionary ligatures and stylistic alternates"
+msgstr "Muchas incluyen ligaduras discrecionales y alternativas estilísticas"
+
+#: includes/admin-page.php:1511
+msgid "Ornamental Fonts"
+msgstr "Fuentes ornamentales"
+
+#: includes/admin-page.php:1511
+msgid "Can contain ornaments and special character sets"
+msgstr "Pueden contener ornamentos y conjuntos de caracteres especiales"
+
+#: includes/admin-page.php:1514
+msgid "Upload fonts via the Custom Fonts tab, or load them through your theme or font service."
+msgstr "Carga fuentes a través de la pestaña Fuentes personalizadas, o cárgalas mediante tu tema o servicio de fuentes."
+
+#: includes/admin-page.php:1518
+msgid "Tips for Using OpenType Features"
+msgstr "Consejos para usar características OpenType"
+
+#: includes/admin-page.php:1520
+msgid "Start with contextual alternates (calt) for automatic character substitutions"
+msgstr "Comienza con alternativas contextuales (calt) para sustituciones automáticas de caracteres"
+
+#: includes/admin-page.php:1521
+msgid "Use swashes sparingly on initial or terminal letters only"
+msgstr "Usa florituras con moderación solo en letras iniciales o finales"
+
+#: includes/admin-page.php:1522
+msgid "Experiment with stylistic sets (ss01-ss20) to discover alternate designs"
+msgstr "Experimenta con conjuntos estilísticos (ss01-ss20) para descubrir diseños alternativos"
+
+#: includes/admin-page.php:1523
+msgid "Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application"
+msgstr "Prueba las ligaduras - las estándar (liga) suelen funcionar universalmente, las discrecionales (dlig) necesitan aplicación cuidadosa"
+
+#: includes/admin-page.php:1524
+msgid "Preview at actual display size - features may look different at various scales"
+msgstr "Previsualiza al tamaño de visualización real - las características pueden verse diferentes a varias escalas"
+
+#: includes/admin-page.php:1525
+msgid "Not all fonts support all features - check documentation and experiment"
+msgstr "No todas las fuentes admiten todas las características - consulta la documentación y experimenta"
+
+#: includes/admin-page.php:1526
+msgid "For partial word styling, use the OpenType Stylist block to maintain accessibility"
+msgstr "Para estilo de palabras parciales, usa el bloque OpenType Stylist para mantener la accesibilidad"
+
+#: includes/admin-page.php:1531
 msgid "Technical Notes"
-msgstr "Notas Técnicas"
+msgstr "Notas técnicas"
 
-#: includes/admin-page.php:558
-msgid "This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content."
-msgstr "Este plugin aplica CSS font-feature-settings al texto seleccionado usando estilos en línea. Las características se almacenan como atributos de datos en elementos span dentro de tu contenido."
+#: includes/admin-page.php:1532
+msgid "Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required."
+msgstr "Las características se aplican usando CSS font-feature-settings almacenadas como estilos en línea y atributos de datos. No se requieren tablas de base de datos adicionales."
 
-#: includes/admin-page.php:559
-msgid "Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support."
-msgstr "Compatibilidad con navegadores: Todos los navegadores modernos admiten características OpenType. Internet Explorer 10+ tiene compatibilidad parcial."
+#: includes/admin-page.php:1533
+msgid "Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support."
+msgstr "Compatibilidad con navegadores: Todos los navegadores modernos (Chrome, Firefox, Safari, Edge) admiten completamente las características OpenType. Internet Explorer 10+ tiene compatibilidad parcial."
+
+#: includes/admin-page.php:1534
+msgid "Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads."
+msgstr "Rendimiento frontend: El plugin utiliza renderizado solo CSS sin JavaScript en el sitio público, garantizando cargas de página rápidas."
+
+#: includes/admin-page.php:1539
+msgid "Looking for high-fidelity implementation?"
+msgstr "¿Busca una implementación de alta fidelidad?"
+
+#: includes/admin-page.php:1541
+msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
+msgstr "Más allá de este plugin, me especializo en construcciones WordPress perfectas al píxel que se adhieren estrictamente a los estándares de accesibilidad y sistemas tipográficos avanzados. Si necesitas un socio para desarrollo de bloques personalizados o integración de diseño complejo:"
+
+#: includes/admin-page.php:1545
+msgid "Contact me at matt@mnc4.com"
+msgstr "Contáctame en matt@mnc4.com"
+
+#: includes/admin-page.php:1549
+msgid "Buy me a coffee ☕"
+msgstr "Cómprame un café ☕"
 
 #: assets/js/block-editor.js:11
 msgid "Typography Features"

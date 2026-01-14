@@ -206,17 +206,6 @@ Currently, the plugin focuses on heading blocks (H1-H6). Support for other block
 
 Check your font's documentation, or use the plugin to experiment. Features that aren't supported simply won't affect the text.
 
-== Screenshots ==
-
-1. Admin settings - Presets tab showing OpenType feature demonstrations with live preview
-2. Admin settings - Custom Fonts tab for uploading webfont kits, Adobe Fonts integration, and custom font definitions
-3. Admin settings - Font Features tab displaying all available OpenType features organized by category
-4. Admin settings - Accessibility tab with screen reader support options and best practices
-5. Admin settings - Help tab with usage instructions and recommended fonts
-6. Block editor showing multiple OpenType Stylist blocks with advanced typography applied
-7. Block editor with OpenType Stylist block selected (same as screenshot 6 - shows block in use)
-8. Block editor with settings sidebar (same as screenshot 6 - demonstrates inspector controls)
-
 == Changelog ==
 
 = 1.0.0 =

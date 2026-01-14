@@ -1477,44 +1477,78 @@ $manual_fonts = $instance->get_manual_fonts();
             <h2><?php esc_html_e('How to Use', 'opentype-stylist'); ?></h2>
 
             <div class="ots-help-section">
-                <h3><?php esc_html_e('Basic Usage', 'opentype-stylist'); ?></h3>
+                <h3><?php esc_html_e('How to Use', 'opentype-stylist'); ?></h3>
+
+                <h4><?php esc_html_e('Method 1: Inline Format (Quick Styling)', 'opentype-stylist'); ?></h4>
+                <p><?php esc_html_e('Use this method for applying features to complete words or phrases in any heading or paragraph block.', 'opentype-stylist'); ?></p>
                 <ol>
-                    <li><?php esc_html_e('Create or edit a heading block (H1-H6) in the block editor', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Type your headline text', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Select the text you want to style', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Click the "Typography Features" button in the toolbar (icon with decorative "A")', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Choose a preset or select individual features', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('See the live preview and save', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Create or edit a heading (H1-H6) or paragraph block', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Select the complete word(s) you want to style', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Click the "Typography Features" button in the toolbar', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Choose a preset or toggle individual features', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Preview the changes and click Apply', 'opentype-stylist'); ?></li>
+                </ol>
+
+                <h4><?php esc_html_e('Method 2: OpenType Stylist Block (Advanced)', 'opentype-stylist'); ?></h4>
+                <p><?php esc_html_e('Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed.', 'opentype-stylist'); ?></p>
+                <ol>
+                    <li><?php esc_html_e('Add the "OpenType Stylist" block from the block inserter', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Choose heading level (H1-H6) in the sidebar', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Use sidebar controls for font family, size, and OpenType features', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('For inline text styling, select text to show the quick feature popover', 'opentype-stylist'); ?></li>
                 </ol>
             </div>
 
             <div class="ots-help-section">
-                <h3><?php esc_html_e('Best Fonts for Advanced Typography', 'opentype-stylist'); ?></h3>
-                <p><?php esc_html_e('This plugin works best with fonts that support OpenType features. Recommended script fonts:', 'opentype-stylist'); ?></p>
+                <h3><?php esc_html_e('Choosing Fonts for OpenType Features', 'opentype-stylist'); ?></h3>
+                <p><?php esc_html_e('This plugin works with fonts that include advanced typographical features and alternate glyphs.', 'opentype-stylist'); ?></p>
+
+                <h4><?php esc_html_e('Font Types with OpenType Support:', 'opentype-stylist'); ?></h4>
                 <ul>
-                    <li><strong>Calgary Script</strong> <?php esc_html_e('by Alejandro Paul - Elegant connecting script', 'opentype-stylist'); ?></li>
-                    <li><strong>Affair</strong> <?php esc_html_e('by Alejandro Paul - Romantic calligraphy', 'opentype-stylist'); ?></li>
-                    <li><strong>Adios Script</strong> <?php esc_html_e('by Alejandro Paul - Casual handwritten style', 'opentype-stylist'); ?></li>
-                    <li><strong>Parfumerie Script</strong> <?php esc_html_e('by Alejandro Paul - Vintage commercial script', 'opentype-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Script & Calligraphy Fonts', 'opentype-stylist'); ?></strong> - <?php esc_html_e('Often include contextual alternates, swashes, and stylistic sets', 'opentype-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Serif Display Fonts', 'opentype-stylist'); ?></strong> - <?php esc_html_e('May feature titling alternates and ligatures', 'opentype-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Professional Typefaces', 'opentype-stylist'); ?></strong> - <?php esc_html_e('Many include discretionary ligatures and stylistic alternates', 'opentype-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Ornamental Fonts', 'opentype-stylist'); ?></strong> - <?php esc_html_e('Can contain ornaments and special character sets', 'opentype-stylist'); ?></li>
                 </ul>
-                <p><?php esc_html_e('Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts.', 'opentype-stylist'); ?></p>
+
+                <p><?php esc_html_e('Upload fonts via the Custom Fonts tab, or load them through your theme or font service.', 'opentype-stylist'); ?></p>
             </div>
 
             <div class="ots-help-section">
-                <h3><?php esc_html_e('Tips for Script Fonts', 'opentype-stylist'); ?></h3>
+                <h3><?php esc_html_e('Tips for Using OpenType Features', 'opentype-stylist'); ?></h3>
                 <ul>
-                    <li><?php esc_html_e('Enable "Contextual Alternates" (calt) for natural letter connections', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Use swashes sparingly on first or last letters only', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Try different stylistic sets to find the best look', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Test your headlines at the actual display size', 'opentype-stylist'); ?></li>
-                    <li><?php esc_html_e('Not all fonts support all features - experiment!', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Start with contextual alternates (calt) for automatic character substitutions', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Use swashes sparingly on initial or terminal letters only', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Experiment with stylistic sets (ss01-ss20) to discover alternate designs', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Preview at actual display size - features may look different at various scales', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('Not all fonts support all features - check documentation and experiment', 'opentype-stylist'); ?></li>
+                    <li><?php esc_html_e('For partial word styling, use the OpenType Stylist block to maintain accessibility', 'opentype-stylist'); ?></li>
                 </ul>
             </div>
 
             <div class="ots-help-section">
                 <h3><?php esc_html_e('Technical Notes', 'opentype-stylist'); ?></h3>
-                <p><?php esc_html_e('This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content.', 'opentype-stylist'); ?></p>
-                <p><?php esc_html_e('Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support.', 'opentype-stylist'); ?></p>
+                <p><?php esc_html_e('Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required.', 'opentype-stylist'); ?></p>
+                <p><?php esc_html_e('Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support.', 'opentype-stylist'); ?></p>
+                <p><?php esc_html_e('Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads.', 'opentype-stylist'); ?></p>
+            </div>
+
+            <!-- Developer Support Section -->
+            <div style="margin-top: 30px; background: #fff; border: 1px solid #c3c4c7; box-shadow: 0 1px 1px rgba(0,0,0,.04); padding: 20px; border-radius: 4px;">
+                <h3 style="margin-top: 0; color: #2271b1;"><?php esc_html_e('Looking for high-fidelity implementation?', 'opentype-stylist'); ?></h3>
+
+                <p><?php esc_html_e('Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:', 'opentype-stylist'); ?></p>
+
+                <p>
+                    <a href="mailto:matt@mnc4.com" class="button">
+                        <?php esc_html_e('Contact me at matt@mnc4.com', 'opentype-stylist'); ?>
+                    </a>
+                    <span style="margin: 0 10px;">|</span>
+                    <a href="https://buymeacoffee.com/matthewneilcowan" target="_blank" rel="noopener noreferrer" class="button">
+                        <?php esc_html_e('Buy me a coffee ☕', 'opentype-stylist'); ?>
+                    </a>
+                </p>
             </div>
         </div>
     </div>

@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
-"POT-Creation-Date: 2025-11-24 20:08+0000\n"
-"PO-Revision-Date: 2025-11-24 20:45+0000\n"
+"POT-Creation-Date: 2026-01-13 10:00+0000\n"
+"PO-Revision-Date: 2026-01-13 10:00+0000\n"
 "Last-Translator: \n"
 "Language-Team: French (France)\n"
 "Language: fr_FR\n"
@@ -628,101 +628,173 @@ msgstr "Formes optimisées pour les grandes tailles d'affichage"
 msgid "Decorative ornaments and symbols"
 msgstr "Ornements et symboles décoratifs"
 
-#: includes/admin-page.php:519
+#: includes/admin-page.php:1480
 msgid "How to Use"
-msgstr "Comment Utiliser"
+msgstr "Comment utiliser"
 
-#: includes/admin-page.php:522
-msgid "Basic Usage"
-msgstr "Utilisation de Base"
+#: includes/admin-page.php:1482
+msgid "Method 1: Inline Format (Quick Styling)"
+msgstr "Méthode 1 : Format en ligne (Style rapide)"
 
-#: includes/admin-page.php:524
-msgid "Create or edit a heading block (H1-H6) in the block editor"
-msgstr "Créez ou modifiez un bloc de titre (H1-H6) dans l'éditeur de blocs"
+#: includes/admin-page.php:1483
+msgid "Use this method for applying features to complete words or phrases in any heading or paragraph block."
+msgstr "Utilisez cette méthode pour appliquer des fonctionnalités à des mots ou phrases complets dans n'importe quel bloc de titre ou de paragraphe."
 
-#: includes/admin-page.php:525
-msgid "Type your headline text"
-msgstr "Saisissez votre texte de titre"
+#: includes/admin-page.php:1485
+msgid "Create or edit a heading (H1-H6) or paragraph block"
+msgstr "Créez ou modifiez un bloc de titre (H1-H6) ou de paragraphe"
 
-#: includes/admin-page.php:526
-msgid "Select the text you want to style"
-msgstr "Sélectionnez le texte que vous souhaitez styliser"
+#: includes/admin-page.php:1486
+msgid "Select the complete word(s) you want to style"
+msgstr "Sélectionnez le(s) mot(s) complet(s) que vous souhaitez styliser"
 
-#: includes/admin-page.php:527
-msgid "Click the \"Typography Features\" button in the toolbar (icon with decorative \"A\")"
-msgstr "Cliquez sur le bouton « Fonctionnalités Typographiques » dans la barre d'outils (icône avec un « A » décoratif)"
+#: includes/admin-page.php:1487
+msgid "Click the \"Typography Features\" button in the toolbar"
+msgstr "Cliquez sur le bouton « Fonctionnalités Typographiques » dans la barre d'outils"
 
-#: includes/admin-page.php:528
-msgid "Choose a preset or select individual features"
-msgstr "Choisissez un préréglage ou sélectionnez des fonctionnalités individuelles"
+#: includes/admin-page.php:1488
+msgid "Choose a preset or toggle individual features"
+msgstr "Choisissez un préréglage ou activez des fonctionnalités individuelles"
 
-#: includes/admin-page.php:529
-msgid "See the live preview and save"
-msgstr "Visualisez l'aperçu en direct et enregistrez"
+#: includes/admin-page.php:1489
+msgid "Preview the changes and click Apply"
+msgstr "Prévisualisez les modifications et cliquez sur Appliquer"
 
-#: includes/admin-page.php:534
-msgid "Best Fonts for Advanced Typography"
-msgstr "Meilleures Polices pour une Typographie Avancée"
+#: includes/admin-page.php:1492
+msgid "Method 2: OpenType Stylist Block (Advanced)"
+msgstr "Méthode 2 : Bloc OpenType Stylist (Avancé)"
 
-#: includes/admin-page.php:535
-msgid "This plugin works best with fonts that support OpenType features. Recommended script fonts:"
-msgstr "Ce plugin fonctionne mieux avec des polices prenant en charge les fonctionnalités OpenType. Polices scriptes recommandées :"
+#: includes/admin-page.php:1493
+msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
+msgstr "Utilisez cette méthode pour une typographie complexe, un style lettre par lettre ou lorsque des fonctionnalités d'accessibilité sont nécessaires."
 
-#: includes/admin-page.php:537
-msgid "by Alejandro Paul - Elegant connecting script"
-msgstr "par Alejandro Paul - Script de liaison élégant"
+#: includes/admin-page.php:1495
+msgid "Add the \"OpenType Stylist\" block from the block inserter"
+msgstr "Ajoutez le bloc « OpenType Stylist » depuis l'outil d'insertion de blocs"
 
-#: includes/admin-page.php:538
-msgid "by Alejandro Paul - Romantic calligraphy"
-msgstr "par Alejandro Paul - Calligraphie romantique"
+#: includes/admin-page.php:1496
+msgid "Choose heading level (H1-H6) in the sidebar"
+msgstr "Choisissez le niveau de titre (H1-H6) dans la barre latérale"
 
-#: includes/admin-page.php:539
-msgid "by Alejandro Paul - Casual handwritten style"
-msgstr "par Alejandro Paul - Style manuscrit décontracté"
+#: includes/admin-page.php:1497
+msgid "Use sidebar controls for font family, size, and OpenType features"
+msgstr "Utilisez les contrôles de la barre latérale pour la famille de polices, la taille et les fonctionnalités OpenType"
 
-#: includes/admin-page.php:540
-msgid "by Alejandro Paul - Vintage commercial script"
-msgstr "par Alejandro Paul - Script commercial vintage"
+#: includes/admin-page.php:1498
+msgid "For inline text styling, select text to show the quick feature popover"
+msgstr "Pour le style de texte en ligne, sélectionnez le texte pour afficher la fenêtre contextuelle des fonctionnalités rapides"
 
-#: includes/admin-page.php:542
-msgid "Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts."
-msgstr "Chargez vos polices en utilisant @font-face dans votre thème ou un plugin comme Adobe Fonts ou Google Fonts."
+#: includes/admin-page.php:1503
+msgid "Choosing Fonts for OpenType Features"
+msgstr "Choisir des polices pour les fonctionnalités OpenType"
 
-#: includes/admin-page.php:546
-msgid "Tips for Script Fonts"
-msgstr "Conseils pour les Polices Scriptes"
+#: includes/admin-page.php:1504
+msgid "This plugin works with fonts that include advanced typographical features and alternate glyphs."
+msgstr "Ce plugin fonctionne avec des polices qui incluent des fonctionnalités typographiques avancées et des glyphes alternatifs."
 
-#: includes/admin-page.php:548
-msgid "Enable \"Contextual Alternates\" (calt) for natural letter connections"
-msgstr "Activez « Alternatives Contextuelles » (calt) pour des liaisons naturelles entre les lettres"
+#: includes/admin-page.php:1506
+msgid "Font Types with OpenType Support:"
+msgstr "Types de polices avec prise en charge OpenType :"
 
-#: includes/admin-page.php:549
-msgid "Use swashes sparingly on first or last letters only"
-msgstr "Utilisez les lettrines avec parcimonie, uniquement sur les premières ou dernières lettres"
+#: includes/admin-page.php:1508
+msgid "Script & Calligraphy Fonts"
+msgstr "Polices scriptes et calligraphiques"
 
-#: includes/admin-page.php:550
-msgid "Try different stylistic sets to find the best look"
-msgstr "Essayez différents ensembles stylistiques pour trouver le meilleur rendu"
+#: includes/admin-page.php:1508
+msgid "Often include contextual alternates, swashes, and stylistic sets"
+msgstr "Incluent souvent des alternatives contextuelles, des lettrines et des ensembles stylistiques"
 
-#: includes/admin-page.php:551
-msgid "Test your headlines at the actual display size"
-msgstr "Testez vos titres à la taille d'affichage réelle"
+#: includes/admin-page.php:1509
+msgid "Serif Display Fonts"
+msgstr "Polices d'affichage avec empattement"
 
-#: includes/admin-page.php:552
-msgid "Not all fonts support all features - experiment!"
-msgstr "Toutes les polices ne prennent pas en charge toutes les fonctionnalités - expérimentez !"
+#: includes/admin-page.php:1509
+msgid "May feature titling alternates and ligatures"
+msgstr "Peuvent inclure des alternatives de titrage et des ligatures"
 
-#: includes/admin-page.php:557
+#: includes/admin-page.php:1510
+msgid "Professional Typefaces"
+msgstr "Polices professionnelles"
+
+#: includes/admin-page.php:1510
+msgid "Many include discretionary ligatures and stylistic alternates"
+msgstr "Beaucoup incluent des ligatures discrétionnaires et des alternatives stylistiques"
+
+#: includes/admin-page.php:1511
+msgid "Ornamental Fonts"
+msgstr "Polices ornementales"
+
+#: includes/admin-page.php:1511
+msgid "Can contain ornaments and special character sets"
+msgstr "Peuvent contenir des ornements et des jeux de caractères spéciaux"
+
+#: includes/admin-page.php:1514
+msgid "Upload fonts via the Custom Fonts tab, or load them through your theme or font service."
+msgstr "Téléversez des polices via l'onglet Polices personnalisées, ou chargez-les via votre thème ou service de polices."
+
+#: includes/admin-page.php:1518
+msgid "Tips for Using OpenType Features"
+msgstr "Conseils pour utiliser les fonctionnalités OpenType"
+
+#: includes/admin-page.php:1520
+msgid "Start with contextual alternates (calt) for automatic character substitutions"
+msgstr "Commencez par les alternatives contextuelles (calt) pour les substitutions automatiques de caractères"
+
+#: includes/admin-page.php:1521
+msgid "Use swashes sparingly on initial or terminal letters only"
+msgstr "Utilisez les lettrines avec parcimonie uniquement sur les lettres initiales ou finales"
+
+#: includes/admin-page.php:1522
+msgid "Experiment with stylistic sets (ss01-ss20) to discover alternate designs"
+msgstr "Expérimentez avec les ensembles stylistiques (ss01-ss20) pour découvrir des designs alternatifs"
+
+#: includes/admin-page.php:1523
+msgid "Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application"
+msgstr "Testez les ligatures - les standards (liga) fonctionnent généralement universellement, les discrétionnaires (dlig) nécessitent une application prudente"
+
+#: includes/admin-page.php:1524
+msgid "Preview at actual display size - features may look different at various scales"
+msgstr "Prévisualisez à la taille d'affichage réelle - les fonctionnalités peuvent apparaître différemment à différentes échelles"
+
+#: includes/admin-page.php:1525
+msgid "Not all fonts support all features - check documentation and experiment"
+msgstr "Toutes les polices ne prennent pas en charge toutes les fonctionnalités - consultez la documentation et expérimentez"
+
+#: includes/admin-page.php:1526
+msgid "For partial word styling, use the OpenType Stylist block to maintain accessibility"
+msgstr "Pour le style de mots partiels, utilisez le bloc OpenType Stylist pour maintenir l'accessibilité"
+
+#: includes/admin-page.php:1531
 msgid "Technical Notes"
-msgstr "Notes Techniques"
+msgstr "Notes techniques"
 
-#: includes/admin-page.php:558
-msgid "This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content."
-msgstr "Ce plugin applique les paramètres CSS font-feature-settings au texte sélectionné à l'aide de styles en ligne. Les fonctionnalités sont stockées en tant qu'attributs de données sur des éléments span dans votre contenu."
+#: includes/admin-page.php:1532
+msgid "Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required."
+msgstr "Les fonctionnalités sont appliquées à l'aide des paramètres CSS font-feature-settings stockés en tant que styles en ligne et attributs de données. Aucune table de base de données supplémentaire n'est requise."
 
-#: includes/admin-page.php:559
-msgid "Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support."
-msgstr "Prise en charge des navigateurs : Tous les navigateurs modernes prennent en charge les fonctionnalités OpenType. Internet Explorer 10+ offre une prise en charge partielle."
+#: includes/admin-page.php:1533
+msgid "Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support."
+msgstr "Prise en charge des navigateurs : Tous les navigateurs modernes (Chrome, Firefox, Safari, Edge) prennent entièrement en charge les fonctionnalités OpenType. Internet Explorer 10+ offre une prise en charge partielle."
+
+#: includes/admin-page.php:1534
+msgid "Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads."
+msgstr "Performance frontend : Le plugin utilise un rendu CSS uniquement sans JavaScript sur le site public, garantissant des chargements de page rapides."
+
+#: includes/admin-page.php:1539
+msgid "Looking for high-fidelity implementation?"
+msgstr "Vous recherchez une mise en œuvre haute fidélité ?"
+
+#: includes/admin-page.php:1541
+msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
+msgstr "Au-delà de ce plugin, je me spécialise dans les constructions WordPress au pixel près qui respectent strictement les normes d'accessibilité et les systèmes typographiques avancés. Si vous avez besoin d'un partenaire pour le développement de blocs personnalisés ou l'intégration de designs complexes :"
+
+#: includes/admin-page.php:1545
+msgid "Contact me at matt@mnc4.com"
+msgstr "Contactez-moi à matt@mnc4.com"
+
+#: includes/admin-page.php:1549
+msgid "Buy me a coffee ☕"
+msgstr "Offrez-moi un café ☕"
 
 #: assets/js/block-editor.js:11
 msgid "Typography Features"
