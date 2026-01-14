@@ -4,8 +4,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/opentype-stylist\n"
-"POT-Creation-Date: 2025-12-16 14:47+0000\n"
-"PO-Revision-Date: 2025-MO-DA HO:MI+ZONE\n"
+"POT-Creation-Date: 2026-01-13 10:00+0000\n"
+"PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -638,100 +638,172 @@ msgstr ""
 msgid "Decorative ornaments and symbols"
 msgstr ""
 
-#: includes/admin-page.php:519
+#: includes/admin-page.php:1480
 msgid "How to Use"
 msgstr ""
 
-#: includes/admin-page.php:522
-msgid "Basic Usage"
+#: includes/admin-page.php:1482
+msgid "Method 1: Inline Format (Quick Styling)"
 msgstr ""
 
-#: includes/admin-page.php:524
-msgid "Create or edit a heading block (H1-H6) in the block editor"
+#: includes/admin-page.php:1483
+msgid "Use this method for applying features to complete words or phrases in any heading or paragraph block."
 msgstr ""
 
-#: includes/admin-page.php:525
-msgid "Type your headline text"
+#: includes/admin-page.php:1485
+msgid "Create or edit a heading (H1-H6) or paragraph block"
 msgstr ""
 
-#: includes/admin-page.php:526
-msgid "Select the text you want to style"
+#: includes/admin-page.php:1486
+msgid "Select the complete word(s) you want to style"
 msgstr ""
 
-#: includes/admin-page.php:527
-msgid "Click the \"Typography Features\" button in the toolbar (icon with decorative \"A\")"
+#: includes/admin-page.php:1487
+msgid "Click the \"Typography Features\" button in the toolbar"
 msgstr ""
 
-#: includes/admin-page.php:528
-msgid "Choose a preset or select individual features"
+#: includes/admin-page.php:1488
+msgid "Choose a preset or toggle individual features"
 msgstr ""
 
-#: includes/admin-page.php:529
-msgid "See the live preview and save"
+#: includes/admin-page.php:1489
+msgid "Preview the changes and click Apply"
 msgstr ""
 
-#: includes/admin-page.php:534
-msgid "Best Fonts for Advanced Typography"
+#: includes/admin-page.php:1492
+msgid "Method 2: OpenType Stylist Block (Advanced)"
 msgstr ""
 
-#: includes/admin-page.php:535
-msgid "This plugin works best with fonts that support OpenType features. Recommended script fonts:"
+#: includes/admin-page.php:1493
+msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
 msgstr ""
 
-#: includes/admin-page.php:537
-msgid "by Alejandro Paul - Elegant connecting script"
+#: includes/admin-page.php:1495
+msgid "Add the \"OpenType Stylist\" block from the block inserter"
 msgstr ""
 
-#: includes/admin-page.php:538
-msgid "by Alejandro Paul - Romantic calligraphy"
+#: includes/admin-page.php:1496
+msgid "Choose heading level (H1-H6) in the sidebar"
 msgstr ""
 
-#: includes/admin-page.php:539
-msgid "by Alejandro Paul - Casual handwritten style"
+#: includes/admin-page.php:1497
+msgid "Use sidebar controls for font family, size, and OpenType features"
 msgstr ""
 
-#: includes/admin-page.php:540
-msgid "by Alejandro Paul - Vintage commercial script"
+#: includes/admin-page.php:1498
+msgid "For inline text styling, select text to show the quick feature popover"
 msgstr ""
 
-#: includes/admin-page.php:542
-msgid "Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts."
+#: includes/admin-page.php:1503
+msgid "Choosing Fonts for OpenType Features"
 msgstr ""
 
-#: includes/admin-page.php:546
-msgid "Tips for Script Fonts"
+#: includes/admin-page.php:1504
+msgid "This plugin works with fonts that include advanced typographical features and alternate glyphs."
 msgstr ""
 
-#: includes/admin-page.php:548
-msgid "Enable \"Contextual Alternates\" (calt) for natural letter connections"
+#: includes/admin-page.php:1506
+msgid "Font Types with OpenType Support:"
 msgstr ""
 
-#: includes/admin-page.php:549
-msgid "Use swashes sparingly on first or last letters only"
+#: includes/admin-page.php:1508
+msgid "Script & Calligraphy Fonts"
 msgstr ""
 
-#: includes/admin-page.php:550
-msgid "Try different stylistic sets to find the best look"
+#: includes/admin-page.php:1508
+msgid "Often include contextual alternates, swashes, and stylistic sets"
 msgstr ""
 
-#: includes/admin-page.php:551
-msgid "Test your headlines at the actual display size"
+#: includes/admin-page.php:1509
+msgid "Serif Display Fonts"
 msgstr ""
 
-#: includes/admin-page.php:552
-msgid "Not all fonts support all features - experiment!"
+#: includes/admin-page.php:1509
+msgid "May feature titling alternates and ligatures"
 msgstr ""
 
-#: includes/admin-page.php:557
+#: includes/admin-page.php:1510
+msgid "Professional Typefaces"
+msgstr ""
+
+#: includes/admin-page.php:1510
+msgid "Many include discretionary ligatures and stylistic alternates"
+msgstr ""
+
+#: includes/admin-page.php:1511
+msgid "Ornamental Fonts"
+msgstr ""
+
+#: includes/admin-page.php:1511
+msgid "Can contain ornaments and special character sets"
+msgstr ""
+
+#: includes/admin-page.php:1514
+msgid "Upload fonts via the Custom Fonts tab, or load them through your theme or font service."
+msgstr ""
+
+#: includes/admin-page.php:1518
+msgid "Tips for Using OpenType Features"
+msgstr ""
+
+#: includes/admin-page.php:1520
+msgid "Start with contextual alternates (calt) for automatic character substitutions"
+msgstr ""
+
+#: includes/admin-page.php:1521
+msgid "Use swashes sparingly on initial or terminal letters only"
+msgstr ""
+
+#: includes/admin-page.php:1522
+msgid "Experiment with stylistic sets (ss01-ss20) to discover alternate designs"
+msgstr ""
+
+#: includes/admin-page.php:1523
+msgid "Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application"
+msgstr ""
+
+#: includes/admin-page.php:1524
+msgid "Preview at actual display size - features may look different at various scales"
+msgstr ""
+
+#: includes/admin-page.php:1525
+msgid "Not all fonts support all features - check documentation and experiment"
+msgstr ""
+
+#: includes/admin-page.php:1526
+msgid "For partial word styling, use the OpenType Stylist block to maintain accessibility"
+msgstr ""
+
+#: includes/admin-page.php:1531
 msgid "Technical Notes"
 msgstr ""
 
-#: includes/admin-page.php:558
-msgid "This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content."
+#: includes/admin-page.php:1532
+msgid "Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required."
 msgstr ""
 
-#: includes/admin-page.php:559
-msgid "Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support."
+#: includes/admin-page.php:1533
+msgid "Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support."
+msgstr ""
+
+#: includes/admin-page.php:1534
+msgid "Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads."
+msgstr ""
+
+#: includes/admin-page.php:1539
+msgid "Looking for high-fidelity implementation?"
+msgstr ""
+
+#: includes/admin-page.php:1541
+msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
+msgstr ""
+
+#: includes/admin-page.php:1545
+msgid "Contact me at matt@mnc4.com"
+msgstr ""
+
+#: includes/admin-page.php:1549
+msgid "Buy me a coffee ☕"
 msgstr ""
 
 #: assets/js/block-editor.js:11

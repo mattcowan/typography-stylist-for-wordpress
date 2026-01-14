@@ -1079,3 +1079,22 @@
     margin-top: 0;
     color: #996800;
 }
+
+/* Developer Support Section */
+.ots-developer-support {
+    margin-top: 30px;
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 20px;
+    border-radius: 4px;
+}
+
+.ots-developer-support h3 {
+    margin-top: 0;
+    color: #2271b1;
+}
+
+.ots-developer-support .ots-separator {
+    margin: 0 10px;
+}
