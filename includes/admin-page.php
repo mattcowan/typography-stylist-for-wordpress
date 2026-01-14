@@ -1477,8 +1477,6 @@ $manual_fonts = $instance->get_manual_fonts();
             <h2><?php esc_html_e('How to Use', 'opentype-stylist'); ?></h2>
 
             <div class="ots-help-section">
-                <h3><?php esc_html_e('How to Use', 'opentype-stylist'); ?></h3>
-
                 <h4><?php esc_html_e('Method 1: Inline Format (Quick Styling)', 'opentype-stylist'); ?></h4>
                 <p><?php esc_html_e('Use this method for applying features to complete words or phrases in any heading or paragraph block.', 'opentype-stylist'); ?></p>
                 <ol>
@@ -1535,8 +1533,8 @@ $manual_fonts = $instance->get_manual_fonts();
             </div>
 
             <!-- Developer Support Section -->
-            <div style="margin-top: 30px; background: #fff; border: 1px solid #c3c4c7; box-shadow: 0 1px 1px rgba(0,0,0,.04); padding: 20px; border-radius: 4px;">
-                <h3 style="margin-top: 0; color: #2271b1;"><?php esc_html_e('Looking for high-fidelity implementation?', 'opentype-stylist'); ?></h3>
+            <div class="ots-developer-support">
+                <h3><?php esc_html_e('Looking for high-fidelity implementation?', 'opentype-stylist'); ?></h3>
 
                 <p><?php esc_html_e('Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:', 'opentype-stylist'); ?></p>
 
@@ -1544,7 +1542,7 @@ $manual_fonts = $instance->get_manual_fonts();
                     <a href="mailto:matt@mnc4.com" class="button">
                         <?php esc_html_e('Contact me at matt@mnc4.com', 'opentype-stylist'); ?>
                     </a>
-                    <span style="margin: 0 10px;">|</span>
+                    <span class="ots-separator">|</span>
                     <a href="https://buymeacoffee.com/matthewneilcowan" target="_blank" rel="noopener noreferrer" class="button">
                         <?php esc_html_e('Buy me a coffee ☕', 'opentype-stylist'); ?>
                     </a>
