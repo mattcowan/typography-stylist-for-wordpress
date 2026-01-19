@@ -1,10 +1,10 @@
-# Copyright (C) 2025 Headline Ligatures and Styles
-# This file is distributed under the same license as the Headline Ligatures and Styles package.
+# Copyright (C) 2025 Typography Stylist
+# This file is distributed under the same license as the Typography Stylist package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/opentype-stylist\n"
-"POT-Creation-Date: 2026-01-13 10:00+0000\n"
+"Project-Id-Version: Typography Stylist 1.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"POT-Creation-Date: 2026-01-19 10:00+0000\n"
 "PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Custom PHP Script\n"
-"X-Domain: opentype-stylist\n"
+"X-Domain: typography-stylist\n"
 
 #: opentype-stylist.php:348
 msgid "Headline Ligatures & Styles"
@@ -671,7 +671,7 @@ msgid "Preview the changes and click Apply"
 msgstr ""
 
 #: includes/admin-page.php:1492
-msgid "Method 2: OpenType Stylist Block (Advanced)"
+msgid "Method 2: Typography Stylist Block (Advanced)"
 msgstr ""
 
 #: includes/admin-page.php:1493
@@ -679,7 +679,7 @@ msgid "Use this method for complex typography, letter-by-letter styling, or when
 msgstr ""
 
 #: includes/admin-page.php:1495
-msgid "Add the \"OpenType Stylist\" block from the block inserter"
+msgid "Add the \"Typography Stylist\" block from the block inserter"
 msgstr ""
 
 #: includes/admin-page.php:1496
@@ -771,7 +771,7 @@ msgid "Not all fonts support all features - check documentation and experiment"
 msgstr ""
 
 #: includes/admin-page.php:1526
-msgid "For partial word styling, use the OpenType Stylist block to maintain accessibility"
+msgid "For partial word styling, use the Typography Stylist block to maintain accessibility"
 msgstr ""
 
 #: includes/admin-page.php:1531
@@ -975,7 +975,7 @@ msgid "Font could not be detected for this block type."
 msgstr ""
 
 #: assets/js/block-editor.js:1526
-msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
+msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
 msgstr ""
 
 #: assets/js/block-editor.js:1572

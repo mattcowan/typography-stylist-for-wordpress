@@ -2,14 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 
-const pluginSlug = 'opentype-stylist';
+const pluginSlug = 'typography-stylist';
 const buildDir = path.join(__dirname, '..', 'build');
 const distDir = path.join(buildDir, pluginSlug);
 const zipFile = path.join(__dirname, '..', `${pluginSlug}.zip`);
 
 // Files and directories to include in the package
 const includeList = [
-  'opentype-stylist.php',
+  'typography-stylist.php',
   'includes/',
   'assets/css/*.min.css',
   'assets/js/*.min.js',
@@ -37,8 +37,8 @@ console.log('Copying production files...');
 
 // Copy main PHP file
 fs.copyFileSync(
-  path.join(__dirname, '..', 'opentype-stylist.php'),
-  path.join(distDir, 'opentype-stylist.php')
+  path.join(__dirname, '..', 'typography-stylist.php'),
+  path.join(distDir, 'typography-stylist.php')
 );
 
 // Copy includes directory
@@ -79,6 +79,15 @@ if (fs.existsSync(jsDir)) {
       );
     });
   }
+}
+
+// Copy block build directory
+const blockBuildDir = path.join(__dirname, '..', 'blocks', 'typography-stylist');
+const distBlockBuildDir = path.join(distDir, 'blocks', 'typography-stylist');
+if (fs.existsSync(blockBuildDir)) {
+  fs.mkdirSync(distBlockBuildDir, { recursive: true });
+  copyDirectory(blockBuildDir, distBlockBuildDir);
+  console.log('✓ Copied block build files');
 }
 
 // Copy optional files if they exist

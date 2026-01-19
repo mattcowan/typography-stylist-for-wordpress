@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall script for OpenType Stylist plugin
+ * Uninstall script for Typography Stylist plugin
  *
  * This file is called when the plugin is uninstalled via the WordPress admin.
  * It cleans up all plugin data from the database and filesystem.

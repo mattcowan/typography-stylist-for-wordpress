@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist Block - Unit Tests
+ * Typography Stylist Block - Unit Tests
  *
  * BEGINNER-FRIENDLY UNIT TESTS
  *
@@ -62,7 +62,7 @@ const { escapeHTML, hasHTMLTags, validateSelectionBounds, sanitizeFontFamily, sa
  * These tests focus on pure functions that are easy to test.
  * They don't require React or WordPress dependencies.
  */
-describe('OpenType Stylist - Helper Functions', () => {
+describe('Typography Stylist - Helper Functions', () => {
 	/**
 	 * Test: sanitizeFontFamily function
 	 *
@@ -221,7 +221,7 @@ describe('OpenType Stylist - Helper Functions', () => {
  * - toggleFeature should apply inline when text is selected
  * - toggleFeature should apply to block when no text is selected
  */
-describe('OpenType Stylist - toggleFeature Logic', () => {
+describe('Typography Stylist - toggleFeature Logic', () => {
 	/**
 	 * Simplified version of the toggleFeature logic
 	 * This is what we're testing
@@ -324,7 +324,7 @@ describe('OpenType Stylist - toggleFeature Logic', () => {
  * These tests verify that toggleBlockFeature always applies block-level features
  * regardless of selection state (for sidebar controls).
  */
-describe('OpenType Stylist - toggleBlockFeature Logic', () => {
+describe('Typography Stylist - toggleBlockFeature Logic', () => {
 	/**
 	 * Simplified version of toggleBlockFeature logic
 	 * This always applies to the block, never inline
@@ -508,7 +508,7 @@ describe('OpenType Stylist - toggleBlockFeature Logic', () => {
  *
  * Testing edge cases helps ensure robustness.
  */
-describe('OpenType Stylist - Edge Cases', () => {
+describe('Typography Stylist - Edge Cases', () => {
 	it('should handle empty feature ID', () => {
 		const toggleFeatureLogic = (featureId, hasSelection, currentFeatures) => {
 			if (!featureId) return { type: 'error', message: 'No feature ID provided' };
@@ -538,7 +538,7 @@ describe('OpenType Stylist - Edge Cases', () => {
  * These tests protect against regressions in the HTML preservation logic
  * added to fix styling loss during block conversion.
  */
-describe('OpenType Stylist - HTML Preservation', () => {
+describe('Typography Stylist - HTML Preservation', () => {
 	it('should detect actual HTML tags', () => {
 		expect(hasHTMLTags('<span>test</span>')).toBe(true);
 		expect(hasHTMLTags('<div class="test">content</div>')).toBe(true);
@@ -606,7 +606,7 @@ describe('OpenType Stylist - HTML Preservation', () => {
  *
  * These tests ensure block-level features are preserved correctly.
  */
-describe('OpenType Stylist - Block Attribute Preservation', () => {
+describe('Typography Stylist - Block Attribute Preservation', () => {
 	/**
 	 * Helper: Determine block attributes for selection-based conversion
 	 */
@@ -667,7 +667,7 @@ describe('OpenType Stylist - Block Attribute Preservation', () => {
  * These tests verify that features applied to inline text selections
  * are correctly detected when the cursor is positioned inside styled spans.
  */
-describe('OpenType Stylist - Inline Feature Detection', () => {
+describe('Typography Stylist - Inline Feature Detection', () => {
 	it('should detect features from inline span at cursor position', () => {
 		const html = 'Test <span class="ots-styled" style="font-feature-settings: \'ss02\' 1">H</span>ere';
 		const cursorAt = 5; // Inside the "H"
@@ -808,7 +808,7 @@ describe('OpenType Stylist - Inline Feature Detection', () => {
  * features when the user clicks on styled text in the editor.
  * This prevents regression of the feature detection functionality.
  */
-describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
+describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 	/**
 	 * This test simulates the getInlineFeaturesAtSelection() function
 	 * from edit.js to ensure it works correctly
@@ -902,7 +902,7 @@ describe('OpenType Stylist - Sidebar Feature Highlighting', () => {
  *
  * Tests for ensureValidFontSizeRange helper function that ensures min <= preferred <= max
  */
-describe('OpenType Stylist - Font Size Range Validation', () => {
+describe('Typography Stylist - Font Size Range Validation', () => {
 	// Mock the helper function since we can't easily import from edit.js
 	// This tests the logic that should be in ensureValidFontSizeRange
 	const ensureValidFontSizeRange = (min, preferred, max) => {
@@ -956,7 +956,7 @@ describe('OpenType Stylist - Font Size Range Validation', () => {
  * Tests for applyOrMergeStyling utility that prevents creating nested ots-styled spans.
  * This fixes the issue where applying font-size + features created nested spans.
  */
-describe('OpenType Stylist - Nested Span Prevention', () => {
+describe('Typography Stylist - Nested Span Prevention', () => {
 	/**
 	 * Helper to create a DOM range for testing
 	 */
@@ -1104,7 +1104,7 @@ describe('OpenType Stylist - Nested Span Prevention', () => {
  * Tests for the getBlockInheritedFont() utility function that detects
  * computed fonts from DOM elements in different block types.
  */
-describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
+describe('Typography Stylist - Block Font Inheritance (block-editor.js)', () => {
 	// Get the utility function from window.otsUtils
 	const { getBlockInheritedFont } = window.otsUtils || {};
 
@@ -1123,7 +1123,7 @@ describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
 		} else if (blockName === 'generateblocks/headline') {
 			textElement = document.createElement('div');
 			textElement.className = 'gb-headline-text';
-		} else if (blockName === 'opentype-stylist/block') {
+		} else if (blockName === 'typography-stylist/block') {
 			textElement = document.createElement('div');
 			textElement.className = 'ots-block-content';
 		} else {
@@ -1190,10 +1190,10 @@ describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
 		mock.cleanup();
 	});
 
-	it('should detect font from opentype-stylist/block blocks', () => {
-		const mock = createMockBlockDOM('test-block-4', 'opentype-stylist/block', null, 'Playfair Display, serif');
+	it('should detect font from typography-stylist/block blocks', () => {
+		const mock = createMockBlockDOM('test-block-4', 'typography-stylist/block', null, 'Playfair Display, serif');
 
-		const result = getBlockInheritedFont('test-block-4', 'opentype-stylist/block', document, window);
+		const result = getBlockInheritedFont('test-block-4', 'typography-stylist/block', document, window);
 
 		expect(result).toBe('Playfair Display, serif');
 		mock.cleanup();
@@ -1399,9 +1399,9 @@ describe('OpenType Stylist - Block Font Inheritance (block-editor.js)', () => {
  * Test Suite: Font Detection in OTS Blocks
  *
  * Tests for the detectBlockComputedFont() utility function from utils.js
- * that detects computed fonts for OpenType Stylist blocks.
+ * that detects computed fonts for Typography Stylist blocks.
  */
-describe('OpenType Stylist - Font Detection in OTS Blocks', () => {
+describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	// Helper to create mock DOM elements for testing
 	function createMockOTSBlock(clientId, fontFamily) {
 		// Create a mock block wrapper

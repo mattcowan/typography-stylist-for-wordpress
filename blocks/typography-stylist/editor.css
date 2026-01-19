@@ -1,19 +1,19 @@
 /**
- * OpenType Stylist Block - Editor Styles
+ * Typography Stylist Block - Editor Styles
  */
 
-.wp-block-opentype-stylist {
+.wp-block-typography-stylist {
 	position: relative;
 }
 
-.wp-block-opentype-stylist .ots-block-content {
+.wp-block-typography-stylist .ots-block-content {
 	/* Add subtle border in editor to show block boundaries */
 	outline: 1px dashed rgba(0, 122, 204, 0.2);
 	outline-offset: 4px;
 	transition: outline-color 0.2s;
 }
 
-.wp-block-opentype-stylist .ots-block-content:focus {
+.wp-block-typography-stylist .ots-block-content:focus {
 	outline-color: rgba(0, 122, 204, 0.6);
 }
 
@@ -47,11 +47,11 @@
 		color: #fff;
 	}
 
-	.wp-block-opentype-stylist .ots-block-content {
+	.wp-block-typography-stylist .ots-block-content {
 		outline-color: rgba(100, 150, 200, 0.3);
 	}
 
-	.wp-block-opentype-stylist .ots-block-content:focus {
+	.wp-block-typography-stylist .ots-block-content:focus {
 		outline-color: rgba(100, 150, 200, 0.7);
 	}
 }

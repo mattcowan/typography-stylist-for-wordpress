@@ -18,7 +18,7 @@ class SecurityTest extends TestCase {
             require_once OTS_PLUGIN_DIR . '/opentype-stylist.php';
             $loaded = true;
         }
-        return \OpenType_Stylist::get_instance();
+        return \Typography_Stylist::get_instance();
     }
 
     /**

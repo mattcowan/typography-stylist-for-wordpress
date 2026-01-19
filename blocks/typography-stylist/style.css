@@ -1,15 +1,15 @@
 /**
- * OpenType Stylist Block - Frontend Styles
+ * Typography Stylist Block - Frontend Styles
  */
 
-.wp-block-opentype-stylist {
+.wp-block-typography-stylist {
 	position: relative;
 }
 
 /* Screen reader only classes - ensure they exist and prevent layout impact */
-.wp-block-opentype-stylist .visually-hidden,
-.wp-block-opentype-stylist .sr-only,
-.wp-block-opentype-stylist .screen-reader-text {
+.wp-block-typography-stylist .visually-hidden,
+.wp-block-typography-stylist .sr-only,
+.wp-block-typography-stylist .screen-reader-text {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -22,7 +22,7 @@
 }
 
 /* Styled content */
-.wp-block-opentype-stylist .ots-styled {
+.wp-block-typography-stylist .ots-styled {
 	/* Inherit all spacing from parent */
 	margin: 0;
 	padding: 0;

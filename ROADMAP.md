@@ -1,6 +1,6 @@
-# OpenType Stylist - Roadmap
+# Typography Stylist - Roadmap
 
-This document outlines potential future enhancements for the OpenType Stylist plugin. These are ideas under consideration and are not committed features.
+This document outlines potential future enhancements for the Typography Stylist plugin. These are ideas under consideration and are not committed features.
 
 ## Table of Contents
 

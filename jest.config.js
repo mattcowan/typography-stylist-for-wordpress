@@ -1,5 +1,5 @@
 /**
- * Jest Configuration for OpenType Stylist
+ * Jest Configuration for Typography Stylist
  *
  * This extends the default WordPress scripts Jest config
  * and adds module name mapping for WordPress packages.

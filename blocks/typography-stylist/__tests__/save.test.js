@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist Block - Save Component Tests
+ * Typography Stylist Block - Save Component Tests
  *
  * Tests for the frontend rendering component (save.js)
  * These tests verify the accessibility implementation and semantic HTML structure.
@@ -22,7 +22,7 @@ jest.mock('@wordpress/block-editor');
 // Import the save component after mock is set up
 import save from '../save';
 
-describe('OpenType Stylist - Save Component (Frontend Rendering)', () => {
+describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 
 	describe('Semantic Heading Structure', () => {
 		it('should render both screen reader and visual versions with same heading tag', () => {
@@ -42,7 +42,7 @@ describe('OpenType Stylist - Save Component (Frontend Rendering)', () => {
 
 			// Verify wrapper div exists
 			expect(tree.type).toBe('div');
-			expect(tree.props.className).toBe('wp-block-opentype-stylist');
+			expect(tree.props.className).toBe('wp-block-typography-stylist');
 
 			// Verify we have two children (screen reader + visual)
 			expect(tree.children).toHaveLength(2);

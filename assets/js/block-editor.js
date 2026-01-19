@@ -1,5 +1,5 @@
 /**
- * Block Editor Integration for OpenType Stylist
+ * Block Editor Integration for Typography Stylist
  * Adds custom format type for OpenType features
  */
 
@@ -143,8 +143,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         else if (blockName === 'generateblocks/headline') {
             textElement = blockWrapper.querySelector('[class*="gb-headline"]');
         }
-        // OpenType Stylist blocks
-        else if (blockName === 'opentype-stylist/block') {
+        // Typography Stylist blocks
+        else if (blockName === 'typography-stylist/block') {
             textElement = blockWrapper.querySelector('.ots-block-content');
         }
         // Fallback: try common RichText elements
@@ -175,21 +175,19 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
     }
 
     /**
-     * Custom "O" icon for OpenType Stylist
+     * Custom "T" icon for Typography Stylist
      */
-    const OTSIcon = () => (
+    const TSIcon = () => (
         wp.element.createElement('svg', {
             width: 20,
             height: 20,
-            viewBox: '0 0 256 256',
+            viewBox: '0 0 1067 1067',
             xmlns: 'http://www.w3.org/2000/svg'
         },
-            wp.element.createElement('g', {},
-                wp.element.createElement('path', {
-                    d: 'M95.72,23.871C74.545,42.158,63.316,75.524,63.316,131.028c0,57.75,15.4,99.778,63.524,99.778c47.804,0,63.524-42.028,63.524-99.778c0-58.07-17.004-97.854-50.691-97.854c-19.891,0-35.933,14.438-35.933,37.537c0,15.4,6.737,25.346,17.004,25.346c11.55,0,13.154-8.983,23.741-8.983c13.154,0,21.496,9.946,21.496,22.458c0,15.4-12.513,25.987-33.688,25.987c-25.346,0-48.445-21.816-48.445-57.107c0-38.5,28.233-64.487,63.524-64.487c48.445,0,91.116,47.804,91.116,117.104c0,69.3-42.35,117.104-111.649,117.104c-69.62,0-111.649-47.804-111.649-117.104c0-67.695,38.5-101.062,76.358-114.537L95.72,23.871z',
-                    fill: 'currentColor'
-                })
-            )
+            wp.element.createElement('path', {
+                d: 'M22.621,323.219c0,116.595 86.232,204.042 200.398,204.042c81.374,0 134.814,-41.294 134.814,-100.806c0,-36.436 -26.72,-68.014 -66.799,-68.014c-71.658,0 -75.301,80.159 -122.668,80.159c-54.654,0 -87.447,-58.298 -87.447,-115.381c0,-78.945 52.225,-137.243 156.675,-137.243c78.945,0 162.748,29.149 250.194,59.512l0,647.348c0,92.305 -20.647,99.592 -117.81,105.665l0,30.363l355.859,0l0,-30.363c-97.163,-6.073 -117.81,-13.36 -117.81,-105.665l0,-609.697c65.585,20.647 133.599,36.436 206.471,36.436c144.53,0 229.547,-83.803 229.547,-184.609c0,-57.083 -32.792,-97.163 -80.159,-97.163c-40.08,0 -72.872,27.934 -72.872,69.229c0,49.796 42.509,65.585 42.509,100.806c0,36.436 -38.865,58.298 -106.879,58.298c-136.028,0 -329.139,-171.25 -534.396,-171.25c-173.679,0 -269.627,109.308 -269.627,228.333Z',
+                fill: 'currentColor'
+            })
         )
     );
 
@@ -207,7 +205,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             } catch (e) {
                 // Session storage might not be available
                 if (window && window.console && typeof window.console.warn === 'function') {
-                    window.console.warn('OpenType Stylist: sessionStorage is not available; "don\'t show again" preference for clear warning will not persist.', e);
+                    window.console.warn('Typography Stylist: sessionStorage is not available; "don\'t show again" preference for clear warning will not persist.', e);
                 }
             }
 
@@ -303,7 +301,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             const { select } = wp.data;
             const selectedBlock = select('core/block-editor').getSelectedBlock();
 
-            if (!selectedBlock || selectedBlock.name !== 'opentype-stylist/block') {
+            if (!selectedBlock || selectedBlock.name !== 'typography-stylist/block') {
                 return null;
             }
 
@@ -868,11 +866,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return { valid: true };
             }
 
-            // Check if we're inside an OpenType Stylist block
+            // Check if we're inside a Typography Stylist block
             const { select } = wp.data;
             const selectedBlock = select('core/block-editor').getSelectedBlock();
-            if (selectedBlock && selectedBlock.name === 'opentype-stylist/block') {
-                // Skip validation - OpenType Stylist block already has proper accessibility
+            if (selectedBlock && selectedBlock.name === 'typography-stylist/block') {
+                // Skip validation - Typography Stylist block already has proper accessibility
                 return { valid: true };
             }
 
@@ -895,7 +893,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             if (breaksWordStart || breaksWordEnd) {
                 return {
                     valid: false,
-                    message: __('For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words.', 'opentype-stylist')
+                    message: __('For better accessibility, select complete words or phrases. Or convert to a Typography Stylist block for accessible styling of partial words.', 'typography-stylist')
                 };
             }
 
@@ -903,7 +901,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         }
 
         /**
-         * Convert current heading/paragraph to OpenType Stylist block, or update existing OpenType Stylist block
+         * Convert current heading/paragraph to Typography Stylist block, or update existing Typography Stylist block
          */
         convertToBlock() {
             const { value } = this.props;
@@ -923,8 +921,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return;
             }
 
-            // Check if we're already in an OpenType Stylist block
-            const isAlreadyOTSBlock = currentBlock.name === 'opentype-stylist/block';
+            // Check if we're already in a Typography Stylist block
+            const isAlreadyOTSBlock = currentBlock.name === 'typography-stylist/block';
 
             // Determine tag from block name (core/heading, core/paragraph, or existing OTS block)
             let tagName = 'h2';
@@ -1075,9 +1073,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         letterSpacing: this.state.letterSpacing
                     });
                 } else {
-                    // Create new OpenType Stylist block preserving user's settings from inline editor
+                    // Create new Typography Stylist block preserving user's settings from inline editor
                     // Don't apply inline features globally - they're only for the selection
-                    const otsBlock = createBlock('opentype-stylist/block', {
+                    const otsBlock = createBlock('typography-stylist/block', {
                         content: contentForBlock,
                         tagName: tagName,
                         features: [],
@@ -1111,7 +1109,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         letterSpacing: this.state.letterSpacing
                     });
                 } else {
-                    const otsBlock = createBlock('opentype-stylist/block', {
+                    const otsBlock = createBlock('typography-stylist/block', {
                         content: textContent,
                         tagName: tagName,
                         features: this.state.selectedFeatures,
@@ -1349,7 +1347,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 // If clearing features fails, do not persist the "don't show again" preference
                 // Optionally, log the error for debugging
                 if (window && window.console && typeof window.console.error === 'function') {
-                    window.console.error('Failed to clear OpenType Stylist features:', error);
+                    window.console.error('Failed to clear Typography Stylist features:', error);
                 }
             }
         }
@@ -1607,8 +1605,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                             className="ots-feature-preview-on ots-feature-apply-btn"
                             onClick={() => this.applyFeatureFromPreview(feature.id)}
                             style={previewStyle}
-                            aria-label={sprintf(__('Click to apply %s feature', 'opentype-stylist'), feature.name)}
-                            title={sprintf(__('Click to apply %s', 'opentype-stylist'), feature.name)}
+                            aria-label={sprintf(__('Click to apply %s feature', 'typography-stylist'), feature.name)}
+                            title={sprintf(__('Click to apply %s', 'typography-stylist'), feature.name)}
                         >
                             {sampleText}
                         </Button>
@@ -1806,7 +1804,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             const hasFonts = fontOptions.length > 0;
 
             // Use stored preview text or fallback
-            const displayText = previewText || __('Elegant Typography & Flourish', 'opentype-stylist');
+            const displayText = previewText || __('Elegant Typography & Flourish', 'typography-stylist');
 
             // Build preview style
             const previewStyle = {
@@ -1838,13 +1836,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
             return (
                 <Fragment>
-                    {/* Only show button if NOT in an OpenType Stylist block */}
+                    {/* Only show button if NOT in a Typography Stylist block */}
                     {!isInOTSBlock && (
                         <BlockControls>
                             <ToolbarGroup>
                                 <ToolbarButton
-                                    icon={OTSIcon}
-                                    title={__('OpenType Stylist', 'opentype-stylist')}
+                                    icon={TSIcon}
+                                    title={__('Typography Stylist', 'typography-stylist')}
                                     onClick={this.togglePopover}
                                     isActive={isActive}
                                     className="ots-toolbar-button"
@@ -1886,14 +1884,14 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 onMouseDown={this.handleDragStart}
                                 onKeyDown={this.handleHeaderKeyDown}
                                 role="toolbar"
-                                aria-label={__('Drag to reposition modal', 'opentype-stylist')}
+                                aria-label={__('Drag to reposition modal', 'typography-stylist')}
                                 tabIndex={0}
                                 style={{ cursor: this.state.isDragging ? 'grabbing' : 'grab' }}
                             >
-                                <h3>{__('OpenType Stylist', 'opentype-stylist')}</h3>
+                                <h3>{__('Typography Stylist', 'typography-stylist')}</h3>
                                 <Button
                                     icon="no-alt"
-                                    label={__('Close', 'opentype-stylist')}
+                                    label={__('Close', 'typography-stylist')}
                                     onClick={this.togglePopover}
                                     className="ots-modal-close-button"
                                 />
@@ -1914,7 +1912,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                         className: 'ots-drag-notice'
                                     },
                                         wp.element.createElement('p', { style: { margin: 0 } },
-                                            '💡 ' + __('Tip: Drag the title bar to reposition this panel', 'opentype-stylist')
+                                            '💡 ' + __('Tip: Drag the title bar to reposition this panel', 'typography-stylist')
                                         )
                                     )}
                                 </div>
@@ -1928,7 +1926,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                             className: 'ots-apply-notice'
                                         },
                                             wp.element.createElement('p', { style: { margin: 0 } },
-                                                __('Click "Apply" below the preview to confirm changes.', 'opentype-stylist')
+                                                __('Click "Apply" below the preview to confirm changes.', 'typography-stylist')
                                             )
                                         )}
                                     </div>
@@ -1944,10 +1942,10 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                         className: 'ots-font-detection-notice'
                                     },
                                         wp.element.createElement('p', { style: { margin: 0 } },
-                                            __('Font could not be detected for this block type.', 'opentype-stylist')
+                                            __('Font could not be detected for this block type.', 'typography-stylist')
                                         ),
                                         wp.element.createElement('p', { style: { margin: '8px 0 0 0', fontSize: '12px' } },
-                                            __('For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar.', 'opentype-stylist')
+                                            __('For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar.', 'typography-stylist')
                                         )
                                     )
                                 )}
@@ -1955,11 +1953,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 {/* Font Selector */}
                                 {hasFonts && (
                                     <div className="ots-font-section">
-                                        <h4>{__('Font Family', 'opentype-stylist')}</h4>
+                                        <h4>{__('Font Family', 'typography-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
                                             options={[
-                                                { label: __('(Default)', 'opentype-stylist'), value: '' },
+                                                { label: __('(Default)', 'typography-stylist'), value: '' },
                                                 ...fontOptions
                                             ]}
                                             onChange={this.setFont}
@@ -1969,19 +1967,19 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Font Weight Control */}
                                 <div className="ots-fontweight-section">
-                                    <h4>{__('Font Weight', 'opentype-stylist')}</h4>
+                                    <h4>{__('Font Weight', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontWeight}
                                         options={[
-                                            { label: __('100 - Thin', 'opentype-stylist'), value: '100' },
-                                            { label: __('200 - Extra Light', 'opentype-stylist'), value: '200' },
-                                            { label: __('300 - Light', 'opentype-stylist'), value: '300' },
-                                            { label: __('400 - Normal', 'opentype-stylist'), value: '400' },
-                                            { label: __('500 - Medium', 'opentype-stylist'), value: '500' },
-                                            { label: __('600 - Semi Bold', 'opentype-stylist'), value: '600' },
-                                            { label: __('700 - Bold', 'opentype-stylist'), value: '700' },
-                                            { label: __('800 - Extra Bold', 'opentype-stylist'), value: '800' },
-                                            { label: __('900 - Black', 'opentype-stylist'), value: '900' }
+                                            { label: __('100 - Thin', 'typography-stylist'), value: '100' },
+                                            { label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
+                                            { label: __('300 - Light', 'typography-stylist'), value: '300' },
+                                            { label: __('400 - Normal', 'typography-stylist'), value: '400' },
+                                            { label: __('500 - Medium', 'typography-stylist'), value: '500' },
+                                            { label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
+                                            { label: __('700 - Bold', 'typography-stylist'), value: '700' },
+                                            { label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
+                                            { label: __('900 - Black', 'typography-stylist'), value: '900' }
                                         ]}
                                         onChange={this.setFontWeight}
                                     />
@@ -1989,14 +1987,14 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Letter Spacing Control */}
                                 <div className="ots-letterspacing-section">
-                                    <h4>{__('Letter Spacing', 'opentype-stylist')}</h4>
+                                    <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={letterSpacing}
                                         onChange={this.setLetterSpacing}
                                         min={-200}
                                         max={200}
                                         step={1}
-                                        help={letterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${letterSpacing / 1000}em`}
+                                        help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
                                         allowReset
                                         resetFallbackValue={0}
                                     />
@@ -2004,12 +2002,12 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Font Size Controls */}
                                 <div className="ots-fontsize-section">
-                                    <h4>{__('Font Size', 'opentype-stylist')}</h4>
+                                    <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
                                         options={[
-                                            { label: __('Inherit', 'opentype-stylist'), value: 'inherit' },
-                                            { label: __('Responsive (Fluid)', 'opentype-stylist'), value: 'responsive' }
+                                            { label: __('Inherit', 'typography-stylist'), value: 'inherit' },
+                                            { label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
                                         ]}
                                         onChange={this.setFontSize}
                                     />
@@ -2017,7 +2015,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     {fontSize === 'responsive' && (
                                         <div className="ots-fontsize-controls">
                                             <RangeControl
-                                                label={__('Minimum Size (mobile)', 'opentype-stylist')}
+                                                label={__('Minimum Size (mobile)', 'typography-stylist')}
                                                 value={fontSizeMin}
                                                 onChange={this.setFontSizeMin}
                                                 min={8}
@@ -2026,7 +2024,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                 help={`${fontSizeMin}px`}
                                             />
                                             <RangeControl
-                                                label={__('Preferred Size (tablet)', 'opentype-stylist')}
+                                                label={__('Preferred Size (tablet)', 'typography-stylist')}
                                                 value={fontSizePreferred}
                                                 onChange={this.setFontSizePreferred}
                                                 min={8}
@@ -2035,7 +2033,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                 help={`${fontSizePreferred}px`}
                                             />
                                             <RangeControl
-                                                label={__('Maximum Size (desktop)', 'opentype-stylist')}
+                                                label={__('Maximum Size (desktop)', 'typography-stylist')}
                                                 value={fontSizeMax}
                                                 onChange={this.setFontSizeMax}
                                                 min={8}
@@ -2050,7 +2048,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 {/* Presets Section */}
                                 {presets.length > 0 && (
                                     <div className="ots-presets-section">
-                                        <h4>{__('Quick Presets', 'opentype-stylist')}</h4>
+                                        <h4>{__('Quick Presets', 'typography-stylist')}</h4>
                                         <div className="ots-presets-grid">
                                             {presets.map(preset => this.renderPresetButton(preset))}
                                         </div>
@@ -2059,7 +2057,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Features Section */}
                                 <div className="ots-features-section">
-                                    <h4>{__('Individual Features', 'opentype-stylist')}</h4>
+                                    <h4>{__('Individual Features', 'typography-stylist')}</h4>
 
                                     {Object.entries(groupedFeatures).map(([category, features]) => (
                                         <PanelBody
@@ -2084,7 +2082,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                 isPrimary
                                                 onClick={this.convertToBlock}
                                             >
-                                                {__('Convert to OpenType Stylist Block', 'opentype-stylist')}
+                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                             </Button>
                                             <Button
                                                 isSecondary
@@ -2094,13 +2092,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                     this.applyFeaturesForce();
                                                 }}
                                             >
-                                                {__('Apply Anyway', 'opentype-stylist')}
+                                                {__('Apply Anyway', 'typography-stylist')}
                                             </Button>
                                             <Button
                                                 isTertiary
                                                 onClick={() => this.setState({ showAccessibilityWarning: false })}
                                             >
-                                                {__('Cancel', 'opentype-stylist')}
+                                                {__('Cancel', 'typography-stylist')}
                                             </Button>
                                         </ButtonGroup>
                                     </div>
@@ -2110,7 +2108,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 {showPreview && !showAccessibilityWarning && (
                                     <div className="ots-preview-section">
                                         <div className="ots-preview-header">
-                                            <h4>{__('Preview', 'opentype-stylist')}</h4>
+                                            <h4>{__('Preview', 'typography-stylist')}</h4>
                                             {fontSize === 'responsive' && (
                                                 <ButtonGroup className="ots-preview-device-toggle">
                                                     <Button
@@ -2119,7 +2117,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                         isSecondary={previewDevice !== 'mobile'}
                                                         onClick={() => this.setPreviewDevice('mobile')}
                                                     >
-                                                        {__('Mobile', 'opentype-stylist')}
+                                                        {__('Mobile', 'typography-stylist')}
                                                     </Button>
                                                     <Button
                                                         isSmall
@@ -2127,7 +2125,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                         isSecondary={previewDevice !== 'tablet'}
                                                         onClick={() => this.setPreviewDevice('tablet')}
                                                     >
-                                                        {__('Tablet', 'opentype-stylist')}
+                                                        {__('Tablet', 'typography-stylist')}
                                                     </Button>
                                                     <Button
                                                         isSmall
@@ -2135,7 +2133,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                         isSecondary={previewDevice !== 'desktop'}
                                                         onClick={() => this.setPreviewDevice('desktop')}
                                                     >
-                                                        {__('Desktop', 'opentype-stylist')}
+                                                        {__('Desktop', 'typography-stylist')}
                                                     </Button>
                                                 </ButtonGroup>
                                             )}
@@ -2148,7 +2146,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                         </div>
                                         {selectedFeatures.length > 0 && (
                                             <div className="ots-preview-features">
-                                                <strong>{__('Active: ', 'opentype-stylist')}</strong>
+                                                <strong>{__('Active: ', 'typography-stylist')}</strong>
                                                 {selectedFeatures.join(', ')}
                                             </div>
                                         )}
@@ -2164,13 +2162,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                             className: 'ots-clear-warning'
                                         },
                                             wp.element.createElement('p', { style: { margin: '0 0 12px 0', fontWeight: '600' } },
-                                                __('Clear All Typography Settings?', 'opentype-stylist')
+                                                __('Clear All Typography Settings?', 'typography-stylist')
                                             ),
                                             wp.element.createElement('p', { style: { margin: '0 0 12px 0', fontSize: '13px' } },
-                                                __('This will remove all typography features, font selections, and styling.', 'opentype-stylist')
+                                                __('This will remove all typography features, font selections, and styling.', 'typography-stylist')
                                             ),
                                             wp.element.createElement(CheckboxControl, {
-                                                label: __('Do not show this warning again (this session)', 'opentype-stylist'),
+                                                label: __('Do not show this warning again (this session)', 'typography-stylist'),
                                                 checked: dontShowClearWarning,
                                                 onChange: (checked) => this.setState({ dontShowClearWarning: checked })
                                             }),
@@ -2178,11 +2176,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                 wp.element.createElement(Button, {
                                                     isPrimary: true,
                                                     onClick: this.confirmClear
-                                                }, __('Clear All Settings', 'opentype-stylist')),
+                                                }, __('Clear All Settings', 'typography-stylist')),
                                                 wp.element.createElement(Button, {
                                                     isSecondary: true,
                                                     onClick: this.cancelClear
-                                                }, __('Cancel', 'opentype-stylist'))
+                                                }, __('Cancel', 'typography-stylist'))
                                             )
                                         )}
                                     </div>
@@ -2196,28 +2194,28 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                                 isPrimary
                                                 onClick={this.applyFeatures}
                                             >
-                                                {__('Apply', 'opentype-stylist')}
+                                                {__('Apply', 'typography-stylist')}
                                             </Button>
                                             {this.state.changeHistory.length > 0 && (
                                                 <Button
                                                     isSecondary
                                                     onClick={this.undoLastChange}
-                                                    title={__('Undo last change', 'opentype-stylist')}
+                                                    title={__('Undo last change', 'typography-stylist')}
                                                 >
-                                                    {__('Undo', 'opentype-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
+                                                    {__('Undo', 'typography-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
                                                 </Button>
                                             )}
                                             <Button
                                                 isSecondary
                                                 onClick={this.handleClearClick}
                                             >
-                                                {__('Clear', 'opentype-stylist')}
+                                                {__('Clear', 'typography-stylist')}
                                             </Button>
                                             <Button
                                                 isTertiary
                                                 onClick={this.togglePopover}
                                             >
-                                                {__('Cancel', 'opentype-stylist')}
+                                                {__('Cancel', 'typography-stylist')}
                                             </Button>
                                         </ButtonGroup>
                                     </div>
@@ -2232,7 +2230,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-n"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'n')}
                                     role="slider"
-                                    aria-label={__('Resize modal vertically', 'opentype-stylist')}
+                                    aria-label={__('Resize modal vertically', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'ns-resize' }}
                                 />
@@ -2240,7 +2238,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-ne"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'ne')}
                                     role="slider"
-                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'nesw-resize' }}
                                 />
@@ -2248,7 +2246,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-e"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'e')}
                                     role="slider"
-                                    aria-label={__('Resize modal horizontally', 'opentype-stylist')}
+                                    aria-label={__('Resize modal horizontally', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'ew-resize' }}
                                 />
@@ -2256,7 +2254,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-se"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'se')}
                                     role="slider"
-                                    aria-label={__('Resize modal', 'opentype-stylist')}
+                                    aria-label={__('Resize modal', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'nwse-resize' }}
                                 />
@@ -2264,7 +2262,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-s"
                                     onMouseDown={(e) => this.handleResizeStart(e, 's')}
                                     role="slider"
-                                    aria-label={__('Resize modal vertically', 'opentype-stylist')}
+                                    aria-label={__('Resize modal vertically', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'ns-resize' }}
                                 />
@@ -2272,7 +2270,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-sw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'sw')}
                                     role="slider"
-                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'nesw-resize' }}
                                 />
@@ -2280,7 +2278,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-w"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'w')}
                                     role="slider"
-                                    aria-label={__('Resize modal horizontally', 'opentype-stylist')}
+                                    aria-label={__('Resize modal horizontally', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'ew-resize' }}
                                 />
@@ -2288,7 +2286,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     className="ots-resize-handle ots-resize-nw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'nw')}
                                     role="slider"
-                                    aria-label={__('Resize modal diagonally', 'opentype-stylist')}
+                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
                                     tabIndex={0}
                                     style={{ cursor: 'nwse-resize' }}
                                 />
@@ -2304,11 +2302,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         getCategoryTitle(category) {
             const titles = {
-                'ligatures': __('Ligatures', 'opentype-stylist'),
-                'stylistic-sets': __('Stylistic Sets', 'opentype-stylist'),
-                'alternates': __('Swashes & Alternates', 'opentype-stylist'),
-                'decorative': __('Decorative', 'opentype-stylist'),
-                'other': __('Other Features', 'opentype-stylist')
+                'ligatures': __('Ligatures', 'typography-stylist'),
+                'stylistic-sets': __('Stylistic Sets', 'typography-stylist'),
+                'alternates': __('Swashes & Alternates', 'typography-stylist'),
+                'decorative': __('Decorative', 'typography-stylist'),
+                'other': __('Other Features', 'typography-stylist')
             };
 
             return titles[category] || category;
@@ -2319,7 +2317,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
      * Register the format type
      */
     registerFormatType(FORMAT_TYPE, {
-        title: __('OpenType Stylist', 'opentype-stylist'),
+        title: __('Typography Stylist', 'typography-stylist'),
         tagName: 'span',
         className: 'ots-styled',
         attributes: {
@@ -2339,7 +2337,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             wp.data.withSelect((select) => {
                 const selectedBlock = select('core/block-editor').getSelectedBlock();
                 return {
-                    isInOTSBlock: selectedBlock && selectedBlock.name === 'opentype-stylist/block'
+                    isInOTSBlock: selectedBlock && selectedBlock.name === 'typography-stylist/block'
                 };
             })
         )(function(props) {

@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist Block - Editor Component
+ * Typography Stylist Block - Editor Component
  */
 
 import { __ } from '@wordpress/i18n';
@@ -32,12 +32,10 @@ import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-
 import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
-// Custom "O" icon for OpenType Stylist
-const OTSIcon = () => (
-	<svg width={20} height={20} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-		<g>
-			<path d="M95.72,23.871C74.545,42.158,63.316,75.524,63.316,131.028c0,57.75,15.4,99.778,63.524,99.778c47.804,0,63.524-42.028,63.524-99.778c0-58.07-17.004-97.854-50.691-97.854c-19.891,0-35.933,14.438-35.933,37.537c0,15.4,6.737,25.346,17.004,25.346c11.55,0,13.154-8.983,23.741-8.983c13.154,0,21.496,9.946,21.496,22.458c0,15.4-12.513,25.987-33.688,25.987c-25.346,0-48.445-21.816-48.445-57.107c0-38.5,28.233-64.487,63.524-64.487c48.445,0,91.116,47.804,91.116,117.104c0,69.3-42.35,117.104-111.649,117.104c-69.62,0-111.649-47.804-111.649-117.104c0-67.695,38.5-101.062,76.358-114.537L95.72,23.871z" fill="currentColor" />
-		</g>
+// Custom "T" icon for Typography Stylist
+const TSIcon = () => (
+	<svg width={20} height={20} viewBox="0 0 1067 1067" xmlns="http://www.w3.org/2000/svg">
+		<path d="M22.621,323.219c0,116.595 86.232,204.042 200.398,204.042c81.374,0 134.814,-41.294 134.814,-100.806c0,-36.436 -26.72,-68.014 -66.799,-68.014c-71.658,0 -75.301,80.159 -122.668,80.159c-54.654,0 -87.447,-58.298 -87.447,-115.381c0,-78.945 52.225,-137.243 156.675,-137.243c78.945,0 162.748,29.149 250.194,59.512l0,647.348c0,92.305 -20.647,99.592 -117.81,105.665l0,30.363l355.859,0l0,-30.363c-97.163,-6.073 -117.81,-13.36 -117.81,-105.665l0,-609.697c65.585,20.647 133.599,36.436 206.471,36.436c144.53,0 229.547,-83.803 229.547,-184.609c0,-57.083 -32.792,-97.163 -80.159,-97.163c-40.08,0 -72.872,27.934 -72.872,69.229c0,49.796 42.509,65.585 42.509,100.806c0,36.436 -38.865,58.298 -106.879,58.298c-136.028,0 -329.139,-171.25 -534.396,-171.25c-173.679,0 -269.627,109.308 -269.627,228.333Z" fill="currentColor"/>
 	</svg>
 );
 
@@ -515,7 +513,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	}, [previewLetterSpacing, clientId, selectionStart, selectionEnd, isPopoverOpen, content]);
 
 	const blockProps = useBlockProps({
-		className: 'wp-block-opentype-stylist'
+		className: 'wp-block-typography-stylist'
 	});
 
 	// Get available features from localized data
@@ -978,11 +976,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Category titles
 	const getCategoryTitle = (category) => {
 		const titles = {
-			'ligatures': __('Ligatures', 'opentype-stylist'),
-			'stylistic-sets': __('Stylistic Sets', 'opentype-stylist'),
-			'alternates': __('Swashes & Alternates', 'opentype-stylist'),
-			'decorative': __('Decorative', 'opentype-stylist'),
-			'other': __('Other Features', 'opentype-stylist')
+			'ligatures': __('Ligatures', 'typography-stylist'),
+			'stylistic-sets': __('Stylistic Sets', 'typography-stylist'),
+			'alternates': __('Swashes & Alternates', 'typography-stylist'),
+			'decorative': __('Decorative', 'typography-stylist'),
+			'other': __('Other Features', 'typography-stylist')
 		};
 		return titles[category] || category;
 	};
@@ -994,10 +992,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			return (
 				<div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
 					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
-						⚠️ {__('Are you sure?', 'opentype-stylist')}
+						⚠️ {__('Are you sure?', 'typography-stylist')}
 					</p>
 					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
-						{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'opentype-stylist')}
+						{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
@@ -1006,14 +1004,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							onClick={clearAllInlineFeatures}
 							style={{ flex: 1 }}
 						>
-							{__('Yes, Clear', 'opentype-stylist')}
+							{__('Yes, Clear', 'typography-stylist')}
 						</Button>
 						<Button
 							variant="secondary"
 							onClick={() => setShowInlineResetConfirm(false)}
 							style={{ flex: 1 }}
 						>
-							{__('Cancel', 'opentype-stylist')}
+							{__('Cancel', 'typography-stylist')}
 						</Button>
 					</div>
 				</div>
@@ -1025,10 +1023,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			return (
 				<div style={{ padding: '16px', backgroundColor: '#ffe5e5', border: '1px solid #dc3232', borderRadius: '4px' }}>
 					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#a00' }}>
-						🚨 {__('Reset Entire Block?', 'opentype-stylist')}
+						🚨 {__('Reset Entire Block?', 'typography-stylist')}
 					</p>
 					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
-						{__('This will completely reset this block, removing both inline features AND all block-level settings (font, features, spacing, etc.). This cannot be undone.', 'opentype-stylist')}
+						{__('This will completely reset this block, removing both inline features AND all block-level settings (font, features, spacing, etc.). This cannot be undone.', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
@@ -1037,14 +1035,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							onClick={resetEntireBlock}
 							style={{ flex: 1 }}
 						>
-							{__('Yes, Reset All', 'opentype-stylist')}
+							{__('Yes, Reset All', 'typography-stylist')}
 						</Button>
 						<Button
 							variant="secondary"
 							onClick={() => setShowFullResetConfirm(false)}
 							style={{ flex: 1 }}
 						>
-							{__('Cancel', 'opentype-stylist')}
+							{__('Cancel', 'typography-stylist')}
 						</Button>
 					</div>
 				</div>
@@ -1060,10 +1058,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					onClick={() => setShowInlineResetConfirm(true)}
 					style={{ marginBottom: '12px', width: '100%', justifyContent: 'center' }}
 				>
-					{__('Clear Individual Features', 'opentype-stylist')}
+					{__('Clear Individual Features', 'typography-stylist')}
 				</Button>
 				<p style={{ fontSize: '11px', color: '#666', margin: '0 0 16px 0' }}>
-					{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'opentype-stylist')}
+					{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'typography-stylist')}
 				</p>
 
 				<Button
@@ -1072,10 +1070,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					onClick={() => setShowFullResetConfirm(true)}
 					style={{ width: '100%', justifyContent: 'center' }}
 				>
-					{__('Reset Entire Block', 'opentype-stylist')}
+					{__('Reset Entire Block', 'typography-stylist')}
 				</Button>
 				<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
-					{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'opentype-stylist')}
+					{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'typography-stylist')}
 				</p>
 			</>
 		);
@@ -1086,8 +1084,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			<BlockControls>
 				<ToolbarGroup>
 					<ToolbarButton
-						icon={OTSIcon}
-						label={__('OpenType Features', 'opentype-stylist')}
+						icon={TSIcon}
+						label={__('OpenType Features', 'typography-stylist')}
 						onClick={handleToolbarClick}
 						isActive={features.length > 0}
 					/>
@@ -1123,14 +1121,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								className="ots-modal-header"
 								onMouseDown={handleDragStart}
 								role="toolbar"
-								aria-label={__('Drag to reposition modal', 'opentype-stylist')}
+								aria-label={__('Drag to reposition modal', 'typography-stylist')}
 								tabIndex={0}
 								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
 							>
-								<h3>{__('Quick Feature Toggles', 'opentype-stylist')}</h3>
+								<h3>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
 								<Button
 									icon="no-alt"
-									label={__('Close', 'opentype-stylist')}
+									label={__('Close', 'typography-stylist')}
 									onClick={handlePopoverClose}
 									className="ots-modal-close-button"
 								/>
@@ -1149,7 +1147,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									style={{ margin: '0 0 16px 0' }}
 								>
 									<p style={{ margin: 0 }}>
-										{'💡 ' + __('Tip: Drag the title bar to reposition this panel', 'opentype-stylist')}
+										{'💡 ' + __('Tip: Drag the title bar to reposition this panel', 'typography-stylist')}
 									</p>
 								</Notice>
 
@@ -1158,13 +1156,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Letter Spacing Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<RangeControl
-										label={__('Letter Spacing (for selected text)', 'opentype-stylist')}
+										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
 										value={inlineLetterSpacing}
 										onChange={handleLetterSpacingChange}
 										min={-200}
 										max={200}
 										step={1}
-										help={inlineLetterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${inlineLetterSpacing / 1000}em`}
+										help={inlineLetterSpacing === 0 ? __('Normal', 'typography-stylist') : `${inlineLetterSpacing / 1000}em`}
 										allowReset
 										resetFallbackValue={0}
 									/>
@@ -1175,20 +1173,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												onClick={applyLetterSpacingOnly}
 												style={{ flex: 1 }}
 											>
-												{__('Apply Letter Spacing', 'opentype-stylist')}
+												{__('Apply Letter Spacing', 'typography-stylist')}
 											</Button>
 											<Button
 												variant="secondary"
 												onClick={clearLetterSpacing}
 												isDestructive
 											>
-												{__('Clear', 'opentype-stylist')}
+												{__('Clear', 'typography-stylist')}
 											</Button>
 										</div>
 									)}
 									{inlineLetterSpacing !== 0 && (
 										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'opentype-stylist')}
+											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
 										</p>
 									)}
 								</div>
@@ -1196,18 +1194,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
-										label={__('Font Size (for selected text)', 'opentype-stylist')}
+										label={__('Font Size (for selected text)', 'typography-stylist')}
 										value={inlineFontSize}
 										onChange={(value) => setInlineFontSize(value)}
 										options={[
-											{ label: __('Inherit from block', 'opentype-stylist'), value: 'inherit' },
-											{ label: __('Responsive (fluid)', 'opentype-stylist'), value: 'responsive' }
+											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
+											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' }
 										]}
 									/>
 									{inlineFontSize === 'responsive' && (
 										<>
 											<RangeControl
-												label={__('Min Size (px)', 'opentype-stylist')}
+												label={__('Min Size (px)', 'typography-stylist')}
 												value={inlineFontSizeMin}
 												onChange={(value) => {
 													const validated = ensureValidFontSizeRange(value, inlineFontSizePreferred, inlineFontSizeMax);
@@ -1220,7 +1218,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												step={1}
 											/>
 											<RangeControl
-												label={__('Preferred Size (px)', 'opentype-stylist')}
+												label={__('Preferred Size (px)', 'typography-stylist')}
 												value={inlineFontSizePreferred}
 												onChange={(value) => {
 													const validated = ensureValidFontSizeRange(inlineFontSizeMin, value, inlineFontSizeMax);
@@ -1233,7 +1231,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												step={1}
 											/>
 											<RangeControl
-												label={__('Max Size (px)', 'opentype-stylist')}
+												label={__('Max Size (px)', 'typography-stylist')}
 												value={inlineFontSizeMax}
 												onChange={(value) => {
 													const validated = ensureValidFontSizeRange(inlineFontSizeMin, inlineFontSizePreferred, value);
@@ -1250,7 +1248,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												onClick={applyInlineFontSize}
 												style={{ marginTop: '8px', width: '100%' }}
 											>
-												{__('Apply Font Size', 'opentype-stylist')}
+												{__('Apply Font Size', 'typography-stylist')}
 											</Button>
 										</>
 									)}
@@ -1259,7 +1257,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Font Weight Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
-										label={__('Font Weight (for selected text)', 'opentype-stylist')}
+										label={__('Font Weight (for selected text)', 'typography-stylist')}
 										value={inlineFontWeight}
 										onChange={(value) => setInlineFontWeight(value)}
 										options={[
@@ -1279,7 +1277,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										onClick={applyInlineFontWeight}
 										style={{ marginTop: '8px', width: '100%' }}
 									>
-										{__('Apply Font Weight', 'opentype-stylist')}
+										{__('Apply Font Weight', 'typography-stylist')}
 									</Button>
 								</div>
 
@@ -1341,7 +1339,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									<div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f6fc', borderRadius: '4px', border: '1px solid #0783be' }}>
 										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
 											<h5 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#0783be' }}>
-												{__('Active Features:', 'opentype-stylist')}
+												{__('Active Features:', 'typography-stylist')}
 											</h5>
 											<Button
 												variant="secondary"
@@ -1350,7 +1348,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												onClick={clearInlineFormatting}
 												style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											>
-												{__('Clear All', 'opentype-stylist')}
+												{__('Clear All', 'typography-stylist')}
 											</Button>
 										</div>
 										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -1375,7 +1373,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								)}
 
 								<p style={{ fontSize: '12px', color: '#757575', marginBottom: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ddd' }}>
-									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'opentype-stylist')}
+									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'typography-stylist')}
 								</p>
 								</div>
 							</div>
@@ -1397,45 +1395,45 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				<ToolbarGroup>
 					<ToolbarDropdownMenu
 						icon="heading"
-						label={__('Change heading level', 'opentype-stylist')}
+						label={__('Change heading level', 'typography-stylist')}
 						controls={[
 							{
-								title: __('Heading 1', 'opentype-stylist'),
+								title: __('Heading 1', 'typography-stylist'),
 								isActive: tagName === 'h1',
 								onClick: () => setAttributes({ tagName: 'h1' })
 							},
 							{
-								title: __('Heading 2', 'opentype-stylist'),
+								title: __('Heading 2', 'typography-stylist'),
 								isActive: tagName === 'h2',
 								onClick: () => setAttributes({ tagName: 'h2' })
 							},
 							{
-								title: __('Heading 3', 'opentype-stylist'),
+								title: __('Heading 3', 'typography-stylist'),
 								isActive: tagName === 'h3',
 								onClick: () => setAttributes({ tagName: 'h3' })
 							},
 							{
-								title: __('Heading 4', 'opentype-stylist'),
+								title: __('Heading 4', 'typography-stylist'),
 								isActive: tagName === 'h4',
 								onClick: () => setAttributes({ tagName: 'h4' })
 							},
 							{
-								title: __('Heading 5', 'opentype-stylist'),
+								title: __('Heading 5', 'typography-stylist'),
 								isActive: tagName === 'h5',
 								onClick: () => setAttributes({ tagName: 'h5' })
 							},
 							{
-								title: __('Heading 6', 'opentype-stylist'),
+								title: __('Heading 6', 'typography-stylist'),
 								isActive: tagName === 'h6',
 								onClick: () => setAttributes({ tagName: 'h6' })
 							},
 							{
-								title: __('Paragraph', 'opentype-stylist'),
+								title: __('Paragraph', 'typography-stylist'),
 								isActive: tagName === 'p',
 								onClick: () => setAttributes({ tagName: 'p' })
 							},
 							{
-								title: __('Div', 'opentype-stylist'),
+								title: __('Div', 'typography-stylist'),
 								isActive: tagName === 'div',
 								onClick: () => setAttributes({ tagName: 'div' })
 							}
@@ -1450,11 +1448,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 			<InspectorControls>
 				{fontOptions.length > 0 && (
-					<PanelBody title={__('Font Family', 'opentype-stylist')} initialOpen={false}>
+					<PanelBody title={__('Font Family', 'typography-stylist')} initialOpen={false}>
 						<SelectControl
 							value={fontId ? String(fontId) : (fontFamily || '')}
 							options={[
-								{ label: __('(Default)', 'opentype-stylist'), value: '' },
+								{ label: __('(Default)', 'typography-stylist'), value: '' },
 								...fontOptions
 							]}
 							onChange={(value) => {
@@ -1483,27 +1481,27 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					</PanelBody>
 				)}
 
-				<PanelBody title={__('Font Weight', 'opentype-stylist')} initialOpen={false}>
+				<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
 						value={fontWeight}
 						options={[
-							{ label: __('100 - Thin', 'opentype-stylist'), value: '100' },
-							{ label: __('200 - Extra Light', 'opentype-stylist'), value: '200' },
-							{ label: __('300 - Light', 'opentype-stylist'), value: '300' },
-							{ label: __('400 - Normal', 'opentype-stylist'), value: '400' },
-							{ label: __('500 - Medium', 'opentype-stylist'), value: '500' },
-							{ label: __('600 - Semi Bold', 'opentype-stylist'), value: '600' },
-							{ label: __('700 - Bold', 'opentype-stylist'), value: '700' },
-							{ label: __('800 - Extra Bold', 'opentype-stylist'), value: '800' },
-							{ label: __('900 - Black', 'opentype-stylist'), value: '900' }
+							{ label: __('100 - Thin', 'typography-stylist'), value: '100' },
+							{ label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
+							{ label: __('300 - Light', 'typography-stylist'), value: '300' },
+							{ label: __('400 - Normal', 'typography-stylist'), value: '400' },
+							{ label: __('500 - Medium', 'typography-stylist'), value: '500' },
+							{ label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
+							{ label: __('700 - Bold', 'typography-stylist'), value: '700' },
+							{ label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
+							{ label: __('900 - Black', 'typography-stylist'), value: '900' }
 						]}
 						onChange={(value) => setAttributes({ fontWeight: value })}
 					/>
 				</PanelBody>
 
-				<PanelBody title={__('Letter Spacing', 'opentype-stylist')} initialOpen={false}>
+				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'opentype-stylist')}
+						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
 					</p>
 					<RangeControl
 						value={letterSpacing}
@@ -1511,18 +1509,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						min={-200}
 						max={200}
 						step={1}
-						help={letterSpacing === 0 ? __('Normal', 'opentype-stylist') : `${letterSpacing / 1000}em`}
+						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
 						allowReset
 						resetFallbackValue={0}
 					/>
 				</PanelBody>
 
-				<PanelBody title={__('Font Size', 'opentype-stylist')} initialOpen={false}>
+				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
 						value={fontSize}
 						options={[
-							{ label: __('Inherit', 'opentype-stylist'), value: 'inherit' },
-							{ label: __('Responsive (Fluid)', 'opentype-stylist'), value: 'responsive' }
+							{ label: __('Inherit', 'typography-stylist'), value: 'inherit' },
+							{ label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
 						]}
 						onChange={(value) => setAttributes({ fontSize: value })}
 					/>
@@ -1530,7 +1528,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					{fontSize === 'responsive' && (
 						<>
 							<RangeControl
-								label={__('Minimum Size (mobile)', 'opentype-stylist')}
+								label={__('Minimum Size (mobile)', 'typography-stylist')}
 								value={fontSizeMin}
 								onChange={(value) => setAttributes({ fontSizeMin: value })}
 								min={8}
@@ -1539,7 +1537,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								help={`${fontSizeMin}px`}
 							/>
 							<RangeControl
-								label={__('Preferred Size (tablet)', 'opentype-stylist')}
+								label={__('Preferred Size (tablet)', 'typography-stylist')}
 								value={fontSizePreferred}
 								onChange={(value) => setAttributes({ fontSizePreferred: value })}
 								min={8}
@@ -1548,7 +1546,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								help={`${fontSizePreferred}px`}
 							/>
 							<RangeControl
-								label={__('Maximum Size (desktop)', 'opentype-stylist')}
+								label={__('Maximum Size (desktop)', 'typography-stylist')}
 								value={fontSizeMax}
 								onChange={(value) => setAttributes({ fontSizeMax: value })}
 								min={8}
@@ -1560,9 +1558,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					)}
 				</PanelBody>
 
-				<PanelBody title={__('OpenType Features', 'opentype-stylist')} initialOpen={true}>
+				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'opentype-stylist')}
+						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
 					</p>
 					{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
 						<div key={category} className="ots-feature-category">
@@ -1580,34 +1578,34 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					))}
 				</PanelBody>
 
-				<PanelBody title={__('Accessibility', 'opentype-stylist')} initialOpen={false}>
+				<PanelBody title={__('Accessibility', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
-						label={__('Screen Reader Class', 'opentype-stylist')}
+						label={__('Screen Reader Class', 'typography-stylist')}
 						value={screenReaderClass}
 						options={[
 							{ label: 'visually-hidden', value: 'visually-hidden' },
 							{ label: 'sr-only', value: 'sr-only' },
 							{ label: 'screen-reader-text', value: 'screen-reader-text' },
-							{ label: __('Custom', 'opentype-stylist'), value: 'custom' }
+							{ label: __('Custom', 'typography-stylist'), value: 'custom' }
 						]}
 						onChange={(value) => setAttributes({ screenReaderClass: value })}
 					/>
 					{screenReaderClass === 'custom' && (
 						<TextControl
-							label={__('Custom Class Name', 'opentype-stylist')}
+							label={__('Custom Class Name', 'typography-stylist')}
 							value={screenReaderClass}
 							onChange={(value) => setAttributes({ screenReaderClass: value })}
-							help={__('Enter your theme\'s screen reader class', 'opentype-stylist')}
+							help={__('Enter your theme\'s screen reader class', 'typography-stylist')}
 						/>
 					)}
 					<p className="description">
-						{__('The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme.', 'opentype-stylist')}
+						{__('The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme.', 'typography-stylist')}
 					</p>
 				</PanelBody>
 
-				<PanelBody title={__('Reset Features', 'opentype-stylist')} initialOpen={false}>
+				<PanelBody title={__('Reset Features', 'typography-stylist')} initialOpen={false}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px' }}>
-						{__('Clear features and styling applied to this block.', 'opentype-stylist')}
+						{__('Clear features and styling applied to this block.', 'typography-stylist')}
 					</p>
 
 					{renderResetPanelContent()}
@@ -1619,7 +1617,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					tagName={tagName}
 					value={content}
 					onChange={(value) => setAttributes({ content: value })}
-					placeholder={__('Add text with advanced typography...', 'opentype-stylist')}
+					placeholder={__('Add text with advanced typography...', 'typography-stylist')}
 					style={buildStyle()}
 					className="ots-block-content"
 				/>

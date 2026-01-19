@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the Headline Ligatures and Styles package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Headline Ligatures and Styles 1.0.1\n"
+"Project-Id-Version: Typography Stylist 1.0.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
 "POT-Creation-Date: 2026-01-13 10:00+0000\n"
 "PO-Revision-Date: 2026-01-13 10:00+0000\n"
@@ -81,67 +81,67 @@ msgstr "Traitement en cours..."
 msgid "Upload Font Kit"
 msgstr "Téléverser un Kit de Polices"
 
-#: opentype-stylist.php:404
+#: typography-stylist.php:404
 msgid "Please enter a project name."
 msgstr "Veuillez saisir un nom de projet."
 
-#: opentype-stylist.php:405
+#: typography-stylist.php:405
 msgid "Please paste the Adobe Fonts embed code."
 msgstr "Veuillez coller le code d'intégration Adobe Fonts."
 
-#: opentype-stylist.php:406
+#: typography-stylist.php:406
 msgid "Adding..."
 msgstr "Ajout en cours..."
 
-#: opentype-stylist.php:407
+#: typography-stylist.php:407
 msgid "Adobe Fonts project added successfully! Reloading page..."
 msgstr "Projet Adobe Fonts ajouté avec succès ! Rechargement de la page..."
 
-#: opentype-stylist.php:408
+#: typography-stylist.php:408
 msgid "Failed to add Adobe Fonts project."
 msgstr "Échec de l'ajout du projet Adobe Fonts."
 
-#: opentype-stylist.php:409
+#: typography-stylist.php:409
 msgid "Add Adobe Fonts Project"
 msgstr "Ajouter un Projet Adobe Fonts"
 
-#: opentype-stylist.php:410
+#: typography-stylist.php:410
 msgid "Are you sure you want to delete this Adobe Fonts project?"
 msgstr "Êtes-vous sûr de vouloir supprimer ce projet Adobe Fonts ?"
 
-#: opentype-stylist.php:411
+#: typography-stylist.php:411
 msgid "Failed to delete Adobe Fonts project."
 msgstr "Échec de la suppression du projet Adobe Fonts."
 
-#: opentype-stylist.php:413
+#: typography-stylist.php:413
 msgid "Please enter a font name."
 msgstr "Veuillez saisir un nom de police."
 
-#: opentype-stylist.php:414
+#: typography-stylist.php:414
 msgid "Please enter a CSS font-family value."
 msgstr "Veuillez saisir une valeur CSS font-family."
 
-#: opentype-stylist.php:415
+#: typography-stylist.php:415
 msgid "Custom font added successfully! Reloading page..."
 msgstr "Police personnalisée ajoutée avec succès ! Rechargement de la page..."
 
-#: opentype-stylist.php:416
+#: typography-stylist.php:416
 msgid "Failed to add custom font."
 msgstr "Échec de l'ajout de la police personnalisée."
 
-#: opentype-stylist.php:417
+#: typography-stylist.php:417
 msgid "Add Custom Font"
 msgstr "Ajouter une Police Personnalisée"
 
-#: opentype-stylist.php:418
+#: typography-stylist.php:418
 msgid "Are you sure you want to delete this custom font?"
 msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
 
-#: opentype-stylist.php:419
+#: typography-stylist.php:419
 msgid "Failed to delete custom font."
 msgstr "Échec de la suppression de la police personnalisée."
 
-#: opentype-stylist.php:591
+#: typography-stylist.php:591
 msgid "Failed to update font loading setting."
 msgstr "Échec de la mise à jour du paramètre de chargement des polices."
 
@@ -285,16 +285,16 @@ msgstr "Échec de la création du répertoire de téléversement"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Échec de l'extraction du fichier ZIP. Veuillez vous assurer que le fichier est une archive ZIP valide."
 
-#: opentype-stylist.php:2159
+#: typography-stylist.php:2159
 msgid "No CSS file found in the font kit"
 msgstr "Aucun fichier CSS trouvé dans le kit de polices"
 
-#: opentype-stylist.php:2393
+#: typography-stylist.php:2393
 #, php-format
 msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
 msgstr "%d fichier(s) CSS trouvé(s) dans le kit de polices, mais aucun ne contient de déclarations @font-face valides. Veuillez vous assurer que le fichier ZIP contient une feuille de style webfont appropriée."
 
-#: opentype-stylist.php:2172
+#: typography-stylist.php:2172
 msgid "Invalid CSS file"
 msgstr "Fichier CSS invalide"
 
@@ -661,16 +661,16 @@ msgid "Preview the changes and click Apply"
 msgstr "Prévisualisez les modifications et cliquez sur Appliquer"
 
 #: includes/admin-page.php:1492
-msgid "Method 2: OpenType Stylist Block (Advanced)"
-msgstr "Méthode 2 : Bloc OpenType Stylist (Avancé)"
+msgid "Method 2: Typography Stylist Block (Advanced)"
+msgstr "Méthode 2 : Bloc Typography Stylist (Avancé)"
 
 #: includes/admin-page.php:1493
 msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
 msgstr "Utilisez cette méthode pour une typographie complexe, un style lettre par lettre ou lorsque des fonctionnalités d'accessibilité sont nécessaires."
 
 #: includes/admin-page.php:1495
-msgid "Add the \"OpenType Stylist\" block from the block inserter"
-msgstr "Ajoutez le bloc « OpenType Stylist » depuis l'outil d'insertion de blocs"
+msgid "Add the \"Typography Stylist\" block from the block inserter"
+msgstr "Ajoutez le bloc « Typography Stylist » depuis l'outil d'insertion de blocs"
 
 #: includes/admin-page.php:1496
 msgid "Choose heading level (H1-H6) in the sidebar"
@@ -761,8 +761,8 @@ msgid "Not all fonts support all features - check documentation and experiment"
 msgstr "Toutes les polices ne prennent pas en charge toutes les fonctionnalités - consultez la documentation et expérimentez"
 
 #: includes/admin-page.php:1526
-msgid "For partial word styling, use the OpenType Stylist block to maintain accessibility"
-msgstr "Pour le style de mots partiels, utilisez le bloc OpenType Stylist pour maintenir l'accessibilité"
+msgid "For partial word styling, use the Typography Stylist block to maintain accessibility"
+msgstr "Pour le style de mots partiels, utilisez le bloc Typography Stylist pour maintenir l'accessibilité"
 
 #: includes/admin-page.php:1531
 msgid "Technical Notes"
@@ -879,15 +879,15 @@ msgid "Other Features"
 msgstr "Autres Fonctionnalités"
 
 #: assets/js/block-editor.js:588
-msgid "OpenType Stylist"
+msgid "Typography Stylist"
 msgstr "Styliste OpenType"
 
 #: assets/js/block-editor.js:356
-msgid "For better accessibility, select complete words or phrases. Or convert to an OpenType Stylist block for accessible styling of partial words."
-msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou phrases complètes. Ou convertissez en bloc OpenType Stylist pour un style accessible des mots partiels."
+msgid "For better accessibility, select complete words or phrases. Or convert to a Typography Stylist block for accessible styling of partial words."
+msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou phrases complètes. Ou convertissez en bloc Typography Stylist pour un style accessible des mots partiels."
 
 #: assets/js/block-editor.js:832
-msgid "Convert to OpenType Stylist Block"
+msgid "Convert to Typography Stylist Block"
 msgstr "Convertir en Bloc Styliste OpenType"
 
 #: assets/js/block-editor.js:842
@@ -987,7 +987,7 @@ msgid "Accessibility Best Practices"
 msgstr "Meilleures Pratiques d'Accessibilité"
 
 #: includes/admin-page.php:868
-msgid "For complex typography with partial word styling, use the OpenType Stylist block instead of inline formats."
+msgid "For complex typography with partial word styling, use the Typography Stylist block instead of inline formats."
 msgstr "Pour une typographie complexe avec stylisation de mots partiels, utilisez le bloc Styliste OpenType au lieu des formats en ligne."
 
 #: includes/admin-page.php:869
@@ -1006,79 +1006,79 @@ msgstr "Le plugin vous avertira si vous tentez d'appliquer une mise en forme à 
 msgid "Accessibility settings saved successfully."
 msgstr "Paramètres d'accessibilité enregistrés avec succès."
 
-#: blocks/opentype-stylist/edit.js:5
+#: blocks/typography-stylist/edit.js:5
 msgid "Add text with advanced typography..."
 msgstr "Ajouter du texte avec typographie avancée..."
 
-#: blocks/opentype-stylist/edit.js:156
+#: blocks/typography-stylist/edit.js:156
 msgid "Change heading level"
 msgstr "Changer le niveau de titre"
 
-#: blocks/opentype-stylist/edit.js:159
+#: blocks/typography-stylist/edit.js:159
 msgid "Heading 1"
 msgstr "Titre 1"
 
-#: blocks/opentype-stylist/edit.js:164
+#: blocks/typography-stylist/edit.js:164
 msgid "Heading 2"
 msgstr "Titre 2"
 
-#: blocks/opentype-stylist/edit.js:169
+#: blocks/typography-stylist/edit.js:169
 msgid "Heading 3"
 msgstr "Titre 3"
 
-#: blocks/opentype-stylist/edit.js:174
+#: blocks/typography-stylist/edit.js:174
 msgid "Heading 4"
 msgstr "Titre 4"
 
-#: blocks/opentype-stylist/edit.js:179
+#: blocks/typography-stylist/edit.js:179
 msgid "Heading 5"
 msgstr "Titre 5"
 
-#: blocks/opentype-stylist/edit.js:184
+#: blocks/typography-stylist/edit.js:184
 msgid "Heading 6"
 msgstr "Titre 6"
 
-#: blocks/opentype-stylist/edit.js:189
+#: blocks/typography-stylist/edit.js:189
 msgid "Paragraph"
 msgstr "Paragraphe"
 
-#: blocks/opentype-stylist/edit.js:194
+#: blocks/typography-stylist/edit.js:194
 msgid "Div"
 msgstr "Div"
 
-#: blocks/opentype-stylist/edit.js:295
+#: blocks/typography-stylist/edit.js:295
 msgid "OpenType Features"
 msgstr "Fonctionnalités OpenType"
 
-#: blocks/opentype-stylist/edit.js:310
+#: blocks/typography-stylist/edit.js:310
 msgid "Screen Reader Class"
 msgstr "Classe de Lecteur d'Écran"
 
-#: blocks/opentype-stylist/edit.js:318
+#: blocks/typography-stylist/edit.js:318
 msgid "Custom"
 msgstr "Personnalisé"
 
-#: blocks/opentype-stylist/edit.js:325
+#: blocks/typography-stylist/edit.js:325
 msgid "Custom Class Name"
 msgstr "Nom de Classe Personnalisé"
 
-#: blocks/opentype-stylist/edit.js:328
+#: blocks/typography-stylist/edit.js:328
 msgid "Enter your theme's screen reader class"
 msgstr "Entrez la classe de lecteur d'écran de votre thème"
 
-#: blocks/opentype-stylist/edit.js:332
+#: blocks/typography-stylist/edit.js:332
 msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
 msgstr "La classe sélectionnée sera utilisée pour masquer le texte dupliqué pour les lecteurs d'écran. Assurez-vous que cette classe est définie dans votre thème."
 
-#: blocks/opentype-stylist/edit.js:799
+#: blocks/typography-stylist/edit.js:799
 msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
 msgstr "Ce contrôle applique l'espacement des lettres à l'ensemble du bloc. Pour appliquer l'espacement des lettres à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
 
-#: blocks/opentype-stylist/edit.js:855
+#: blocks/typography-stylist/edit.js:855
 msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
 msgstr "Ces contrôles appliquent des fonctionnalités à l'ensemble du bloc. Pour appliquer des fonctionnalités à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
 
-#: blocks/opentype-stylist/block.json:8
+#: blocks/typography-stylist/block.json:8
 msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
 msgstr "Typographie OpenType avancée avec prise en charge complète de l'accessibilité. Les paramètres du panneau de bloc s'appliquent à l'ensemble du bloc ; utilisez le bouton Basculer les fonctionnalités rapides pour les sélections individuelles."
 
@@ -1087,8 +1087,8 @@ msgid "Font could not be detected for this block type."
 msgstr "La police n'a pas pu être détectée pour ce type de bloc."
 
 #: assets/js/block-editor.js:1526
-msgid "For the best experience with OpenType features, consider using the OpenType Stylist block instead of the inline toolbar."
-msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envisagez d'utiliser le bloc OpenType Stylist au lieu de la barre d'outils en ligne."
+msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
+msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envisagez d'utiliser le bloc Typography Stylist au lieu de la barre d'outils en ligne."
 
 #: assets/js/block-editor.js:1572
 msgid "Click \"Apply\" below the preview to confirm changes."
@@ -1146,7 +1146,7 @@ msgstr "Sélectionner quelle police active doit remplacer la police supprimée"
 msgid "Add Replacement"
 msgstr "Ajouter un Remplacement"
 
-#: opentype-stylist.php:2799
+#: typography-stylist.php:2799
 msgid "Invalid font ID (0). Font IDs must be greater than 0."
 msgstr "ID de police invalide (0). Les IDs de police doivent être supérieurs à 0."
 

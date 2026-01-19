@@ -9,7 +9,7 @@
     verbose="true"
 >
     <testsuites>
-        <testsuite name="OpenType Stylist Test Suite">
+        <testsuite name="Typography Stylist Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>

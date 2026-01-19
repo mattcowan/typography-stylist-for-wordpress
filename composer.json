@@ -1,5 +1,5 @@
 {
-  "name": "opentype-stylist/opentype-stylist",
+  "name": "typography-stylist/typography-stylist",
   "description": "WordPress plugin for advanced OpenType typography features",
   "type": "wordpress-plugin",
   "require-dev": {
