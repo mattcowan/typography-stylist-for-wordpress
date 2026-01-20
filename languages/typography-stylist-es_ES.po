@@ -4,7 +4,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Typography Stylist 1.0.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/headline-ligatures-styles\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
 "POT-Creation-Date: 2026-01-13 10:00+0000\n"
 "PO-Revision-Date: 2026-01-13 10:00+0000\n"
 "Last-Translator: \n"
