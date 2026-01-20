@@ -1,10 +1,10 @@
-# Copyright (C) 2025 Typography Stylist
+# Copyright (C) 2026 Typography Stylist
 # This file is distributed under the same license as the Typography Stylist package.
 msgid ""
 msgstr ""
 "Project-Id-Version: Typography Stylist 1.1.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
-"POT-Creation-Date: 2026-01-19 10:00+0000\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/opentype-stylist\n"
+"POT-Creation-Date: 2026-01-19 23:36+0000\n"
 "PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -287,16 +287,11 @@ msgstr ""
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr ""
 
-#: opentype-stylist.php:2159
+#: opentype-stylist.php:1324
 msgid "No CSS file found in the font kit"
 msgstr ""
 
-#: opentype-stylist.php:2393
-#, php-format
-msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
-msgstr ""
-
-#: opentype-stylist.php:2172
+#: opentype-stylist.php:1330
 msgid "Invalid CSS file"
 msgstr ""
 
@@ -344,12 +339,12 @@ msgstr ""
 msgid "Help"
 msgstr ""
 
-#: includes/admin-page.php:153
-msgid "Font Features"
+#: includes/admin-page.php:95
+msgid "Feature Demonstrations"
 msgstr ""
 
-#: includes/admin-page.php:154
-msgid "Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography."
+#: includes/admin-page.php:96
+msgid "See how each OpenType feature affects your text. Compare the default rendering with each feature enabled."
 msgstr ""
 
 #: includes/admin-page.php:102
@@ -376,34 +371,6 @@ msgstr ""
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr ""
 
-#: includes/admin-page.php:243
-msgid "Custom Preview Text:"
-msgstr ""
-
-#: includes/admin-page.php:249
-msgid "Type your own text to preview features..."
-msgstr ""
-
-#: includes/admin-page.php:250
-msgid "Enter custom text to preview features"
-msgstr ""
-
-#: includes/admin-page.php:256
-msgid "Reset to Defaults"
-msgstr ""
-
-#: includes/admin-page.php:259
-msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
-msgstr ""
-
-#: includes/admin-page.php:266
-msgid "Font Preview (No Features Applied)"
-msgstr ""
-
-#: includes/admin-page.php:268
-msgid "This shows how the selected font looks without any OpenType features applied."
-msgstr ""
-
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr ""
@@ -420,7 +387,11 @@ msgstr ""
 msgid "Decorative"
 msgstr ""
 
-#: includes/admin-page.php:302
+#: includes/admin-page.php:186
+msgid "Default:"
+msgstr ""
+
+#: includes/admin-page.php:193
 msgid "With Feature:"
 msgstr ""
 
@@ -518,55 +489,47 @@ msgstr ""
 msgid "How to use:"
 msgstr ""
 
-#: includes/admin-page.php:735
-msgid "Download your webfont kit from your font provider"
+#: includes/admin-page.php:376
+msgid "Download your webfont kit from MyFonts, Fontspring, or another provider"
 msgstr ""
 
-#: includes/admin-page.php:736
+#: includes/admin-page.php:377
 msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
 msgstr ""
 
-#: includes/admin-page.php:737
+#: includes/admin-page.php:378
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr ""
 
-#: includes/admin-page.php:738
+#: includes/admin-page.php:379
 msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
 msgstr ""
 
-#: includes/admin-page.php:739
+#: includes/admin-page.php:380
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
 msgstr ""
 
-#: includes/admin-page.php:741
+#: includes/admin-page.php:382
 msgid "What should the ZIP contain:"
 msgstr ""
 
-#: includes/admin-page.php:743
-msgid "A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)"
+#: includes/admin-page.php:384
+msgid "A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)"
 msgstr ""
 
-#: includes/admin-page.php:744
+#: includes/admin-page.php:385
 msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
 msgstr ""
 
-#: includes/admin-page.php:745
+#: includes/admin-page.php:386
 msgid "The directory structure must match the paths in the CSS file"
 msgstr ""
 
-#: includes/admin-page.php:747
-msgid "Compatibility Note:"
-msgstr ""
-
-#: includes/admin-page.php:747
-msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
-msgstr ""
-
-#: includes/admin-page.php:748
+#: includes/admin-page.php:388
 msgid "Note:"
 msgstr ""
 
-#: includes/admin-page.php:748
+#: includes/admin-page.php:388
 msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
 msgstr ""
 
@@ -638,172 +601,100 @@ msgstr ""
 msgid "Decorative ornaments and symbols"
 msgstr ""
 
-#: includes/admin-page.php:1480
+#: includes/admin-page.php:519
 msgid "How to Use"
 msgstr ""
 
-#: includes/admin-page.php:1482
-msgid "Method 1: Inline Format (Quick Styling)"
+#: includes/admin-page.php:522
+msgid "Basic Usage"
 msgstr ""
 
-#: includes/admin-page.php:1483
-msgid "Use this method for applying features to complete words or phrases in any heading or paragraph block."
+#: includes/admin-page.php:524
+msgid "Create or edit a heading block (H1-H6) in the block editor"
 msgstr ""
 
-#: includes/admin-page.php:1485
-msgid "Create or edit a heading (H1-H6) or paragraph block"
+#: includes/admin-page.php:525
+msgid "Type your headline text"
 msgstr ""
 
-#: includes/admin-page.php:1486
-msgid "Select the complete word(s) you want to style"
+#: includes/admin-page.php:526
+msgid "Select the text you want to style"
 msgstr ""
 
-#: includes/admin-page.php:1487
-msgid "Click the \"Typography Features\" button in the toolbar"
+#: includes/admin-page.php:527
+msgid "Click the \"Typography Features\" button in the toolbar (icon with decorative \"A\")"
 msgstr ""
 
-#: includes/admin-page.php:1488
-msgid "Choose a preset or toggle individual features"
+#: includes/admin-page.php:528
+msgid "Choose a preset or select individual features"
 msgstr ""
 
-#: includes/admin-page.php:1489
-msgid "Preview the changes and click Apply"
+#: includes/admin-page.php:529
+msgid "See the live preview and save"
 msgstr ""
 
-#: includes/admin-page.php:1492
-msgid "Method 2: Typography Stylist Block (Advanced)"
+#: includes/admin-page.php:534
+msgid "Best Fonts for Advanced Typography"
 msgstr ""
 
-#: includes/admin-page.php:1493
-msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
+#: includes/admin-page.php:535
+msgid "This plugin works best with fonts that support OpenType features. Recommended script fonts:"
 msgstr ""
 
-#: includes/admin-page.php:1495
-msgid "Add the \"Typography Stylist\" block from the block inserter"
+#: includes/admin-page.php:537
+msgid "by Alejandro Paul - Elegant connecting script"
 msgstr ""
 
-#: includes/admin-page.php:1496
-msgid "Choose heading level (H1-H6) in the sidebar"
+#: includes/admin-page.php:538
+msgid "by Alejandro Paul - Romantic calligraphy"
 msgstr ""
 
-#: includes/admin-page.php:1497
-msgid "Use sidebar controls for font family, size, and OpenType features"
+#: includes/admin-page.php:539
+msgid "by Alejandro Paul - Casual handwritten style"
 msgstr ""
 
-#: includes/admin-page.php:1498
-msgid "For inline text styling, select text to show the quick feature popover"
+#: includes/admin-page.php:540
+msgid "by Alejandro Paul - Vintage commercial script"
 msgstr ""
 
-#: includes/admin-page.php:1503
-msgid "Choosing Fonts for OpenType Features"
+#: includes/admin-page.php:542
+msgid "Load your fonts using @font-face in your theme or a plugin like Adobe Fonts or Google Fonts."
 msgstr ""
 
-#: includes/admin-page.php:1504
-msgid "This plugin works with fonts that include advanced typographical features and alternate glyphs."
+#: includes/admin-page.php:546
+msgid "Tips for Script Fonts"
 msgstr ""
 
-#: includes/admin-page.php:1506
-msgid "Font Types with OpenType Support:"
+#: includes/admin-page.php:548
+msgid "Enable \"Contextual Alternates\" (calt) for natural letter connections"
 msgstr ""
 
-#: includes/admin-page.php:1508
-msgid "Script & Calligraphy Fonts"
+#: includes/admin-page.php:549
+msgid "Use swashes sparingly on first or last letters only"
 msgstr ""
 
-#: includes/admin-page.php:1508
-msgid "Often include contextual alternates, swashes, and stylistic sets"
+#: includes/admin-page.php:550
+msgid "Try different stylistic sets to find the best look"
 msgstr ""
 
-#: includes/admin-page.php:1509
-msgid "Serif Display Fonts"
+#: includes/admin-page.php:551
+msgid "Test your headlines at the actual display size"
 msgstr ""
 
-#: includes/admin-page.php:1509
-msgid "May feature titling alternates and ligatures"
+#: includes/admin-page.php:552
+msgid "Not all fonts support all features - experiment!"
 msgstr ""
 
-#: includes/admin-page.php:1510
-msgid "Professional Typefaces"
-msgstr ""
-
-#: includes/admin-page.php:1510
-msgid "Many include discretionary ligatures and stylistic alternates"
-msgstr ""
-
-#: includes/admin-page.php:1511
-msgid "Ornamental Fonts"
-msgstr ""
-
-#: includes/admin-page.php:1511
-msgid "Can contain ornaments and special character sets"
-msgstr ""
-
-#: includes/admin-page.php:1514
-msgid "Upload fonts via the Custom Fonts tab, or load them through your theme or font service."
-msgstr ""
-
-#: includes/admin-page.php:1518
-msgid "Tips for Using OpenType Features"
-msgstr ""
-
-#: includes/admin-page.php:1520
-msgid "Start with contextual alternates (calt) for automatic character substitutions"
-msgstr ""
-
-#: includes/admin-page.php:1521
-msgid "Use swashes sparingly on initial or terminal letters only"
-msgstr ""
-
-#: includes/admin-page.php:1522
-msgid "Experiment with stylistic sets (ss01-ss20) to discover alternate designs"
-msgstr ""
-
-#: includes/admin-page.php:1523
-msgid "Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application"
-msgstr ""
-
-#: includes/admin-page.php:1524
-msgid "Preview at actual display size - features may look different at various scales"
-msgstr ""
-
-#: includes/admin-page.php:1525
-msgid "Not all fonts support all features - check documentation and experiment"
-msgstr ""
-
-#: includes/admin-page.php:1526
-msgid "For partial word styling, use the Typography Stylist block to maintain accessibility"
-msgstr ""
-
-#: includes/admin-page.php:1531
+#: includes/admin-page.php:557
 msgid "Technical Notes"
 msgstr ""
 
-#: includes/admin-page.php:1532
-msgid "Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required."
+#: includes/admin-page.php:558
+msgid "This plugin applies CSS font-feature-settings to selected text using inline styles. The features are stored as data attributes on span elements within your content."
 msgstr ""
 
-#: includes/admin-page.php:1533
-msgid "Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support."
-msgstr ""
-
-#: includes/admin-page.php:1534
-msgid "Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads."
-msgstr ""
-
-#: includes/admin-page.php:1539
-msgid "Looking for high-fidelity implementation?"
-msgstr ""
-
-#: includes/admin-page.php:1541
-msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
-msgstr ""
-
-#: includes/admin-page.php:1545
-msgid "Contact me at matt@mnc4.com"
-msgstr ""
-
-#: includes/admin-page.php:1549
-msgid "Buy me a coffee ☕"
+#: includes/admin-page.php:559
+msgid "Browser support: All modern browsers support OpenType features. Internet Explorer 10+ has partial support."
 msgstr ""
 
 #: assets/js/block-editor.js:11
@@ -816,16 +707,6 @@ msgstr ""
 
 #: assets/js/block-editor.js:457
 msgid "Font Family"
-msgstr ""
-
-#: includes/admin-page.php:366
-msgid "%d font"
-msgid_plural "%d fonts"
-msgstr[0] ""
-msgstr[1] ""
-
-#: includes/admin-page.php:413
-msgid "Font Family:"
 msgstr ""
 
 #: assets/js/block-editor.js:461
@@ -886,299 +767,4 @@ msgstr ""
 
 #: assets/js/block-editor.js:598
 msgid "Other Features"
-msgstr ""
-
-#: assets/js/block-editor.js:857
-#, php-format
-msgid "Click to apply %s feature"
-msgstr ""
-
-#: assets/js/block-editor.js:858
-#, php-format
-msgid "Click to apply %s"
-msgstr ""
-
-#: assets/js/block-editor.js:1162
-msgid "Undo last change"
-msgstr ""
-
-#: assets/js/block-editor.js:1163
-msgid "Undo"
-msgstr ""
-
-#: includes/admin-page.php:900
-msgid "Clear Button Confirmation"
-msgstr ""
-
-#: includes/admin-page.php:912
-msgid "Show confirmation when clearing typography features"
-msgstr ""
-
-#: includes/admin-page.php:915
-msgid "When enabled, the Clear button will show a confirmation dialog before removing all formatting. Users can disable this on a per-session basis."
-msgstr ""
-
-#: includes/admin-page.php:1289
-msgid "Variable Font Weights"
-msgstr ""
-
-#: includes/admin-page.php:1301
-msgid "Allow custom font-weight values (1-1000) for variable fonts"
-msgstr ""
-
-#: includes/admin-page.php:1304
-msgid "When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts."
-msgstr ""
-
-#: assets/js/block-editor.js:1825
-msgid "Do not show this warning again (this session)"
-msgstr ""
-
-#: assets/js/block-editor.js:1832
-msgid "Clear All Typography Settings?"
-msgstr ""
-
-#: assets/js/block-editor.js:1833
-msgid "Clear All Settings"
-msgstr ""
-
-#: assets/js/block-editor.js:1835
-msgid "This will remove all typography features, font selections, and styling."
-msgstr ""
-
-#: blocks/opentype-stylist/edit.js:171
-msgid "OpenType Features"
-msgstr ""
-
-#: blocks/opentype-stylist/edit.js:182
-msgid "Quick Feature Toggles"
-msgstr ""
-
-#: blocks/opentype-stylist/edit.js:244
-msgid "For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar."
-msgstr ""
-
-#: blocks/opentype-stylist/edit.js:799
-msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
-msgstr ""
-
-#: blocks/opentype-stylist/edit.js:855
-msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
-msgstr ""
-
-#: blocks/opentype-stylist/block.json:8
-msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
-msgstr ""
-
-#: assets/js/block-editor.js:1523
-msgid "Font could not be detected for this block type."
-msgstr ""
-
-#: assets/js/block-editor.js:1526
-msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
-msgstr ""
-
-#: assets/js/block-editor.js:1572
-msgid "Click \"Apply\" below the preview to confirm changes."
-msgstr ""
-
-#: includes/admin-page.php:729
-msgid "How to use custom font definitions:"
-msgstr ""
-
-#: includes/admin-page.php:315
-msgid "Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor, and you can edit fallback fonts for each kit."
-msgstr ""
-
-#: includes/admin-page.php:713
-msgid "Add fonts from Adobe Fonts by pasting the embed code from your Adobe Fonts project. Once added, you can edit fallback fonts for each font family."
-msgstr ""
-
-#: includes/admin-page.php:331
-#, php-format
-msgid "Edit fallback fonts for: %s"
-msgstr ""
-
-#: includes/admin-page.php:333
-#: includes/admin-page.php:544
-msgid "Edit Fallbacks"
-msgstr ""
-
-#: includes/admin-page.php:395
-#: includes/admin-page.php:606
-msgid "Fallback Fonts (optional):"
-msgstr ""
-
-#: includes/admin-page.php:410
-#: includes/admin-page.php:621
-#: includes/admin-page.php:803
-msgid "Save Changes"
-msgstr ""
-
-#: includes/admin-page.php:413
-#: includes/admin-page.php:624
-#: includes/admin-page.php:806
-msgid "Cancel"
-msgstr ""
-
-#: includes/admin-page.php:728
-#, php-format
-msgid "Edit custom font: %s"
-msgstr ""
-
-#: includes/admin-page.php:730
-msgid "Edit"
-msgstr ""
-
-#: opentype-stylist.php:648
-msgid "Saving..."
-msgstr ""
-
-#: opentype-stylist.php:650
-msgid "Fallback fonts updated successfully! Reloading page..."
-msgstr ""
-
-#: opentype-stylist.php:651
-msgid "Failed to update fallback fonts."
-msgstr ""
-
-#: opentype-stylist.php:652
-msgid "Font updated successfully! Reloading page..."
-msgstr ""
-
-#: opentype-stylist.php:653
-msgid "Failed to update font."
-msgstr ""
-
-#: opentype-stylist.php:2148
-#: opentype-stylist.php:2226
-msgid "Fallbacks parameter is required"
-msgstr ""
-
-#: opentype-stylist.php:2359
-msgid "Font family parameter is required"
-msgstr ""
-
-#: opentype-stylist.php:2375
-msgid "Manual font not found"
-msgstr ""
-
-#: includes/admin-page.php:119
-msgid "Replacement Fonts"
-msgstr ""
-
-#: includes/admin-page.php:1138
-msgid "When a font is deleted, you can map it to a replacement font. Content using the deleted font will automatically display with the replacement."
-msgstr ""
-
-#: includes/admin-page.php:1143
-msgid "No font replacements configured."
-msgstr ""
-
-#: includes/admin-page.php:1305
-msgid "Add New Replacement Mapping"
-msgstr ""
-
-#: includes/admin-page.php:1306
-msgid "Manually create a replacement mapping for a font ID that was previously deleted."
-msgstr ""
-
-#: includes/admin-page.php:1311
-msgid "Deleted Font ID:"
-msgstr ""
-
-#: includes/admin-page.php:1314
-msgid "Select a deleted font ID..."
-msgstr ""
-
-#: includes/admin-page.php:1318
-msgid "Select a font ID that was previously deleted (available IDs shown)"
-msgstr ""
-
-#: includes/admin-page.php:1324
-msgid "Replacement Font:"
-msgstr ""
-
-#: includes/admin-page.php:1327
-msgid "Select a replacement font..."
-msgstr ""
-
-#: includes/admin-page.php:1331
-msgid "Select which active font should replace the deleted font"
-msgstr ""
-
-#: includes/admin-page.php:1337
-msgid "Add Replacement"
-msgstr ""
-
-#: opentype-stylist.php:2799
-msgid "Invalid font ID (0). Font IDs must be greater than 0."
-msgstr ""
-
-#: includes/admin-page.php:1147
-msgid "Unassigned Font IDs"
-msgstr ""
-
-#: includes/admin-page.php:1148
-msgid "These font IDs are referenced in your replacement mappings but no longer have active fonts. Assign replacements to restore functionality."
-msgstr ""
-
-#: includes/admin-page.php:1213
-msgid "Delete Font"
-msgstr ""
-
-#: includes/admin-page.php:1214
-msgid "Close"
-msgstr ""
-
-#: includes/admin-page.php:1217
-msgid "Assign a fallback for existing uses of this font?"
-msgstr ""
-
-#: includes/admin-page.php:1218
-msgid "Content will automatically use the replacement font. You can change this later in Replacement Fonts."
-msgstr ""
-
-#: includes/admin-page.php:1222
-msgid "Replacement Font:"
-msgstr ""
-
-#: includes/admin-page.php:1225
-msgid "— No Replacement (Skip) —"
-msgstr ""
-
-#: includes/admin-page.php:1233
-msgid "Load replacement globally"
-msgstr ""
-
-#: includes/admin-page.php:1235
-msgid "Forces this replacement to load on all pages, even if the deleted font is not detected."
-msgstr ""
-
-#: includes/admin-page.php:1239
-msgid "Cancel"
-msgstr ""
-
-#: opentype-stylist.php:2707
-msgid "Missing required parameters."
-msgstr ""
-
-#: opentype-stylist.php:2716
-msgid "Failed to add font replacement."
-msgstr ""
-
-#: opentype-stylist.php:2728
-msgid "Missing font ID."
-msgstr ""
-
-#: opentype-stylist.php:2737
-msgid "Failed to update font replacement."
-msgstr ""
-
-#: opentype-stylist.php:2756
-msgid "Failed to delete font replacement."
-msgstr ""
-
-#: opentype-stylist.php:720
-msgid "Font deleted successfully! Reloading page..."
 msgstr ""

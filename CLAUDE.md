@@ -13,7 +13,7 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 **Main Plugin File:** [typography-stylist.php](typography-stylist.php)
 - Singleton class `OpenType_Stylist` handles all WordPress integration
 - Enqueues block editor and frontend assets
-- Registers REST API endpoints at `/wp-json/ots/v1/`
+- Registers REST API endpoints at `/wp-json/typography-stylist/v1/`
 - Manages presets stored in `wp_options` table (`ots_presets`)
 - Constants: `OTS_VERSION`, `OTS_PLUGIN_DIR`, `OTS_PLUGIN_URL`, `OTS_PLUGIN_BASENAME`
 
@@ -35,7 +35,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **When:** Use for complex typography with accessibility features or when styling partial words
    - **Components:**
      - **Inspector Controls (Sidebar):** Block-level settings for font family, weight, size, letter spacing, and OpenType features
-     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="ots-styled">` elements (similar to inline editor but scoped to OTS block content)
+     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="ots-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to OTS block content)
    - **Features:**
      - Dual content approach: clean semantic heading for screen readers, styled version for visual display
      - Built with JSX/React using `@wordpress/scripts` build toolchain
@@ -61,26 +61,26 @@ The plugin provides two distinct interfaces for applying OpenType features:
 ### REST API Endpoints
 
 **Presets:**
-- `GET /wp-json/ots/v1/presets` - Get all presets
-- `POST /wp-json/ots/v1/presets` - Save new preset (requires `edit_posts` capability)
-- `DELETE /wp-json/ots/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
+- `GET /wp-json/typography-stylist/v1/presets` - Get all presets
+- `POST /wp-json/typography-stylist/v1/presets` - Save new preset (requires `edit_posts` capability)
+- `DELETE /wp-json/typography-stylist/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
 
 **Custom Fonts (Uploaded Webfont Kits):**
-- `GET /wp-json/ots/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/ots/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
-- `PATCH /wp-json/ots/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/typography-stylist/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
+- `PATCH /wp-json/typography-stylist/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Adobe Fonts (Typekit):**
-- `GET /wp-json/ots/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/ots/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
-- `PATCH /wp-json/ots/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/typography-stylist/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
+- `PATCH /wp-json/typography-stylist/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Custom Font Definitions (Theme/Plugin/CDN Fonts):**
-- `GET /wp-json/ots/v1/manual-fonts` - Get custom font definitions
-- `POST /wp-json/ots/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/typography-stylist/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)

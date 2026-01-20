@@ -201,7 +201,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             // Check if user has disabled warning for this session
             let hideWarning = false;
             try {
-                hideWarning = sessionStorage.getItem('ots_hide_clear_warning') === 'true';
+                hideWarning = sessionStorage.getItem('typography_stylist_hide_clear_warning') === 'true';
             } catch (e) {
                 // Session storage might not be available
                 if (window && window.console && typeof window.console.warn === 'function') {
@@ -1202,7 +1202,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 attributes['style'] = styleString;
 
                 // Add aria-label if enabled for accessibility
-                if (otsData.enableAriaLabels && value) {
+                if (typographyStylistData.enableAriaLabels && value) {
                     const selectedText = value.start !== value.end
                         ? getTextContent(slice(value, value.start, value.end))
                         : getTextContent(value);
@@ -1274,7 +1274,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 attributes['style'] = styleString;
 
                 // Add aria-label if enabled for accessibility (in force apply)
-                if (otsData.enableAriaLabels && value) {
+                if (typographyStylistData.enableAriaLabels && value) {
                     const selectedText = value.start !== value.end
                         ? getTextContent(slice(value, value.start, value.end))
                         : getTextContent(value);
@@ -1312,7 +1312,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         handleClearClick() {
             // Check if confirmation is enabled globally and not disabled for this session
-            const showConfirmation = otsData.showClearConfirmation && !this.state.dontShowClearWarning;
+            const showConfirmation = typographyStylistData.showClearConfirmation && !this.state.dontShowClearWarning;
 
             if (showConfirmation) {
                 // Show confirmation modal
@@ -1335,7 +1335,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 if (this.state.dontShowClearWarning) {
                     // Store in session storage so it persists for this session only
                     try {
-                        sessionStorage.setItem('ots_hide_clear_warning', 'true');
+                        sessionStorage.setItem('typography_stylist_hide_clear_warning', 'true');
                     } catch (e) {
                         // Session storage might not be available
                     }
@@ -1396,7 +1396,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          * Group features by category
          */
         groupFeatures() {
-            const features = otsData.features || [];
+            const features = typographyStylistData.features || [];
             const grouped = {};
 
             features.forEach(feature => {
@@ -1414,9 +1414,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          * Get font options for select control
          */
         getFontOptions() {
-            const fonts = otsData.fonts || [];
-            const adobeFonts = otsData.adobeFonts || [];
-            const manualFonts = otsData.manualFonts || [];
+            const fonts = typographyStylistData.fonts || [];
+            const adobeFonts = typographyStylistData.adobeFonts || [];
+            const manualFonts = typographyStylistData.manualFonts || [];
             const options = [];
 
             // Build font ID map for quick lookup (clear before repopulating)
@@ -1799,7 +1799,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             const { isActive, isInOTSBlock = false } = this.props;
             const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
-            const presets = otsData.presets || [];
+            const presets = typographyStylistData.presets || [];
             const fontOptions = this.getFontOptions();
             const hasFonts = fontOptions.length > 0;
 

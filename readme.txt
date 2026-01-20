@@ -262,7 +262,7 @@ Typography features are stored as inline styles and data attributes within post 
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/ots/v1/`.
+Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/typography-stylist/v1/`.
 
 = Font Management =
 

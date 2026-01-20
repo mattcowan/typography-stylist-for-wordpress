@@ -66,6 +66,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
 	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('400');
+	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
 
@@ -517,7 +518,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	});
 
 	// Get available features from localized data
-	const availableFeatures = window.otsData?.features || [];
+	const availableFeatures = window.typographyStylistData?.features || [];
 	const groupedFeatures = {};
 	availableFeatures.forEach(feature => {
 		const category = feature.category || 'other';
@@ -530,9 +531,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Get font options
 	const fontOptions = [];
 	const fontIdMap = {}; // Map font ID to font object
-	const fonts = window.otsData?.fonts || [];
-	const adobeFonts = window.otsData?.adobeFonts || [];
-	const manualFonts = window.otsData?.manualFonts || [];
+	const fonts = window.typographyStylistData?.fonts || [];
+	const adobeFonts = window.typographyStylistData?.adobeFonts || [];
+	const manualFonts = window.typographyStylistData?.manualFonts || [];
 
 	// Add uploaded fonts
 	fonts.forEach(font => {
@@ -807,6 +808,45 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						'data-fontweight': inlineFontWeight
 					};
 					const styleString = `font-weight: ${inlineFontWeight}`;
+
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+					if (success) {
+						setAttributes({ content: container.innerHTML });
+					}
+				}
+
+			}
+		}
+	};
+
+	// Apply font family to selected text only (inline)
+	const applyInlineFontFamily = () => {
+		if (!content || !inlineFontFamily) return;
+
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					// Get font details from fontIdMap
+					const fontData = fontIdMap[inlineFontFamily];
+					const fontFamily = fontData?.family || '';
+					const fallbacks = fontData?.fallbacks || '';
+					const fullFontFamily = fallbacks ? `${fontFamily}, ${fallbacks}` : fontFamily;
+
+					const attributes = {
+						'data-fontfamily': inlineFontFamily
+					};
+					const styleString = `font-family: ${fullFontFamily}`;
 
 					const success = applyOrMergeStyling(range, attributes, styleString, doc);
 					if (success) {
@@ -1251,6 +1291,29 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												{__('Apply Font Size', 'typography-stylist')}
 											</Button>
 										</>
+									)}
+								</div>
+
+								{/* Font Family Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Font Family (for selected text)', 'typography-stylist')}
+										value={inlineFontFamily}
+										onChange={(value) => setInlineFontFamily(value)}
+										options={[
+											{ label: __('Select a font...', 'typography-stylist'), value: '' },
+											...fontOptions
+										]}
+										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
+									/>
+									{inlineFontFamily && (
+										<Button
+											variant="primary"
+											onClick={applyInlineFontFamily}
+											style={{ marginTop: '8px', width: '100%' }}
+										>
+											{__('Apply Font Family', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 

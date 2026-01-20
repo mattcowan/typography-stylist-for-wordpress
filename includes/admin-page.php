@@ -14,14 +14,14 @@ if (!current_user_can('manage_options')) {
 }
 
 // Save settings (with proper sanitization)
-if (isset($_POST['ots_save_settings']) &&
-    check_admin_referer('ots_settings_nonce') &&
+if (isset($_POST['typography_stylist_save_settings']) &&
+    check_admin_referer('typography_stylist_settings_nonce') &&
     current_user_can('manage_options')) {
 
     // Use proper sanitization via registered settings
-    if (isset($_POST['ots_presets'])) {
-        $sanitized = Typography_Stylist::get_instance()->sanitize_presets(wp_unslash($_POST['ots_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        update_option('ots_presets', $sanitized);
+    if (isset($_POST['typography_stylist_presets'])) {
+        $sanitized = Typography_Stylist::get_instance()->sanitize_presets(wp_unslash($_POST['typography_stylist_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+        update_option('typography_stylist_presets', $sanitized);
 
         // Clear cache
         Typography_Stylist::get_instance()->clear_cache();
@@ -33,18 +33,18 @@ if (isset($_POST['ots_save_settings']) &&
 }
 
 // Save options settings
-if (isset($_POST['ots_save_options_settings']) &&
-    check_admin_referer('ots_options_settings_nonce') &&
+if (isset($_POST['typography_stylist_save_options_settings']) &&
+    check_admin_referer('typography_stylist_options_settings_nonce') &&
     current_user_can('manage_options')) {
 
     // Get previous value to detect changes
-    $previous_show_clear_confirmation = (bool) get_option('ots_show_clear_confirmation', true);
-    $show_clear_confirmation = isset($_POST['ots_show_clear_confirmation']) ? '1' : '0';
-    update_option('ots_show_clear_confirmation', $show_clear_confirmation);
+    $previous_show_clear_confirmation = (bool) get_option('typography_stylist_show_clear_confirmation', true);
+    $show_clear_confirmation = isset($_POST['typography_stylist_show_clear_confirmation']) ? '1' : '0';
+    update_option('typography_stylist_show_clear_confirmation', $show_clear_confirmation);
 
     // Save variable weight setting
-    $allow_variable = isset($_POST['ots_allow_variable_weights']) ? '1' : '0';
-    update_option('ots_allow_variable_weights', $allow_variable);
+    $allow_variable = isset($_POST['typography_stylist_allow_variable_weights']) ? '1' : '0';
+    update_option('typography_stylist_allow_variable_weights', $allow_variable);
 
     // Clear cache for all users only when the clear confirmation setting changes
     if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
@@ -57,13 +57,13 @@ if (isset($_POST['ots_save_options_settings']) &&
 }
 
 // Save accessibility settings
-if (isset($_POST['ots_save_accessibility_settings']) &&
-    check_admin_referer('ots_accessibility_settings_nonce') &&
+if (isset($_POST['typography_stylist_save_accessibility_settings']) &&
+    check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
     current_user_can('manage_options')) {
 
     // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
-    $enable_aria = isset($_POST['ots_enable_aria_labels']) ? '1' : '0';
-    update_option('ots_enable_aria_labels', $enable_aria);
+    $enable_aria = isset($_POST['typography_stylist_enable_aria_labels']) ? '1' : '0';
+    update_option('typography_stylist_enable_aria_labels', $enable_aria);
 
     // Clear cache when accessibility settings change
     Typography_Stylist::get_instance()->clear_cache();
@@ -75,7 +75,7 @@ if (isset($_POST['ots_save_accessibility_settings']) &&
 
 $instance = Typography_Stylist::get_instance();
 $presets = $instance->get_presets();
-$custom_fonts = get_option('ots_custom_fonts', array());
+$custom_fonts = get_option('typography_stylist_custom_fonts', array());
 $adobe_fonts = $instance->get_adobe_fonts();
 $manual_fonts = $instance->get_manual_fonts();
 ?>
@@ -1049,6 +1049,7 @@ $manual_fonts = $instance->get_manual_fonts();
                             <?php esc_html_e('Adobe Fonts Embed Code:', 'typography-stylist'); ?>
                             <span class="required" aria-label="<?php esc_attr_e('required', 'typography-stylist'); ?>">*</span>
                         </label>
+                        <!-- phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- Placeholder text showing example format -->
                         <textarea
                             id="ots-adobe-embed-code"
                             name="ots-adobe-embed-code"
@@ -1261,7 +1262,7 @@ $manual_fonts = $instance->get_manual_fonts();
             <p><?php esc_html_e('Configure general plugin settings and user experience preferences.', 'typography-stylist'); ?></p>
 
             <form method="post" action="">
-                <?php wp_nonce_field('ots_options_settings_nonce'); ?>
+                <?php wp_nonce_field('typography_stylist_options_settings_nonce'); ?>
 
                 <table class="form-table" role="presentation">
                     <tbody>
@@ -1277,7 +1278,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                     id="ots_show_clear_confirmation"
                                     name="ots_show_clear_confirmation"
                                     value="1"
-                                    <?php checked(get_option('ots_show_clear_confirmation', true)); ?>
+                                    <?php checked(get_option('typography_stylist_show_clear_confirmation', true)); ?>
                                 />
                                 <label for="ots_show_clear_confirmation">
                                     <?php esc_html_e('Show confirmation when clearing typography features', 'typography-stylist'); ?>
@@ -1306,7 +1307,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                     id="ots_allow_variable_weights"
                                     name="ots_allow_variable_weights"
                                     value="1"
-                                    <?php checked(get_option('ots_allow_variable_weights', false)); ?>
+                                    <?php checked(get_option('typography_stylist_allow_variable_weights', false)); ?>
                                 />
                                 <label for="ots_allow_variable_weights">
                                     <?php esc_html_e('Allow custom font-weight values (1-1000) for variable fonts', 'typography-stylist'); ?>
@@ -1348,7 +1349,7 @@ $manual_fonts = $instance->get_manual_fonts();
             </div>
 
             <form method="post" action="">
-                <?php wp_nonce_field('ots_accessibility_settings_nonce'); ?>
+                <?php wp_nonce_field('typography_stylist_accessibility_settings_nonce'); ?>
 
                 <h3><?php esc_html_e('Optional Screen Reader Enhancement', 'typography-stylist'); ?></h3>
                 <p><?php esc_html_e('Configure aria-label support for inline formatted text (standard heading blocks, paragraph blocks, etc.).', 'typography-stylist'); ?></p>
@@ -1367,7 +1368,7 @@ $manual_fonts = $instance->get_manual_fonts();
                                     id="ots_enable_aria_labels"
                                     name="ots_enable_aria_labels"
                                     value="1"
-                                    <?php checked(get_option('ots_enable_aria_labels', false)); ?>
+                                    <?php checked(get_option('typography_stylist_enable_aria_labels', false)); ?>
                                 />
                                 <label for="ots_enable_aria_labels">
                                     <?php esc_html_e('Add aria-label with original text to inline styled spans', 'typography-stylist'); ?>

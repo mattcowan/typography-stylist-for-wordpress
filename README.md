@@ -216,28 +216,28 @@ opentype-stylist/
 **REST API Endpoints**
 
 *Presets:*
-- `GET /wp-json/ots/v1/presets` - Get all presets
-- `POST /wp-json/ots/v1/presets` - Save new preset
-- `DELETE /wp-json/ots/v1/presets/{id}` - Delete preset
+- `GET /wp-json/typography-stylist/v1/presets` - Get all presets
+- `POST /wp-json/typography-stylist/v1/presets` - Save new preset
+- `DELETE /wp-json/typography-stylist/v1/presets/{id}` - Delete preset
 
 *Custom Fonts:*
-- `GET /wp-json/ots/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/ots/v1/fonts` - Upload font kit (multipart/form-data)
-- `DELETE /wp-json/ots/v1/fonts/{id}` - Delete font kit
+- `GET /wp-json/typography-stylist/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/typography-stylist/v1/fonts` - Upload font kit (multipart/form-data)
+- `DELETE /wp-json/typography-stylist/v1/fonts/{id}` - Delete font kit
 
 *Adobe Fonts:*
-- `GET /wp-json/ots/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/ots/v1/adobe-fonts` - Add Adobe Fonts project
-- `DELETE /wp-json/ots/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
-- `PATCH /wp-json/ots/v1/adobe-fonts/{id}/fallback` - Update fallback fonts
+- `GET /wp-json/typography-stylist/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/typography-stylist/v1/adobe-fonts` - Add Adobe Fonts project
+- `DELETE /wp-json/typography-stylist/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
+- `PATCH /wp-json/typography-stylist/v1/adobe-fonts/{id}/fallback` - Update fallback fonts
 
 *Custom Fonts:*
-- `GET /wp-json/ots/v1/manual-fonts` - Get custom font definitions
-- `POST /wp-json/ots/v1/manual-fonts` - Add custom font
-- `DELETE /wp-json/ots/v1/manual-fonts/{id}` - Delete custom font
+- `GET /wp-json/typography-stylist/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/typography-stylist/v1/manual-fonts` - Add custom font
+- `DELETE /wp-json/typography-stylist/v1/manual-fonts/{id}` - Delete custom font
 
 *Fallbacks:*
-- `PATCH /wp-json/ots/v1/fonts/{id}/fallback` - Update fallback for uploaded font
+- `PATCH /wp-json/typography-stylist/v1/fonts/{id}/fallback` - Update fallback for uploaded font
 
 **Data Storage**
 - Presets: `wp_options` table (`ots_presets`)
