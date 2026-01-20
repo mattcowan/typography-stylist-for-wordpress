@@ -1,6 +1,9 @@
 <?php
 /**
  * Admin settings page template
+ *
+ * This template is rendered by the Typography_Stylist::render_admin_page() method.
+ * All variables are passed as function parameters to avoid global scope.
  */
 
 // Exit if accessed directly
@@ -8,78 +11,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Verify user has permission
-if (!current_user_can('manage_options')) {
-    wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'typography-stylist'));
-}
-
-// Save settings (with proper sanitization)
-if (isset($_POST['typography_stylist_save_settings']) &&
-    check_admin_referer('typography_stylist_settings_nonce') &&
-    current_user_can('manage_options')) {
-
-    // Use proper sanitization via registered settings
-    if (isset($_POST['typography_stylist_presets'])) {
-        $sanitized = Typography_Stylist::get_instance()->sanitize_presets(wp_unslash($_POST['typography_stylist_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        update_option('typography_stylist_presets', $sanitized);
-
-        // Clear cache
-        Typography_Stylist::get_instance()->clear_cache();
-
-        echo '<div class="notice notice-success"><p>' .
-             esc_html__('Settings saved successfully.', 'typography-stylist') .
-             '</p></div>';
-    }
-}
-
-// Save options settings
-if (isset($_POST['typography_stylist_save_options_settings']) &&
-    check_admin_referer('typography_stylist_options_settings_nonce') &&
-    current_user_can('manage_options')) {
-
-    // Get previous value to detect changes
-    $previous_show_clear_confirmation = (bool) get_option('typography_stylist_show_clear_confirmation', true);
-    $show_clear_confirmation = isset($_POST['typography_stylist_show_clear_confirmation']) ? '1' : '0';
-    update_option('typography_stylist_show_clear_confirmation', $show_clear_confirmation);
-
-    // Save variable weight setting
-    $allow_variable = isset($_POST['typography_stylist_allow_variable_weights']) ? '1' : '0';
-    update_option('typography_stylist_allow_variable_weights', $allow_variable);
-
-    // Clear cache for all users only when the clear confirmation setting changes
-    if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
-        Typography_Stylist::get_instance()->clear_cache();
-    }
-
-    echo '<div class="notice notice-success"><p>' .
-         esc_html__('Options saved successfully.', 'typography-stylist') .
-         '</p></div>';
-}
-
-// Save accessibility settings
-if (isset($_POST['typography_stylist_save_accessibility_settings']) &&
-    check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
-    current_user_can('manage_options')) {
-
-    // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
-    $enable_aria = isset($_POST['typography_stylist_enable_aria_labels']) ? '1' : '0';
-    update_option('typography_stylist_enable_aria_labels', $enable_aria);
-
-    // Clear cache when accessibility settings change
-    Typography_Stylist::get_instance()->clear_cache();
-
-    echo '<div class="notice notice-success"><p>' .
-         esc_html__('Accessibility settings saved successfully.', 'typography-stylist') .
-         '</p></div>';
-}
-
-$instance = Typography_Stylist::get_instance();
-$presets = $instance->get_presets();
-$custom_fonts = get_option('typography_stylist_custom_fonts', array());
-$adobe_fonts = $instance->get_adobe_fonts();
-$manual_fonts = $instance->get_manual_fonts();
-?>
-
+/**
+ * Render the admin settings page template
+ *
+ * @param Typography_Stylist $instance      Plugin instance
+ * @param array              $presets       Array of user-created presets
+ * @param array              $custom_fonts  Array of uploaded custom fonts
+ * @param array              $adobe_fonts   Array of Adobe Fonts configurations
+ * @param array              $manual_fonts  Array of manually defined fonts
+ */
+function typography_stylist_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {
+    ?>
 <div class="wrap ots-admin-wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
@@ -1595,3 +1537,6 @@ $manual_fonts = $instance->get_manual_fonts();
      - assets/js/admin-page.js (or admin-page.min.js)
      These files are enqueued in the main plugin file via enqueue_admin_assets() method
 -->
+    <?php
+}
+// End of typography_stylist_render_admin_template() function

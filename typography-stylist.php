@@ -317,6 +317,7 @@ class Typography_Stylist {
         $use_full_content_filter = apply_filters('typography_stylist_use_full_content_filter', false);
 
         if ($use_full_content_filter) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core hook
             return apply_filters('the_content', $content);
         }
 
@@ -4074,7 +4075,84 @@ class Typography_Stylist {
             wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'typography-stylist'));
         }
 
+        // Save settings (with proper sanitization)
+        if (isset($_POST['typography_stylist_save_settings']) &&
+            check_admin_referer('typography_stylist_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Use proper sanitization via registered settings
+            if (isset($_POST['typography_stylist_presets'])) {
+                $sanitized = $this->sanitize_presets(wp_unslash($_POST['typography_stylist_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                update_option('typography_stylist_presets', $sanitized);
+
+                // Clear cache
+                $this->clear_cache();
+
+                echo '<div class="notice notice-success"><p>' .
+                     esc_html__('Settings saved successfully.', 'typography-stylist') .
+                     '</p></div>';
+            }
+        }
+
+        // Save options settings
+        if (isset($_POST['typography_stylist_save_options_settings']) &&
+            check_admin_referer('typography_stylist_options_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Get previous value to detect changes
+            $previous_show_clear_confirmation = (bool) get_option('typography_stylist_show_clear_confirmation', true);
+            $show_clear_confirmation = isset($_POST['typography_stylist_show_clear_confirmation']) ? '1' : '0';
+            update_option('typography_stylist_show_clear_confirmation', $show_clear_confirmation);
+
+            // Save variable weight setting
+            $allow_variable = isset($_POST['typography_stylist_allow_variable_weights']) ? '1' : '0';
+            update_option('typography_stylist_allow_variable_weights', $allow_variable);
+
+            // Clear cache for all users only when the clear confirmation setting changes
+            if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
+                $this->clear_cache();
+            }
+
+            echo '<div class="notice notice-success"><p>' .
+                 esc_html__('Options saved successfully.', 'typography-stylist') .
+                 '</p></div>';
+        }
+
+        // Save accessibility settings
+        if (isset($_POST['typography_stylist_save_accessibility_settings']) &&
+            check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
+            $enable_aria = isset($_POST['typography_stylist_enable_aria_labels']) ? '1' : '0';
+            update_option('typography_stylist_enable_aria_labels', $enable_aria);
+
+            // Clear cache when accessibility settings change
+            $this->clear_cache();
+
+            echo '<div class="notice notice-success"><p>' .
+                 esc_html__('Accessibility settings saved successfully.', 'typography-stylist') .
+                 '</p></div>';
+        }
+
+        // Prepare template data
+        $template_data = array(
+            'instance' => $this,
+            'presets' => $this->get_presets(),
+            'custom_fonts' => get_option('typography_stylist_custom_fonts', array()),
+            'adobe_fonts' => $this->get_adobe_fonts(),
+            'manual_fonts' => $this->get_manual_fonts(),
+        );
+
+        // Include template file and render
         include OTS_PLUGIN_DIR . 'includes/admin-page.php';
+        typography_stylist_render_admin_template(
+            $template_data['instance'],
+            $template_data['presets'],
+            $template_data['custom_fonts'],
+            $template_data['adobe_fonts'],
+            $template_data['manual_fonts']
+        );
     }
 }
 
