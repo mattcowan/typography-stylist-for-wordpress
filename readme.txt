@@ -1,18 +1,18 @@
-=== OpenType Stylist ===
+=== Typography Stylist ===
 Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.0.7
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Add advanced OpenType features like ligatures and stylistic sets to headlines with inline text selection and live preview.
+Unlock hidden OpenType features like ligatures, swashes, and stylistic sets in the WordPress block editor.
 
 == Description ==
 
-OpenType Stylist provides typography control for WordPress headlines. This plugin allows you to apply OpenType features directly in the block editor.
+Typography Stylist provides typography control for WordPress headlines. This plugin allows you to apply OpenType features directly in the block editor.
 
 = Key Features =
 
@@ -29,7 +29,7 @@ OpenType Stylist provides typography control for WordPress headlines. This plugi
 * **Font Fallbacks**: Set fallback fonts for all font sources for better compatibility
 * **Font Preview**: Test OpenType features with any uploaded or connected font
 * **Accessibility Features**: Screen reader support with ARIA markup and a heading structure that maintains proper semantics for both screen reader and visual views
-* **OpenType Stylist Block**: Custom block for complex typography that preserves the document outline (maintains proper heading levels for assistive technology navigation)
+* **Typography Stylist Block**: Custom block for complex typography that preserves the document outline (maintains proper heading levels for assistive technology navigation)
 * **Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
 * **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility
 
@@ -113,7 +113,7 @@ The plugin can apply OpenType features to any font loaded on your site.
 
 = How do I upload custom fonts? =
 
-1. Go to Settings → OpenType Stylist → Custom Fonts tab
+1. Go to Settings → Typography Stylist → Custom Fonts tab
 2. Enter a name for your font kit
 3. Click "Choose ZIP File" and select your webfont kit ZIP
 4. Click "Upload Font Kit"
@@ -122,7 +122,7 @@ The plugin will extract the fonts and make them available in the editor and prev
 
 = How do I add Adobe Fonts? =
 
-1. Go to Settings → OpenType Stylist → Custom Fonts tab
+1. Go to Settings → Typography Stylist → Custom Fonts tab
 2. Scroll to "Adobe Fonts (Typekit)" section
 3. Enter a project name
 4. Paste your Adobe Fonts embed code (the <script> tag)
@@ -135,7 +135,7 @@ Make sure your domain is authorized in your Adobe Fonts project settings.
 
 If you have fonts already loaded through your theme, another plugin, or a CDN:
 
-1. Go to Settings → OpenType Stylist → Custom Fonts tab
+1. Go to Settings → Typography Stylist → Custom Fonts tab
 2. Scroll to "Custom Font Definitions" section
 3. Enter a display name for the font
 4. Enter the exact CSS font-family value (e.g., 'Playfair Display', serif)
@@ -153,14 +153,14 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 The plugin includes accessibility features for screen reader compatibility:
 
 * **Inline Format Warnings**: Detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
-* **OpenType Stylist Block**: Custom block designed for complex typography that includes ARIA markup with screen reader-accessible text
-* **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → OpenType Stylist → Accessibility)
-* **Screen Reader Classes**: The OpenType Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
+* **Typography Stylist Block**: Custom block designed for complex typography that includes ARIA markup with screen reader-accessible text
+* **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
+* **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
 * **Dual Content Approach**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
 
 = How does the accessibility block work? =
 
-The OpenType Stylist block creates two versions of your text:
+the Typography Stylist block creates two versions of your text:
 
 1. **For screen readers**: Clean, unformatted text in a semantic heading element (H1-H6) with the `visually-hidden` class applied. This maintains the document outline and heading navigation for assistive technology users.
 2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content with complex OpenType features.
@@ -170,7 +170,7 @@ This approach provides both styled visual presentation and screen reader compati
 = Should I use the inline format or the block? =
 
 * **Use Inline Format** when applying features to complete words or phrases in existing heading blocks
-* **Use OpenType Stylist Block** when you need letter-by-letter styling, complex typography, or maximum accessibility control
+* **Use Typography Stylist Block** when you need letter-by-letter styling, complex typography, or maximum accessibility control
 
 The plugin will warn you if an inline selection might cause accessibility issues.
 
@@ -208,8 +208,8 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.0.0 =
-* OpenType Stylist block with ARIA markup and semantic HTML
+= 1.1.0 =
+* Typography Stylist Block with ARIA markup and semantic HTML
 * Smart selection validation warns when partial word selections could fragment text
 * Conversion tool from inline formats to accessible block structure
 * Configurable aria-label support for inline formatted text
@@ -240,8 +240,8 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-Initial release of OpenType Stylist with accessibility features, font management, and OpenType typography controls.
+= 1.1.0 =
+Initial release of Typography Stylist with accessibility features, font management, and OpenType typography controls.
 
 == Technical Details ==
 
@@ -262,7 +262,7 @@ Typography features are stored as inline styles and data attributes within post 
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/ots/v1/`.
+Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/typography-stylist/v1/`.
 
 = Font Management =
 

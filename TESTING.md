@@ -1,4 +1,4 @@
-# Testing Guide for OpenType Stylist
+# Testing Guide for Typography Stylist
 
 ## Overview
 

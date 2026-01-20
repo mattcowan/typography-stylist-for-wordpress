@@ -7,16 +7,16 @@
  */
 
 // Define plugin constants
-define('PLUGIN_NAME', 'Headline Ligatures and Styles');
-define('PLUGIN_DOMAIN', 'opentype-stylist');
-define('PLUGIN_VERSION', '1.0.1');
+define('PLUGIN_NAME', 'Typography Stylist');
+define('PLUGIN_DOMAIN', 'typography-stylist');
+define('PLUGIN_VERSION', '1.1.0');
 
 // Output file
 $potFile = __DIR__ . '/../languages/' . PLUGIN_DOMAIN . '.pot';
 
 // Files to scan
 $files = [
-    __DIR__ . '/../opentype-stylist.php',
+    __DIR__ . '/../typography-stylist.php',
     __DIR__ . '/../includes/admin-page.php',
     __DIR__ . '/../assets/js/block-editor.js'
 ];

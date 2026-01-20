@@ -5,7 +5,7 @@ use Brain\Monkey;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 
 /**
- * Base test case for all OpenType Stylist tests
+ * Base test case for all Typography Stylist tests
  */
 abstract class TestCase extends PHPUnitTestCase {
 

@@ -10,10 +10,10 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 
 ### Core Plugin Structure
 
-**Main Plugin File:** [opentype-stylist.php](opentype-stylist.php)
+**Main Plugin File:** [typography-stylist.php](typography-stylist.php)
 - Singleton class `OpenType_Stylist` handles all WordPress integration
 - Enqueues block editor and frontend assets
-- Registers REST API endpoints at `/wp-json/ots/v1/`
+- Registers REST API endpoints at `/wp-json/typography-stylist/v1/`
 - Manages presets stored in `wp_options` table (`ots_presets`)
 - Constants: `OTS_VERSION`, `OTS_PLUGIN_DIR`, `OTS_PLUGIN_URL`, `OTS_PLUGIN_BASENAME`
 
@@ -30,12 +30,12 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **Storage:** Features are stored directly in post content (no separate meta table)
    - **Note:** Features must be explicitly applied via the "Apply" button (not automatic on toggle)
 
-2. **OpenType Stylist Block** [blocks/opentype-stylist/](blocks/opentype-stylist/)
+2. **Typography Stylist Block** [blocks/typography-stylist/](blocks/typography-stylist/)
    - **What:** Custom Gutenberg block with block-level controls in the sidebar PLUS inline text styling
    - **When:** Use for complex typography with accessibility features or when styling partial words
    - **Components:**
      - **Inspector Controls (Sidebar):** Block-level settings for font family, weight, size, letter spacing, and OpenType features
-     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="ots-styled">` elements (similar to inline editor but scoped to OTS block content)
+     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="ots-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to OTS block content)
    - **Features:**
      - Dual content approach: clean semantic heading for screen readers, styled version for visual display
      - Built with JSX/React using `@wordpress/scripts` build toolchain
@@ -48,7 +48,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
 - Font preview with glyph browser for testing OpenType features
 - Glyph browser: [assets/js/glyph-browser.min.js](assets/js/glyph-browser.min.js) - Interactive font preview tool
 - Inline styles and jQuery for tab switching
-- Located at Settings → OpenType Stylist
+- Located at Settings → Typography Stylist
 
 ### Data Flow
 
@@ -61,26 +61,26 @@ The plugin provides two distinct interfaces for applying OpenType features:
 ### REST API Endpoints
 
 **Presets:**
-- `GET /wp-json/ots/v1/presets` - Get all presets
-- `POST /wp-json/ots/v1/presets` - Save new preset (requires `edit_posts` capability)
-- `DELETE /wp-json/ots/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
+- `GET /wp-json/typography-stylist/v1/presets` - Get all presets
+- `POST /wp-json/typography-stylist/v1/presets` - Save new preset (requires `edit_posts` capability)
+- `DELETE /wp-json/typography-stylist/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
 
 **Custom Fonts (Uploaded Webfont Kits):**
-- `GET /wp-json/ots/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/ots/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
-- `PATCH /wp-json/ots/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/typography-stylist/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
+- `PATCH /wp-json/typography-stylist/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Adobe Fonts (Typekit):**
-- `GET /wp-json/ots/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/ots/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
-- `PATCH /wp-json/ots/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/typography-stylist/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
+- `PATCH /wp-json/typography-stylist/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Custom Font Definitions (Theme/Plugin/CDN Fonts):**
-- `GET /wp-json/ots/v1/manual-fonts` - Get custom font definitions
-- `POST /wp-json/ots/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
-- `DELETE /wp-json/ots/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
+- `GET /wp-json/typography-stylist/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/typography-stylist/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
+- `DELETE /wp-json/typography-stylist/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)
@@ -94,7 +94,7 @@ The plugin supports these feature categories:
 - **Stylistic Sets:** ss01-ss05 (hardcoded, but supports through ss20)
 - **Alternates:** swsh, cswh, salt, titl, ornm
 
-Feature data structure in [opentype-stylist.php](opentype-stylist.php:247-328):
+Feature data structure in [typography-stylist.php](typography-stylist.php:247-328):
 ```php
 array(
     'id' => 'calt',           // OpenType feature code
@@ -149,7 +149,7 @@ Block editor JavaScript requires:
 
 **Unit Tests:**
 - This plugin has Jest unit tests for utility functions and business logic
-- Test files are located in `blocks/opentype-stylist/__tests__/`
+- Test files are located in `blocks/typography-stylist/__tests__/`
 - Tests verify the actual implementation by importing from `utils.js`
 - **CRITICAL: Always run tests after making code changes**
 
@@ -182,9 +182,9 @@ npm test -- --coverage    # See test coverage report
 
 ### Modifying Features or Presets
 
-**To add new OpenType features:** Edit `get_available_features()` in [opentype-stylist.php](opentype-stylist.php:247-328)
+**To add new OpenType features:** Edit `get_available_features()` in [typography-stylist.php](typography-stylist.php:247-328)
 
-**To add default presets:** Edit `get_default_presets()` in [opentype-stylist.php](opentype-stylist.php:209-242)
+**To add default presets:** Edit `get_default_presets()` in [typography-stylist.php](typography-stylist.php:209-242)
 
 **Filter hooks for extensibility:**
 - `OTS_available_features` - Filter available features
@@ -196,7 +196,7 @@ npm test -- --coverage    # See test coverage report
 
 **Nonce verification:** REST API uses `wp_create_nonce('wp_rest')` and `check_permissions()` method checks `current_user_can('edit_posts')`
 
-**Localization:** All strings use `__()` with text domain `opentype-stylist`
+**Localization:** All strings use `__()` with text domain `typography-stylist`
 
 **Debug Logging:**
 - Do NOT add error_log() statements to production code
@@ -214,9 +214,9 @@ npm test -- --coverage    # See test coverage report
 **Translation Management:**
 - All user-facing strings MUST be wrapped in translation functions (`__()`, `esc_html__()`, `esc_attr__()`, `sprintf()`)
 - After adding new translatable strings, update ALL translation files in this order:
-  1. **Base template:** [languages/opentype-stylist.pot](languages/opentype-stylist.pot)
-  2. **French translation:** [languages/opentype-stylist-fr_FR.po](languages/opentype-stylist-fr_FR.po)
-  3. **Spanish translation:** [languages/opentype-stylist-es_ES.po](languages/opentype-stylist-es_ES.po)
+  1. **Base template:** [languages/typography-stylist.pot](languages/typography-stylist.pot)
+  2. **French translation:** [languages/typography-stylist-fr_FR.po](languages/typography-stylist-fr_FR.po)
+  3. **Spanish translation:** [languages/typography-stylist-es_ES.po](languages/typography-stylist-es_ES.po)
 - Format for .pot and .po files:
   ```
   #: path/to/file.php:123
@@ -246,12 +246,12 @@ npm test -- --coverage    # See test coverage report
 - Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)
 - **Plugin supports two usage methods:**
   1. **Inline Format** - For complete words/phrases in any heading block (H1-H6)
-  2. **OpenType Stylist Block** - For complex typography with accessibility features
+  2. **Typography Stylist Block** - For complex typography with accessibility features
 - Do not update the version number unless asked
 - **Updates on new features MUST include:**
   1. Running unit tests (`npm test`) to verify no regressions
   2. Adding tests for new utility functions or business logic
   3. Updating the readme files (readme.txt and/or README.md)
-  4. Adding new translatable strings to languages/opentype-stylist.pot
+  4. Adding new translatable strings to languages/typography-stylist.pot
   5. Running build process if JavaScript/CSS was modified (`npm run build`)
   6. Running tests again after build to ensure everything still works

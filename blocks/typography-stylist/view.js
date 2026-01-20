@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist Block - Frontend JavaScript (if needed)
+ * Typography Stylist Block - Frontend JavaScript (if needed)
  * Currently empty as all functionality is CSS-based
  */
 

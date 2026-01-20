@@ -1,5 +1,5 @@
 /**
- * Shared utility functions for OpenType Stylist
+ * Shared utility functions for Typography Stylist
  */
 
 /**

@@ -1,6 +1,6 @@
 <?php
 /**
- * PHPUnit bootstrap file for OpenType Stylist plugin tests
+ * PHPUnit bootstrap file for Typography Stylist plugin tests
  */
 
 // Load Composer autoloader
@@ -17,7 +17,7 @@ if (!defined('OTS_PLUGIN_URL')) {
     define('OTS_PLUGIN_URL', 'http://localhost/wp-content/plugins/opentype-stylist/');
 }
 if (!defined('OTS_PLUGIN_BASENAME')) {
-    define('OTS_PLUGIN_BASENAME', 'opentype-stylist/opentype-stylist.php');
+    define('OTS_PLUGIN_BASENAME', 'typography-stylist/typography-stylist.php');
 }
 if (!defined('OTS_VERSION')) {
     define('OTS_VERSION', 'test-version');

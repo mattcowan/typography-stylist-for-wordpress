@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist Block - Save Component (Frontend Render)
+ * Typography Stylist Block - Save Component (Frontend Render)
  */
 
 import { RichText } from '@wordpress/block-editor';
@@ -74,7 +74,7 @@ export default function save({ attributes }) {
 	}
 
 	return (
-		<div className="wp-block-opentype-stylist">
+		<div className="wp-block-typography-stylist">
 			{/* Screen reader accessible text (hidden visually, maintains semantic heading structure) */}
 			<RichText.Content
 				tagName={tagName}

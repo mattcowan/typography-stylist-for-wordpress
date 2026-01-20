@@ -1,5 +1,5 @@
 /**
- * OpenType Stylist - Shared Utility Functions
+ * Typography Stylist - Shared Utility Functions
  *
  * Pure functions extracted for reuse across edit.js, block-editor.js, and tests.
  * These functions have no side effects and can be tested independently.

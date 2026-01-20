@@ -250,7 +250,7 @@ try {
 
     if ($locale) {
         // Compile specific locale
-        $po_file = $languages_dir . '/opentype-stylist-' . $locale . '.po';
+        $po_file = $languages_dir . '/typography-stylist-' . $locale . '.po';
 
         if (!file_exists($po_file)) {
             echo "Error: PO file not found: {$po_file}\n";

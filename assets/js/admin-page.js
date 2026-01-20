@@ -86,7 +86,7 @@ jQuery(document).ready(function($) {
 
         // Validate file type
         if (!file.name.endsWith('.zip')) {
-            alert(otsAdmin.strings.selectZip);
+            alert(typographyStylistAdmin.strings.selectZip);
             $(this).val('');
             return;
         }
@@ -131,13 +131,13 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterName + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterName + '</p></div>');
             $('#ots-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!selectedFile) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.selectFile + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.selectFile + '</p></div>');
             return;
         }
 
@@ -151,21 +151,21 @@ jQuery(document).ready(function($) {
 
         // Disable button, show progress, and add aria-busy
         $('.ots-upload-form').attr('aria-busy', 'true');
-        $btn.prop('disabled', true).text(otsAdmin.strings.uploading);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.uploading);
         $progress.show();
         $progressFill.css('width', '0%');
-        $progressText.text(otsAdmin.strings.uploadingZip);
+        $progressText.text(typographyStylistAdmin.strings.uploadingZip);
         $progressBar.attr('aria-valuenow', '0');
 
         // Upload via REST API
         $.ajax({
-            url: otsAdmin.restUrl + 'fonts',
+            url: typographyStylistAdmin.restUrl + 'fonts',
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             xhr: function() {
                 var xhr = new window.XMLHttpRequest();
@@ -175,17 +175,17 @@ jQuery(document).ready(function($) {
                         var percentComplete = Math.round((e.loaded / e.total) * 100);
                         $progressFill.css('width', percentComplete + '%');
                         $progressBar.attr('aria-valuenow', percentComplete);
-                        $progressText.text(otsAdmin.strings.uploading + ' ' + percentComplete + '%');
+                        $progressText.text(typographyStylistAdmin.strings.uploading + ' ' + percentComplete + '%');
                     }
                 }, false);
                 return xhr;
             },
             success: function(response) {
-                $progressText.text(otsAdmin.strings.processing);
+                $progressText.text(typographyStylistAdmin.strings.processing);
                 $progressFill.css('width', '100%');
                 $progressBar.attr('aria-valuenow', '100');
 
-                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.uploadSuccess + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.uploadSuccess + '</p></div>');
 
                 // Reset form
                 selectedFile = null;
@@ -199,7 +199,7 @@ jQuery(document).ready(function($) {
                 }, 2000);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.uploadError;
+                var errorMsg = typographyStylistAdmin.strings.uploadError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -208,7 +208,7 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 $('.ots-upload-form').attr('aria-busy', 'false');
-                $btn.prop('disabled', false).text(otsAdmin.strings.uploadButton);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.uploadButton);
             }
         });
     });
@@ -350,13 +350,13 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeProjectName + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeProjectName + '</p></div>');
             $('#ots-adobe-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!embedCode) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeEmbedCode + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeEmbedCode + '</p></div>');
             $('#ots-adobe-embed-code').focus().attr('aria-invalid', 'true');
             return;
         }
@@ -372,7 +372,7 @@ jQuery(document).ready(function($) {
         }
 
         if (fontFamilies.length === 0) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterAdobeFontFamilies + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeFontFamilies + '</p></div>');
             $('#ots-adobe-font-families').focus().attr('aria-invalid', 'true');
             return;
         }
@@ -390,23 +390,23 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
-            url: otsAdmin.restUrl + 'adobe-fonts',
+            url: typographyStylistAdmin.restUrl + 'adobe-fonts',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(response) {
                 // Handle new response format: array of fonts instead of single font
                 var count = response.count || (response.fonts ? response.fonts.length : 1);
                 var successMsg = count === 1
-                    ? otsAdmin.strings.adobeFontSuccess
-                    : otsAdmin.strings.adobeFontSuccess.replace('added', 'Added ' + count + ' fonts from');
+                    ? typographyStylistAdmin.strings.adobeFontSuccess
+                    : typographyStylistAdmin.strings.adobeFontSuccess.replace('added', 'Added ' + count + ' fonts from');
 
                 $message.html('<div class="notice notice-success inline"><p>' + successMsg + '</p></div>');
 
@@ -421,14 +421,14 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.addAdobeFontError;
+                var errorMsg = typographyStylistAdmin.strings.addAdobeFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(otsAdmin.strings.addAdobeFontButton);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.addAdobeFontButton);
             }
         });
     });
@@ -462,14 +462,14 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: otsAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
+            url: typographyStylistAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(response) {
                 // Visual feedback: briefly highlight the checkbox label
@@ -483,7 +483,7 @@ jQuery(document).ready(function($) {
                 // Revert checkbox to original state
                 $checkbox.prop('checked', originalState);
 
-                var errorMsg = (otsAdmin.strings && otsAdmin.strings.updateSettingError) ? otsAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
+                var errorMsg = (typographyStylistAdmin.strings && typographyStylistAdmin.strings.updateSettingError) ? typographyStylistAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -508,13 +508,13 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterManualFontName + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterManualFontName + '</p></div>');
             $('#ots-manual-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!fontFamily) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterFontFamily + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterFontFamily + '</p></div>');
             $('#ots-manual-font-family').focus().attr('aria-invalid', 'true');
             return;
         }
@@ -530,19 +530,19 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(otsAdmin.strings.adding);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
-            url: otsAdmin.restUrl + 'manual-fonts',
+            url: typographyStylistAdmin.restUrl + 'manual-fonts',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(response) {
-                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.manualFontSuccess + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.manualFontSuccess + '</p></div>');
 
                 // Reset form
                 $('#ots-manual-font-name').val('');
@@ -554,14 +554,14 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.addManualFontError;
+                var errorMsg = typographyStylistAdmin.strings.addManualFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(otsAdmin.strings.addManualFontButton);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.addManualFontButton);
             }
         });
     });
@@ -595,14 +595,14 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: otsAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
+            url: typographyStylistAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(response) {
                 // Visual feedback: briefly highlight the checkbox label
@@ -616,7 +616,7 @@ jQuery(document).ready(function($) {
                 // Revert checkbox to original state
                 $checkbox.prop('checked', originalState);
 
-                var errorMsg = (otsAdmin.strings && otsAdmin.strings.updateSettingError) ? otsAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
+                var errorMsg = (typographyStylistAdmin.strings && typographyStylistAdmin.strings.updateSettingError) ? typographyStylistAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -657,31 +657,31 @@ jQuery(document).ready(function($) {
         var fallbacks = $card.find('.ots-font-fallback-input').val().trim();
 
         $message.html('');
-        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
 
         $.ajax({
-            url: otsAdmin.restUrl + 'fonts/' + fontId + '/fallback',
+            url: typographyStylistAdmin.restUrl + 'fonts/' + fontId + '/fallback',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fallbacksUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fallbacksUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.updateFallbacksError;
+                var errorMsg = typographyStylistAdmin.strings.updateFallbacksError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
             }
         });
     });
@@ -717,31 +717,31 @@ jQuery(document).ready(function($) {
         var fallbacks = $card.find('.ots-adobe-font-fallback-input').val().trim();
 
         $message.html('');
-        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
 
         $.ajax({
-            url: otsAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
+            url: typographyStylistAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fallbacksUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fallbacksUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.updateFallbacksError;
+                var errorMsg = typographyStylistAdmin.strings.updateFallbacksError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
             }
         });
     });
@@ -778,16 +778,16 @@ jQuery(document).ready(function($) {
 
         // Validate
         if (!fontFamily) {
-            $message.html('<div class="notice notice-error inline"><p>' + otsAdmin.strings.enterFontFamily + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterFontFamily + '</p></div>');
             $card.find('.ots-manual-font-family-input').focus().attr('aria-invalid', 'true');
             return;
         }
 
         $card.find('.ots-manual-font-family-input').attr('aria-invalid', 'false');
-        $btn.prop('disabled', true).text(otsAdmin.strings.saving);
+        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
 
         $.ajax({
-            url: otsAdmin.restUrl + 'manual-fonts/' + fontId,
+            url: typographyStylistAdmin.restUrl + 'manual-fonts/' + fontId,
             method: 'PATCH',
             data: JSON.stringify({
                 font_family: fontFamily,
@@ -795,23 +795,23 @@ jQuery(document).ready(function($) {
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + otsAdmin.strings.fontUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fontUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = otsAdmin.strings.updateFontError;
+                var errorMsg = typographyStylistAdmin.strings.updateFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(otsAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
             }
         });
     });
@@ -837,8 +837,8 @@ jQuery(document).ready(function($) {
         $select.find('option:not(:first)').remove();
 
         // Add all fonts except the one being deleted
-        if (otsAdmin.fonts) {
-            otsAdmin.fonts.forEach(function(font) {
+        if (typographyStylistAdmin.fonts) {
+            typographyStylistAdmin.fonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId && font.font_faces) {
                     font.font_faces.forEach(function(face) {
                         $select.append('<option value="' + font.font_id + '">📁 ' + face.family + '</option>');
@@ -847,8 +847,8 @@ jQuery(document).ready(function($) {
             });
         }
 
-        if (otsAdmin.adobeFonts) {
-            otsAdmin.adobeFonts.forEach(function(font) {
+        if (typographyStylistAdmin.adobeFonts) {
+            typographyStylistAdmin.adobeFonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId) {
                     // New structure: font_family (single string)
                     if (font.font_family) {
@@ -864,8 +864,8 @@ jQuery(document).ready(function($) {
             });
         }
 
-        if (otsAdmin.manualFonts) {
-            otsAdmin.manualFonts.forEach(function(font) {
+        if (typographyStylistAdmin.manualFonts) {
+            typographyStylistAdmin.manualFonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId && font.font_family) {
                     $select.append('<option value="' + font.font_id + '">⚙️ ' + font.name + '</option>');
                 }
@@ -968,7 +968,7 @@ jQuery(document).ready(function($) {
 
         if (replacementId) {
             var replacementPromise = $.ajax({
-                url: otsAdmin.restUrl + 'font-replacements',
+                url: typographyStylistAdmin.restUrl + 'font-replacements',
                 method: 'POST',
                 data: JSON.stringify({
                     deleted_id: deleteFontContext.fontNumericId,
@@ -977,7 +977,7 @@ jQuery(document).ready(function($) {
                 }),
                 contentType: 'application/json',
                 beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                    xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
                 }
             });
             promises.push(replacementPromise);
@@ -994,17 +994,17 @@ jQuery(document).ready(function($) {
 
             // Otherwise, proceed with font deletion
             $.ajax({
-                url: otsAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId,
+                url: typographyStylistAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId,
                 method: 'DELETE',
                 beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                    xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
                 },
                 success: function() {
                     closeDeletionModal();
 
                     // Show success message
                     var $message = $('<div class="notice notice-success is-dismissible" style="margin: 20px 0;"><p>' +
-                                    otsAdmin.strings.deleteFontSuccess + '</p></div>');
+                                    typographyStylistAdmin.strings.deleteFontSuccess + '</p></div>');
                     $('.wrap h1').after($message);
 
                     // Reload page after brief delay
@@ -1033,7 +1033,7 @@ jQuery(document).ready(function($) {
         fontId = parseInt(fontId);
 
         // Check all font sources
-        var allFonts = (otsAdmin.fonts || []).concat(otsAdmin.adobeFonts || []).concat(otsAdmin.manualFonts || []);
+        var allFonts = (typographyStylistAdmin.fonts || []).concat(typographyStylistAdmin.adobeFonts || []).concat(typographyStylistAdmin.manualFonts || []);
 
         for (var i = 0; i < allFonts.length; i++) {
             if (allFonts[i].font_id === fontId) {
@@ -1046,10 +1046,10 @@ jQuery(document).ready(function($) {
 
     function loadReplacementsList() {
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements',
+            url: typographyStylistAdmin.restUrl + 'font-replacements',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(data) {
                 var $list = $('#ots-replacements-list');
@@ -1098,10 +1098,10 @@ jQuery(document).ready(function($) {
      */
     function loadUnassignedFonts() {
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements/orphans',
+            url: typographyStylistAdmin.restUrl + 'font-replacements/orphans',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(data) {
                 if (data.orphaned_ids && data.orphaned_ids.length > 0) {
@@ -1153,10 +1153,10 @@ jQuery(document).ready(function($) {
         if (!confirm('Remove this font replacement mapping?')) return;
 
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typographyStylistAdmin.restUrl + 'font-replacements/' + deletedId,
             method: 'DELETE',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function() {
                 loadReplacementsList();
@@ -1173,14 +1173,14 @@ jQuery(document).ready(function($) {
         var globalLoad = $(this).is(':checked');
 
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typographyStylistAdmin.restUrl + 'font-replacements/' + deletedId,
             method: 'PATCH',
             data: JSON.stringify({
                 global_load: globalLoad
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             error: function() {
                 alert('Failed to update global load setting.');
@@ -1202,7 +1202,7 @@ jQuery(document).ready(function($) {
     function populateAddReplacementForm() {
         // Get all active font IDs
         var activeFontIds = [];
-        var allFonts = (otsAdmin.fonts || []).concat(otsAdmin.adobeFonts || []).concat(otsAdmin.manualFonts || []);
+        var allFonts = (typographyStylistAdmin.fonts || []).concat(typographyStylistAdmin.adobeFonts || []).concat(typographyStylistAdmin.manualFonts || []);
 
         allFonts.forEach(function(font) {
             if (font.font_id) {
@@ -1212,10 +1212,10 @@ jQuery(document).ready(function($) {
 
         // Get existing replacement mappings
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements',
+            url: typographyStylistAdmin.restUrl + 'font-replacements',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function(data) {
                 var existingMappings = data.mappings || {};
@@ -1286,7 +1286,7 @@ jQuery(document).ready(function($) {
 
         // Create the replacement mapping
         $.ajax({
-            url: otsAdmin.restUrl + 'font-replacements',
+            url: typographyStylistAdmin.restUrl + 'font-replacements',
             method: 'POST',
             data: JSON.stringify({
                 deleted_id: parseInt(deletedId),
@@ -1294,7 +1294,7 @@ jQuery(document).ready(function($) {
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', otsAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
             },
             success: function() {
                 $message.html('<p class="notice notice-success">Replacement mapping added successfully!</p>');

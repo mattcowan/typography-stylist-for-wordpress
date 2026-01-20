@@ -1,8 +1,8 @@
-# OpenType Stylist - User Documentation
+# Typography Stylist - User Documentation
 
 **Version 1.0.6**
 
-Welcome to OpenType Stylist! This plugin brings advanced typography features to WordPress, allowing you to apply professional OpenType features like ligatures, stylistic sets, and swashes to your headlines with just a few clicks.
+Welcome to Typography Stylist\! This plugin brings advanced typography features to WordPress, allowing you to apply professional OpenType features like ligatures, stylistic sets, and swashes to your headlines with just a few clicks.
 
 ---
 
@@ -33,7 +33,7 @@ Welcome to OpenType Stylist! This plugin brings advanced typography features to 
    - You'll see a success message
 
 3. **Access Settings:**
-   - Go to Settings → OpenType Stylist
+   - Go to Settings → Typography Stylist
    - Explore the available features and presets
 
 ### System Requirements
@@ -59,7 +59,7 @@ Not all fonts support all features. Premium fonts (especially script fonts) typi
 
 ## Font Management
 
-OpenType Stylist gives you three ways to add custom fonts to WordPress:
+Typography Stylist gives you three ways to add custom fonts to WordPress:
 
 ### Method 1: Upload Webfont Kits
 
@@ -68,7 +68,7 @@ Upload complete webfont kits from MyFonts, Fontspring, or other font vendors.
 **Step-by-Step:**
 
 1. **Purchase and download** a webfont kit from your font vendor
-2. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+2. **Go to** Settings → Typography Stylist → Custom Fonts tab
 3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
 4. **Click "Choose ZIP File"** and select your downloaded kit
 5. **Click "Upload Font Kit"**
@@ -101,7 +101,7 @@ Connect Adobe Fonts projects by pasting the embed code.
 2. **Create or open** a Web Project
 3. **Add fonts** to your project
 4. **Copy the embed code** (the `<script>` tag)
-5. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+5. **Go to** Settings → Typography Stylist → Custom Fonts tab
 6. **Scroll to** "Adobe Fonts (Typekit)" section
 7. **Enter a project name** (e.g., "My Adobe Fonts")
 8. **Paste the embed code** into the textarea
@@ -120,7 +120,7 @@ Define fonts already loaded through your theme, plugins, or CDN (like Google Fon
 **Step-by-Step:**
 
 1. **Make sure your font is already loaded** on your site
-2. **Go to** Settings → OpenType Stylist → Custom Fonts tab
+2. **Go to** Settings → Typography Stylist → Custom Fonts tab
 3. **Scroll to** "Custom Font Definitions" section
 4. **Enter a display name** (e.g., "Playfair Display")
 5. **Enter the CSS font-family value** exactly as it appears in your theme:
@@ -166,7 +166,7 @@ font-family: 'Playfair Display', Georgia, serif;
 
 **How to Update Existing Blocks:**
 
-1. **Edit the post/page** containing the OpenType Stylist block
+1. **Edit the post/page** containing the Typography Stylist block
 2. **Click on the block** to select it
 3. **In the block sidebar settings**, find the "Font Family" dropdown
 4. **Re-select the same font** from the dropdown (this will add the current fallbacks)
@@ -182,7 +182,7 @@ The block will now use the font with fallbacks included.
 
 ### Font Loading Optimization
 
-OpenType Stylist includes smart font loading to improve site performance.
+Typography Stylist includes smart font loading to improve site performance.
 
 **Load on All Pages Option:**
 
@@ -199,7 +199,7 @@ For **Uploaded Fonts (MyFonts/Fontspring kits)** and **Adobe Fonts**, you can co
   - Use if you experience font loading issues
 
 **How to Configure:**
-1. Go to Settings → OpenType Stylist → Custom Fonts tab
+1. Go to Settings → Typography Stylist → Custom Fonts tab
 2. Find your uploaded font kit or Adobe Fonts project
 3. Check/uncheck "Load on all pages" for each kit/project
 4. Changes save automatically
@@ -225,7 +225,7 @@ This helps you:
 
 ## Applying Typography Features
 
-OpenType Stylist offers two ways to apply typography features:
+Typography Stylist offers two ways to apply typography features:
 
 ### Method 1: Inline Format (Simple)
 
@@ -237,7 +237,7 @@ Best for applying features to complete words or phrases in heading blocks.
 2. **Add a Heading block** (H1, H2, H3, H4, H5, or H6)
 3. **Type your headline** text
 4. **Select the text** you want to style (complete words only)
-5. **Click the OpenType Stylist button** in the toolbar (circle "O" icon)
+5. **Click the Typography Stylist button** in the toolbar (circle "O" icon)
 6. A popover will appear with:
    - **Quick Presets** - Pre-configured feature combinations
    - **Individual Features** - Toggle specific OpenType features
@@ -251,21 +251,21 @@ If you select partial words (like just "Sa" in "Sarah"), you'll see an accessibi
 > "Warning: Partial word selection detected. This may fragment text for screen readers."
 
 You have three options:
-- **Convert to Accessible Block** - Converts to an OpenType Stylist block (recommended)
+- **Convert to Accessible Block** - Converts to an Typography Stylist block (recommended)
 - **Apply Anyway** - Applies the format but may impact accessibility
 - **Cancel** - Cancels the operation
 
-**Why this matters:** Screen readers may read fragmented text in a confusing way. The OpenType Stylist block solves this with dual content.
+**Why this matters:** Screen readers may read fragmented text in a confusing way. the Typography Stylist block solves this with dual content.
 
-### Method 2: OpenType Stylist Block (Advanced)
+### Method 2: Typography Stylist block (Advanced)
 
 Best for complex typography, letter-by-letter styling, or maximum accessibility.
 
 **Step-by-Step:**
 
-1. **Add an OpenType Stylist block** from the block inserter
+1. **Add an Typography Stylist block** from the block inserter
    - Click the (+) button
-   - Search for "OpenType Stylist"
+   - Search for "Typography Stylist"
    - Click to insert
 2. **Type your text** directly in the block
 3. **Configure settings** in the sidebar Inspector Controls:
@@ -312,7 +312,7 @@ You can also create and save your own custom presets from the Admin Settings.
 
 ## Admin Interface Guide
 
-Access via Settings → OpenType Stylist
+Access via Settings → Typography Stylist
 
 ### Presets Tab
 
@@ -385,7 +385,7 @@ Access via Settings → OpenType Stylist
 - Learn about accessibility best practices
 
 **Accessibility Features:**
-- OpenType Stylist block maintains semantic heading structure
+- Typography Stylist block maintains semantic heading structure
 - Dual content approach: clean for screen readers, styled for visual
 - Smart selection warnings prevent text fragmentation
 - Configurable screen reader classes
@@ -402,7 +402,7 @@ Access via Settings → OpenType Stylist
 
 ## Accessibility Features
 
-OpenType Stylist is designed with accessibility in mind.
+Typography Stylist is designed with accessibility in mind.
 
 ### The Accessibility Challenge
 
@@ -413,10 +413,10 @@ Complex typography with OpenType features can create challenges for screen reade
 
 ### Our Solution: Dual Content Approach
 
-The OpenType Stylist block creates two versions of your content:
+the Typography Stylist block creates two versions of your content:
 
 ```html
-<div class="wp-block-opentype-stylist">
+<div class="wp-block-typography-stylist">
   <!-- For screen readers - clean semantic heading -->
   <h2 class="visually-hidden">Beautiful Typography</h2>
 
@@ -441,7 +441,7 @@ The OpenType Stylist block creates two versions of your content:
 - Styling simple text that won't fragment
 - You want quick application in existing heading blocks
 
-**Use OpenType Stylist Block When:**
+**Use Typography Stylist block When:**
 - Applying features to partial words or individual letters
 - Creating complex typographic designs
 - Accessibility is a primary concern
@@ -546,13 +546,13 @@ The plugin helps maintain WCAG 2.1 Level AA compliance by:
 
 **If screen reader reads text incorrectly:**
 
-1. Use the OpenType Stylist block instead of inline format
+1. Use the Typography Stylist block instead of inline format
 2. Ensure you're selecting complete words with inline format
 3. Configure proper screen reader class in Accessibility settings
 4. Test with multiple screen readers (NVDA, JAWS, VoiceOver)
 
 **Solution:**
-- Convert inline formats to OpenType Stylist blocks
+- Convert inline formats to Typography Stylist blocks
 - Follow the partial word selection warnings
 - Ensure semantic heading structure is maintained
 
@@ -606,12 +606,12 @@ add_filter('OTS_default_presets', function($presets) {
 
 ### REST API Usage
 
-All REST API endpoints are at `/wp-json/ots/v1/`
+All REST API endpoints are at `/wp-json/typography-stylist/v1/`
 
 #### Get All Presets
 
 ```javascript
-fetch('/wp-json/ots/v1/presets')
+fetch('/wp-json/typography-stylist/v1/presets')
     .then(response => response.json())
     .then(data => console.log(data));
 ```
@@ -623,7 +623,7 @@ const formData = new FormData();
 formData.append('name', 'My Font');
 formData.append('file', fileInput.files[0]);
 
-fetch('/wp-json/ots/v1/fonts', {
+fetch('/wp-json/typography-stylist/v1/fonts', {
     method: 'POST',
     headers: {
         'X-WP-Nonce': wpApiSettings.nonce
@@ -637,7 +637,7 @@ fetch('/wp-json/ots/v1/fonts', {
 #### Add Adobe Fonts Project
 
 ```javascript
-fetch('/wp-json/ots/v1/adobe-fonts', {
+fetch('/wp-json/typography-stylist/v1/adobe-fonts', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -664,7 +664,7 @@ fetch('/wp-json/ots/v1/adobe-fonts', {
 }
 
 /* Block wrapper */
-.wp-block-opentype-stylist {
+.wp-block-typography-stylist {
     /* Block container */
 }
 
@@ -688,8 +688,8 @@ fetch('/wp-json/ots/v1/adobe-fonts', {
 ### File Structure
 
 ```
-opentype-stylist/
-├── opentype-stylist.php              # Main plugin file
+typography-stylist/
+├── typography-stylist.php              # Main plugin file
 ├── includes/
 │   └── admin-page.php                # Admin settings interface
 ├── assets/
@@ -704,7 +704,7 @@ opentype-stylist/
 │       ├── frontend.css              # Frontend styles
 │       └── glyph-browser.min.css     # Glyph browser styles
 ├── blocks/
-│   └── opentype-stylist/
+│   └── typography-stylist/
 │       ├── index.js                  # Block registration
 │       ├── edit.js                   # Block editor component
 │       ├── save.js                   # Block frontend rendering
@@ -802,6 +802,6 @@ See [README.md](README.md#changelog) for detailed version history.
 
 ---
 
-**Thank you for using OpenType Stylist!**
+**Thank you for using Typography Stylist\!**
 
 We hope this plugin helps you create beautiful, accessible typography in WordPress.

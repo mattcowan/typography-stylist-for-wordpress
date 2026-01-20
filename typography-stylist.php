@@ -1,14 +1,14 @@
 <?php
 /**
- * Plugin Name: OpenType Stylist
+ * Plugin Name: Typography Stylist
  * Plugin URI: https://github.com/mattcowan/opentype-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.0.7
+ * Version: 1.1.0
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: opentype-stylist
+ * Text Domain: typography-stylist
  * Domain Path: /languages
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('OTS_VERSION')) {
-    define('OTS_VERSION', '1.0.7');
+    define('OTS_VERSION', '1.1.0');
 }
 if (!defined('OTS_PLUGIN_DIR')) {
     define('OTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -36,7 +36,7 @@ if (!defined('OTS_PLUGIN_BASENAME')) {
 /**
  * Main plugin class
  */
-class OpenType_Stylist {
+class Typography_Stylist {
 
     /**
      * Instance of this class
@@ -114,7 +114,7 @@ class OpenType_Stylist {
     public function activate_plugin() {
         $this->secure_upload_directory();
         // Mark .htaccess as verified so we don't check on every admin page load
-        update_option('ots_htaccess_verified', true, false);
+        update_option('typography_stylist_htaccess_verified', true, false);
     }
 
     /**
@@ -125,7 +125,7 @@ class OpenType_Stylist {
      */
     public function maybe_create_htaccess() {
         // Check if we've already verified .htaccess (one-time check)
-        if (get_option('ots_htaccess_verified', false)) {
+        if (get_option('typography_stylist_htaccess_verified', false)) {
             return;
         }
 
@@ -139,7 +139,7 @@ class OpenType_Stylist {
         }
 
         // Mark as verified so we don't check again
-        update_option('ots_htaccess_verified', true, false);
+        update_option('typography_stylist_htaccess_verified', true, false);
     }
 
     /**
@@ -153,39 +153,8 @@ class OpenType_Stylist {
             $this->enqueue_custom_fonts_for_blocks();
             $this->enqueue_adobe_fonts();
 
-            // Note: CSS variables are now output via admin_print_styles hook
-            // in output_font_css_variables_iframe() method for reliable iframe injection
-        }
-    }
-
-    /**
-     * Output CSS variables for block editor iframe
-     *
-     * The block editor uses an iframe for content rendering. CSS variables
-     * must be injected directly into the iframe's head, not via wp_add_inline_style()
-     * on dummy handles (which is unreliable in iframe context).
-     *
-     * This method fires on admin_print_styles which runs in both main admin
-     * and iframe contexts, ensuring CSS variables are available everywhere.
-     */
-    public function output_font_css_variables_iframe() {
-        // Only in admin context
-        if (!is_admin()) {
-            return;
-        }
-
-        $css = $this->get_font_css_variables();
-        if (!empty($css)) {
-            $css = $this->sanitize_output_css($css);
-            $allowed_css = array(
-                'style' => array(
-                    'id' => array(),
-                    'type' => array()
-                )
-            );
-            // Output style block directly - matches pattern from output_font_css_variables()
-            // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
-            echo wp_kses("<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
+            // Note: CSS variables are output via admin_head hook
+            // in output_font_css_variables() method for reliable iframe injection
         }
     }
 
@@ -201,7 +170,7 @@ class OpenType_Stylist {
 
         // Editor styles
         wp_enqueue_style(
-            'ots-block-editor',
+            'typography-stylist-block-editor',
             OTS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
             array('wp-edit-blocks'),
             OTS_VERSION
@@ -209,7 +178,7 @@ class OpenType_Stylist {
 
         // Editor JavaScript
         wp_enqueue_script(
-            'ots-block-editor',
+            'typography-stylist-block-editor',
             OTS_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
             array(
                 'wp-blocks',
@@ -227,13 +196,13 @@ class OpenType_Stylist {
 
         // Enable JavaScript translations
         wp_set_script_translations(
-            'ots-block-editor',
-            'opentype-stylist',
+            'typography-stylist-block-editor',
+            'typography-stylist',
             OTS_PLUGIN_DIR . 'languages'
         );
 
         // Cache the localized data with transient
-        $cache_key = 'ots_editor_data_' . get_current_user_id();
+        $cache_key = 'typography_stylist_editor_data_' . get_current_user_id();
         $localized_data = get_transient($cache_key);
 
         if (false === $localized_data) {
@@ -243,10 +212,10 @@ class OpenType_Stylist {
                 'fonts' => $this->get_custom_fonts(),
                 'adobeFonts' => $this->get_adobe_fonts(),
                 'manualFonts' => $this->get_manual_fonts(),
-                'restUrl' => rest_url('ots/v1/'),
+                'restUrl' => rest_url('typography-stylist/v1/'),
                 'nonce' => wp_create_nonce('wp_rest'),
-                'enableAriaLabels' => get_option('ots_enable_aria_labels', false),
-                'showClearConfirmation' => get_option('ots_show_clear_confirmation', true)
+                'enableAriaLabels' => get_option('typography_stylist_enable_aria_labels', false),
+                'showClearConfirmation' => get_option('typography_stylist_show_clear_confirmation', true)
             );
 
             // Cache for 1 hour
@@ -254,7 +223,7 @@ class OpenType_Stylist {
         }
 
         // Pass data to JavaScript
-        wp_localize_script('ots-block-editor', 'otsData', $localized_data);
+        wp_localize_script('typography-stylist-block-editor', 'typographyStylistData', $localized_data);
     }
 
     /**
@@ -266,7 +235,7 @@ class OpenType_Stylist {
      * 2. If <!--more--> tag exists, use content before it
      * 3. Otherwise, assume full content (since auto-excerpts are plain text without styled content)
      *
-     * Theme authors can override this behavior using the 'ots_archive_post_content' filter.
+     * Theme authors can override this behavior using the 'typography_stylist_archive_post_content' filter.
      *
      * @param WP_Post $post Post object
      * @return string Content to check
@@ -297,7 +266,7 @@ class OpenType_Stylist {
              * @param bool    $check_full_content Whether to check full content (default: false)
              * @param WP_Post $post               The post object being checked
              */
-            $check_full_content = apply_filters('ots_check_full_content_on_archives', false, $post);
+            $check_full_content = apply_filters('typography_stylist_check_full_content_on_archives', false, $post);
             $content_to_check = $check_full_content ? $post->post_content : '';
         }
 
@@ -313,7 +282,7 @@ class OpenType_Stylist {
          * @param string  $content_to_check The content determined by the default heuristic
          * @param WP_Post $post             The post object being checked
          */
-        return apply_filters('ots_archive_post_content', $content_to_check, $post);
+        return apply_filters('typography_stylist_archive_post_content', $content_to_check, $post);
     }
 
     /**
@@ -339,15 +308,16 @@ class OpenType_Stylist {
      * 'the_content' filter and you understand the security/performance implications.
      *
      * To enable (not recommended unless absolutely necessary):
-     * add_filter('ots_use_full_content_filter', '__return_true');
+     * add_filter('typography_stylist_use_full_content_filter', '__return_true');
      *
      * @param string $content Raw post content to render
      * @return string Rendered content
      */
     private function render_content_for_detection($content) {
-        $use_full_content_filter = apply_filters('ots_use_full_content_filter', false);
+        $use_full_content_filter = apply_filters('typography_stylist_use_full_content_filter', false);
 
         if ($use_full_content_filter) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core hook
             return apply_filters('the_content', $content);
         }
 
@@ -370,7 +340,7 @@ class OpenType_Stylist {
             }
 
             // Cache the result per post
-            $cache_key = 'ots_has_styled_' . $post->ID;
+            $cache_key = 'typography_stylist_has_styled_' . $post->ID;
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -396,7 +366,7 @@ class OpenType_Stylist {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'ots_has_styled_archive_' . md5(serialize($post_ids));
+            $cache_key = 'typography_stylist_has_styled_archive_' . md5(serialize($post_ids));
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -443,7 +413,7 @@ class OpenType_Stylist {
             }
 
             // Cache the result per post
-            $cache_key = 'ots_used_fonts_' . $post->ID;
+            $cache_key = 'typography_stylist_used_fonts_' . $post->ID;
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -492,7 +462,7 @@ class OpenType_Stylist {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'ots_used_fonts_archive_' . md5(serialize($post_ids));
+            $cache_key = 'typography_stylist_used_fonts_archive_' . md5(serialize($post_ids));
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -540,15 +510,15 @@ class OpenType_Stylist {
     }
 
     /**
-     * Recursively extract fontFamily from OpenType Stylist blocks
+     * Recursively extract fontFamily from Typography Stylist blocks
      *
      * @param array $blocks Array of parsed blocks
      * @param array &$fonts Array to collect font families (passed by reference)
      */
     private function extract_fonts_from_blocks($blocks, &$fonts) {
         foreach ($blocks as $block) {
-            // Check if this is an OpenType Stylist block with a fontFamily attribute
-            if ($block['blockName'] === 'opentype-stylist/block' &&
+            // Check if this is a Typography Stylist block with a fontFamily attribute
+            if ($block['blockName'] === 'typography-stylist/block' &&
                 isset($block['attrs']['fontFamily']) &&
                 !empty($block['attrs']['fontFamily'])) {
                 $fonts[] = $block['attrs']['fontFamily'];
@@ -598,7 +568,7 @@ class OpenType_Stylist {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'ots-frontend',
+            'typography-stylist-frontend',
             OTS_PLUGIN_URL . "assets/css/frontend{$suffix}.css",
             array(),
             OTS_VERSION
@@ -685,7 +655,7 @@ class OpenType_Stylist {
 
         // Build cache key including load_on_all_pages settings
         $load_settings = wp_list_pluck($all_fonts, 'load_on_all_pages', 'id');
-        $cache_key = 'ots_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
+        $cache_key = 'typography_stylist_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -733,7 +703,7 @@ class OpenType_Stylist {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('ots-frontend', $combined_css);
+            wp_add_inline_style('typography-stylist-frontend', $combined_css);
         }
     }
 
@@ -742,10 +712,10 @@ class OpenType_Stylist {
      */
     public function add_admin_menu() {
         $hook = add_options_page(
-            esc_html__('OpenType Stylist', 'opentype-stylist'),
-            esc_html__('OpenType Stylist', 'opentype-stylist'),
+            esc_html__('Typography Stylist', 'typography-stylist'),
+            esc_html__('Typography Stylist', 'typography-stylist'),
             'manage_options',
-            'opentype-stylist',
+            'typography-stylist',
             array($this, 'render_admin_page')
         );
 
@@ -763,8 +733,8 @@ class OpenType_Stylist {
     public function add_plugin_action_links($links) {
         $settings_link = sprintf(
             '<a href="%s">%s</a>',
-            esc_url(admin_url('options-general.php?page=opentype-stylist')),
-            esc_html__('Settings', 'opentype-stylist')
+            esc_url(admin_url('options-general.php?page=typography-stylist')),
+            esc_html__('Settings', 'typography-stylist')
         );
 
         array_unshift($links, $settings_link);
@@ -779,14 +749,14 @@ class OpenType_Stylist {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'ots-admin',
+            'typography-stylist-admin',
             OTS_PLUGIN_URL . "assets/css/admin-page{$suffix}.css",
             array(),
             OTS_VERSION
         );
 
         wp_enqueue_script(
-            'ots-admin',
+            'typography-stylist-admin',
             OTS_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
             array('jquery'),
             OTS_VERSION,
@@ -798,55 +768,55 @@ class OpenType_Stylist {
         $this->enqueue_adobe_fonts();
 
         // Localize script for translations and data
-        wp_localize_script('ots-admin', 'otsAdmin', array(
-            'restUrl' => rest_url('ots/v1/'),
+        wp_localize_script('typography-stylist-admin', 'typographyStylistAdmin', array(
+            'restUrl' => rest_url('typography-stylist/v1/'),
             'nonce' => wp_create_nonce('wp_rest'),
             'fonts' => $this->get_custom_fonts(),
             'adobeFonts' => $this->get_adobe_fonts(),
             'manualFonts' => $this->get_manual_fonts(),
             'replacements' => $this->get_font_replacements(),
             'strings' => array(
-                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'opentype-stylist'),
-                'uploadError' => esc_html__('Failed to upload font kit.', 'opentype-stylist'),
-                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'opentype-stylist'),
-                'enterName' => esc_html__('Please enter a font kit name.', 'opentype-stylist'),
-                'selectFile' => esc_html__('Please select a ZIP file.', 'opentype-stylist'),
-                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'opentype-stylist'),
-                'deleteError' => esc_html__('Failed to delete font kit.', 'opentype-stylist'),
-                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'opentype-stylist'),
-                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'opentype-stylist'),
-                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'opentype-stylist'),
-                'uploading' => esc_html__('Uploading', 'opentype-stylist'),
-                'uploadingZip' => esc_html__('Uploading ZIP file...', 'opentype-stylist'),
-                'processing' => esc_html__('Processing...', 'opentype-stylist'),
-                'uploadButton' => esc_html__('Upload Font Kit', 'opentype-stylist'),
+                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'typography-stylist'),
+                'uploadError' => esc_html__('Failed to upload font kit.', 'typography-stylist'),
+                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'typography-stylist'),
+                'enterName' => esc_html__('Please enter a font kit name.', 'typography-stylist'),
+                'selectFile' => esc_html__('Please select a ZIP file.', 'typography-stylist'),
+                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'typography-stylist'),
+                'deleteError' => esc_html__('Failed to delete font kit.', 'typography-stylist'),
+                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'typography-stylist'),
+                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typography-stylist'),
+                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typography-stylist'),
+                'uploading' => esc_html__('Uploading', 'typography-stylist'),
+                'uploadingZip' => esc_html__('Uploading ZIP file...', 'typography-stylist'),
+                'processing' => esc_html__('Processing...', 'typography-stylist'),
+                'uploadButton' => esc_html__('Upload Font Kit', 'typography-stylist'),
                 // Adobe Fonts strings
-                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'opentype-stylist'),
-                'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'opentype-stylist'),
-                'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'opentype-stylist'),
-                'adding' => esc_html__('Adding...', 'opentype-stylist'),
-                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'opentype-stylist'),
-                'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'opentype-stylist'),
-                'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'opentype-stylist'),
-                'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'opentype-stylist'),
-                'deleteAdobeFontError' => esc_html__('Failed to delete Adobe Fonts project.', 'opentype-stylist'),
+                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'typography-stylist'),
+                'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
+                'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
+                'adding' => esc_html__('Adding...', 'typography-stylist'),
+                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'typography-stylist'),
+                'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'typography-stylist'),
+                'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'typography-stylist'),
+                'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'typography-stylist'),
+                'deleteAdobeFontError' => esc_html__('Failed to delete Adobe Fonts project.', 'typography-stylist'),
                 // Manual/Custom Fonts strings
-                'enterManualFontName' => esc_html__('Please enter a font name.', 'opentype-stylist'),
-                'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'opentype-stylist'),
-                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'opentype-stylist'),
-                'addManualFontError' => esc_html__('Failed to add custom font.', 'opentype-stylist'),
-                'addManualFontButton' => esc_html__('Add Custom Font', 'opentype-stylist'),
-                'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'opentype-stylist'),
-                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'opentype-stylist'),
+                'enterManualFontName' => esc_html__('Please enter a font name.', 'typography-stylist'),
+                'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'typography-stylist'),
+                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'typography-stylist'),
+                'addManualFontError' => esc_html__('Failed to add custom font.', 'typography-stylist'),
+                'addManualFontButton' => esc_html__('Add Custom Font', 'typography-stylist'),
+                'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'typography-stylist'),
+                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'typography-stylist'),
                 // Font loading setting strings
-                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'opentype-stylist'),
+                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'typography-stylist'),
                 // Edit font strings
-                'saving' => esc_html__('Saving...', 'opentype-stylist'),
-                'saveChanges' => esc_html__('Save Changes', 'opentype-stylist'),
-                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'opentype-stylist'),
-                'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'opentype-stylist'),
-                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'opentype-stylist'),
-                'updateFontError' => esc_html__('Failed to update font.', 'opentype-stylist')
+                'saving' => esc_html__('Saving...', 'typography-stylist'),
+                'saveChanges' => esc_html__('Save Changes', 'typography-stylist'),
+                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'typography-stylist'),
+                'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'typography-stylist'),
+                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'typography-stylist'),
+                'updateFontError' => esc_html__('Failed to update font.', 'typography-stylist')
             )
         ));
     }
@@ -862,7 +832,7 @@ class OpenType_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'ots_admin_font_css';
+        $cache_key = 'typography_stylist_admin_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -884,7 +854,7 @@ class OpenType_Stylist {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('ots-admin', $combined_css);
+            wp_add_inline_style('typography-stylist-admin', $combined_css);
         }
     }
 
@@ -900,7 +870,7 @@ class OpenType_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'ots_block_font_css';
+        $cache_key = 'typography_stylist_block_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -922,11 +892,11 @@ class OpenType_Stylist {
         }
 
         // Always register/enqueue handle even if no custom fonts, so we can attach CSS variables
-        wp_register_style('ots-block-fonts', false, array(), OTS_VERSION);
-        wp_enqueue_style('ots-block-fonts');
+        wp_register_style('typography-stylist-block-fonts', false, array(), OTS_VERSION);
+        wp_enqueue_style('typography-stylist-block-fonts');
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('ots-block-fonts', $combined_css);
+            wp_add_inline_style('typography-stylist-block-fonts', $combined_css);
         }
 
         // Add CSS variables for font replacements to work in editor iframe
@@ -934,7 +904,7 @@ class OpenType_Stylist {
         if (!empty($css_vars)) {
             // CSS variables must be added as proper CSS (not wrapped in <style> tags)
             // wp_add_inline_style expects raw CSS content
-            wp_add_inline_style('ots-block-fonts', $css_vars);
+            wp_add_inline_style('typography-stylist-block-fonts', $css_vars);
         }
     }
 
@@ -949,7 +919,7 @@ class OpenType_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'ots_editor_font_css';
+        $cache_key = 'typography_stylist_editor_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -972,9 +942,9 @@ class OpenType_Stylist {
 
         if (!empty($combined_css)) {
             // Register a separate handle for fonts in the popover/toolbar context
-            wp_register_style('ots-editor-fonts', false, array(), OTS_VERSION);
-            wp_enqueue_style('ots-editor-fonts');
-            wp_add_inline_style('ots-editor-fonts', $combined_css);
+            wp_register_style('typography-stylist-editor-fonts', false, array(), OTS_VERSION);
+            wp_enqueue_style('typography-stylist-editor-fonts');
+            wp_add_inline_style('typography-stylist-editor-fonts', $combined_css);
         }
     }
 
@@ -982,37 +952,37 @@ class OpenType_Stylist {
      * Register settings
      */
     public function register_settings() {
-        register_setting('ots_settings', 'ots_presets', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_presets', array(
             'type' => 'array',
             'default' => $this->get_default_presets(),
             'sanitize_callback' => array($this, 'sanitize_presets')
         ));
 
-        register_setting('ots_settings', 'ots_global_settings', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_global_settings', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_global_settings')
         ));
 
-        register_setting('ots_settings', 'ots_custom_fonts', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_custom_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_custom_fonts')
         ));
 
-        register_setting('ots_settings', 'ots_adobe_fonts', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_adobe_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_adobe_fonts')
         ));
 
-        register_setting('ots_settings', 'ots_manual_fonts', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_manual_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_manual_fonts')
         ));
 
-        register_setting('ots_settings', 'ots_font_replacements', array(
+        register_setting('typography_stylist_settings', 'typography_stylist_font_replacements', array(
             'type' => 'array',
             'default' => array(
                 'mappings' => array(),
@@ -1031,45 +1001,45 @@ class OpenType_Stylist {
      * Register custom block
      */
     public function register_block() {
-        register_block_type(OTS_PLUGIN_DIR . 'blocks/opentype-stylist');
+        register_block_type(OTS_PLUGIN_DIR . 'blocks/typography-stylist');
     }
 
     /**
      * Register REST API routes
      */
     public function register_rest_routes() {
-        register_rest_route('ots/v1', '/presets', array(
+        register_rest_route('typography-stylist/v1', '/presets', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_presets_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/presets', array(
+        register_rest_route('typography-stylist/v1', '/presets', array(
             'methods' => 'POST',
             'callback' => array($this, 'save_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typography-stylist/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
         // Add features endpoint
-        register_rest_route('ots/v1', '/features', array(
+        register_rest_route('typography-stylist/v1', '/features', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_features_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/fonts', array(
+        register_rest_route('typography-stylist/v1', '/fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/fonts', array(
+        register_rest_route('typography-stylist/v1', '/fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'upload_font_endpoint'),
             'permission_callback' => function() {
@@ -1077,7 +1047,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_font_endpoint'),
             'permission_callback' => function() {
@@ -1086,13 +1056,13 @@ class OpenType_Stylist {
         ));
 
         // Adobe Fonts endpoints
-        register_rest_route('ots/v1', '/adobe-fonts', array(
+        register_rest_route('typography-stylist/v1', '/adobe-fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_adobe_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/adobe-fonts', array(
+        register_rest_route('typography-stylist/v1', '/adobe-fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_adobe_font_endpoint'),
             'permission_callback' => function() {
@@ -1100,7 +1070,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_adobe_font_endpoint'),
             'permission_callback' => function() {
@@ -1108,7 +1078,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
+        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_fallback_endpoint'),
             'permission_callback' => function() {
@@ -1116,7 +1086,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
@@ -1125,13 +1095,13 @@ class OpenType_Stylist {
         ));
 
         // Manual fonts endpoints
-        register_rest_route('ots/v1', '/manual-fonts', array(
+        register_rest_route('typography-stylist/v1', '/manual-fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_manual_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/manual-fonts', array(
+        register_rest_route('typography-stylist/v1', '/manual-fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1139,7 +1109,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typography-stylist/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1147,7 +1117,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typography-stylist/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1156,7 +1126,7 @@ class OpenType_Stylist {
         ));
 
         // Fallback endpoint for uploaded fonts
-        register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
+        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_fallback_endpoint'),
             'permission_callback' => function() {
@@ -1165,7 +1135,7 @@ class OpenType_Stylist {
         ));
 
         // Load on all pages endpoint for uploaded fonts
-        register_rest_route('ots/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
@@ -1174,13 +1144,13 @@ class OpenType_Stylist {
         ));
 
         // Font replacement endpoints
-        register_rest_route('ots/v1', '/font-replacements', array(
+        register_rest_route('typography-stylist/v1', '/font-replacements', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_font_replacements_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('ots/v1', '/font-replacements', array(
+        register_rest_route('typography-stylist/v1', '/font-replacements', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1188,7 +1158,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/font-replacements/(?P<id>\d+)', array(
+        register_rest_route('typography-stylist/v1', '/font-replacements/(?P<id>\d+)', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1196,7 +1166,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/font-replacements/(?P<id>\d+)', array(
+        register_rest_route('typography-stylist/v1', '/font-replacements/(?P<id>\d+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1204,7 +1174,7 @@ class OpenType_Stylist {
             }
         ));
 
-        register_rest_route('ots/v1', '/font-replacements/orphans', array(
+        register_rest_route('typography-stylist/v1', '/font-replacements/orphans', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_unassigned_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
@@ -1223,7 +1193,7 @@ class OpenType_Stylist {
         // Rate limiting for write operations
         if ($request && in_array($request->get_method(), array('POST', 'DELETE', 'PUT', 'PATCH'))) {
             $user_id = get_current_user_id();
-            $rate_limit_key = 'ots_rate_limit_' . $user_id;
+            $rate_limit_key = 'typography_stylist_rate_limit_' . $user_id;
             $requests = get_transient($rate_limit_key);
 
             if (false === $requests) {
@@ -1236,7 +1206,7 @@ class OpenType_Stylist {
             if ($requests > 50) {
                 return new WP_Error(
                     'rate_limit_exceeded',
-                    esc_html__('Too many requests. Please try again later.', 'opentype-stylist'),
+                    esc_html__('Too many requests. Please try again later.', 'typography-stylist'),
                     array('status' => 429)
                 );
             }
@@ -1252,7 +1222,7 @@ class OpenType_Stylist {
      */
     public function get_presets() {
         if (null === $this->presets_cache) {
-            $this->presets_cache = get_option('ots_presets', $this->get_default_presets());
+            $this->presets_cache = get_option('typography_stylist_presets', $this->get_default_presets());
         }
         return $this->presets_cache;
     }
@@ -1315,171 +1285,171 @@ class OpenType_Stylist {
             $this->features_cache = array(
                 array(
                     'id' => 'liga',
-                    'name' => esc_html__('Standard Ligatures', 'opentype-stylist'),
+                    'name' => esc_html__('Standard Ligatures', 'typography-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Common letter combinations like fi, fl', 'opentype-stylist')
+                    'description' => esc_html__('Common letter combinations like fi, fl', 'typography-stylist')
                 ),
                 array(
                     'id' => 'dlig',
-                    'name' => esc_html__('Discretionary Ligatures', 'opentype-stylist'),
+                    'name' => esc_html__('Discretionary Ligatures', 'typography-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Optional decorative ligatures', 'opentype-stylist')
+                    'description' => esc_html__('Optional decorative ligatures', 'typography-stylist')
                 ),
                 array(
                     'id' => 'calt',
-                    'name' => esc_html__('Contextual Alternates', 'opentype-stylist'),
+                    'name' => esc_html__('Contextual Alternates', 'typography-stylist'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Context-aware letter forms', 'opentype-stylist')
+                    'description' => esc_html__('Context-aware letter forms', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss01',
-                    'name' => esc_html__('Stylistic Set 1', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 1', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss02',
-                    'name' => esc_html__('Stylistic Set 2', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 2', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss03',
-                    'name' => esc_html__('Stylistic Set 3', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 3', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss04',
-                    'name' => esc_html__('Stylistic Set 4', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 4', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss05',
-                    'name' => esc_html__('Stylistic Set 5', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 5', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss06',
-                    'name' => esc_html__('Stylistic Set 6', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 6', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss07',
-                    'name' => esc_html__('Stylistic Set 7', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 7', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss08',
-                    'name' => esc_html__('Stylistic Set 8', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 8', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss09',
-                    'name' => esc_html__('Stylistic Set 9', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 9', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss10',
-                    'name' => esc_html__('Stylistic Set 10', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 10', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss11',
-                    'name' => esc_html__('Stylistic Set 11', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 11', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss12',
-                    'name' => esc_html__('Stylistic Set 12', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 12', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss13',
-                    'name' => esc_html__('Stylistic Set 13', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 13', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss14',
-                    'name' => esc_html__('Stylistic Set 14', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 14', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss15',
-                    'name' => esc_html__('Stylistic Set 15', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 15', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss16',
-                    'name' => esc_html__('Stylistic Set 16', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 16', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss17',
-                    'name' => esc_html__('Stylistic Set 17', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 17', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss18',
-                    'name' => esc_html__('Stylistic Set 18', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 18', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss19',
-                    'name' => esc_html__('Stylistic Set 19', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 19', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss20',
-                    'name' => esc_html__('Stylistic Set 20', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Set 20', 'typography-stylist'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'opentype-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
                 ),
                 array(
                     'id' => 'swsh',
-                    'name' => esc_html__('Swashes', 'opentype-stylist'),
+                    'name' => esc_html__('Swashes', 'typography-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Decorative flourishes', 'opentype-stylist')
+                    'description' => esc_html__('Decorative flourishes', 'typography-stylist')
                 ),
                 array(
                     'id' => 'cswh',
-                    'name' => esc_html__('Contextual Swashes', 'opentype-stylist'),
+                    'name' => esc_html__('Contextual Swashes', 'typography-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Context-aware decorative flourishes', 'opentype-stylist')
+                    'description' => esc_html__('Context-aware decorative flourishes', 'typography-stylist')
                 ),
                 array(
                     'id' => 'salt',
-                    'name' => esc_html__('Stylistic Alternates', 'opentype-stylist'),
+                    'name' => esc_html__('Stylistic Alternates', 'typography-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Alternative character forms', 'opentype-stylist')
+                    'description' => esc_html__('Alternative character forms', 'typography-stylist')
                 ),
                 array(
                     'id' => 'titl',
-                    'name' => esc_html__('Titling', 'opentype-stylist'),
+                    'name' => esc_html__('Titling', 'typography-stylist'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Optimized for large titles', 'opentype-stylist')
+                    'description' => esc_html__('Optimized for large titles', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ornm',
-                    'name' => esc_html__('Ornaments', 'opentype-stylist'),
+                    'name' => esc_html__('Ornaments', 'typography-stylist'),
                     'category' => 'decorative',
-                    'description' => esc_html__('Decorative ornaments', 'opentype-stylist')
+                    'description' => esc_html__('Decorative ornaments', 'typography-stylist')
                 )
             );
         }
@@ -1594,11 +1564,11 @@ class OpenType_Stylist {
 
         // Validate required parameters
         if (empty($params['id']) || empty($params['name']) || empty($params['features'])) {
-            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'typography-stylist'), array('status' => 400));
         }
 
         if (!is_array($params['features']) || count($params['features']) === 0) {
-            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'typography-stylist'), array('status' => 400));
         }
 
         // Validate feature IDs
@@ -1606,7 +1576,7 @@ class OpenType_Stylist {
         foreach ($params['features'] as $feature) {
             if (!in_array($feature, $available_features, true)) {
                 /* translators: %s: The invalid OpenType feature ID */
-                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'opentype-stylist'), esc_html($feature)), array('status' => 400));
+                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'typography-stylist'), esc_html($feature)), array('status' => 400));
             }
         }
 
@@ -1619,7 +1589,7 @@ class OpenType_Stylist {
 
         $presets = $this->get_presets();
         $presets[] = $new_preset;
-        update_option('ots_presets', $presets);
+        update_option('typography_stylist_presets', $presets);
 
         // Clear cache
         $this->clear_cache();
@@ -1647,12 +1617,12 @@ class OpenType_Stylist {
         if (!$found) {
             return new WP_Error(
                 'preset_not_found',
-                esc_html__('Preset not found', 'opentype-stylist'),
+                esc_html__('Preset not found', 'typography-stylist'),
                 array('status' => 404)
             );
         }
 
-        update_option('ots_presets', array_values($presets));
+        update_option('typography_stylist_presets', array_values($presets));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -1679,7 +1649,7 @@ class OpenType_Stylist {
      */
     public function get_custom_fonts() {
         if (null === $this->fonts_cache) {
-            $this->fonts_cache = get_option('ots_custom_fonts', array());
+            $this->fonts_cache = get_option('typography_stylist_custom_fonts', array());
         }
         return $this->fonts_cache;
     }
@@ -1689,7 +1659,7 @@ class OpenType_Stylist {
      */
     public function get_manual_fonts() {
         if (null === $this->manual_fonts_cache) {
-            $this->manual_fonts_cache = get_option('ots_manual_fonts', array());
+            $this->manual_fonts_cache = get_option('typography_stylist_manual_fonts', array());
         }
         return $this->manual_fonts_cache;
     }
@@ -1703,11 +1673,11 @@ class OpenType_Stylist {
         $this->manual_fonts_cache = null;
 
         // Clear all font CSS caches
-        delete_transient('ots_combined_font_css');
-        delete_transient('ots_admin_font_css');
-        delete_transient('ots_editor_font_css');
-        delete_transient('ots_block_font_css');
-        delete_transient('ots_css_variables');
+        delete_transient('typography_stylist_combined_font_css');
+        delete_transient('typography_stylist_admin_font_css');
+        delete_transient('typography_stylist_editor_font_css');
+        delete_transient('typography_stylist_block_font_css');
+        delete_transient('typography_stylist_css_variables');
 
         // Clear per-page font caches (all cached variations)
         // Direct database call is required here for bulk deletion of transients with wildcard patterns.
@@ -1731,8 +1701,8 @@ class OpenType_Stylist {
      */
     private function invalidate_editor_data_cache($user_id = null) {
         if ($user_id) {
-            delete_transient('ots_editor_data_' . $user_id);
-            wp_cache_delete('ots_editor_data_' . $user_id, 'transient');
+            delete_transient('typography_stylist_editor_data_' . $user_id);
+            wp_cache_delete('typography_stylist_editor_data_' . $user_id, 'transient');
         } else {
             // Clear for all users
             // Direct database call is required for bulk deletion of user-specific transients.
@@ -1929,7 +1899,7 @@ class OpenType_Stylist {
                 $weight = sanitize_text_field($face['weight']);
 
                 // Check if variable weights are enabled
-                $allow_variable = get_option('ots_allow_variable_weights', false);
+                $allow_variable = get_option('typography_stylist_allow_variable_weights', false);
 
                 // Validate it's a known weight value
                 $valid_weights = array('normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900');
@@ -1999,7 +1969,7 @@ class OpenType_Stylist {
             $params = $request->get_params();
 
             if (empty($files['zip_file']) || empty($params['name'])) {
-                return new WP_Error('missing_data', esc_html__('Missing required font data', 'opentype-stylist'), array('status' => 400));
+                return new WP_Error('missing_data', esc_html__('Missing required font data', 'typography-stylist'), array('status' => 400));
             }
 
             $uploaded_file = $files['zip_file'];
@@ -2010,23 +1980,23 @@ class OpenType_Stylist {
             $type = $file_info['type'];
 
             if (!$ext || !$type) {
-                return new WP_Error('invalid_file', esc_html__('Invalid file type', 'opentype-stylist'), array('status' => 400));
+                return new WP_Error('invalid_file', esc_html__('Invalid file type', 'typography-stylist'), array('status' => 400));
             }
 
             if ($ext !== 'zip' || !in_array($type, array('application/zip', 'application/x-zip-compressed'), true)) {
-                return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'opentype-stylist'), array('status' => 400));
+                return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'typography-stylist'), array('status' => 400));
             }
 
             // Validate file size (max 10MB)
             $max_size = 10 * 1024 * 1024; // 10MB
             if ($uploaded_file['size'] > $max_size) {
                 /* translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB") */
-                return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'opentype-stylist'), size_format($max_size)), array('status' => 400));
+                return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'typography-stylist'), size_format($max_size)), array('status' => 400));
             }
 
             // Check for upload errors
             if ($uploaded_file['error'] !== UPLOAD_ERR_OK) {
-                return new WP_Error('upload_error', esc_html__('File upload error', 'opentype-stylist'), array('status' => 400));
+                return new WP_Error('upload_error', esc_html__('File upload error', 'typography-stylist'), array('status' => 400));
             }
 
             // Process the ZIP file - returns array of font entries
@@ -2041,7 +2011,7 @@ class OpenType_Stylist {
             foreach ($font_entries as $font_entry) {
                 $fonts[] = $font_entry;
             }
-            update_option('ots_custom_fonts', $fonts);
+            update_option('typography_stylist_custom_fonts', $fonts);
 
             // Clear cache
             $this->clear_cache();
@@ -2055,7 +2025,7 @@ class OpenType_Stylist {
             // Return generic message to users
             return new WP_Error(
                 'upload_exception',
-                esc_html__('Upload failed due to an internal error. Please try again or contact support.', 'opentype-stylist'),
+                esc_html__('Upload failed due to an internal error. Please try again or contact support.', 'typography-stylist'),
                 array('status' => 500)
             );
         }
@@ -2078,7 +2048,7 @@ class OpenType_Stylist {
         }
 
         if (!$font_to_delete) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
         }
 
         // Check if this is the last font in the kit
@@ -2114,7 +2084,7 @@ class OpenType_Stylist {
             }
         }
 
-        update_option('ots_custom_fonts', array_values($fonts));
+        update_option('typography_stylist_custom_fonts', array_values($fonts));
 
         // Clear cache
         $this->clear_cache();
@@ -2134,7 +2104,7 @@ class OpenType_Stylist {
 
         // Create directory
         if (!wp_mkdir_p($kit_base_path)) {
-            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'opentype-stylist'));
+            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'typography-stylist'));
         }
 
         // Initialize WordPress filesystem
@@ -2149,7 +2119,7 @@ class OpenType_Stylist {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
             // Return generic message to users
-            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'typography-stylist'), array('status' => 400));
         }
 
         // Validate extracted files - only allow CSS, WOFF, WOFF2, TTF, OTF, EOT
@@ -2203,13 +2173,13 @@ class OpenType_Stylist {
             $wp_filesystem->rmdir($kit_base_path, true);
             return new WP_Error(
                 'iterator_failed',
-                esc_html__('Failed to process font kit. The archive may be corrupted.', 'opentype-stylist')
+                esc_html__('Failed to process font kit. The archive may be corrupted.', 'typography-stylist')
             );
         }
 
         if (empty($css_files)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'opentype-stylist'));
+            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'typography-stylist'));
         }
 
         // Select the best CSS file (prioritizes actual font CSS over specimen/demo files)
@@ -2223,14 +2193,14 @@ class OpenType_Stylist {
         // Validate it's a real file, not a symlink
         if (!is_file($css_file_path) || is_link($css_file_path)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'opentype-stylist'));
+            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'typography-stylist'));
         }
 
         // Check CSS file size (max 1MB)
         $file_size = filesize($css_file_path);
         if ($file_size > 1024 * 1024) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'opentype-stylist'));
+            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'typography-stylist'));
         }
 
         // Use WP Filesystem API
@@ -2238,13 +2208,13 @@ class OpenType_Stylist {
 
         if ($css_content === false) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'opentype-stylist'));
+            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'typography-stylist'));
         }
 
         // Validate it looks like CSS (basic check)
         if (!preg_match('/@font-face\s*\{/i', $css_content)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'opentype-stylist'));
+            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'typography-stylist'));
         }
 
         // Get the directory where the CSS file is located (relative to kit_base_path)
@@ -2265,7 +2235,7 @@ class OpenType_Stylist {
         // Check if sanitization removed all content
         if (empty($css_content)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('No valid @font-face declarations found after sanitization', 'opentype-stylist'));
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face declarations found after sanitization', 'typography-stylist'));
         }
 
         // Parse font families
@@ -2274,7 +2244,7 @@ class OpenType_Stylist {
         if (empty($font_faces)) {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'opentype-stylist'));
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'typography-stylist'));
         }
 
         // Count font files more efficiently
@@ -2425,7 +2395,7 @@ class OpenType_Stylist {
             'no_font_face_css',
             sprintf(
                 /* translators: %d: number of CSS files found */
-                esc_html__('Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet.', 'opentype-stylist'),
+                esc_html__('Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet.', 'typography-stylist'),
                 count($css_files)
             ),
             array(
@@ -2550,7 +2520,7 @@ class OpenType_Stylist {
      * Get Adobe Fonts scripts
      */
     public function get_adobe_fonts() {
-        return get_option('ots_adobe_fonts', array());
+        return get_option('typography_stylist_adobe_fonts', array());
     }
 
     /**
@@ -2703,13 +2673,14 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (empty($params['embed_code'])) {
-            return new WP_Error('missing_embed_code', esc_html__('Embed code is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_embed_code', esc_html__('Embed code is required', 'typography-stylist'), array('status' => 400));
         }
 
         // Parse embed code
         $parsed = $this->parse_adobe_fonts_code($params['embed_code']);
         if (!$parsed) {
-            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'opentype-stylist'), array('status' => 400));
+            // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- False positive: error message text, not actual inline CSS/JS
+            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'typography-stylist'), array('status' => 400));
         }
 
         // Parse font families from user input
@@ -2718,7 +2689,7 @@ class OpenType_Stylist {
             : array();
 
         if (empty($font_families_input)) {
-            return new WP_Error('missing_families', esc_html__('At least one font family is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_families', esc_html__('At least one font family is required', 'typography-stylist'), array('status' => 400));
         }
 
         // Create kit metadata
@@ -2731,7 +2702,7 @@ class OpenType_Stylist {
             $is_duplicate_css_url = isset($font['css_url'], $parsed['css_url']) && $font['css_url'] === $parsed['css_url'];
 
             if ($is_duplicate_kit_id || $is_duplicate_css_url) {
-                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'opentype-stylist'), array('status' => 400));
+                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'typography-stylist'), array('status' => 400));
             }
         }
         $kit_name = !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'];
@@ -2759,7 +2730,7 @@ class OpenType_Stylist {
         foreach ($font_entries as $font_entry) {
             $fonts[] = $font_entry;
         }
-        update_option('ots_adobe_fonts', $fonts);
+        update_option('typography_stylist_adobe_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
@@ -2795,10 +2766,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_adobe_fonts', array_values($fonts));
+        update_option('typography_stylist_adobe_fonts', array_values($fonts));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -2819,7 +2790,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -2834,10 +2805,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_adobe_fonts', $fonts);
+        update_option('typography_stylist_adobe_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2858,7 +2829,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['load_on_all_pages'])) {
-            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -2873,10 +2844,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_adobe_fonts', $fonts);
+        update_option('typography_stylist_adobe_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2897,7 +2868,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -2912,10 +2883,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_custom_fonts', $fonts);
+        update_option('typography_stylist_custom_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2936,7 +2907,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['load_on_all_pages'])) {
-            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -2951,10 +2922,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_custom_fonts', $fonts);
+        update_option('typography_stylist_custom_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2989,7 +2960,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (empty($params['name']) || empty($params['font_family'])) {
-            return new WP_Error('missing_data', esc_html__('Name and font family are required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_data', esc_html__('Name and font family are required', 'typography-stylist'), array('status' => 400));
         }
 
         // Generate unique ID
@@ -3006,7 +2977,7 @@ class OpenType_Stylist {
 
         $fonts = $this->get_manual_fonts();
         $fonts[] = $new_font;
-        update_option('ots_manual_fonts', $fonts);
+        update_option('typography_stylist_manual_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
@@ -3038,10 +3009,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_manual_fonts', array_values($fonts));
+        update_option('typography_stylist_manual_fonts', array_values($fonts));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -3062,7 +3033,7 @@ class OpenType_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['font_family'])) {
-            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_manual_fonts();
@@ -3078,10 +3049,10 @@ class OpenType_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'opentype-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typography-stylist'), array('status' => 404));
         }
 
-        update_option('ots_manual_fonts', $fonts);
+        update_option('typography_stylist_manual_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -3198,7 +3169,7 @@ class OpenType_Stylist {
         // Enqueue each unique CSS URL once
         foreach ($css_urls_to_load as $handle_id => $css_url) {
             wp_enqueue_style(
-                'ots-adobe-' . $handle_id,
+                'typography-stylist-adobe-' . $handle_id,
                 esc_url($css_url, array('https')),
                 array(),
                 $handle_id  // Use kit ID as version for cache busting when Adobe updates fonts
@@ -3229,20 +3200,20 @@ class OpenType_Stylist {
         $global_load = $request->get_param('global_load');
 
         if (empty($deleted_id) || empty($replacement_id)) {
-            return new WP_Error('missing_params', __('Missing required parameters.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', __('Missing required parameters.', 'typography-stylist'), array('status' => 400));
         }
 
         $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
 
         if ($success === false) {
-            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typography-stylist'), array('status' => 400));
         }
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
         }
 
-        return new WP_Error('failed', __('Failed to add font replacement.', 'opentype-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to add font replacement.', 'typography-stylist'), array('status' => 500));
     }
 
     /**
@@ -3254,20 +3225,20 @@ class OpenType_Stylist {
         $global_load = $request->get_param('global_load');
 
         if (empty($deleted_id)) {
-            return new WP_Error('missing_id', __('Missing font ID.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_id', __('Missing font ID.', 'typography-stylist'), array('status' => 400));
         }
 
         $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
 
         if ($success === false) {
-            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typography-stylist'), array('status' => 400));
         }
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
         }
 
-        return new WP_Error('failed', __('Failed to update font replacement.', 'opentype-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to update font replacement.', 'typography-stylist'), array('status' => 500));
     }
 
     /**
@@ -3277,7 +3248,7 @@ class OpenType_Stylist {
         $deleted_id = $request->get_param('id');
 
         if (empty($deleted_id)) {
-            return new WP_Error('missing_id', __('Missing font ID.', 'opentype-stylist'), array('status' => 400));
+            return new WP_Error('missing_id', __('Missing font ID.', 'typography-stylist'), array('status' => 400));
         }
 
         $success = $this->remove_font_replacement((int) $deleted_id);
@@ -3286,7 +3257,7 @@ class OpenType_Stylist {
             return rest_ensure_response(array('success' => true));
         }
 
-        return new WP_Error('failed', __('Failed to delete font replacement.', 'opentype-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to delete font replacement.', 'typography-stylist'), array('status' => 500));
     }
 
     /**
@@ -3304,7 +3275,7 @@ class OpenType_Stylist {
      */
     private function get_font_replacements() {
         if (null === $this->font_replacements_cache) {
-            $this->font_replacements_cache = get_option('ots_font_replacements', array(
+            $this->font_replacements_cache = get_option('typography_stylist_font_replacements', array(
                 'mappings' => array(),
                 'global_load' => array(),
                 'next_id' => 1
@@ -3330,7 +3301,7 @@ class OpenType_Stylist {
 
         // Increment for next time
         $replacements['next_id'] = $next_id + 1;
-        update_option('ots_font_replacements', $replacements);
+        update_option('typography_stylist_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
 
         return $current_id;
@@ -3473,7 +3444,7 @@ class OpenType_Stylist {
             $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
         }
 
-        update_option('ots_font_replacements', $replacements);
+        update_option('typography_stylist_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
         $this->clear_cache();
 
@@ -3492,7 +3463,7 @@ class OpenType_Stylist {
         unset($replacements['mappings'][$deleted_id]);
         $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
 
-        update_option('ots_font_replacements', $replacements);
+        update_option('typography_stylist_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
         $this->clear_cache();
 
@@ -3534,7 +3505,7 @@ class OpenType_Stylist {
      */
     public function get_font_css_variables() {
         // Check transient cache first
-        $cache_key = 'ots_css_variables';
+        $cache_key = 'typography_stylist_css_variables';
         $cached_css = get_transient($cache_key);
 
         if (false !== $cached_css) {
@@ -4101,10 +4072,87 @@ class OpenType_Stylist {
     public function render_admin_page() {
         // Verify user has permission
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'opentype-stylist'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'typography-stylist'));
         }
 
+        // Save settings (with proper sanitization)
+        if (isset($_POST['typography_stylist_save_settings']) &&
+            check_admin_referer('typography_stylist_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Use proper sanitization via registered settings
+            if (isset($_POST['typography_stylist_presets'])) {
+                $sanitized = $this->sanitize_presets(wp_unslash($_POST['typography_stylist_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                update_option('typography_stylist_presets', $sanitized);
+
+                // Clear cache
+                $this->clear_cache();
+
+                echo '<div class="notice notice-success"><p>' .
+                     esc_html__('Settings saved successfully.', 'typography-stylist') .
+                     '</p></div>';
+            }
+        }
+
+        // Save options settings
+        if (isset($_POST['typography_stylist_save_options_settings']) &&
+            check_admin_referer('typography_stylist_options_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Get previous value to detect changes
+            $previous_show_clear_confirmation = (bool) get_option('typography_stylist_show_clear_confirmation', true);
+            $show_clear_confirmation = isset($_POST['typography_stylist_show_clear_confirmation']) ? '1' : '0';
+            update_option('typography_stylist_show_clear_confirmation', $show_clear_confirmation);
+
+            // Save variable weight setting
+            $allow_variable = isset($_POST['typography_stylist_allow_variable_weights']) ? '1' : '0';
+            update_option('typography_stylist_allow_variable_weights', $allow_variable);
+
+            // Clear cache for all users only when the clear confirmation setting changes
+            if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
+                $this->clear_cache();
+            }
+
+            echo '<div class="notice notice-success"><p>' .
+                 esc_html__('Options saved successfully.', 'typography-stylist') .
+                 '</p></div>';
+        }
+
+        // Save accessibility settings
+        if (isset($_POST['typography_stylist_save_accessibility_settings']) &&
+            check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
+            current_user_can('manage_options')) {
+
+            // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
+            $enable_aria = isset($_POST['typography_stylist_enable_aria_labels']) ? '1' : '0';
+            update_option('typography_stylist_enable_aria_labels', $enable_aria);
+
+            // Clear cache when accessibility settings change
+            $this->clear_cache();
+
+            echo '<div class="notice notice-success"><p>' .
+                 esc_html__('Accessibility settings saved successfully.', 'typography-stylist') .
+                 '</p></div>';
+        }
+
+        // Prepare template data
+        $template_data = array(
+            'instance' => $this,
+            'presets' => $this->get_presets(),
+            'custom_fonts' => get_option('typography_stylist_custom_fonts', array()),
+            'adobe_fonts' => $this->get_adobe_fonts(),
+            'manual_fonts' => $this->get_manual_fonts(),
+        );
+
+        // Include template file and render
         include OTS_PLUGIN_DIR . 'includes/admin-page.php';
+        typography_stylist_render_admin_template(
+            $template_data['instance'],
+            $template_data['presets'],
+            $template_data['custom_fonts'],
+            $template_data['adobe_fonts'],
+            $template_data['manual_fonts']
+        );
     }
 }
 
@@ -4116,11 +4164,11 @@ class OpenType_Stylist {
  *
  * @since 1.0.0
  *
- * @return OpenType_Stylist The plugin instance.
+ * @return Typography_Stylist The plugin instance.
  */
-function ots_init() {
-    return OpenType_Stylist::get_instance();
+function typography_stylist_init() {
+    return Typography_Stylist::get_instance();
 }
 
 // Start plugin
-add_action('plugins_loaded', 'ots_init');
+add_action('plugins_loaded', 'typography_stylist_init');
