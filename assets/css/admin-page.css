@@ -3,24 +3,24 @@
  * Headline Ligatures & Styles Plugin
  */
 
-.ots-admin-wrap {
+.typost-admin-wrap {
     max-width: 1200px;
 }
 
-.ots-admin-container {
+.typost-admin-container {
     background: #fff;
     border: 1px solid #ccd0d4;
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
     margin-top: 20px;
 }
 
-.ots-admin-tabs {
+.typost-admin-tabs {
     border-bottom: 1px solid #ccd0d4;
     background: #f6f7f7;
     display: flex;
 }
 
-.ots-tab-button {
+.typost-tab-button {
     background: none;
     border: none;
     padding: 15px 20px;
@@ -31,32 +31,32 @@
     transition: all 0.2s;
 }
 
-.ots-tab-button:hover {
+.typost-tab-button:hover {
     background: #fff;
 }
 
-.ots-tab-button.active {
+.typost-tab-button.active {
     background: #fff;
     border-bottom-color: #2271b1;
     font-weight: 600;
 }
 
-.ots-tab-button:focus {
+.typost-tab-button:focus {
     outline: 2px solid #2271b1;
     outline-offset: -2px;
     box-shadow: inset 0 0 0 1px #2271b1;
 }
 
-.ots-tab-content {
+.typost-tab-content {
     display: none;
     padding: 30px;
 }
 
-.ots-tab-content.active {
+.typost-tab-content.active {
     display: block;
 }
 
-.ots-preset-controls {
+.typost-preset-controls {
     margin: 20px 0;
     padding: 20px;
     background: #f0f6fc;
@@ -64,23 +64,23 @@
     border-radius: 4px;
 }
 
-.ots-preset-font-selector {
+.typost-preset-font-selector {
     margin: 0 15px 20px 15px;
 }
 
-.ots-preset-font-selector:last-child {
+.typost-preset-font-selector:last-child {
     margin-bottom: 0;
 }
 
-.ots-preset-font-selector label,
-.ots-preset-size-control label {
+.typost-preset-font-selector label,
+.typost-preset-size-control label {
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
     font-size: 14px;
 }
 
-.ots-font-select {
+.typost-font-select {
     max-width: 400px;
     padding: 8px;
     font-size: 14px;
@@ -88,23 +88,23 @@
     border-radius: 4px;
 }
 
-.ots-font-select:focus {
+.typost-font-select:focus {
     outline: 2px solid #2271b1;
     outline-offset: 0;
 }
 
-.ots-preset-font-selector .description,
-.ots-preset-size-control .description {
+.typost-preset-font-selector .description,
+.typost-preset-size-control .description {
     margin-top: 8px;
     color: #646970;
     font-size: 13px;
 }
 
-.ots-preset-size-control {
+.typost-preset-size-control {
     margin: 20px 15px 0 15px;
 }
 
-.ots-size-value {
+.typost-size-value {
     display: inline-block;
     min-width: 50px;
     text-align: right;
@@ -113,7 +113,7 @@
     margin-left: 8px;
 }
 
-.ots-size-slider {
+.typost-size-slider {
     width: 100%;
     max-width: 400px;
     height: 8px;
@@ -125,7 +125,7 @@
     margin-bottom: 8px;
 }
 
-.ots-size-slider::-webkit-slider-thumb {
+.typost-size-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
@@ -136,11 +136,11 @@
     transition: background 0.2s;
 }
 
-.ots-size-slider::-webkit-slider-thumb:hover {
+.typost-size-slider::-webkit-slider-thumb:hover {
     background: #135e96;
 }
 
-.ots-size-slider::-moz-range-thumb {
+.typost-size-slider::-moz-range-thumb {
     width: 20px;
     height: 20px;
     background: #2271b1;
@@ -150,25 +150,25 @@
     transition: background 0.2s;
 }
 
-.ots-size-slider::-moz-range-thumb:hover {
+.typost-size-slider::-moz-range-thumb:hover {
     background: #135e96;
 }
 
-.ots-size-slider:focus {
+.typost-size-slider:focus {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
 }
 
-.ots-size-slider:focus::-webkit-slider-thumb {
+.typost-size-slider:focus::-webkit-slider-thumb {
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
-.ots-size-slider:focus::-moz-range-thumb {
+.typost-size-slider:focus::-moz-range-thumb {
     box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
 }
 
 /* Baseline Preview Section */
-.ots-baseline-preview-section {
+.typost-baseline-preview-section {
     margin: 30px 0;
     padding: 20px;
     background: #f9f9f9;
@@ -176,19 +176,19 @@
     border-radius: 6px;
 }
 
-.ots-baseline-preview-section h3 {
+.typost-baseline-preview-section h3 {
     margin: 0 0 8px 0;
     font-size: 16px;
     color: #1d2327;
 }
 
-.ots-baseline-preview-section .description {
+.typost-baseline-preview-section .description {
     margin: 0 0 20px 0;
     color: #666;
     font-size: 13px;
 }
 
-.ots-baseline-preview-container {
+.typost-baseline-preview-container {
     background: #fff;
     border: 2px solid #2271b1;
     border-radius: 4px;
@@ -196,7 +196,7 @@
     overflow: hidden;
 }
 
-.ots-baseline-preview {
+.typost-baseline-preview {
     font-size: 50px;
     line-height: 1.4;
     text-align: center;
@@ -208,36 +208,36 @@
 }
 
 /* Feature Category Section */
-.ots-feature-category-section {
+.typost-feature-category-section {
     margin: 30px 0;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-feature-category-section:last-of-type {
+.typost-feature-category-section:last-of-type {
     border-bottom: none;
 }
 
 /* Collapsible summary styles */
-.ots-feature-category-summary {
+.typost-feature-category-summary {
     cursor: pointer;
     list-style: none;
     margin-bottom: 20px;
 }
 
 /* Remove default marker/disclosure triangle */
-.ots-feature-category-summary::-webkit-details-marker,
-.ots-feature-category-summary::marker {
+.typost-feature-category-summary::-webkit-details-marker,
+.typost-feature-category-summary::marker {
     display: none;
 }
 
-.ots-feature-category-summary:focus {
+.typost-feature-category-summary:focus {
     outline: 2px solid #2271b1;
     outline-offset: 8px;
 }
 
 /* Style the h3 to include the arrow */
-.ots-feature-category-section > summary > h3,
-.ots-feature-category-section > .ots-feature-category-summary > h3 {
+.typost-feature-category-section > summary > h3,
+.typost-feature-category-section > .typost-feature-category-summary > h3 {
     color: #2271b1;
     font-size: 18px;
     margin: 0;
@@ -251,8 +251,8 @@
 }
 
 /* Add arrow before h3 */
-.ots-feature-category-section > summary > h3::before,
-.ots-feature-category-section > .ots-feature-category-summary > h3::before {
+.typost-feature-category-section > summary > h3::before,
+.typost-feature-category-section > .typost-feature-category-summary > h3::before {
     content: '▶';
     position: absolute;
     left: 0;
@@ -263,17 +263,17 @@
 }
 
 /* Rotate arrow when open */
-.ots-feature-category-section[open] > summary > h3::before,
-.ots-feature-category-section[open] > .ots-feature-category-summary > h3::before {
+.typost-feature-category-section[open] > summary > h3::before,
+.typost-feature-category-section[open] > .typost-feature-category-summary > h3::before {
     transform: rotate(90deg);
 }
 
-.ots-feature-category-summary:hover > h3 {
+.typost-feature-category-summary:hover > h3 {
     opacity: 0.8;
 }
 
 /* Legacy support for non-collapsible sections */
-.ots-feature-category-section > h3 {
+.typost-feature-category-section > h3 {
     color: #2271b1;
     font-size: 18px;
     margin-bottom: 20px;
@@ -282,14 +282,14 @@
 }
 
 /* Feature Demos Grid */
-.ots-feature-demos-grid {
+.typost-feature-demos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
 
-.ots-feature-demo-card {
+.typost-feature-demo-card {
     border: 1px solid #ddd;
     padding: 20px;
     border-radius: 6px;
@@ -297,24 +297,24 @@
     transition: box-shadow 0.2s;
 }
 
-.ots-feature-demo-card:hover {
+.typost-feature-demo-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.ots-feature-demo-header {
+.typost-feature-demo-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
 
-.ots-feature-demo-header h4 {
+.typost-feature-demo-header h4 {
     margin: 0;
     font-size: 15px;
     color: #1d2327;
 }
 
-.ots-feature-demo-header .ots-feature-code {
+.typost-feature-demo-header .typost-feature-code {
     background: #2271b1;
     color: #fff;
     padding: 4px 8px;
@@ -323,7 +323,7 @@
     font-weight: 600;
 }
 
-.ots-feature-demo-description {
+.typost-feature-demo-description {
     color: #666;
     font-size: 13px;
     margin: 0 0 15px 0;
@@ -331,14 +331,14 @@
 }
 
 /* Feature Comparison */
-.ots-feature-comparison {
+.typost-feature-comparison {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 15px;
 }
 
-.ots-feature-preview-container {
+.typost-feature-preview-container {
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -347,7 +347,7 @@
     min-width: 0;
 }
 
-.ots-feature-preview-label {
+.typost-feature-preview-label {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -356,7 +356,7 @@
     letter-spacing: 0.5px;
 }
 
-.ots-feature-preview {
+.typost-feature-preview {
     font-size: 54px;
     line-height: 1.2;
     text-align: center;
@@ -368,11 +368,11 @@
     hyphens: auto;
 }
 
-.ots-feature-preview-off {
+.typost-feature-preview-off {
     color: #666;
 }
 
-.ots-feature-preview-on {
+.typost-feature-preview-on {
     color: #1d2327;
     font-weight: 500;
     width: 100%;
@@ -384,44 +384,44 @@
 }
 
 /* User Presets Section */
-.ots-user-presets-section {
+.typost-user-presets-section {
     margin-top: 40px;
     padding-top: 30px;
     border-top: 3px solid #2271b1;
 }
 
-.ots-user-presets-section > h3 {
+.typost-user-presets-section > h3 {
     color: #2271b1;
     font-size: 18px;
     margin-bottom: 15px;
 }
 
-.ots-presets-grid {
+.typost-presets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
 
-.ots-preset-card {
+.typost-preset-card {
     border: 1px solid #ddd;
     padding: 20px;
     border-radius: 4px;
     background: #fafafa;
 }
 
-.ots-preset-card h4 {
+.typost-preset-card h4 {
     margin: 0 0 10px 0;
     font-size: 16px;
 }
 
-.ots-preset-description {
+.typost-preset-description {
     color: #666;
     font-size: 13px;
     margin-bottom: 10px;
 }
 
-.ots-preset-features {
+.typost-preset-features {
     font-size: 12px;
     margin-bottom: 15px;
     padding: 8px;
@@ -429,7 +429,7 @@
     border-radius: 3px;
 }
 
-.ots-preset-preview {
+.typost-preset-preview {
     font-size: 50px;
     padding: 15px;
     background: #fff;
@@ -439,46 +439,46 @@
     line-height: 1.2;
 }
 
-.ots-features-list {
+.typost-features-list {
     margin-top: 20px;
 }
 
-.ots-feature-category {
+.typost-feature-category {
     margin-bottom: 30px;
 }
 
-.ots-feature-category h3 {
+.typost-feature-category h3 {
     margin-bottom: 10px;
     padding-bottom: 5px;
     border-bottom: 2px solid #2271b1;
 }
 
-.ots-feature-category table code {
+.typost-feature-category table code {
     background: #f0f0f1;
     padding: 3px 6px;
     border-radius: 3px;
     font-weight: 600;
 }
 
-.ots-help-section {
+.typost-help-section {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-help-section:last-child {
+.typost-help-section:last-child {
     border-bottom: none;
 }
 
-.ots-help-section h3 {
+.typost-help-section h3 {
     color: #2271b1;
 }
 
-.ots-help-section ul, .ots-help-section ol {
+.typost-help-section ul, .typost-help-section ol {
     line-height: 1.8;
 }
 
-.ots-add-preset-section {
+.typost-add-preset-section {
     margin-top: 30px;
     padding: 20px;
     background: #f0f6fc;
@@ -486,11 +486,11 @@
 }
 
 /* Fonts Tab Styles */
-.ots-fonts-list {
+.typost-fonts-list {
     margin: 20px 0;
 }
 
-.ots-font-card {
+.typost-font-card {
     border: 1px solid #ddd;
     padding: 15px;
     margin-bottom: 15px;
@@ -499,14 +499,14 @@
 }
 
 /* Kit grouping styles */
-.ots-font-kit-card {
+.typost-font-kit-card {
     border: 1px solid #c3c4c7;
     margin-bottom: 20px;
     border-radius: 4px;
     background: #fff;
 }
 
-.ots-font-kit-header {
+.typost-font-kit-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -515,7 +515,7 @@
     border-bottom: 1px solid #c3c4c7;
 }
 
-.ots-font-kit-header h4 {
+.typost-font-kit-header h4 {
     margin: 0;
     display: flex;
     align-items: center;
@@ -523,7 +523,7 @@
     flex: 1;
 }
 
-.ots-toggle-kit {
+.typost-toggle-kit {
     background: none;
     border: none;
     padding: 0;
@@ -536,55 +536,55 @@
     color: #1d2327;
 }
 
-.ots-toggle-kit:hover {
+.typost-toggle-kit:hover {
     color: #2271b1;
 }
 
-.ots-toggle-kit:focus {
+.typost-toggle-kit:focus {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
     border-radius: 2px;
 }
 
-.ots-toggle-kit .dashicons {
+.typost-toggle-kit .dashicons {
     transition: transform 0.2s;
 }
 
-.ots-kit-font-count {
+.typost-kit-font-count {
     font-size: 13px;
     font-weight: 400;
     color: #646970;
 }
 
-.ots-kit-fonts {
+.typost-kit-fonts {
     padding: 15px;
     background: #f6f7f7;
 }
 
-.ots-kit-fonts .ots-font-card {
+.typost-kit-fonts .typost-font-card {
     background: #fff;
     border: 1px solid #ddd;
 }
 
-.ots-kit-font .ots-font-header h5 {
+.typost-kit-font .typost-font-header h5 {
     margin: 0;
     font-size: 15px;
     font-weight: 500;
 }
 
-.ots-font-header {
+.typost-font-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
 }
 
-.ots-font-header h4 {
+.typost-font-header h4 {
     margin: 0;
     font-size: 16px;
 }
 
-.ots-font-families {
+.typost-font-families {
     padding: 10px;
     background: #fff;
     border-radius: 3px;
@@ -592,12 +592,12 @@
     font-size: 13px;
 }
 
-.ots-font-meta {
+.typost-font-meta {
     color: #666;
     font-size: 12px;
 }
 
-.ots-upload-font-section {
+.typost-upload-font-section {
     margin-top: 30px;
     padding: 20px;
     background: #fff;
@@ -605,36 +605,36 @@
     border-radius: 4px;
 }
 
-.ots-upload-form {
+.typost-upload-form {
     margin: 20px 0;
 }
 
-.ots-form-field {
+.typost-form-field {
     margin-bottom: 15px;
 }
 
-.ots-form-field label {
+.typost-form-field label {
     display: block;
     margin-bottom: 5px;
     font-weight: 600;
 }
 
-.ots-font-help {
+.typost-font-help {
     margin-top: 30px;
     padding: 15px;
     background: #f0f6fc;
     border-left: 4px solid #2271b1;
 }
 
-.ots-font-help h4 {
+.typost-font-help h4 {
     margin-top: 0;
 }
 
-.ots-font-help ol {
+.typost-font-help ol {
     line-height: 1.8;
 }
 
-.ots-empty-state {
+.typost-empty-state {
     padding: 40px;
     text-align: center;
     color: #666;
@@ -643,33 +643,33 @@
     border-radius: 4px;
 }
 
-.ots-upload-method-buttons {
+.typost-upload-method-buttons {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 10px;
 }
 
-.ots-upload-method-buttons .button {
+.typost-upload-method-buttons .button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
     min-height: 44px;
 }
 
-.ots-upload-method-buttons .dashicons {
+.typost-upload-method-buttons .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
 }
 
-.ots-or-separator {
+.typost-or-separator {
     color: #666;
     font-style: italic;
     font-size: 13px;
 }
 
-.ots-selected-file {
+.typost-selected-file {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -680,20 +680,20 @@
     margin-bottom: 10px;
 }
 
-.ots-selected-file .dashicons-media-document {
+.typost-selected-file .dashicons-media-document {
     color: #2271b1;
     font-size: 18px;
     width: 18px;
     height: 18px;
 }
 
-.ots-selected-file #ots-file-name {
+.typost-selected-file #typost-file-name {
     flex: 1;
     font-weight: 500;
     color: #2271b1;
 }
 
-.ots-selected-file .button-link {
+.typost-selected-file .button-link {
     color: #b32d2e;
     text-decoration: none;
     padding: 0;
@@ -702,27 +702,27 @@
     cursor: pointer;
 }
 
-.ots-selected-file .button-link .dashicons {
+.typost-selected-file .button-link .dashicons {
     font-size: 16px;
     width: 16px;
     height: 16px;
 }
 
-.ots-selected-file .button-link:hover {
+.typost-selected-file .button-link:hover {
     color: #dc3232;
 }
 
-.ots-file-size {
+.typost-file-size {
     color: #666;
     font-size: 12px;
     margin-left: 8px;
 }
 
-.ots-upload-progress {
+.typost-upload-progress {
     margin-top: 15px;
 }
 
-.ots-progress-bar {
+.typost-progress-bar {
     width: 100%;
     height: 30px;
     background: #f0f0f1;
@@ -731,7 +731,7 @@
     position: relative;
 }
 
-.ots-progress-fill {
+.typost-progress-fill {
     height: 100%;
     background: linear-gradient(90deg, #2271b1 0%, #135e96 100%);
     transition: width 0.3s ease;
@@ -740,14 +740,14 @@
     justify-content: center;
 }
 
-.ots-progress-text {
+.typost-progress-text {
     text-align: center;
     margin-top: 8px;
     font-size: 13px;
     color: #666;
 }
 
-.ots-selected-file .dashicons-media-archive {
+.typost-selected-file .dashicons-media-archive {
     color: #2271b1;
     font-size: 18px;
     width: 18px;
@@ -788,19 +788,19 @@
     z-index: 100000;
 }
 
-#ots-upload-font-btn,
-#ots-select-file-btn,
-#ots-clear-file-btn {
+#typost-upload-font-btn,
+#typost-select-file-btn,
+#typost-clear-file-btn {
     min-height: 44px;
     min-width: 44px;
 }
 
-.ots-font-section, .ots-fontsize-section {
+.typost-font-section, .typost-fontsize-section {
     margin: 0 1rem;
 }
 
 /* Adobe Fonts Section */
-.ots-adobe-fonts-section {
+.typost-adobe-fonts-section {
     margin-top: 40px;
     padding: 20px;
     background: #fff;
@@ -808,22 +808,22 @@
     border-radius: 4px;
 }
 
-.ots-adobe-fonts-section h3 {
+.typost-adobe-fonts-section h3 {
     margin-top: 0;
     padding-bottom: 10px;
     border-bottom: 2px solid #2271b1;
 }
 
-.ots-adobe-fonts-list {
+.typost-adobe-fonts-list {
     margin: 20px 0;
 }
 
-.ots-adobe-fonts-list h4 {
+.typost-adobe-fonts-list h4 {
     font-size: 15px;
     margin-bottom: 15px;
 }
 
-.ots-adobe-font-card {
+.typost-adobe-font-card {
     border: 1px solid #ddd;
     padding: 15px;
     margin-bottom: 15px;
@@ -831,23 +831,23 @@
     background: #f8fbff;
 }
 
-.ots-adobe-font-card h5 {
+.typost-adobe-font-card h5 {
     margin: 0;
     font-size: 15px;
 }
 
-.ots-add-adobe-font-form {
+.typost-add-adobe-font-form {
     margin: 20px 0;
     padding: 20px;
     background: #f9f9f9;
     border-radius: 4px;
 }
 
-.ots-add-adobe-font-form h4 {
+.typost-add-adobe-font-form h4 {
     margin-top: 0;
 }
 
-.ots-adobe-help {
+.typost-adobe-help {
     margin-top: 30px;
     padding: 15px;
     background: #f0f6fc;
@@ -855,34 +855,34 @@
     border-radius: 4px;
 }
 
-.ots-adobe-help h4 {
+.typost-adobe-help h4 {
     margin-top: 0;
 }
 
-.ots-adobe-help ol {
+.typost-adobe-help ol {
     line-height: 1.8;
 }
 
-.ots-delete-adobe-font {
+.typost-delete-adobe-font {
     color: #b32d2e;
 }
 
-.ots-delete-adobe-font:hover {
+.typost-delete-adobe-font:hover {
     color: #d63638;
 }
 
 /* Manual Fonts Section */
-.ots-manual-fonts-section {
+.typost-manual-fonts-section {
     margin-top: 40px;
     padding-top: 40px;
     border-top: 1px solid #dcdcde;
 }
 
-.ots-manual-fonts-list {
+.typost-manual-fonts-list {
     margin: 20px 0;
 }
 
-.ots-manual-font-card {
+.typost-manual-font-card {
     background: #fff;
     border: 1px solid #dcdcde;
     padding: 20px;
@@ -890,31 +890,31 @@
     border-radius: 4px;
 }
 
-.ots-manual-font-card .ots-font-header {
+.typost-manual-font-card .typost-font-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 10px;
 }
 
-.ots-manual-font-card h5 {
+.typost-manual-font-card h5 {
     margin: 0;
     font-size: 16px;
 }
 
-.ots-manual-font-card .ots-font-families,
-.ots-manual-font-card .ots-font-fallbacks {
+.typost-manual-font-card .typost-font-families,
+.typost-manual-font-card .typost-font-fallbacks {
     margin: 10px 0;
 }
 
-.ots-manual-font-card .ots-font-families code,
-.ots-manual-font-card .ots-font-fallbacks code {
+.typost-manual-font-card .typost-font-families code,
+.typost-manual-font-card .typost-font-fallbacks code {
     background: #f6f7f7;
     padding: 4px 8px;
     border-radius: 3px;
 }
 
-.ots-add-manual-font-form {
+.typost-add-manual-font-form {
     background: #f6f7f7;
     border: 1px solid #dcdcde;
     border-radius: 4px;
@@ -922,7 +922,7 @@
     margin: 20px 0;
 }
 
-.ots-manual-help {
+.typost-manual-help {
     margin-top: 30px;
     padding: 20px;
     background: #f0f6fc;
@@ -930,26 +930,26 @@
     border-radius: 4px;
 }
 
-.ots-manual-help h4 {
+.typost-manual-help h4 {
     margin-top: 0;
 }
 
-.ots-manual-help ol {
+.typost-manual-help ol {
     line-height: 1.8;
 }
 
-.ots-manual-help code {
+.typost-manual-help code {
     background: #fff;
     padding: 2px 6px;
     border-radius: 3px;
     font-size: 13px;
 }
 
-.ots-delete-manual-font {
+.typost-delete-manual-font {
     color: #b32d2e;
 }
 
-.ots-delete-manual-font:hover {
+.typost-delete-manual-font:hover {
     color: #d63638;
 }
 
@@ -957,7 +957,7 @@
    FONT DELETION MODAL & REPLACEMENT MANAGEMENT
    ========================================================================= */
 
-.ots-modal {
+.typost-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -969,7 +969,7 @@
     justify-content: center;
 }
 
-.ots-modal-overlay {
+.typost-modal-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -979,7 +979,7 @@
     z-index: 1;
 }
 
-.ots-modal-content {
+.typost-modal-content {
     position: relative;
     background: #fff;
     max-width: 500px;
@@ -989,18 +989,18 @@
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
-.ots-modal-header {
+.typost-modal-header {
     padding: 20px;
     border-bottom: 1px solid #dcdcde;
     position: relative;
 }
 
-.ots-modal-header h2 {
+.typost-modal-header h2 {
     margin: 0;
     font-size: 18px;
 }
 
-.ots-modal-close {
+.typost-modal-close {
     position: absolute;
     top: 10px;
     right: 10px;
@@ -1013,54 +1013,54 @@
     padding: 5px 10px;
 }
 
-.ots-modal-close:hover {
+.typost-modal-close:hover {
     color: #135e96;
 }
 
-.ots-modal-body {
+.typost-modal-body {
     padding: 20px;
 }
 
-.ots-modal-field {
+.typost-modal-field {
     margin-bottom: 20px;
 }
 
-.ots-modal-field label {
+.typost-modal-field label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
 }
 
-.ots-modal-field select {
+.typost-modal-field select {
     width: 100%;
 }
 
-.ots-modal-field .description {
+.typost-modal-field .description {
     margin-top: 6px;
     font-size: 13px;
     color: #646970;
 }
 
-.ots-modal-footer {
+.typost-modal-footer {
     padding: 15px 20px;
     border-top: 1px solid #dcdcde;
     text-align: right;
 }
 
-.ots-modal-footer .button {
+.typost-modal-footer .button {
     margin-left: 10px;
 }
 
 /* Replacements table */
-#ots-replacements-list table {
+#typost-replacements-list table {
     margin-top: 20px;
 }
 
-#ots-replacements-list th {
+#typost-replacements-list th {
     font-weight: 600;
 }
 
-.ots-no-replacements {
+.typost-no-replacements {
     padding: 40px 20px;
     text-align: center;
     color: #646970;
@@ -1068,20 +1068,20 @@
     border-radius: 4px;
 }
 
-#ots-unassigned-fonts {
+#typost-unassigned-fonts {
     padding: 20px;
     background: #fcf9e8;
     border-left: 4px solid #dba617;
     border-radius: 4px;
 }
 
-#ots-unassigned-fonts h3 {
+#typost-unassigned-fonts h3 {
     margin-top: 0;
     color: #996800;
 }
 
 /* Developer Support Section */
-.ots-developer-support {
+.typost-developer-support {
     margin-top: 30px;
     background: #fff;
     border: 1px solid #c3c4c7;
@@ -1090,11 +1090,11 @@
     border-radius: 4px;
 }
 
-.ots-developer-support h3 {
+.typost-developer-support h3 {
     margin-top: 0;
     color: #2271b1;
 }
 
-.ots-developer-support .ots-separator {
+.typost-developer-support .typost-separator {
     margin: 0 10px;
 }

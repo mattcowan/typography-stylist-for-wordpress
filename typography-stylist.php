@@ -1,14 +1,14 @@
 <?php
 /**
  * Plugin Name: Typography Stylist
- * Plugin URI: https://github.com/mattcowan/opentype-stylist
+ * Plugin URI: https://github.com/mattcowan/typography-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
  * Version: 1.1.0
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: typography-stylist
+ * Text Domain: typost
  * Domain Path: /languages
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -20,23 +20,23 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants (check if already defined for test compatibility)
-if (!defined('OTS_VERSION')) {
-    define('OTS_VERSION', '1.1.0');
+if (!defined('TYPOST_VERSION')) {
+    define('TYPOST_VERSION', '1.1.0');
 }
-if (!defined('OTS_PLUGIN_DIR')) {
-    define('OTS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+if (!defined('TYPOST_PLUGIN_DIR')) {
+    define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
 }
-if (!defined('OTS_PLUGIN_URL')) {
-    define('OTS_PLUGIN_URL', plugin_dir_url(__FILE__));
+if (!defined('TYPOST_PLUGIN_URL')) {
+    define('TYPOST_PLUGIN_URL', plugin_dir_url(__FILE__));
 }
-if (!defined('OTS_PLUGIN_BASENAME')) {
-    define('OTS_PLUGIN_BASENAME', plugin_basename(__FILE__));
+if (!defined('TYPOST_PLUGIN_BASENAME')) {
+    define('TYPOST_PLUGIN_BASENAME', plugin_basename(__FILE__));
 }
 
 /**
  * Main plugin class
  */
-class Typography_Stylist {
+class Typost {
 
     /**
      * Instance of this class
@@ -102,7 +102,7 @@ class Typography_Stylist {
         add_action('init', array($this, 'register_block'));
 
         // Add Settings link on plugins page
-        add_filter('plugin_action_links_' . OTS_PLUGIN_BASENAME, array($this, 'add_plugin_action_links'));
+        add_filter('plugin_action_links_' . TYPOST_PLUGIN_BASENAME, array($this, 'add_plugin_action_links'));
 
         // Secure upload directory on activation
         register_activation_hook(__FILE__, array($this, 'activate_plugin'));
@@ -114,7 +114,7 @@ class Typography_Stylist {
     public function activate_plugin() {
         $this->secure_upload_directory();
         // Mark .htaccess as verified so we don't check on every admin page load
-        update_option('typography_stylist_htaccess_verified', true, false);
+        update_option('typost_htaccess_verified', true, false);
     }
 
     /**
@@ -125,12 +125,12 @@ class Typography_Stylist {
      */
     public function maybe_create_htaccess() {
         // Check if we've already verified .htaccess (one-time check)
-        if (get_option('typography_stylist_htaccess_verified', false)) {
+        if (get_option('typost_htaccess_verified', false)) {
             return;
         }
 
         $upload_dir = wp_upload_dir();
-        $font_dir = $upload_dir['basedir'] . '/ots/fonts';
+        $font_dir = $upload_dir['basedir'] . '/typography-stylist/fonts';
         $htaccess_file = $font_dir . '/.htaccess';
 
         // If directory exists but .htaccess doesn't, create it
@@ -139,7 +139,7 @@ class Typography_Stylist {
         }
 
         // Mark as verified so we don't check again
-        update_option('typography_stylist_htaccess_verified', true, false);
+        update_option('typost_htaccess_verified', true, false);
     }
 
     /**
@@ -170,16 +170,16 @@ class Typography_Stylist {
 
         // Editor styles
         wp_enqueue_style(
-            'typography-stylist-block-editor',
-            OTS_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
+            'typost-block-editor',
+            TYPOST_PLUGIN_URL . "assets/css/block-editor{$suffix}.css",
             array('wp-edit-blocks'),
-            OTS_VERSION
+            TYPOST_VERSION
         );
 
         // Editor JavaScript
         wp_enqueue_script(
-            'typography-stylist-block-editor',
-            OTS_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
+            'typost-block-editor',
+            TYPOST_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
             array(
                 'wp-blocks',
                 'wp-element',
@@ -190,19 +190,19 @@ class Typography_Stylist {
                 'wp-i18n',
                 'wp-compose'
             ),
-            OTS_VERSION,
+            TYPOST_VERSION,
             true
         );
 
         // Enable JavaScript translations
         wp_set_script_translations(
-            'typography-stylist-block-editor',
-            'typography-stylist',
-            OTS_PLUGIN_DIR . 'languages'
+            'typost-block-editor',
+            'typost',
+            TYPOST_PLUGIN_DIR . 'languages'
         );
 
         // Cache the localized data with transient
-        $cache_key = 'typography_stylist_editor_data_' . get_current_user_id();
+        $cache_key = 'typost_editor_data_' . get_current_user_id();
         $localized_data = get_transient($cache_key);
 
         if (false === $localized_data) {
@@ -212,10 +212,10 @@ class Typography_Stylist {
                 'fonts' => $this->get_custom_fonts(),
                 'adobeFonts' => $this->get_adobe_fonts(),
                 'manualFonts' => $this->get_manual_fonts(),
-                'restUrl' => rest_url('typography-stylist/v1/'),
+                'restUrl' => rest_url('typost/v1/'),
                 'nonce' => wp_create_nonce('wp_rest'),
-                'enableAriaLabels' => get_option('typography_stylist_enable_aria_labels', false),
-                'showClearConfirmation' => get_option('typography_stylist_show_clear_confirmation', true)
+                'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
+                'showClearConfirmation' => get_option('typost_show_clear_confirmation', true)
             );
 
             // Cache for 1 hour
@@ -223,7 +223,7 @@ class Typography_Stylist {
         }
 
         // Pass data to JavaScript
-        wp_localize_script('typography-stylist-block-editor', 'typographyStylistData', $localized_data);
+        wp_localize_script('typost-block-editor', 'typostData', $localized_data);
     }
 
     /**
@@ -235,7 +235,7 @@ class Typography_Stylist {
      * 2. If <!--more--> tag exists, use content before it
      * 3. Otherwise, assume full content (since auto-excerpts are plain text without styled content)
      *
-     * Theme authors can override this behavior using the 'typography_stylist_archive_post_content' filter.
+     * Theme authors can override this behavior using the 'typost_archive_post_content' filter.
      *
      * @param WP_Post $post Post object
      * @return string Content to check
@@ -266,7 +266,7 @@ class Typography_Stylist {
              * @param bool    $check_full_content Whether to check full content (default: false)
              * @param WP_Post $post               The post object being checked
              */
-            $check_full_content = apply_filters('typography_stylist_check_full_content_on_archives', false, $post);
+            $check_full_content = apply_filters('typost_check_full_content_on_archives', false, $post);
             $content_to_check = $check_full_content ? $post->post_content : '';
         }
 
@@ -282,7 +282,7 @@ class Typography_Stylist {
          * @param string  $content_to_check The content determined by the default heuristic
          * @param WP_Post $post             The post object being checked
          */
-        return apply_filters('typography_stylist_archive_post_content', $content_to_check, $post);
+        return apply_filters('typost_archive_post_content', $content_to_check, $post);
     }
 
     /**
@@ -308,13 +308,13 @@ class Typography_Stylist {
      * 'the_content' filter and you understand the security/performance implications.
      *
      * To enable (not recommended unless absolutely necessary):
-     * add_filter('typography_stylist_use_full_content_filter', '__return_true');
+     * add_filter('typost_use_full_content_filter', '__return_true');
      *
      * @param string $content Raw post content to render
      * @return string Rendered content
      */
     private function render_content_for_detection($content) {
-        $use_full_content_filter = apply_filters('typography_stylist_use_full_content_filter', false);
+        $use_full_content_filter = apply_filters('typost_use_full_content_filter', false);
 
         if ($use_full_content_filter) {
             // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core hook
@@ -340,7 +340,7 @@ class Typography_Stylist {
             }
 
             // Cache the result per post
-            $cache_key = 'typography_stylist_has_styled_' . $post->ID;
+            $cache_key = 'typost_has_styled_' . $post->ID;
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -350,9 +350,9 @@ class Typography_Stylist {
                 // Apply content filters to render Gutenberg blocks
                 $rendered_content = $this->render_content_for_detection($raw_content);
 
-                // Check if ots-styled class exists in either raw or rendered content
-                $has_styled = (strpos($raw_content, 'ots-styled') !== false ||
-                              strpos($rendered_content, 'ots-styled') !== false) ? 'yes' : 'no';
+                // Check if typost-styled class exists in either raw or rendered content
+                $has_styled = (strpos($raw_content, 'typost-styled') !== false ||
+                              strpos($rendered_content, 'typost-styled') !== false) ? 'yes' : 'no';
 
                 set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
             }
@@ -366,7 +366,7 @@ class Typography_Stylist {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typography_stylist_has_styled_archive_' . md5(serialize($post_ids));
+            $cache_key = 'typost_has_styled_archive_' . md5(serialize($post_ids));
             $has_styled = get_transient($cache_key);
 
             if (false === $has_styled) {
@@ -377,14 +377,14 @@ class Typography_Stylist {
                     $content_to_check = $this->get_archive_post_content($loop_post);
 
                     // Check raw content first (cheap operation)
-                    if (strpos($content_to_check, 'ots-styled') !== false) {
+                    if (strpos($content_to_check, 'typost-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
                     }
 
                     // Only render blocks if not found in raw content (expensive operation)
                     $rendered_content = $this->render_content_for_detection($content_to_check);
-                    if (strpos($rendered_content, 'ots-styled') !== false) {
+                    if (strpos($rendered_content, 'typost-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
                     }
@@ -413,7 +413,7 @@ class Typography_Stylist {
             }
 
             // Cache the result per post
-            $cache_key = 'typography_stylist_used_fonts_' . $post->ID;
+            $cache_key = 'typost_used_fonts_' . $post->ID;
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -462,7 +462,7 @@ class Typography_Stylist {
 
             // Build cache key from all post IDs on this page
             $post_ids = wp_list_pluck($wp_query->posts, 'ID');
-            $cache_key = 'typography_stylist_used_fonts_archive_' . md5(serialize($post_ids));
+            $cache_key = 'typost_used_fonts_archive_' . md5(serialize($post_ids));
             $used_fonts = get_transient($cache_key);
 
             if (false === $used_fonts) {
@@ -518,7 +518,7 @@ class Typography_Stylist {
     private function extract_fonts_from_blocks($blocks, &$fonts) {
         foreach ($blocks as $block) {
             // Check if this is a Typography Stylist block with a fontFamily attribute
-            if ($block['blockName'] === 'typography-stylist/block' &&
+            if ($block['blockName'] === 'typost/block' &&
                 isset($block['attrs']['fontFamily']) &&
                 !empty($block['attrs']['fontFamily'])) {
                 $fonts[] = $block['attrs']['fontFamily'];
@@ -568,10 +568,10 @@ class Typography_Stylist {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'typography-stylist-frontend',
-            OTS_PLUGIN_URL . "assets/css/frontend{$suffix}.css",
+            'typost-frontend',
+            TYPOST_PLUGIN_URL . "assets/css/frontend{$suffix}.css",
             array(),
-            OTS_VERSION
+            TYPOST_VERSION
         );
 
         // Enqueue custom fonts only when needed
@@ -655,7 +655,7 @@ class Typography_Stylist {
 
         // Build cache key including load_on_all_pages settings
         $load_settings = wp_list_pluck($all_fonts, 'load_on_all_pages', 'id');
-        $cache_key = 'typography_stylist_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
+        $cache_key = 'typost_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -703,7 +703,7 @@ class Typography_Stylist {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('typography-stylist-frontend', $combined_css);
+            wp_add_inline_style('typost-frontend', $combined_css);
         }
     }
 
@@ -712,8 +712,8 @@ class Typography_Stylist {
      */
     public function add_admin_menu() {
         $hook = add_options_page(
-            esc_html__('Typography Stylist', 'typography-stylist'),
-            esc_html__('Typography Stylist', 'typography-stylist'),
+            esc_html__('Typography Stylist', 'typost'),
+            esc_html__('Typography Stylist', 'typost'),
             'manage_options',
             'typography-stylist',
             array($this, 'render_admin_page')
@@ -734,7 +734,7 @@ class Typography_Stylist {
         $settings_link = sprintf(
             '<a href="%s">%s</a>',
             esc_url(admin_url('options-general.php?page=typography-stylist')),
-            esc_html__('Settings', 'typography-stylist')
+            esc_html__('Settings', 'typost')
         );
 
         array_unshift($links, $settings_link);
@@ -749,17 +749,17 @@ class Typography_Stylist {
         $suffix = (defined('SCRIPT_DEBUG') && SCRIPT_DEBUG) ? '' : '.min';
 
         wp_enqueue_style(
-            'typography-stylist-admin',
-            OTS_PLUGIN_URL . "assets/css/admin-page{$suffix}.css",
+            'typost-admin',
+            TYPOST_PLUGIN_URL . "assets/css/admin-page{$suffix}.css",
             array(),
-            OTS_VERSION
+            TYPOST_VERSION
         );
 
         wp_enqueue_script(
-            'typography-stylist-admin',
-            OTS_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
+            'typost-admin',
+            TYPOST_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
             array('jquery'),
-            OTS_VERSION,
+            TYPOST_VERSION,
             true
         );
 
@@ -768,55 +768,55 @@ class Typography_Stylist {
         $this->enqueue_adobe_fonts();
 
         // Localize script for translations and data
-        wp_localize_script('typography-stylist-admin', 'typographyStylistAdmin', array(
-            'restUrl' => rest_url('typography-stylist/v1/'),
+        wp_localize_script('typost-admin', 'typostAdmin', array(
+            'restUrl' => rest_url('typost/v1/'),
             'nonce' => wp_create_nonce('wp_rest'),
             'fonts' => $this->get_custom_fonts(),
             'adobeFonts' => $this->get_adobe_fonts(),
             'manualFonts' => $this->get_manual_fonts(),
             'replacements' => $this->get_font_replacements(),
             'strings' => array(
-                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'typography-stylist'),
-                'uploadError' => esc_html__('Failed to upload font kit.', 'typography-stylist'),
-                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'typography-stylist'),
-                'enterName' => esc_html__('Please enter a font kit name.', 'typography-stylist'),
-                'selectFile' => esc_html__('Please select a ZIP file.', 'typography-stylist'),
-                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'typography-stylist'),
-                'deleteError' => esc_html__('Failed to delete font kit.', 'typography-stylist'),
-                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'typography-stylist'),
-                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typography-stylist'),
-                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typography-stylist'),
-                'uploading' => esc_html__('Uploading', 'typography-stylist'),
-                'uploadingZip' => esc_html__('Uploading ZIP file...', 'typography-stylist'),
-                'processing' => esc_html__('Processing...', 'typography-stylist'),
-                'uploadButton' => esc_html__('Upload Font Kit', 'typography-stylist'),
+                'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'typost'),
+                'uploadError' => esc_html__('Failed to upload font kit.', 'typost'),
+                'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'typost'),
+                'enterName' => esc_html__('Please enter a font kit name.', 'typost'),
+                'selectFile' => esc_html__('Please select a ZIP file.', 'typost'),
+                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'typost'),
+                'deleteError' => esc_html__('Failed to delete font kit.', 'typost'),
+                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'typost'),
+                'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typost'),
+                'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typost'),
+                'uploading' => esc_html__('Uploading', 'typost'),
+                'uploadingZip' => esc_html__('Uploading ZIP file...', 'typost'),
+                'processing' => esc_html__('Processing...', 'typost'),
+                'uploadButton' => esc_html__('Upload Font Kit', 'typost'),
                 // Adobe Fonts strings
-                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'typography-stylist'),
-                'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
-                'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
-                'adding' => esc_html__('Adding...', 'typography-stylist'),
-                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'typography-stylist'),
-                'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'typography-stylist'),
-                'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'typography-stylist'),
-                'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'typography-stylist'),
-                'deleteAdobeFontError' => esc_html__('Failed to delete Adobe Fonts project.', 'typography-stylist'),
+                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'typost'),
+                'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typost'),
+                'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typost'),
+                'adding' => esc_html__('Adding...', 'typost'),
+                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'typost'),
+                'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'typost'),
+                'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'typost'),
+                'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'typost'),
+                'deleteAdobeFontError' => esc_html__('Failed to delete Adobe Fonts project.', 'typost'),
                 // Manual/Custom Fonts strings
-                'enterManualFontName' => esc_html__('Please enter a font name.', 'typography-stylist'),
-                'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'typography-stylist'),
-                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'typography-stylist'),
-                'addManualFontError' => esc_html__('Failed to add custom font.', 'typography-stylist'),
-                'addManualFontButton' => esc_html__('Add Custom Font', 'typography-stylist'),
-                'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'typography-stylist'),
-                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'typography-stylist'),
+                'enterManualFontName' => esc_html__('Please enter a font name.', 'typost'),
+                'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'typost'),
+                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'typost'),
+                'addManualFontError' => esc_html__('Failed to add custom font.', 'typost'),
+                'addManualFontButton' => esc_html__('Add Custom Font', 'typost'),
+                'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'typost'),
+                'deleteManualFontError' => esc_html__('Failed to delete custom font.', 'typost'),
                 // Font loading setting strings
-                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'typography-stylist'),
+                'updateSettingError' => esc_html__('Failed to update font loading setting.', 'typost'),
                 // Edit font strings
-                'saving' => esc_html__('Saving...', 'typography-stylist'),
-                'saveChanges' => esc_html__('Save Changes', 'typography-stylist'),
-                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'typography-stylist'),
-                'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'typography-stylist'),
-                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'typography-stylist'),
-                'updateFontError' => esc_html__('Failed to update font.', 'typography-stylist')
+                'saving' => esc_html__('Saving...', 'typost'),
+                'saveChanges' => esc_html__('Save Changes', 'typost'),
+                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'typost'),
+                'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'typost'),
+                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'typost'),
+                'updateFontError' => esc_html__('Failed to update font.', 'typost')
             )
         ));
     }
@@ -832,7 +832,7 @@ class Typography_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'typography_stylist_admin_font_css';
+        $cache_key = 'typost_admin_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -854,7 +854,7 @@ class Typography_Stylist {
         }
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('typography-stylist-admin', $combined_css);
+            wp_add_inline_style('typost-admin', $combined_css);
         }
     }
 
@@ -870,7 +870,7 @@ class Typography_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'typography_stylist_block_font_css';
+        $cache_key = 'typost_block_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -892,11 +892,11 @@ class Typography_Stylist {
         }
 
         // Always register/enqueue handle even if no custom fonts, so we can attach CSS variables
-        wp_register_style('typography-stylist-block-fonts', false, array(), OTS_VERSION);
-        wp_enqueue_style('typography-stylist-block-fonts');
+        wp_register_style('typost-block-fonts', false, array(), TYPOST_VERSION);
+        wp_enqueue_style('typost-block-fonts');
 
         if (!empty($combined_css)) {
-            wp_add_inline_style('typography-stylist-block-fonts', $combined_css);
+            wp_add_inline_style('typost-block-fonts', $combined_css);
         }
 
         // Add CSS variables for font replacements to work in editor iframe
@@ -904,7 +904,7 @@ class Typography_Stylist {
         if (!empty($css_vars)) {
             // CSS variables must be added as proper CSS (not wrapped in <style> tags)
             // wp_add_inline_style expects raw CSS content
-            wp_add_inline_style('typography-stylist-block-fonts', $css_vars);
+            wp_add_inline_style('typost-block-fonts', $css_vars);
         }
     }
 
@@ -919,7 +919,7 @@ class Typography_Stylist {
         }
 
         // Cache combined font CSS
-        $cache_key = 'typography_stylist_editor_font_css';
+        $cache_key = 'typost_editor_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -942,9 +942,9 @@ class Typography_Stylist {
 
         if (!empty($combined_css)) {
             // Register a separate handle for fonts in the popover/toolbar context
-            wp_register_style('typography-stylist-editor-fonts', false, array(), OTS_VERSION);
-            wp_enqueue_style('typography-stylist-editor-fonts');
-            wp_add_inline_style('typography-stylist-editor-fonts', $combined_css);
+            wp_register_style('typost-editor-fonts', false, array(), TYPOST_VERSION);
+            wp_enqueue_style('typost-editor-fonts');
+            wp_add_inline_style('typost-editor-fonts', $combined_css);
         }
     }
 
@@ -952,37 +952,37 @@ class Typography_Stylist {
      * Register settings
      */
     public function register_settings() {
-        register_setting('typography_stylist_settings', 'typography_stylist_presets', array(
+        register_setting('typost_settings', 'typost_presets', array(
             'type' => 'array',
             'default' => $this->get_default_presets(),
             'sanitize_callback' => array($this, 'sanitize_presets')
         ));
 
-        register_setting('typography_stylist_settings', 'typography_stylist_global_settings', array(
+        register_setting('typost_settings', 'typost_global_settings', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_global_settings')
         ));
 
-        register_setting('typography_stylist_settings', 'typography_stylist_custom_fonts', array(
+        register_setting('typost_settings', 'typost_custom_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_custom_fonts')
         ));
 
-        register_setting('typography_stylist_settings', 'typography_stylist_adobe_fonts', array(
+        register_setting('typost_settings', 'typost_adobe_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_adobe_fonts')
         ));
 
-        register_setting('typography_stylist_settings', 'typography_stylist_manual_fonts', array(
+        register_setting('typost_settings', 'typost_manual_fonts', array(
             'type' => 'array',
             'default' => array(),
             'sanitize_callback' => array($this, 'sanitize_manual_fonts')
         ));
 
-        register_setting('typography_stylist_settings', 'typography_stylist_font_replacements', array(
+        register_setting('typost_settings', 'typost_font_replacements', array(
             'type' => 'array',
             'default' => array(
                 'mappings' => array(),
@@ -1001,45 +1001,45 @@ class Typography_Stylist {
      * Register custom block
      */
     public function register_block() {
-        register_block_type(OTS_PLUGIN_DIR . 'blocks/typography-stylist');
+        register_block_type(TYPOST_PLUGIN_DIR . 'blocks/typography-stylist');
     }
 
     /**
      * Register REST API routes
      */
     public function register_rest_routes() {
-        register_rest_route('typography-stylist/v1', '/presets', array(
+        register_rest_route('typost/v1', '/presets', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_presets_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/presets', array(
+        register_rest_route('typost/v1', '/presets', array(
             'methods' => 'POST',
             'callback' => array($this, 'save_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typost/v1', '/presets/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_preset_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
         // Add features endpoint
-        register_rest_route('typography-stylist/v1', '/features', array(
+        register_rest_route('typost/v1', '/features', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_features_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/fonts', array(
+        register_rest_route('typost/v1', '/fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/fonts', array(
+        register_rest_route('typost/v1', '/fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'upload_font_endpoint'),
             'permission_callback' => function() {
@@ -1047,7 +1047,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_font_endpoint'),
             'permission_callback' => function() {
@@ -1056,13 +1056,13 @@ class Typography_Stylist {
         ));
 
         // Adobe Fonts endpoints
-        register_rest_route('typography-stylist/v1', '/adobe-fonts', array(
+        register_rest_route('typost/v1', '/adobe-fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_adobe_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/adobe-fonts', array(
+        register_rest_route('typost/v1', '/adobe-fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_adobe_font_endpoint'),
             'permission_callback' => function() {
@@ -1070,7 +1070,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typost/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_adobe_font_endpoint'),
             'permission_callback' => function() {
@@ -1078,7 +1078,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
+        register_rest_route('typost/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_fallback_endpoint'),
             'permission_callback' => function() {
@@ -1086,7 +1086,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+        register_rest_route('typost/v1', '/adobe-fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_adobe_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
@@ -1095,13 +1095,13 @@ class Typography_Stylist {
         ));
 
         // Manual fonts endpoints
-        register_rest_route('typography-stylist/v1', '/manual-fonts', array(
+        register_rest_route('typost/v1', '/manual-fonts', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_manual_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/manual-fonts', array(
+        register_rest_route('typost/v1', '/manual-fonts', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1109,7 +1109,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typost/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1117,7 +1117,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
+        register_rest_route('typost/v1', '/manual-fonts/(?P<id>[a-zA-Z0-9_-]+)', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_manual_font_endpoint'),
             'permission_callback' => function() {
@@ -1126,7 +1126,7 @@ class Typography_Stylist {
         ));
 
         // Fallback endpoint for uploaded fonts
-        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
+        register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/fallback', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_fallback_endpoint'),
             'permission_callback' => function() {
@@ -1135,7 +1135,7 @@ class Typography_Stylist {
         ));
 
         // Load on all pages endpoint for uploaded fonts
-        register_rest_route('typography-stylist/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
+        register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
@@ -1144,13 +1144,13 @@ class Typography_Stylist {
         ));
 
         // Font replacement endpoints
-        register_rest_route('typography-stylist/v1', '/font-replacements', array(
+        register_rest_route('typost/v1', '/font-replacements', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_font_replacements_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
 
-        register_rest_route('typography-stylist/v1', '/font-replacements', array(
+        register_rest_route('typost/v1', '/font-replacements', array(
             'methods' => 'POST',
             'callback' => array($this, 'add_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1158,7 +1158,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/font-replacements/(?P<id>\d+)', array(
+        register_rest_route('typost/v1', '/font-replacements/(?P<id>\d+)', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1166,7 +1166,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/font-replacements/(?P<id>\d+)', array(
+        register_rest_route('typost/v1', '/font-replacements/(?P<id>\d+)', array(
             'methods' => 'DELETE',
             'callback' => array($this, 'delete_font_replacement_endpoint'),
             'permission_callback' => function() {
@@ -1174,7 +1174,7 @@ class Typography_Stylist {
             }
         ));
 
-        register_rest_route('typography-stylist/v1', '/font-replacements/orphans', array(
+        register_rest_route('typost/v1', '/font-replacements/orphans', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_unassigned_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
@@ -1193,7 +1193,7 @@ class Typography_Stylist {
         // Rate limiting for write operations
         if ($request && in_array($request->get_method(), array('POST', 'DELETE', 'PUT', 'PATCH'))) {
             $user_id = get_current_user_id();
-            $rate_limit_key = 'typography_stylist_rate_limit_' . $user_id;
+            $rate_limit_key = 'typost_rate_limit_' . $user_id;
             $requests = get_transient($rate_limit_key);
 
             if (false === $requests) {
@@ -1206,7 +1206,7 @@ class Typography_Stylist {
             if ($requests > 50) {
                 return new WP_Error(
                     'rate_limit_exceeded',
-                    esc_html__('Too many requests. Please try again later.', 'typography-stylist'),
+                    esc_html__('Too many requests. Please try again later.', 'typost'),
                     array('status' => 429)
                 );
             }
@@ -1222,7 +1222,7 @@ class Typography_Stylist {
      */
     public function get_presets() {
         if (null === $this->presets_cache) {
-            $this->presets_cache = get_option('typography_stylist_presets', $this->get_default_presets());
+            $this->presets_cache = get_option('typost_presets', $this->get_default_presets());
         }
         return $this->presets_cache;
     }
@@ -1285,171 +1285,171 @@ class Typography_Stylist {
             $this->features_cache = array(
                 array(
                     'id' => 'liga',
-                    'name' => esc_html__('Standard Ligatures', 'typography-stylist'),
+                    'name' => esc_html__('Standard Ligatures', 'typost'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Common letter combinations like fi, fl', 'typography-stylist')
+                    'description' => esc_html__('Common letter combinations like fi, fl', 'typost')
                 ),
                 array(
                     'id' => 'dlig',
-                    'name' => esc_html__('Discretionary Ligatures', 'typography-stylist'),
+                    'name' => esc_html__('Discretionary Ligatures', 'typost'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Optional decorative ligatures', 'typography-stylist')
+                    'description' => esc_html__('Optional decorative ligatures', 'typost')
                 ),
                 array(
                     'id' => 'calt',
-                    'name' => esc_html__('Contextual Alternates', 'typography-stylist'),
+                    'name' => esc_html__('Contextual Alternates', 'typost'),
                     'category' => 'ligatures',
-                    'description' => esc_html__('Context-aware letter forms', 'typography-stylist')
+                    'description' => esc_html__('Context-aware letter forms', 'typost')
                 ),
                 array(
                     'id' => 'ss01',
-                    'name' => esc_html__('Stylistic Set 1', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 1', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss02',
-                    'name' => esc_html__('Stylistic Set 2', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 2', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss03',
-                    'name' => esc_html__('Stylistic Set 3', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 3', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss04',
-                    'name' => esc_html__('Stylistic Set 4', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 4', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss05',
-                    'name' => esc_html__('Stylistic Set 5', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 5', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss06',
-                    'name' => esc_html__('Stylistic Set 6', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 6', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss07',
-                    'name' => esc_html__('Stylistic Set 7', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 7', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss08',
-                    'name' => esc_html__('Stylistic Set 8', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 8', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss09',
-                    'name' => esc_html__('Stylistic Set 9', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 9', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss10',
-                    'name' => esc_html__('Stylistic Set 10', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 10', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss11',
-                    'name' => esc_html__('Stylistic Set 11', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 11', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss12',
-                    'name' => esc_html__('Stylistic Set 12', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 12', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss13',
-                    'name' => esc_html__('Stylistic Set 13', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 13', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss14',
-                    'name' => esc_html__('Stylistic Set 14', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 14', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss15',
-                    'name' => esc_html__('Stylistic Set 15', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 15', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss16',
-                    'name' => esc_html__('Stylistic Set 16', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 16', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss17',
-                    'name' => esc_html__('Stylistic Set 17', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 17', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss18',
-                    'name' => esc_html__('Stylistic Set 18', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 18', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss19',
-                    'name' => esc_html__('Stylistic Set 19', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 19', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'ss20',
-                    'name' => esc_html__('Stylistic Set 20', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Set 20', 'typost'),
                     'category' => 'stylistic-sets',
-                    'description' => esc_html__('Alternate character designs', 'typography-stylist')
+                    'description' => esc_html__('Alternate character designs', 'typost')
                 ),
                 array(
                     'id' => 'swsh',
-                    'name' => esc_html__('Swashes', 'typography-stylist'),
+                    'name' => esc_html__('Swashes', 'typost'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Decorative flourishes', 'typography-stylist')
+                    'description' => esc_html__('Decorative flourishes', 'typost')
                 ),
                 array(
                     'id' => 'cswh',
-                    'name' => esc_html__('Contextual Swashes', 'typography-stylist'),
+                    'name' => esc_html__('Contextual Swashes', 'typost'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Context-aware decorative flourishes', 'typography-stylist')
+                    'description' => esc_html__('Context-aware decorative flourishes', 'typost')
                 ),
                 array(
                     'id' => 'salt',
-                    'name' => esc_html__('Stylistic Alternates', 'typography-stylist'),
+                    'name' => esc_html__('Stylistic Alternates', 'typost'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Alternative character forms', 'typography-stylist')
+                    'description' => esc_html__('Alternative character forms', 'typost')
                 ),
                 array(
                     'id' => 'titl',
-                    'name' => esc_html__('Titling', 'typography-stylist'),
+                    'name' => esc_html__('Titling', 'typost'),
                     'category' => 'alternates',
-                    'description' => esc_html__('Optimized for large titles', 'typography-stylist')
+                    'description' => esc_html__('Optimized for large titles', 'typost')
                 ),
                 array(
                     'id' => 'ornm',
-                    'name' => esc_html__('Ornaments', 'typography-stylist'),
+                    'name' => esc_html__('Ornaments', 'typost'),
                     'category' => 'decorative',
-                    'description' => esc_html__('Decorative ornaments', 'typography-stylist')
+                    'description' => esc_html__('Decorative ornaments', 'typost')
                 )
             );
         }
@@ -1564,11 +1564,11 @@ class Typography_Stylist {
 
         // Validate required parameters
         if (empty($params['id']) || empty($params['name']) || empty($params['features'])) {
-            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Missing required parameters', 'typost'), array('status' => 400));
         }
 
         if (!is_array($params['features']) || count($params['features']) === 0) {
-            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('invalid_features', esc_html__('Features must be a non-empty array', 'typost'), array('status' => 400));
         }
 
         // Validate feature IDs
@@ -1576,7 +1576,7 @@ class Typography_Stylist {
         foreach ($params['features'] as $feature) {
             if (!in_array($feature, $available_features, true)) {
                 /* translators: %s: The invalid OpenType feature ID */
-                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'typography-stylist'), esc_html($feature)), array('status' => 400));
+                return new WP_Error('invalid_feature_id', sprintf(esc_html__('Invalid feature ID: %s', 'typost'), esc_html($feature)), array('status' => 400));
             }
         }
 
@@ -1589,7 +1589,7 @@ class Typography_Stylist {
 
         $presets = $this->get_presets();
         $presets[] = $new_preset;
-        update_option('typography_stylist_presets', $presets);
+        update_option('typost_presets', $presets);
 
         // Clear cache
         $this->clear_cache();
@@ -1617,12 +1617,12 @@ class Typography_Stylist {
         if (!$found) {
             return new WP_Error(
                 'preset_not_found',
-                esc_html__('Preset not found', 'typography-stylist'),
+                esc_html__('Preset not found', 'typost'),
                 array('status' => 404)
             );
         }
 
-        update_option('typography_stylist_presets', array_values($presets));
+        update_option('typost_presets', array_values($presets));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -1649,7 +1649,7 @@ class Typography_Stylist {
      */
     public function get_custom_fonts() {
         if (null === $this->fonts_cache) {
-            $this->fonts_cache = get_option('typography_stylist_custom_fonts', array());
+            $this->fonts_cache = get_option('typost_custom_fonts', array());
         }
         return $this->fonts_cache;
     }
@@ -1659,7 +1659,7 @@ class Typography_Stylist {
      */
     public function get_manual_fonts() {
         if (null === $this->manual_fonts_cache) {
-            $this->manual_fonts_cache = get_option('typography_stylist_manual_fonts', array());
+            $this->manual_fonts_cache = get_option('typost_manual_fonts', array());
         }
         return $this->manual_fonts_cache;
     }
@@ -1673,23 +1673,23 @@ class Typography_Stylist {
         $this->manual_fonts_cache = null;
 
         // Clear all font CSS caches
-        delete_transient('typography_stylist_combined_font_css');
-        delete_transient('typography_stylist_admin_font_css');
-        delete_transient('typography_stylist_editor_font_css');
-        delete_transient('typography_stylist_block_font_css');
-        delete_transient('typography_stylist_css_variables');
+        delete_transient('typost_combined_font_css');
+        delete_transient('typost_admin_font_css');
+        delete_transient('typost_editor_font_css');
+        delete_transient('typost_block_font_css');
+        delete_transient('typost_css_variables');
 
         // Clear per-page font caches (all cached variations)
         // Direct database call is required here for bulk deletion of transients with wildcard patterns.
         // No caching needed as this is a delete operation.
         global $wpdb;
         // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_font_css_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_font_css_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_has_styled_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_has_styled_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_ots_used_fonts_') . '%'));
-        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_ots_used_fonts_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_typost_font_css_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_typost_font_css_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_typost_has_styled_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_typost_has_styled_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_typost_used_fonts_') . '%'));
+        $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_typost_used_fonts_') . '%'));
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
         // Clear editor data cache for all users
@@ -1701,8 +1701,8 @@ class Typography_Stylist {
      */
     private function invalidate_editor_data_cache($user_id = null) {
         if ($user_id) {
-            delete_transient('typography_stylist_editor_data_' . $user_id);
-            wp_cache_delete('typography_stylist_editor_data_' . $user_id, 'transient');
+            delete_transient('typost_editor_data_' . $user_id);
+            wp_cache_delete('typost_editor_data_' . $user_id, 'transient');
         } else {
             // Clear for all users
             // Direct database call is required for bulk deletion of user-specific transients.
@@ -1712,8 +1712,8 @@ class Typography_Stylist {
             $wpdb->query(
                 $wpdb->prepare(
                     "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-                    $wpdb->esc_like('_transient_ots_editor_data_') . '%',
-                    $wpdb->esc_like('_transient_timeout_ots_editor_data_') . '%'
+                    $wpdb->esc_like('_transient_typost_editor_data_') . '%',
+                    $wpdb->esc_like('_transient_timeout_typost_editor_data_') . '%'
                 )
             );
             // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -1728,8 +1728,8 @@ class Typography_Stylist {
      */
     public function get_fonts_upload_dir() {
         $upload_dir = wp_upload_dir();
-        $font_dir = $upload_dir['basedir'] . '/ots/fonts';
-        $font_url = $upload_dir['baseurl'] . '/ots/fonts';
+        $font_dir = $upload_dir['basedir'] . '/typography-stylist/fonts';
+        $font_url = $upload_dir['baseurl'] . '/typography-stylist/fonts';
 
         return array(
             'path' => $font_dir,
@@ -1899,7 +1899,7 @@ class Typography_Stylist {
                 $weight = sanitize_text_field($face['weight']);
 
                 // Check if variable weights are enabled
-                $allow_variable = get_option('typography_stylist_allow_variable_weights', false);
+                $allow_variable = get_option('typost_allow_variable_weights', false);
 
                 // Validate it's a known weight value
                 $valid_weights = array('normal', 'bold', '100', '200', '300', '400', '500', '600', '700', '800', '900');
@@ -1969,7 +1969,7 @@ class Typography_Stylist {
             $params = $request->get_params();
 
             if (empty($files['zip_file']) || empty($params['name'])) {
-                return new WP_Error('missing_data', esc_html__('Missing required font data', 'typography-stylist'), array('status' => 400));
+                return new WP_Error('missing_data', esc_html__('Missing required font data', 'typost'), array('status' => 400));
             }
 
             $uploaded_file = $files['zip_file'];
@@ -1980,23 +1980,23 @@ class Typography_Stylist {
             $type = $file_info['type'];
 
             if (!$ext || !$type) {
-                return new WP_Error('invalid_file', esc_html__('Invalid file type', 'typography-stylist'), array('status' => 400));
+                return new WP_Error('invalid_file', esc_html__('Invalid file type', 'typost'), array('status' => 400));
             }
 
             if ($ext !== 'zip' || !in_array($type, array('application/zip', 'application/x-zip-compressed'), true)) {
-                return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'typography-stylist'), array('status' => 400));
+                return new WP_Error('invalid_file', esc_html__('Please upload a valid ZIP file', 'typost'), array('status' => 400));
             }
 
             // Validate file size (max 10MB)
             $max_size = 10 * 1024 * 1024; // 10MB
             if ($uploaded_file['size'] > $max_size) {
                 /* translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB") */
-                return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'typography-stylist'), size_format($max_size)), array('status' => 400));
+                return new WP_Error('file_too_large', sprintf(esc_html__('File size exceeds maximum allowed (%s)', 'typost'), size_format($max_size)), array('status' => 400));
             }
 
             // Check for upload errors
             if ($uploaded_file['error'] !== UPLOAD_ERR_OK) {
-                return new WP_Error('upload_error', esc_html__('File upload error', 'typography-stylist'), array('status' => 400));
+                return new WP_Error('upload_error', esc_html__('File upload error', 'typost'), array('status' => 400));
             }
 
             // Process the ZIP file - returns array of font entries
@@ -2011,7 +2011,7 @@ class Typography_Stylist {
             foreach ($font_entries as $font_entry) {
                 $fonts[] = $font_entry;
             }
-            update_option('typography_stylist_custom_fonts', $fonts);
+            update_option('typost_custom_fonts', $fonts);
 
             // Clear cache
             $this->clear_cache();
@@ -2025,7 +2025,7 @@ class Typography_Stylist {
             // Return generic message to users
             return new WP_Error(
                 'upload_exception',
-                esc_html__('Upload failed due to an internal error. Please try again or contact support.', 'typography-stylist'),
+                esc_html__('Upload failed due to an internal error. Please try again or contact support.', 'typost'),
                 array('status' => 500)
             );
         }
@@ -2048,7 +2048,7 @@ class Typography_Stylist {
         }
 
         if (!$font_to_delete) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typost'), array('status' => 404));
         }
 
         // Check if this is the last font in the kit
@@ -2084,7 +2084,7 @@ class Typography_Stylist {
             }
         }
 
-        update_option('typography_stylist_custom_fonts', array_values($fonts));
+        update_option('typost_custom_fonts', array_values($fonts));
 
         // Clear cache
         $this->clear_cache();
@@ -2099,12 +2099,12 @@ class Typography_Stylist {
         // Create unique kit ID and directory
         $kit_id = 'kit-' . time() . '-' . wp_generate_password(8, false);
         $upload_dir = wp_upload_dir();
-        $kit_base_path = $upload_dir['basedir'] . '/ots/fonts/' . $kit_id;
-        $kit_base_url = $upload_dir['baseurl'] . '/ots/fonts/' . $kit_id;
+        $kit_base_path = $upload_dir['basedir'] . '/typography-stylist/fonts/' . $kit_id;
+        $kit_base_url = $upload_dir['baseurl'] . '/typography-stylist/fonts/' . $kit_id;
 
         // Create directory
         if (!wp_mkdir_p($kit_base_path)) {
-            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'typography-stylist'));
+            return new WP_Error('mkdir_failed', esc_html__('Failed to create upload directory', 'typost'));
         }
 
         // Initialize WordPress filesystem
@@ -2119,7 +2119,7 @@ class Typography_Stylist {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
             // Return generic message to users
-            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('unzip_failed', esc_html__('Failed to extract ZIP file. Please ensure the file is a valid ZIP archive.', 'typost'), array('status' => 400));
         }
 
         // Validate extracted files - only allow CSS, WOFF, WOFF2, TTF, OTF, EOT
@@ -2173,13 +2173,13 @@ class Typography_Stylist {
             $wp_filesystem->rmdir($kit_base_path, true);
             return new WP_Error(
                 'iterator_failed',
-                esc_html__('Failed to process font kit. The archive may be corrupted.', 'typography-stylist')
+                esc_html__('Failed to process font kit. The archive may be corrupted.', 'typost')
             );
         }
 
         if (empty($css_files)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'typography-stylist'));
+            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'typost'));
         }
 
         // Select the best CSS file (prioritizes actual font CSS over specimen/demo files)
@@ -2193,14 +2193,14 @@ class Typography_Stylist {
         // Validate it's a real file, not a symlink
         if (!is_file($css_file_path) || is_link($css_file_path)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'typography-stylist'));
+            return new WP_Error('invalid_css', esc_html__('Invalid CSS file', 'typost'));
         }
 
         // Check CSS file size (max 1MB)
         $file_size = filesize($css_file_path);
         if ($file_size > 1024 * 1024) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'typography-stylist'));
+            return new WP_Error('css_too_large', esc_html__('CSS file is too large (max 1MB)', 'typost'));
         }
 
         // Use WP Filesystem API
@@ -2208,13 +2208,13 @@ class Typography_Stylist {
 
         if ($css_content === false) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'typography-stylist'));
+            return new WP_Error('css_read_error', esc_html__('Could not read CSS file', 'typost'));
         }
 
         // Validate it looks like CSS (basic check)
         if (!preg_match('/@font-face\s*\{/i', $css_content)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'typography-stylist'));
+            return new WP_Error('invalid_css', esc_html__('CSS file does not contain @font-face declarations', 'typost'));
         }
 
         // Get the directory where the CSS file is located (relative to kit_base_path)
@@ -2235,7 +2235,7 @@ class Typography_Stylist {
         // Check if sanitization removed all content
         if (empty($css_content)) {
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('No valid @font-face declarations found after sanitization', 'typography-stylist'));
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face declarations found after sanitization', 'typost'));
         }
 
         // Parse font families
@@ -2244,7 +2244,7 @@ class Typography_Stylist {
         if (empty($font_faces)) {
             // Clean up on failure
             $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'typography-stylist'));
+            return new WP_Error('invalid_css', esc_html__('No valid @font-face rules found in CSS', 'typost'));
         }
 
         // Count font files more efficiently
@@ -2395,7 +2395,7 @@ class Typography_Stylist {
             'no_font_face_css',
             sprintf(
                 /* translators: %d: number of CSS files found */
-                esc_html__('Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet.', 'typography-stylist'),
+                esc_html__('Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet.', 'typost'),
                 count($css_files)
             ),
             array(
@@ -2462,7 +2462,7 @@ class Typography_Stylist {
      */
     public function secure_upload_directory() {
         $upload_dir = wp_upload_dir();
-        $font_dir = $upload_dir['basedir'] . '/ots/fonts';
+        $font_dir = $upload_dir['basedir'] . '/typography-stylist/fonts';
 
         if (!file_exists($font_dir)) {
             wp_mkdir_p($font_dir);
@@ -2520,7 +2520,7 @@ class Typography_Stylist {
      * Get Adobe Fonts scripts
      */
     public function get_adobe_fonts() {
-        return get_option('typography_stylist_adobe_fonts', array());
+        return get_option('typost_adobe_fonts', array());
     }
 
     /**
@@ -2673,14 +2673,14 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (empty($params['embed_code'])) {
-            return new WP_Error('missing_embed_code', esc_html__('Embed code is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_embed_code', esc_html__('Embed code is required', 'typost'), array('status' => 400));
         }
 
         // Parse embed code
         $parsed = $this->parse_adobe_fonts_code($params['embed_code']);
         if (!$parsed) {
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet -- False positive: error message text, not actual inline CSS/JS
-            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('invalid_embed_code', esc_html__('Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts.', 'typost'), array('status' => 400));
         }
 
         // Parse font families from user input
@@ -2689,7 +2689,7 @@ class Typography_Stylist {
             : array();
 
         if (empty($font_families_input)) {
-            return new WP_Error('missing_families', esc_html__('At least one font family is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_families', esc_html__('At least one font family is required', 'typost'), array('status' => 400));
         }
 
         // Create kit metadata
@@ -2702,7 +2702,7 @@ class Typography_Stylist {
             $is_duplicate_css_url = isset($font['css_url'], $parsed['css_url']) && $font['css_url'] === $parsed['css_url'];
 
             if ($is_duplicate_kit_id || $is_duplicate_css_url) {
-                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'typography-stylist'), array('status' => 400));
+                return new WP_Error('duplicate_kit', esc_html__('This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first.', 'typost'), array('status' => 400));
             }
         }
         $kit_name = !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'];
@@ -2730,7 +2730,7 @@ class Typography_Stylist {
         foreach ($font_entries as $font_entry) {
             $fonts[] = $font_entry;
         }
-        update_option('typography_stylist_adobe_fonts', $fonts);
+        update_option('typost_adobe_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
@@ -2766,10 +2766,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_adobe_fonts', array_values($fonts));
+        update_option('typost_adobe_fonts', array_values($fonts));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -2790,7 +2790,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typost'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -2805,10 +2805,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_adobe_fonts', $fonts);
+        update_option('typost_adobe_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2829,7 +2829,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['load_on_all_pages'])) {
-            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typost'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -2844,10 +2844,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Adobe Font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_adobe_fonts', $fonts);
+        update_option('typost_adobe_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2868,7 +2868,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typost'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -2883,10 +2883,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_custom_fonts', $fonts);
+        update_option('typost_custom_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2907,7 +2907,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['load_on_all_pages'])) {
-            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_parameter', esc_html__('load_on_all_pages parameter is required', 'typost'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -2922,10 +2922,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_custom_fonts', $fonts);
+        update_option('typost_custom_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -2960,7 +2960,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (empty($params['name']) || empty($params['font_family'])) {
-            return new WP_Error('missing_data', esc_html__('Name and font family are required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_data', esc_html__('Name and font family are required', 'typost'), array('status' => 400));
         }
 
         // Generate unique ID
@@ -2977,7 +2977,7 @@ class Typography_Stylist {
 
         $fonts = $this->get_manual_fonts();
         $fonts[] = $new_font;
-        update_option('typography_stylist_manual_fonts', $fonts);
+        update_option('typost_manual_fonts', $fonts);
 
         // Clear cache
         $this->clear_cache();
@@ -3009,10 +3009,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_manual_fonts', array_values($fonts));
+        update_option('typost_manual_fonts', array_values($fonts));
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true));
@@ -3033,7 +3033,7 @@ class Typography_Stylist {
         $params = $request->get_json_params();
 
         if (!isset($params['font_family'])) {
-            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typost'), array('status' => 400));
         }
 
         $fonts = $this->get_manual_fonts();
@@ -3049,10 +3049,10 @@ class Typography_Stylist {
         }
 
         if (!$found) {
-            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typography-stylist'), array('status' => 404));
+            return new WP_Error('font_not_found', esc_html__('Manual font not found', 'typost'), array('status' => 404));
         }
 
-        update_option('typography_stylist_manual_fonts', $fonts);
+        update_option('typost_manual_fonts', $fonts);
         $this->clear_cache();
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
@@ -3169,7 +3169,7 @@ class Typography_Stylist {
         // Enqueue each unique CSS URL once
         foreach ($css_urls_to_load as $handle_id => $css_url) {
             wp_enqueue_style(
-                'typography-stylist-adobe-' . $handle_id,
+                'typost-adobe-' . $handle_id,
                 esc_url($css_url, array('https')),
                 array(),
                 $handle_id  // Use kit ID as version for cache busting when Adobe updates fonts
@@ -3200,20 +3200,20 @@ class Typography_Stylist {
         $global_load = $request->get_param('global_load');
 
         if (empty($deleted_id) || empty($replacement_id)) {
-            return new WP_Error('missing_params', __('Missing required parameters.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', __('Missing required parameters.', 'typost'), array('status' => 400));
         }
 
         $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
 
         if ($success === false) {
-            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typost'), array('status' => 400));
         }
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
         }
 
-        return new WP_Error('failed', __('Failed to add font replacement.', 'typography-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to add font replacement.', 'typost'), array('status' => 500));
     }
 
     /**
@@ -3225,20 +3225,20 @@ class Typography_Stylist {
         $global_load = $request->get_param('global_load');
 
         if (empty($deleted_id)) {
-            return new WP_Error('missing_id', __('Missing font ID.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_id', __('Missing font ID.', 'typost'), array('status' => 400));
         }
 
         $success = $this->add_font_replacement((int) $deleted_id, (int) $replacement_id, (bool) $global_load);
 
         if ($success === false) {
-            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('invalid_id', __('Invalid font ID (0). Font IDs must be greater than 0.', 'typost'), array('status' => 400));
         }
 
         if ($success) {
             return rest_ensure_response(array('success' => true, 'replacements' => $this->get_font_replacements()));
         }
 
-        return new WP_Error('failed', __('Failed to update font replacement.', 'typography-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to update font replacement.', 'typost'), array('status' => 500));
     }
 
     /**
@@ -3248,7 +3248,7 @@ class Typography_Stylist {
         $deleted_id = $request->get_param('id');
 
         if (empty($deleted_id)) {
-            return new WP_Error('missing_id', __('Missing font ID.', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_id', __('Missing font ID.', 'typost'), array('status' => 400));
         }
 
         $success = $this->remove_font_replacement((int) $deleted_id);
@@ -3257,7 +3257,7 @@ class Typography_Stylist {
             return rest_ensure_response(array('success' => true));
         }
 
-        return new WP_Error('failed', __('Failed to delete font replacement.', 'typography-stylist'), array('status' => 500));
+        return new WP_Error('failed', __('Failed to delete font replacement.', 'typost'), array('status' => 500));
     }
 
     /**
@@ -3275,7 +3275,7 @@ class Typography_Stylist {
      */
     private function get_font_replacements() {
         if (null === $this->font_replacements_cache) {
-            $this->font_replacements_cache = get_option('typography_stylist_font_replacements', array(
+            $this->font_replacements_cache = get_option('typost_font_replacements', array(
                 'mappings' => array(),
                 'global_load' => array(),
                 'next_id' => 1
@@ -3301,7 +3301,7 @@ class Typography_Stylist {
 
         // Increment for next time
         $replacements['next_id'] = $next_id + 1;
-        update_option('typography_stylist_font_replacements', $replacements);
+        update_option('typost_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
 
         return $current_id;
@@ -3444,7 +3444,7 @@ class Typography_Stylist {
             $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
         }
 
-        update_option('typography_stylist_font_replacements', $replacements);
+        update_option('typost_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
         $this->clear_cache();
 
@@ -3463,7 +3463,7 @@ class Typography_Stylist {
         unset($replacements['mappings'][$deleted_id]);
         $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
 
-        update_option('typography_stylist_font_replacements', $replacements);
+        update_option('typost_font_replacements', $replacements);
         $this->font_replacements_cache = $replacements;
         $this->clear_cache();
 
@@ -3505,7 +3505,7 @@ class Typography_Stylist {
      */
     public function get_font_css_variables() {
         // Check transient cache first
-        $cache_key = 'typography_stylist_css_variables';
+        $cache_key = 'typost_css_variables';
         $cached_css = get_transient($cache_key);
 
         if (false !== $cached_css) {
@@ -3635,7 +3635,7 @@ class Typography_Stylist {
             // - admin_print_styles hook: Too late for some editor initialization contexts
             // Output is sanitized via sanitize_output_css() and wp_kses()
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
-            echo wp_kses("<style id=\"ots-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
+            echo wp_kses("<style id=\"typost-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
         }
     }
 
@@ -3792,11 +3792,11 @@ class Typography_Stylist {
                 }
 
                 // Verify the path points to our uploads directory
-                // Normalize path to prevent traversal attacks (e.g., /malicious/../wp-content/uploads/ots/fonts/)
+                // Normalize path to prevent traversal attacks (e.g., /malicious/../wp-content/uploads/typography-stylist/fonts/)
                 $normalized_path = preg_replace('#/+#', '/', $url_path); // Collapse multiple slashes
                 $normalized_path = preg_replace('#/\.\./|/\./#', '/', $normalized_path); // Remove . and ..
 
-                if (strpos($normalized_path, '/wp-content/uploads/ots/fonts/') === false) {
+                if (strpos($normalized_path, '/wp-content/uploads/typography-stylist/fonts/') === false) {
                     // URL is from our host but not in our uploads directory - reject
                     return false;
                 }
@@ -4072,41 +4072,41 @@ class Typography_Stylist {
     public function render_admin_page() {
         // Verify user has permission
         if (!current_user_can('manage_options')) {
-            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'typography-stylist'));
+            wp_die(esc_html__('You do not have sufficient permissions to access this page.', 'typost'));
         }
 
         // Save settings (with proper sanitization)
-        if (isset($_POST['typography_stylist_save_settings']) &&
-            check_admin_referer('typography_stylist_settings_nonce') &&
+        if (isset($_POST['typost_save_settings']) &&
+            check_admin_referer('typost_settings_nonce') &&
             current_user_can('manage_options')) {
 
             // Use proper sanitization via registered settings
-            if (isset($_POST['typography_stylist_presets'])) {
-                $sanitized = $this->sanitize_presets(wp_unslash($_POST['typography_stylist_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-                update_option('typography_stylist_presets', $sanitized);
+            if (isset($_POST['typost_presets'])) {
+                $sanitized = $this->sanitize_presets(wp_unslash($_POST['typost_presets'])); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+                update_option('typost_presets', $sanitized);
 
                 // Clear cache
                 $this->clear_cache();
 
                 echo '<div class="notice notice-success"><p>' .
-                     esc_html__('Settings saved successfully.', 'typography-stylist') .
+                     esc_html__('Settings saved successfully.', 'typost') .
                      '</p></div>';
             }
         }
 
         // Save options settings
-        if (isset($_POST['typography_stylist_save_options_settings']) &&
-            check_admin_referer('typography_stylist_options_settings_nonce') &&
+        if (isset($_POST['typost_save_options_settings']) &&
+            check_admin_referer('typost_options_settings_nonce') &&
             current_user_can('manage_options')) {
 
             // Get previous value to detect changes
-            $previous_show_clear_confirmation = (bool) get_option('typography_stylist_show_clear_confirmation', true);
-            $show_clear_confirmation = isset($_POST['typography_stylist_show_clear_confirmation']) ? '1' : '0';
-            update_option('typography_stylist_show_clear_confirmation', $show_clear_confirmation);
+            $previous_show_clear_confirmation = (bool) get_option('typost_show_clear_confirmation', true);
+            $show_clear_confirmation = isset($_POST['typost_show_clear_confirmation']) ? '1' : '0';
+            update_option('typost_show_clear_confirmation', $show_clear_confirmation);
 
             // Save variable weight setting
-            $allow_variable = isset($_POST['typography_stylist_allow_variable_weights']) ? '1' : '0';
-            update_option('typography_stylist_allow_variable_weights', $allow_variable);
+            $allow_variable = isset($_POST['typost_allow_variable_weights']) ? '1' : '0';
+            update_option('typost_allow_variable_weights', $allow_variable);
 
             // Clear cache for all users only when the clear confirmation setting changes
             if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
@@ -4114,24 +4114,24 @@ class Typography_Stylist {
             }
 
             echo '<div class="notice notice-success"><p>' .
-                 esc_html__('Options saved successfully.', 'typography-stylist') .
+                 esc_html__('Options saved successfully.', 'typost') .
                  '</p></div>';
         }
 
         // Save accessibility settings
-        if (isset($_POST['typography_stylist_save_accessibility_settings']) &&
-            check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
+        if (isset($_POST['typost_save_accessibility_settings']) &&
+            check_admin_referer('typost_accessibility_settings_nonce') &&
             current_user_can('manage_options')) {
 
             // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
-            $enable_aria = isset($_POST['typography_stylist_enable_aria_labels']) ? '1' : '0';
-            update_option('typography_stylist_enable_aria_labels', $enable_aria);
+            $enable_aria = isset($_POST['typost_enable_aria_labels']) ? '1' : '0';
+            update_option('typost_enable_aria_labels', $enable_aria);
 
             // Clear cache when accessibility settings change
             $this->clear_cache();
 
             echo '<div class="notice notice-success"><p>' .
-                 esc_html__('Accessibility settings saved successfully.', 'typography-stylist') .
+                 esc_html__('Accessibility settings saved successfully.', 'typost') .
                  '</p></div>';
         }
 
@@ -4139,14 +4139,14 @@ class Typography_Stylist {
         $template_data = array(
             'instance' => $this,
             'presets' => $this->get_presets(),
-            'custom_fonts' => get_option('typography_stylist_custom_fonts', array()),
+            'custom_fonts' => get_option('typost_custom_fonts', array()),
             'adobe_fonts' => $this->get_adobe_fonts(),
             'manual_fonts' => $this->get_manual_fonts(),
         );
 
         // Include template file and render
-        include OTS_PLUGIN_DIR . 'includes/admin-page.php';
-        typography_stylist_render_admin_template(
+        include TYPOST_PLUGIN_DIR . 'includes/admin-page.php';
+        typost_render_admin_template(
             $template_data['instance'],
             $template_data['presets'],
             $template_data['custom_fonts'],
@@ -4164,11 +4164,11 @@ class Typography_Stylist {
  *
  * @since 1.0.0
  *
- * @return Typography_Stylist The plugin instance.
+ * @return Typost The plugin instance.
  */
-function typography_stylist_init() {
-    return Typography_Stylist::get_instance();
+function typost_init() {
+    return Typost::get_instance();
 }
 
 // Start plugin
-add_action('plugins_loaded', 'typography_stylist_init');
+add_action('plugins_loaded', 'typost_init');

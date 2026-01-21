@@ -77,7 +77,7 @@ The plugin will:
 - Extract the ZIP file
 - Process CSS and font files
 - Make fonts available in the editor
-- Store files securely in `wp-content/uploads/ots/fonts/`
+- Store files securely in `wp-content/uploads/typography-stylist/fonts/`
 
 **What should the ZIP contain:**
 - A CSS file with @font-face declarations (e.g., `MyWebfontsKit.css`)
@@ -421,7 +421,7 @@ the Typography Stylist block creates two versions of your content:
   <h2 class="visually-hidden">Beautiful Typography</h2>
 
   <!-- For visual display - styled with OpenType features -->
-  <h2 class="ots-styled" aria-hidden="true">
+  <h2 class="typost-styled" aria-hidden="true">
     [Styled content with complex typography]
   </h2>
 </div>
@@ -504,7 +504,7 @@ The plugin helps maintain WCAG 2.1 Level AA compliance by:
 ### Uploaded Fonts Not Loading on Frontend
 
 **Check:**
-1. Font files are in `wp-content/uploads/ots/fonts/`
+1. Font files are in `wp-content/uploads/typography-stylist/fonts/`
 2. File permissions allow web server to read files
 3. .htaccess isn't blocking font file access
 4. No CORS errors in browser console
@@ -579,7 +579,7 @@ The plugin helps maintain WCAG 2.1 Level AA compliance by:
 #### Add Custom OpenType Features
 
 ```php
-add_filter('OTS_available_features', function($features) {
+add_filter('TYPOST_available_features', function($features) {
     $features[] = array(
         'id' => 'cv01',
         'name' => __('Character Variant 1', 'your-textdomain'),
@@ -593,7 +593,7 @@ add_filter('OTS_available_features', function($features) {
 #### Add Default Presets
 
 ```php
-add_filter('OTS_default_presets', function($presets) {
+add_filter('TYPOST_default_presets', function($presets) {
     $presets[] = array(
         'id' => 'my-custom-preset',
         'name' => __('My Custom Style', 'your-textdomain'),
@@ -659,7 +659,7 @@ fetch('/wp-json/typography-stylist/v1/adobe-fonts', {
 
 ```css
 /* Inline format wrapper */
-.ots-styled {
+.typost-styled {
     /* Inline OpenType features applied here */
 }
 
@@ -678,7 +678,7 @@ fetch('/wp-json/typography-stylist/v1/adobe-fonts', {
 
 ```html
 <!-- Inline format stores features -->
-<span class="ots-styled"
+<span class="typost-styled"
       data-features="calt,ss02,swsh"
       style="font-feature-settings: 'calt' 1, 'ss02' 1, 'swsh' 1">
     Text

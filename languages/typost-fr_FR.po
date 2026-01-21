@@ -1,942 +1,942 @@
-# Spanish (Spain) translation for Headline Ligatures and Styles
+# French (France) translation for Headline Ligatures and Styles
 # Copyright (C) 2025 Headline Ligatures and Styles
 # This file is distributed under the same license as the Headline Ligatures and Styles package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 1.0.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Project-Id-Version: Typost 1.0.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typost\n"
 "POT-Creation-Date: 2026-01-13 10:00+0000\n"
 "PO-Revision-Date: 2026-01-13 10:00+0000\n"
 "Last-Translator: \n"
-"Language-Team: Spanish (Spain)\n"
-"Language: es_ES\n"
+"Language-Team: French (France)\n"
+"Language: fr_FR\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Manual Translation\n"
 "X-Domain: headline-ligatures-styles\n"
 
 #: headline-ligatures-styles.php:348
 msgid "Headline Ligatures & Styles"
-msgstr "Ligaduras y Estilos de Títulos"
+msgstr "Ligatures et Styles de Titres"
 
 #: headline-ligatures-styles.php:349
 msgid "Headline Typography"
-msgstr "Tipografía de Títulos"
+msgstr "Typographie des Titres"
 
 #: headline-ligatures-styles.php:1464
 msgid "You do not have sufficient permissions to access this page."
-msgstr "No tienes permisos suficientes para acceder a esta página."
+msgstr "Vous n'avez pas les permissions suffisantes pour accéder à cette page."
 
 #: headline-ligatures-styles.php:389
 msgid "Are you sure you want to delete this font kit?"
-msgstr "¿Estás seguro de que quieres eliminar este kit de fuentes?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce kit de polices ?"
 
 #: headline-ligatures-styles.php:390
 msgid "Failed to upload font kit."
-msgstr "Error al cargar el kit de fuentes."
+msgstr "Échec du téléversement du kit de polices."
 
 #: headline-ligatures-styles.php:391
 msgid "Please select a ZIP file (.zip)"
-msgstr "Por favor, selecciona un archivo ZIP (.zip)"
+msgstr "Veuillez sélectionner un fichier ZIP (.zip)"
 
 #: headline-ligatures-styles.php:392
 msgid "Please enter a font kit name."
-msgstr "Por favor, introduce un nombre para el kit de fuentes."
+msgstr "Veuillez saisir un nom pour le kit de polices."
 
 #: headline-ligatures-styles.php:393
 msgid "Please select a ZIP file."
-msgstr "Por favor, selecciona un archivo ZIP."
+msgstr "Veuillez sélectionner un fichier ZIP."
 
 #: headline-ligatures-styles.php:394
 msgid "Font kit uploaded and processed successfully! Reloading page..."
-msgstr "¡Kit de fuentes cargado y procesado correctamente! Recargando página..."
+msgstr "Kit de polices téléversé et traité avec succès ! Rechargement de la page..."
 
 #: headline-ligatures-styles.php:395
 msgid "Failed to delete font kit."
-msgstr "Error al eliminar el kit de fuentes."
+msgstr "Échec de la suppression du kit de polices."
 
 #: headline-ligatures-styles.php:396
 msgid "No custom fonts uploaded yet."
-msgstr "Aún no se han cargado fuentes personalizadas."
+msgstr "Aucune police personnalisée téléversée pour le moment."
 
 #: headline-ligatures-styles.php:397
 msgid "Upload a webfont kit using the form below to add custom fonts with OpenType features."
-msgstr "Carga un kit de fuentes web usando el formulario a continuación para añadir fuentes personalizadas con características OpenType."
+msgstr "Téléversez un kit de polices web à l'aide du formulaire ci-dessous pour ajouter des polices personnalisées avec des fonctionnalités OpenType."
 
 #: headline-ligatures-styles.php:398
 msgid "Uploading"
-msgstr "Cargando"
+msgstr "Téléversement"
 
 #: headline-ligatures-styles.php:399
 msgid "Uploading ZIP file..."
-msgstr "Cargando archivo ZIP..."
+msgstr "Téléversement du fichier ZIP..."
 
 #: headline-ligatures-styles.php:400
 msgid "Processing..."
-msgstr "Procesando..."
+msgstr "Traitement en cours..."
 
 #: headline-ligatures-styles.php:401
 msgid "Upload Font Kit"
-msgstr "Cargar Kit de Fuentes"
+msgstr "Téléverser un Kit de Polices"
 
-#: typography-stylist.php:404
+#: typost.php:404
 msgid "Please enter a project name."
-msgstr "Por favor, introduce un nombre de proyecto."
+msgstr "Veuillez saisir un nom de projet."
 
-#: typography-stylist.php:405
+#: typost.php:405
 msgid "Please paste the Adobe Fonts embed code."
-msgstr "Por favor, pega el código de inserción de Adobe Fonts."
+msgstr "Veuillez coller le code d'intégration Adobe Fonts."
 
-#: typography-stylist.php:406
+#: typost.php:406
 msgid "Adding..."
-msgstr "Añadiendo..."
+msgstr "Ajout en cours..."
 
-#: typography-stylist.php:407
+#: typost.php:407
 msgid "Adobe Fonts project added successfully! Reloading page..."
-msgstr "¡Proyecto de Adobe Fonts añadido con éxito! Recargando página..."
+msgstr "Projet Adobe Fonts ajouté avec succès ! Rechargement de la page..."
 
-#: typography-stylist.php:408
+#: typost.php:408
 msgid "Failed to add Adobe Fonts project."
-msgstr "Error al añadir el proyecto de Adobe Fonts."
+msgstr "Échec de l'ajout du projet Adobe Fonts."
 
-#: typography-stylist.php:409
+#: typost.php:409
 msgid "Add Adobe Fonts Project"
-msgstr "Añadir Proyecto de Adobe Fonts"
+msgstr "Ajouter un Projet Adobe Fonts"
 
-#: typography-stylist.php:410
+#: typost.php:410
 msgid "Are you sure you want to delete this Adobe Fonts project?"
-msgstr "¿Estás seguro de que quieres eliminar este proyecto de Adobe Fonts?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce projet Adobe Fonts ?"
 
-#: typography-stylist.php:411
+#: typost.php:411
 msgid "Failed to delete Adobe Fonts project."
-msgstr "Error al eliminar el proyecto de Adobe Fonts."
+msgstr "Échec de la suppression du projet Adobe Fonts."
 
-#: typography-stylist.php:413
+#: typost.php:413
 msgid "Please enter a font name."
-msgstr "Por favor, introduce un nombre de fuente."
+msgstr "Veuillez saisir un nom de police."
 
-#: typography-stylist.php:414
+#: typost.php:414
 msgid "Please enter a CSS font-family value."
-msgstr "Por favor, introduce un valor CSS font-family."
+msgstr "Veuillez saisir une valeur CSS font-family."
 
-#: typography-stylist.php:415
+#: typost.php:415
 msgid "Custom font added successfully! Reloading page..."
-msgstr "¡Fuente personalizada añadida con éxito! Recargando página..."
+msgstr "Police personnalisée ajoutée avec succès ! Rechargement de la page..."
 
-#: typography-stylist.php:416
+#: typost.php:416
 msgid "Failed to add custom font."
-msgstr "Error al añadir la fuente personalizada."
+msgstr "Échec de l'ajout de la police personnalisée."
 
-#: typography-stylist.php:417
+#: typost.php:417
 msgid "Add Custom Font"
-msgstr "Añadir Fuente Personalizada"
+msgstr "Ajouter une Police Personnalisée"
 
-#: typography-stylist.php:418
+#: typost.php:418
 msgid "Are you sure you want to delete this custom font?"
-msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
 
-#: typography-stylist.php:419
+#: typost.php:419
 msgid "Failed to delete custom font."
-msgstr "Error al eliminar la fuente personalizada."
+msgstr "Échec de la suppression de la police personnalisée."
 
-#: typography-stylist.php:591
+#: typost.php:591
 msgid "Failed to update font loading setting."
-msgstr "Error al actualizar la configuración de carga de fuentes."
+msgstr "Échec de la mise à jour du paramètre de chargement des polices."
 
 #: headline-ligatures-styles.php:618
 msgid "Too many requests. Please try again later."
-msgstr "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde."
+msgstr "Trop de requêtes. Veuillez réessayer plus tard."
 
 #: headline-ligatures-styles.php:682
 msgid "Standard Ligatures"
-msgstr "Ligaduras Estándar"
+msgstr "Ligatures Standard"
 
 #: headline-ligatures-styles.php:684
 msgid "Common letter combinations like fi, fl"
-msgstr "Combinaciones comunes de letras como fi, fl"
+msgstr "Combinaisons de lettres courantes comme fi, fl"
 
 #: headline-ligatures-styles.php:688
 msgid "Discretionary Ligatures"
-msgstr "Ligaduras Discrecionales"
+msgstr "Ligatures Discrétionnaires"
 
 #: headline-ligatures-styles.php:690
 msgid "Optional decorative ligatures"
-msgstr "Ligaduras decorativas opcionales"
+msgstr "Ligatures décoratives optionnelles"
 
 #: headline-ligatures-styles.php:694
 msgid "Contextual Alternates"
-msgstr "Alternativas Contextuales"
+msgstr "Alternatives Contextuelles"
 
 #: headline-ligatures-styles.php:696
 msgid "Context-aware letter forms"
-msgstr "Formas de letras según el contexto"
+msgstr "Formes de lettres contextuelles"
 
 #: headline-ligatures-styles.php:700
 msgid "Stylistic Set 1"
-msgstr "Conjunto Estilístico 1"
+msgstr "Ensemble Stylistique 1"
 
 #: headline-ligatures-styles.php:706
 msgid "Stylistic Set 2"
-msgstr "Conjunto Estilístico 2"
+msgstr "Ensemble Stylistique 2"
 
 #: headline-ligatures-styles.php:712
 msgid "Stylistic Set 3"
-msgstr "Conjunto Estilístico 3"
+msgstr "Ensemble Stylistique 3"
 
 #: headline-ligatures-styles.php:718
 msgid "Stylistic Set 4"
-msgstr "Conjunto Estilístico 4"
+msgstr "Ensemble Stylistique 4"
 
 #: headline-ligatures-styles.php:724
 msgid "Stylistic Set 5"
-msgstr "Conjunto Estilístico 5"
+msgstr "Ensemble Stylistique 5"
 
 #: headline-ligatures-styles.php:702
 msgid "Alternate character designs"
-msgstr "Diseños alternativos de caracteres"
+msgstr "Variantes de caractères"
 
 #: headline-ligatures-styles.php:730
 msgid "Swashes"
-msgstr "Florituras"
+msgstr "Lettrines"
 
 #: headline-ligatures-styles.php:732
 msgid "Decorative flourishes"
-msgstr "Adornos decorativos"
+msgstr "Ornements décoratifs"
 
 #: headline-ligatures-styles.php:736
 msgid "Contextual Swashes"
-msgstr "Florituras Contextuales"
+msgstr "Lettrines Contextuelles"
 
 #: headline-ligatures-styles.php:738
 msgid "Context-aware decorative flourishes"
-msgstr "Adornos decorativos según el contexto"
+msgstr "Ornements décoratifs contextuels"
 
 #: headline-ligatures-styles.php:742
 msgid "Stylistic Alternates"
-msgstr "Alternativas Estilísticas"
+msgstr "Alternatives Stylistiques"
 
 #: headline-ligatures-styles.php:744
 msgid "Alternative character forms"
-msgstr "Formas alternativas de caracteres"
+msgstr "Formes alternatives de caractères"
 
 #: headline-ligatures-styles.php:748
 msgid "Titling"
-msgstr "Titulares"
+msgstr "Capitales Titrées"
 
 #: headline-ligatures-styles.php:750
 msgid "Optimized for large titles"
-msgstr "Optimizado para títulos grandes"
+msgstr "Optimisé pour les grands titres"
 
 #: headline-ligatures-styles.php:754
 msgid "Ornaments"
-msgstr "Ornamentos"
+msgstr "Ornements"
 
 #: headline-ligatures-styles.php:756
 msgid "Decorative ornaments"
-msgstr "Ornamentos decorativos"
+msgstr "Ornements décoratifs"
 
 #: headline-ligatures-styles.php:871
 msgid "Missing required parameters"
-msgstr "Faltan parámetros requeridos"
+msgstr "Paramètres obligatoires manquants"
 
 #: headline-ligatures-styles.php:875
 msgid "Features must be a non-empty array"
-msgstr "Las características deben ser un array no vacío"
+msgstr "Les fonctionnalités doivent être un tableau non vide"
 
 #: headline-ligatures-styles.php:882
 msgid "Invalid feature ID: %s"
-msgstr "ID de característica inválido: %s"
+msgstr "ID de fonctionnalité invalide : %s"
 
 #: headline-ligatures-styles.php:923
 msgid "Preset not found"
-msgstr "Preajuste no encontrado"
+msgstr "Préréglage introuvable"
 
 #: headline-ligatures-styles.php:1150
 msgid "Missing required font data"
-msgstr "Faltan datos de fuente requeridos"
+msgstr "Données de police obligatoires manquantes"
 
 #: headline-ligatures-styles.php:1161
 msgid "Invalid file type"
-msgstr "Tipo de archivo inválido"
+msgstr "Type de fichier invalide"
 
 #: headline-ligatures-styles.php:1165
 msgid "Please upload a valid ZIP file"
-msgstr "Por favor, carga un archivo ZIP válido"
+msgstr "Veuillez téléverser un fichier ZIP valide"
 
 #: headline-ligatures-styles.php:1171
 msgid "File size exceeds maximum allowed (%s)"
-msgstr "El tamaño del archivo excede el máximo permitido (%s)"
+msgstr "La taille du fichier dépasse la limite autorisée (%s)"
 
 #: headline-ligatures-styles.php:1176
 msgid "File upload error"
-msgstr "Error al cargar el archivo"
+msgstr "Erreur de téléversement du fichier"
 
 #: headline-ligatures-styles.php:1234
 msgid "Font not found"
-msgstr "Fuente no encontrada"
+msgstr "Police introuvable"
 
 #: headline-ligatures-styles.php:1262
 msgid "Failed to create upload directory"
-msgstr "Error al crear el directorio de carga"
+msgstr "Échec de la création du répertoire de téléversement"
 
 #: headline-ligatures-styles.php:1279
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
-msgstr "Error al extraer el archivo ZIP. Por favor, asegúrate de que el archivo es un archivo ZIP válido."
+msgstr "Échec de l'extraction du fichier ZIP. Veuillez vous assurer que le fichier est une archive ZIP valide."
 
-#: typography-stylist.php:2159
+#: typost.php:2159
 msgid "No CSS file found in the font kit"
-msgstr "No se encontró ningún archivo CSS en el kit de fuentes"
+msgstr "Aucun fichier CSS trouvé dans le kit de polices"
 
-#: typography-stylist.php:2393
+#: typost.php:2393
 #, php-format
 msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
-msgstr "Se encontraron %d archivo(s) CSS en el kit de fuentes, pero ninguno contiene declaraciones @font-face válidas. Por favor, asegúrate de que el archivo ZIP contiene una hoja de estilo webfont adecuada."
+msgstr "%d fichier(s) CSS trouvé(s) dans le kit de polices, mais aucun ne contient de déclarations @font-face valides. Veuillez vous assurer que le fichier ZIP contient une feuille de style webfont appropriée."
 
-#: typography-stylist.php:2172
+#: typost.php:2172
 msgid "Invalid CSS file"
-msgstr "Archivo CSS inválido"
+msgstr "Fichier CSS invalide"
 
 #: headline-ligatures-styles.php:1337
 msgid "CSS file is too large (max 1MB)"
-msgstr "El archivo CSS es demasiado grande (máx. 1MB)"
+msgstr "Le fichier CSS est trop volumineux (max 1 Mo)"
 
 #: headline-ligatures-styles.php:1345
 msgid "Could not read CSS file"
-msgstr "No se pudo leer el archivo CSS"
+msgstr "Impossible de lire le fichier CSS"
 
 #: headline-ligatures-styles.php:1351
 msgid "CSS file does not contain @font-face declarations"
-msgstr "El archivo CSS no contiene declaraciones @font-face"
+msgstr "Le fichier CSS ne contient pas de déclarations @font-face"
 
 #: headline-ligatures-styles.php:1372
 msgid "No valid @font-face rules found in CSS"
-msgstr "No se encontraron reglas @font-face válidas en el CSS"
+msgstr "Aucune règle @font-face valide trouvée dans le CSS"
 
 #: includes/admin-page.php:30
 msgid "Settings saved successfully."
-msgstr "Configuración guardada correctamente."
+msgstr "Paramètres enregistrés avec succès."
 
 #: includes/admin-page.php:45
 msgid "Skip to main content"
-msgstr "Saltar al contenido principal"
+msgstr "Aller au contenu principal"
 
 #: includes/admin-page.php:49
 msgid "Settings sections"
-msgstr "Secciones de configuración"
+msgstr "Sections de paramètres"
 
 #: includes/admin-page.php:57
 msgid "Presets"
-msgstr "Preajustes"
+msgstr "Préréglages"
 
 #: includes/admin-page.php:66
 msgid "Custom Fonts"
-msgstr "Fuentes Personalizadas"
+msgstr "Polices Personnalisées"
 
 #: includes/admin-page.php:75
 msgid "Font Features"
-msgstr "Características de Fuente"
+msgstr "Fonctionnalités de Police"
 
 #: includes/admin-page.php:84
 msgid "Help"
-msgstr "Ayuda"
+msgstr "Aide"
 
 #: includes/admin-page.php:153
 msgid "Font Features"
-msgstr "Características de Fuente"
+msgstr "Fonctionnalités de Police"
 
 #: includes/admin-page.php:154
 msgid "Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography."
-msgstr "Explora las características de OpenType con vistas previas en vivo. Escribe texto personalizado o usa las muestras predeterminadas para ver cómo cada característica afecta tu tipografía."
+msgstr "Explorez les fonctionnalités OpenType avec des aperçus en direct. Saisissez du texte personnalisé ou utilisez les échantillons par défaut pour voir comment chaque fonctionnalité affecte votre typographie."
 
 #: includes/admin-page.php:102
 msgid "Preview with Font:"
-msgstr "Vista previa con fuente:"
+msgstr "Aperçu avec la police :"
 
 #: includes/admin-page.php:105
 msgid "Default (system font)"
-msgstr "Predeterminada (fuente del sistema)"
+msgstr "Par défaut (police système)"
 
 #: includes/admin-page.php:121
 msgid "Select a custom font to preview how features will look with that font."
-msgstr "Selecciona una fuente personalizada para previsualizar cómo se verán las características con esa fuente."
+msgstr "Sélectionnez une police personnalisée pour prévisualiser l'apparence des fonctionnalités avec cette police."
 
 #: includes/admin-page.php:128
 msgid "Preview Size:"
-msgstr "Tamaño de Vista Previa:"
+msgstr "Taille de l'aperçu :"
 
 #: includes/admin-page.php:139
 msgid "Adjust preview text size"
-msgstr "Ajustar tamaño del texto de vista previa"
+msgstr "Ajuster la taille du texte d'aperçu"
 
 #: includes/admin-page.php:145
 msgid "Adjust the size of the preview text to better see typography features."
-msgstr "Ajusta el tamaño del texto de vista previa para ver mejor las características tipográficas."
+msgstr "Ajustez la taille du texte d'aperçu pour mieux voir les fonctionnalités typographiques."
 
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
-msgstr "Texto de Vista Previa Personalizado:"
+msgstr "Texte d'Aperçu Personnalisé :"
 
 #: includes/admin-page.php:249
 msgid "Type your own text to preview features..."
-msgstr "Escribe tu propio texto para previsualizar características..."
+msgstr "Saisissez votre propre texte pour prévisualiser les fonctionnalités..."
 
 #: includes/admin-page.php:250
 msgid "Enter custom text to preview features"
-msgstr "Introduce texto personalizado para previsualizar características"
+msgstr "Saisir du texte personnalisé pour prévisualiser les fonctionnalités"
 
 #: includes/admin-page.php:256
 msgid "Reset to Defaults"
-msgstr "Restablecer a Valores Predeterminados"
+msgstr "Réinitialiser aux Valeurs par Défaut"
 
 #: includes/admin-page.php:259
 msgid "Type your own text to see how each feature affects it, or leave blank to use default samples."
-msgstr "Escribe tu propio texto para ver cómo cada característica lo afecta, o déjalo en blanco para usar las muestras predeterminadas."
+msgstr "Saisissez votre propre texte pour voir comment chaque fonctionnalité l'affecte, ou laissez vide pour utiliser les échantillons par défaut."
 
 #: includes/admin-page.php:266
 msgid "Font Preview (No Features Applied)"
-msgstr "Vista Previa de Fuente (Sin Características Aplicadas)"
+msgstr "Aperçu de Police (Sans Fonctionnalités Appliquées)"
 
 #: includes/admin-page.php:268
 msgid "This shows how the selected font looks without any OpenType features applied."
-msgstr "Esto muestra cómo se ve la fuente seleccionada sin ninguna característica OpenType aplicada."
+msgstr "Ceci montre comment la police sélectionnée apparaît sans aucune fonctionnalité OpenType appliquée."
 
 #: includes/admin-page.php:164
 msgid "Ligatures"
-msgstr "Ligaduras"
+msgstr "Ligatures"
 
 #: includes/admin-page.php:165
 msgid "Stylistic Sets"
-msgstr "Conjuntos Estilísticos"
+msgstr "Ensembles Stylistiques"
 
 #: includes/admin-page.php:166
 msgid "Swashes & Alternates"
-msgstr "Florituras y Alternativas"
+msgstr "Lettrines et Alternatives"
 
 #: includes/admin-page.php:167
 msgid "Decorative"
-msgstr "Decorativo"
+msgstr "Décoratif"
 
 #: includes/admin-page.php:302
 msgid "With Feature:"
-msgstr "Con Característica:"
+msgstr "Avec la fonctionnalité :"
 
 #: includes/admin-page.php:209
 msgid "Your Saved Presets"
-msgstr "Tus Preajustes Guardados"
+msgstr "Vos Préréglages Enregistrés"
 
 #: includes/admin-page.php:210
 msgid "These are presets you've created in the block editor."
-msgstr "Estos son preajustes que has creado en el editor de bloques."
+msgstr "Ce sont les préréglages que vous avez créés dans l'éditeur de blocs."
 
 #: includes/admin-page.php:218
 msgid "Features:"
-msgstr "Características:"
+msgstr "Fonctionnalités :"
 
 #: includes/admin-page.php:245
 msgid "Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor."
-msgstr "Carga kits de fuentes web (MyFonts, Fontspring, etc.) para usar fuentes personalizadas con características OpenType. Una vez cargadas, las fuentes estarán disponibles en el editor de bloques."
+msgstr "Téléversez des kits de polices web (MyFonts, Fontspring, etc.) pour utiliser des polices personnalisées avec des fonctionnalités OpenType. Une fois téléversées, les polices seront disponibles dans l'éditeur de blocs."
 
 #: includes/admin-page.php:250
 msgid "Uploaded Fonts"
-msgstr "Fuentes Cargadas"
+msgstr "Polices Téléversées"
 
 #: includes/admin-page.php:259
 msgid "Delete font kit: %s"
-msgstr "Eliminar kit de fuentes: %s"
+msgstr "Supprimer le kit de polices : %s"
 
 #: includes/admin-page.php:261
 msgid "Delete"
-msgstr "Eliminar"
+msgstr "Supprimer"
 
 #: includes/admin-page.php:265
 msgid "Font Families:"
-msgstr "Familias de Fuentes:"
+msgstr "Familles de Polices :"
 
 #: includes/admin-page.php:278
 msgid "Uploaded: %s"
-msgstr "Cargado: %s"
+msgstr "Téléversé : %s"
 
 #: includes/admin-page.php:281
 msgid "%d font file"
 msgid_plural "%d font files"
-msgstr[0] "%d archivo de fuente"
-msgstr[1] "%d archivos de fuentes"
+msgstr[0] "%d fichier de police"
+msgstr[1] "%d fichiers de polices"
 
 #: includes/admin-page.php:303
 msgid "Font Kit Name:"
-msgstr "Nombre del Kit de Fuentes:"
+msgstr "Nom du Kit de Polices :"
 
 #: includes/admin-page.php:304
 msgid "required"
-msgstr "requerido"
+msgstr "obligatoire"
 
 #: includes/admin-page.php:311
 msgid "e.g., MyFonts Kit 2024"
-msgstr "ej., Kit de MyFonts 2024"
+msgstr "par ex., Kit MyFonts 2024"
 
 #: includes/admin-page.php:316
 msgid "Enter a descriptive name for this font kit"
-msgstr "Introduce un nombre descriptivo para este kit de fuentes"
+msgstr "Saisissez un nom descriptif pour ce kit de polices"
 
 #: includes/admin-page.php:322
 msgid "ZIP File:"
-msgstr "Archivo ZIP:"
+msgstr "Fichier ZIP :"
 
 #: includes/admin-page.php:325
 msgid "Choose ZIP file containing webfont kit"
-msgstr "Elige el archivo ZIP que contiene el kit de fuentes web"
+msgstr "Choisir le fichier ZIP contenant le kit de polices web"
 
 #: includes/admin-page.php:330
 msgid "Choose ZIP File"
-msgstr "Elegir Archivo ZIP"
+msgstr "Choisir un Fichier ZIP"
 
 #: includes/admin-page.php:341
 msgid "Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files."
-msgstr "Carga un kit de fuentes web como archivo ZIP. El ZIP debe contener el archivo CSS y los archivos de fuentes."
+msgstr "Téléversez un kit de polices web sous forme de fichier ZIP. Le ZIP doit contenir le fichier CSS et les fichiers de polices."
 
 #: includes/admin-page.php:347
 msgid "Clear selected file"
-msgstr "Limpiar archivo seleccionado"
+msgstr "Effacer le fichier sélectionné"
 
 #: includes/admin-page.php:367
 msgid "Uploading..."
-msgstr "Cargando..."
+msgstr "Téléversement..."
 
 #: includes/admin-page.php:374
 msgid "How to use:"
-msgstr "Cómo usar:"
+msgstr "Comment utiliser :"
 
 #: includes/admin-page.php:735
 msgid "Download your webfont kit from your font provider"
-msgstr "Descarga tu kit de fuentes web desde tu proveedor de fuentes"
+msgstr "Téléchargez votre kit de polices web depuis votre fournisseur de polices"
 
 #: includes/admin-page.php:736
 msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
-msgstr "Si el kit no está comprimido, crea un archivo ZIP que contenga toda la carpeta del kit (incluyendo el archivo CSS y todos los archivos de fuentes en sus directorios)"
+msgstr "Si le kit n'est pas déjà compressé, créez un fichier ZIP contenant l'ensemble du dossier du kit (y compris le fichier CSS et tous les fichiers de polices dans leurs répertoires)"
 
 #: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
-msgstr "Haz clic en \"Elegir Archivo ZIP\" y selecciona tu archivo ZIP del kit de fuentes web"
+msgstr "Cliquez sur « Choisir un Fichier ZIP » et sélectionnez votre fichier ZIP du kit de polices web"
 
 #: includes/admin-page.php:738
 msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
-msgstr "Dale a tu kit un nombre descriptivo y haz clic en \"Cargar Kit de Fuentes\""
+msgstr "Donnez à votre kit un nom descriptif et cliquez sur « Téléverser un Kit de Polices »"
 
 #: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
-msgstr "El plugin extraerá el ZIP, procesará las fuentes y las hará disponibles en el editor de bloques"
+msgstr "Le plugin extraira le ZIP, traitera les polices et les rendra disponibles dans l'éditeur de blocs"
 
 #: includes/admin-page.php:741
 msgid "What should the ZIP contain:"
-msgstr "Qué debe contener el ZIP:"
+msgstr "Que doit contenir le ZIP :"
 
 #: includes/admin-page.php:743
 msgid "A CSS file with @font-face declarations (e.g., stylesheet.css or MyWebfontsKit.css)"
-msgstr "Un archivo CSS con declaraciones @font-face (ej., stylesheet.css o MyWebfontsKit.css)"
+msgstr "Un fichier CSS avec des déclarations @font-face (par ex., stylesheet.css ou MyWebfontsKit.css)"
 
 #: includes/admin-page.php:744
 msgid "Font files in their subdirectories (e.g., webFonts/FontName/font.woff2)"
-msgstr "Archivos de fuentes en sus subdirectorios (ej., webFonts/NombreFuente/fuente.woff2)"
+msgstr "Les fichiers de polices dans leurs sous-répertoires (par ex., webFonts/NomPolice/police.woff2)"
 
 #: includes/admin-page.php:745
 msgid "The directory structure must match the paths in the CSS file"
-msgstr "La estructura de directorios debe coincidir con las rutas en el archivo CSS"
+msgstr "La structure des répertoires doit correspondre aux chemins dans le fichier CSS"
 
 #: includes/admin-page.php:747
 msgid "Compatibility Note:"
-msgstr "Nota de Compatibilidad:"
+msgstr "Note de Compatibilité :"
 
 #: includes/admin-page.php:747
 msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
-msgstr "Este plugin ha sido probado con kits de fuentes web de MyFonts. Otros proveedores deberían funcionar si siguen una estructura similar (archivo CSS con declaraciones @font-face y archivos de fuentes en subdirectorios)."
+msgstr "Ce plugin a été testé avec des kits de polices web de MyFonts. D'autres fournisseurs devraient fonctionner s'ils suivent une structure similaire (fichier CSS avec déclarations @font-face et fichiers de polices dans des sous-répertoires)."
 
 #: includes/admin-page.php:748
 msgid "Note:"
-msgstr "Nota:"
+msgstr "Remarque :"
 
 #: includes/admin-page.php:748
 msgid "The plugin automatically rewrites CSS paths and stores all files in your WordPress uploads directory. All fonts and their files will be properly organized and served from your server."
-msgstr "El plugin reescribe automáticamente las rutas CSS y almacena todos los archivos en tu directorio de cargas de WordPress. Todas las fuentes y sus archivos se organizarán correctamente y se servirán desde tu servidor."
+msgstr "Le plugin réécrit automatiquement les chemins CSS et stocke tous les fichiers dans votre répertoire de téléversements WordPress. Toutes les polices et leurs fichiers seront correctement organisés et servis depuis votre serveur."
 
 #: includes/admin-page.php:401
 msgid "Available OpenType Features"
-msgstr "Características OpenType Disponibles"
+msgstr "Fonctionnalités OpenType Disponibles"
 
 #: includes/admin-page.php:402
 msgid "This plugin supports the following OpenType font features. Note that not all fonts include all features."
-msgstr "Este plugin admite las siguientes características de fuentes OpenType. Ten en cuenta que no todas las fuentes incluyen todas las características."
+msgstr "Ce plugin prend en charge les fonctionnalités OpenType suivantes. Notez que toutes les polices n'incluent pas toutes les fonctionnalités."
 
 #: includes/admin-page.php:409
 msgid "Available ligature OpenType features"
-msgstr "Características OpenType de ligaduras disponibles"
+msgstr "Fonctionnalités OpenType de ligatures disponibles"
 
 #: includes/admin-page.php:413
 msgid "Code"
-msgstr "Código"
+msgstr "Code"
 
 #: includes/admin-page.php:414
 msgid "Name"
-msgstr "Nombre"
+msgstr "Nom"
 
 #: includes/admin-page.php:415
 msgid "Description"
-msgstr "Descripción"
+msgstr "Description"
 
 #: includes/admin-page.php:422
 msgid "Common letter combinations like fi, fl, ff"
-msgstr "Combinaciones comunes de letras como fi, fl, ff"
+msgstr "Combinaisons de lettres courantes comme fi, fl, ff"
 
 #: includes/admin-page.php:427
 msgid "Optional decorative ligatures for special effects"
-msgstr "Ligaduras decorativas opcionales para efectos especiales"
+msgstr "Ligatures décoratives optionnelles pour des effets spéciaux"
 
 #: includes/admin-page.php:432
 msgid "Context-aware letter forms that adapt to surrounding characters"
-msgstr "Formas de letras según el contexto que se adaptan a los caracteres circundantes"
+msgstr "Formes de lettres contextuelles qui s'adaptent aux caractères environnants"
 
 #: includes/admin-page.php:442
 msgid "Available stylistic set OpenType features"
-msgstr "Características OpenType de conjuntos estilísticos disponibles"
+msgstr "Fonctionnalités OpenType d'ensembles stylistiques disponibles"
 
 #: includes/admin-page.php:455
 msgid "Stylistic Set %d"
-msgstr "Conjunto Estilístico %d"
+msgstr "Ensemble Stylistique %d"
 
 #: includes/admin-page.php:456
 msgid "Alternate character designs (font-specific)"
-msgstr "Diseños alternativos de caracteres (específicos de la fuente)"
+msgstr "Variantes de caractères (spécifiques à la police)"
 
 #: includes/admin-page.php:460
 msgid "...and ss06 through ss20"
-msgstr "...y ss06 hasta ss20"
+msgstr "...et ss06 jusqu'à ss20"
 
 #: includes/admin-page.php:470
 msgid "Available swashes and alternates OpenType features"
-msgstr "Características OpenType de florituras y alternativas disponibles"
+msgstr "Fonctionnalités OpenType de lettrines et alternatives disponibles"
 
 #: includes/admin-page.php:483
 msgid "Decorative flourishes and ornamental strokes"
-msgstr "Florituras decorativas y trazos ornamentales"
+msgstr "Ornements décoratifs et traits ornementaux"
 
 #: includes/admin-page.php:498
 msgid "Forms optimized for large display sizes"
-msgstr "Formas optimizadas para tamaños de visualización grandes"
+msgstr "Formes optimisées pour les grandes tailles d'affichage"
 
 #: includes/admin-page.php:503
 msgid "Decorative ornaments and symbols"
-msgstr "Ornamentos y símbolos decorativos"
+msgstr "Ornements et symboles décoratifs"
 
 #: includes/admin-page.php:1480
 msgid "How to Use"
-msgstr "Cómo usar"
+msgstr "Comment utiliser"
 
 #: includes/admin-page.php:1482
 msgid "Method 1: Inline Format (Quick Styling)"
-msgstr "Método 1: Formato en línea (Estilo rápido)"
+msgstr "Méthode 1 : Format en ligne (Style rapide)"
 
 #: includes/admin-page.php:1483
 msgid "Use this method for applying features to complete words or phrases in any heading or paragraph block."
-msgstr "Utiliza este método para aplicar características a palabras o frases completas en cualquier bloque de encabezado o párrafo."
+msgstr "Utilisez cette méthode pour appliquer des fonctionnalités à des mots ou phrases complets dans n'importe quel bloc de titre ou de paragraphe."
 
 #: includes/admin-page.php:1485
 msgid "Create or edit a heading (H1-H6) or paragraph block"
-msgstr "Crea o edita un bloque de encabezado (H1-H6) o párrafo"
+msgstr "Créez ou modifiez un bloc de titre (H1-H6) ou de paragraphe"
 
 #: includes/admin-page.php:1486
 msgid "Select the complete word(s) you want to style"
-msgstr "Selecciona la(s) palabra(s) completa(s) que deseas estilizar"
+msgstr "Sélectionnez le(s) mot(s) complet(s) que vous souhaitez styliser"
 
 #: includes/admin-page.php:1487
 msgid "Click the \"Typography Features\" button in the toolbar"
-msgstr "Haz clic en el botón \"Características Tipográficas\" en la barra de herramientas"
+msgstr "Cliquez sur le bouton « Fonctionnalités Typographiques » dans la barre d'outils"
 
 #: includes/admin-page.php:1488
 msgid "Choose a preset or toggle individual features"
-msgstr "Elige un preajuste o activa características individuales"
+msgstr "Choisissez un préréglage ou activez des fonctionnalités individuelles"
 
 #: includes/admin-page.php:1489
 msgid "Preview the changes and click Apply"
-msgstr "Previsualiza los cambios y haz clic en Aplicar"
+msgstr "Prévisualisez les modifications et cliquez sur Appliquer"
 
 #: includes/admin-page.php:1492
-msgid "Method 2: Typography Stylist Block (Advanced)"
-msgstr "Método 2: Bloque Typography Stylist (Avanzado)"
+msgid "Method 2: Typost Block (Advanced)"
+msgstr "Méthode 2 : Bloc Typost (Avancé)"
 
 #: includes/admin-page.php:1493
 msgid "Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed."
-msgstr "Utiliza este método para tipografía compleja, estilo letra por letra o cuando se necesiten funciones de accesibilidad."
+msgstr "Utilisez cette méthode pour une typographie complexe, un style lettre par lettre ou lorsque des fonctionnalités d'accessibilité sont nécessaires."
 
 #: includes/admin-page.php:1495
-msgid "Add the \"Typography Stylist\" block from the block inserter"
-msgstr "Añade el bloque \"Typography Stylist\" desde el insertador de bloques"
+msgid "Add the \"Typost\" block from the block inserter"
+msgstr "Ajoutez le bloc « Typost » depuis l'outil d'insertion de blocs"
 
 #: includes/admin-page.php:1496
 msgid "Choose heading level (H1-H6) in the sidebar"
-msgstr "Elige el nivel de encabezado (H1-H6) en la barra lateral"
+msgstr "Choisissez le niveau de titre (H1-H6) dans la barre latérale"
 
 #: includes/admin-page.php:1497
 msgid "Use sidebar controls for font family, size, and OpenType features"
-msgstr "Utiliza los controles de la barra lateral para familia de fuente, tamaño y características OpenType"
+msgstr "Utilisez les contrôles de la barre latérale pour la famille de polices, la taille et les fonctionnalités OpenType"
 
 #: includes/admin-page.php:1498
 msgid "For inline text styling, select text to show the quick feature popover"
-msgstr "Para estilo de texto en línea, selecciona texto para mostrar la ventana emergente de características rápidas"
+msgstr "Pour le style de texte en ligne, sélectionnez le texte pour afficher la fenêtre contextuelle des fonctionnalités rapides"
 
 #: includes/admin-page.php:1503
 msgid "Choosing Fonts for OpenType Features"
-msgstr "Elegir fuentes para características OpenType"
+msgstr "Choisir des polices pour les fonctionnalités OpenType"
 
 #: includes/admin-page.php:1504
 msgid "This plugin works with fonts that include advanced typographical features and alternate glyphs."
-msgstr "Este plugin funciona con fuentes que incluyen características tipográficas avanzadas y glifos alternativos."
+msgstr "Ce plugin fonctionne avec des polices qui incluent des fonctionnalités typographiques avancées et des glyphes alternatifs."
 
 #: includes/admin-page.php:1506
 msgid "Font Types with OpenType Support:"
-msgstr "Tipos de fuentes con soporte OpenType:"
+msgstr "Types de polices avec prise en charge OpenType :"
 
 #: includes/admin-page.php:1508
 msgid "Script & Calligraphy Fonts"
-msgstr "Fuentes script y caligráficas"
+msgstr "Polices scriptes et calligraphiques"
 
 #: includes/admin-page.php:1508
 msgid "Often include contextual alternates, swashes, and stylistic sets"
-msgstr "A menudo incluyen alternativas contextuales, florituras y conjuntos estilísticos"
+msgstr "Incluent souvent des alternatives contextuelles, des lettrines et des ensembles stylistiques"
 
 #: includes/admin-page.php:1509
 msgid "Serif Display Fonts"
-msgstr "Fuentes de visualización con serifa"
+msgstr "Polices d'affichage avec empattement"
 
 #: includes/admin-page.php:1509
 msgid "May feature titling alternates and ligatures"
-msgstr "Pueden incluir alternativas de título y ligaduras"
+msgstr "Peuvent inclure des alternatives de titrage et des ligatures"
 
 #: includes/admin-page.php:1510
 msgid "Professional Typefaces"
-msgstr "Tipografías profesionales"
+msgstr "Polices professionnelles"
 
 #: includes/admin-page.php:1510
 msgid "Many include discretionary ligatures and stylistic alternates"
-msgstr "Muchas incluyen ligaduras discrecionales y alternativas estilísticas"
+msgstr "Beaucoup incluent des ligatures discrétionnaires et des alternatives stylistiques"
 
 #: includes/admin-page.php:1511
 msgid "Ornamental Fonts"
-msgstr "Fuentes ornamentales"
+msgstr "Polices ornementales"
 
 #: includes/admin-page.php:1511
 msgid "Can contain ornaments and special character sets"
-msgstr "Pueden contener ornamentos y conjuntos de caracteres especiales"
+msgstr "Peuvent contenir des ornements et des jeux de caractères spéciaux"
 
 #: includes/admin-page.php:1514
 msgid "Upload fonts via the Custom Fonts tab, or load them through your theme or font service."
-msgstr "Carga fuentes a través de la pestaña Fuentes personalizadas, o cárgalas mediante tu tema o servicio de fuentes."
+msgstr "Téléversez des polices via l'onglet Polices personnalisées, ou chargez-les via votre thème ou service de polices."
 
 #: includes/admin-page.php:1518
 msgid "Tips for Using OpenType Features"
-msgstr "Consejos para usar características OpenType"
+msgstr "Conseils pour utiliser les fonctionnalités OpenType"
 
 #: includes/admin-page.php:1520
 msgid "Start with contextual alternates (calt) for automatic character substitutions"
-msgstr "Comienza con alternativas contextuales (calt) para sustituciones automáticas de caracteres"
+msgstr "Commencez par les alternatives contextuelles (calt) pour les substitutions automatiques de caractères"
 
 #: includes/admin-page.php:1521
 msgid "Use swashes sparingly on initial or terminal letters only"
-msgstr "Usa florituras con moderación solo en letras iniciales o finales"
+msgstr "Utilisez les lettrines avec parcimonie uniquement sur les lettres initiales ou finales"
 
 #: includes/admin-page.php:1522
 msgid "Experiment with stylistic sets (ss01-ss20) to discover alternate designs"
-msgstr "Experimenta con conjuntos estilísticos (ss01-ss20) para descubrir diseños alternativos"
+msgstr "Expérimentez avec les ensembles stylistiques (ss01-ss20) pour découvrir des designs alternatifs"
 
 #: includes/admin-page.php:1523
 msgid "Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application"
-msgstr "Prueba las ligaduras - las estándar (liga) suelen funcionar universalmente, las discrecionales (dlig) necesitan aplicación cuidadosa"
+msgstr "Testez les ligatures - les standards (liga) fonctionnent généralement universellement, les discrétionnaires (dlig) nécessitent une application prudente"
 
 #: includes/admin-page.php:1524
 msgid "Preview at actual display size - features may look different at various scales"
-msgstr "Previsualiza al tamaño de visualización real - las características pueden verse diferentes a varias escalas"
+msgstr "Prévisualisez à la taille d'affichage réelle - les fonctionnalités peuvent apparaître différemment à différentes échelles"
 
 #: includes/admin-page.php:1525
 msgid "Not all fonts support all features - check documentation and experiment"
-msgstr "No todas las fuentes admiten todas las características - consulta la documentación y experimenta"
+msgstr "Toutes les polices ne prennent pas en charge toutes les fonctionnalités - consultez la documentation et expérimentez"
 
 #: includes/admin-page.php:1526
-msgid "For partial word styling, use the Typography Stylist block to maintain accessibility"
-msgstr "Para estilo de palabras parciales, usa el bloque Typography Stylist para mantener la accesibilidad"
+msgid "For partial word styling, use the Typost block to maintain accessibility"
+msgstr "Pour le style de mots partiels, utilisez le bloc Typost pour maintenir l'accessibilité"
 
 #: includes/admin-page.php:1531
 msgid "Technical Notes"
-msgstr "Notas técnicas"
+msgstr "Notes techniques"
 
 #: includes/admin-page.php:1532
 msgid "Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required."
-msgstr "Las características se aplican usando CSS font-feature-settings almacenadas como estilos en línea y atributos de datos. No se requieren tablas de base de datos adicionales."
+msgstr "Les fonctionnalités sont appliquées à l'aide des paramètres CSS font-feature-settings stockés en tant que styles en ligne et attributs de données. Aucune table de base de données supplémentaire n'est requise."
 
 #: includes/admin-page.php:1533
 msgid "Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support."
-msgstr "Compatibilidad con navegadores: Todos los navegadores modernos (Chrome, Firefox, Safari, Edge) admiten completamente las características OpenType. Internet Explorer 10+ tiene compatibilidad parcial."
+msgstr "Prise en charge des navigateurs : Tous les navigateurs modernes (Chrome, Firefox, Safari, Edge) prennent entièrement en charge les fonctionnalités OpenType. Internet Explorer 10+ offre une prise en charge partielle."
 
 #: includes/admin-page.php:1534
 msgid "Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads."
-msgstr "Rendimiento frontend: El plugin utiliza renderizado solo CSS sin JavaScript en el sitio público, garantizando cargas de página rápidas."
+msgstr "Performance frontend : Le plugin utilise un rendu CSS uniquement sans JavaScript sur le site public, garantissant des chargements de page rapides."
 
 #: includes/admin-page.php:1539
 msgid "Looking for high-fidelity implementation?"
-msgstr "¿Busca una implementación de alta fidelidad?"
+msgstr "Vous recherchez une mise en œuvre haute fidélité ?"
 
 #: includes/admin-page.php:1541
 msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
-msgstr "Más allá de este plugin, me especializo en construcciones WordPress perfectas al píxel que se adhieren estrictamente a los estándares de accesibilidad y sistemas tipográficos avanzados. Si necesitas un socio para desarrollo de bloques personalizados o integración de diseño complejo:"
+msgstr "Au-delà de ce plugin, je me spécialise dans les constructions WordPress au pixel près qui respectent strictement les normes d'accessibilité et les systèmes typographiques avancés. Si vous avez besoin d'un partenaire pour le développement de blocs personnalisés ou l'intégration de designs complexes :"
 
 #: includes/admin-page.php:1545
 msgid "Contact me at matt@mnc4.com"
-msgstr "Contáctame en matt@mnc4.com"
+msgstr "Contactez-moi à matt@mnc4.com"
 
 #: includes/admin-page.php:1549
 msgid "Buy me a coffee ☕"
-msgstr "Cómprame un café ☕"
+msgstr "Offrez-moi un café ☕"
 
 #: assets/js/block-editor.js:11
 msgid "Typography Features"
-msgstr "Características Tipográficas"
+msgstr "Fonctionnalités Typographiques"
 
 #: assets/js/block-editor.js:423
 msgid "Elegant Typography & Flourish"
-msgstr "Tipografía Elegante y Florituras"
+msgstr "Typographie Élégante et Ornements"
 
 #: assets/js/block-editor.js:457
 msgid "Font Family"
-msgstr "Familia de Fuentes"
+msgstr "Famille de Polices"
 
 #: includes/admin-page.php:366
 msgid "%d font"
 msgid_plural "%d fonts"
-msgstr[0] "%d fuente"
-msgstr[1] "%d fuentes"
+msgstr[0] "%d police"
+msgstr[1] "%d polices"
 
 #: includes/admin-page.php:413
 msgid "Font Family:"
-msgstr "Familia de Fuentes:"
+msgstr "Famille de Polices :"
 
 #: assets/js/block-editor.js:461
 msgid "(Default)"
-msgstr "(Predeterminada)"
+msgstr "(Par défaut)"
 
 #: assets/js/block-editor.js:471
 msgid "Font Size"
-msgstr "Tamaño de Fuente"
+msgstr "Taille de Police"
 
 #: assets/js/block-editor.js:475
 msgid "Inherit"
-msgstr "Heredar"
+msgstr "Hériter"
 
 #: assets/js/block-editor.js:476
 msgid "Responsive (Fluid)"
-msgstr "Responsivo (Fluido)"
+msgstr "Responsive (Fluide)"
 
 #: assets/js/block-editor.js:484
 msgid "Minimum Size (mobile)"
-msgstr "Tamaño Mínimo (móvil)"
+msgstr "Taille Minimale (mobile)"
 
 #: assets/js/block-editor.js:493
 msgid "Preferred Size (tablet)"
-msgstr "Tamaño Preferido (tablet)"
+msgstr "Taille Préférée (tablette)"
 
 #: assets/js/block-editor.js:502
 msgid "Maximum Size (desktop)"
-msgstr "Tamaño Máximo (escritorio)"
+msgstr "Taille Maximale (ordinateur)"
 
 #: assets/js/block-editor.js:517
 msgid "Quick Presets"
-msgstr "Preajustes Rápidos"
+msgstr "Préréglages Rapides"
 
 #: assets/js/block-editor.js:526
 msgid "Individual Features"
-msgstr "Características Individuales"
+msgstr "Fonctionnalités Individuelles"
 
 #: assets/js/block-editor.js:543
 msgid "Preview"
-msgstr "Vista Previa"
+msgstr "Aperçu"
 
 #: assets/js/block-editor.js:552
 msgid "Active: "
-msgstr "Activo: "
+msgstr "Actif : "
 
 #: assets/js/block-editor.js:566
 msgid "Apply"
-msgstr "Aplicar"
+msgstr "Appliquer"
 
 #: assets/js/block-editor.js:572
 msgid "Clear"
-msgstr "Limpiar"
+msgstr "Effacer"
 
 #: assets/js/block-editor.js:578
 msgid "Cancel"
-msgstr "Cancelar"
+msgstr "Annuler"
 
 #: assets/js/block-editor.js:598
 msgid "Other Features"
-msgstr "Otras Características"
+msgstr "Autres Fonctionnalités"
 
 #: assets/js/block-editor.js:588
-msgid "Typography Stylist"
-msgstr "Estilista OpenType"
+msgid "Typost"
+msgstr "Styliste OpenType"
 
 #: assets/js/block-editor.js:356
-msgid "For better accessibility, select complete words or phrases. Or convert to a Typography Stylist block for accessible styling of partial words."
-msgstr "Para mejor accesibilidad, selecciona palabras o frases completas. O conviértelo a un bloque Estilista OpenType para estilizar palabras parciales de forma accesible."
+msgid "For better accessibility, select complete words or phrases. Or convert to a Typost block for accessible styling of partial words."
+msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou phrases complètes. Ou convertissez en bloc Typost pour un style accessible des mots partiels."
 
 #: assets/js/block-editor.js:832
-msgid "Convert to Typography Stylist Block"
-msgstr "Convertir a Bloque Estilista OpenType"
+msgid "Convert to Typost Block"
+msgstr "Convertir en Bloc Styliste OpenType"
 
 #: assets/js/block-editor.js:842
 msgid "Apply Anyway"
-msgstr "Aplicar de Todas Formas"
+msgstr "Appliquer Quand Même"
 
 #: assets/js/block-editor.js:470
 msgid "Font Weight"
-msgstr "Peso de Fuente"
+msgstr "Graisse de Police"
 
 #: assets/js/block-editor.js:605
 msgid "100 - Thin"
-msgstr "100 - Fina"
+msgstr "100 - Fine"
 
 #: assets/js/block-editor.js:606
 msgid "200 - Extra Light"
-msgstr "200 - Extra Ligera"
+msgstr "200 - Extra Légère"
 
 #: assets/js/block-editor.js:607
 msgid "300 - Light"
-msgstr "300 - Ligera"
+msgstr "300 - Légère"
 
 #: assets/js/block-editor.js:608
 msgid "400 - Normal"
-msgstr "400 - Normal"
+msgstr "400 - Normale"
 
 #: assets/js/block-editor.js:609
 msgid "500 - Medium"
-msgstr "500 - Media"
+msgstr "500 - Moyenne"
 
 #: assets/js/block-editor.js:610
 msgid "600 - Semi Bold"
-msgstr "600 - Semi Negrita"
+msgstr "600 - Semi Gras"
 
 #: assets/js/block-editor.js:611
 msgid "700 - Bold"
-msgstr "700 - Negrita"
+msgstr "700 - Gras"
 
 #: assets/js/block-editor.js:612
 msgid "800 - Extra Bold"
-msgstr "800 - Extra Negrita"
+msgstr "800 - Extra Gras"
 
 #: assets/js/block-editor.js:613
 msgid "900 - Black"
-msgstr "900 - Negra"
+msgstr "900 - Noir"
 
 #: assets/js/block-editor.js:622
 msgid "Letter Spacing"
-msgstr "Espaciado de Letras"
+msgstr "Espacement des Lettres"
 
 #: assets/js/block-editor.js:628
 msgid "Normal"
@@ -944,220 +944,220 @@ msgstr "Normal"
 
 #: assets/js/block-editor.js:548
 msgid "Mobile"
-msgstr "Móvil"
+msgstr "Mobile"
 
 #: assets/js/block-editor.js:555
 msgid "Tablet"
-msgstr "Tableta"
+msgstr "Tablette"
 
 #: assets/js/block-editor.js:562
 msgid "Desktop"
-msgstr "Escritorio"
+msgstr "Bureau"
 
 #: includes/admin-page.php:86
 msgid "Accessibility"
-msgstr "Accesibilidad"
+msgstr "Accessibilité"
 
 #: includes/admin-page.php:825
 msgid "Accessibility Settings"
-msgstr "Configuración de Accesibilidad"
+msgstr "Paramètres d'Accessibilité"
 
 #: includes/admin-page.php:826
 msgid "Configure screen reader support for inline typography features."
-msgstr "Configurar soporte de lector de pantalla para características tipográficas en línea."
+msgstr "Configurer le support des lecteurs d'écran pour les fonctionnalités typographiques en ligne."
 
 #: includes/admin-page.php:836
 msgid "Screen Reader Support"
-msgstr "Soporte de Lector de Pantalla"
+msgstr "Support des Lecteurs d'Écran"
 
 #: includes/admin-page.php:848
 msgid "Add aria-label attributes to styled text"
-msgstr "Añadir atributos aria-label al texto estilizado"
+msgstr "Ajouter des attributs aria-label au texte stylisé"
 
 #: includes/admin-page.php:851
 msgid "When enabled, inline formatted text will include aria-label attributes containing the original text for better screen reader accessibility."
-msgstr "Cuando está habilitado, el texto formateado en línea incluirá atributos aria-label con el texto original para mejorar la accesibilidad con lectores de pantalla."
+msgstr "Lorsqu'activé, le texte formaté en ligne inclura des attributs aria-label contenant le texte original pour une meilleure accessibilité des lecteurs d'écran."
 
 #: includes/admin-page.php:860
 msgid "Save Accessibility Settings"
-msgstr "Guardar Configuración de Accesibilidad"
+msgstr "Enregistrer les Paramètres d'Accessibilité"
 
 #: includes/admin-page.php:866
 msgid "Accessibility Best Practices"
-msgstr "Mejores Prácticas de Accesibilidad"
+msgstr "Meilleures Pratiques d'Accessibilité"
 
 #: includes/admin-page.php:868
-msgid "For complex typography with partial word styling, use the Typography Stylist block instead of inline formats."
-msgstr "Para tipografía compleja con estilizado de palabras parciales, usa el bloque Estilista OpenType en lugar de formatos en línea."
+msgid "For complex typography with partial word styling, use the Typost block instead of inline formats."
+msgstr "Pour une typographie complexe avec stylisation de mots partiels, utilisez le bloc Styliste OpenType au lieu des formats en ligne."
 
 #: includes/admin-page.php:869
 msgid "Always select complete words or phrases when applying inline formats to avoid fragmenting text for screen readers."
-msgstr "Siempre selecciona palabras o frases completas al aplicar formatos en línea para evitar fragmentar el texto para lectores de pantalla."
+msgstr "Sélectionnez toujours des mots ou des phrases complètes lors de l'application de formats en ligne pour éviter de fragmenter le texte pour les lecteurs d'écran."
 
 #: includes/admin-page.php:870
 msgid "Test your styled headings with screen readers like NVDA (Windows) or VoiceOver (macOS) to ensure they read correctly."
-msgstr "Prueba tus encabezados estilizados con lectores de pantalla como NVDA (Windows) o VoiceOver (macOS) para asegurar que se lean correctamente."
+msgstr "Testez vos titres stylisés avec des lecteurs d'écran comme NVDA (Windows) ou VoiceOver (macOS) pour vous assurer qu'ils se lisent correctement."
 
 #: includes/admin-page.php:871
 msgid "The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block."
-msgstr "El plugin te advertirá si intentas aplicar formato a palabras parciales y ofrecerá convertir a un bloque accesible."
+msgstr "Le plugin vous avertira si vous tentez d'appliquer une mise en forme à des mots partiels et proposera de convertir en bloc accessible."
 
 #: includes/admin-page.php:44
 msgid "Accessibility settings saved successfully."
-msgstr "Configuración de accesibilidad guardada correctamente."
+msgstr "Paramètres d'accessibilité enregistrés avec succès."
 
-#: blocks/typography-stylist/edit.js:5
+#: blocks/typost/edit.js:5
 msgid "Add text with advanced typography..."
-msgstr "Añadir texto con tipografía avanzada..."
+msgstr "Ajouter du texte avec typographie avancée..."
 
-#: blocks/typography-stylist/edit.js:156
+#: blocks/typost/edit.js:156
 msgid "Change heading level"
-msgstr "Cambiar nivel de encabezado"
+msgstr "Changer le niveau de titre"
 
-#: blocks/typography-stylist/edit.js:159
+#: blocks/typost/edit.js:159
 msgid "Heading 1"
-msgstr "Encabezado 1"
+msgstr "Titre 1"
 
-#: blocks/typography-stylist/edit.js:164
+#: blocks/typost/edit.js:164
 msgid "Heading 2"
-msgstr "Encabezado 2"
+msgstr "Titre 2"
 
-#: blocks/typography-stylist/edit.js:169
+#: blocks/typost/edit.js:169
 msgid "Heading 3"
-msgstr "Encabezado 3"
+msgstr "Titre 3"
 
-#: blocks/typography-stylist/edit.js:174
+#: blocks/typost/edit.js:174
 msgid "Heading 4"
-msgstr "Encabezado 4"
+msgstr "Titre 4"
 
-#: blocks/typography-stylist/edit.js:179
+#: blocks/typost/edit.js:179
 msgid "Heading 5"
-msgstr "Encabezado 5"
+msgstr "Titre 5"
 
-#: blocks/typography-stylist/edit.js:184
+#: blocks/typost/edit.js:184
 msgid "Heading 6"
-msgstr "Encabezado 6"
+msgstr "Titre 6"
 
-#: blocks/typography-stylist/edit.js:189
+#: blocks/typost/edit.js:189
 msgid "Paragraph"
-msgstr "Párrafo"
+msgstr "Paragraphe"
 
-#: blocks/typography-stylist/edit.js:194
+#: blocks/typost/edit.js:194
 msgid "Div"
 msgstr "Div"
 
-#: blocks/typography-stylist/edit.js:295
+#: blocks/typost/edit.js:295
 msgid "OpenType Features"
-msgstr "Características OpenType"
+msgstr "Fonctionnalités OpenType"
 
-#: blocks/typography-stylist/edit.js:310
+#: blocks/typost/edit.js:310
 msgid "Screen Reader Class"
-msgstr "Clase de Lector de Pantalla"
+msgstr "Classe de Lecteur d'Écran"
 
-#: blocks/typography-stylist/edit.js:318
+#: blocks/typost/edit.js:318
 msgid "Custom"
-msgstr "Personalizado"
+msgstr "Personnalisé"
 
-#: blocks/typography-stylist/edit.js:325
+#: blocks/typost/edit.js:325
 msgid "Custom Class Name"
-msgstr "Nombre de Clase Personalizado"
+msgstr "Nom de Classe Personnalisé"
 
-#: blocks/typography-stylist/edit.js:328
+#: blocks/typost/edit.js:328
 msgid "Enter your theme's screen reader class"
-msgstr "Introduce la clase de lector de pantalla de tu tema"
+msgstr "Entrez la classe de lecteur d'écran de votre thème"
 
-#: blocks/typography-stylist/edit.js:332
+#: blocks/typost/edit.js:332
 msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
-msgstr "La clase seleccionada se usará para ocultar texto duplicado para lectores de pantalla. Asegúrate de que esta clase esté definida en tu tema."
+msgstr "La classe sélectionnée sera utilisée pour masquer le texte dupliqué pour les lecteurs d'écran. Assurez-vous que cette classe est définie dans votre thème."
 
-#: blocks/typography-stylist/edit.js:799
+#: blocks/typost/edit.js:799
 msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
-msgstr "Este control aplica el espaciado de letras a todo el bloque. Para aplicar el espaciado de letras a selecciones de texto individuales, usa el botón Alternar funciones rápidas de la barra de herramientas."
+msgstr "Ce contrôle applique l'espacement des lettres à l'ensemble du bloc. Pour appliquer l'espacement des lettres à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
 
-#: blocks/typography-stylist/edit.js:855
+#: blocks/typost/edit.js:855
 msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
-msgstr "Estos controles aplican funciones a todo el bloque. Para aplicar funciones a selecciones de texto individuales, usa el botón Alternar funciones rápidas de la barra de herramientas."
+msgstr "Ces contrôles appliquent des fonctionnalités à l'ensemble du bloc. Pour appliquer des fonctionnalités à des sélections de texte individuelles, utilisez le bouton Basculer les fonctionnalités rapides dans la barre d'outils."
 
-#: blocks/typography-stylist/block.json:8
+#: blocks/typost/block.json:8
 msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
-msgstr "Tipografía OpenType avanzada con soporte completo de accesibilidad. La configuración del panel de bloque se aplica a todo el bloque; usa Alternar funciones rápidas para selecciones individuales."
+msgstr "Typographie OpenType avancée avec prise en charge complète de l'accessibilité. Les paramètres du panneau de bloc s'appliquent à l'ensemble du bloc ; utilisez le bouton Basculer les fonctionnalités rapides pour les sélections individuelles."
 
 #: assets/js/block-editor.js:1523
 msgid "Font could not be detected for this block type."
-msgstr "No se pudo detectar la fuente para este tipo de bloque."
+msgstr "La police n'a pas pu être détectée pour ce type de bloc."
 
 #: assets/js/block-editor.js:1526
-msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
-msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere usar el bloque Typography Stylist en lugar de la barra de herramientas en línea."
+msgid "For the best experience with OpenType features, consider using the Typost block instead of the inline toolbar."
+msgstr "Pour une meilleure expérience avec les fonctionnalités OpenType, envisagez d'utiliser le bloc Typost au lieu de la barre d'outils en ligne."
 
 #: assets/js/block-editor.js:1572
 msgid "Click \"Apply\" below the preview to confirm changes."
-msgstr "Haga clic en \"Aplicar\" debajo de la vista previa para confirmar los cambios."
+msgstr "Cliquez sur « Appliquer » sous l'aperçu pour confirmer les modifications."
 
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
-msgstr "No volver a mostrar esta advertencia (esta sesión)"
+msgstr "Ne plus afficher cet avertissement (cette session)"
 
 #: assets/js/block-editor.js:1832
 msgid "Clear All Typography Settings?"
-msgstr "¿Borrar Todas las Configuraciones Tipográficas?"
+msgstr "Effacer Tous les Paramètres Typographiques ?"
 
 #: assets/js/block-editor.js:1833
 msgid "Clear All Settings"
-msgstr "Borrar Todas las Configuraciones"
+msgstr "Effacer Tous les Paramètres"
 
 #: assets/js/block-editor.js:1835
 msgid "This will remove all typography features, font selections, and styling."
-msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."
+msgstr "Cela supprimera toutes les fonctionnalités typographiques, sélections de polices et styles."
 
 #: includes/admin-page.php:1305
 msgid "Add New Replacement Mapping"
-msgstr "Agregar Nuevo Mapeo de Reemplazo"
+msgstr "Ajouter un Nouveau Mappage de Remplacement"
 
 #: includes/admin-page.php:1306
 msgid "Manually create a replacement mapping for a font ID that was previously deleted."
-msgstr "Crear manualmente un mapeo de reemplazo para un ID de fuente que fue eliminado previamente."
+msgstr "Créer manuellement un mappage de remplacement pour un ID de police précédemment supprimé."
 
 #: includes/admin-page.php:1311
 msgid "Deleted Font ID:"
-msgstr "ID de Fuente Eliminada:"
+msgstr "ID de Police Supprimée :"
 
 #: includes/admin-page.php:1314
 msgid "Select a deleted font ID..."
-msgstr "Seleccionar un ID de fuente eliminada..."
+msgstr "Sélectionner un ID de police supprimée..."
 
 #: includes/admin-page.php:1318
 msgid "Select a font ID that was previously deleted (available IDs shown)"
-msgstr "Seleccionar un ID de fuente que fue eliminado previamente (IDs disponibles mostrados)"
+msgstr "Sélectionner un ID de police précédemment supprimé (IDs disponibles affichés)"
 
 #: includes/admin-page.php:1324
 msgid "Replacement Font:"
-msgstr "Fuente de Reemplazo:"
+msgstr "Police de Remplacement :"
 
 #: includes/admin-page.php:1327
 msgid "Select a replacement font..."
-msgstr "Seleccionar una fuente de reemplazo..."
+msgstr "Sélectionner une police de remplacement..."
 
 #: includes/admin-page.php:1331
 msgid "Select which active font should replace the deleted font"
-msgstr "Seleccionar qué fuente activa debe reemplazar la fuente eliminada"
+msgstr "Sélectionner quelle police active doit remplacer la police supprimée"
 
 #: includes/admin-page.php:1337
 msgid "Add Replacement"
-msgstr "Agregar Reemplazo"
+msgstr "Ajouter un Remplacement"
 
-#: typography-stylist.php:2799
+#: typost.php:2799
 msgid "Invalid font ID (0). Font IDs must be greater than 0."
-msgstr "ID de fuente inválido (0). Los IDs de fuente deben ser mayores que 0."
+msgstr "ID de police invalide (0). Les IDs de police doivent être supérieurs à 0."
 
 #: includes/admin-page.php:1289
 msgid "Variable Font Weights"
-msgstr "Pesos de Fuente Variable"
+msgstr "Poids de Police Variable"
 
 #: includes/admin-page.php:1301
 msgid "Allow custom font-weight values (1-1000) for variable fonts"
-msgstr "Permitir valores de font-weight personalizados (1-1000) para fuentes variables"
+msgstr "Autoriser les valeurs de font-weight personnalisées (1-1000) pour les polices variables"
 
 #: includes/admin-page.php:1304
 msgid "When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts."
-msgstr "Cuando está habilitado, permite valores de font-weight de 1 a 1000 en lugar de solo pesos estándar (100, 200, ..., 900). Habilite esto si está utilizando fuentes variables que admiten pesos intermedios como 450 o 350. Deshabilitado por defecto para compatibilidad con fuentes estándar."
+msgstr "Lorsqu'elle est activée, autorise les valeurs de font-weight de 1 à 1000 au lieu des poids standards uniquement (100, 200, ..., 900). Activez cette option si vous utilisez des polices variables qui prennent en charge des poids intermédiaires comme 450 ou 350. Désactivée par défaut pour la compatibilité avec les polices standard."

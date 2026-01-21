@@ -54,7 +54,7 @@ global.wp = {
 require('../../../assets/js/block-editor.js');
 
 // Get utilities from the global object exposed by block-editor.js
-const { escapeHTML, hasHTMLTags, validateSelectionBounds, sanitizeFontFamily, sanitizeCSSValue } = window.otsUtils || {};
+const { escapeHTML, hasHTMLTags, validateSelectionBounds, sanitizeFontFamily, sanitizeCSSValue } = window.typostUtils || {};
 
 /**
  * Test Suite: Helper Functions
@@ -610,15 +610,15 @@ describe('Typography Stylist - Block Attribute Preservation', () => {
 	/**
 	 * Helper: Determine block attributes for selection-based conversion
 	 */
-	const getBlockAttributesForSelection = (isAlreadyOTSBlock, currentBlockFeatures, selectedFeatures) => {
-		if (isAlreadyOTSBlock) {
+	const getBlockAttributesForSelection = (isAlreadyTypostBlock, currentBlockFeatures, selectedFeatures) => {
+		if (isAlreadyTypostBlock) {
 			// Preserve existing block-level features
 			return {
 				features: currentBlockFeatures || [],
 				preservedExisting: true
 			};
 		} else {
-			// New OTS block from core/heading - no global features
+			// New Typost block from core/heading - no global features
 			return {
 				features: [],
 				preservedExisting: false
@@ -626,9 +626,9 @@ describe('Typography Stylist - Block Attribute Preservation', () => {
 		}
 	};
 
-	it('should preserve existing features when updating OTS block', () => {
+	it('should preserve existing features when updating Typographic Stylist block', () => {
 		const result = getBlockAttributesForSelection(
-			true, // isAlreadyOTSBlock
+			true, // isAlreadyTypostBlock
 			['liga', 'dlig'], // currentBlockFeatures
 			['ss14'] // selectedFeatures (applied inline only)
 		);
@@ -638,9 +638,9 @@ describe('Typography Stylist - Block Attribute Preservation', () => {
 		expect(result.features).not.toContain('ss14'); // ss14 is inline-only
 	});
 
-	it('should use empty features for new OTS block from core/heading', () => {
+	it('should use empty features for new Typographic Stylist block from core/heading', () => {
 		const result = getBlockAttributesForSelection(
-			false, // Not already OTS block
+			false, // Not already Typost block
 			undefined, // core/heading doesn't have features
 			['ss14'] // selectedFeatures (applied inline only)
 		);
@@ -651,7 +651,7 @@ describe('Typography Stylist - Block Attribute Preservation', () => {
 
 	it('should handle empty current features array', () => {
 		const result = getBlockAttributesForSelection(
-			true, // isAlreadyOTSBlock
+			true, // isAlreadyTypostBlock
 			[], // No current features
 			['ss14']
 		);
@@ -669,7 +669,7 @@ describe('Typography Stylist - Block Attribute Preservation', () => {
  */
 describe('Typography Stylist - Inline Feature Detection', () => {
 	it('should detect features from inline span at cursor position', () => {
-		const html = 'Test <span class="ots-styled" style="font-feature-settings: \'ss02\' 1">H</span>ere';
+		const html = 'Test <span class="typost-styled" style="font-feature-settings: \'ss02\' 1">H</span>ere';
 		const cursorAt = 5; // Inside the "H"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt); // cursor position (start === end)
@@ -678,7 +678,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should detect features from data-features attribute', () => {
-		const html = 'Test <span class="ots-styled" data-features="liga,dlig">text</span> here';
+		const html = 'Test <span class="typost-styled" data-features="liga,dlig">text</span> here';
 		const cursorAt = 8; // Inside "text"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -687,7 +687,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should prefer data-features over style attribute', () => {
-		const html = 'Test <span class="ots-styled" data-features="ss01" style="font-feature-settings: \'ss02\' 1">text</span>';
+		const html = 'Test <span class="typost-styled" data-features="ss01" style="font-feature-settings: \'ss02\' 1">text</span>';
 		const cursorAt = 7;
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -696,7 +696,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should return innermost span when spans are nested', () => {
-		const html = '<span class="ots-styled" data-features="liga">Outer <span class="ots-styled" data-features="ss02">Inner</span> text</span>';
+		const html = '<span class="typost-styled" data-features="liga">Outer <span class="typost-styled" data-features="ss02">Inner</span> text</span>';
 		const cursorAt = 8; // Inside "Inner"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -704,9 +704,9 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 		expect(features).toEqual(['ss02']); // Should find innermost span
 	});
 
-	it('should detect features from nested ots-styled spans (font-size wrapper case)', () => {
+	it('should detect features from nested typost-styled spans (font-size wrapper case)', () => {
 		// This tests the fix for the 'M' in Mephisto bug where font-size wraps a feature span
-		const html = '<span data-fontsize="responsive" data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span></span>';
+		const html = '<span data-fontsize="responsive" data-fontweight="400" class="typost-styled"><span data-features="ss01" class="typost-styled">M</span></span>';
 		const cursorAt = 0; // Inside "M"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -714,10 +714,10 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 		expect(features).toEqual(['ss01']); // Should detect ss01 from nested span
 	});
 
-	it('should collect features from all nested ots-styled spans in hierarchy', () => {
+	it('should collect features from all nested typost-styled spans in hierarchy', () => {
 		// Test case: With our improved nested detection, we now collect features from
-		// the matched span AND any ots-styled spans it contains (including nested ones)
-		const html = '<span data-features="liga" class="ots-styled"><span data-features="ss01,ss02" class="ots-styled">Text</span></span>';
+		// the matched span AND any typost-styled spans it contains (including nested ones)
+		const html = '<span data-features="liga" class="typost-styled"><span data-features="ss01,ss02" class="typost-styled">Text</span></span>';
 		const cursorAt = 1; // Inside "Text"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -729,9 +729,9 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 		expect(features).toHaveLength(3);
 	});
 
-	it('should handle deeply nested ots-styled spans', () => {
+	it('should handle deeply nested typost-styled spans', () => {
 		// Test triple-nested case
-		const html = '<span data-fontsize="responsive" class="ots-styled"><span data-fontweight="700" class="ots-styled"><span data-features="ss01,dlig" class="ots-styled">X</span></span></span>';
+		const html = '<span data-fontsize="responsive" class="typost-styled"><span data-fontweight="700" class="typost-styled"><span data-features="ss01,dlig" class="typost-styled">X</span></span></span>';
 		const cursorAt = 0; // Inside "X"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -742,7 +742,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should return empty array when cursor is outside styled spans', () => {
-		const html = 'Plain <span class="ots-styled" data-features="ss02">styled</span> text';
+		const html = 'Plain <span class="typost-styled" data-features="ss02">styled</span> text';
 		const cursorAt = 2; // In "Plain", before the span
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -752,7 +752,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 
 	it('should NOT detect features when cursor is immediately after styled span (boundary bug)', () => {
 		// Reproduces the Moriarty bug: cursor on "o" should not detect ss01 from "M"
-		const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+		const html = '<span class="typost-styled" data-features="ss01">M</span>oriarty';
 		// Text positions: M=0, o=1, r=2, i=3, a=4, r=5, t=6, y=7
 		const cursorAt = 1; // On "o" - immediately after the styled "M"
 
@@ -763,7 +763,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should detect features when cursor is at start of styled span', () => {
-		const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+		const html = '<span class="typost-styled" data-features="ss01">M</span>oriarty';
 		const cursorAt = 0; // At start of "M"
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -773,7 +773,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should handle multiple features in style attribute', () => {
-		const html = '<span class="ots-styled" style="font-feature-settings: \'liga\' 1, \'dlig\' 1, \'ss02\' 1">text</span>';
+		const html = '<span class="typost-styled" style="font-feature-settings: \'liga\' 1, \'dlig\' 1, \'ss02\' 1">text</span>';
 		const cursorAt = 2;
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -791,7 +791,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 	});
 
 	it('should handle HTML entities in style attribute', () => {
-		const html = '<span class="ots-styled" style="font-feature-settings: &quot;ss02&quot; 1">text</span>';
+		const html = '<span class="typost-styled" style="font-feature-settings: &quot;ss02&quot; 1">text</span>';
 		const cursorAt = 2;
 
 		const features = parseInlineFeaturesAtCursor(html, cursorAt, cursorAt);
@@ -804,7 +804,7 @@ describe('Typography Stylist - Inline Feature Detection', () => {
 /**
  * Test Suite: Edit.js Sidebar Feature Highlighting
  *
- * These tests verify that the OTS block sidebar correctly highlights
+ * These tests verify that the Typographic Stylist block sidebar correctly highlights
  * features when the user clicks on styled text in the editor.
  * This prevents regression of the feature detection functionality.
  */
@@ -815,7 +815,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 	 */
 	it('should highlight features in sidebar when cursor is on styled text', () => {
 		// Arrange: Create content with inline styled text
-		const content = 'Hello <span class="ots-styled" data-features="ss02,swsh">World</span> text';
+		const content = 'Hello <span class="typost-styled" data-features="ss02,swsh">World</span> text';
 		const cursorOffset = 8; // Cursor inside "World"
 
 		// Act: Parse inline features at cursor position
@@ -829,7 +829,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 
 	it('should not highlight features when cursor is on unstyled text', () => {
 		// Arrange: Content with styled span, but cursor outside it
-		const content = 'Hello <span class="ots-styled" data-features="ss02">World</span> text';
+		const content = 'Hello <span class="typost-styled" data-features="ss02">World</span> text';
 		const cursorOffset = 2; // Cursor in "Hello" (unstyled)
 
 		// Act: Parse inline features at cursor position
@@ -842,7 +842,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 	it('should highlight innermost features when spans are nested', () => {
 		// Arrange: Nested styled spans with different features
 		// Text content is "Outer Inner text" (Outer=0-4, Inner=6-10, text=12-15)
-		const content = '<span class="ots-styled" data-features="liga">Outer <span class="ots-styled" data-features="ss02">Inner</span> text</span>';
+		const content = '<span class="typost-styled" data-features="liga">Outer <span class="typost-styled" data-features="ss02">Inner</span> text</span>';
 		const cursorOffset = 8; // Cursor inside "Inner"
 
 		// Act: Parse inline features at cursor position
@@ -856,7 +856,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 	it('should work with multiple styled spans in same block', () => {
 		// Arrange: Multiple styled spans with different features
 		// Text content is "First and Second" (offsets: First=0-4, " and "=5-9, Second=10-15)
-		const content = '<span class="ots-styled" data-features="ss01">First</span> and <span class="ots-styled" data-features="ss02">Second</span>';
+		const content = '<span class="typost-styled" data-features="ss01">First</span> and <span class="typost-styled" data-features="ss02">Second</span>';
 		const cursorOffset = 11; // Cursor inside "Second" (offset 10-15)
 
 		// Act: Parse inline features at cursor position
@@ -885,7 +885,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 
 	it('should fallback to style attribute when data-features is missing', () => {
 		// Arrange: Legacy content without data-features attribute
-		const content = '<span class="ots-styled" style="font-feature-settings: \'ss02\' 1, \'liga\' 1">Text</span>';
+		const content = '<span class="typost-styled" style="font-feature-settings: \'ss02\' 1, \'liga\' 1">Text</span>';
 		const cursorOffset = 2;
 
 		// Act: Parse inline features at cursor position
@@ -953,7 +953,7 @@ describe('Typography Stylist - Font Size Range Validation', () => {
 /**
  * Test Suite: Nested Span Prevention
  *
- * Tests for applyOrMergeStyling utility that prevents creating nested ots-styled spans.
+ * Tests for applyOrMergeStyling utility that prevents creating nested typost-styled spans.
  * This fixes the issue where applying font-size + features created nested spans.
  */
 describe('Typography Stylist - Nested Span Prevention', () => {
@@ -992,7 +992,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		return { range, doc, container };
 	}
 
-	it('should create new span when selection is not inside ots-styled span', () => {
+	it('should create new span when selection is not inside typost-styled span', () => {
 		// Arrange
 		const html = 'Plain text here';
 		const { range, doc, container } = createRangeInHTML(html, 0, 5);
@@ -1005,14 +1005,14 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 		// Assert
 		expect(success).toBe(true);
-		const spans = container.querySelectorAll('span.ots-styled');
+		const spans = container.querySelectorAll('span.typost-styled');
 		expect(spans.length).toBe(1);
 		expect(spans[0].getAttribute('data-features')).toBe('ss01');
 	});
 
-	it('should merge attributes when selection is inside existing ots-styled span', () => {
+	it('should merge attributes when selection is inside existing typost-styled span', () => {
 		// Arrange: Existing span with font-size
-		const html = '<span class="ots-styled" data-fontsize="responsive" style="font-size: 48px">Text</span>';
+		const html = '<span class="typost-styled" data-fontsize="responsive" style="font-size: 48px">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		const attributes = { 'data-features': 'ss01' };
@@ -1023,7 +1023,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 		// Assert
 		expect(success).toBe(true);
-		const spans = container.querySelectorAll('span.ots-styled');
+		const spans = container.querySelectorAll('span.typost-styled');
 		expect(spans.length).toBe(1); // Should still be 1 span (not nested)
 
 		// Check merged attributes
@@ -1038,7 +1038,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 	it('should merge features when adding to span that already has features', () => {
 		// Arrange: Existing span with ss01
-		const html = '<span class="ots-styled" data-features="ss01" style="font-feature-settings: &quot;ss01&quot; 1">Text</span>';
+		const html = '<span class="typost-styled" data-features="ss01" style="font-feature-settings: &quot;ss01&quot; 1">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		const attributes = { 'data-features': 'liga' };
@@ -1049,7 +1049,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 		// Assert
 		expect(success).toBe(true);
-		const spans = container.querySelectorAll('span.ots-styled');
+		const spans = container.querySelectorAll('span.typost-styled');
 		expect(spans.length).toBe(1);
 
 		// Check that features were merged (not replaced)
@@ -1060,7 +1060,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 	it('should deduplicate features when merging', () => {
 		// Arrange: Existing span with ss01
-		const html = '<span class="ots-styled" data-features="ss01,liga">Text</span>';
+		const html = '<span class="typost-styled" data-features="ss01,liga">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		const attributes = { 'data-features': 'ss01' }; // Try to add ss01 again
@@ -1071,7 +1071,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 		// Assert
 		expect(success).toBe(true);
-		const dataFeatures = container.querySelector('span.ots-styled').getAttribute('data-features');
+		const dataFeatures = container.querySelector('span.typost-styled').getAttribute('data-features');
 		const featuresArray = dataFeatures.split(',').map(f => f.trim());
 
 		// Should not have duplicate ss01
@@ -1081,7 +1081,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 	it('should overwrite other attributes when merging', () => {
 		// Arrange: Existing span with font-weight 400
-		const html = '<span class="ots-styled" data-fontweight="400" style="font-weight: 400">Text</span>';
+		const html = '<span class="typost-styled" data-fontweight="400" style="font-weight: 400">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		const attributes = { 'data-fontweight': '700' };
@@ -1092,7 +1092,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 
 		// Assert
 		expect(success).toBe(true);
-		const span = container.querySelector('span.ots-styled');
+		const span = container.querySelector('span.typost-styled');
 		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be updated
 		expect(span.getAttribute('style')).toContain('font-weight: 700');
 	});
@@ -1105,8 +1105,8 @@ describe('Typography Stylist - Nested Span Prevention', () => {
  * computed fonts from DOM elements in different block types.
  */
 describe('Typography Stylist - Block Font Inheritance (block-editor.js)', () => {
-	// Get the utility function from window.otsUtils
-	const { getBlockInheritedFont } = window.otsUtils || {};
+	// Get the utility function from window.typostUtils
+	const { getBlockInheritedFont } = window.typostUtils || {};
 
 	// Helper to create mock DOM elements for testing
 	function createMockBlockDOM(blockId, blockName, tagName, fontFamily) {
@@ -1123,9 +1123,9 @@ describe('Typography Stylist - Block Font Inheritance (block-editor.js)', () => 
 		} else if (blockName === 'generateblocks/headline') {
 			textElement = document.createElement('div');
 			textElement.className = 'gb-headline-text';
-		} else if (blockName === 'typography-stylist/block') {
+		} else if (blockName === 'typost/block') {
 			textElement = document.createElement('div');
-			textElement.className = 'ots-block-content';
+			textElement.className = 'typost-block-content';
 		} else {
 			textElement = document.createElement('div');
 			textElement.setAttribute('contenteditable', 'true');
@@ -1190,10 +1190,10 @@ describe('Typography Stylist - Block Font Inheritance (block-editor.js)', () => 
 		mock.cleanup();
 	});
 
-	it('should detect font from typography-stylist/block blocks', () => {
-		const mock = createMockBlockDOM('test-block-4', 'typography-stylist/block', null, 'Playfair Display, serif');
+	it('should detect font from typost/block blocks', () => {
+		const mock = createMockBlockDOM('test-block-4', 'typost/block', null, 'Playfair Display, serif');
 
-		const result = getBlockInheritedFont('test-block-4', 'typography-stylist/block', document, window);
+		const result = getBlockInheritedFont('test-block-4', 'typost/block', document, window);
 
 		expect(result).toBe('Playfair Display, serif');
 		mock.cleanup();
@@ -1396,21 +1396,21 @@ describe('Typography Stylist - Block Font Inheritance (block-editor.js)', () => 
 });
 
 /**
- * Test Suite: Font Detection in OTS Blocks
+ * Test Suite: Font Detection in Typographic Stylist Blocks
  *
  * Tests for the detectBlockComputedFont() utility function from utils.js
- * that detects computed fonts for Typography Stylist blocks.
+ * that detects computed fonts for Typographic Stylist blocks.
  */
-describe('Typography Stylist - Font Detection in OTS Blocks', () => {
+describe('Typography Stylist - Font Detection in Typographic Stylist Blocks', () => {
 	// Helper to create mock DOM elements for testing
-	function createMockOTSBlock(clientId, fontFamily) {
+	function createMockTypostBlock(clientId, fontFamily) {
 		// Create a mock block wrapper
 		const blockWrapper = document.createElement('div');
 		blockWrapper.setAttribute('data-block', clientId);
 
 		// Create the RichText element (.ots-block-content)
 		const richTextElement = document.createElement('div');
-		richTextElement.className = 'ots-block-content';
+		richTextElement.className = 'typost-block-content';
 		richTextElement.textContent = 'Sample text';
 		blockWrapper.appendChild(richTextElement);
 		document.body.appendChild(blockWrapper);
@@ -1444,18 +1444,18 @@ describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	}
 
 	it('should detect font from RichText element when fontFamily not set', () => {
-		const mock = createMockOTSBlock('ots-block-1', 'Hipster Script Pro, cursive');
+		const mock = createMockTypostBlock('typost-block-1', 'Hipster Script Pro, cursive');
 
-		const result = detectBlockComputedFont('ots-block-1');
+		const result = detectBlockComputedFont('typost-block-1');
 
 		expect(result).toBe('Hipster Script Pro, cursive');
 		mock.cleanup();
 	});
 
 	it('should remove quotes from detected font', () => {
-		const mock = createMockOTSBlock('ots-block-2', '"Playfair Display", serif');
+		const mock = createMockTypostBlock('typost-block-2', '"Playfair Display", serif');
 
-		const result = detectBlockComputedFont('ots-block-2');
+		const result = detectBlockComputedFont('typost-block-2');
 
 		expect(result).toBe('Playfair Display, serif');
 		expect(result).not.toContain('"');
@@ -1463,9 +1463,9 @@ describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	});
 
 	it('should remove single quotes from detected font', () => {
-		const mock = createMockOTSBlock('ots-block-3', "'Times New Roman', serif");
+		const mock = createMockTypostBlock('typost-block-3', "'Times New Roman', serif");
 
-		const result = detectBlockComputedFont('ots-block-3');
+		const result = detectBlockComputedFont('typost-block-3');
 
 		expect(result).toBe('Times New Roman, serif');
 		expect(result).not.toContain("'");
@@ -1479,12 +1479,12 @@ describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	});
 
 	it('should return empty string when RichText element not found', () => {
-		// Create a block wrapper without .ots-block-content
+		// Create a block wrapper without .typost-block-content
 		const blockWrapper = document.createElement('div');
-		blockWrapper.setAttribute('data-block', 'empty-ots-block');
+		blockWrapper.setAttribute('data-block', 'empty-typost-block');
 		document.body.appendChild(blockWrapper);
 
-		const result = detectBlockComputedFont('empty-ots-block');
+		const result = detectBlockComputedFont('empty-typost-block');
 
 		expect(result).toBe('');
 		blockWrapper.parentNode.removeChild(blockWrapper);
@@ -1503,9 +1503,9 @@ describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	});
 
 	it('should return empty string when font-family is empty', () => {
-		const mock = createMockOTSBlock('ots-block-4', '');
+		const mock = createMockTypostBlock('typost-block-4', '');
 
-		const result = detectBlockComputedFont('ots-block-4');
+		const result = detectBlockComputedFont('typost-block-4');
 
 		expect(result).toBe('');
 		mock.cleanup();
@@ -1550,7 +1550,7 @@ describe('Typography Stylist - Font Detection in OTS Blocks', () => {
 	it('should handle errors gracefully', () => {
 		// Create a scenario that would throw an error
 		// Mock getComputedStyle to throw
-		const mock = createMockOTSBlock('error-block', 'Arial');
+		const mock = createMockTypostBlock('error-block', 'Arial');
 		const originalGetComputedStyle = window.getComputedStyle;
 		const originalConsoleError = console.error;
 
@@ -1602,7 +1602,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should detect partial inline features (first letter only)', () => {
-			const html = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+			const html = '<span class="typost-styled" data-features="ss01">M</span>oriarty';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1613,7 +1613,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should detect full coverage with uniform features', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+			const html = '<span class="typost-styled" data-features="ss01">Moriarty</span>';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1624,7 +1624,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should detect full coverage with multiple uniform features', () => {
-			const html = '<span class="ots-styled" data-features="ss01,liga,dlig">Complete Text</span>';
+			const html = '<span class="typost-styled" data-features="ss01,liga,dlig">Complete Text</span>';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1635,7 +1635,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should not extract when coverage is full but features are mixed', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Mor</span><span class="ots-styled" data-features="ss02">iarty</span>';
+			const html = '<span class="typost-styled" data-features="ss01">Mor</span><span class="typost-styled" data-features="ss02">iarty</span>';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1645,7 +1645,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should handle nested spans (font-size wrapper case)', () => {
-			const html = '<span class="ots-styled" data-fontsize="responsive"><span class="ots-styled" data-features="ss01">M</span>oriarty</span>';
+			const html = '<span class="typost-styled" data-fontsize="responsive"><span class="typost-styled" data-features="ss01">M</span>oriarty</span>';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1657,7 +1657,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		it('should handle leading/trailing whitespace correctly (coverage bug fix)', () => {
 			// This tests the fix for the trim() inconsistency bug
 			// HTML with leading space in the styled span
-			const html = '<span class="ots-styled" data-features="ss01"> Moriarty</span>';
+			const html = '<span class="typost-styled" data-features="ss01"> Moriarty</span>';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1670,7 +1670,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should handle content with whitespace', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>  ';
+			const html = '<span class="typost-styled" data-features="ss01">Moriarty</span>  ';
 
 			const result = analyzeInlineFeatures(html);
 
@@ -1689,12 +1689,12 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 			expect(result.coverage).toBe('none');
 		});
 
-		it('should handle content with only ots-styled spans but no features', () => {
-			const html = '<span class="ots-styled" data-fontweight="700">Moriarty</span>';
+		it('should handle content with only typost-styled spans but no features', () => {
+			const html = '<span class="typost-styled" data-fontweight="700">Moriarty</span>';
 
 			const result = analyzeInlineFeatures(html);
 
-			// Has ots-styled but no OpenType features
+			// Has typost-styled but no OpenType features
 			expect(result.hasInlineFeatures).toBe(false);
 			expect(result.coverage).toBe('none');
 			expect(result.shouldExtractToBlock).toBe(false);
@@ -1702,32 +1702,32 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 	});
 
 	describe('stripInlineFeatures', () => {
-		it('should remove ots-styled spans while keeping text', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+		it('should remove typost-styled spans while keeping text', () => {
+			const html = '<span class="typost-styled" data-features="ss01">Moriarty</span>';
 
 			const result = stripInlineFeatures(html);
 
 			expect(result).toBe('Moriarty');
 		});
 
-		it('should remove multiple ots-styled spans', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Mor</span><span class="ots-styled" data-features="ss02">iarty</span>';
+		it('should remove multiple typost-styled spans', () => {
+			const html = '<span class="typost-styled" data-features="ss01">Mor</span><span class="typost-styled" data-features="ss02">iarty</span>';
 
 			const result = stripInlineFeatures(html);
 
 			expect(result).toBe('Moriarty');
 		});
 
-		it('should preserve non-ots-styled markup', () => {
-			const html = '<strong><span class="ots-styled" data-features="ss01">Moriarty</span></strong>';
+		it('should preserve non-typost-styled markup', () => {
+			const html = '<strong><span class="typost-styled" data-features="ss01">Moriarty</span></strong>';
 
 			const result = stripInlineFeatures(html);
 
 			expect(result).toBe('<strong>Moriarty</strong>');
 		});
 
-		it('should handle nested ots-styled spans', () => {
-			const html = '<span class="ots-styled" data-fontsize="responsive"><span class="ots-styled" data-features="ss01">Moriarty</span></span>';
+		it('should handle nested typost-styled spans', () => {
+			const html = '<span class="typost-styled" data-fontsize="responsive"><span class="typost-styled" data-features="ss01">Moriarty</span></span>';
 
 			const result = stripInlineFeatures(html);
 
@@ -1743,7 +1743,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should preserve text content exactly', () => {
-			const html = '<span class="ots-styled" data-features="ss01">Test&nbsp;Text</span>';
+			const html = '<span class="typost-styled" data-features="ss01">Test&nbsp;Text</span>';
 
 			const result = stripInlineFeatures(html);
 
@@ -1756,7 +1756,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 	describe('Block Conversion Transform Integration', () => {
 		it('should preserve partial inline features during conversion', () => {
 			// Simulate what happens when converting a heading with partial features
-			const sourceContent = '<span class="ots-styled" data-features="ss01">M</span>oriarty';
+			const sourceContent = '<span class="typost-styled" data-features="ss01">M</span>oriarty';
 
 			const analysis = analyzeInlineFeatures(sourceContent);
 
@@ -1768,7 +1768,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should extract full-coverage features to block level during conversion', () => {
-			const sourceContent = '<span class="ots-styled" data-features="ss01">Moriarty</span>';
+			const sourceContent = '<span class="typost-styled" data-features="ss01">Moriarty</span>';
 
 			const analysis = analyzeInlineFeatures(sourceContent);
 
@@ -1783,7 +1783,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should handle mixed features correctly', () => {
-			const sourceContent = '<span class="ots-styled" data-features="ss01">M</span><span class="ots-styled" data-features="ss02">oriarty</span>';
+			const sourceContent = '<span class="typost-styled" data-features="ss01">M</span><span class="typost-styled" data-features="ss02">oriarty</span>';
 
 			const analysis = analyzeInlineFeatures(sourceContent);
 
@@ -1796,7 +1796,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 	describe('Nested span cursor detection', () => {
 		it('should NOT detect features when cursor is in outer wrapper but outside inner feature span', () => {
 			// This reproduces the Moriarty bug: outer wrapper with font-weight, inner span with ss01 on "M"
-			const html = '<span data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty.</span>';
+			const html = '<span data-fontweight="400" class="typost-styled"><span data-features="ss01" class="typost-styled">M</span>oriarty.</span>';
 
 			// Cursor on "o" (position 1)
 			const featuresOnO = parseInlineFeaturesAtCursor(html, 1, 1);
@@ -1812,7 +1812,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should detect features when cursor is inside inner feature span', () => {
-			const html = '<span data-fontweight="400" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty.</span>';
+			const html = '<span data-fontweight="400" class="typost-styled"><span data-features="ss01" class="typost-styled">M</span>oriarty.</span>';
 
 			// Cursor on "M" (position 0)
 			const featuresOnM = parseInlineFeaturesAtCursor(html, 0, 0);
@@ -1820,7 +1820,7 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 		});
 
 		it('should detect both outer and inner features when cursor is in nested feature span', () => {
-			const html = '<span data-fontsize="24px" class="ots-styled"><span data-features="ss01" class="ots-styled">M</span>oriarty</span>';
+			const html = '<span data-fontsize="24px" class="typost-styled"><span data-features="ss01" class="typost-styled">M</span>oriarty</span>';
 
 			// Cursor on "M" (position 0) - inside both spans
 			const featuresOnM = parseInlineFeaturesAtCursor(html, 0, 0);

@@ -42,7 +42,7 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 
 			// Verify wrapper div exists
 			expect(tree.type).toBe('div');
-			expect(tree.props.className).toBe('wp-block-typography-stylist');
+			expect(tree.props.className).toBe('wp-block-typost');
 
 			// Verify we have two children (screen reader + visual)
 			expect(tree.children).toHaveLength(2);
@@ -107,7 +107,7 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 			expect(tree.children[0].props.className).toBe('sr-only');
 		});
 
-		it('should apply ots-styled class to visual version only', () => {
+		it('should apply typost-styled class to visual version only', () => {
 			const attributes = {
 				content: 'Test Content',
 				tagName: 'h2',
@@ -122,7 +122,7 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 			const tree = component.toJSON();
 
 			// Second child is visual version
-			expect(tree.children[1].props.className).toBe('ots-styled');
+			expect(tree.children[1].props.className).toBe('typost-styled');
 		});
 	});
 
@@ -188,7 +188,7 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 
 		it('should handle nested HTML tags correctly', () => {
 			const attributes = {
-				content: '<span class="ots-styled"><strong>Nested</strong></span> tags',
+				content: '<span class="typost-styled"><strong>Nested</strong></span> tags',
 				tagName: 'h2',
 				features: [],
 				screenReaderClass: 'visually-hidden',

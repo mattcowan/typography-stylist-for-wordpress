@@ -74,7 +74,7 @@ export default function save({ attributes }) {
 	}
 
 	return (
-		<div className="wp-block-typography-stylist">
+		<div className="wp-block-typost">
 			{/* Screen reader accessible text (hidden visually, maintains semantic heading structure) */}
 			<RichText.Content
 				tagName={tagName}
@@ -87,7 +87,7 @@ export default function save({ attributes }) {
 				tagName={tagName}
 				value={content}
 				style={styleObj}
-				className="ots-styled"
+				className="typost-styled"
 				aria-hidden="true"
 				data-font={fontFamily || undefined}
 				data-font-id={fontId || undefined}

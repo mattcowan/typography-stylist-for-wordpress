@@ -1,5 +1,5 @@
 {
-  "name": "typography-stylist",
+  "name": "typost",
   "version": "1.1.0",
   "description": "WordPress plugin for advanced OpenType typography features in Gutenberg headlines",
   "scripts": {
