@@ -1408,7 +1408,7 @@ describe('Typography Stylist - Font Detection in Typographic Stylist Blocks', ()
 		const blockWrapper = document.createElement('div');
 		blockWrapper.setAttribute('data-block', clientId);
 
-		// Create the RichText element (.ots-block-content)
+		// Create the RichText element (.typost-block-content)
 		const richTextElement = document.createElement('div');
 		richTextElement.className = 'typost-block-content';
 		richTextElement.textContent = 'Sample text';

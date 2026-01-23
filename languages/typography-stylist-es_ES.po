@@ -81,67 +81,67 @@ msgstr "Procesando..."
 msgid "Upload Font Kit"
 msgstr "Cargar Kit de Fuentes"
 
-#: Typography Stylist.php:404
+#: typography-stylist.php:404
 msgid "Please enter a project name."
 msgstr "Por favor, introduce un nombre de proyecto."
 
-#: Typography Stylist.php:405
+#: typography-stylist.php:405
 msgid "Please paste the Adobe Fonts embed code."
 msgstr "Por favor, pega el código de inserción de Adobe Fonts."
 
-#: Typography Stylist.php:406
+#: typography-stylist.php:406
 msgid "Adding..."
 msgstr "Añadiendo..."
 
-#: Typography Stylist.php:407
+#: typography-stylist.php:407
 msgid "Adobe Fonts project added successfully! Reloading page..."
 msgstr "¡Proyecto de Adobe Fonts añadido con éxito! Recargando página..."
 
-#: Typography Stylist.php:408
+#: typography-stylist.php:408
 msgid "Failed to add Adobe Fonts project."
 msgstr "Error al añadir el proyecto de Adobe Fonts."
 
-#: Typography Stylist.php:409
+#: typography-stylist.php:409
 msgid "Add Adobe Fonts Project"
 msgstr "Añadir Proyecto de Adobe Fonts"
 
-#: Typography Stylist.php:410
+#: typography-stylist.php:410
 msgid "Are you sure you want to delete this Adobe Fonts project?"
 msgstr "¿Estás seguro de que quieres eliminar este proyecto de Adobe Fonts?"
 
-#: Typography Stylist.php:411
+#: typography-stylist.php:411
 msgid "Failed to delete Adobe Fonts project."
 msgstr "Error al eliminar el proyecto de Adobe Fonts."
 
-#: Typography Stylist.php:413
+#: typography-stylist.php:413
 msgid "Please enter a font name."
 msgstr "Por favor, introduce un nombre de fuente."
 
-#: Typography Stylist.php:414
+#: typography-stylist.php:414
 msgid "Please enter a CSS font-family value."
 msgstr "Por favor, introduce un valor CSS font-family."
 
-#: Typography Stylist.php:415
+#: typography-stylist.php:415
 msgid "Custom font added successfully! Reloading page..."
 msgstr "¡Fuente personalizada añadida con éxito! Recargando página..."
 
-#: Typography Stylist.php:416
+#: typography-stylist.php:416
 msgid "Failed to add custom font."
 msgstr "Error al añadir la fuente personalizada."
 
-#: Typography Stylist.php:417
+#: typography-stylist.php:417
 msgid "Add Custom Font"
 msgstr "Añadir Fuente Personalizada"
 
-#: Typography Stylist.php:418
+#: typography-stylist.php:418
 msgid "Are you sure you want to delete this custom font?"
 msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
 
-#: Typography Stylist.php:419
+#: typography-stylist.php:419
 msgid "Failed to delete custom font."
 msgstr "Error al eliminar la fuente personalizada."
 
-#: Typography Stylist.php:591
+#: typography-stylist.php:591
 msgid "Failed to update font loading setting."
 msgstr "Error al actualizar la configuración de carga de fuentes."
 
@@ -285,16 +285,16 @@ msgstr "Error al crear el directorio de carga"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Error al extraer el archivo ZIP. Por favor, asegúrate de que el archivo es un archivo ZIP válido."
 
-#: Typography Stylist.php:2159
+#: typography-stylist.php:2159
 msgid "No CSS file found in the font kit"
 msgstr "No se encontró ningún archivo CSS en el kit de fuentes"
 
-#: Typography Stylist.php:2393
+#: typography-stylist.php:2393
 #, php-format
 msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
 msgstr "Se encontraron %d archivo(s) CSS en el kit de fuentes, pero ninguno contiene declaraciones @font-face válidas. Por favor, asegúrate de que el archivo ZIP contiene una hoja de estilo webfont adecuada."
 
-#: Typography Stylist.php:2172
+#: typography-stylist.php:2172
 msgid "Invalid CSS file"
 msgstr "Archivo CSS inválido"
 
@@ -1006,79 +1006,79 @@ msgstr "El plugin te advertirá si intentas aplicar formato a palabras parciales
 msgid "Accessibility settings saved successfully."
 msgstr "Configuración de accesibilidad guardada correctamente."
 
-#: blocks/Typography Stylist/edit.js:5
+#: blocks/typography-stylist/edit.js:5
 msgid "Add text with advanced typography..."
 msgstr "Añadir texto con tipografía avanzada..."
 
-#: blocks/Typography Stylist/edit.js:156
+#: blocks/typography-stylist/edit.js:156
 msgid "Change heading level"
 msgstr "Cambiar nivel de encabezado"
 
-#: blocks/Typography Stylist/edit.js:159
+#: blocks/typography-stylist/edit.js:159
 msgid "Heading 1"
 msgstr "Encabezado 1"
 
-#: blocks/Typography Stylist/edit.js:164
+#: blocks/typography-stylist/edit.js:164
 msgid "Heading 2"
 msgstr "Encabezado 2"
 
-#: blocks/Typography Stylist/edit.js:169
+#: blocks/typography-stylist/edit.js:169
 msgid "Heading 3"
 msgstr "Encabezado 3"
 
-#: blocks/Typography Stylist/edit.js:174
+#: blocks/typography-stylist/edit.js:174
 msgid "Heading 4"
 msgstr "Encabezado 4"
 
-#: blocks/Typography Stylist/edit.js:179
+#: blocks/typography-stylist/edit.js:179
 msgid "Heading 5"
 msgstr "Encabezado 5"
 
-#: blocks/Typography Stylist/edit.js:184
+#: blocks/typography-stylist/edit.js:184
 msgid "Heading 6"
 msgstr "Encabezado 6"
 
-#: blocks/Typography Stylist/edit.js:189
+#: blocks/typography-stylist/edit.js:189
 msgid "Paragraph"
 msgstr "Párrafo"
 
-#: blocks/Typography Stylist/edit.js:194
+#: blocks/typography-stylist/edit.js:194
 msgid "Div"
 msgstr "Div"
 
-#: blocks/Typography Stylist/edit.js:295
+#: blocks/typography-stylist/edit.js:295
 msgid "OpenType Features"
 msgstr "Características OpenType"
 
-#: blocks/Typography Stylist/edit.js:310
+#: blocks/typography-stylist/edit.js:310
 msgid "Screen Reader Class"
 msgstr "Clase de Lector de Pantalla"
 
-#: blocks/Typography Stylist/edit.js:318
+#: blocks/typography-stylist/edit.js:318
 msgid "Custom"
 msgstr "Personalizado"
 
-#: blocks/Typography Stylist/edit.js:325
+#: blocks/typography-stylist/edit.js:325
 msgid "Custom Class Name"
 msgstr "Nombre de Clase Personalizado"
 
-#: blocks/Typography Stylist/edit.js:328
+#: blocks/typography-stylist/edit.js:328
 msgid "Enter your theme's screen reader class"
 msgstr "Introduce la clase de lector de pantalla de tu tema"
 
-#: blocks/Typography Stylist/edit.js:332
+#: blocks/typography-stylist/edit.js:332
 msgid "The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme."
 msgstr "La clase seleccionada se usará para ocultar texto duplicado para lectores de pantalla. Asegúrate de que esta clase esté definida en tu tema."
 
-#: blocks/Typography Stylist/edit.js:799
+#: blocks/typography-stylist/edit.js:799
 msgid "This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar."
 msgstr "Este control aplica el espaciado de letras a todo el bloque. Para aplicar el espaciado de letras a selecciones de texto individuales, usa el botón Alternar funciones rápidas de la barra de herramientas."
 
-#: blocks/Typography Stylist/edit.js:855
+#: blocks/typography-stylist/edit.js:855
 msgid "These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar."
 msgstr "Estos controles aplican funciones a todo el bloque. Para aplicar funciones a selecciones de texto individuales, usa el botón Alternar funciones rápidas de la barra de herramientas."
 
-#: blocks/Typography Stylist/block.json:8
+#: blocks/typography-stylist/block.json:8
 msgid "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections."
 msgstr "Tipografía OpenType avanzada con soporte completo de accesibilidad. La configuración del panel de bloque se aplica a todo el bloque; usa Alternar funciones rápidas para selecciones individuales."
 
@@ -1146,7 +1146,7 @@ msgstr "Seleccionar qué fuente activa debe reemplazar la fuente eliminada"
 msgid "Add Replacement"
 msgstr "Agregar Reemplazo"
 
-#: Typography Stylist.php:2799
+#: typography-stylist.php:2799
 msgid "Invalid font ID (0). Font IDs must be greater than 0."
 msgstr "ID de fuente inválido (0). Los IDs de fuente deben ser mayores que 0."
 

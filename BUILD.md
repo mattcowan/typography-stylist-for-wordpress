@@ -12,7 +12,7 @@ This document provides instructions for developers who want to rebuild the Typos
 
 1. Navigate to the plugin directory:
 ```bash
-cd wp-content/plugins/opentype-stylist
+cd wp-content/plugins/typography-stylist
 ```
 
 2. Install dependencies:
@@ -122,8 +122,8 @@ npm test -- --coverage
 - Tool: Terser
 
 **Typography Stylist Block:**
-- Sources: `blocks/typost/*.js` (index.js, edit.js, save.js, utils.js, view.js)
-- Output: `blocks/typost/build/index.js` (37KB bundled)
+- Sources: `blocks/typography-stylist/*.js` (index.js, edit.js, save.js, utils.js, view.js)
+- Output: `blocks/typography-stylist/build/index.js` (37KB bundled)
 - Tool: @wordpress/scripts (webpack + babel)
 
 ### CSS Files
@@ -214,7 +214,7 @@ After building, verify everything works:
 
 **Plugin won't activate**: Check PHP error log for syntax errors
 
-**Block won't load**: Ensure `blocks/typost/build/index.js` was generated
+**Block won't load**: Ensure `blocks/typography-stylist/build/index.js` was generated
 
 **Styles missing**: Check that minified CSS files exist in `assets/css/`
 
@@ -229,7 +229,7 @@ After building, verify everything works:
 ## Notes
 
 - **DO NOT** edit minified files (*.min.js, *.min.css) directly - they will be overwritten on next build
-- **DO NOT** edit `blocks/typost/build/` files directly - they are generated from block source files
+- **DO NOT** edit `blocks/typography-stylist/build/` files directly - they are generated from block source files
 - Source files are the source of truth - all changes should be made to unminified files
 - After making changes, always rebuild and test before committing
 

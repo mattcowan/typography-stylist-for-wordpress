@@ -56,15 +56,15 @@ terser assets/js/admin-page.js --compress --mangle --output assets/js/admin-page
 
 ### Typography Stylist Block (React/JSX)
 
-**File:** `blocks/typost/build/index.js` (37KB bundled)
+**File:** `blocks/typography-stylist/build/index.js` (37KB bundled)
 
 **Sources:**
-- [`blocks/typost/index.js`](blocks/typost/index.js) - Block registration and configuration
-- [`blocks/typost/edit.js`](blocks/typost/edit.js) - Editor component (React)
-- [`blocks/typost/save.js`](blocks/typost/save.js) - Frontend save/render function
-- [`blocks/typost/utils.js`](blocks/typost/utils.js) - Utility functions
-- [`blocks/typost/view.js`](blocks/typost/view.js) - Frontend interactive script
-- [`blocks/typost/block.json`](blocks/typost/block.json) - Block metadata
+- [`blocks/typography-stylist/index.js`](blocks/typography-stylist/index.js) - Block registration and configuration
+- [`blocks/typography-stylist/edit.js`](blocks/typography-stylist/edit.js) - Editor component (React)
+- [`blocks/typography-stylist/save.js`](blocks/typography-stylist/save.js) - Frontend save/render function
+- [`blocks/typography-stylist/utils.js`](blocks/typography-stylist/utils.js) - Utility functions
+- [`blocks/typography-stylist/view.js`](blocks/typography-stylist/view.js) - Frontend interactive script
+- [`blocks/typography-stylist/block.json`](blocks/typography-stylist/block.json) - Block metadata
 
 **Purpose:** Custom Gutenberg block that provides advanced typography controls with accessibility features. Allows block-level OpenType settings and inline text styling within the block.
 
@@ -77,14 +77,14 @@ npm run build:block
 
 **Actual Command:**
 ```bash
-wp-scripts build blocks/typost/index.js --output-path=blocks/typost/build
+wp-scripts build blocks/typography-stylist/index.js --output-path=blocks/typography-stylist/build
 ```
 
 **Configuration:**
 - Babel settings: `.babelrc`
 - WordPress defaults: Uses @wordpress/scripts standard webpack configuration
 
-**Dependencies:** Automatically bundled by webpack (see `blocks/typost/build/index.asset.php` for WordPress dependencies)
+**Dependencies:** Automatically bundled by webpack (see `blocks/typography-stylist/build/index.asset.php` for WordPress dependencies)
 
 ---
 
@@ -265,7 +265,7 @@ npm run build
 This will regenerate:
 - `assets/js/block-editor.min.js`
 - `assets/js/admin-page.min.js`
-- `blocks/typost/build/index.js`
+- `blocks/typography-stylist/build/index.js`
 - `assets/css/block-editor.min.css`
 - `assets/css/frontend.min.css`
 - `assets/css/admin-page.min.css`
