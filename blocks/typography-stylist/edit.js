@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Custom "T" icon for Typography Stylist
@@ -69,6 +69,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
+	const [capturedSelection, setCapturedSelection] = useState(null);
 
 	// Modal position and size state
 	const [modalX, setModalX] = useState(() => {
@@ -164,7 +165,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	}, [fontFamily, clientId]); // Re-run when fontFamily or clientId changes
 
-	// Get inline features at current cursor/selection position (for OTS block sidebar)
+	// Get inline features at current cursor/selection position (for Typographic Stylist block sidebar)
 	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
 	// Uses selectionStart/End offset only (not full object) to avoid re-computation on every selection change
 	// Note: Inline editor toolbar (block-editor.js) uses component state for similar optimization
@@ -221,12 +222,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Drag handlers
 	const handleDragStart = (e) => {
 		// Don't drag if clicking close button
-		if (e.target.closest('.ots-modal-close-button')) {
+		if (e.target.closest('.typost-modal-close-button')) {
 			return;
 		}
 
 		// Only drag from header
-		if (!e.target.closest('.ots-modal-header')) {
+		if (!e.target.closest('.typost-modal-header')) {
 			return;
 		}
 
@@ -347,12 +348,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					// There's a selection - extract it
 					const slicedValue = sliceRichText(richTextValue, start, end);
 					extractedText = getTextContent(slicedValue);
+
+					// Capture selection offsets and text before Modal opens (Modal clears selection)
+					setCapturedSelection({
+						start: start,
+						end: end,
+						text: extractedText,
+						length: extractedText.length
+					});
 				} else {
-					// No selection - use entire text
+					// No selection - clear captured selection
+					setCapturedSelection(null);
 					extractedText = getTextContent(richTextValue);
 				}
 			} else {
-				// No valid selection in this block - use entire text
+				// No valid selection in this block - clear captured selection
+				setCapturedSelection(null);
 				extractedText = getTextContent(richTextValue);
 			}
 		}
@@ -375,6 +386,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
+		setCapturedSelection(null); // Clear captured selection
 		setIsPopoverOpen(false);
 	};
 
@@ -408,7 +420,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					// Create the preview span wrapper
 					const span = doc.createElement('span');
-					span.className = 'ots-preview-temp';
+					span.className = 'typost-preview-temp';
 					span.style.letterSpacing = `${value / 1000}em`;
 
 					// Wrap the range content
@@ -455,7 +467,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
 
 				// Find the RichText element within the block
-				let blockElement = blockWrapper?.querySelector('.ots-block-content');
+				let blockElement = blockWrapper?.querySelector('.typost-block-content');
 
 				if (!blockElement) {
 					// Try finding by the actual tag name (h1, h2, p, etc.)
@@ -483,7 +495,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			// Use the same robust lookup as above to find the content element
 			const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
 			if (blockWrapper) {
-				let blockElement = blockWrapper.querySelector('.ots-block-content');
+				let blockElement = blockWrapper.querySelector('.typost-block-content');
 
 				if (!blockElement && tagName) {
 					blockElement = blockWrapper.querySelector(tagName);
@@ -498,7 +510,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}
 
 				// Remove any temporary preview wrapper spans
-				const tempSpans = blockWrapper.querySelectorAll('.ots-preview-temp');
+				const tempSpans = blockWrapper.querySelectorAll('.typost-preview-temp');
 				tempSpans.forEach((span) => {
 					const parent = span.parentNode;
 					if (!parent) {
@@ -514,11 +526,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	}, [previewLetterSpacing, clientId, selectionStart, selectionEnd, isPopoverOpen, content]);
 
 	const blockProps = useBlockProps({
-		className: 'wp-block-typography-stylist'
+		className: 'wp-block-typost'
 	});
 
 	// Get available features from localized data
-	const availableFeatures = window.typographyStylistData?.features || [];
+	const availableFeatures = window.typostData?.features || [];
 	const groupedFeatures = {};
 	availableFeatures.forEach(feature => {
 		const category = feature.category || 'other';
@@ -531,9 +543,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Get font options
 	const fontOptions = [];
 	const fontIdMap = {}; // Map font ID to font object
-	const fonts = window.typographyStylistData?.fonts || [];
-	const adobeFonts = window.typographyStylistData?.adobeFonts || [];
-	const manualFonts = window.typographyStylistData?.manualFonts || [];
+	const fonts = window.typostData?.fonts || [];
+	const adobeFonts = window.typostData?.adobeFonts || [];
+	const manualFonts = window.typostData?.manualFonts || [];
 
 	// Add uploaded fonts
 	fonts.forEach(font => {
@@ -591,7 +603,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	});
 
 	const toggleFeature = (featureId) => {
-		// Check if we have a valid selection - if so, apply inline instead
+		// Check if we have a valid selection - if so, toggle inline instead
 		if (selectionStart && selectionEnd &&
 		    selectionStart.clientId === clientId &&
 		    selectionEnd.clientId === clientId) {
@@ -599,9 +611,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const start = selectionStart.offset || 0;
 			const end = selectionEnd.offset || 0;
 
-			// If there's a selection, apply inline instead of toggling block-level
+			// If there's a selection, toggle inline feature
 			if (start !== end) {
-				applyFeatureToSelection(featureId);
+				// Check if feature is already applied to this selection
+				if (inlineFeaturesAtSelection.includes(featureId)) {
+					// Feature is active - remove it
+					removeFeatureFromSelection(featureId);
+				} else {
+					// Feature is not active - apply it
+					applyFeatureToSelection(featureId);
+				}
 				return;
 			}
 		}
@@ -663,7 +682,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const range = getRangeForOffsets(container, start, end, doc);
 
 				if (range) {
-					// Use the new helper to apply or merge styling (avoids nested ots-styled spans)
+					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
 					const attributes = {
 						'data-features': ''
 					};
@@ -684,7 +703,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	};
 
-	// Clear all inline formatting from selected text (removes ots-styled spans)
+	// Clear all inline formatting from selected text (removes typost-styled spans)
 	// This does NOT remove block-level features/styles
 	const clearInlineFormatting = () => {
 		if (!content) return;
@@ -706,23 +725,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const range = getRangeForOffsets(container, start, end, doc);
 
 				if (range) {
-					// Find all ots-styled spans within the range
+					// Find all typost-styled spans within the range
 					const commonAncestor = range.commonAncestorContainer;
 					let searchRoot = commonAncestor.nodeType === Node.TEXT_NODE
 						? commonAncestor.parentElement
 						: commonAncestor;
 
-					// Check if the selection itself is inside an ots-styled span
-					const parentSpan = searchRoot.closest('span.ots-styled');
+					// Check if the selection itself is inside an typost-styled span
+					const parentSpan = searchRoot.closest('span.typost-styled');
 					if (parentSpan) {
 						searchRoot = parentSpan;
 					}
 
-					const styledSpans = searchRoot.querySelectorAll('span.ots-styled');
+					const styledSpans = searchRoot.querySelectorAll('span.typost-styled');
 
-					// Also check if searchRoot itself is an ots-styled span
+					// Also check if searchRoot itself is an typost-styled span
 					const spansToUnwrap = [];
-					if (searchRoot.classList && searchRoot.classList.contains('ots-styled')) {
+					if (searchRoot.classList && searchRoot.classList.contains('typost-styled')) {
 						spansToUnwrap.push(searchRoot);
 					}
 					styledSpans.forEach(span => spansToUnwrap.push(span));
@@ -893,38 +912,227 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					// Use the new helper to apply or merge styling (avoids nested ots-styled spans)
-					const attributes = {
-						'data-features': featureId
-					};
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-features': featureId };
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
-						// Get the updated HTML
-						const newContent = container.innerHTML;
-						setAttributes({ content: newContent });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						// This catches cases where surroundContents() silently fails
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						// Check ALL spans, not just single-span case
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							// If this span's text matches the entire container text, it wrapped everything
+							if (spanText.length >= containerText.length - 1) {
+								// EXCEPTION: If this span is our INTENDED selection, it's valid
+								// Check if span text matches what we captured
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+
+									// eslint-disable-next-line no-console
+									if (typeof console !== 'undefined' && console.warn) {
+										console.warn('Typographic Stylist Block - Detected nested wrapping bug:', {
+											spanText: spanText.substring(0, 50),
+											spanTextLength: spanText.length,
+											containerTextLength: containerText.length,
+											capturedLength: capturedSelection?.length,
+											numSpans: typostSpans.length
+										});
+									}
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							// eslint-disable-next-line no-console
+							if (typeof console !== 'undefined' && console.warn) {
+								console.warn('Typographic Stylist Block - Post-validation failed: surroundContents wrapped entire content');
+							}
+							success = false; // Force fallback
+						}
 					}
 				}
 
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					// eslint-disable-next-line no-console
+					if (typeof console !== 'undefined' && console.warn) {
+						console.warn('Typographic Stylist Block - Range method failed, using string fallback:', validation.reason);
+					}
+
+					const attributes = { 'data-features': featureId };
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+						success = true;
+					} else {
+						// eslint-disable-next-line no-console
+						if (typeof console !== 'undefined' && console.error) {
+							console.error('Typographic Stylist Block - Both range and string methods failed:', fallbackResult.error);
+						}
+						return; // Give up
+					}
+				}
+
+				// 3. Update content if either method succeeded
+				if (success) {
+					setAttributes({ content: newContent });
+				}
 			}
 		}
 	};
 
-	// Clear all inline ots-styled spans from content (doesn't affect block-level settings)
+	// Remove a specific feature from the selected text
+	const removeFeatureFromSelection = (featureId) => {
+		if (!content) return;
+
+		// Check if we have a valid selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				// Parse the current content as HTML
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					// Find all typost-styled spans within the range that have this feature
+					const commonAncestor = range.commonAncestorContainer;
+					let searchRoot = commonAncestor.nodeType === Node.TEXT_NODE
+						? commonAncestor.parentElement
+						: commonAncestor;
+
+					// Check if the selection itself is inside a typost-styled span
+					const parentSpan = searchRoot.closest('span.typost-styled');
+					if (parentSpan) {
+						searchRoot = parentSpan;
+					}
+
+					const styledSpans = searchRoot.querySelectorAll('span.typost-styled');
+
+					// Collect spans that have this specific feature
+					const spansToProcess = [];
+					if (searchRoot.classList && searchRoot.classList.contains('typost-styled')) {
+						const dataFeatures = searchRoot.getAttribute('data-features');
+						if (dataFeatures && dataFeatures.includes(featureId)) {
+							spansToProcess.push(searchRoot);
+						}
+					}
+					styledSpans.forEach(span => {
+						const dataFeatures = span.getAttribute('data-features');
+						if (dataFeatures && dataFeatures.includes(featureId)) {
+							spansToProcess.push(span);
+						}
+					});
+
+					// Remove the feature from each span
+					spansToProcess.forEach(span => {
+						const dataFeatures = span.getAttribute('data-features');
+						if (dataFeatures) {
+							// Split features (comma-separated) and remove the target feature
+							const featureList = dataFeatures.split(',').map(f => f.trim()).filter(f => f && f !== featureId);
+
+							if (featureList.length === 0) {
+								// No features left - unwrap the span
+								if (span.parentNode) {
+									while (span.firstChild) {
+										span.parentNode.insertBefore(span.firstChild, span);
+									}
+									span.parentNode.removeChild(span);
+								}
+							} else {
+								// Update the span with remaining features (comma-separated)
+								span.setAttribute('data-features', featureList.join(','));
+
+								// Rebuild font-feature-settings CSS with all remaining features
+								const featureSettings = featureList.map(f => `"${f}" 1`).join(', ');
+								const currentStyle = span.getAttribute('style') || '';
+
+								// Parse existing styles
+								const styleObj = {};
+								currentStyle.split(';').forEach(rule => {
+									const [prop, value] = rule.split(':').map(s => s.trim());
+									if (prop && value) {
+										styleObj[prop] = value;
+									}
+								});
+
+								// Update font-feature-settings
+								styleObj['font-feature-settings'] = featureSettings;
+
+								// Rebuild style string
+								const newStyle = Object.entries(styleObj)
+									.filter(([prop, value]) => prop && value)
+									.map(([prop, value]) => `${prop}: ${value}`)
+									.join('; ');
+
+								span.setAttribute('style', newStyle);
+							}
+						}
+					});
+
+					// Get the updated HTML
+					const newContent = container.innerHTML;
+					setAttributes({ content: newContent });
+				}
+			}
+		}
+	};
+
+	// Clear all inline typost-styled spans from content (doesn't affect block-level settings)
 	const clearAllInlineFeatures = () => {
 		if (!content) return;
 
-		// Parse the content and remove all ots-styled spans
+		// Parse the content and remove all typost-styled spans
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 		const container = doc.body.firstChild;
 
-		// Find all ots-styled spans
-		const styledSpans = container.querySelectorAll('span.ots-styled');
+		// Find all typost-styled spans
+		const styledSpans = container.querySelectorAll('span.typost-styled');
 
 		// Unwrap each span (replace it with its contents)
 		styledSpans.forEach(span => {
@@ -951,7 +1159,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const parser = new DOMParser();
 			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 			const container = doc.body.firstChild;
-			const styledSpans = container.querySelectorAll('span.ots-styled');
+			const styledSpans = container.querySelectorAll('span.typost-styled');
 			styledSpans.forEach(span => {
 				if (span.parentNode) {
 					while (span.firstChild) {
@@ -1035,7 +1243,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						⚠️ {__('Are you sure?', 'typography-stylist')}
 					</p>
 					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
-						{__('This will remove all inline features (ots-styled spans) from this block. Block-level settings will remain.', 'typography-stylist')}
+						{__('This will remove all inline features (typost-styled spans) from this block. Block-level settings will remain.', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
@@ -1101,7 +1309,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					{__('Clear Individual Features', 'typography-stylist')}
 				</Button>
 				<p style={{ fontSize: '11px', color: '#666', margin: '0 0 16px 0' }}>
-					{__('Removes all inline features (ots-styled spans) but keeps block-level settings.', 'typography-stylist')}
+					{__('Removes all inline features (typost-styled spans) but keeps block-level settings.', 'typography-stylist')}
 				</p>
 
 				<Button
@@ -1133,15 +1341,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						<Modal
 							title=""
 							onRequestClose={handlePopoverClose}
-							className={`ots-modal ots-block-modal ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''}`}
+							className={`typost-modal typost-block-modal ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''}`}
 							isDismissible={true}
 							shouldCloseOnClickOutside={false}
 							shouldCloseOnEsc={true}
 							__experimentalHideHeader={true}
 							onMouseDown={(e) => {
 								// Only trigger drag if clicking on header, not content
-								if (e.target.classList.contains('ots-modal-header') ||
-									e.target.closest('.ots-modal-header')) {
+								if (e.target.classList.contains('typost-modal-header') ||
+									e.target.closest('.typost-modal-header')) {
 									handleDragStart(e);
 								}
 							}}
@@ -1158,7 +1366,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						>
 							{/* Custom draggable header */}
 							<div
-								className="ots-modal-header"
+								className="typost-modal-header"
 								onMouseDown={handleDragStart}
 								role="toolbar"
 								aria-label={__('Drag to reposition modal', 'typography-stylist')}
@@ -1170,12 +1378,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									icon="no-alt"
 									label={__('Close', 'typography-stylist')}
 									onClick={handlePopoverClose}
-									className="ots-modal-close-button"
+									className="typost-modal-close-button"
 								/>
 							</div>
 
 							{/* Modal content wrapper with scroll */}
-							<div className="ots-modal-content" style={{
+							<div className="typost-modal-content" style={{
 								height: `calc(${modalHeight}px - 60px)`,
 								overflowY: 'auto'
 							}}>
@@ -1183,7 +1391,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								<Notice
 									status="info"
 									isDismissible={false}
-									className="ots-drag-notice"
+									className="typost-drag-notice"
 									style={{ margin: '0 0 16px 0' }}
 								>
 									<p style={{ margin: 0 }}>
@@ -1355,7 +1563,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											key={category}
 											title={getCategoryTitle(category)}
 											initialOpen={hasActiveFeatures}
-											className={`ots-feature-category-panel ${hasActiveFeatures ? 'has-active-features' : ''}`}
+											className={`typost-feature-category-panel ${hasActiveFeatures ? 'has-active-features' : ''}`}
 										>
 										{categoryFeatures.map(feature => {
 											const sampleText = previewText || 'ffi ffl Th AE';
@@ -1378,9 +1586,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 													<div style={{ fontSize: '12px', color: '#666', marginBottom: '6px', marginLeft: '24px' }}>
 														{feature.description}
 													</div>
-													<div className="ots-feature-preview" style={{ marginLeft: '24px' }}>
+													<div className="typost-feature-preview" style={{ marginLeft: '24px' }}>
 														<Button
-															className="ots-feature-preview-on ots-feature-apply-btn"
+															className="typost-feature-preview-on typost-feature-apply-btn"
 															onClick={() => applyFeatureToSelection(feature.id)}
 															style={{
 																fontFeatureSettings: `"${feature.id}" 1`,
@@ -1442,15 +1650,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							</div>
 
 							{/* Resize handles */}
-							<div className="ots-resize-handles">
-								<div className="ots-resize-handle ots-resize-handle-n" onMouseDown={(e) => handleResizeStart(e, 'n')} />
-								<div className="ots-resize-handle ots-resize-handle-ne" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
-								<div className="ots-resize-handle ots-resize-handle-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
-								<div className="ots-resize-handle ots-resize-handle-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
-								<div className="ots-resize-handle ots-resize-handle-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
-								<div className="ots-resize-handle ots-resize-handle-sw" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
-								<div className="ots-resize-handle ots-resize-handle-w" onMouseDown={(e) => handleResizeStart(e, 'w')} />
-								<div className="ots-resize-handle ots-resize-handle-nw" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
+							<div className="typost-resize-handles">
+								<div className="typost-resize-handle typost-resize-handle-n" onMouseDown={(e) => handleResizeStart(e, 'n')} />
+								<div className="typost-resize-handle typost-resize-handle-ne" onMouseDown={(e) => handleResizeStart(e, 'ne')} />
+								<div className="typost-resize-handle typost-resize-handle-e" onMouseDown={(e) => handleResizeStart(e, 'e')} />
+								<div className="typost-resize-handle typost-resize-handle-se" onMouseDown={(e) => handleResizeStart(e, 'se')} />
+								<div className="typost-resize-handle typost-resize-handle-s" onMouseDown={(e) => handleResizeStart(e, 's')} />
+								<div className="typost-resize-handle typost-resize-handle-sw" onMouseDown={(e) => handleResizeStart(e, 'sw')} />
+								<div className="typost-resize-handle typost-resize-handle-w" onMouseDown={(e) => handleResizeStart(e, 'w')} />
+								<div className="typost-resize-handle typost-resize-handle-nw" onMouseDown={(e) => handleResizeStart(e, 'nw')} />
 							</div>
 						</Modal>
 					)}
@@ -1626,7 +1834,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
 					</p>
 					{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
-						<div key={category} className="ots-feature-category">
+						<div key={category} className="typost-feature-category">
 							<h4>{getCategoryTitle(category)}</h4>
 							{categoryFeatures.map(feature => (
 								<ToggleControl
@@ -1682,7 +1890,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					onChange={(value) => setAttributes({ content: value })}
 					placeholder={__('Add text with advanced typography...', 'typography-stylist')}
 					style={buildStyle()}
-					className="ots-block-content"
+					className="typost-block-content"
 				/>
 			</div>
 		</>

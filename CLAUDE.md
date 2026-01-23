@@ -11,11 +11,11 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 ### Core Plugin Structure
 
 **Main Plugin File:** [typography-stylist.php](typography-stylist.php)
-- Singleton class `OpenType_Stylist` handles all WordPress integration
+- Singleton class `Typost` handles all WordPress integration
 - Enqueues block editor and frontend assets
-- Registers REST API endpoints at `/wp-json/typography-stylist/v1/`
-- Manages presets stored in `wp_options` table (`ots_presets`)
-- Constants: `OTS_VERSION`, `OTS_PLUGIN_DIR`, `OTS_PLUGIN_URL`, `OTS_PLUGIN_BASENAME`
+- Registers REST API endpoints at `/wp-json/typost/v1/`
+- Manages presets stored in `wp_options` table (`TYPOST_presets`)
+- Constants: `TYPOST_VERSION`, `TYPOST_PLUGIN_DIR`, `TYPOST_PLUGIN_URL`, `TYPOST_PLUGIN_BASENAME`
 
 **Block Editor Integration:**
 
@@ -25,8 +25,8 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **What:** Toolbar button (with "O" icon) available on standard rich text blocks (core/heading, core/paragraph, etc.)
    - **When:** Use for applying features to complete words/phrases in any heading or paragraph block
    - **How:** Opens a popover with presets, individual features, font controls, and preview
-   - **Implementation:** Registers custom format type `ots/typography-features` using WordPress `@wordpress/format-api`
-   - **Output:** Applies formatting using inline `<span class="ots-styled" data-features="..." style="font-feature-settings: ...">`
+   - **Implementation:** Registers custom format type `typost/typography-features` using WordPress `@wordpress/format-api`
+   - **Output:** Applies formatting using inline `<span class="typost-styled" data-features="..." style="font-feature-settings: ...">`
    - **Storage:** Features are stored directly in post content (no separate meta table)
    - **Note:** Features must be explicitly applied via the "Apply" button (not automatic on toggle)
 
@@ -35,7 +35,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **When:** Use for complex typography with accessibility features or when styling partial words
    - **Components:**
      - **Inspector Controls (Sidebar):** Block-level settings for font family, weight, size, letter spacing, and OpenType features
-     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="ots-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to OTS block content)
+     - **Quick Feature Toggles (Popover):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="typost-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to Typographic Stylist block content)
    - **Features:**
      - Dual content approach: clean semantic heading for screen readers, styled version for visual display
      - Built with JSX/React using `@wordpress/scripts` build toolchain
@@ -45,15 +45,14 @@ The plugin provides two distinct interfaces for applying OpenType features:
 **Admin Interface:** [includes/admin-page.php](includes/admin-page.php)
 - Tabbed interface showing: Presets, Font Features, Custom Fonts, Accessibility, Help
 - Font management: Upload webfont kits, Adobe Fonts integration, custom font definitions
-- Font preview with glyph browser for testing OpenType features
-- Glyph browser: [assets/js/glyph-browser.min.js](assets/js/glyph-browser.min.js) - Interactive font preview tool
+- Font preview for testing OpenType features
 - Inline styles and jQuery for tab switching
 - Located at Settings → Typography Stylist
 
 ### Data Flow
 
 1. User selects text in heading block → clicks toolbar button
-2. Popover shows presets (from `otsData.presets`) and features (from `otsData.features`)
+2. Popover shows presets (from `typostData.presets`) and features (from `typostData.features`)
 3. User toggles features or selects preset → clicks Apply
 4. JavaScript applies inline format with `data-features` attribute and `font-feature-settings` style
 5. Frontend displays with CSS only (no JavaScript required)
@@ -61,26 +60,26 @@ The plugin provides two distinct interfaces for applying OpenType features:
 ### REST API Endpoints
 
 **Presets:**
-- `GET /wp-json/typography-stylist/v1/presets` - Get all presets
-- `POST /wp-json/typography-stylist/v1/presets` - Save new preset (requires `edit_posts` capability)
-- `DELETE /wp-json/typography-stylist/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
+- `GET /wp-json/typost/v1/presets` - Get all presets
+- `POST /wp-json/typost/v1/presets` - Save new preset (requires `edit_posts` capability)
+- `DELETE /wp-json/typost/v1/presets/{id}` - Delete preset (requires `edit_posts` capability)
 
 **Custom Fonts (Uploaded Webfont Kits):**
-- `GET /wp-json/typography-stylist/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/typography-stylist/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
-- `DELETE /wp-json/typography-stylist/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
-- `PATCH /wp-json/typography-stylist/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typost/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/typost/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
+- `DELETE /wp-json/typost/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
+- `PATCH /wp-json/typost/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Adobe Fonts (Typekit):**
-- `GET /wp-json/typography-stylist/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/typography-stylist/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
-- `DELETE /wp-json/typography-stylist/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
-- `PATCH /wp-json/typography-stylist/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `GET /wp-json/typost/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/typost/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
+- `DELETE /wp-json/typost/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
+- `PATCH /wp-json/typost/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
 
 **Custom Font Definitions (Theme/Plugin/CDN Fonts):**
-- `GET /wp-json/typography-stylist/v1/manual-fonts` - Get custom font definitions
-- `POST /wp-json/typography-stylist/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
-- `DELETE /wp-json/typography-stylist/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
+- `GET /wp-json/typost/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/typost/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
+- `DELETE /wp-json/typost/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)
@@ -187,8 +186,8 @@ npm test -- --coverage    # See test coverage report
 **To add default presets:** Edit `get_default_presets()` in [typography-stylist.php](typography-stylist.php:209-242)
 
 **Filter hooks for extensibility:**
-- `OTS_available_features` - Filter available features
-- `OTS_default_presets` - Filter default presets
+- `TYPOST_available_features` - Filter available features
+- `TYPOST_default_presets` - Filter default presets
 
 ### Code Patterns
 
@@ -237,11 +236,11 @@ npm test -- --coverage    # See test coverage report
 
 - Typography features are stored **inline in post content**, not in post meta
 - No database migrations needed - uses existing `wp_options` for:
-  - `ots_presets` - User-created presets
-  - `ots_custom_fonts` - Uploaded webfont kits metadata
-  - `ots_adobe_fonts` - Adobe Fonts project configurations
-  - `ots_manual_fonts` - Custom font definitions
-- Uploaded font files stored in `wp-content/uploads/ots/fonts/` with .htaccess protection
+  - `TYPOST_presets` - User-created presets
+  - `TYPOST_custom_fonts` - Uploaded webfont kits metadata
+  - `TYPOST_adobe_fonts` - Adobe Fonts project configurations
+  - `TYPOST_manual_fonts` - Custom font definitions
+- Uploaded font files stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 - Frontend has zero JavaScript - purely CSS-based rendering
 - Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)
 - **Plugin supports two usage methods:**

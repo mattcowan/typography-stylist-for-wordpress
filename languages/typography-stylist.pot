@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Typography Stylist 1.1.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Typography Stylist\n"
 "POT-Creation-Date: 2026-01-19 23:36+0000\n"
 "PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Custom PHP Script\n"
-"X-Domain: typography-stylist\n"
+"X-Domain: Typography Stylist\n"
 
 #: opentype-stylist.php:348
 msgid "Headline Ligatures & Styles"

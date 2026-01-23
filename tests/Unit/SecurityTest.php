@@ -1,7 +1,7 @@
 <?php
-namespace OpenTypeStylist\Tests\Unit;
+namespace TypographyStylist\Tests\Unit;
 
-use OpenTypeStylist\Tests\TestCase;
+use TypographyStylist\Tests\TestCase;
 use Brain\Monkey\Functions;
 
 /**
@@ -15,10 +15,10 @@ class SecurityTest extends TestCase {
     private function getPluginInstance() {
         static $loaded = false;
         if (!$loaded) {
-            require_once OTS_PLUGIN_DIR . '/opentype-stylist.php';
+            require_once TYPOST_PLUGIN_DIR . '/typography-stylist.php';
             $loaded = true;
         }
-        return \Typography_Stylist::get_instance();
+        return \Typost::get_instance();
     }
 
     /**

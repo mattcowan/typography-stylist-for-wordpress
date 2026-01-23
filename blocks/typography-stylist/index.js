@@ -18,7 +18,7 @@ const TSIcon = () => (
 );
 
 // Register the block
-registerBlockType('typography-stylist/block', {
+registerBlockType('typost/block', {
 	icon: TSIcon,
 	edit: Edit,
 	save: save,
@@ -33,7 +33,7 @@ registerBlockType('typography-stylist/block', {
 
 					if (analysis.shouldExtractToBlock) {
 						// Full coverage with uniform features - extract to block level
-						return createBlock('typography-stylist/block', {
+						return createBlock('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'p',
 							features: analysis.commonFeatures
@@ -41,7 +41,7 @@ registerBlockType('typography-stylist/block', {
 					}
 
 					// Partial coverage or mixed features - preserve inline spans
-					return createBlock('typography-stylist/block', {
+					return createBlock('typost/block', {
 						content: attributes.content,
 						tagName: 'p',
 						features: []
@@ -57,7 +57,7 @@ registerBlockType('typography-stylist/block', {
 
 					if (analysis.shouldExtractToBlock) {
 						// Full coverage with uniform features - extract to block level
-						return createBlock('typography-stylist/block', {
+						return createBlock('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'h' + attributes.level,
 							features: analysis.commonFeatures
@@ -65,7 +65,7 @@ registerBlockType('typography-stylist/block', {
 					}
 
 					// Partial coverage or mixed features - preserve inline spans
-					return createBlock('typography-stylist/block', {
+					return createBlock('typost/block', {
 						content: attributes.content,
 						tagName: 'h' + attributes.level,
 						features: []

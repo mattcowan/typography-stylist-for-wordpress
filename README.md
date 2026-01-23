@@ -1,4 +1,4 @@
-# Typography Stylist
+# Typost
 
 A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview in the Gutenberg block editor.
 
@@ -23,7 +23,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ### Accessibility Features
 - Smart selection warnings for partial word selections
-- Typography Stylist block maintains proper heading semantics for both screen reader and visual views
+- Typost block maintains proper heading semantics for both screen reader and visual views
 - ARIA markup ensures screen reader compatibility while enabling complex typography
 - Optional aria-label attributes for inline formatted text
 - Configurable screen reader classes (visually-hidden, sr-only, custom)
@@ -41,12 +41,12 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 1. **Download** or clone this repository into your WordPress plugins directory:
    ```bash
    cd wp-content/plugins/
-   git clone [repository-url] opentype-stylist
+   git clone [repository-url] typost
    ```
 
 2. **Activate** the plugin through the WordPress admin panel:
    - Go to Plugins → Installed Plugins
-   - Find "Typography Stylist"
+   - Find "Typost"
    - Click "Activate"
 
 3. **Configure** (optional):
@@ -61,7 +61,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 #### Option 1: Upload Webfont Kits (MyFonts, Fontspring, etc.)
 
 1. **Purchase and download** your webfont kit from MyFonts, Fontspring, or another provider
-2. **Go to** Settings → Typography Stylist → Custom Fonts tab
+2. **Go to** Settings → Typost → Custom Fonts tab
 3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
 4. **Click "Choose ZIP File"** and select your webfont kit ZIP file
 5. **Click "Upload Font Kit"**
@@ -81,7 +81,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 1. **Go to** [fonts.adobe.com](https://fonts.adobe.com) and create or open a Web Project
 2. **Add the fonts** you want to use to your project
 3. **Copy the embed code** (the `<script>` tag) from your Adobe Fonts project
-4. **Go to** Settings → Typography Stylist → Custom Fonts tab
+4. **Go to** Settings → Typost → Custom Fonts tab
 5. **Scroll to** "Adobe Fonts (Typekit)" section
 6. **Enter a project name** (e.g., "My Adobe Fonts")
 7. **Paste the embed code** into the textarea
@@ -97,7 +97,7 @@ The fonts will be immediately available in the preview selector and block editor
 If you have fonts loaded through your theme, another plugin, or a CDN (like Google Fonts), you can define them for use with this plugin:
 
 1. **Make sure your font is already loaded** on your site
-2. **Go to** Settings → Typography Stylist → Custom Fonts tab
+2. **Go to** Settings → Typost → Custom Fonts tab
 3. **Scroll to** "Custom Font Definitions" section
 4. **Enter a display name** for the font (e.g., "Playfair Display")
 5. **Enter the CSS font-family value** exactly as it appears in your theme (e.g., `'Playfair Display', serif`)
@@ -133,19 +133,19 @@ font-family: 'Playfair Display', Georgia, serif;
 1. **Create a heading block** in the WordPress editor (H1-H6)
 2. **Type your headline** text
 3. **Select the text** you want to style (complete words or phrases)
-4. **Click the Typography Stylist button** in the toolbar (circle "O" icon)
+4. **Click the Typost button** in the toolbar (circle "O" icon)
 5. **Choose a preset** or toggle individual features
 6. **Preview** your changes in real-time
 7. **Click Apply** to save
 
 **Note:** If you select partial words, you'll see an accessibility warning with options to:
-- Convert to an accessible Typography Stylist block
+- Convert to an accessible Typost block
 - Apply anyway (not recommended)
 - Cancel
 
-#### Method 2: Typography Stylist Block (for complex typography)
+#### Method 2: Typost Block (for complex typography)
 
-1. **Add a Typography Stylist block** from the block inserter
+1. **Add a Typost block** from the block inserter
 2. **Select the heading level** (H1-H6, P, or DIV) from the toolbar
 3. **Type your text** directly in the block
 4. **Configure features** in the sidebar Inspector Controls:
@@ -181,7 +181,7 @@ This plugin requires fonts that support OpenType features. Many premium script f
 <h1>Sarah & Michael</h1>
 
 <!-- After (with Wedding Style preset: calt + ss02 + swsh) -->
-<h1><span class="ots-styled" data-features="calt,ss02,swsh" style="font-feature-settings: 'calt' 1, 'ss02' 1, 'swsh' 1">S</span>arah & Michael</h1>
+<h1><span class="typost-styled" data-features="calt,ss02,swsh" style="font-feature-settings: 'calt' 1, 'ss02' 1, 'swsh' 1">S</span>arah & Michael</h1>
 ```
 
 ## Technical Details
@@ -189,8 +189,8 @@ This plugin requires fonts that support OpenType features. Many premium script f
 ### File Structure
 
 ```
-opentype-stylist/
-├── typography-stylist.php              # Main plugin file
+typost/
+├── typost.php              # Main plugin file
 ├── includes/
 │   └── admin-page.php                # Admin settings page
 ├── assets/
@@ -210,41 +210,41 @@ opentype-stylist/
 
 **Block Editor (Gutenberg)**
 - Uses `@wordpress/format-api` for inline formatting
-- Registers custom format type: `ots/typography-features`
+- Registers custom format type: `typost/typography-features`
 - React-based UI components
 
 **REST API Endpoints**
 
 *Presets:*
-- `GET /wp-json/typography-stylist/v1/presets` - Get all presets
-- `POST /wp-json/typography-stylist/v1/presets` - Save new preset
-- `DELETE /wp-json/typography-stylist/v1/presets/{id}` - Delete preset
+- `GET /wp-json/typost/v1/presets` - Get all presets
+- `POST /wp-json/typost/v1/presets` - Save new preset
+- `DELETE /wp-json/typost/v1/presets/{id}` - Delete preset
 
 *Custom Fonts:*
-- `GET /wp-json/typography-stylist/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/typography-stylist/v1/fonts` - Upload font kit (multipart/form-data)
-- `DELETE /wp-json/typography-stylist/v1/fonts/{id}` - Delete font kit
+- `GET /wp-json/typost/v1/fonts` - Get uploaded font kits
+- `POST /wp-json/typost/v1/fonts` - Upload font kit (multipart/form-data)
+- `DELETE /wp-json/typost/v1/fonts/{id}` - Delete font kit
 
 *Adobe Fonts:*
-- `GET /wp-json/typography-stylist/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/typography-stylist/v1/adobe-fonts` - Add Adobe Fonts project
-- `DELETE /wp-json/typography-stylist/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
-- `PATCH /wp-json/typography-stylist/v1/adobe-fonts/{id}/fallback` - Update fallback fonts
+- `GET /wp-json/typost/v1/adobe-fonts` - Get Adobe Fonts projects
+- `POST /wp-json/typost/v1/adobe-fonts` - Add Adobe Fonts project
+- `DELETE /wp-json/typost/v1/adobe-fonts/{id}` - Delete Adobe Fonts project
+- `PATCH /wp-json/typost/v1/adobe-fonts/{id}/fallback` - Update fallback fonts
 
 *Custom Fonts:*
-- `GET /wp-json/typography-stylist/v1/manual-fonts` - Get custom font definitions
-- `POST /wp-json/typography-stylist/v1/manual-fonts` - Add custom font
-- `DELETE /wp-json/typography-stylist/v1/manual-fonts/{id}` - Delete custom font
+- `GET /wp-json/typost/v1/manual-fonts` - Get custom font definitions
+- `POST /wp-json/typost/v1/manual-fonts` - Add custom font
+- `DELETE /wp-json/typost/v1/manual-fonts/{id}` - Delete custom font
 
 *Fallbacks:*
-- `PATCH /wp-json/typography-stylist/v1/fonts/{id}/fallback` - Update fallback for uploaded font
+- `PATCH /wp-json/typost/v1/fonts/{id}/fallback` - Update fallback for uploaded font
 
 **Data Storage**
-- Presets: `wp_options` table (`ots_presets`)
-- Custom Fonts (Uploaded): `wp_options` table (`ots_custom_fonts`)
-- Adobe Fonts: `wp_options` table (`ots_adobe_fonts`)
-- Manual Fonts: `wp_options` table (`ots_manual_fonts`)
-- Font Files: `wp-content/uploads/ots/fonts/` directory
+- Presets: `wp_options` table (`typost_presets`)
+- Custom Fonts (Uploaded): `wp_options` table (`typost_custom_fonts`)
+- Adobe Fonts: `wp_options` table (`typost_adobe_fonts`)
+- Manual Fonts: `wp_options` table (`typost_manual_fonts`)
+- Font Files: `wp-content/uploads/typography-stylist/fonts/` directory
 - Feature settings: Inline in post content (data attributes + styles)
 
 ### CSS Implementation
@@ -252,7 +252,7 @@ opentype-stylist/
 Features are applied using the `font-feature-settings` CSS property:
 
 ```css
-.ots-styled {
+.typost-styled {
     font-feature-settings: "calt" 1, "ss02" 1, "swsh" 1;
 }
 ```
@@ -287,7 +287,7 @@ The plugin includes accessibility features for screen reader compatibility:
 - Optional aria-label support (configurable in Settings → Accessibility)
 - Conversion tool to accessible block format
 
-**For Typography Stylist Block:**
+**For Typost Block:**
 - Dual content approach: clean text for screen readers, styled text for visual display
 - ARIA markup with `aria-hidden="true"` on styled content
 - Configurable screen reader classes (visually-hidden, sr-only, custom)
@@ -295,20 +295,20 @@ The plugin includes accessibility features for screen reader compatibility:
 
 **Recommended Usage:**
 - Use inline format for simple, complete word/phrase styling
-- Use Typography Stylist block for complex or letter-by-letter typography
+- Use Typost block for complex or letter-by-letter typography
 - Test with screen readers like NVDA (Windows) or VoiceOver (macOS) to verify compatibility with your content
 
-### How does the Typography Stylist block ensure accessibility?
+### How does the Typost block ensure accessibility?
 
 The block creates two versions of your content:
 
 ```html
-<div class="wp-block-opentype-stylist">
+<div class="wp-block-typost">
   <!-- For screen readers - maintains semantic heading structure -->
   <h2 class="visually-hidden">Beautiful Typography</h2>
 
   <!-- For visual display -->
-  <h2 class="ots-styled" aria-hidden="true">
+  <h2 class="typost-styled" aria-hidden="true">
     [Styled content with OpenType features]
   </h2>
 </div>
@@ -326,7 +326,7 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 ### What happens to uploaded fonts?
 
-Fonts are stored securely in `wp-content/uploads/ots/fonts/` with:
+Fonts are stored securely in `wp-content/uploads/typography-stylist/fonts/` with:
 - .htaccess protection to prevent PHP execution
 - Organized directory structure by kit ID
 - Automatic CSS path rewriting for WordPress compatibility
@@ -337,7 +337,7 @@ Adobe Fonts load directly from Adobe's servers using the script you provide. Mak
 
 ### Can I delete uploaded fonts?
 
-Yes! Go to Settings → Typography Stylist → Custom Fonts tab and click the "Delete" button next to any font kit or Adobe Fonts project. For uploaded kits, this will also remove all associated files from your server.
+Yes! Go to Settings → Typost → Custom Fonts tab and click the "Delete" button next to any font kit or Adobe Fonts project. For uploaded kits, this will also remove all associated files from your server.
 
 ### Will this work with page builders?
 
@@ -352,7 +352,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 ### Version 1.0.0
 
 **Accessibility Features:**
-- Typography Stylist custom block with ARIA support
+- Typost custom block with ARIA support
 - Smart selection validation with warnings for partial word selections
 - Conversion from inline format to accessible block
 - Optional aria-label support for inline formatted text
@@ -415,7 +415,7 @@ npm run build:block
 npm run watch
 ```
 
-The plugin works as-is without build tools for the inline format. the Typography Stylist block requires building with `npm run build:block`.
+The plugin works as-is without build tools for the inline format. the Typost block requires building with `npm run build:block`.
 
 ### Extending the Plugin
 
@@ -423,7 +423,7 @@ The plugin works as-is without build tools for the inline format. the Typography
 
 ```php
 // In your theme's functions.php
-add_filter('OTS_available_features', function($features) {
+add_filter('TYPOST_available_features', function($features) {
     $features[] = array(
         'id' => 'cv01',
         'name' => __('Character Variant 1'),
@@ -437,7 +437,7 @@ add_filter('OTS_available_features', function($features) {
 **Add Custom Presets**
 
 ```php
-add_filter('OTS_default_presets', function($presets) {
+add_filter('TYPOST_default_presets', function($presets) {
     $presets[] = array(
         'id' => 'my-custom-preset',
         'name' => __('My Custom Style'),
@@ -459,7 +459,7 @@ The plugin implements multiple security measures for font uploads:
 - **Path Traversal Protection**: Prevents files from being extracted outside the designated directory
 - **CSS Sanitization**: Removes dangerous CSS expressions, JavaScript protocols, and unwanted @ rules
 - **Size Limits**: Maximum 10MB for ZIP files, 1MB for CSS files
-- **Secure Storage**: Uploaded fonts stored in `wp-content/uploads/ots/fonts/` with .htaccess protection
+- **Secure Storage**: Uploaded fonts stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 
 ### Adobe Fonts Security
 

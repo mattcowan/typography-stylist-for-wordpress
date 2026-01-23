@@ -16,7 +16,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
     const { compose } = wp.compose;
 
     // Define the format type name
-    const FORMAT_TYPE = 'ots/typography-features';
+    const FORMAT_TYPE = 'typost/features';
 
     /**
      * Shared utility functions
@@ -144,8 +144,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             textElement = blockWrapper.querySelector('[class*="gb-headline"]');
         }
         // Typography Stylist blocks
-        else if (blockName === 'typography-stylist/block') {
-            textElement = blockWrapper.querySelector('.ots-block-content');
+        else if (blockName === 'typost/block') {
+            textElement = blockWrapper.querySelector('.typost-block-content');
         }
         // Fallback: try common RichText elements
         else {
@@ -164,7 +164,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
     // Expose utilities for testing
     if (typeof window !== 'undefined') {
-        window.otsUtils = {
+        window.typostUtils = {
             escapeHTML,
             hasHTMLTags,
             validateSelectionBounds,
@@ -230,7 +230,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 showClearConfirmation: false,
                 dontShowClearWarning: hideWarning,
                 // Inline features cached when popover opens (for inline editor toolbar)
-                // Note: OTS block sidebar (edit.js) uses useMemo for similar optimization
+                // Note: Typographic Stylist block sidebar (edit.js) uses useMemo for similar optimization
                 inlineFeatures: [],
                 // Font inherited from block's computed styles (when Default font is selected)
                 blockInheritedFont: '',
@@ -292,7 +292,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         }
 
         /**
-         * Get styled span element at current selection in OTS blocks
+         * Get styled span element at current selection in Typographic Stylist blocks
          * Returns the span element if found, null otherwise
          * @private
          */
@@ -301,7 +301,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             const { select } = wp.data;
             const selectedBlock = select('core/block-editor').getSelectedBlock();
 
-            if (!selectedBlock || selectedBlock.name !== 'typography-stylist/block') {
+            if (!selectedBlock || selectedBlock.name !== 'typost/block') {
                 return null;
             }
 
@@ -320,7 +320,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             const container = doc.body.firstChild;
 
             // Find all styled spans
-            const styledSpans = container.querySelectorAll('span.ots-styled');
+            const styledSpans = container.querySelectorAll('span.typost-styled');
 
             // Find the smallest (most specific/innermost) span that matches
             let smallestMatchingSpan = null;
@@ -373,12 +373,12 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         }
 
         /**
-         * Get inline features from styled spans at current selection in OTS blocks
+         * Get inline features from styled spans at current selection in Typographic Stylist blocks
          * Optimized version - only called when popover opens, not on every render
          * @return {Array} Array of feature codes from the styled span at selection
          * @private
          */
-        getInlineFeaturesForOTSBlock() {
+        getInlineFeaturesForTypostBlock() {
             const styledSpan = this.getStyledSpanAtSelection();
 
             if (styledSpan) {
@@ -414,7 +414,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
         /**
          * Get currently active features from format
-         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
+         * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
          * Uses cached inline features when popover is open for performance
          */
         getActiveFeatures() {
@@ -432,13 +432,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return this.state.inlineFeatures;
             }
 
-            // Otherwise compute inline features for OTS blocks
-            return this.getInlineFeaturesForOTSBlock();
+            // Otherwise compute inline features for Typographic Stylist blocks
+            return this.getInlineFeaturesForTypostBlock();
         }
 
         /**
          * Get currently active font from format
-         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
+         * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
          */
         getActiveFont() {
             const { value } = this.props;
@@ -449,7 +449,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return activeFormat.attributes['data-font'];
             }
 
-            // Check for styled span in OTS block
+            // Check for styled span in Typographic Stylist block
             const styledSpan = this.getStyledSpanAtSelection();
             if (styledSpan) {
                 const dataFont = styledSpan.getAttribute('data-font');
@@ -480,7 +480,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return parseInt(activeFormat.attributes['data-font-id'], 10);
             }
 
-            // Check for styled span in OTS block
+            // Check for styled span in Typographic Stylist block
             const styledSpan = this.getStyledSpanAtSelection();
             if (styledSpan) {
                 const dataFontId = styledSpan.getAttribute('data-font-id');
@@ -597,7 +597,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
         /**
          * Get currently active letter spacing from format
-         * Also checks for inline <span class="ots-styled"> elements in OTS blocks
+         * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
          */
         getActiveLetterSpacing() {
             const { value } = this.props;
@@ -608,7 +608,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return parseInt(activeFormat.attributes['data-letterspacing'], 10);
             }
 
-            // Check for styled span in OTS block
+            // Check for styled span in Typographic Stylist block
             const styledSpan = this.getStyledSpanAtSelection();
             if (styledSpan) {
                 const dataSpacing = styledSpan.getAttribute('data-letterspacing');
@@ -670,7 +670,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 }
 
                 // Compute inline features only when opening (performance optimization)
-                computedInlineFeatures = this.getInlineFeaturesForOTSBlock();
+                computedInlineFeatures = this.getInlineFeaturesForTypostBlock();
 
                 // Detect block's inherited font for preview (when Default font is selected)
                 inheritedFont = this.getBlockInheritedFont();
@@ -869,7 +869,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             // Check if we're inside a Typography Stylist block
             const { select } = wp.data;
             const selectedBlock = select('core/block-editor').getSelectedBlock();
-            if (selectedBlock && selectedBlock.name === 'typography-stylist/block') {
+            if (selectedBlock && selectedBlock.name === 'typost/block') {
                 // Skip validation - Typography Stylist block already has proper accessibility
                 return { valid: true };
             }
@@ -922,11 +922,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             }
 
             // Check if we're already in a Typography Stylist block
-            const isAlreadyOTSBlock = currentBlock.name === 'typography-stylist/block';
+            const isAlreadyTypostBlock = currentBlock.name === 'typost/block';
 
-            // Determine tag from block name (core/heading, core/paragraph, or existing OTS block)
+            // Determine tag from block name (core/heading, core/paragraph, or existing Typographic Stylist block)
             let tagName = 'h2';
-            if (isAlreadyOTSBlock) {
+            if (isAlreadyTypostBlock) {
                 tagName = currentBlock.attributes.tagName || 'h2';
             } else if (currentBlock.name === 'core/heading' && currentBlock.attributes.level) {
                 tagName = `h${currentBlock.attributes.level}`;
@@ -985,7 +985,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     const textLength = container.textContent.length;
                     const validationResult = validateSelectionBounds(value.start, value.end, textLength);
                     if (!validationResult.valid) {
-                        console.error('OTS Inline Editor - Invalid selection bounds:', validationResult.error, { start: value.start, end: value.end, textLength });
+                        console.error('Typographic Stylist Inline Editor - Invalid selection bounds:', validationResult.error, { start: value.start, end: value.end, textLength });
                         return;
                     }
 
@@ -1020,9 +1020,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         range.setEnd(endNode, endOffset);
 
                         const span = doc.createElement('span');
-                        span.className = 'ots-styled';
+                        span.className = 'typost-styled';
                         // Always set data-features for new content (faster parsing than style attribute)
-                        // Note: getInlineFeaturesForOTSBlock() includes fallback for backward compatibility
+                        // Note: getInlineFeaturesForTypostBlock() includes fallback for backward compatibility
                         span.setAttribute('data-features', selectedFeatures.join(','));
                         span.setAttribute('style', styleString);
 
@@ -1030,13 +1030,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                             range.surroundContents(span);
                             contentForBlock = container.innerHTML;
                         } catch (e) {
-                            console.error('OTS Inline Editor - Failed to wrap selection, using fallback:', e);
+                            console.error('Typographic Stylist Inline Editor - Failed to wrap selection, using fallback:', e);
                             // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
                             const beforeText = fullText.substring(0, value.start);
                             const selectedText = fullText.substring(value.start, value.end);
                             const afterText = fullText.substring(value.end);
                             contentForBlock = escapeHTML(beforeText) +
-                                `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                                `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                                 escapeHTML(afterText);
                         }
                     } else {
@@ -1045,7 +1045,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         const selectedText = fullText.substring(value.start, value.end);
                         const afterText = fullText.substring(value.end);
                         contentForBlock = escapeHTML(beforeText) +
-                            `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                            `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                             escapeHTML(afterText);
                     }
                 } else {
@@ -1054,12 +1054,12 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     const selectedText = fullText.substring(value.start, value.end);
                     const afterText = fullText.substring(value.end);
                     contentForBlock = escapeHTML(beforeText) +
-                        `<span class="ots-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
                         escapeHTML(afterText);
                 }
 
-                // If already an OTS block, just update its attributes
-                if (isAlreadyOTSBlock) {
+                // If already an Typography Stylist block, just update its attributes
+                if (isAlreadyTypostBlock) {
                     dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
                         content: contentForBlock,
                         // Preserve existing block-level features, don't apply inline features globally
@@ -1075,7 +1075,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 } else {
                     // Create new Typography Stylist block preserving user's settings from inline editor
                     // Don't apply inline features globally - they're only for the selection
-                    const otsBlock = createBlock('typography-stylist/block', {
+                    const typostBlock = createBlock('typost/block', {
                         content: contentForBlock,
                         tagName: tagName,
                         features: [],
@@ -1089,14 +1089,14 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     });
 
                     // Replace current block
-                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
                 }
             } else {
                 // No selection - apply to entire block (original behavior)
                 const textContent = currentBlock.attributes.content || getTextContent(value);
 
-                // If already an OTS block, just update its attributes
-                if (isAlreadyOTSBlock) {
+                // If already an Typography Stylist block, just update its attributes
+                if (isAlreadyTypostBlock) {
                     dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
                         content: textContent,
                         features: this.state.selectedFeatures,
@@ -1109,7 +1109,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         letterSpacing: this.state.letterSpacing
                     });
                 } else {
-                    const otsBlock = createBlock('typography-stylist/block', {
+                    const typostBlock = createBlock('typost/block', {
                         content: textContent,
                         tagName: tagName,
                         features: this.state.selectedFeatures,
@@ -1123,7 +1123,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     });
 
                     // Replace current block
-                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, otsBlock);
+                    dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
                 }
             }
 
@@ -1202,7 +1202,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 attributes['style'] = styleString;
 
                 // Add aria-label if enabled for accessibility
-                if (typographyStylistData.enableAriaLabels && value) {
+                if (typostData.enableAriaLabels && value) {
                     const selectedText = value.start !== value.end
                         ? getTextContent(slice(value, value.start, value.end))
                         : getTextContent(value);
@@ -1274,7 +1274,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 attributes['style'] = styleString;
 
                 // Add aria-label if enabled for accessibility (in force apply)
-                if (typographyStylistData.enableAriaLabels && value) {
+                if (typostData.enableAriaLabels && value) {
                     const selectedText = value.start !== value.end
                         ? getTextContent(slice(value, value.start, value.end))
                         : getTextContent(value);
@@ -1312,7 +1312,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         handleClearClick() {
             // Check if confirmation is enabled globally and not disabled for this session
-            const showConfirmation = typographyStylistData.showClearConfirmation && !this.state.dontShowClearWarning;
+            const showConfirmation = typostData.showClearConfirmation && !this.state.dontShowClearWarning;
 
             if (showConfirmation) {
                 // Show confirmation modal
@@ -1396,7 +1396,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          * Group features by category
          */
         groupFeatures() {
-            const features = typographyStylistData.features || [];
+            const features = typostData.features || [];
             const grouped = {};
 
             features.forEach(feature => {
@@ -1414,9 +1414,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          * Get font options for select control
          */
         getFontOptions() {
-            const fonts = typographyStylistData.fonts || [];
-            const adobeFonts = typographyStylistData.adobeFonts || [];
-            const manualFonts = typographyStylistData.manualFonts || [];
+            const fonts = typostData.fonts || [];
+            const adobeFonts = typostData.adobeFonts || [];
+            const manualFonts = typostData.manualFonts || [];
             const options = [];
 
             // Build font ID map for quick lookup (clear before repopulating)
@@ -1592,17 +1592,17 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             }
 
             return (
-                <div key={feature.id} className="ots-feature-toggle">
+                <div key={feature.id} className="typost-feature-toggle">
                     <ToggleControl
                         label={feature.name}
                         help={feature.description}
                         checked={isActive}
                         onChange={() => this.toggleFeature(feature.id)}
                     />
-                    <code className="ots-feature-code">{feature.id}</code>
-                    <div className="ots-feature-preview">
+                    <code className="typost-feature-code">{feature.id}</code>
+                    <div className="typost-feature-preview">
                         <Button
-                            className="ots-feature-preview-on ots-feature-apply-btn"
+                            className="typost-feature-preview-on typost-feature-apply-btn"
                             onClick={() => this.applyFeatureFromPreview(feature.id)}
                             style={previewStyle}
                             aria-label={sprintf(__('Click to apply %s feature', 'typography-stylist'), feature.name)}
@@ -1628,10 +1628,10 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     isSecondary={!isActive}
                     isPrimary={isActive}
                     onClick={() => this.applyPreset(preset)}
-                    className="ots-preset-button"
+                    className="typost-preset-button"
                 >
-                    <div className="ots-preset-name">{preset.name}</div>
-                    <div className="ots-preset-features-list">{preset.features.join(', ')}</div>
+                    <div className="typost-preset-name">{preset.name}</div>
+                    <div className="typost-preset-features-list">{preset.features.join(', ')}</div>
                 </Button>
             );
         }
@@ -1641,12 +1641,12 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         handleDragStart(e) {
             // Don't drag if clicking the close button
-            if (e.target.closest('.ots-modal-close-button')) {
+            if (e.target.closest('.typost-modal-close-button')) {
                 return;
             }
 
             // Only drag from header area
-            if (!e.target.closest('.ots-modal-header')) {
+            if (!e.target.closest('.typost-modal-header')) {
                 return;
             }
 
@@ -1796,10 +1796,10 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         }
 
         render() {
-            const { isActive, isInOTSBlock = false } = this.props;
+            const { isActive, isInTypostBlock = false } = this.props;
             const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
-            const presets = typographyStylistData.presets || [];
+            const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
             const hasFonts = fontOptions.length > 0;
 
@@ -1837,7 +1837,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             return (
                 <Fragment>
                     {/* Only show button if NOT in a Typography Stylist block */}
-                    {!isInOTSBlock && (
+                    {!isInTypostBlock && (
                         <BlockControls>
                             <ToolbarGroup>
                                 <ToolbarButton
@@ -1845,7 +1845,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     title={__('Typography Stylist', 'typography-stylist')}
                                     onClick={this.togglePopover}
                                     isActive={isActive}
-                                    className="ots-toolbar-button"
+                                    className="typost-toolbar-button"
                                 />
                             </ToolbarGroup>
                         </BlockControls>
@@ -1855,15 +1855,15 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         <Modal
                             title=""
                             onRequestClose={this.togglePopover}
-                            className={`ots-modal ${this.state.isDragging ? 'is-dragging' : ''} ${this.state.isResizing ? 'is-resizing' : ''}`}
+                            className={`typost-modal ${this.state.isDragging ? 'is-dragging' : ''} ${this.state.isResizing ? 'is-resizing' : ''}`}
                             isDismissible={true}
                             shouldCloseOnClickOutside={false}
                             shouldCloseOnEsc={true}
                             __experimentalHideHeader={true}
                             onMouseDown={(e) => {
                                 // Only trigger drag if clicking on header, not content
-                                if (e.target.classList.contains('ots-modal-header') ||
-                                    e.target.closest('.ots-modal-header')) {
+                                if (e.target.classList.contains('typost-modal-header') ||
+                                    e.target.closest('.typost-modal-header')) {
                                     this.handleDragStart(e);
                                 }
                             }}
@@ -1880,7 +1880,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         >
                             {/* Custom draggable header */}
                             <div
-                                className="ots-modal-header"
+                                className="typost-modal-header"
                                 onMouseDown={this.handleDragStart}
                                 onKeyDown={this.handleHeaderKeyDown}
                                 role="toolbar"
@@ -1893,23 +1893,23 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     icon="no-alt"
                                     label={__('Close', 'typography-stylist')}
                                     onClick={this.togglePopover}
-                                    className="ots-modal-close-button"
+                                    className="typost-modal-close-button"
                                 />
                             </div>
 
                             {/* Modal content wrapper with scroll */}
-                            <div className="ots-modal-content" style={{
+                            <div className="typost-modal-content" style={{
                                 height: `calc(${this.state.modalHeight}px - 60px)`,
                                 overflowY: 'auto'
                             }}>
-                                <div className="ots-popover-content">
+                                <div className="typost-popover-content">
 
                                 {/* Drag instruction notice - always visible */}
-                                <div className="ots-sticky-notice-wrapper">
+                                <div className="typost-sticky-notice-wrapper">
                                     {wp.element.createElement(Notice, {
                                         status: 'info',
                                         isDismissible: false,
-                                        className: 'ots-drag-notice'
+                                        className: 'typost-drag-notice'
                                     },
                                         wp.element.createElement('p', { style: { margin: 0 } },
                                             '💡 ' + __('Tip: Drag the title bar to reposition this panel', 'typography-stylist')
@@ -1919,11 +1919,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
                                 {this.state.hasChanges && (
-                                    <div className="ots-sticky-notice-wrapper">
+                                    <div className="typost-sticky-notice-wrapper">
                                         {wp.element.createElement(Notice, {
                                             status: 'info',
                                             isDismissible: false,
-                                            className: 'ots-apply-notice'
+                                            className: 'typost-apply-notice'
                                         },
                                             wp.element.createElement('p', { style: { margin: 0 } },
                                                 __('Click "Apply" below the preview to confirm changes.', 'typography-stylist')
@@ -1933,13 +1933,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 )}
 
                                 {/* Scrollable Content Wrapper */}
-                                <div className="ots-scrollable-content">
+                                <div className="typost-scrollable-content">
                                 {/* Font Detection Warning */}
                                 {fontDetectionFailed && !selectedFont && (
                                     wp.element.createElement(Notice, {
                                         status: 'warning',
                                         isDismissible: false,
-                                        className: 'ots-font-detection-notice'
+                                        className: 'typost-font-detection-notice'
                                     },
                                         wp.element.createElement('p', { style: { margin: 0 } },
                                             __('Font could not be detected for this block type.', 'typography-stylist')
@@ -1952,7 +1952,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Font Selector */}
                                 {hasFonts && (
-                                    <div className="ots-font-section">
+                                    <div className="typost-font-section">
                                         <h4>{__('Font Family', 'typography-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
@@ -1966,7 +1966,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 )}
 
                                 {/* Font Weight Control */}
-                                <div className="ots-fontweight-section">
+                                <div className="typost-fontweight-section">
                                     <h4>{__('Font Weight', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontWeight}
@@ -1986,7 +1986,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 </div>
 
                                 {/* Letter Spacing Control */}
-                                <div className="ots-letterspacing-section">
+                                <div className="typost-letterspacing-section">
                                     <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={letterSpacing}
@@ -2001,7 +2001,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 </div>
 
                                 {/* Font Size Controls */}
-                                <div className="ots-fontsize-section">
+                                <div className="typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
@@ -2013,7 +2013,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     />
 
                                     {fontSize === 'responsive' && (
-                                        <div className="ots-fontsize-controls">
+                                        <div className="typost-fontsize-controls">
                                             <RangeControl
                                                 label={__('Minimum Size (mobile)', 'typography-stylist')}
                                                 value={fontSizeMin}
@@ -2047,16 +2047,16 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Presets Section */}
                                 {presets.length > 0 && (
-                                    <div className="ots-presets-section">
+                                    <div className="typost-presets-section">
                                         <h4>{__('Quick Presets', 'typography-stylist')}</h4>
-                                        <div className="ots-presets-grid">
+                                        <div className="typost-presets-grid">
                                             {presets.map(preset => this.renderPresetButton(preset))}
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Features Section */}
-                                <div className="ots-features-section">
+                                <div className="typost-features-section">
                                     <h4>{__('Individual Features', 'typography-stylist')}</h4>
 
                                     {Object.entries(groupedFeatures).map(([category, features]) => (
@@ -2064,7 +2064,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                             key={category}
                                             title={this.getCategoryTitle(category)}
                                             initialOpen={category === 'ligatures'}
-                                            className="ots-feature-category"
+                                            className="typost-feature-category"
                                         >
                                             {features.map(feature => this.renderFeatureToggle(feature))}
                                         </PanelBody>
@@ -2073,8 +2073,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Accessibility Warning */}
                                 {showAccessibilityWarning && (
-                                    <div className="ots-accessibility-warning">
-                                        <p className="ots-warning-message">
+                                    <div className="typost-accessibility-warning">
+                                        <p className="typost-warning-message">
                                             ⚠️ {warningMessage}
                                         </p>
                                         <ButtonGroup>
@@ -2106,11 +2106,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Preview Section */}
                                 {showPreview && !showAccessibilityWarning && (
-                                    <div className="ots-preview-section">
-                                        <div className="ots-preview-header">
+                                    <div className="typost-preview-section">
+                                        <div className="typost-preview-header">
                                             <h4>{__('Preview', 'typography-stylist')}</h4>
                                             {fontSize === 'responsive' && (
-                                                <ButtonGroup className="ots-preview-device-toggle">
+                                                <ButtonGroup className="typost-preview-device-toggle">
                                                     <Button
                                                         isSmall
                                                         isPrimary={previewDevice === 'mobile'}
@@ -2139,13 +2139,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                             )}
                                         </div>
                                         <div
-                                            className="ots-preview-text"
+                                            className="typost-preview-text"
                                             style={previewStyle}
                                         >
                                             {displayText}
                                         </div>
                                         {selectedFeatures.length > 0 && (
-                                            <div className="ots-preview-features">
+                                            <div className="typost-preview-features">
                                                 <strong>{__('Active: ', 'typography-stylist')}</strong>
                                                 {selectedFeatures.join(', ')}
                                             </div>
@@ -2155,11 +2155,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Clear Confirmation - Inline */}
                                 {showClearConfirmation && (
-                                    <div className="ots-clear-confirmation-inline">
+                                    <div className="typost-clear-confirmation-inline">
                                         {wp.element.createElement(Notice, {
                                             status: 'warning',
                                             isDismissible: false,
-                                            className: 'ots-clear-warning'
+                                            className: 'typost-clear-warning'
                                         },
                                             wp.element.createElement('p', { style: { margin: '0 0 12px 0', fontWeight: '600' } },
                                                 __('Clear All Typography Settings?', 'typography-stylist')
@@ -2188,7 +2188,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
                                 {/* Action Buttons */}
                                 {!showClearConfirmation && (
-                                    <div className="ots-popover-actions">
+                                    <div className="typost-popover-actions">
                                         <ButtonGroup>
                                             <Button
                                                 isPrimary
@@ -2220,14 +2220,14 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                         </ButtonGroup>
                                     </div>
                                 )}
-                                </div>{/* End ots-scrollable-content */}
-                            </div>{/* End ots-popover-content */}
-                            </div>{/* End ots-modal-content */}
+                                </div>{/* End typost-scrollable-content */}
+                            </div>{/* End typost-popover-content */}
+                            </div>{/* End typost-modal-content */}
 
                             {/* Resize handles - 8 directions */}
-                            <div className="ots-resize-handles">
+                            <div className="typost-resize-handles">
                                 <div
-                                    className="ots-resize-handle ots-resize-n"
+                                    className="typost-resize-handle typost-resize-n"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'n')}
                                     role="slider"
                                     aria-label={__('Resize modal vertically', 'typography-stylist')}
@@ -2235,7 +2235,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-ne"
+                                    className="typost-resize-handle typost-resize-ne"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'ne')}
                                     role="slider"
                                     aria-label={__('Resize modal diagonally', 'typography-stylist')}
@@ -2243,7 +2243,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-e"
+                                    className="typost-resize-handle typost-resize-e"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'e')}
                                     role="slider"
                                     aria-label={__('Resize modal horizontally', 'typography-stylist')}
@@ -2251,7 +2251,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-se"
+                                    className="typost-resize-handle typost-resize-se"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'se')}
                                     role="slider"
                                     aria-label={__('Resize modal', 'typography-stylist')}
@@ -2259,7 +2259,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'nwse-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-s"
+                                    className="typost-resize-handle typost-resize-s"
                                     onMouseDown={(e) => this.handleResizeStart(e, 's')}
                                     role="slider"
                                     aria-label={__('Resize modal vertically', 'typography-stylist')}
@@ -2267,7 +2267,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-sw"
+                                    className="typost-resize-handle typost-resize-sw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'sw')}
                                     role="slider"
                                     aria-label={__('Resize modal diagonally', 'typography-stylist')}
@@ -2275,7 +2275,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-w"
+                                    className="typost-resize-handle typost-resize-w"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'w')}
                                     role="slider"
                                     aria-label={__('Resize modal horizontally', 'typography-stylist')}
@@ -2283,7 +2283,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="ots-resize-handle ots-resize-nw"
+                                    className="typost-resize-handle typost-resize-nw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'nw')}
                                     role="slider"
                                     aria-label={__('Resize modal diagonally', 'typography-stylist')}
@@ -2319,7 +2319,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
     registerFormatType(FORMAT_TYPE, {
         title: __('Typography Stylist', 'typography-stylist'),
         tagName: 'span',
-        className: 'ots-styled',
+        className: 'typost-styled',
         attributes: {
             'data-features': 'data-features',
             'data-font': 'data-font',
@@ -2337,7 +2337,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             wp.data.withSelect((select) => {
                 const selectedBlock = select('core/block-editor').getSelectedBlock();
                 return {
-                    isInOTSBlock: selectedBlock && selectedBlock.name === 'typography-stylist/block'
+                    isInTypostBlock: selectedBlock && selectedBlock.name === 'typost/block'
                 };
             })
         )(function(props) {

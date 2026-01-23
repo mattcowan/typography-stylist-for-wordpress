@@ -14,15 +14,15 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
 }
 
 // Delete plugin options from database
-delete_option('typography_stylist_presets');
-delete_option('typography_stylist_custom_fonts');
-delete_option('typography_stylist_adobe_fonts');
-delete_option('typography_stylist_manual_fonts');
-delete_option('typography_stylist_font_replacements');
-delete_option('typography_stylist_htaccess_verified');
-delete_option('typography_stylist_enable_aria_labels');
-delete_option('typography_stylist_show_clear_confirmation');
-delete_option('typography_stylist_global_settings');
+delete_option('typost_presets');
+delete_option('typost_custom_fonts');
+delete_option('typost_adobe_fonts');
+delete_option('typost_manual_fonts');
+delete_option('typost_font_replacements');
+delete_option('typost_htaccess_verified');
+delete_option('typost_enable_aria_labels');
+delete_option('typost_show_clear_confirmation');
+delete_option('typost_global_settings');
 
 // Delete transients
 // Direct database calls are required during uninstall for bulk deletion with wildcard patterns.
@@ -35,23 +35,23 @@ global $wpdb;
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $wpdb->esc_like('_transient_typography_stylist_editor_data_') . '%',
-        $wpdb->esc_like('_transient_timeout_typography_stylist_editor_data_') . '%'
+        $wpdb->esc_like('_transient_typost_editor_data_') . '%',
+        $wpdb->esc_like('_transient_timeout_typost_editor_data_') . '%'
     )
 );
 
 // Delete combined font CSS transients
-delete_transient('typography_stylist_combined_font_css');
-delete_transient('typography_stylist_admin_font_css');
-delete_transient('typography_stylist_editor_font_css');
-delete_transient('typography_stylist_block_font_css');
+delete_transient('typost_combined_font_css');
+delete_transient('typost_admin_font_css');
+delete_transient('typost_editor_font_css');
+delete_transient('typost_block_font_css');
 
 // Delete per-page font CSS transients
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $wpdb->esc_like('_transient_typography_stylist_font_css_') . '%',
-        $wpdb->esc_like('_transient_timeout_typography_stylist_font_css_') . '%'
+        $wpdb->esc_like('_transient_typost_font_css_') . '%',
+        $wpdb->esc_like('_transient_timeout_typost_font_css_') . '%'
     )
 );
 
@@ -59,8 +59,8 @@ $wpdb->query(
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $wpdb->esc_like('_transient_typography_stylist_has_styled_') . '%',
-        $wpdb->esc_like('_transient_timeout_typography_stylist_has_styled_') . '%'
+        $wpdb->esc_like('_transient_typost_has_styled_') . '%',
+        $wpdb->esc_like('_transient_timeout_typost_has_styled_') . '%'
     )
 );
 
@@ -68,8 +68,8 @@ $wpdb->query(
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $wpdb->esc_like('_transient_typography_stylist_used_fonts_') . '%',
-        $wpdb->esc_like('_transient_timeout_typography_stylist_used_fonts_') . '%'
+        $wpdb->esc_like('_transient_typost_used_fonts_') . '%',
+        $wpdb->esc_like('_transient_timeout_typost_used_fonts_') . '%'
     )
 );
 
@@ -77,44 +77,46 @@ $wpdb->query(
 $wpdb->query(
     $wpdb->prepare(
         "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-        $wpdb->esc_like('_transient_typography_stylist_rate_limit_') . '%',
-        $wpdb->esc_like('_transient_timeout_typography_stylist_rate_limit_') . '%'
+        $wpdb->esc_like('_transient_typost_rate_limit_') . '%',
+        $wpdb->esc_like('_transient_timeout_typost_rate_limit_') . '%'
     )
 );
 
 // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // Delete uploaded font files
-$upload_dir = wp_upload_dir();
-$font_dir = $upload_dir['basedir'] . '/ots';
+$typost_upload_dir = wp_upload_dir();
+$typost_font_dir = $typost_upload_dir['basedir'] . '/typography-stylist';
 
-if (file_exists($font_dir)) {
+if (file_exists($typost_font_dir)) {
     require_once(ABSPATH . 'wp-admin/includes/file.php');
 
     // Initialize WordPress Filesystem
     if (WP_Filesystem()) {
         global $wp_filesystem;
 
-        // Remove entire ots directory including fonts
-        $wp_filesystem->rmdir($font_dir, true);
+        // Remove entire typography-stylist directory including fonts
+        $wp_filesystem->rmdir($typost_font_dir, true);
     } else {
         // Fallback to PHP functions if WP_Filesystem fails
-        if (is_dir($font_dir)) {
-            $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($font_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        // phpcs:disable WordPress.WP.AlternativeFunctions -- WP_Filesystem failed, this is emergency cleanup during uninstall
+        if (is_dir($typost_font_dir)) {
+            $typost_files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($typost_font_dir, RecursiveDirectoryIterator::SKIP_DOTS),
                 RecursiveIteratorIterator::CHILD_FIRST
             );
 
-            foreach ($files as $file) {
-                if ($file->isDir()) {
-                    @rmdir($file->getRealPath());
+            foreach ($typost_files as $typost_file) {
+                if ($typost_file->isDir()) {
+                    @rmdir($typost_file->getRealPath());
                 } else {
-                    @unlink($file->getRealPath());
+                    @unlink($typost_file->getRealPath());
                 }
             }
 
-            @rmdir($font_dir);
+            @rmdir($typost_font_dir);
         }
+        // phpcs:enable WordPress.WP.AlternativeFunctions
     }
 }
 

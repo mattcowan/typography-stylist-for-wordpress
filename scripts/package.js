@@ -8,15 +8,20 @@ const distDir = path.join(buildDir, pluginSlug);
 const zipFile = path.join(__dirname, '..', `${pluginSlug}.zip`);
 
 // Files and directories to include in the package
+// Includes only essential runtime files and WordPress.org requirements
 const includeList = [
   'typography-stylist.php',
+  'uninstall.php',
   'includes/',
-  'assets/css/*.min.css',
-  'assets/js/*.min.js',
-  'assets/fonts/', // if you have any fonts
-  'languages/', // if you have translations
-  'README.txt', // WordPress.org readme if exists
-  'LICENSE' // if exists
+  'assets/css/*.css',     // Include both source and minified
+  'assets/js/*.js',       // Include both source and minified
+  'assets/fonts/',        // if you have any fonts
+  'languages/',           // if you have translations
+  'blocks/typography-stylist/**',  // All block files (source + build)
+  'package.json',         // For developers
+  'README.txt',           // WordPress.org readme if exists
+  'readme.txt',           // lowercase variant
+  'LICENSE'               // if exists
 ];
 
 // Clean previous build
@@ -41,6 +46,13 @@ fs.copyFileSync(
   path.join(distDir, 'typography-stylist.php')
 );
 
+// Copy uninstall.php
+const uninstallPath = path.join(__dirname, '..', 'uninstall.php');
+if (fs.existsSync(uninstallPath)) {
+  fs.copyFileSync(uninstallPath, path.join(distDir, 'uninstall.php'));
+  console.log('✓ Copied uninstall.php');
+}
+
 // Copy includes directory
 const includesDir = path.join(__dirname, '..', 'includes');
 const distIncludesDir = path.join(distDir, 'includes');
@@ -49,11 +61,11 @@ if (fs.existsSync(includesDir)) {
   copyDirectory(includesDir, distIncludesDir);
 }
 
-// Copy minified CSS files
+// Copy ALL CSS files (both source and minified)
 const cssDir = path.join(__dirname, '..', 'assets', 'css');
 const distCssDir = path.join(distDir, 'assets', 'css');
 if (fs.existsSync(cssDir)) {
-  const cssFiles = fs.readdirSync(cssDir).filter(file => file.endsWith('.min.css'));
+  const cssFiles = fs.readdirSync(cssDir).filter(file => file.endsWith('.css'));
   if (cssFiles.length > 0) {
     fs.mkdirSync(distCssDir, { recursive: true });
     cssFiles.forEach(file => {
@@ -62,14 +74,15 @@ if (fs.existsSync(cssDir)) {
         path.join(distCssDir, file)
       );
     });
+    console.log(`✓ Copied ${cssFiles.length} CSS files (source + minified)`);
   }
 }
 
-// Copy minified JS files
+// Copy ALL JS files (both source and minified)
 const jsDir = path.join(__dirname, '..', 'assets', 'js');
 const distJsDir = path.join(distDir, 'assets', 'js');
 if (fs.existsSync(jsDir)) {
-  const jsFiles = fs.readdirSync(jsDir).filter(file => file.endsWith('.min.js'));
+  const jsFiles = fs.readdirSync(jsDir).filter(file => file.endsWith('.js'));
   if (jsFiles.length > 0) {
     fs.mkdirSync(distJsDir, { recursive: true });
     jsFiles.forEach(file => {
@@ -78,6 +91,7 @@ if (fs.existsSync(jsDir)) {
         path.join(distJsDir, file)
       );
     });
+    console.log(`✓ Copied ${jsFiles.length} JS files (source + minified)`);
   }
 }
 
@@ -91,11 +105,18 @@ if (fs.existsSync(blockBuildDir)) {
 }
 
 // Copy optional files if they exist
-const optionalFiles = ['README.txt', 'LICENSE', 'readme.txt'];
+// Excludes developer-only files (BUILD.md, SOURCE.md, .babelrc)
+const optionalFiles = [
+  'README.txt',
+  'readme.txt',
+  'LICENSE',
+  'package.json'  // For developers
+];
 optionalFiles.forEach(file => {
   const filePath = path.join(__dirname, '..', file);
   if (fs.existsSync(filePath)) {
     fs.copyFileSync(filePath, path.join(distDir, file));
+    console.log(`✓ Copied ${file}`);
   }
 });
 

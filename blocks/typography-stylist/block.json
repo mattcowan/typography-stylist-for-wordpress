@@ -1,7 +1,7 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "typography-stylist/block",
+	"name": "typost/block",
 	"title": "Typography Stylist",
 	"category": "text",
 	"icon": {

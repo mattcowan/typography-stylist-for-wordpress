@@ -3,26 +3,26 @@
  */
 
 /* Toolbar Button */
-.ots-toolbar-button {
+.typost-toolbar-button {
     position: relative;
 }
 
-.ots-toolbar-button.is-pressed {
+.typost-toolbar-button.is-pressed {
     background-color: #1e1e1e;
 }
 
-.ots-toolbar-button:focus {
+.typost-toolbar-button:focus {
     outline: 2px solid #0073aa;
     outline-offset: 2px;
     box-shadow: 0 0 0 1px #fff, 0 0 0 3px #0073aa;
 }
 
 /* Main Popover */
-.ots-popover {
+.typost-popover {
     z-index: 1000000;
 }
 
-.ots-popover .components-popover__content {
+.typost-popover .components-popover__content {
     min-width: 400px;
     max-width: 500px;
     max-height: 600px;
@@ -31,7 +31,7 @@
     flex-direction: column;
 }
 
-.ots-popover-content {
+.typost-popover-content {
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -39,7 +39,7 @@
 }
 
 /* Sticky Notice Wrapper */
-.ots-sticky-notice-wrapper {
+.typost-sticky-notice-wrapper {
     position: sticky;
     top: 0;
     z-index: 10;
@@ -47,25 +47,25 @@
     border-bottom: 1px solid #ddd;
 }
 
-.ots-sticky-notice-wrapper .components-notice {
+.typost-sticky-notice-wrapper .components-notice {
     margin: 0;
     border-radius: 0;
 }
 
 /* Scrollable Content Wrapper */
-.ots-scrollable-content {
+.typost-scrollable-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-.ots-popover-header {
+.typost-popover-header {
     padding: 16px 20px;
     border-bottom: 1px solid #ddd;
     background: #f9f9f9;
 }
 
-.ots-popover-header h3 {
+.typost-popover-header h3 {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
@@ -73,12 +73,12 @@
 }
 
 /* Presets Section */
-.ots-presets-section {
+.typost-presets-section {
     padding: 16px 20px;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-presets-section h4 {
+.typost-presets-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 600;
@@ -87,13 +87,13 @@
     letter-spacing: 0.5px;
 }
 
-.ots-presets-grid {
+.typost-presets-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
 }
 
-.ots-preset-button {
+.typost-preset-button {
     padding: 12px 14px;
     text-align: left;
     height: auto;
@@ -103,37 +103,37 @@
     transition: all 0.2s;
 }
 
-.ots-preset-button:hover {
+.typost-preset-button:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.ots-preset-button:focus {
+.typost-preset-button:focus {
     outline: 2px solid #0073aa;
     outline-offset: 2px;
 }
 
-.ots-preset-name {
+.typost-preset-name {
     font-weight: 600;
     font-size: 13px;
     margin-bottom: 4px;
 }
 
-.ots-preset-features-list {
+.typost-preset-features-list {
     font-size: 12px;
     color: #5e5e5e;
     font-family: monospace;
 }
 
 /* Features Section */
-.ots-features-section {
+.typost-features-section {
     padding: 16px 20px;
     border-bottom: 1px solid #ddd;
     max-height: 300px;
     overflow-y: auto;
 }
 
-.ots-features-section h4 {
+.typost-features-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 600;
@@ -142,41 +142,41 @@
     letter-spacing: 0.5px;
 }
 
-.ots-feature-category {
+.typost-feature-category {
     margin-bottom: 0;
 }
 
-.ots-feature-category .components-panel__body-title {
+.typost-feature-category .components-panel__body-title {
     font-size: 13px;
     font-weight: 600;
 }
 
-.ots-feature-toggle {
+.typost-feature-toggle {
     position: relative;
     padding: 8px 0;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-feature-toggle:last-child {
+.typost-feature-toggle:last-child {
     border-bottom: none;
 }
 
-.ots-feature-toggle .components-toggle-control {
+.typost-feature-toggle .components-toggle-control {
     margin-bottom: 0;
 }
 
-.ots-feature-toggle .components-base-control__label {
+.typost-feature-toggle .components-base-control__label {
     font-weight: 500;
     font-size: 13px;
 }
 
-.ots-feature-toggle .components-toggle-control__help {
+.typost-feature-toggle .components-toggle-control__help {
     font-size: 13px;
     color: #5e5e5e;
     margin-top: 4px;
 }
 
-.ots-feature-code {
+.typost-feature-code {
     position: absolute;
     top: 12px;
     right: 0;
@@ -189,7 +189,7 @@
 }
 
 /* Feature Preview Container */
-.ots-feature-preview {
+.typost-feature-preview {
     margin-top: 8px;
     padding: 0;
     background: transparent;
@@ -201,9 +201,9 @@
 }
 
 /* Interactive Feature Preview Button */
-.ots-feature-apply-btn,
-.components-button.ots-feature-apply-btn,
-.editor-visual-editor .components-button.ots-feature-apply-btn {
+.typost-feature-apply-btn,
+.components-button.typost-feature-apply-btn,
+.editor-visual-editor .components-button.typost-feature-apply-btn {
     width: 100% !important;
     padding: 20px !important;
     background: #fff;
@@ -223,17 +223,17 @@
     height: auto !important;
 }
 
-.ots-feature-apply-btn:hover {
+.typost-feature-apply-btn:hover {
     background: #f0f6fc;
     border-color: #2271b1 !important;
     box-shadow: 0 2px 4px rgba(34, 113, 177, 0.15);
 }
 
-.ots-feature-apply-btn:active {
+.typost-feature-apply-btn:active {
     box-shadow: 0 1px 2px rgba(34, 113, 177, 0.2);
 }
 
-.ots-feature-apply-btn:focus {
+.typost-feature-apply-btn:focus {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
     box-shadow: none;
@@ -241,34 +241,34 @@
 
 /* Hover and active transforms - only when motion is preferred */
 @media (prefers-reduced-motion: no-preference) {
-    .ots-feature-apply-btn:hover,
-    .components-button.ots-feature-apply-btn:hover,
-    .editor-visual-editor .components-button.ots-feature-apply-btn:hover {
+    .typost-feature-apply-btn:hover,
+    .components-button.typost-feature-apply-btn:hover,
+    .editor-visual-editor .components-button.typost-feature-apply-btn:hover {
         transform: translateY(-1px);
     }
 
-    .ots-feature-apply-btn:active,
-    .components-button.ots-feature-apply-btn:active,
-    .editor-visual-editor .components-button.ots-feature-apply-btn:active {
+    .typost-feature-apply-btn:active,
+    .components-button.typost-feature-apply-btn:active,
+    .editor-visual-editor .components-button.typost-feature-apply-btn:active {
         transform: translateY(0);
     }
 }
 
 /* Preview Section */
-.ots-preview-section {
+.typost-preview-section {
     padding: 16px 20px;
     background: #f9f9f9;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-preview-header {
+.typost-preview-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 12px;
 }
 
-.ots-preview-section h4 {
+.typost-preview-section h4 {
     margin: 0;
     font-size: 13px;
     font-weight: 600;
@@ -277,18 +277,18 @@
     letter-spacing: 0.5px;
 }
 
-.ots-preview-device-toggle {
+.typost-preview-device-toggle {
     display: flex;
     gap: 0;
 }
 
-.ots-preview-device-toggle .components-button {
+.typost-preview-device-toggle .components-button {
     min-height: 32px;
     padding: 4px 12px;
     font-size: 12px;
 }
 
-.ots-preview-text {
+.typost-preview-text {
     font-size: 24px;
     padding: 16px;
     background: #fff;
@@ -299,102 +299,102 @@
     line-height: 1.4;
 }
 
-.ots-preview-features {
+.typost-preview-features {
     font-size: 13px;
     color: #1e1e1e;
     font-family: monospace;
 }
 
-.ots-preview-features strong {
+.typost-preview-features strong {
     font-weight: 600;
     color: #1e1e1e;
 }
 
 /* Clear Confirmation - Inline */
-.ots-clear-confirmation-inline {
+.typost-clear-confirmation-inline {
     padding: 0;
     margin: 0;
 }
 
-.ots-clear-confirmation-inline .components-notice {
+.typost-clear-confirmation-inline .components-notice {
     margin: 0;
     border-radius: 0;
 }
 
-.ots-clear-confirmation-inline .components-button-group {
+.typost-clear-confirmation-inline .components-button-group {
     display: flex;
     gap: 8px;
     width: 100%;
 }
 
-.ots-clear-confirmation-inline .components-button {
+.typost-clear-confirmation-inline .components-button {
     flex: 1;
     justify-content: center;
 }
 
 /* Action Buttons */
-.ots-popover-actions {
+.typost-popover-actions {
     padding: 16px 20px;
     background: #f9f9f9;
 }
 
-.ots-popover-actions .components-button-group {
+.typost-popover-actions .components-button-group {
     display: flex;
     gap: 8px;
     width: 100%;
 }
 
-.ots-popover-actions .components-button {
+.typost-popover-actions .components-button {
     flex: 1;
     justify-content: center;
     min-height: 44px;
 }
 
-.ots-popover-actions .components-button:focus {
+.typost-popover-actions .components-button:focus {
     outline: 2px solid #0073aa;
     outline-offset: 2px;
 }
 
 /* Styled Text in Editor */
-.ots-styled {
+.typost-styled {
     position: relative;
     border-bottom: 1px dotted rgba(0, 122, 204, 0.4);
 }
 
-.ots-styled:hover {
+.typost-styled:hover {
     background: rgba(0, 122, 204, 0.05);
 }
 
 /* Scrollbar Styling */
-.ots-features-section::-webkit-scrollbar,
-.ots-popover .components-popover__content::-webkit-scrollbar {
+.typost-features-section::-webkit-scrollbar,
+.typost-popover .components-popover__content::-webkit-scrollbar {
     width: 8px;
 }
 
-.ots-features-section::-webkit-scrollbar-track,
-.ots-popover .components-popover__content::-webkit-scrollbar-track {
+.typost-features-section::-webkit-scrollbar-track,
+.typost-popover .components-popover__content::-webkit-scrollbar-track {
     background: #f1f1f1;
 }
 
-.ots-features-section::-webkit-scrollbar-thumb,
-.ots-popover .components-popover__content::-webkit-scrollbar-thumb {
+.typost-features-section::-webkit-scrollbar-thumb,
+.typost-popover .components-popover__content::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
 }
 
-.ots-features-section::-webkit-scrollbar-thumb:hover,
-.ots-popover .components-popover__content::-webkit-scrollbar-thumb:hover {
+.typost-features-section::-webkit-scrollbar-thumb:hover,
+.typost-popover .components-popover__content::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
 
 /* Responsive Adjustments */
 @media (max-width: 600px) {
-    .ots-popover .components-popover__content {
+    .typost-popover .components-popover__content {
         min-width: 300px;
         max-width: 90vw;
     }
 
-    .ots-presets-grid {
+    .typost-presets-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -412,11 +412,11 @@
         }
     }
 
-    .ots-popover .components-popover__content {
+    .typost-popover .components-popover__content {
         animation: hlsFadeIn 0.2s ease-out;
     }
 
-    .ots-preset-button:hover {
+    .typost-preset-button:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         transition: all 0.2s;
@@ -424,11 +424,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .ots-popover .components-popover__content {
+    .typost-popover .components-popover__content {
         animation: none;
     }
 
-    .ots-preset-button:hover {
+    .typost-preset-button:hover {
         transform: none;
         box-shadow: 0 0 0 2px #0073aa;
         transition: none;
@@ -436,19 +436,19 @@
 }
 
 /* Font, Font Weight, Letter Spacing, and Font Size Sections */
-.ots-font-section,
-.ots-fontweight-section,
-.ots-letterspacing-section,
-.ots-fontsize-section {
+.typost-font-section,
+.typost-fontweight-section,
+.typost-letterspacing-section,
+.typost-fontsize-section {
     margin: 0 1rem;
     padding: 16px 20px;
     border-bottom: 1px solid #ddd;
 }
 
-.ots-font-section h4,
-.ots-fontweight-section h4,
-.ots-letterspacing-section h4,
-.ots-fontsize-section h4 {
+.typost-font-section h4,
+.typost-fontweight-section h4,
+.typost-letterspacing-section h4,
+.typost-fontsize-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;
     font-weight: 600;
@@ -458,7 +458,7 @@
 }
 
 /* Accessibility Warning */
-.ots-accessibility-warning {
+.typost-accessibility-warning {
     padding: 16px 20px;
     background: #fff3cd;
     border: 1px solid #ffc107;
@@ -466,32 +466,32 @@
     margin: 16px 20px;
 }
 
-.ots-warning-message {
+.typost-warning-message {
     font-size: 13px;
     color: #856404;
     margin: 0 0 12px 0;
     line-height: 1.5;
 }
 
-.ots-accessibility-warning .components-button-group {
+.typost-accessibility-warning .components-button-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
     width: 100%;
 }
 
-.ots-accessibility-warning .components-button {
+.typost-accessibility-warning .components-button {
     width: 100%;
     justify-content: center;
     min-height: 36px;
 }
 
 /* Active Feature Panel Highlighting */
-.ots-feature-category-panel.has-active-features > .components-panel__body-title {
+.typost-feature-category-panel.has-active-features > .components-panel__body-title {
     background-color: #f0f6fc !important;
 }
 
-.ots-feature-category-panel.has-active-features > .components-panel__body-title button {
+.typost-feature-category-panel.has-active-features > .components-panel__body-title button {
     color: #0783be !important;
     font-weight: 600 !important;
 }
@@ -501,12 +501,12 @@
    ======================================== */
 
 /* Reduce background dimming - much more transparent */
-.ots-modal .components-modal__screen-overlay {
+.typost-modal .components-modal__screen-overlay {
     background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Modal frame positioning overrides */
-.ots-modal .components-modal__frame {
+.typost-modal .components-modal__frame {
     position: fixed !important;
     transform: none !important;
     max-width: none !important;
@@ -519,8 +519,8 @@
 }
 
 /* Override WordPress modal content padding */
-.ots-modal .components-modal__content,
-.ots-modal .components-modal__content.hide-header {
+.typost-modal .components-modal__content,
+.typost-modal .components-modal__content.hide-header {
     margin-top: 0 !important;
     padding: 0 !important;
     flex: 1;
@@ -530,7 +530,7 @@
 }
 
 /* Draggable header */
-.ots-modal-header {
+.typost-modal-header {
     padding: 16px 20px;
     border-bottom: 1px solid #ddd;
     background: #f9f9f9;
@@ -545,15 +545,15 @@
     flex-shrink: 0;
 }
 
-.ots-modal-header:active {
+.typost-modal-header:active {
     cursor: grabbing;
 }
 
-.ots-modal.is-dragging .ots-modal-header {
+.typost-modal.is-dragging .typost-modal-header {
     cursor: grabbing;
 }
 
-.ots-modal-header h3 {
+.typost-modal-header h3 {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
@@ -562,49 +562,49 @@
     flex: 1;
 }
 
-.ots-modal-header:focus {
+.typost-modal-header:focus {
     outline: 2px solid #0073aa;
     outline-offset: -2px;
 }
 
 /* Close button styling */
-.ots-modal-close-button {
+.typost-modal-close-button {
     flex-shrink: 0;
     margin-left: 16px;
     pointer-events: auto;
 }
 
-.ots-modal-close-button:hover {
+.typost-modal-close-button:hover {
     background: rgba(0, 0, 0, 0.05);
 }
 
 /* Modal content wrapper with scroll */
-.ots-modal-content {
+.typost-modal-content {
     overflow-y: auto;
     overflow-x: hidden;
     background: #fff;
 }
 
 /* Scrollbar styling for modal content */
-.ots-modal-content::-webkit-scrollbar {
+.typost-modal-content::-webkit-scrollbar {
     width: 8px;
 }
 
-.ots-modal-content::-webkit-scrollbar-track {
+.typost-modal-content::-webkit-scrollbar-track {
     background: #f1f1f1;
 }
 
-.ots-modal-content::-webkit-scrollbar-thumb {
+.typost-modal-content::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 4px;
 }
 
-.ots-modal-content::-webkit-scrollbar-thumb:hover {
+.typost-modal-content::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
 
 /* Resize handles container */
-.ots-resize-handles {
+.typost-resize-handles {
     position: absolute;
     top: 0;
     left: 0;
@@ -614,83 +614,83 @@
 }
 
 /* Individual resize handles */
-.ots-resize-handle {
+.typost-resize-handle {
     position: absolute;
     pointer-events: auto;
     z-index: 10;
 }
 
 /* Corner handles - larger hit area (16px) */
-.ots-resize-handle-ne,
-.ots-resize-handle-nw,
-.ots-resize-handle-se,
-.ots-resize-handle-sw {
+.typost-resize-handle-ne,
+.typost-resize-handle-nw,
+.typost-resize-handle-se,
+.typost-resize-handle-sw {
     width: 16px;
     height: 16px;
 }
 
 /* Edge handles - 8px hit area */
-.ots-resize-handle-n,
-.ots-resize-handle-s {
+.typost-resize-handle-n,
+.typost-resize-handle-s {
     left: 16px;
     right: 16px;
     height: 8px;
 }
 
-.ots-resize-handle-e,
-.ots-resize-handle-w {
+.typost-resize-handle-e,
+.typost-resize-handle-w {
     top: 16px;
     bottom: 16px;
     width: 8px;
 }
 
 /* Positioning */
-.ots-resize-handle-n {
+.typost-resize-handle-n {
     top: 0;
     cursor: ns-resize;
 }
 
-.ots-resize-handle-ne {
+.typost-resize-handle-ne {
     top: 0;
     right: 0;
     cursor: nesw-resize;
 }
 
-.ots-resize-handle-e {
+.typost-resize-handle-e {
     right: 0;
     cursor: ew-resize;
 }
 
-.ots-resize-handle-se {
+.typost-resize-handle-se {
     bottom: 0;
     right: 0;
     cursor: nwse-resize;
 }
 
-.ots-resize-handle-s {
+.typost-resize-handle-s {
     bottom: 0;
     cursor: ns-resize;
 }
 
-.ots-resize-handle-sw {
+.typost-resize-handle-sw {
     bottom: 0;
     left: 0;
     cursor: nesw-resize;
 }
 
-.ots-resize-handle-w {
+.typost-resize-handle-w {
     left: 0;
     cursor: ew-resize;
 }
 
-.ots-resize-handle-nw {
+.typost-resize-handle-nw {
     top: 0;
     left: 0;
     cursor: nwse-resize;
 }
 
 /* Visual indicator for SE corner (most common resize) */
-.ots-resize-handle-se::after {
+.typost-resize-handle-se::after {
     content: '';
     position: absolute;
     bottom: 4px;
@@ -708,24 +708,24 @@
     opacity: 0.4;
 }
 
-.ots-modal.is-resizing .ots-resize-handle-se::after {
+.typost-modal.is-resizing .typost-resize-handle-se::after {
     opacity: 0.8;
 }
 
 /* Modal state classes */
-.ots-modal.is-dragging {
+.typost-modal.is-dragging {
     -webkit-user-select: none;
     user-select: none;
 }
 
-.ots-modal.is-resizing {
+.typost-modal.is-resizing {
     -webkit-user-select: none;
     user-select: none;
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-    .ots-modal .components-modal__frame {
+    .typost-modal .components-modal__frame {
         transition: none !important;
     }
 }

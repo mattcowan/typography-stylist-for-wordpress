@@ -10,17 +10,17 @@ require_once dirname(__DIR__) . '/vendor/autoload.php';
 require_once dirname(__DIR__) . '/vendor/brain/monkey/inc/patchwork-loader.php';
 
 // Define plugin constants for testing (if not already defined)
-if (!defined('OTS_PLUGIN_DIR')) {
-    define('OTS_PLUGIN_DIR', dirname(__DIR__));
+if (!defined('TYPOST_PLUGIN_DIR')) {
+    define('TYPOST_PLUGIN_DIR', dirname(__DIR__));
 }
-if (!defined('OTS_PLUGIN_URL')) {
-    define('OTS_PLUGIN_URL', 'http://localhost/wp-content/plugins/opentype-stylist/');
+if (!defined('TYPOST_PLUGIN_URL')) {
+    define('TYPOST_PLUGIN_URL', 'http://localhost/wp-content/plugins/opentype-stylist/');
 }
-if (!defined('OTS_PLUGIN_BASENAME')) {
-    define('OTS_PLUGIN_BASENAME', 'typography-stylist/typography-stylist.php');
+if (!defined('TYPOST_PLUGIN_BASENAME')) {
+    define('TYPOST_PLUGIN_BASENAME', 'typography-stylist/typography-stylist.php');
 }
-if (!defined('OTS_VERSION')) {
-    define('OTS_VERSION', 'test-version');
+if (!defined('TYPOST_VERSION')) {
+    define('TYPOST_VERSION', 'test-version');
 }
 
 // Define WordPress constants

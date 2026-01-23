@@ -1,5 +1,5 @@
 <?php
-namespace OpenTypeStylist\Tests;
+namespace TypographyStylist\Tests;
 
 use Brain\Monkey;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;

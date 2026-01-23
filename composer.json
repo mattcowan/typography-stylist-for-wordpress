@@ -9,7 +9,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "OpenTypeStylist\\Tests\\": "tests/"
+      "TypographyStylist\\Tests\\": "tests/"
     }
   },
   "scripts": {

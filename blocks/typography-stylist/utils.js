@@ -25,7 +25,7 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 	const parser = new DOMParser();
 	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 	const container = doc.body.firstChild;
-	const styledSpans = container.querySelectorAll('span.ots-styled');
+	const styledSpans = container.querySelectorAll('span.typost-styled');
 
 	// Find the smallest (innermost) span that matches the cursor/selection
 	let smallestMatchingSpan = null;
@@ -75,9 +75,9 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 		return [];
 	}
 
-	// Collect ALL features from this span and any nested ots-styled spans
+	// Collect ALL features from this span and any nested typost-styled spans
 	// This handles the case where font-size/weight wraps feature spans:
-	// <span data-fontsize="..." class="ots-styled"><span data-features="ss01" class="ots-styled">M</span></span>
+	// <span data-fontsize="..." class="typost-styled"><span data-features="ss01" class="typost-styled">M</span></span>
 	const allFeatures = new Set();
 
 	// Extract features from data attribute (preferred - faster and more reliable)
@@ -89,10 +89,10 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 		});
 	}
 
-	// ALSO check for ots-styled spans INSIDE this one (nested case)
+	// ALSO check for typost-styled spans INSIDE this one (nested case)
 	// This fixes detection when font-sizing wraps a feature-styled span
 	// BUT only include features if cursor is ACTUALLY inside the nested span
-	const nestedStyledSpans = smallestMatchingSpan.querySelectorAll('span.ots-styled');
+	const nestedStyledSpans = smallestMatchingSpan.querySelectorAll('span.typost-styled');
 	for (const nested of nestedStyledSpans) {
 		// Calculate the text position range for this nested span
 		const nestedWalker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
@@ -188,9 +188,9 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 }
 
 /**
- * Apply or merge styling to a selection, avoiding nested ots-styled spans
+ * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
- * This function checks if the selected range is already inside an ots-styled span.
+ * This function checks if the selected range is already inside an typost-styled span.
  * If yes, it merges the new attributes into the existing span.
  * If no, it creates a new span wrapper.
  *
@@ -202,7 +202,9 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
  */
 export function applyOrMergeStyling(range, attributes, styleString, doc) {
 	try {
-		// Check if the range is entirely within a single ots-styled span
+		let mergedFeatures = [];
+
+		// Check if the range is entirely within a single typost-styled span
 		let commonAncestor = range.commonAncestorContainer;
 
 		// If the common ancestor is a text node, get its parent element
@@ -210,8 +212,8 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 			commonAncestor = commonAncestor.parentElement;
 		}
 
-		// Find the closest ots-styled span (if any)
-		const existingSpan = commonAncestor.closest('span.ots-styled');
+		// Find the closest typost-styled span (if any)
+		const existingSpan = commonAncestor.closest('span.typost-styled');
 
 		if (existingSpan) {
 			// Check if the entire selection is within this span
@@ -229,6 +231,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 						const combined = [...new Set([...existingArray, ...newFeatures])].filter(f => f);
 						if (combined.length > 0) {
 							existingSpan.setAttribute('data-features', combined.join(','));
+						mergedFeatures = combined;
 						}
 					} else {
 						// For other attributes, new value overwrites old
@@ -256,7 +259,13 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 					}
 				});
 
-				// Rebuild style string
+				// CRITICAL FIX: If we merged features, rebuild font-feature-settings with ALL features
+			if (mergedFeatures.length > 0) {
+				const featureSettings = mergedFeatures.map(f => `"${f}" 1`).join(', ');
+				newStyleObj['font-feature-settings'] = featureSettings;
+			}
+
+						// Rebuild style string
 				const mergedStyle = Object.entries(newStyleObj)
 					.map(([prop, value]) => `${prop}: ${value}`)
 					.join('; ');
@@ -269,7 +278,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 
 		// No existing span found or selection spans multiple elements - create new wrapper
 		const span = doc.createElement('span');
-		span.className = 'ots-styled';
+		span.className = 'typost-styled';
 
 		Object.keys(attributes).forEach(key => {
 			span.setAttribute(key, attributes[key]);
@@ -285,9 +294,155 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		if (typeof console !== 'undefined' && console.error) {
-			console.error('OTS Block - Failed to apply or merge styling:', error);
+			console.error('Typographic Stylist Block - Failed to apply or merge styling:', error);
 		}
 		return false;
+	}
+}
+
+/**
+ * Validate that a DOM Range matches the expected text selection
+ *
+ * Prevents bugs where invalid ranges wrap entire content instead of selection.
+ *
+ * @param {Range} range - The DOM range to validate
+ * @param {string} expectedText - The text we expect the range to contain
+ * @param {number} expectedLength - Expected character count
+ * @return {Object} { valid: boolean, reason: string }
+ */
+export function validateRangeMatchesSelection(range, expectedText, expectedLength) {
+	if (!range) {
+		return { valid: false, reason: 'Range is null' };
+	}
+
+	if (!expectedText || expectedLength === 0) {
+		return { valid: false, reason: 'Empty selection' };
+	}
+
+	try {
+		const rangeText = range.toString();
+
+		// Check exact match
+		if (rangeText === expectedText) {
+			return { valid: true, reason: 'Exact match' };
+		}
+
+		// Check trimmed match (handles whitespace differences)
+		if (rangeText.trim() === expectedText.trim()) {
+			return { valid: true, reason: 'Trimmed match' };
+		}
+
+		// Check length match (handles HTML entities)
+		if (rangeText.length === expectedLength) {
+			return { valid: true, reason: 'Length match' };
+		}
+
+		return {
+			valid: false,
+			reason: `Mismatch: expected "${expectedText}" (${expectedLength} chars), got "${rangeText}" (${rangeText.length} chars)`
+		};
+	} catch (error) {
+		return { valid: false, reason: `Error: ${error.message}` };
+	}
+}
+
+/**
+ * Apply styling using string manipulation (fallback when Range fails)
+ *
+ * This method works by:
+ * 1. Finding text nodes and their positions
+ * 2. Locating the exact text node containing the selection
+ * 3. Manually splitting it and inserting a span
+ *
+ * @param {string} htmlContent - The HTML content
+ * @param {number} startOffset - Start character offset
+ * @param {number} endOffset - End character offset
+ * @param {Object} attributes - Attributes to set on span
+ * @param {string} styleString - CSS style string
+ * @return {Object} { success: boolean, content: string, error: string|null }
+ */
+export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset, attributes, styleString) {
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Build text position map
+		const textMap = [];
+		let currentOffset = 0;
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let textNode;
+
+		while ((textNode = walker.nextNode())) {
+			const nodeText = textNode.nodeValue;
+			textMap.push({
+				node: textNode,
+				start: currentOffset,
+				end: currentOffset + nodeText.length,
+				text: nodeText
+			});
+			currentOffset += nodeText.length;
+		}
+
+		// Find affected text nodes
+		const affectedNodes = textMap.filter(item =>
+			item.start < endOffset && item.end > startOffset
+		);
+
+		if (affectedNodes.length === 0) {
+			return { success: false, content: htmlContent, error: 'No text nodes in range' };
+		}
+
+		// Handle single text node case (most common, including single-letter bug)
+		if (affectedNodes.length === 1) {
+			const nodeInfo = affectedNodes[0];
+			const textNode = nodeInfo.node;
+
+			// Calculate offsets within this text node
+			const nodeRelativeStart = Math.max(0, startOffset - nodeInfo.start);
+			const nodeRelativeEnd = Math.min(nodeInfo.text.length, endOffset - nodeInfo.start);
+
+			// Split: before | selected | after
+			const before = nodeInfo.text.substring(0, nodeRelativeStart);
+			const selected = nodeInfo.text.substring(nodeRelativeStart, nodeRelativeEnd);
+			const after = nodeInfo.text.substring(nodeRelativeEnd);
+
+			// Build span
+			const span = doc.createElement('span');
+			span.className = 'typost-styled';
+
+			Object.keys(attributes).forEach(key => {
+				const value = attributes[key];
+				if (value !== null && value !== undefined && value !== '') {
+					span.setAttribute(key, String(value));
+				}
+			});
+
+			if (styleString) {
+				span.setAttribute('style', styleString);
+			}
+
+			span.textContent = selected;
+
+			// Replace text node with: before + span + after
+			const parent = textNode.parentNode;
+			if (before) {
+				parent.insertBefore(doc.createTextNode(before), textNode);
+			}
+			parent.insertBefore(span, textNode);
+			if (after) {
+				parent.insertBefore(doc.createTextNode(after), textNode);
+			}
+			parent.removeChild(textNode);
+
+			return { success: true, content: container.innerHTML, error: null };
+		}
+
+		// Multi-node selection - defer to range method
+		return { success: false, content: htmlContent, error: 'Multi-node selection - use range method' };
+
+	} catch (error) {
+		return { success: false, content: htmlContent, error: error.message };
 	}
 }
 
@@ -298,10 +453,10 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
  * Handles iframe context detection for WordPress block editor.
  *
  * @param {string} clientId - Block's client ID
- * @param {string} elementSelector - CSS selector for the text element (e.g., '.ots-block-content')
+ * @param {string} elementSelector - CSS selector for the text element (e.g., '.typost-block-content')
  * @return {string} Computed font-family (with quotes removed) or empty string if not found
  */
-export function detectBlockComputedFont(clientId, elementSelector = '.ots-block-content') {
+export function detectBlockComputedFont(clientId, elementSelector = '.typost-block-content') {
 	if (!clientId) {
 		return '';
 	}
@@ -337,7 +492,7 @@ export function detectBlockComputedFont(clientId, elementSelector = '.ots-block-
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		if (typeof console !== 'undefined' && console.error) {
-			console.error('OTS Block - Failed to detect computed font:', error);
+			console.error('Typographic Stylist Block - Failed to detect computed font:', error);
 		}
 		return '';
 	}
@@ -357,7 +512,7 @@ export function detectBlockComputedFont(clientId, elementSelector = '.ots-block-
  *
  * @param {string} htmlContent - HTML content to analyze
  * @return {Object} Analysis result with:
- *   - hasInlineFeatures {boolean} - Whether any ots-styled spans with features exist
+ *   - hasInlineFeatures {boolean} - Whether any typost-styled spans with features exist
  *   - coverage {string} - 'none', 'partial', or 'full'
  *   - commonFeatures {Array<string>} - Features common to all text (if full coverage)
  *   - shouldExtractToBlock {boolean} - Whether features should be extracted to block level
@@ -389,8 +544,8 @@ export function analyzeInlineFeatures(htmlContent) {
 			return defaultResult;
 		}
 
-		// Find all ots-styled spans that have OpenType features
-		const styledSpans = Array.from(container.querySelectorAll('span.ots-styled')).filter(span => {
+		// Find all typost-styled spans that have OpenType features
+		const styledSpans = Array.from(container.querySelectorAll('span.typost-styled')).filter(span => {
 			const features = span.getAttribute('data-features');
 			return features && features.trim().length > 0;
 		});
@@ -463,7 +618,7 @@ export function analyzeInlineFeatures(htmlContent) {
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		if (typeof console !== 'undefined' && console.error) {
-			console.error('OTS Block - Failed to analyze inline features:', error);
+			console.error('Typographic Stylist Block - Failed to analyze inline features:', error);
 		}
 		return defaultResult;
 	}
@@ -472,13 +627,13 @@ export function analyzeInlineFeatures(htmlContent) {
 /**
  * Strip inline OpenType feature spans from HTML content
  *
- * Removes all <span class="ots-styled"> elements while preserving their text content
- * and any other non-ots-styled markup.
+ * Removes all <span class="typost-styled"> elements while preserving their text content
+ * and any other non-typost-styled markup.
  *
  * Used during block conversion when features should be extracted to block level.
  *
- * @param {string} htmlContent - HTML content with inline ots-styled spans
- * @return {string} HTML content with ots-styled spans removed
+ * @param {string} htmlContent - HTML content with inline typost-styled spans
+ * @return {string} HTML content with typost-styled spans removed
  */
 export function stripInlineFeatures(htmlContent) {
 	if (!htmlContent || typeof htmlContent !== 'string') {
@@ -491,8 +646,8 @@ export function stripInlineFeatures(htmlContent) {
 		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 		const container = doc.body.firstChild;
 
-		// Find all ots-styled spans (including nested ones)
-		const styledSpans = container.querySelectorAll('span.ots-styled');
+		// Find all typost-styled spans (including nested ones)
+		const styledSpans = container.querySelectorAll('span.typost-styled');
 
 		// Remove each span while keeping its content
 		styledSpans.forEach(span => {
@@ -516,7 +671,7 @@ export function stripInlineFeatures(htmlContent) {
 	} catch (error) {
 		// eslint-disable-next-line no-console
 		if (typeof console !== 'undefined' && console.error) {
-			console.error('OTS Block - Failed to strip inline features:', error);
+			console.error('Typographic Stylist Block - Failed to strip inline features:', error);
 		}
 		return htmlContent;
 	}

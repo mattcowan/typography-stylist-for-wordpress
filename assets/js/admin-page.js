@@ -7,15 +7,15 @@ jQuery(document).ready(function($) {
     'use strict';
 
     // Tab switching with ARIA support
-    $('.ots-tab-button').on('click', function() {
+    $('.typost-tab-button').on('click', function() {
         var tab = $(this).data('tab');
 
         // Update ARIA states
-        $('.ots-tab-button').removeClass('active').attr('aria-selected', 'false');
+        $('.typost-tab-button').removeClass('active').attr('aria-selected', 'false');
         $(this).addClass('active').attr('aria-selected', 'true');
 
-        $('.ots-tab-content').removeClass('active').attr('hidden', 'true');
-        var $panel = $('#ots-tab-' + tab);
+        $('.typost-tab-content').removeClass('active').attr('hidden', 'true');
+        var $panel = $('#typost-tab-' + tab);
         $panel.addClass('active').removeAttr('hidden');
 
         // Move focus to panel for screen readers
@@ -23,8 +23,8 @@ jQuery(document).ready(function($) {
     });
 
     // Add keyboard navigation (arrow keys for tabs)
-    $('.ots-tab-button').on('keydown', function(e) {
-        var $tabs = $('.ots-tab-button');
+    $('.typost-tab-button').on('keydown', function(e) {
+        var $tabs = $('.typost-tab-button');
         var currentIndex = $tabs.index(this);
         var newIndex;
 
@@ -46,7 +46,7 @@ jQuery(document).ready(function($) {
     });
 
     // Kit toggle handling
-    $(document).on('click', '.ots-toggle-kit', function() {
+    $(document).on('click', '.typost-toggle-kit', function() {
         var $button = $(this);
         var $kitFonts = $('#' + $button.attr('aria-controls'));
         var isExpanded = $button.attr('aria-expanded') === 'true';
@@ -66,8 +66,8 @@ jQuery(document).ready(function($) {
     var selectedFile = null;
 
     // Trigger file input when button is clicked
-    $('#ots-select-file-btn').on('click', function() {
-        $('#ots-font-file').click();
+    $('#typost-select-file-btn').on('click', function() {
+        $('#typost-font-file').click();
     });
 
     // Format file size
@@ -80,13 +80,13 @@ jQuery(document).ready(function($) {
     }
 
     // Handle file selection
-    $('#ots-font-file').on('change', function(e) {
+    $('#typost-font-file').on('change', function(e) {
         var file = e.target.files[0];
         if (!file) return;
 
         // Validate file type
         if (!file.name.endsWith('.zip')) {
-            alert(typographyStylistAdmin.strings.selectZip);
+            alert(typostAdmin.strings.selectZip);
             $(this).val('');
             return;
         }
@@ -94,55 +94,55 @@ jQuery(document).ready(function($) {
         selectedFile = file;
 
         // Show file name and size
-        $('#ots-file-name').text(file.name);
-        $('#ots-file-size').text('(' + formatFileSize(file.size) + ')');
-        $('#ots-selected-file').show();
+        $('#typost-file-name').text(file.name);
+        $('#typost-file-size').text('(' + formatFileSize(file.size) + ')');
+        $('#typost-selected-file').show();
 
         // Enable upload button
-        $('#ots-upload-font-btn').prop('disabled', false);
+        $('#typost-upload-font-btn').prop('disabled', false);
 
         // Auto-fill kit name from filename if empty
-        if (!$('#ots-font-name').val()) {
+        if (!$('#typost-font-name').val()) {
             var kitName = file.name.replace(/\.(zip)$/i, '');
-            $('#ots-font-name').val(kitName);
+            $('#typost-font-name').val(kitName);
         }
     });
 
     // Clear file selection
-    $('#ots-clear-file-btn').on('click', function() {
+    $('#typost-clear-file-btn').on('click', function() {
         selectedFile = null;
-        $('#ots-font-file').val('');
-        $('#ots-selected-file').hide();
-        $('#ots-upload-font-btn').prop('disabled', true);
+        $('#typost-font-file').val('');
+        $('#typost-selected-file').hide();
+        $('#typost-upload-font-btn').prop('disabled', true);
     });
 
     // Upload font kit
-    $('#ots-upload-font-btn').on('click', function() {
+    $('#typost-upload-font-btn').on('click', function() {
         var $btn = $(this);
-        var $message = $('#ots-font-message');
-        var $progress = $('#ots-upload-progress');
-        var $progressFill = $('.ots-progress-fill');
-        var $progressText = $('.ots-progress-text');
-        var $progressBar = $('.ots-progress-bar');
-        var fontName = $('#ots-font-name').val().trim();
+        var $message = $('#typost-font-message');
+        var $progress = $('#typost-upload-progress');
+        var $progressFill = $('.typost-progress-fill');
+        var $progressText = $('.typost-progress-text');
+        var $progressBar = $('.typost-progress-bar');
+        var fontName = $('#typost-font-name').val().trim();
 
         // Clear previous message
         $message.html('');
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterName + '</p></div>');
-            $('#ots-font-name').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterName + '</p></div>');
+            $('#typost-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!selectedFile) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.selectFile + '</p></div>');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.selectFile + '</p></div>');
             return;
         }
 
         // Clear aria-invalid on success
-        $('#ots-font-name').attr('aria-invalid', 'false');
+        $('#typost-font-name').attr('aria-invalid', 'false');
 
         // Prepare FormData
         var formData = new FormData();
@@ -150,22 +150,22 @@ jQuery(document).ready(function($) {
         formData.append('name', fontName);
 
         // Disable button, show progress, and add aria-busy
-        $('.ots-upload-form').attr('aria-busy', 'true');
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.uploading);
+        $('.typost-upload-form').attr('aria-busy', 'true');
+        $btn.prop('disabled', true).text(typostAdmin.strings.uploading);
         $progress.show();
         $progressFill.css('width', '0%');
-        $progressText.text(typographyStylistAdmin.strings.uploadingZip);
+        $progressText.text(typostAdmin.strings.uploadingZip);
         $progressBar.attr('aria-valuenow', '0');
 
         // Upload via REST API
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'fonts',
+            url: typostAdmin.restUrl + 'fonts',
             method: 'POST',
             data: formData,
             processData: false,
             contentType: false,
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             xhr: function() {
                 var xhr = new window.XMLHttpRequest();
@@ -175,23 +175,23 @@ jQuery(document).ready(function($) {
                         var percentComplete = Math.round((e.loaded / e.total) * 100);
                         $progressFill.css('width', percentComplete + '%');
                         $progressBar.attr('aria-valuenow', percentComplete);
-                        $progressText.text(typographyStylistAdmin.strings.uploading + ' ' + percentComplete + '%');
+                        $progressText.text(typostAdmin.strings.uploading + ' ' + percentComplete + '%');
                     }
                 }, false);
                 return xhr;
             },
             success: function(response) {
-                $progressText.text(typographyStylistAdmin.strings.processing);
+                $progressText.text(typostAdmin.strings.processing);
                 $progressFill.css('width', '100%');
                 $progressBar.attr('aria-valuenow', '100');
 
-                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.uploadSuccess + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.uploadSuccess + '</p></div>');
 
                 // Reset form
                 selectedFile = null;
-                $('#ots-font-name').val('');
-                $('#ots-font-file').val('');
-                $('#ots-selected-file').hide();
+                $('#typost-font-name').val('');
+                $('#typost-font-file').val('');
+                $('#typost-selected-file').hide();
 
                 // Refresh page after 2 seconds
                 setTimeout(function() {
@@ -199,7 +199,7 @@ jQuery(document).ready(function($) {
                 }, 2000);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.uploadError;
+                var errorMsg = typostAdmin.strings.uploadError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -207,18 +207,18 @@ jQuery(document).ready(function($) {
                 $progress.hide();
             },
             complete: function() {
-                $('.ots-upload-form').attr('aria-busy', 'false');
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.uploadButton);
+                $('.typost-upload-form').attr('aria-busy', 'false');
+                $btn.prop('disabled', false).text(typostAdmin.strings.uploadButton);
             }
         });
     });
 
     // Font preview selector
-    $('#ots-preview-font-select').on('change', function() {
+    $('#typost-preview-font-select').on('change', function() {
         var selectedFont = $(this).val();
 
         // Update all feature demo previews
-        $('.ots-feature-preview').each(function() {
+        $('.typost-feature-preview').each(function() {
             if (selectedFont) {
                 $(this).css('font-family', selectedFont);
             } else {
@@ -227,7 +227,7 @@ jQuery(document).ready(function($) {
         });
 
         // Update all preset previews (if any exist)
-        $('.ots-preset-preview').each(function() {
+        $('.typost-preset-preview').each(function() {
             if (selectedFont) {
                 $(this).css('font-family', selectedFont);
             } else {
@@ -237,14 +237,14 @@ jQuery(document).ready(function($) {
 
         // Update baseline preview
         if (selectedFont) {
-            $('#ots-baseline-preview').css('font-family', selectedFont);
+            $('#typost-baseline-preview').css('font-family', selectedFont);
         } else {
-            $('#ots-baseline-preview').css('font-family', 'Georgia, serif');
+            $('#typost-baseline-preview').css('font-family', 'Georgia, serif');
         }
     });
 
     // Auto-select first non-system font on page load
-    var $fontSelect = $('#ots-preview-font-select');
+    var $fontSelect = $('#typost-preview-font-select');
     if ($fontSelect.length && $fontSelect.find('option').length > 1) {
         // Get first option that's not the default (empty value)
         var $firstFont = $fontSelect.find('option:not([value=""])').first();
@@ -254,39 +254,39 @@ jQuery(document).ready(function($) {
     }
 
     // Preview size slider
-    $('#ots-preview-size-slider').on('input', function() {
+    $('#typost-preview-size-slider').on('input', function() {
         var size = $(this).val();
         var $slider = $(this);
 
         // Update the displayed value
-        $('#ots-preview-size-value').text(size + 'px');
+        $('#typost-preview-size-value').text(size + 'px');
 
         // Update ARIA attributes
         $slider.attr('aria-valuenow', size);
         $slider.attr('aria-valuetext', size + ' pixels');
 
         // Update all feature demo previews
-        $('.ots-feature-preview').css('font-size', size + 'px');
+        $('.typost-feature-preview').css('font-size', size + 'px');
 
         // Update all preset previews (if any exist)
-        $('.ots-preset-preview').css('font-size', size + 'px');
+        $('.typost-preset-preview').css('font-size', size + 'px');
 
         // Update baseline preview
-        $('#ots-baseline-preview').css('font-size', size + 'px');
+        $('#typost-baseline-preview').css('font-size', size + 'px');
     });
 
     // Custom preview text input
-    $('#ots-preview-custom-text').on('input', function() {
+    $('#typost-preview-custom-text').on('input', function() {
         var customText = $(this).val();
-        var $resetBtn = $('#ots-preview-reset-text');
-        var $baselinePreview = $('#ots-baseline-preview');
+        var $resetBtn = $('#typost-preview-reset-text');
+        var $baselinePreview = $('#typost-baseline-preview');
 
         if (customText && customText.trim()) {
             // Show reset button
             $resetBtn.show();
 
             // Update all feature previews with custom text
-            $('.ots-feature-preview').each(function() {
+            $('.typost-feature-preview').each(function() {
                 $(this).text(customText);
             });
 
@@ -297,7 +297,7 @@ jQuery(document).ready(function($) {
             $resetBtn.hide();
 
             // Restore default demo text
-            $('.ots-feature-preview').each(function() {
+            $('.typost-feature-preview').each(function() {
                 var defaultText = $(this).data('demo-text');
                 if (defaultText) {
                     $(this).text(defaultText);
@@ -313,14 +313,14 @@ jQuery(document).ready(function($) {
     });
 
     // Reset custom preview text
-    $('#ots-preview-reset-text').on('click', function() {
-        $('#ots-preview-custom-text').val('').trigger('input');
+    $('#typost-preview-reset-text').on('click', function() {
+        $('#typost-preview-custom-text').val('').trigger('input');
     });
 
     // Delete font - show replacement modal
     var deleteFontContext = null; // Store deletion context
 
-    $('.ots-delete-font').on('click', function() {
+    $('.typost-delete-font').on('click', function() {
         var $btn = $(this);
         var fontId = $btn.data('font-id');
         var fontNumericId = $btn.data('font-numeric-id');
@@ -338,26 +338,26 @@ jQuery(document).ready(function($) {
     });
 
     // Add Adobe Font
-    $('#ots-add-adobe-font-btn').on('click', function() {
+    $('#typost-add-adobe-font-btn').on('click', function() {
         var $btn = $(this);
-        var $message = $('#ots-adobe-font-message');
-        var fontName = $('#ots-adobe-font-name').val().trim();
-        var embedCode = $('#ots-adobe-embed-code').val().trim();
-        var fontFamiliesInput = $('#ots-adobe-font-families').val().trim();
+        var $message = $('#typost-adobe-font-message');
+        var fontName = $('#typost-adobe-font-name').val().trim();
+        var embedCode = $('#typost-adobe-embed-code').val().trim();
+        var fontFamiliesInput = $('#typost-adobe-font-families').val().trim();
 
         // Clear previous message
         $message.html('');
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeProjectName + '</p></div>');
-            $('#ots-adobe-font-name').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterAdobeProjectName + '</p></div>');
+            $('#typost-adobe-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!embedCode) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeEmbedCode + '</p></div>');
-            $('#ots-adobe-embed-code').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterAdobeEmbedCode + '</p></div>');
+            $('#typost-adobe-embed-code').focus().attr('aria-invalid', 'true');
             return;
         }
 
@@ -372,15 +372,15 @@ jQuery(document).ready(function($) {
         }
 
         if (fontFamilies.length === 0) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterAdobeFontFamilies + '</p></div>');
-            $('#ots-adobe-font-families').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterAdobeFontFamilies + '</p></div>');
+            $('#typost-adobe-font-families').focus().attr('aria-invalid', 'true');
             return;
         }
 
         // Clear aria-invalid on success
-        $('#ots-adobe-font-name').attr('aria-invalid', 'false');
-        $('#ots-adobe-embed-code').attr('aria-invalid', 'false');
-        $('#ots-adobe-font-families').attr('aria-invalid', 'false');
+        $('#typost-adobe-font-name').attr('aria-invalid', 'false');
+        $('#typost-adobe-embed-code').attr('aria-invalid', 'false');
+        $('#typost-adobe-font-families').attr('aria-invalid', 'false');
 
         // Prepare data
         var data = {
@@ -390,30 +390,30 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.adding);
+        $btn.prop('disabled', true).text(typostAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'adobe-fonts',
+            url: typostAdmin.restUrl + 'adobe-fonts',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(response) {
                 // Handle new response format: array of fonts instead of single font
                 var count = response.count || (response.fonts ? response.fonts.length : 1);
                 var successMsg = count === 1
-                    ? typographyStylistAdmin.strings.adobeFontSuccess
-                    : typographyStylistAdmin.strings.adobeFontSuccess.replace('added', 'Added ' + count + ' fonts from');
+                    ? typostAdmin.strings.adobeFontSuccess
+                    : typostAdmin.strings.adobeFontSuccess.replace('added', 'Added ' + count + ' fonts from');
 
                 $message.html('<div class="notice notice-success inline"><p>' + successMsg + '</p></div>');
 
                 // Reset form
-                $('#ots-adobe-font-name').val('');
-                $('#ots-adobe-embed-code').val('');
-                $('#ots-adobe-font-families').val('');
+                $('#typost-adobe-font-name').val('');
+                $('#typost-adobe-embed-code').val('');
+                $('#typost-adobe-font-families').val('');
 
                 // Refresh page after 1.5 seconds
                 setTimeout(function() {
@@ -421,20 +421,20 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.addAdobeFontError;
+                var errorMsg = typostAdmin.strings.addAdobeFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.addAdobeFontButton);
+                $btn.prop('disabled', false).text(typostAdmin.strings.addAdobeFontButton);
             }
         });
     });
 
     // Delete Adobe Font - show replacement modal
-    $('.ots-delete-adobe-font').on('click', function() {
+    $('.typost-delete-adobe-font').on('click', function() {
         var $btn = $(this);
         var fontId = $btn.data('font-id');
         var fontNumericId = $btn.data('font-numeric-id');
@@ -451,7 +451,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle Adobe Font "Load on all pages" checkbox
-    $('.ots-adobe-font-load-all-pages').on('change', function() {
+    $('.typost-adobe-font-load-all-pages').on('change', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -462,28 +462,28 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
+            url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(response) {
                 // Visual feedback: briefly highlight the checkbox label
                 var $label = $checkbox.closest('label');
-                $label.addClass('ots-success-flash');
+                $label.addClass('typost-success-flash');
                 setTimeout(function() {
-                    $label.removeClass('ots-success-flash');
+                    $label.removeClass('typost-success-flash');
                 }, 500);
             },
             error: function(xhr) {
                 // Revert checkbox to original state
                 $checkbox.prop('checked', originalState);
 
-                var errorMsg = (typographyStylistAdmin.strings && typographyStylistAdmin.strings.updateSettingError) ? typographyStylistAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
+                var errorMsg = (typostAdmin.strings && typostAdmin.strings.updateSettingError) ? typostAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -497,31 +497,31 @@ jQuery(document).ready(function($) {
     });
 
     // Add Manual Font
-    $('#ots-add-manual-font-btn').on('click', function() {
+    $('#typost-add-manual-font-btn').on('click', function() {
         var $btn = $(this);
-        var $message = $('#ots-manual-font-message');
-        var fontName = $('#ots-manual-font-name').val().trim();
-        var fontFamily = $('#ots-manual-font-family').val().trim();
+        var $message = $('#typost-manual-font-message');
+        var fontName = $('#typost-manual-font-name').val().trim();
+        var fontFamily = $('#typost-manual-font-family').val().trim();
 
         // Clear previous message
         $message.html('');
 
         // Validate
         if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterManualFontName + '</p></div>');
-            $('#ots-manual-font-name').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterManualFontName + '</p></div>');
+            $('#typost-manual-font-name').focus().attr('aria-invalid', 'true');
             return;
         }
 
         if (!fontFamily) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterFontFamily + '</p></div>');
-            $('#ots-manual-font-family').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterFontFamily + '</p></div>');
+            $('#typost-manual-font-family').focus().attr('aria-invalid', 'true');
             return;
         }
 
         // Clear aria-invalid on success
-        $('#ots-manual-font-name').attr('aria-invalid', 'false');
-        $('#ots-manual-font-family').attr('aria-invalid', 'false');
+        $('#typost-manual-font-name').attr('aria-invalid', 'false');
+        $('#typost-manual-font-family').attr('aria-invalid', 'false');
 
         // Prepare data
         var data = {
@@ -530,23 +530,23 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.adding);
+        $btn.prop('disabled', true).text(typostAdmin.strings.adding);
 
         // Add via REST API
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'manual-fonts',
+            url: typostAdmin.restUrl + 'manual-fonts',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(response) {
-                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.manualFontSuccess + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.manualFontSuccess + '</p></div>');
 
                 // Reset form
-                $('#ots-manual-font-name').val('');
-                $('#ots-manual-font-family').val('');
+                $('#typost-manual-font-name').val('');
+                $('#typost-manual-font-family').val('');
 
                 // Refresh page after 1.5 seconds
                 setTimeout(function() {
@@ -554,20 +554,20 @@ jQuery(document).ready(function($) {
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.addManualFontError;
+                var errorMsg = typostAdmin.strings.addManualFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.addManualFontButton);
+                $btn.prop('disabled', false).text(typostAdmin.strings.addManualFontButton);
             }
         });
     });
 
     // Delete Manual Font - show replacement modal
-    $('.ots-delete-manual-font').on('click', function() {
+    $('.typost-delete-manual-font').on('click', function() {
         var $btn = $(this);
         var fontId = $btn.data('font-id');
         var fontNumericId = $btn.data('font-numeric-id');
@@ -584,7 +584,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle MyFonts "Load on all pages" checkbox
-    $('.ots-font-load-all-pages').on('change', function() {
+    $('.typost-font-load-all-pages').on('change', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -595,28 +595,28 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
+            url: typostAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(response) {
                 // Visual feedback: briefly highlight the checkbox label
                 var $label = $checkbox.closest('label');
-                $label.addClass('ots-success-flash');
+                $label.addClass('typost-success-flash');
                 setTimeout(function() {
-                    $label.removeClass('ots-success-flash');
+                    $label.removeClass('typost-success-flash');
                 }, 500);
             },
             error: function(xhr) {
                 // Revert checkbox to original state
                 $checkbox.prop('checked', originalState);
 
-                var errorMsg = (typographyStylistAdmin.strings && typographyStylistAdmin.strings.updateSettingError) ? typographyStylistAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
+                var errorMsg = (typostAdmin.strings && typostAdmin.strings.updateSettingError) ? typostAdmin.strings.updateSettingError : 'Failed to update font loading setting.';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
@@ -630,164 +630,164 @@ jQuery(document).ready(function($) {
     });
 
     // Edit MyFonts (uploaded fonts) fallback
-    $('.ots-edit-font').on('click', function() {
-        var $card = $(this).closest('.ots-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-edit-font').on('click', function() {
+        var $card = $(this).closest('.typost-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Hide card content, show edit form (keep loading-option visible)
-        $card.find('.ots-font-families, .ots-font-meta, .ots-font-actions').hide();
+        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').hide();
         $editForm.show();
     });
 
-    $('.ots-cancel-font-edit').on('click', function() {
-        var $card = $(this).closest('.ots-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-cancel-font-edit').on('click', function() {
+        var $card = $(this).closest('.typost-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Show card content, hide edit form
-        $card.find('.ots-font-families, .ots-font-meta, .ots-font-actions').show();
+        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').show();
         $editForm.hide();
-        $editForm.find('.ots-font-edit-message').html('');
+        $editForm.find('.typost-font-edit-message').html('');
     });
 
-    $('.ots-save-font-edit').on('click', function() {
+    $('.typost-save-font-edit').on('click', function() {
         var $btn = $(this);
-        var $card = $btn.closest('.ots-font-card');
-        var $message = $card.find('.ots-font-edit-message');
-        var fontId = $card.find('.ots-edit-font').data('font-id');
-        var fallbacks = $card.find('.ots-font-fallback-input').val().trim();
+        var $card = $btn.closest('.typost-font-card');
+        var $message = $card.find('.typost-font-edit-message');
+        var fontId = $card.find('.typost-edit-font').data('font-id');
+        var fallbacks = $card.find('.typost-font-fallback-input').val().trim();
 
         $message.html('');
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
+        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
 
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'fonts/' + fontId + '/fallback',
+            url: typostAdmin.restUrl + 'fonts/' + fontId + '/fallback',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fallbacksUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.updateFallbacksError;
+                var errorMsg = typostAdmin.strings.updateFallbacksError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
             }
         });
     });
 
     // Edit Adobe Fonts fallback
-    $('.ots-edit-adobe-font').on('click', function() {
-        // Support both .ots-adobe-font-card (legacy) and .ots-font-card (new kit structure)
-        var $card = $(this).closest('.ots-adobe-font-card, .ots-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-edit-adobe-font').on('click', function() {
+        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
+        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Hide card content, show edit form
-        $card.find('.ots-font-families, .ots-font-loading-option, .ots-font-meta, .ots-font-actions').hide();
+        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').hide();
         $editForm.show();
     });
 
-    $('.ots-cancel-adobe-font-edit').on('click', function() {
-        // Support both .ots-adobe-font-card (legacy) and .ots-font-card (new kit structure)
-        var $card = $(this).closest('.ots-adobe-font-card, .ots-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-cancel-adobe-font-edit').on('click', function() {
+        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
+        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Show card content, hide edit form
-        $card.find('.ots-font-families, .ots-font-loading-option, .ots-font-meta, .ots-font-actions').show();
+        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').show();
         $editForm.hide();
-        $editForm.find('.ots-adobe-font-edit-message').html('');
+        $editForm.find('.typost-adobe-font-edit-message').html('');
     });
 
-    $('.ots-save-adobe-font-edit').on('click', function() {
+    $('.typost-save-adobe-font-edit').on('click', function() {
         var $btn = $(this);
-        // Support both .ots-adobe-font-card (legacy) and .ots-font-card (new kit structure)
-        var $card = $btn.closest('.ots-adobe-font-card, .ots-font-card');
-        var $message = $card.find('.ots-adobe-font-edit-message');
-        var fontId = $card.find('.ots-edit-adobe-font').data('font-id');
-        var fallbacks = $card.find('.ots-adobe-font-fallback-input').val().trim();
+        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
+        var $card = $btn.closest('.typost-adobe-font-card, .typost-font-card');
+        var $message = $card.find('.typost-adobe-font-edit-message');
+        var fontId = $card.find('.typost-edit-adobe-font').data('font-id');
+        var fallbacks = $card.find('.typost-adobe-font-fallback-input').val().trim();
 
         $message.html('');
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
+        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
 
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
+            url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fallbacksUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.updateFallbacksError;
+                var errorMsg = typostAdmin.strings.updateFallbacksError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
             }
         });
     });
 
     // Edit Manual Font
-    $('.ots-edit-manual-font').on('click', function() {
-        var $card = $(this).closest('.ots-manual-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-edit-manual-font').on('click', function() {
+        var $card = $(this).closest('.typost-manual-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Hide card content, show edit form
-        $card.find('.ots-font-families, .ots-font-fallbacks, .ots-font-meta, .ots-font-actions').hide();
+        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').hide();
         $editForm.show();
     });
 
-    $('.ots-cancel-manual-font-edit').on('click', function() {
-        var $card = $(this).closest('.ots-manual-font-card');
-        var $editForm = $card.find('.ots-font-edit-form');
+    $('.typost-cancel-manual-font-edit').on('click', function() {
+        var $card = $(this).closest('.typost-manual-font-card');
+        var $editForm = $card.find('.typost-font-edit-form');
 
         // Show card content, hide edit form
-        $card.find('.ots-font-families, .ots-font-fallbacks, .ots-font-meta, .ots-font-actions').show();
+        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').show();
         $editForm.hide();
-        $editForm.find('.ots-manual-font-edit-message').html('');
+        $editForm.find('.typost-manual-font-edit-message').html('');
     });
 
-    $('.ots-save-manual-font-edit').on('click', function() {
+    $('.typost-save-manual-font-edit').on('click', function() {
         var $btn = $(this);
-        var $card = $btn.closest('.ots-manual-font-card');
-        var $message = $card.find('.ots-manual-font-edit-message');
-        var fontId = $card.find('.ots-edit-manual-font').data('font-id');
-        var fontFamily = $card.find('.ots-manual-font-family-input').val().trim();
-        var fallbacks = $card.find('.ots-manual-font-fallback-input').val().trim();
+        var $card = $btn.closest('.typost-manual-font-card');
+        var $message = $card.find('.typost-manual-font-edit-message');
+        var fontId = $card.find('.typost-edit-manual-font').data('font-id');
+        var fontFamily = $card.find('.typost-manual-font-family-input').val().trim();
+        var fallbacks = $card.find('.typost-manual-font-fallback-input').val().trim();
 
         $message.html('');
 
         // Validate
         if (!fontFamily) {
-            $message.html('<div class="notice notice-error inline"><p>' + typographyStylistAdmin.strings.enterFontFamily + '</p></div>');
-            $card.find('.ots-manual-font-family-input').focus().attr('aria-invalid', 'true');
+            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterFontFamily + '</p></div>');
+            $card.find('.typost-manual-font-family-input').focus().attr('aria-invalid', 'true');
             return;
         }
 
-        $card.find('.ots-manual-font-family-input').attr('aria-invalid', 'false');
-        $btn.prop('disabled', true).text(typographyStylistAdmin.strings.saving);
+        $card.find('.typost-manual-font-family-input').attr('aria-invalid', 'false');
+        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
 
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'manual-fonts/' + fontId,
+            url: typostAdmin.restUrl + 'manual-fonts/' + fontId,
             method: 'PATCH',
             data: JSON.stringify({
                 font_family: fontFamily,
@@ -795,23 +795,23 @@ jQuery(document).ready(function($) {
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
-                $message.html('<div class="notice notice-success inline"><p>' + typographyStylistAdmin.strings.fontUpdated + '</p></div>');
+                $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fontUpdated + '</p></div>');
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
             },
             error: function(xhr) {
-                var errorMsg = typographyStylistAdmin.strings.updateFontError;
+                var errorMsg = typostAdmin.strings.updateFontError;
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typographyStylistAdmin.strings.saveChanges);
+                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
             }
         });
     });
@@ -827,8 +827,8 @@ jQuery(document).ready(function($) {
      * Show deletion modal with replacement options
      */
     function showDeletionModal(fontId) {
-        var $modal = $('#ots-delete-font-modal');
-        var $select = $('#ots-replacement-font-select');
+        var $modal = $('#typost-delete-font-modal');
+        var $select = $('#typost-replacement-font-select');
 
         // Store currently focused element
         previouslyFocusedElement = document.activeElement;
@@ -837,8 +837,8 @@ jQuery(document).ready(function($) {
         $select.find('option:not(:first)').remove();
 
         // Add all fonts except the one being deleted
-        if (typographyStylistAdmin.fonts) {
-            typographyStylistAdmin.fonts.forEach(function(font) {
+        if (typostAdmin.fonts) {
+            typostAdmin.fonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId && font.font_faces) {
                     font.font_faces.forEach(function(face) {
                         $select.append('<option value="' + font.font_id + '">📁 ' + face.family + '</option>');
@@ -847,8 +847,8 @@ jQuery(document).ready(function($) {
             });
         }
 
-        if (typographyStylistAdmin.adobeFonts) {
-            typographyStylistAdmin.adobeFonts.forEach(function(font) {
+        if (typostAdmin.adobeFonts) {
+            typostAdmin.adobeFonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId) {
                     // New structure: font_family (single string)
                     if (font.font_family) {
@@ -864,8 +864,8 @@ jQuery(document).ready(function($) {
             });
         }
 
-        if (typographyStylistAdmin.manualFonts) {
-            typographyStylistAdmin.manualFonts.forEach(function(font) {
+        if (typostAdmin.manualFonts) {
+            typostAdmin.manualFonts.forEach(function(font) {
                 if (font.font_id && font.font_id !== fontId && font.font_family) {
                     $select.append('<option value="' + font.font_id + '">⚙️ ' + font.name + '</option>');
                 }
@@ -874,12 +874,12 @@ jQuery(document).ready(function($) {
 
         // Reset form
         $select.val('');
-        $('#ots-replacement-global-load').prop('checked', false);
+        $('#typost-replacement-global-load').prop('checked', false);
 
         // Show modal
         $modal.fadeIn(200, function() {
             // Move focus to modal content
-            var $modalContent = $modal.find('.ots-modal-content');
+            var $modalContent = $modal.find('.typost-modal-content');
             $modalContent.attr('tabindex', '-1').focus();
 
             // Set up focus trap
@@ -891,7 +891,7 @@ jQuery(document).ready(function($) {
      * Close deletion modal
      */
     function closeDeletionModal() {
-        var $modal = $('#ots-delete-font-modal');
+        var $modal = $('#typost-delete-font-modal');
 
         // Remove focus trap event listeners
         $modal.off('keydown.focustrap');
@@ -951,15 +951,15 @@ jQuery(document).ready(function($) {
     }
 
     // Modal close handlers
-    $('.ots-modal-close, .ots-modal-cancel, .ots-modal-overlay').on('click', closeDeletionModal);
+    $('.typost-modal-close, .typost-modal-cancel, .typost-modal-overlay').on('click', closeDeletionModal);
 
     // Confirm deletion with optional replacement
-    $('.ots-modal-confirm-delete').on('click', function() {
+    $('.typost-modal-confirm-delete').on('click', function() {
         if (!deleteFontContext) return;
 
         var $btn = $(this);
-        var replacementId = $('#ots-replacement-font-select').val();
-        var globalLoad = $('#ots-replacement-global-load').is(':checked');
+        var replacementId = $('#typost-replacement-font-select').val();
+        var globalLoad = $('#typost-replacement-global-load').is(':checked');
 
         $btn.prop('disabled', true).text('Deleting...');
 
@@ -968,7 +968,7 @@ jQuery(document).ready(function($) {
 
         if (replacementId) {
             var replacementPromise = $.ajax({
-                url: typographyStylistAdmin.restUrl + 'font-replacements',
+                url: typostAdmin.restUrl + 'font-replacements',
                 method: 'POST',
                 data: JSON.stringify({
                     deleted_id: deleteFontContext.fontNumericId,
@@ -977,7 +977,7 @@ jQuery(document).ready(function($) {
                 }),
                 contentType: 'application/json',
                 beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                    xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
                 }
             });
             promises.push(replacementPromise);
@@ -994,17 +994,17 @@ jQuery(document).ready(function($) {
 
             // Otherwise, proceed with font deletion
             $.ajax({
-                url: typographyStylistAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId,
+                url: typostAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId,
                 method: 'DELETE',
                 beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                    xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
                 },
                 success: function() {
                     closeDeletionModal();
 
                     // Show success message
                     var $message = $('<div class="notice notice-success is-dismissible" style="margin: 20px 0;"><p>' +
-                                    typographyStylistAdmin.strings.deleteFontSuccess + '</p></div>');
+                                    typostAdmin.strings.deleteFontSuccess + '</p></div>');
                     $('.wrap h1').after($message);
 
                     // Reload page after brief delay
@@ -1033,7 +1033,7 @@ jQuery(document).ready(function($) {
         fontId = parseInt(fontId);
 
         // Check all font sources
-        var allFonts = (typographyStylistAdmin.fonts || []).concat(typographyStylistAdmin.adobeFonts || []).concat(typographyStylistAdmin.manualFonts || []);
+        var allFonts = (typostAdmin.fonts || []).concat(typostAdmin.adobeFonts || []).concat(typostAdmin.manualFonts || []);
 
         for (var i = 0; i < allFonts.length; i++) {
             if (allFonts[i].font_id === fontId) {
@@ -1046,19 +1046,19 @@ jQuery(document).ready(function($) {
 
     function loadReplacementsList() {
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements',
+            url: typostAdmin.restUrl + 'font-replacements',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(data) {
-                var $list = $('#ots-replacements-list');
+                var $list = $('#typost-replacements-list');
                 var mappings = data.mappings || {};
                 var globalLoad = data.global_load || [];
 
                 if (Object.keys(mappings).length === 0) {
-                    $list.html('<p class="ots-no-replacements">No font replacements configured.</p>');
-                    $('#ots-unassigned-fonts').hide();
+                    $list.html('<p class="typost-no-replacements">No font replacements configured.</p>');
+                    $('#typost-unassigned-fonts').hide();
                     return;
                 }
 
@@ -1074,12 +1074,12 @@ jQuery(document).ready(function($) {
                     html += '<tr data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">';
                     html += '<td><strong>' + deletedName + '</strong><br><small>ID: ' + deletedId + '</small></td>';
                     html += '<td><strong>' + replacementName + '</strong><br><small>ID: ' + replacementId + '</small></td>';
-                    html += '<td><input type="checkbox" class="ots-toggle-global-load" ' +
+                    html += '<td><input type="checkbox" class="typost-toggle-global-load" ' +
                            'data-deleted-id="' + deletedId + '"' +
                            (isGlobal ? ' checked' : '') + ' /></td>';
                     html += '<td>';
-                    html += '<button class="button ots-edit-replacement" data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">Edit</button> ';
-                    html += '<button class="button ots-delete-replacement" data-deleted-id="' + deletedId + '">Remove</button>';
+                    html += '<button class="button typost-edit-replacement" data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">Edit</button> ';
+                    html += '<button class="button typost-delete-replacement" data-deleted-id="' + deletedId + '">Remove</button>';
                     html += '</td>';
                     html += '</tr>';
                 });
@@ -1098,25 +1098,25 @@ jQuery(document).ready(function($) {
      */
     function loadUnassignedFonts() {
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements/orphans',
+            url: typostAdmin.restUrl + 'font-replacements/orphans',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(data) {
                 if (data.orphaned_ids && data.orphaned_ids.length > 0) {
                     var html = '<p>Unassigned IDs: ' + data.orphaned_ids.join(', ') + '</p>';
-                    $('#ots-unassigned-list').html(html);
-                    $('#ots-unassigned-fonts').show();
+                    $('#typost-unassigned-list').html(html);
+                    $('#typost-unassigned-fonts').show();
                 } else {
-                    $('#ots-unassigned-fonts').hide();
+                    $('#typost-unassigned-fonts').hide();
                 }
             }
         });
     }
 
     // Edit replacement mapping
-    $(document).on('click', '.ots-edit-replacement', function() {
+    $(document).on('click', '.typost-edit-replacement', function() {
         var deletedId = $(this).data('deleted-id');
         var currentReplacementId = $(this).data('replacement-id');
 
@@ -1130,18 +1130,18 @@ jQuery(document).ready(function($) {
         showDeletionModal(parseInt(deletedId));
 
         // Pre-select the current replacement
-        $('#ots-replacement-font-select').val(currentReplacementId);
+        $('#typost-replacement-font-select').val(currentReplacementId);
 
         // Change modal title and button text
-        $('#ots-delete-font-modal .ots-modal-header h2').text('Edit Font Replacement');
-        $('.ots-modal-confirm-delete').text('Update Replacement');
-        $('#ots-delete-font-modal .ots-modal-description').html(
+        $('#typost-delete-font-modal .typost-modal-header h2').text('Edit Font Replacement');
+        $('.typost-modal-confirm-delete').text('Update Replacement');
+        $('#typost-delete-font-modal .typost-modal-description').html(
             '<p>Select a new replacement font for ID <strong>' + deletedId + '</strong>.</p>'
         );
     });
 
     // Delete replacement mapping
-    $(document).on('click', '.ots-delete-replacement', function() {
+    $(document).on('click', '.typost-delete-replacement', function() {
         var deletedId = $(this).data('deleted-id');
 
         // Validate ID
@@ -1153,10 +1153,10 @@ jQuery(document).ready(function($) {
         if (!confirm('Remove this font replacement mapping?')) return;
 
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
             method: 'DELETE',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
                 loadReplacementsList();
@@ -1168,19 +1168,19 @@ jQuery(document).ready(function($) {
     });
 
     // Toggle global load for replacement
-    $(document).on('change', '.ots-toggle-global-load', function() {
+    $(document).on('change', '.typost-toggle-global-load', function() {
         var deletedId = $(this).data('deleted-id');
         var globalLoad = $(this).is(':checked');
 
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
             method: 'PATCH',
             data: JSON.stringify({
                 global_load: globalLoad
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             error: function() {
                 alert('Failed to update global load setting.');
@@ -1191,7 +1191,7 @@ jQuery(document).ready(function($) {
     });
 
     // Load replacements when tab is opened
-    $('.ots-tab-button[data-tab="replacements"]').on('click', function() {
+    $('.typost-tab-button[data-tab="replacements"]').on('click', function() {
         loadReplacementsList();
         populateAddReplacementForm();
     });
@@ -1202,7 +1202,7 @@ jQuery(document).ready(function($) {
     function populateAddReplacementForm() {
         // Get all active font IDs
         var activeFontIds = [];
-        var allFonts = (typographyStylistAdmin.fonts || []).concat(typographyStylistAdmin.adobeFonts || []).concat(typographyStylistAdmin.manualFonts || []);
+        var allFonts = (typostAdmin.fonts || []).concat(typostAdmin.adobeFonts || []).concat(typostAdmin.manualFonts || []);
 
         allFonts.forEach(function(font) {
             if (font.font_id) {
@@ -1212,10 +1212,10 @@ jQuery(document).ready(function($) {
 
         // Get existing replacement mappings
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements',
+            url: typostAdmin.restUrl + 'font-replacements',
             method: 'GET',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function(data) {
                 var existingMappings = data.mappings || {};
@@ -1236,14 +1236,14 @@ jQuery(document).ready(function($) {
                 }
 
                 // Populate deleted ID dropdown
-                var $deletedSelect = $('#ots-new-deleted-id');
+                var $deletedSelect = $('#typost-new-deleted-id');
                 $deletedSelect.find('option:not(:first)').remove();
                 availableIds.forEach(function(id) {
                     $deletedSelect.append('<option value="' + id + '">' + id + '</option>');
                 });
 
                 // Populate replacement font dropdown
-                var $replacementSelect = $('#ots-new-replacement-id');
+                var $replacementSelect = $('#typost-new-replacement-id');
                 $replacementSelect.find('option:not(:first)').remove();
                 allFonts.forEach(function(font) {
                     if (font.font_id) {
@@ -1258,11 +1258,11 @@ jQuery(document).ready(function($) {
     /**
      * Handle "Add Replacement" button click
      */
-    $('#ots-add-replacement-btn').on('click', function() {
+    $('#typost-add-replacement-btn').on('click', function() {
         var $btn = $(this);
-        var $message = $('#ots-add-replacement-message');
-        var deletedId = $('#ots-new-deleted-id').val();
-        var replacementId = $('#ots-new-replacement-id').val();
+        var $message = $('#typost-add-replacement-message');
+        var deletedId = $('#typost-new-deleted-id').val();
+        var replacementId = $('#typost-new-replacement-id').val();
 
         $message.html('');
 
@@ -1286,7 +1286,7 @@ jQuery(document).ready(function($) {
 
         // Create the replacement mapping
         $.ajax({
-            url: typographyStylistAdmin.restUrl + 'font-replacements',
+            url: typostAdmin.restUrl + 'font-replacements',
             method: 'POST',
             data: JSON.stringify({
                 deleted_id: parseInt(deletedId),
@@ -1294,12 +1294,12 @@ jQuery(document).ready(function($) {
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
-                xhr.setRequestHeader('X-WP-Nonce', typographyStylistAdmin.nonce);
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
                 $message.html('<p class="notice notice-success">Replacement mapping added successfully!</p>');
-                $('#ots-new-deleted-id').val('');
-                $('#ots-new-replacement-id').val('');
+                $('#typost-new-deleted-id').val('');
+                $('#typost-new-replacement-id').val('');
                 loadReplacementsList();
                 populateAddReplacementForm();
                 $btn.prop('disabled', false).text('Add Replacement');

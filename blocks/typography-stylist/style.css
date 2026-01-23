@@ -2,14 +2,14 @@
  * Typography Stylist Block - Frontend Styles
  */
 
-.wp-block-typography-stylist {
+.wp-block-typost {
 	position: relative;
 }
 
 /* Screen reader only classes - ensure they exist and prevent layout impact */
-.wp-block-typography-stylist .visually-hidden,
-.wp-block-typography-stylist .sr-only,
-.wp-block-typography-stylist .screen-reader-text {
+.wp-block-typost .visually-hidden,
+.wp-block-typost .sr-only,
+.wp-block-typost .screen-reader-text {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -22,7 +22,7 @@
 }
 
 /* Styled content */
-.wp-block-typography-stylist .ots-styled {
+.wp-block-typost .typost-styled {
 	/* Inherit all spacing from parent */
 	margin: 0;
 	padding: 0;

@@ -279,6 +279,38 @@ Define fonts that are already loaded through your theme, plugins, or CDN (like G
 
 All three methods make fonts available in the block editor and preview selector.
 
+= Source Code =
+
+This plugin includes both compiled/minified files and their source code to meet WordPress security and transparency requirements.
+
+**Minified/Compiled Files:**
+* assets/js/*.min.js files have corresponding source files in assets/js/
+* assets/css/*.min.css files have corresponding source files in assets/css/
+* blocks/typography-stylist/build/ files are compiled from blocks/typography-stylist/ source files
+
+**Rebuilding from Source:**
+Developers can rebuild all files from source:
+
+1. Install dependencies: `npm install`
+2. Rebuild all files: `npm run build`
+3. Run tests: `npm test`
+
+**Build Documentation:**
+See BUILD.md and SOURCE.md in the plugin directory for complete documentation of the build process, source file mappings, and build tool versions.
+
+**Build Configuration:**
+* Babel configuration: .babelrc
+* Build tools and versions: package.json (devDependencies)
+* Test framework: Jest (via @wordpress/scripts)
+
+**Build Tools Used:**
+* @wordpress/scripts 26.19.0 - WordPress block building and testing
+* Browserify 17.0.1 + Babelify 10.0.0 - JavaScript transpilation
+* Terser 5.16.0 - JavaScript minification
+* clean-css-cli 5.6.2 - CSS minification
+
+All source code is included in the distribution ZIP and publicly available for security review.
+
 == Credits ==
 
 Developed by Matthew Cowan.

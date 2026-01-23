@@ -4,7 +4,7 @@
  */
 
 /* Base styling for elements with typography features */
-.ots-styled {
+.typost-styled {
     /* Features are applied via inline styles */
     /* This class ensures proper rendering */
     font-variant-ligatures: normal;
@@ -14,25 +14,25 @@
 }
 
 /* Ensure text rendering is optimal for OpenType features */
-h1 .ots-styled,
-h2 .ots-styled,
-h3 .ots-styled,
-h4 .ots-styled,
-h5 .ots-styled,
-h6 .ots-styled {
+h1 .typost-styled,
+h2 .typost-styled,
+h3 .typost-styled,
+h4 .typost-styled,
+h5 .typost-styled,
+h6 .typost-styled {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
 /* Prevent features from being disabled by normalize/reset */
-.ots-styled * {
+.typost-styled * {
     font-feature-settings: inherit;
 }
 
 /* Print styles - ensure features are preserved */
 @media print {
-    .ots-styled {
+    .typost-styled {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
@@ -44,105 +44,105 @@ h6 .ots-styled {
  */
 
 /* Standard ligatures */
-.ots-liga {
+.typost-liga {
     font-feature-settings: "liga" 1;
 }
 
 /* Discretionary ligatures */
-.ots-dlig {
+.typost-dlig {
     font-feature-settings: "dlig" 1;
 }
 
 /* Contextual alternates */
-.ots-calt {
+.typost-calt {
     font-feature-settings: "calt" 1;
 }
 
 /* Contextual alternates + standard ligatures */
-.ots-liga-calt {
+.typost-liga-calt {
     font-feature-settings: "liga" 1, "calt" 1;
 }
 
 /* Swashes */
-.ots-swsh {
+.typost-swsh {
     font-feature-settings: "swsh" 1;
 }
 
 /* Contextual swashes */
-.ots-cswh {
+.typost-cswh {
     font-feature-settings: "cswh" 1;
 }
 
 /* Stylistic alternates */
-.ots-salt {
+.typost-salt {
     font-feature-settings: "salt" 1;
 }
 
 /* Titling forms */
-.ots-titl {
+.typost-titl {
     font-feature-settings: "titl" 1;
 }
 
 /* Ornaments */
-.ots-ornm {
+.typost-ornm {
     font-feature-settings: "ornm" 1;
 }
 
 /* Stylistic sets */
-.ots-ss01 { font-feature-settings: "ss01" 1; }
-.ots-ss02 { font-feature-settings: "ss02" 1; }
-.ots-ss03 { font-feature-settings: "ss03" 1; }
-.ots-ss04 { font-feature-settings: "ss04" 1; }
-.ots-ss05 { font-feature-settings: "ss05" 1; }
-.ots-ss06 { font-feature-settings: "ss06" 1; }
-.ots-ss07 { font-feature-settings: "ss07" 1; }
-.ots-ss08 { font-feature-settings: "ss08" 1; }
-.ots-ss09 { font-feature-settings: "ss09" 1; }
-.ots-ss10 { font-feature-settings: "ss10" 1; }
-.ots-ss11 { font-feature-settings: "ss11" 1; }
-.ots-ss12 { font-feature-settings: "ss12" 1; }
-.ots-ss13 { font-feature-settings: "ss13" 1; }
-.ots-ss14 { font-feature-settings: "ss14" 1; }
-.ots-ss15 { font-feature-settings: "ss15" 1; }
-.ots-ss16 { font-feature-settings: "ss16" 1; }
-.ots-ss17 { font-feature-settings: "ss17" 1; }
-.ots-ss18 { font-feature-settings: "ss18" 1; }
-.ots-ss19 { font-feature-settings: "ss19" 1; }
-.ots-ss20 { font-feature-settings: "ss20" 1; }
+.typost-ss01 { font-feature-settings: "ss01" 1; }
+.typost-ss02 { font-feature-settings: "ss02" 1; }
+.typost-ss03 { font-feature-settings: "ss03" 1; }
+.typost-ss04 { font-feature-settings: "ss04" 1; }
+.typost-ss05 { font-feature-settings: "ss05" 1; }
+.typost-ss06 { font-feature-settings: "ss06" 1; }
+.typost-ss07 { font-feature-settings: "ss07" 1; }
+.typost-ss08 { font-feature-settings: "ss08" 1; }
+.typost-ss09 { font-feature-settings: "ss09" 1; }
+.typost-ss10 { font-feature-settings: "ss10" 1; }
+.typost-ss11 { font-feature-settings: "ss11" 1; }
+.typost-ss12 { font-feature-settings: "ss12" 1; }
+.typost-ss13 { font-feature-settings: "ss13" 1; }
+.typost-ss14 { font-feature-settings: "ss14" 1; }
+.typost-ss15 { font-feature-settings: "ss15" 1; }
+.typost-ss16 { font-feature-settings: "ss16" 1; }
+.typost-ss17 { font-feature-settings: "ss17" 1; }
+.typost-ss18 { font-feature-settings: "ss18" 1; }
+.typost-ss19 { font-feature-settings: "ss19" 1; }
+.typost-ss20 { font-feature-settings: "ss20" 1; }
 
 /**
  * Preset combinations based on default presets
  */
 
 /* Elegant Script: calt + ss02 */
-.ots-preset-elegant-script {
+.typost-preset-elegant-script {
     font-feature-settings: "calt" 1, "ss02" 1;
 }
 
 /* Wedding Style: calt + ss02 + swsh */
-.ots-preset-wedding-style {
+.typost-preset-wedding-style {
     font-feature-settings: "calt" 1, "ss02" 1, "swsh" 1;
 }
 
 /* Vintage Ornate: calt + dlig + ss01 */
-.ots-preset-vintage-ornate {
+.typost-preset-vintage-ornate {
     font-feature-settings: "calt" 1, "dlig" 1, "ss01" 1;
 }
 
 /* Modern Clean: liga + calt */
-.ots-preset-modern-clean {
+.typost-preset-modern-clean {
     font-feature-settings: "liga" 1, "calt" 1;
 }
 
 /* Full Swash: calt + swsh + cswh + salt */
-.ots-preset-full-swash {
+.typost-preset-full-swash {
     font-feature-settings: "calt" 1, "swsh" 1, "cswh" 1, "salt" 1;
 }
 
 /**
  * Accessibility - ensure features don't break screen readers
  */
-.ots-styled {
+.typost-styled {
     /* Preserve text content for screen readers */
     speak: normal;
 }
@@ -151,7 +151,7 @@ h6 .ots-styled {
  * Performance optimization
  * Use will-change for animated text with features
  */
-.ots-styled.ots-animated {
+.typost-styled.typost-animated {
     will-change: font-feature-settings;
 }
 
@@ -161,21 +161,21 @@ h6 .ots-styled {
 
 /* Firefox */
 @-moz-document url-prefix() {
-    .ots-styled {
+    .typost-styled {
         -moz-font-feature-settings: inherit;
     }
 }
 
 /* Safari */
 @supports (-webkit-appearance: none) {
-    .ots-styled {
+    .typost-styled {
         -webkit-font-feature-settings: inherit;
     }
 }
 
 /* Edge legacy */
 @supports (-ms-ime-align: auto) {
-    .ots-styled {
+    .typost-styled {
         -ms-font-feature-settings: inherit;
     }
 }
