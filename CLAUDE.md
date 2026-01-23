@@ -10,7 +10,7 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 
 ### Core Plugin Structure
 
-**Main Plugin File:** [typost.php](typost.php)
+**Main Plugin File:** [typography-stylist.php](typography-stylist.php)
 - Singleton class `Typost` handles all WordPress integration
 - Enqueues block editor and frontend assets
 - Registers REST API endpoints at `/wp-json/typost/v1/`
@@ -30,7 +30,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **Storage:** Features are stored directly in post content (no separate meta table)
    - **Note:** Features must be explicitly applied via the "Apply" button (not automatic on toggle)
 
-2. **Typost Block** [blocks/typost/](blocks/typost/)
+2. **Typography Stylist Block** [blocks/typography-stylist/](blocks/typography-stylist/)
    - **What:** Custom Gutenberg block with block-level controls in the sidebar PLUS inline text styling
    - **When:** Use for complex typography with accessibility features or when styling partial words
    - **Components:**
@@ -45,10 +45,9 @@ The plugin provides two distinct interfaces for applying OpenType features:
 **Admin Interface:** [includes/admin-page.php](includes/admin-page.php)
 - Tabbed interface showing: Presets, Font Features, Custom Fonts, Accessibility, Help
 - Font management: Upload webfont kits, Adobe Fonts integration, custom font definitions
-- Font preview with glyph browser for testing OpenType features
-- Glyph browser: [assets/js/glyph-browser.min.js](assets/js/glyph-browser.min.js) - Interactive font preview tool
+- Font preview for testing OpenType features
 - Inline styles and jQuery for tab switching
-- Located at Settings → Typost
+- Located at Settings → Typography Stylist
 
 ### Data Flow
 
@@ -94,7 +93,7 @@ The plugin supports these feature categories:
 - **Stylistic Sets:** ss01-ss05 (hardcoded, but supports through ss20)
 - **Alternates:** swsh, cswh, salt, titl, ornm
 
-Feature data structure in [typost.php](typost.php:247-328):
+Feature data structure in [typography-stylist.php](typography-stylist.php:247-328):
 ```php
 array(
     'id' => 'calt',           // OpenType feature code
@@ -149,7 +148,7 @@ Block editor JavaScript requires:
 
 **Unit Tests:**
 - This plugin has Jest unit tests for utility functions and business logic
-- Test files are located in `blocks/typost/__tests__/`
+- Test files are located in `blocks/typography-stylist/__tests__/`
 - Tests verify the actual implementation by importing from `utils.js`
 - **CRITICAL: Always run tests after making code changes**
 
@@ -182,9 +181,9 @@ npm test -- --coverage    # See test coverage report
 
 ### Modifying Features or Presets
 
-**To add new OpenType features:** Edit `get_available_features()` in [typost.php](typost.php:247-328)
+**To add new OpenType features:** Edit `get_available_features()` in [typography-stylist.php](typography-stylist.php:247-328)
 
-**To add default presets:** Edit `get_default_presets()` in [typost.php](typost.php:209-242)
+**To add default presets:** Edit `get_default_presets()` in [typography-stylist.php](typography-stylist.php:209-242)
 
 **Filter hooks for extensibility:**
 - `TYPOST_available_features` - Filter available features
@@ -196,7 +195,7 @@ npm test -- --coverage    # See test coverage report
 
 **Nonce verification:** REST API uses `wp_create_nonce('wp_rest')` and `check_permissions()` method checks `current_user_can('edit_posts')`
 
-**Localization:** All strings use `__()` with text domain `typost`
+**Localization:** All strings use `__()` with text domain `typography-stylist`
 
 **Debug Logging:**
 - Do NOT add error_log() statements to production code
@@ -214,9 +213,9 @@ npm test -- --coverage    # See test coverage report
 **Translation Management:**
 - All user-facing strings MUST be wrapped in translation functions (`__()`, `esc_html__()`, `esc_attr__()`, `sprintf()`)
 - After adding new translatable strings, update ALL translation files in this order:
-  1. **Base template:** [languages/typost.pot](languages/typost.pot)
-  2. **French translation:** [languages/typost-fr_FR.po](languages/typost-fr_FR.po)
-  3. **Spanish translation:** [languages/typost-es_ES.po](languages/typost-es_ES.po)
+  1. **Base template:** [languages/typography-stylist.pot](languages/typography-stylist.pot)
+  2. **French translation:** [languages/typography-stylist-fr_FR.po](languages/typography-stylist-fr_FR.po)
+  3. **Spanish translation:** [languages/typography-stylist-es_ES.po](languages/typography-stylist-es_ES.po)
 - Format for .pot and .po files:
   ```
   #: path/to/file.php:123
@@ -246,12 +245,12 @@ npm test -- --coverage    # See test coverage report
 - Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)
 - **Plugin supports two usage methods:**
   1. **Inline Format** - For complete words/phrases in any heading block (H1-H6)
-  2. **Typost Block** - For complex typography with accessibility features
+  2. **Typography Stylist Block** - For complex typography with accessibility features
 - Do not update the version number unless asked
 - **Updates on new features MUST include:**
   1. Running unit tests (`npm test`) to verify no regressions
   2. Adding tests for new utility functions or business logic
   3. Updating the readme files (readme.txt and/or README.md)
-  4. Adding new translatable strings to languages/typost.pot
+  4. Adding new translatable strings to languages/typography-stylist.pot
   5. Running build process if JavaScript/CSS was modified (`npm run build`)
   6. Running tests again after build to ensure everything still works

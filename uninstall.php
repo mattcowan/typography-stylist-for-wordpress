@@ -85,10 +85,10 @@ $wpdb->query(
 // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // Delete uploaded font files
-$upload_dir = wp_upload_dir();
-$font_dir = $upload_dir['basedir'] . '/typography-stylist';
+$typost_upload_dir = wp_upload_dir();
+$typost_font_dir = $typost_upload_dir['basedir'] . '/typography-stylist';
 
-if (file_exists($font_dir)) {
+if (file_exists($typost_font_dir)) {
     require_once(ABSPATH . 'wp-admin/includes/file.php');
 
     // Initialize WordPress Filesystem
@@ -96,25 +96,27 @@ if (file_exists($font_dir)) {
         global $wp_filesystem;
 
         // Remove entire typography-stylist directory including fonts
-        $wp_filesystem->rmdir($font_dir, true);
+        $wp_filesystem->rmdir($typost_font_dir, true);
     } else {
         // Fallback to PHP functions if WP_Filesystem fails
-        if (is_dir($font_dir)) {
-            $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($font_dir, RecursiveDirectoryIterator::SKIP_DOTS),
+        // phpcs:disable WordPress.WP.AlternativeFunctions -- WP_Filesystem failed, this is emergency cleanup during uninstall
+        if (is_dir($typost_font_dir)) {
+            $typost_files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($typost_font_dir, RecursiveDirectoryIterator::SKIP_DOTS),
                 RecursiveIteratorIterator::CHILD_FIRST
             );
 
-            foreach ($files as $file) {
-                if ($file->isDir()) {
-                    @rmdir($file->getRealPath());
+            foreach ($typost_files as $typost_file) {
+                if ($typost_file->isDir()) {
+                    @rmdir($typost_file->getRealPath());
                 } else {
-                    @unlink($file->getRealPath());
+                    @unlink($typost_file->getRealPath());
                 }
             }
 
-            @rmdir($font_dir);
+            @rmdir($typost_font_dir);
         }
+        // phpcs:enable WordPress.WP.AlternativeFunctions
     }
 }
 

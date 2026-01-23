@@ -8,7 +8,7 @@ const distDir = path.join(buildDir, pluginSlug);
 const zipFile = path.join(__dirname, '..', `${pluginSlug}.zip`);
 
 // Files and directories to include in the package
-// Now includes both source and compiled files for WordPress.org compliance
+// Includes only essential runtime files and WordPress.org requirements
 const includeList = [
   'typography-stylist.php',
   'uninstall.php',
@@ -18,10 +18,7 @@ const includeList = [
   'assets/fonts/',        // if you have any fonts
   'languages/',           // if you have translations
   'blocks/typography-stylist/**',  // All block files (source + build)
-  'BUILD.md',             // Build instructions
-  'SOURCE.md',            // Source documentation
   'package.json',         // For developers
-  '.babelrc',             // Babel config
   'README.txt',           // WordPress.org readme if exists
   'readme.txt',           // lowercase variant
   'LICENSE'               // if exists
@@ -108,14 +105,12 @@ if (fs.existsSync(blockBuildDir)) {
 }
 
 // Copy optional files if they exist
+// Excludes developer-only files (BUILD.md, SOURCE.md, .babelrc)
 const optionalFiles = [
   'README.txt',
   'readme.txt',
   'LICENSE',
-  'BUILD.md',      // Build instructions for WordPress.org compliance
-  'SOURCE.md',     // Source code documentation
-  'package.json',  // For developers
-  '.babelrc'       // Babel configuration
+  'package.json'  // For developers
 ];
 optionalFiles.forEach(file => {
   const filePath = path.join(__dirname, '..', file);

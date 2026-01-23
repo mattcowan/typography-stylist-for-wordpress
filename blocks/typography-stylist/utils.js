@@ -301,6 +301,152 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 }
 
 /**
+ * Validate that a DOM Range matches the expected text selection
+ *
+ * Prevents bugs where invalid ranges wrap entire content instead of selection.
+ *
+ * @param {Range} range - The DOM range to validate
+ * @param {string} expectedText - The text we expect the range to contain
+ * @param {number} expectedLength - Expected character count
+ * @return {Object} { valid: boolean, reason: string }
+ */
+export function validateRangeMatchesSelection(range, expectedText, expectedLength) {
+	if (!range) {
+		return { valid: false, reason: 'Range is null' };
+	}
+
+	if (!expectedText || expectedLength === 0) {
+		return { valid: false, reason: 'Empty selection' };
+	}
+
+	try {
+		const rangeText = range.toString();
+
+		// Check exact match
+		if (rangeText === expectedText) {
+			return { valid: true, reason: 'Exact match' };
+		}
+
+		// Check trimmed match (handles whitespace differences)
+		if (rangeText.trim() === expectedText.trim()) {
+			return { valid: true, reason: 'Trimmed match' };
+		}
+
+		// Check length match (handles HTML entities)
+		if (rangeText.length === expectedLength) {
+			return { valid: true, reason: 'Length match' };
+		}
+
+		return {
+			valid: false,
+			reason: `Mismatch: expected "${expectedText}" (${expectedLength} chars), got "${rangeText}" (${rangeText.length} chars)`
+		};
+	} catch (error) {
+		return { valid: false, reason: `Error: ${error.message}` };
+	}
+}
+
+/**
+ * Apply styling using string manipulation (fallback when Range fails)
+ *
+ * This method works by:
+ * 1. Finding text nodes and their positions
+ * 2. Locating the exact text node containing the selection
+ * 3. Manually splitting it and inserting a span
+ *
+ * @param {string} htmlContent - The HTML content
+ * @param {number} startOffset - Start character offset
+ * @param {number} endOffset - End character offset
+ * @param {Object} attributes - Attributes to set on span
+ * @param {string} styleString - CSS style string
+ * @return {Object} { success: boolean, content: string, error: string|null }
+ */
+export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset, attributes, styleString) {
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Build text position map
+		const textMap = [];
+		let currentOffset = 0;
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let textNode;
+
+		while ((textNode = walker.nextNode())) {
+			const nodeText = textNode.nodeValue;
+			textMap.push({
+				node: textNode,
+				start: currentOffset,
+				end: currentOffset + nodeText.length,
+				text: nodeText
+			});
+			currentOffset += nodeText.length;
+		}
+
+		// Find affected text nodes
+		const affectedNodes = textMap.filter(item =>
+			item.start < endOffset && item.end > startOffset
+		);
+
+		if (affectedNodes.length === 0) {
+			return { success: false, content: htmlContent, error: 'No text nodes in range' };
+		}
+
+		// Handle single text node case (most common, including single-letter bug)
+		if (affectedNodes.length === 1) {
+			const nodeInfo = affectedNodes[0];
+			const textNode = nodeInfo.node;
+
+			// Calculate offsets within this text node
+			const nodeRelativeStart = Math.max(0, startOffset - nodeInfo.start);
+			const nodeRelativeEnd = Math.min(nodeInfo.text.length, endOffset - nodeInfo.start);
+
+			// Split: before | selected | after
+			const before = nodeInfo.text.substring(0, nodeRelativeStart);
+			const selected = nodeInfo.text.substring(nodeRelativeStart, nodeRelativeEnd);
+			const after = nodeInfo.text.substring(nodeRelativeEnd);
+
+			// Build span
+			const span = doc.createElement('span');
+			span.className = 'typost-styled';
+
+			Object.keys(attributes).forEach(key => {
+				const value = attributes[key];
+				if (value !== null && value !== undefined && value !== '') {
+					span.setAttribute(key, String(value));
+				}
+			});
+
+			if (styleString) {
+				span.setAttribute('style', styleString);
+			}
+
+			span.textContent = selected;
+
+			// Replace text node with: before + span + after
+			const parent = textNode.parentNode;
+			if (before) {
+				parent.insertBefore(doc.createTextNode(before), textNode);
+			}
+			parent.insertBefore(span, textNode);
+			if (after) {
+				parent.insertBefore(doc.createTextNode(after), textNode);
+			}
+			parent.removeChild(textNode);
+
+			return { success: true, content: container.innerHTML, error: null };
+		}
+
+		// Multi-node selection - defer to range method
+		return { success: false, content: htmlContent, error: 'Multi-node selection - use range method' };
+
+	} catch (error) {
+		return { success: false, content: htmlContent, error: error.message };
+	}
+}
+
+/**
  * Detect block's computed font from DOM
  *
  * Finds a block's RichText element in the DOM and extracts its computed font-family.

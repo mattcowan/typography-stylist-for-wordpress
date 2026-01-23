@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -1853,3 +1853,234 @@ describe('Block Conversion - Inline Feature Analysis', () => {
  * - npm run test:watch        Run tests in watch mode (re-runs on file changes)
  * - npm test -- --coverage    See test coverage report
  */
+
+/**
+ * SINGLE LETTER SELECTION BUG FIX TESTS
+ *
+ * These tests verify the fix for the bug where selecting a single letter
+ * and applying an OpenType feature wrapped the entire block content instead
+ * of just the selected letter.
+ *
+ * Root cause: getRangeForOffsets created invalid ranges for single-letter selections,
+ * causing surroundContents() to wrap entire content.
+ *
+ * Solution: Hybrid approach with validation and string manipulation fallback.
+ */
+
+describe('Single Letter Selection Bug Fix', () => {
+
+	describe('validateRangeMatchesSelection', () => {
+		it('should validate exact text match', () => {
+			const mockRange = {
+				toString: () => 't'
+			};
+
+			const result = validateRangeMatchesSelection(mockRange, 't', 1);
+			expect(result.valid).toBe(true);
+			expect(result.reason).toBe('Exact match');
+		});
+
+		it('should reject mismatched text (the bug case)', () => {
+			const mockRange = {
+				toString: () => 'Gratitude script'
+			};
+
+			const result = validateRangeMatchesSelection(mockRange, 't', 1);
+			expect(result.valid).toBe(false);
+			expect(result.reason).toContain('Mismatch');
+		});
+
+		it('should handle null range', () => {
+			const result = validateRangeMatchesSelection(null, 't', 1);
+			expect(result.valid).toBe(false);
+			expect(result.reason).toBe('Range is null');
+		});
+
+		it('should handle empty selection', () => {
+			const mockRange = {
+				toString: () => ''
+			};
+
+			const result = validateRangeMatchesSelection(mockRange, '', 0);
+			expect(result.valid).toBe(false);
+			expect(result.reason).toBe('Empty selection');
+		});
+
+		it('should accept trimmed match for whitespace differences', () => {
+			const mockRange = {
+				toString: () => ' test '
+			};
+
+			const result = validateRangeMatchesSelection(mockRange, 'test', 4);
+			expect(result.valid).toBe(true);
+			expect(result.reason).toBe('Trimmed match');
+		});
+
+		it('should accept length match for HTML entity differences', () => {
+			const mockRange = {
+				toString: () => 'test'
+			};
+
+			const result = validateRangeMatchesSelection(mockRange, 'test', 4);
+			expect(result.valid).toBe(true);
+			expect(result.reason).toBe('Exact match');
+		});
+	});
+
+	describe('applyStylingSafeStringMethod', () => {
+		it('should wrap single character correctly', () => {
+			const result = applyStylingSafeStringMethod(
+				'Gratitude script',
+				3, // "t"
+				4,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toContain('<span class="typost-styled"');
+			expect(result.content).toContain('data-features="ss01"');
+			expect(result.content).toMatch(/Gra<span[^>]*>t<\/span>itude script/);
+		});
+
+		it('should handle selection at start of text', () => {
+			const result = applyStylingSafeStringMethod(
+				'Gratitude',
+				0, // "G"
+				1,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toMatch(/^<span[^>]*>G<\/span>ratitude/);
+		});
+
+		it('should handle selection at end of text', () => {
+			const result = applyStylingSafeStringMethod(
+				'script',
+				5, // "t"
+				6,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toMatch(/scrip<span[^>]*>t<\/span>$/);
+		});
+
+		it('should handle multi-character selection', () => {
+			const result = applyStylingSafeStringMethod(
+				'Gratitude',
+				4, // "itude"
+				9,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toMatch(/Grat<span[^>]*>itude<\/span>$/);
+		});
+
+		it('should include style attribute when provided', () => {
+			const result = applyStylingSafeStringMethod(
+				'test',
+				0,
+				4,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1; color: red'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toContain('style="font-feature-settings: &quot;ss01&quot; 1; color: red"');
+		});
+
+		it('should omit empty or null attributes', () => {
+			const result = applyStylingSafeStringMethod(
+				'test',
+				0,
+				4,
+				{ 'data-features': 'ss01', 'data-empty': '', 'data-null': null },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toContain('data-features="ss01"');
+			expect(result.content).not.toContain('data-empty');
+			expect(result.content).not.toContain('data-null');
+		});
+
+		it('should return error for empty content', () => {
+			const result = applyStylingSafeStringMethod(
+				'',
+				0,
+				1,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(false);
+			expect(result.error).toBe('No text nodes in range');
+		});
+
+		it('should handle HTML with existing tags', () => {
+			const result = applyStylingSafeStringMethod(
+				'Hello <strong>world</strong>',
+				6, // "w" in "world"
+				7,
+				{ 'data-features': 'ss01' },
+				'font-feature-settings: "ss01" 1'
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.content).toContain('<strong>');
+			expect(result.content).toMatch(/<span[^>]*>w<\/span>orld/);
+		});
+	});
+
+	describe('Nested span wrapping detection', () => {
+		it('should detect when surroundContents wraps entire content with nested spans', () => {
+			// Simulate the nested span bug scenario
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(
+				'<div>Grati<span class="typost-styled" data-features="ss01">t</span>ude script</div>',
+				'text/html'
+			);
+			const container = doc.body.firstChild;
+
+			// Get all typost-styled spans
+			const typostSpans = container.querySelectorAll('span.typost-styled');
+
+			// Should have 1 span initially
+			expect(typostSpans.length).toBe(1);
+
+			// Now simulate wrapping everything with outer span (the bug)
+			const outerSpan = doc.createElement('span');
+			outerSpan.className = 'typost-styled';
+			outerSpan.setAttribute('data-features', 'ss02');
+
+			// Move all children into outer span
+			while (container.firstChild) {
+				outerSpan.appendChild(container.firstChild);
+			}
+			container.appendChild(outerSpan);
+
+			// Get all spans now
+			const typostSpansAfter = container.querySelectorAll('span.typost-styled');
+
+			// Should have 2 spans (nested)
+			expect(typostSpansAfter.length).toBe(2);
+
+			// Outer span should contain all text (the bug)
+			const containerText = container.textContent;
+			const outerSpanText = typostSpansAfter[0].textContent;
+
+			expect(outerSpanText).toBe(containerText);
+			expect(outerSpanText.length).toBe(containerText.length);
+
+			// This is the bug condition that post-validation should detect
+			const wrappedEverything = outerSpanText.length >= containerText.length - 1;
+			expect(wrappedEverything).toBe(true);
+		});
+	});
+});

@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Custom "T" icon for Typography Stylist
@@ -69,6 +69,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
+	const [capturedSelection, setCapturedSelection] = useState(null);
 
 	// Modal position and size state
 	const [modalX, setModalX] = useState(() => {
@@ -347,12 +348,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					// There's a selection - extract it
 					const slicedValue = sliceRichText(richTextValue, start, end);
 					extractedText = getTextContent(slicedValue);
+
+					// Capture selection offsets and text before Modal opens (Modal clears selection)
+					setCapturedSelection({
+						start: start,
+						end: end,
+						text: extractedText,
+						length: extractedText.length
+					});
 				} else {
-					// No selection - use entire text
+					// No selection - clear captured selection
+					setCapturedSelection(null);
 					extractedText = getTextContent(richTextValue);
 				}
 			} else {
-				// No valid selection in this block - use entire text
+				// No valid selection in this block - clear captured selection
+				setCapturedSelection(null);
 				extractedText = getTextContent(richTextValue);
 			}
 		}
@@ -375,6 +386,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
+		setCapturedSelection(null); // Clear captured selection
 		setIsPopoverOpen(false);
 	};
 
@@ -900,23 +912,108 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
-					const attributes = {
-						'data-features': featureId
-					};
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-features': featureId };
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
-						// Get the updated HTML
-						const newContent = container.innerHTML;
-						setAttributes({ content: newContent });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						// This catches cases where surroundContents() silently fails
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						// Check ALL spans, not just single-span case
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							// If this span's text matches the entire container text, it wrapped everything
+							if (spanText.length >= containerText.length - 1) {
+								// EXCEPTION: If this span is our INTENDED selection, it's valid
+								// Check if span text matches what we captured
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+
+									// eslint-disable-next-line no-console
+									if (typeof console !== 'undefined' && console.warn) {
+										console.warn('Typographic Stylist Block - Detected nested wrapping bug:', {
+											spanText: spanText.substring(0, 50),
+											spanTextLength: spanText.length,
+											containerTextLength: containerText.length,
+											capturedLength: capturedSelection?.length,
+											numSpans: typostSpans.length
+										});
+									}
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							// eslint-disable-next-line no-console
+							if (typeof console !== 'undefined' && console.warn) {
+								console.warn('Typographic Stylist Block - Post-validation failed: surroundContents wrapped entire content');
+							}
+							success = false; // Force fallback
+						}
 					}
 				}
 
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					// eslint-disable-next-line no-console
+					if (typeof console !== 'undefined' && console.warn) {
+						console.warn('Typographic Stylist Block - Range method failed, using string fallback:', validation.reason);
+					}
+
+					const attributes = { 'data-features': featureId };
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+						success = true;
+					} else {
+						// eslint-disable-next-line no-console
+						if (typeof console !== 'undefined' && console.error) {
+							console.error('Typographic Stylist Block - Both range and string methods failed:', fallbackResult.error);
+						}
+						return; // Give up
+					}
+				}
+
+				// 3. Update content if either method succeeded
+				if (success) {
+					setAttributes({ content: newContent });
+				}
 			}
 		}
 	};

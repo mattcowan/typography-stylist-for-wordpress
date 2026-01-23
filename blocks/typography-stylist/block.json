@@ -9,7 +9,7 @@
 	},
 	"description": "Advanced OpenType typography with full accessibility support. Block panel settings apply to the entire block; use Quick Features Toggle for individual selections.",
 	"keywords": ["typography", "opentype", "ligatures", "heading", "accessibility"],
-	"textdomain": "typost",
+	"textdomain": "typography-stylist",
 	"supports": {
 		"html": false,
 		"align": ["wide", "full"],
