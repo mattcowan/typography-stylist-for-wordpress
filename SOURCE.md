@@ -393,7 +393,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 ## Changelog
 
-### Version 1.1.0
-- Added BUILD.md and SOURCE.md for WordPress.org compliance
+### Version 1.1.3
+- Added BUILD.txt and SOURCE.md for WordPress.org compliance
 - Included source files alongside minified files in distribution
 - Documented all build processes and tools

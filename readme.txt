@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.0
+Stable tag: 1.1.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -208,7 +208,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.1.0 =
+= 1.1.3 =
 * Typography Stylist Block with ARIA markup and semantic HTML
 * Smart selection validation warns when partial word selections could fragment text
 * Conversion tool from inline formats to accessible block structure
@@ -240,7 +240,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Upgrade Notice ==
 
-= 1.1.0 =
+= 1.1.3 =
 Initial release of Typography Stylist with accessibility features, font management, and OpenType typography controls.
 
 == Technical Details ==

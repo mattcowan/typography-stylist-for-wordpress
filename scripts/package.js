@@ -86,8 +86,11 @@ if (fs.existsSync(jsDir)) {
   if (jsFiles.length > 0) {
     fs.mkdirSync(distJsDir, { recursive: true });
     jsFiles.forEach(file => {
+      const srcPath = path.join(jsDir, file);
+      // Validate JavaScript files for minification
+      validateJavaScriptFile(srcPath);
       fs.copyFileSync(
-        path.join(jsDir, file),
+        srcPath,
         path.join(distJsDir, file)
       );
     });
@@ -105,10 +108,10 @@ if (fs.existsSync(blockBuildDir)) {
 }
 
 // Copy optional files if they exist
-// Excludes developer-only files (BUILD.md, SOURCE.md, .babelrc)
 const optionalFiles = [
   'README.txt',
   'readme.txt',
+  'BUILD.txt',     // Build instructions for developers (WordPress.org requirement)
   'LICENSE',
   'package.json'  // For developers
 ];
@@ -165,14 +168,69 @@ function copyDirectory(src, dest) {
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
 
+  // Directories to exclude from the package
+  const excludeDirs = ['__tests__', '__mocks__', 'node_modules', '.git'];
+
   for (const entry of entries) {
+    // Skip excluded directories
+    if (excludeDirs.includes(entry.name)) {
+      console.log(`⊘ Skipped: ${entry.name}/`);
+      continue;
+    }
+
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
       copyDirectory(srcPath, destPath);
     } else {
+      // Validate JavaScript files for minification warnings
+      if (entry.name.endsWith('.js')) {
+        validateJavaScriptFile(srcPath);
+      }
       fs.copyFileSync(srcPath, destPath);
     }
+  }
+}
+
+// Helper function to validate JavaScript files
+// WordPress.org flags minified files, but build/index.js is legitimately minified
+function validateJavaScriptFile(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.split('\n');
+  const fileName = path.basename(filePath);
+
+  // Expected minified files (these are production builds and should be minified)
+  const expectedMinified = [
+    path.sep + 'build' + path.sep + 'index.js',    // wp-scripts build output
+    'block-editor.min.js',                          // browserify output
+    'admin-page.min.js'                             // terser output
+  ];
+
+  // Check if this is an expected minified file
+  const normalizedPath = filePath.replace(/\\/g, '/');
+  const isExpectedMinified = expectedMinified.some(pattern =>
+    normalizedPath.includes(pattern.replace(/\\/g, '/'))
+  );
+
+  // Files with .min.js extension are expected to be minified
+  const hasMinExtension = fileName.endsWith('.min.js');
+
+  // Check if file appears to be minified
+  // A file is considered minified if:
+  // 1. It has very few lines (<=2), OR
+  // 2. Average line length is very high (>1000), OR
+  // 3. It has .min.js extension and first line is very long (>300)
+  const avgLineLength = content.length / lines.length;
+  const firstLineLength = lines[0]?.length || 0;
+  const isMinified = lines.length <= 2 ||
+                     avgLineLength > 1000 ||
+                     (hasMinExtension && firstLineLength > 300);
+
+  if (isMinified && !isExpectedMinified) {
+    console.warn(`⚠️  Warning: ${fileName} appears to be minified but is not in the expected list`);
+    console.warn(`   Path: ${filePath}`);
+  } else if (isMinified && isExpectedMinified) {
+    console.log(`✓ ${fileName} is a legitimate production build (minified)`);
   }
 }
