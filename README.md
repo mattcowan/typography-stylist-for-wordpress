@@ -1,4 +1,4 @@
-# Typost
+# Typography Stylist
 
 A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview in the Gutenberg block editor.
 
