@@ -1,0 +1,255 @@
+===============================================================================
+BUILD INSTRUCTIONS - Typography Stylist Plugin
+===============================================================================
+
+This document provides instructions for developers who want to rebuild the
+Typography Stylist plugin from source code.
+
+===============================================================================
+PREREQUISITES
+===============================================================================
+
+- Node.js: Version 18 or higher
+- npm: Version 8 or higher (comes with Node.js)
+- Git: For version control (optional)
+
+===============================================================================
+INSTALLATION
+===============================================================================
+
+1. Navigate to the plugin directory:
+
+   cd wp-content/plugins/typography-stylist
+
+2. Install dependencies:
+
+   npm install
+
+This will install all required build tools and dependencies listed in package.json.
+
+===============================================================================
+BUILD COMMANDS
+===============================================================================
+
+FULL BUILD
+----------
+Rebuild all JavaScript and CSS files:
+
+   npm run build
+
+This command runs:
+- Block build (React/JSX compilation)
+- JavaScript transpilation and minification
+- CSS minification
+
+PARTIAL BUILDS
+--------------
+Build only the Gutenberg block:
+   npm run build:block
+
+Build only JavaScript files:
+   npm run build:js
+
+Build only CSS files:
+   npm run build:css
+
+INDIVIDUAL ASSET BUILDS
+-----------------------
+Build block editor JavaScript:
+   npm run build:js:editor
+
+Build admin page JavaScript:
+   npm run build:js:admin
+
+Build block editor CSS:
+   npm run build:css:editor
+
+Build frontend CSS:
+   npm run build:css:frontend
+
+Build admin page CSS:
+   npm run build:css:admin
+
+DEVELOPMENT WATCH MODE
+----------------------
+Automatically rebuild files when changes are detected:
+
+   npm run watch
+
+This is useful during development - it watches JavaScript and CSS files
+and rebuilds them automatically.
+
+===============================================================================
+TESTING
+===============================================================================
+
+RUN UNIT TESTS
+--------------
+Run all Jest unit tests:
+   npm test
+
+Run tests in watch mode (re-runs on file changes):
+   npm run test:watch
+
+Generate test coverage report:
+   npm test -- --coverage
+
+===============================================================================
+BUILD OUTPUT
+===============================================================================
+
+JAVASCRIPT FILES
+----------------
+Block Editor Integration:
+- Source: assets/js/block-editor.js (110KB, 2,350 lines)
+- Output: assets/js/block-editor.min.js (91KB)
+- Tool: Browserify + Babelify
+
+Admin Page:
+- Source: assets/js/admin-page.js (53KB, 1,317 lines)
+- Output: assets/js/admin-page.min.js (35KB)
+- Tool: Terser
+
+Typography Stylist Block:
+- Sources: blocks/typography-stylist/*.js (index.js, edit.js, save.js, utils.js, view.js)
+- Output: blocks/typography-stylist/build/index.js (37KB bundled)
+- Tool: @wordpress/scripts (webpack + babel)
+
+CSS FILES
+---------
+Block Editor Styles:
+- Source: assets/css/block-editor.css (15KB)
+- Output: assets/css/block-editor.min.css (11KB)
+- Tool: clean-css-cli
+
+Frontend Styles:
+- Source: assets/css/frontend.css (4.4KB)
+- Output: assets/css/frontend.min.css (2.4KB)
+- Tool: clean-css-cli
+
+Admin Page Styles:
+- Source: assets/css/admin-page.css (21KB)
+- Output: assets/css/admin-page.min.css (15KB)
+- Tool: clean-css-cli
+
+===============================================================================
+BUILD TOOLS
+===============================================================================
+
+The following build tools are used:
+
+- @wordpress/scripts: 26.19.0 - Block building and testing
+- Browserify: 17.0.1 - JavaScript bundling
+- Babelify: 10.0.0 - JavaScript transpilation
+- Terser: 5.16.0 - JavaScript minification
+- clean-css-cli: 5.6.2 - CSS minification
+- Jest: 29.7.0 - Unit testing
+
+See package.json for complete list of dependencies.
+
+===============================================================================
+BUILD CONFIGURATION
+===============================================================================
+
+- Babel Configuration: .babelrc - Transpilation settings for ES6+ and JSX
+- Jest Configuration: jest.config.js - Test framework settings
+- Package Scripts: package.json - All build commands
+
+===============================================================================
+PACKAGING FOR DISTRIBUTION
+===============================================================================
+
+Create a distribution ZIP file:
+
+   npm run package
+
+This will:
+1. Run full build process
+2. Create a typography-stylist.zip file
+3. Include both source and compiled files
+4. Include necessary configuration files (package.json, .babelrc)
+5. Include documentation (BUILD.txt)
+
+The ZIP file will be approximately 250KB and ready for WordPress.org distribution.
+
+===============================================================================
+VERIFICATION CHECKLIST
+===============================================================================
+
+After building, verify everything works:
+
+1. Build succeeds: npm run build completes without errors
+2. Tests pass: npm test shows all tests passing
+3. Files generated: Check that minified files exist and are smaller than source files
+4. WordPress activation: Plugin activates without PHP errors
+5. Block editor: Typography features button appears in toolbar
+6. Frontend: Styled content displays correctly
+7. Admin page: Settings page loads at Settings -> Typography Stylist
+
+===============================================================================
+TROUBLESHOOTING
+===============================================================================
+
+BUILD ERRORS
+------------
+"Cannot find module": Run npm install to install dependencies
+
+"Command not found": Ensure Node.js and npm are installed and in your PATH
+
+Babel errors: Check that .babelrc exists and is valid JSON
+
+TEST FAILURES
+-------------
+"No tests found": Ensure you're in the plugin root directory
+
+Import errors: Check that file paths in tests match actual file locations
+
+Snapshot mismatches: Run npm test -- -u to update snapshots
+(only if changes are intentional)
+
+WORDPRESS ERRORS
+----------------
+Plugin won't activate: Check PHP error log for syntax errors
+
+Block won't load: Ensure blocks/typography-stylist/build/index.js was generated
+
+Styles missing: Check that minified CSS files exist in assets/css/
+
+===============================================================================
+DEVELOPMENT WORKFLOW
+===============================================================================
+
+1. Make changes to source files (.js or .css files, not .min.js or .min.css)
+2. Run npm run build (or use watch mode: npm run watch)
+3. Run npm test to verify no regressions
+4. Test manually in WordPress
+5. Create git commit (handled by user)
+
+===============================================================================
+IMPORTANT NOTES
+===============================================================================
+
+- DO NOT edit minified files (*.min.js, *.min.css) directly - they will be
+  overwritten on next build
+
+- DO NOT edit blocks/typography-stylist/build/ files directly - they are
+  generated from block source files
+
+- Source files are the source of truth - all changes should be made to
+  unminified files
+
+- After making changes, always rebuild and test before committing
+
+===============================================================================
+LICENSE
+===============================================================================
+
+All source code is licensed under GPLv2 or later. See plugin header for details.
+
+===============================================================================
+QUESTIONS OR ISSUES?
+===============================================================================
+
+See CLAUDE.md for plugin architecture and development guidelines.
+
+===============================================================================
