@@ -16,7 +16,7 @@ Typography Stylist provides advanced typography controls for WordPress. This plu
 
 = Key Features =
 
-* **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen-readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
+* **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
 * **Inline Text Selection**: Highlight any text within richtext blocks, and apply basic typography features quickly. A warning will pop-up if your selection may cause accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
 * **Live Preview**: Preview changes in real-time before applying.
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
