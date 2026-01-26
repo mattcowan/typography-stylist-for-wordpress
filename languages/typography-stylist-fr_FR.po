@@ -3,10 +3,10 @@
 # This file is distributed under the same license as the Headline Ligatures and Styles package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 1.0.1\n"
+"Project-Id-Version: Typography Stylist 1.1.4\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Typography Stylist\n"
-"POT-Creation-Date: 2026-01-13 10:00+0000\n"
-"PO-Revision-Date: 2026-01-13 10:00+0000\n"
+"POT-Creation-Date: 2026-01-26 23:36+0000\n"
+"PO-Revision-Date: 2026-01-26 23:36+0000\n"
 "Last-Translator: \n"
 "Language-Team: French (France)\n"
 "Language: fr_FR\n"

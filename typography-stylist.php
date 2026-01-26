@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://github.com/mattcowan/typography-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '1.1.3');
+    define('TYPOST_VERSION', '1.1.4');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -687,8 +687,8 @@ class Typost {
                     }
 
                     if ($should_load) {
-                        // Sanitize CSS before adding
-                        $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                        // Sanitize CSS before adding and ensure URLs are relative
+                        $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                     }
                 }
             }
@@ -839,8 +839,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -877,8 +877,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -926,8 +926,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -2433,6 +2433,60 @@ class Typost {
     }
 
     /**
+     * Convert absolute font URLs to relative URLs dynamically
+     * Handles legacy fonts without needing migration
+     */
+    private function ensure_relative_font_urls($css_content) {
+        return preg_replace_callback(
+            "/url\s*\(\s*['\"]?([^)'\"\s]+)['\"]?\s*\)/i",
+            function($matches) {
+                $url = $matches[1];
+
+                // Skip data URIs
+                if (strpos($url, 'data:') === 0) {
+                    return $matches[0];
+                }
+
+                // Only process absolute URLs (http://, https://) and protocol-relative URLs (//)
+                // Skip everything else (relative paths like /path/to/font.woff, ../fonts/file.woff, etc.)
+                if (!preg_match('/^(https?:)?\/\//', $url)) {
+                    return $matches[0];
+                }
+
+                // Convert absolute to relative (extract path only)
+                $parsed = parse_url($url);
+
+                // If parsing fails or no path, keep original
+                if ($parsed === false || !isset($parsed['path'])) {
+                    return $matches[0];
+                }
+
+                // Build path with sanitized query string and fragment if present
+                $path = $parsed['path'];
+
+                // Add query string if present and safe (validate against injection)
+                if (isset($parsed['query']) && $parsed['query'] !== '') {
+                    // Allow only safe URL query characters (alphanumeric, dash, underscore, percent, equals, ampersand, dot)
+                    if (preg_match('/^[a-zA-Z0-9_\-=&%.]+$/', $parsed['query'])) {
+                        $path .= '?' . $parsed['query'];
+                    }
+                }
+
+                // Add fragment if present and safe (common in font URLs like #iefix)
+                if (isset($parsed['fragment']) && $parsed['fragment'] !== '') {
+                    // Allow alphanumeric, dash, underscore (covers #iefix, #svg-id, etc.)
+                    if (preg_match('/^[a-zA-Z0-9_\-]+$/', $parsed['fragment'])) {
+                        $path .= '#' . $parsed['fragment'];
+                    }
+                }
+
+                return "url('" . $path . "')";
+            },
+            $css_content
+        );
+    }
+
+    /**
      * Rewrite relative URLs in CSS to absolute WordPress URLs
      */
     public function rewrite_css_urls($css_content, $base_url) {
@@ -2447,9 +2501,35 @@ class Typost {
                     return $matches[0];
                 }
 
-                // Convert relative to absolute
+                // Convert relative to absolute, then extract path only (protocol-agnostic)
                 $absolute_url = rtrim($base_url, '/') . '/' . ltrim($url, '/');
-                return "url('" . $absolute_url . "')";
+                $parsed = parse_url($absolute_url);
+
+                // If parsing fails or no path, keep original
+                if ($parsed === false || !isset($parsed['path'])) {
+                    return $matches[0];
+                }
+
+                // Build relative URL with sanitized query string and fragment if present
+                $relative_url = $parsed['path'];
+
+                // Add query string if present and safe (validate against injection)
+                if (isset($parsed['query']) && $parsed['query'] !== '') {
+                    // Allow only safe URL query characters (alphanumeric, dash, underscore, percent, equals, ampersand, dot)
+                    if (preg_match('/^[a-zA-Z0-9_\-=&%.]+$/', $parsed['query'])) {
+                        $relative_url .= '?' . $parsed['query'];
+                    }
+                }
+
+                // Add fragment if present and safe (common in font URLs like #iefix)
+                if (isset($parsed['fragment']) && $parsed['fragment'] !== '') {
+                    // Allow alphanumeric, dash, underscore (covers #iefix, #svg-id, etc.)
+                    if (preg_match('/^[a-zA-Z0-9_\-]+$/', $parsed['fragment'])) {
+                        $relative_url .= '#' . $parsed['fragment'];
+                    }
+                }
+
+                return "url('" . $relative_url . "')";
             },
             $css_content
         );

@@ -349,6 +349,17 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.1.4
+
+**Bug Fixes:**
+- Fixed mixed content warnings on HTTPS sites when loading custom fonts
+- Font URLs now use relative paths for protocol-agnostic loading
+- Legacy fonts with absolute URLs are automatically converted at render time
+
+### Version 1.1.3
+
+See readme.txt for full version 1.1.3 changelog (initial public release).
+
 ### Version 1.0.0
 
 **Accessibility Features:**

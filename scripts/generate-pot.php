@@ -9,7 +9,7 @@
 // Define plugin constants
 define('PLUGIN_NAME', 'Typography Stylist');
 define('PLUGIN_DOMAIN', 'typography-stylist');
-define('PLUGIN_VERSION', '1.1.3');
+define('PLUGIN_VERSION', '1.1.4');
 
 // Output file
 $potFile = __DIR__ . '/../languages/' . PLUGIN_DOMAIN . '.pot';
