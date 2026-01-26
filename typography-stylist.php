@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://github.com/mattcowan/typography-stylist
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '1.1.3');
+    define('TYPOST_VERSION', '1.1.4');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -687,8 +687,8 @@ class Typost {
                     }
 
                     if ($should_load) {
-                        // Sanitize CSS before adding
-                        $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                        // Sanitize CSS before adding and ensure URLs are relative
+                        $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                     }
                 }
             }
@@ -839,8 +839,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -877,8 +877,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -926,8 +926,8 @@ class Typost {
             $combined_css = '';
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
-                    // Sanitize CSS before adding
-                    $combined_css .= "\n" . $this->sanitize_css_content($font['css_content']);
+                    // Sanitize CSS before adding and ensure URLs are relative
+                    $combined_css .= "\n" . $this->ensure_relative_font_urls($this->sanitize_css_content($font['css_content']));
                 }
             }
 
@@ -2433,6 +2433,35 @@ class Typost {
     }
 
     /**
+     * Convert absolute font URLs to relative URLs dynamically
+     * Handles legacy fonts without needing migration
+     */
+    private function ensure_relative_font_urls($css_content) {
+        return preg_replace_callback(
+            "/url\s*\(\s*['\"]?([^)'\"\s]+)['\"]?\s*\)/i",
+            function($matches) {
+                $url = $matches[1];
+
+                // Skip data URIs
+                if (strpos($url, 'data:') === 0) {
+                    return $matches[0];
+                }
+
+                // Skip already-relative URLs
+                if (strpos($url, 'http') !== 0) {
+                    return $matches[0];
+                }
+
+                // Convert absolute to relative (extract path only)
+                $parsed = parse_url($url);
+                $path = $parsed['path'] ?? $url;
+                return "url('" . $path . "')";
+            },
+            $css_content
+        );
+    }
+
+    /**
      * Rewrite relative URLs in CSS to absolute WordPress URLs
      */
     public function rewrite_css_urls($css_content, $base_url) {
@@ -2447,9 +2476,11 @@ class Typost {
                     return $matches[0];
                 }
 
-                // Convert relative to absolute
+                // Convert relative to absolute, then extract path only (protocol-agnostic)
                 $absolute_url = rtrim($base_url, '/') . '/' . ltrim($url, '/');
-                return "url('" . $absolute_url . "')";
+                $parsed = parse_url($absolute_url);
+                $relative_url = $parsed['path'] ?? $absolute_url;
+                return "url('" . $relative_url . "')";
             },
             $css_content
         );
