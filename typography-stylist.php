@@ -2447,14 +2447,39 @@ class Typost {
                     return $matches[0];
                 }
 
-                // Skip already-relative URLs
-                if (strpos($url, 'http') !== 0) {
+                // Only process absolute URLs (http://, https://) and protocol-relative URLs (//)
+                // Skip everything else (relative paths like /path/to/font.woff, ../fonts/file.woff, etc.)
+                if (!preg_match('/^(https?:)?\/\//', $url)) {
                     return $matches[0];
                 }
 
                 // Convert absolute to relative (extract path only)
                 $parsed = parse_url($url);
-                $path = $parsed['path'] ?? $url;
+
+                // If parsing fails or no path, keep original
+                if ($parsed === false || !isset($parsed['path'])) {
+                    return $matches[0];
+                }
+
+                // Build path with sanitized query string and fragment if present
+                $path = $parsed['path'];
+
+                // Add query string if present and safe (validate against injection)
+                if (isset($parsed['query']) && $parsed['query'] !== '') {
+                    // Allow only safe URL query characters (alphanumeric, dash, underscore, percent, equals, ampersand, dot)
+                    if (preg_match('/^[a-zA-Z0-9_\-=&%.]+$/', $parsed['query'])) {
+                        $path .= '?' . $parsed['query'];
+                    }
+                }
+
+                // Add fragment if present and safe (common in font URLs like #iefix)
+                if (isset($parsed['fragment']) && $parsed['fragment'] !== '') {
+                    // Allow alphanumeric, dash, underscore (covers #iefix, #svg-id, etc.)
+                    if (preg_match('/^[a-zA-Z0-9_\-]+$/', $parsed['fragment'])) {
+                        $path .= '#' . $parsed['fragment'];
+                    }
+                }
+
                 return "url('" . $path . "')";
             },
             $css_content
@@ -2479,7 +2504,31 @@ class Typost {
                 // Convert relative to absolute, then extract path only (protocol-agnostic)
                 $absolute_url = rtrim($base_url, '/') . '/' . ltrim($url, '/');
                 $parsed = parse_url($absolute_url);
-                $relative_url = $parsed['path'] ?? $absolute_url;
+
+                // If parsing fails or no path, keep original
+                if ($parsed === false || !isset($parsed['path'])) {
+                    return $matches[0];
+                }
+
+                // Build relative URL with sanitized query string and fragment if present
+                $relative_url = $parsed['path'];
+
+                // Add query string if present and safe (validate against injection)
+                if (isset($parsed['query']) && $parsed['query'] !== '') {
+                    // Allow only safe URL query characters (alphanumeric, dash, underscore, percent, equals, ampersand, dot)
+                    if (preg_match('/^[a-zA-Z0-9_\-=&%.]+$/', $parsed['query'])) {
+                        $relative_url .= '?' . $parsed['query'];
+                    }
+                }
+
+                // Add fragment if present and safe (common in font URLs like #iefix)
+                if (isset($parsed['fragment']) && $parsed['fragment'] !== '') {
+                    // Allow alphanumeric, dash, underscore (covers #iefix, #svg-id, etc.)
+                    if (preg_match('/^[a-zA-Z0-9_\-]+$/', $parsed['fragment'])) {
+                        $relative_url .= '#' . $parsed['fragment'];
+                    }
+                }
+
                 return "url('" . $relative_url . "')";
             },
             $css_content
