@@ -4,6 +4,10 @@
 
 import { RichText } from '@wordpress/block-editor';
 
+// Viewport breakpoints for responsive font sizing
+const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
+const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+
 export default function save({ attributes }) {
 	const {
 		content,
@@ -50,7 +54,7 @@ export default function save({ attributes }) {
 		}
 
 		if (fontSize === 'responsive') {
-			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`);
+			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
 		}
 
 		if (textAlign) {

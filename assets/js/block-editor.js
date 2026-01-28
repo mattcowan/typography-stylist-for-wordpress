@@ -2077,14 +2077,18 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                 <div className="typost-lineheight-section">
                                     <h4>{__('Line Height', 'typography-stylist')}</h4>
                                     <RangeControl
-                                        value={lineHeight}
+                                        value={lineHeight === 0 ? 1.5 : lineHeight}
                                         onChange={this.setLineHeight}
                                         min={0.5}
                                         max={3}
                                         step={0.1}
-                                        help={lineHeight === 0 ? __('Browser default', 'typography-stylist') : lineHeight}
+                                        help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
                                         allowReset
                                         resetFallbackValue={0}
+                                        marks={[
+                                            { value: 1.5, label: '1.5' }
+                                        ]}
+                                        renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
                                     />
                                 </div>
 

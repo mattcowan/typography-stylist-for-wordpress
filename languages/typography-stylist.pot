@@ -794,3 +794,39 @@ msgstr ""
 #: blocks/typography-stylist/edit.js:1433
 msgid "Adjust slider to preview, then click Apply."
 msgstr ""
+
+#: blocks/typography-stylist/edit.js:1799
+#: blocks/typography-stylist/edit.js:1451
+#: assets/js/block-editor.js:2085
+msgid "Currently using browser default"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1564
+msgid "Mobile (320px+)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1574
+#: blocks/typography-stylist/edit.js:1917
+msgid "Intermediate"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1584
+msgid "Large (1920px)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1594
+#: blocks/typography-stylist/edit.js:1942
+msgid "Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1916
+msgid "Mobile (320px and up)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1934
+msgid "Large (up to 1920px)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1625
+msgid "Preview active. Click \"Apply Font Size\" to save changes, or close this panel to cancel."
+msgstr ""

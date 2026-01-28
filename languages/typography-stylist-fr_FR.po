@@ -1187,3 +1187,39 @@ msgstr "Appliquer la Hauteur de Ligne"
 #: blocks/typography-stylist/edit.js:1433
 msgid "Adjust slider to preview, then click Apply."
 msgstr "Ajustez le curseur pour prévisualiser, puis cliquez sur Appliquer."
+
+#: blocks/typography-stylist/edit.js:1799
+#: blocks/typography-stylist/edit.js:1451
+#: assets/js/block-editor.js:2085
+msgid "Currently using browser default"
+msgstr "Utilise actuellement la valeur par défaut du navigateur"
+
+#: blocks/typography-stylist/edit.js:1564
+msgid "Mobile (320px+)"
+msgstr "Mobile (320px+)"
+
+#: blocks/typography-stylist/edit.js:1574
+#: blocks/typography-stylist/edit.js:1917
+msgid "Intermediate"
+msgstr "Intermédiaire"
+
+#: blocks/typography-stylist/edit.js:1584
+msgid "Large (1920px)"
+msgstr "Grand (1920px)"
+
+#: blocks/typography-stylist/edit.js:1594
+#: blocks/typography-stylist/edit.js:1942
+msgid "Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior."
+msgstr "Remarque : Les tailles de police sont dans le désordre. Mobile doit être ≤ Intermédiaire ≤ Grand pour un comportement attendu."
+
+#: blocks/typography-stylist/edit.js:1916
+msgid "Mobile (320px and up)"
+msgstr "Mobile (320px et plus)"
+
+#: blocks/typography-stylist/edit.js:1934
+msgid "Large (up to 1920px)"
+msgstr "Grand (jusqu'à 1920px)"
+
+#: blocks/typography-stylist/edit.js:1625
+msgid "Preview active. Click \"Apply Font Size\" to save changes, or close this panel to cancel."
+msgstr "Aperçu actif. Cliquez sur \"Appliquer la Taille de Police\" pour enregistrer les modifications, ou fermez ce panneau pour annuler."
