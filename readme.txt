@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -220,6 +220,13 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.1.5 =
+* Added: Line-height controls for block-level and inline text styling
+* Added: Line-height control in Typography Stylist block inspector panel
+* Added: Line-height control in Quick Features Toggle popover for inline selections
+* Added: Line-height control in inline editor toolbar for standard heading/paragraph blocks
+* Improved: Line-height can be adjusted from 0.5 to 3.0 with 0.1 step increments
 
 = 1.1.4 =
 * Fixed: Mixed content warnings on HTTPS sites when loading custom fonts

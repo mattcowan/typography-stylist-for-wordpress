@@ -2,7 +2,7 @@
 # This file is distributed under the same license as the Typography Stylist package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 1.1.4\n"
+"Project-Id-Version: Typography Stylist 1.1.5\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Typography Stylist\n"
 "POT-Creation-Date: 2026-01-26 23:36+0000\n"
 "PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
@@ -767,4 +767,30 @@ msgstr ""
 
 #: assets/js/block-editor.js:598
 msgid "Other Features"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1794
+#: assets/js/block-editor.js:2075
+msgid "Line Height"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1796
+msgid "This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1805
+#: assets/js/block-editor.js:2082
+msgid "Browser default"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1413
+msgid "Line Height (for selected text)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1423
+msgid "Apply Line Height"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:1433
+msgid "Adjust slider to preview, then click Apply."
 msgstr ""

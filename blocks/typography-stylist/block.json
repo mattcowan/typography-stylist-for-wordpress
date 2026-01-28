@@ -74,6 +74,10 @@
 			"type": "number",
 			"default": 0
 		},
+		"lineHeight": {
+			"type": "number",
+			"default": 0
+		},
 		"screenReaderClass": {
 			"type": "string",
 			"default": "visually-hidden"

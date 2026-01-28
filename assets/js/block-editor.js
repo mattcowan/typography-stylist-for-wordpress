@@ -220,6 +220,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
+                lineHeight: this.getActiveLineHeight() || 0,
                 showPreview: true,
                 activePreset: null,
                 previewText: '',
@@ -273,6 +274,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
             this.setFontWeight = this.setFontWeight.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
+            this.setLineHeight = this.setLineHeight.bind(this);
             this.setPreviewDevice = this.setPreviewDevice.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
             this.convertToBlock = this.convertToBlock.bind(this);
@@ -629,6 +631,38 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
         }
 
         /**
+         * Get currently active line height from format
+         * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
+         */
+        getActiveLineHeight() {
+            const { value } = this.props;
+
+            // First, try the standard format API
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-lineheight']) {
+                return parseFloat(activeFormat.attributes['data-lineheight']);
+            }
+
+            // Check for styled span in Typographic Stylist block
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const dataLineHeight = styledSpan.getAttribute('data-lineheight');
+                if (dataLineHeight) {
+                    return parseFloat(dataLineHeight);
+                }
+
+                // Fallback: parse from style attribute
+                const style = styledSpan.getAttribute('style') || '';
+                const lineHeightMatch = style.match(/line-height:\s*([\d.]+)/);
+                if (lineHeightMatch) {
+                    return parseFloat(lineHeightMatch[1]);
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Initialize modal position (center in viewport)
          */
         initializeModalPosition() {
@@ -689,7 +723,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                     fontSizeMax: this.getActiveFontSizeMax() || 32,
                     fontWeight: this.getActiveFontWeight() || '400',
-                    letterSpacing: this.getActiveLetterSpacing() || 0
+                    letterSpacing: this.getActiveLetterSpacing() || 0,
+                    lineHeight: this.getActiveLineHeight() || 0
                 };
 
                 // Initialize modal position when opening
@@ -706,6 +741,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
+                lineHeight: this.getActiveLineHeight() || 0,
                 previewText: extractedText,
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
@@ -818,6 +854,19 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
             this.setState({
                 letterSpacing: value,
+                hasChanges: true
+            });
+        }
+
+        /**
+         * Set line height
+         */
+        setLineHeight(value) {
+            // Save to history before making changes
+            this.saveToHistory();
+
+            this.setState({
+                lineHeight: value,
                 hasChanges: true
             });
         }
@@ -1106,7 +1155,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
                         fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing
+                        letterSpacing: this.state.letterSpacing,
+                        lineHeight: this.state.lineHeight
                     });
                 } else {
                     const typostBlock = createBlock('typost/block', {
@@ -1119,7 +1169,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
                         fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing
+                        letterSpacing: this.state.letterSpacing,
+                        lineHeight: this.state.lineHeight
                     });
 
                     // Replace current block
@@ -1136,7 +1187,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         applyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight } = this.state;
 
             // Validate selection
             const validation = this.validateSelection();
@@ -1149,8 +1200,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 return;
             }
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
-                // Remove format if no features, font, font size, weight, or letter spacing selected
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0) {
+                // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 onChange(removeFormat(value, FORMAT_TYPE));
             } else {
                 // Build attributes
@@ -1186,6 +1237,13 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     attributes['data-letterspacing'] = letterSpacing.toString();
                     if (styleString) styleString += '; ';
                     styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                }
+
+                // Add line height
+                if (lineHeight !== 0) {
+                    attributes['data-lineheight'] = lineHeight.toString();
+                    if (styleString) styleString += '; ';
+                    styleString += `line-height: ${lineHeight}`;
                 }
 
                 // Add font size
@@ -1225,9 +1283,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          */
         applyFeaturesForce() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight } = this.state;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0) {
                 onChange(removeFormat(value, FORMAT_TYPE));
             } else {
                 const attributes = {};
@@ -1259,6 +1317,12 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     attributes['data-letterspacing'] = letterSpacing.toString();
                     if (styleString) styleString += '; ';
                     styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                }
+
+                if (lineHeight !== 0) {
+                    attributes['data-lineheight'] = lineHeight.toString();
+                    if (styleString) styleString += '; ';
+                    styleString += `line-height: ${lineHeight}`;
                 }
 
                 if (fontSize !== 'inherit') {
@@ -1379,6 +1443,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 fontSizeMax: 32,
                 fontWeight: '400',
                 letterSpacing: 0,
+                lineHeight: 0,
                 activePreset: null,
                 hasChanges: false
                 // Note: Keep popover open (isOpen: true) so user can see cleared state
@@ -1491,7 +1556,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
          * Save current state to history
          */
         saveToHistory() {
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, changeHistory } = this.state;
+            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, changeHistory } = this.state;
 
             const snapshot = {
                 selectedFeatures: [...selectedFeatures],
@@ -1501,7 +1566,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                 fontSizePreferred,
                 fontSizeMax,
                 fontWeight,
-                letterSpacing
+                letterSpacing,
+                lineHeight
             };
 
             // Limit history to last 20 changes
@@ -1551,7 +1617,8 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                         previousState.fontSizePreferred === initialState.fontSizePreferred &&
                         previousState.fontSizeMax === initialState.fontSizeMax &&
                         previousState.fontWeight === initialState.fontWeight &&
-                        previousState.letterSpacing === initialState.letterSpacing;
+                        previousState.letterSpacing === initialState.letterSpacing &&
+                        previousState.lineHeight === initialState.lineHeight;
                 }
 
                 // Restore previous state
@@ -1564,6 +1631,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     fontSizeMax: previousState.fontSizeMax,
                     fontWeight: previousState.fontWeight,
                     letterSpacing: previousState.letterSpacing,
+                    lineHeight: previousState.lineHeight,
                     changeHistory: newHistory,
                     // Reset hasChanges if we're back to initial state
                     hasChanges: !isBackToInitialState
@@ -1797,7 +1865,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
         render() {
             const { isActive, isInTypostBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -1821,6 +1889,11 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
             // Apply letter spacing to preview
             if (letterSpacing !== 0) {
                 previewStyle.letterSpacing = `${letterSpacing / 1000}em`;
+            }
+
+            // Apply line height to preview
+            if (lineHeight !== 0) {
+                previewStyle.lineHeight = lineHeight;
             }
 
             // Apply font size to preview based on device selection
@@ -1995,6 +2068,21 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                                         max={200}
                                         step={1}
                                         help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                    />
+                                </div>
+
+                                {/* Line Height Control */}
+                                <div className="typost-lineheight-section">
+                                    <h4>{__('Line Height', 'typography-stylist')}</h4>
+                                    <RangeControl
+                                        value={lineHeight}
+                                        onChange={this.setLineHeight}
+                                        min={0.5}
+                                        max={3}
+                                        step={0.1}
+                                        help={lineHeight === 0 ? __('Browser default', 'typography-stylist') : lineHeight}
                                         allowReset
                                         resetFallbackValue={0}
                                     />

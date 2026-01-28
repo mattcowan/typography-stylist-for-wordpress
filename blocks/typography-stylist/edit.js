@@ -52,6 +52,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontSizeMax,
 		fontWeight,
 		letterSpacing,
+		lineHeight,
 		screenReaderClass,
 		textAlign
 	} = attributes;
@@ -60,6 +61,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewText, setPreviewText] = useState('');
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
+	const [inlineLineHeight, setInlineLineHeight] = useState(0);
+	const [previewLineHeight, setPreviewLineHeight] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
 	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
@@ -386,6 +389,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
+		setInlineLineHeight(0);
+		setPreviewLineHeight(0);
 		setCapturedSelection(null); // Clear captured selection
 		setIsPopoverOpen(false);
 	};
@@ -447,6 +452,72 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (originalContentRef.current) {
 			setAttributes({ content: originalContentRef.current });
 			originalContentRef.current = null;
+		}
+	};
+
+	// Handle line height change with live preview
+	const handleLineHeightChange = (value) => {
+		setInlineLineHeight(value);
+		setPreviewLineHeight(value);
+	};
+
+	// Clear line height (reset to 0)
+	const clearLineHeight = () => {
+		setInlineLineHeight(0);
+		setPreviewLineHeight(0);
+	};
+
+	// Apply line height only (no feature)
+	const applyLineHeightOnly = () => {
+		if (!content || inlineLineHeight === 0) return;
+
+		// Check if we have a valid selection
+		if (selectionStart && selectionEnd &&
+		    selectionStart.clientId === clientId &&
+		    selectionEnd.clientId === clientId) {
+
+			const start = selectionStart.offset || 0;
+			const end = selectionEnd.offset || 0;
+
+			if (start !== end) {
+				// Build the styled span with ONLY line height
+				const styleArray = [];
+
+				if (fontFamily) {
+					const sanitizedFont = sanitizeFontFamily(fontFamily);
+					styleArray.push(`font-family: ${sanitizedFont}`);
+				}
+
+				styleArray.push(`line-height: ${inlineLineHeight}`);
+
+				const styleString = styleArray.join('; ');
+
+				// Parse the current content as HTML and wrap the selection
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
+					const attributes = {
+						'data-features': ''
+					};
+
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+					if (success) {
+						// Get the updated HTML
+						const newContent = container.innerHTML;
+						setAttributes({ content: newContent });
+					}
+				}
+
+				// Clear the original content ref since we're committing the change
+				originalContentRef.current = null;
+
+			}
 		}
 	};
 
@@ -1178,6 +1249,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			fontFamily: '',
 			fontWeight: '',
 			letterSpacing: 0,
+			lineHeight: 0,
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 32,
@@ -1208,6 +1280,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		if (letterSpacing !== 0) {
 			styles.letterSpacing = `${letterSpacing / 1000}em`;
+		}
+
+		if (lineHeight !== 0) {
+			styles.lineHeight = lineHeight;
 		}
 
 		if (fontSize === 'responsive') {
@@ -1435,6 +1511,44 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									{inlineLetterSpacing !== 0 && (
 										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
 											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
+										</p>
+									)}
+								</div>
+
+								{/* Line Height Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<RangeControl
+										label={__('Line Height (for selected text)', 'typography-stylist')}
+										value={inlineLineHeight}
+										onChange={handleLineHeightChange}
+										min={0.5}
+										max={3}
+										step={0.1}
+										help={inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : inlineLineHeight}
+										allowReset
+										resetFallbackValue={0}
+									/>
+									{inlineLineHeight !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLineHeightOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Line Height', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLineHeight}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLineHeight !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
 										</p>
 									)}
 								</div>
@@ -1781,6 +1895,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						max={200}
 						step={1}
 						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+						allowReset
+						resetFallbackValue={0}
+					/>
+				</PanelBody>
+
+				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={lineHeight}
+						onChange={(value) => setAttributes({ lineHeight: value })}
+						min={0.5}
+						max={3}
+						step={0.1}
+						help={lineHeight === 0 ? __('Browser default', 'typography-stylist') : lineHeight}
 						allowReset
 						resetFallbackValue={0}
 					/>

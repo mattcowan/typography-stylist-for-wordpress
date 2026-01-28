@@ -439,6 +439,7 @@
 .typost-font-section,
 .typost-fontweight-section,
 .typost-letterspacing-section,
+.typost-lineheight-section,
 .typost-fontsize-section {
     margin: 0 1rem;
     padding: 16px 20px;
@@ -448,6 +449,7 @@
 .typost-font-section h4,
 .typost-fontweight-section h4,
 .typost-letterspacing-section h4,
+.typost-lineheight-section h4,
 .typost-fontsize-section h4 {
     margin: 0 0 12px 0;
     font-size: 13px;

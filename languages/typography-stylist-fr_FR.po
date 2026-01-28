@@ -1161,3 +1161,29 @@ msgstr "Autoriser les valeurs de font-weight personnalisées (1-1000) pour les p
 #: includes/admin-page.php:1304
 msgid "When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts."
 msgstr "Lorsqu'elle est activée, autorise les valeurs de font-weight de 1 à 1000 au lieu des poids standards uniquement (100, 200, ..., 900). Activez cette option si vous utilisez des polices variables qui prennent en charge des poids intermédiaires comme 450 ou 350. Désactivée par défaut pour la compatibilité avec les polices standard."
+
+#: blocks/typography-stylist/edit.js:1794
+#: assets/js/block-editor.js:2075
+msgid "Line Height"
+msgstr "Hauteur de Ligne"
+
+#: blocks/typography-stylist/edit.js:1796
+msgid "This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar."
+msgstr "Ce contrôle applique la hauteur de ligne à l'ensemble du bloc. Pour appliquer la hauteur de ligne à des sélections de texte individuelles, utilisez le bouton Quick Features Toggle de la barre d'outils."
+
+#: blocks/typography-stylist/edit.js:1805
+#: assets/js/block-editor.js:2082
+msgid "Browser default"
+msgstr "Par défaut du navigateur"
+
+#: blocks/typography-stylist/edit.js:1413
+msgid "Line Height (for selected text)"
+msgstr "Hauteur de Ligne (pour le texte sélectionné)"
+
+#: blocks/typography-stylist/edit.js:1423
+msgid "Apply Line Height"
+msgstr "Appliquer la Hauteur de Ligne"
+
+#: blocks/typography-stylist/edit.js:1433
+msgid "Adjust slider to preview, then click Apply."
+msgstr "Ajustez le curseur pour prévisualiser, puis cliquez sur Appliquer."

@@ -17,6 +17,7 @@ export default function save({ attributes }) {
 		fontSizeMax,
 		fontWeight,
 		letterSpacing,
+		lineHeight,
 		screenReaderClass,
 		textAlign
 	} = attributes;
@@ -42,6 +43,10 @@ export default function save({ attributes }) {
 
 		if (letterSpacing !== 0) {
 			styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
+		}
+
+		if (lineHeight !== 0) {
+			styleArray.push(`line-height: ${lineHeight}`);
 		}
 
 		if (fontSize === 'responsive') {
