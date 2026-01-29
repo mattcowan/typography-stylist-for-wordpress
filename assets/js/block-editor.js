@@ -2062,40 +2062,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     />
                                 </div>
 
-                                {/* Letter Spacing Control */}
-                                <div className="typost-letterspacing-section">
-                                    <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
-                                    <RangeControl
-                                        value={letterSpacing}
-                                        onChange={this.setLetterSpacing}
-                                        min={-200}
-                                        max={200}
-                                        step={1}
-                                        help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
-                                        allowReset
-                                        resetFallbackValue={0}
-                                    />
-                                </div>
-
-                                {/* Line Height Control */}
-                                <div className="typost-lineheight-section">
-                                    <h4>{__('Line Height', 'typography-stylist')}</h4>
-                                    <RangeControl
-                                        value={lineHeight === 0 ? 1.5 : lineHeight}
-                                        onChange={this.setLineHeight}
-                                        min={0.5}
-                                        max={3}
-                                        step={0.1}
-                                        help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
-                                        allowReset
-                                        resetFallbackValue={0}
-                                        marks={[
-                                            { value: 1.5, label: '1.5' }
-                                        ]}
-                                        renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
-                                    />
-                                </div>
-
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
@@ -2139,6 +2105,40 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             />
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Line Height Control */}
+                                <div className="typost-lineheight-section">
+                                    <h4>{__('Line Height', 'typography-stylist')}</h4>
+                                    <RangeControl
+                                        value={lineHeight === 0 ? 1.5 : lineHeight}
+                                        onChange={this.setLineHeight}
+                                        min={0.5}
+                                        max={3}
+                                        step={0.1}
+                                        help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                        marks={[
+                                            { value: 1.5, label: '1.5' }
+                                        ]}
+                                        renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+                                    />
+                                </div>
+
+                                {/* Letter Spacing Control */}
+                                <div className="typost-letterspacing-section">
+                                    <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
+                                    <RangeControl
+                                        value={letterSpacing}
+                                        onChange={this.setLetterSpacing}
+                                        min={-200}
+                                        max={200}
+                                        step={1}
+                                        help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                    />
                                 </div>
 
                                 {/* Presets Section */}

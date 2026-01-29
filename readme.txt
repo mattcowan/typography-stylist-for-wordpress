@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.5
+Stable tag: 1.1.6
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -220,6 +220,13 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.1.6 =
+* Improved: Standardized control order across all interfaces for better consistency
+* Changed: Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
+* Changed: Updated inline editor popover control order to match sidebar and quick toggles
+* Changed: Updated Typography Stylist block sidebar inspector controls order
+* Changed: Updated Typography Stylist block quick feature toggles popover control order
 
 = 1.1.5 =
 * Added: Line-height controls for block-level and inline text styling

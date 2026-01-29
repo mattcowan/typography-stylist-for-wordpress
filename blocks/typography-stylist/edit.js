@@ -1577,84 +1577,54 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
-								{/* Letter Spacing Control */}
+								{/* Font Family Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<RangeControl
-										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
-										value={inlineLetterSpacing}
-										onChange={handleLetterSpacingChange}
-										min={-200}
-										max={200}
-										step={1}
-										help={inlineLetterSpacing === 0 ? __('Normal', 'typography-stylist') : `${inlineLetterSpacing / 1000}em`}
-										allowReset
-										resetFallbackValue={0}
+									<SelectControl
+										label={__('Font Family (for selected text)', 'typography-stylist')}
+										value={inlineFontFamily}
+										onChange={(value) => setInlineFontFamily(value)}
+										options={[
+											{ label: __('Select a font...', 'typography-stylist'), value: '' },
+											...fontOptions
+										]}
+										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
 									/>
-									{inlineLetterSpacing !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLetterSpacingOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Letter Spacing', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLetterSpacing}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLetterSpacing !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
-										</p>
+									{inlineFontFamily && (
+										<Button
+											variant="primary"
+											onClick={applyInlineFontFamily}
+											style={{ marginTop: '8px', width: '100%' }}
+										>
+											{__('Apply Font Family', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 
-								{/* Line Height Control */}
+								{/* Font Weight Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<RangeControl
-										label={__('Line Height (for selected text)', 'typography-stylist')}
-										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
-										onChange={handleLineHeightChange}
-										min={0.5}
-										max={3}
-										step={0.1}
-										help={inlineLineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : inlineLineHeight}
-										allowReset
-										resetFallbackValue={0}
-										marks={[
-											{ value: 1.5, label: '1.5' }
+									<SelectControl
+										label={__('Font Weight (for selected text)', 'typography-stylist')}
+										value={inlineFontWeight}
+										onChange={(value) => setInlineFontWeight(value)}
+										options={[
+											{ label: '100 - Thin', value: '100' },
+											{ label: '200 - Extra Light', value: '200' },
+											{ label: '300 - Light', value: '300' },
+											{ label: '400 - Normal', value: '400' },
+											{ label: '500 - Medium', value: '500' },
+											{ label: '600 - Semi Bold', value: '600' },
+											{ label: '700 - Bold', value: '700' },
+											{ label: '800 - Extra Bold', value: '800' },
+											{ label: '900 - Black', value: '900' }
 										]}
-										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
 									/>
-									{inlineLineHeight !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLineHeightOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Line Height', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLineHeight}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLineHeight !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
-										</p>
-									)}
+									<Button
+										variant="primary"
+										onClick={applyInlineFontWeight}
+										style={{ marginTop: '8px', width: '100%' }}
+									>
+										{__('Apply Font Weight', 'typography-stylist')}
+									</Button>
 								</div>
 
 								{/* Font Size Control */}
@@ -1736,55 +1706,86 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
-								{/* Font Family Control */}
+								{/* Line Height Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
-										label={__('Font Family (for selected text)', 'typography-stylist')}
-										value={inlineFontFamily}
-										onChange={(value) => setInlineFontFamily(value)}
-										options={[
-											{ label: __('Select a font...', 'typography-stylist'), value: '' },
-											...fontOptions
+									<RangeControl
+										label={__('Line Height (for selected text)', 'typography-stylist')}
+										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
+										onChange={handleLineHeightChange}
+										min={0.5}
+										max={3}
+										step={0.1}
+										help={inlineLineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : inlineLineHeight}
+										allowReset
+										resetFallbackValue={0}
+										marks={[
+											{ value: 1.5, label: '1.5' }
 										]}
-										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
+										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
 									/>
-									{inlineFontFamily && (
-										<Button
-											variant="primary"
-											onClick={applyInlineFontFamily}
-											style={{ marginTop: '8px', width: '100%' }}
-										>
-											{__('Apply Font Family', 'typography-stylist')}
-										</Button>
+									{inlineLineHeight !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLineHeightOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Line Height', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLineHeight}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLineHeight !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
+										</p>
 									)}
 								</div>
 
-								{/* Font Weight Control */}
+								{/* Letter Spacing Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
-										label={__('Font Weight (for selected text)', 'typography-stylist')}
-										value={inlineFontWeight}
-										onChange={(value) => setInlineFontWeight(value)}
-										options={[
-											{ label: '100 - Thin', value: '100' },
-											{ label: '200 - Extra Light', value: '200' },
-											{ label: '300 - Light', value: '300' },
-											{ label: '400 - Normal', value: '400' },
-											{ label: '500 - Medium', value: '500' },
-											{ label: '600 - Semi Bold', value: '600' },
-											{ label: '700 - Bold', value: '700' },
-											{ label: '800 - Extra Bold', value: '800' },
-											{ label: '900 - Black', value: '900' }
-										]}
+									<RangeControl
+										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
+										value={inlineLetterSpacing}
+										onChange={handleLetterSpacingChange}
+										min={-200}
+										max={200}
+										step={1}
+										help={inlineLetterSpacing === 0 ? __('Normal', 'typography-stylist') : `${inlineLetterSpacing / 1000}em`}
+										allowReset
+										resetFallbackValue={0}
 									/>
-									<Button
-										variant="primary"
-										onClick={applyInlineFontWeight}
-										style={{ marginTop: '8px', width: '100%' }}
-									>
-										{__('Apply Font Weight', 'typography-stylist')}
-									</Button>
+									{inlineLetterSpacing !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLetterSpacingOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Letter Spacing', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLetterSpacing}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLetterSpacing !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
+										</p>
+									)}
 								</div>
+
 
 								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => {
 									// Check if any features in this category are active
@@ -2004,42 +2005,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					/>
 				</PanelBody>
 
-				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
-					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
-					</p>
-					<RangeControl
-						value={letterSpacing}
-						onChange={(value) => setAttributes({ letterSpacing: value })}
-						min={-200}
-						max={200}
-						step={1}
-						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
-						allowReset
-						resetFallbackValue={0}
-					/>
-				</PanelBody>
-
-				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
-					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
-					</p>
-					<RangeControl
-						value={lineHeight === 0 ? 1.5 : lineHeight}
-						onChange={(value) => setAttributes({ lineHeight: value })}
-						min={0.5}
-						max={3}
-						step={0.1}
-						help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
-						allowReset
-						resetFallbackValue={0}
-						marks={[
-							{ value: 1.5, label: '1.5' }
-						]}
-						renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
-					/>
-				</PanelBody>
-
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
 						value={fontSize}
@@ -2086,6 +2051,42 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							)}
 						</>
 					)}
+				</PanelBody>
+
+				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={lineHeight === 0 ? 1.5 : lineHeight}
+						onChange={(value) => setAttributes({ lineHeight: value })}
+						min={0.5}
+						max={3}
+						step={0.1}
+						help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
+						allowReset
+						resetFallbackValue={0}
+						marks={[
+							{ value: 1.5, label: '1.5' }
+						]}
+						renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+					/>
+				</PanelBody>
+
+				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={letterSpacing}
+						onChange={(value) => setAttributes({ letterSpacing: value })}
+						min={-200}
+						max={200}
+						step={1}
+						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+						allowReset
+						resetFallbackValue={0}
+					/>
 				</PanelBody>
 
 				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>
