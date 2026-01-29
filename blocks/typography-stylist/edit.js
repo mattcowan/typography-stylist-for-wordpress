@@ -29,8 +29,12 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
+
+// Viewport breakpoints for responsive font sizing
+const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
+const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
 // Custom "T" icon for Typography Stylist
 const TSIcon = () => (
@@ -52,6 +56,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontSizeMax,
 		fontWeight,
 		letterSpacing,
+		lineHeight,
 		screenReaderClass,
 		textAlign
 	} = attributes;
@@ -60,11 +65,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewText, setPreviewText] = useState('');
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
+	const [inlineLineHeight, setInlineLineHeight] = useState(0);
+	const [previewLineHeight, setPreviewLineHeight] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
 	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
 	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
 	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
+	const [previewFontSize, setPreviewFontSize] = useState('inherit');
+	const [previewFontSizeMin, setPreviewFontSizeMin] = useState(16);
+	const [previewFontSizePreferred, setPreviewFontSizePreferred] = useState(32);
+	const [previewFontSizeMax, setPreviewFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('400');
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
@@ -99,28 +110,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [resizeStartModalX, setResizeStartModalX] = useState(0);
 	const [resizeStartModalY, setResizeStartModalY] = useState(0);
 	const [resizeDirection, setResizeDirection] = useState(null);
-
-	/**
-	 * Ensure font size values maintain valid range: min <= preferred <= max
-	 * @param {number} min - Minimum font size
-	 * @param {number} preferred - Preferred font size
-	 * @param {number} max - Maximum font size
-	 * @return {Object} Validated and adjusted values
-	 */
-	const ensureValidFontSizeRange = (min, preferred, max) => {
-		// Ensure min doesn't exceed preferred or max
-		const validMin = Math.min(min, preferred, max);
-		// Ensure max isn't less than preferred or min
-		const validMax = Math.max(min, preferred, max);
-		// Ensure preferred is between min and max
-		const validPreferred = Math.max(validMin, Math.min(preferred, validMax));
-
-		return {
-			min: validMin,
-			preferred: validPreferred,
-			max: validMax
-		};
-	};
 
 	// Get selection from block editor store
 	const { selectionStart, selectionEnd } = useSelect(
@@ -217,6 +206,87 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		range.setEnd(rangeEndNode, rangeEndOffset);
 
 		return range;
+	};
+
+	/**
+	 * Apply preview styling to selected text by wrapping with temporary span
+	 * Handles multiple concurrent preview properties (letter-spacing, line-height, font-size)
+	 *
+	 * @param {Object} params
+	 * @param {string} params.content - Current block content
+	 * @param {Object} params.selectionStart - Selection start position
+	 * @param {Object} params.selectionEnd - Selection end position
+	 * @param {string} params.clientId - Block client ID
+	 * @param {Object} params.styles - CSS styles to apply { 'letter-spacing': '0.05em', 'line-height': 2.0, ... }
+	 * @param {Function} params.setAttributes - Block setAttributes function
+	 * @param {Object} params.originalContentRef - Reference to original content before preview
+	 * @returns {boolean} - True if preview was applied successfully
+	 */
+	const applyPreviewStyles = ({
+		content,
+		selectionStart,
+		selectionEnd,
+		clientId,
+		styles,
+		setAttributes,
+		originalContentRef
+	}) => {
+		// Validation checks
+		if (!content || !selectionStart || !selectionEnd || !clientId) {
+			return false;
+		}
+
+		if (selectionStart.clientId !== clientId || selectionEnd.clientId !== clientId) {
+			return false;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		if (start === end) {
+			return false;
+		}
+
+		// Store original content if not already stored
+		if (!originalContentRef.current) {
+			originalContentRef.current = content;
+		}
+
+		// Parse ORIGINAL content (prevents nested preview spans)
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${originalContentRef.current}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		const range = getRangeForOffsets(container, start, end, doc);
+
+		if (!range) {
+			return false;
+		}
+
+		try {
+			const span = doc.createElement('span');
+			span.className = 'typost-preview-temp';
+
+			// Build style string from ALL active preview values
+			const styleString = Object.entries(styles)
+				.filter(([_, value]) => value !== null && value !== undefined && value !== '')
+				.map(([prop, value]) => `${prop}: ${value}`)
+				.join('; ');
+
+			if (styleString) {
+				span.style.cssText = styleString;
+			}
+
+			range.surroundContents(span);
+			const previewContent = container.innerHTML;
+			setAttributes({ content: previewContent });
+
+			return true;
+		} catch (e) {
+			// Range cannot be wrapped (e.g., intersects element boundaries)
+			// Silently fail for preview - user can still apply manually
+			return false;
+		}
 	};
 
 	// Drag handlers
@@ -384,9 +454,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			setAttributes({ content: originalContentRef.current });
 			originalContentRef.current = null;
 		}
+		// Reset letter-spacing preview state
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
-		setCapturedSelection(null); // Clear captured selection
+		// Reset line-height preview state
+		setInlineLineHeight(0);
+		setPreviewLineHeight(0);
+		// Reset responsive font-size preview state
+		setPreviewFontSize('inherit');
+		setPreviewFontSizeMin(16);
+		setPreviewFontSizePreferred(32);
+		setPreviewFontSizeMax(64);
+		// Clear captured selection and close popover
+		setCapturedSelection(null);
 		setIsPopoverOpen(false);
 	};
 
@@ -395,66 +475,144 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineLetterSpacing(value);
 		setPreviewLetterSpacing(value);
 
-		// Apply preview by temporarily wrapping the selected text
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		// Build styles object with ALL active preview values
+		const styles = {};
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
-
-			if (start !== end && content) {
-				// Store original content if not already stored
-				if (!originalContentRef.current) {
-					originalContentRef.current = content;
-				}
-
-				// Parse the current content as HTML and wrap the selection for preview
-				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${originalContentRef.current}</div>`, 'text/html');
-				const container = doc.body.firstChild;
-
-				const range = getRangeForOffsets(container, start, end, doc);
-
-				if (range) {
-
-					// Create the preview span wrapper
-					const span = doc.createElement('span');
-					span.className = 'typost-preview-temp';
-					span.style.letterSpacing = `${value / 1000}em`;
-
-					// Wrap the range content
-					try {
-						range.surroundContents(span);
-
-						// Get the updated HTML and set it temporarily
-						const previewContent = container.innerHTML;
-						setAttributes({ content: previewContent });
-					} catch (e) {
-						// Range cannot be wrapped (e.g., intersects element boundaries)
-						// Silently fail for preview - user can still apply manually
-					}
-				}
-			}
+		if (value !== 0) {
+			styles['letter-spacing'] = `${value / 1000}em`;
 		}
+
+		if (previewLineHeight !== 0) {
+			styles['line-height'] = previewLineHeight;
+		}
+
+		if (previewFontSize === 'responsive') {
+			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			styles['font-size'] = clampValue;
+		}
+
+		applyPreviewStyles({
+			content,
+			selectionStart,
+			selectionEnd,
+			clientId,
+			styles,
+			setAttributes,
+			originalContentRef
+		});
 	};
 
 	// Clear letter spacing (reset to 0)
 	const clearLetterSpacing = () => {
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
-		// Restore original content
-		if (originalContentRef.current) {
-			setAttributes({ content: originalContentRef.current });
-			originalContentRef.current = null;
+
+		// Build styles object with remaining active preview values
+		const styles = {};
+
+		if (previewLineHeight !== 0) {
+			styles['line-height'] = previewLineHeight;
+		}
+
+		if (previewFontSize === 'responsive') {
+			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			styles['font-size'] = clampValue;
+		}
+
+		// If other properties remain, rebuild preview; otherwise restore original
+		if (Object.keys(styles).length > 0) {
+			applyPreviewStyles({
+				content,
+				selectionStart,
+				selectionEnd,
+				clientId,
+				styles,
+				setAttributes,
+				originalContentRef
+			});
+		} else {
+			// No more preview properties - restore original content
+			if (originalContentRef.current) {
+				setAttributes({ content: originalContentRef.current });
+				originalContentRef.current = null;
+			}
 		}
 	};
 
-	// Apply live preview letter spacing by wrapping selected text temporarily
-	useEffect(() => {
-		if (!isPopoverOpen) return;
+	// Handle line height change with live preview
+	const handleLineHeightChange = (value) => {
+		setInlineLineHeight(value);
+		setPreviewLineHeight(value);
 
-		// Only apply preview if we have a selection
+		// Build styles object with ALL active preview values
+		const styles = {};
+
+		if (previewLetterSpacing !== 0) {
+			styles['letter-spacing'] = `${previewLetterSpacing / 1000}em`;
+		}
+
+		if (value !== 0) {
+			styles['line-height'] = value;
+		}
+
+		if (previewFontSize === 'responsive') {
+			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			styles['font-size'] = clampValue;
+		}
+
+		applyPreviewStyles({
+			content,
+			selectionStart,
+			selectionEnd,
+			clientId,
+			styles,
+			setAttributes,
+			originalContentRef
+		});
+	};
+
+	// Clear line height (reset to 0)
+	const clearLineHeight = () => {
+		setInlineLineHeight(0);
+		setPreviewLineHeight(0);
+
+		// Build styles object with remaining active preview values
+		const styles = {};
+
+		if (previewLetterSpacing !== 0) {
+			styles['letter-spacing'] = `${previewLetterSpacing / 1000}em`;
+		}
+
+		if (previewFontSize === 'responsive') {
+			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			styles['font-size'] = clampValue;
+		}
+
+		// If other properties remain, rebuild preview; otherwise restore original
+		if (Object.keys(styles).length > 0) {
+			applyPreviewStyles({
+				content,
+				selectionStart,
+				selectionEnd,
+				clientId,
+				styles,
+				setAttributes,
+				originalContentRef
+			});
+		} else {
+			// No more preview properties - restore original content
+			if (originalContentRef.current) {
+				setAttributes({ content: originalContentRef.current });
+				originalContentRef.current = null;
+			}
+		}
+	};
+
+	// Apply line height only (no feature)
+	const applyLineHeightOnly = () => {
+		if (!content || inlineLineHeight === 0) return;
+
+		// Check if we have a valid selection
 		if (selectionStart && selectionEnd &&
 		    selectionStart.clientId === clientId &&
 		    selectionEnd.clientId === clientId) {
@@ -462,68 +620,76 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const start = selectionStart.offset || 0;
 			const end = selectionEnd.offset || 0;
 
-			if (start !== end && content) {
-				// Find the block wrapper first
-				const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
+			if (start !== end) {
+				// Build the styled span with ONLY line height
+				const styleArray = [];
 
-				// Find the RichText element within the block
-				let blockElement = blockWrapper?.querySelector('.typost-block-content');
-
-				if (!blockElement) {
-					// Try finding by the actual tag name (h1, h2, p, etc.)
-					blockElement = blockWrapper?.querySelector(tagName);
+				if (fontFamily) {
+					const sanitizedFont = sanitizeFontFamily(fontFamily);
+					styleArray.push(`font-family: ${sanitizedFont}`);
 				}
 
-				if (!blockElement) {
-					// Last resort: try the rich-text role
-					blockElement = blockWrapper?.querySelector('[role="textbox"]');
+				styleArray.push(`line-height: ${inlineLineHeight}`);
+
+				const styleString = styleArray.join('; ');
+
+				// Parse the current content as HTML and wrap the selection
+				const parser = new DOMParser();
+				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const container = doc.body.firstChild;
+
+				const range = getRangeForOffsets(container, start, end, doc);
+
+				if (range) {
+					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
+					const attributes = {
+						'data-features': ''
+					};
+
+					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+					if (success) {
+						// Get the updated HTML
+						const newContent = container.innerHTML;
+						setAttributes({ content: newContent });
+					}
 				}
 
-				if (blockElement && previewLetterSpacing !== 0) {
-					// Apply letter-spacing style directly to the RichText element
-					const spacingValue = `${previewLetterSpacing / 1000}em`;
-					blockElement.style.letterSpacing = spacingValue;
-				} else if (blockElement) {
-					// Remove preview styling
-					blockElement.style.letterSpacing = '';
-				}
+				// Clear the original content ref since we're committing the change
+				originalContentRef.current = null;
+
 			}
 		}
+	};
 
-		// Cleanup when popover closes
-		return () => {
-			// Use the same robust lookup as above to find the content element
-			const blockWrapper = document.querySelector(`[data-block="${clientId}"]`);
-			if (blockWrapper) {
-				let blockElement = blockWrapper.querySelector('.typost-block-content');
+	// Handle font size preview change
+	const handleFontSizePreviewChange = (min, preferred, max) => {
+		const styles = {};
 
-				if (!blockElement && tagName) {
-					blockElement = blockWrapper.querySelector(tagName);
-				}
+		// Include letter-spacing if active
+		if (previewLetterSpacing !== 0) {
+			styles['letter-spacing'] = `${previewLetterSpacing / 1000}em`;
+		}
 
-				if (!blockElement) {
-					blockElement = blockWrapper.querySelector('[role="textbox"]');
-				}
+		// Include line-height if active
+		if (previewLineHeight !== 0) {
+			styles['line-height'] = previewLineHeight;
+		}
 
-				if (blockElement) {
-					blockElement.style.letterSpacing = '';
-				}
+		// Calculate clamp() for font-size
+		const clampValue = `clamp(${min}px, ${preferred / 16}rem + ${((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${max}px)`;
+		styles['font-size'] = clampValue;
 
-				// Remove any temporary preview wrapper spans
-				const tempSpans = blockWrapper.querySelectorAll('.typost-preview-temp');
-				tempSpans.forEach((span) => {
-					const parent = span.parentNode;
-					if (!parent) {
-						return;
-					}
-					while (span.firstChild) {
-						parent.insertBefore(span.firstChild, span);
-					}
-					parent.removeChild(span);
-				});
-			}
-		};
-	}, [previewLetterSpacing, clientId, selectionStart, selectionEnd, isPopoverOpen, content]);
+		applyPreviewStyles({
+			content,
+			selectionStart,
+			selectionEnd,
+			clientId,
+			styles,
+			setAttributes,
+			originalContentRef
+		});
+	};
 
 	const blockProps = useBlockProps({
 		className: 'wp-block-typost'
@@ -792,12 +958,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						attributes['data-fontsize-min'] = inlineFontSizeMin.toString();
 						attributes['data-fontsize-preferred'] = inlineFontSizePreferred.toString();
 						attributes['data-fontsize-max'] = inlineFontSizeMax.toString();
-						styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (1920 - 320)) * 100}vw, ${inlineFontSizeMax}px)`;
+						styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${inlineFontSizeMax}px)`;
 					}
 
 					const success = applyOrMergeStyling(range, attributes, styleString, doc);
 					if (success) {
 						setAttributes({ content: container.innerHTML });
+						// Clear preview state after applying
+						setPreviewFontSize('inherit');
+						setPreviewFontSizeMin(inlineFontSizeMin);
+						setPreviewFontSizePreferred(inlineFontSizePreferred);
+						setPreviewFontSizeMax(inlineFontSizeMax);
 					}
 				}
 
@@ -1178,6 +1349,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			fontFamily: '',
 			fontWeight: '',
 			letterSpacing: 0,
+			lineHeight: 0,
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 32,
@@ -1210,8 +1382,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			styles.letterSpacing = `${letterSpacing / 1000}em`;
 		}
 
+		if (lineHeight !== 0) {
+			styles.lineHeight = lineHeight;
+		}
+
 		if (fontSize === 'responsive') {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`;
+			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
 		if (textAlign) {
@@ -1439,12 +1615,60 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
+								{/* Line Height Control */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<RangeControl
+										label={__('Line Height (for selected text)', 'typography-stylist')}
+										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
+										onChange={handleLineHeightChange}
+										min={0.5}
+										max={3}
+										step={0.1}
+										help={inlineLineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : inlineLineHeight}
+										allowReset
+										resetFallbackValue={0}
+										marks={[
+											{ value: 1.5, label: '1.5' }
+										]}
+										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+									/>
+									{inlineLineHeight !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLineHeightOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Line Height', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLineHeight}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLineHeight !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
+										</p>
+									)}
+								</div>
+
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
 										label={__('Font Size (for selected text)', 'typography-stylist')}
 										value={inlineFontSize}
-										onChange={(value) => setInlineFontSize(value)}
+										onChange={(value) => {
+											setInlineFontSize(value);
+											// Clear preview when changing font size type
+											if (value === 'inherit') {
+												setPreviewFontSize('inherit');
+											}
+										}}
 										options={[
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
 											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' }
@@ -1453,44 +1677,54 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									{inlineFontSize === 'responsive' && (
 										<>
 											<RangeControl
-												label={__('Min Size (px)', 'typography-stylist')}
+												label={__('Mobile (320px+)', 'typography-stylist')}
 												value={inlineFontSizeMin}
 												onChange={(value) => {
-													const validated = ensureValidFontSizeRange(value, inlineFontSizePreferred, inlineFontSizeMax);
-													setInlineFontSizeMin(validated.min);
-													setInlineFontSizePreferred(validated.preferred);
-													setInlineFontSizeMax(validated.max);
+													setInlineFontSizeMin(value);
+													setPreviewFontSizeMin(value);
+													setPreviewFontSize('responsive');
+													handleFontSizePreviewChange(value, previewFontSizePreferred, previewFontSizeMax);
 												}}
 												min={8}
 												max={200}
 												step={1}
 											/>
 											<RangeControl
-												label={__('Preferred Size (px)', 'typography-stylist')}
+												label={__('Intermediate', 'typography-stylist')}
 												value={inlineFontSizePreferred}
 												onChange={(value) => {
-													const validated = ensureValidFontSizeRange(inlineFontSizeMin, value, inlineFontSizeMax);
-													setInlineFontSizeMin(validated.min);
-													setInlineFontSizePreferred(validated.preferred);
-													setInlineFontSizeMax(validated.max);
-												}}
-												min={inlineFontSizeMin}
-												max={inlineFontSizeMax}
-												step={1}
-											/>
-											<RangeControl
-												label={__('Max Size (px)', 'typography-stylist')}
-												value={inlineFontSizeMax}
-												onChange={(value) => {
-													const validated = ensureValidFontSizeRange(inlineFontSizeMin, inlineFontSizePreferred, value);
-													setInlineFontSizeMin(validated.min);
-													setInlineFontSizePreferred(validated.preferred);
-													setInlineFontSizeMax(validated.max);
+													setInlineFontSizePreferred(value);
+													setPreviewFontSizePreferred(value);
+													setPreviewFontSize('responsive');
+													handleFontSizePreviewChange(previewFontSizeMin, value, previewFontSizeMax);
 												}}
 												min={8}
 												max={400}
 												step={1}
 											/>
+											<RangeControl
+												label={__('Large (1920px)', 'typography-stylist')}
+												value={inlineFontSizeMax}
+												onChange={(value) => {
+													setInlineFontSizeMax(value);
+													setPreviewFontSizeMax(value);
+													setPreviewFontSize('responsive');
+													handleFontSizePreviewChange(previewFontSizeMin, previewFontSizePreferred, value);
+												}}
+												min={8}
+												max={400}
+												step={1}
+											/>
+											{!isValidFontSizeRange(inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax) && (
+												<Notice status="warning" isDismissible={false}>
+													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
+												</Notice>
+											)}
+											{previewFontSize === 'responsive' && (
+												<Notice status="info" isDismissible={false} style={{ marginTop: '8px' }}>
+													{__('Preview active. Click "Apply Font Size" to save changes, or close this panel to cancel.', 'typography-stylist')}
+												</Notice>
+											)}
 											<Button
 												variant="primary"
 												onClick={applyInlineFontSize}
@@ -1786,6 +2020,26 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					/>
 				</PanelBody>
 
+				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={lineHeight === 0 ? 1.5 : lineHeight}
+						onChange={(value) => setAttributes({ lineHeight: value })}
+						min={0.5}
+						max={3}
+						step={0.1}
+						help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
+						allowReset
+						resetFallbackValue={0}
+						marks={[
+							{ value: 1.5, label: '1.5' }
+						]}
+						renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+					/>
+				</PanelBody>
+
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
 						value={fontSize}
@@ -1799,7 +2053,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					{fontSize === 'responsive' && (
 						<>
 							<RangeControl
-								label={__('Minimum Size (mobile)', 'typography-stylist')}
+								label={__('Mobile (320px and up)', 'typography-stylist')}
 								value={fontSizeMin}
 								onChange={(value) => setAttributes({ fontSizeMin: value })}
 								min={8}
@@ -1808,7 +2062,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								help={`${fontSizeMin}px`}
 							/>
 							<RangeControl
-								label={__('Preferred Size (tablet)', 'typography-stylist')}
+								label={__('Intermediate', 'typography-stylist')}
 								value={fontSizePreferred}
 								onChange={(value) => setAttributes({ fontSizePreferred: value })}
 								min={8}
@@ -1817,7 +2071,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								help={`${fontSizePreferred}px`}
 							/>
 							<RangeControl
-								label={__('Maximum Size (desktop)', 'typography-stylist')}
+								label={__('Large (up to 1920px)', 'typography-stylist')}
 								value={fontSizeMax}
 								onChange={(value) => setAttributes({ fontSizeMax: value })}
 								min={8}
@@ -1825,6 +2079,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								step={1}
 								help={`${fontSizeMax}px`}
 							/>
+							{!isValidFontSizeRange(fontSizeMin, fontSizePreferred, fontSizeMax) && (
+								<Notice status="warning" isDismissible={false}>
+									{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
+								</Notice>
+							)}
 						</>
 					)}
 				</PanelBody>

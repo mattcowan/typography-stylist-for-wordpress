@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -900,53 +900,40 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
 /**
  * Test Suite: Font Size Range Validation
  *
- * Tests for ensureValidFontSizeRange helper function that ensures min <= preferred <= max
+ * Tests for isValidFontSizeRange helper function that checks if min <= preferred <= max
  */
 describe('Typography Stylist - Font Size Range Validation', () => {
-	// Mock the helper function since we can't easily import from edit.js
-	// This tests the logic that should be in ensureValidFontSizeRange
-	const ensureValidFontSizeRange = (min, preferred, max) => {
-		const validMin = Math.min(min, preferred, max);
-		const validMax = Math.max(min, preferred, max);
-		const validPreferred = Math.max(validMin, Math.min(preferred, validMax));
-		return { min: validMin, preferred: validPreferred, max: validMax };
-	};
+	// Test the actual isValidFontSizeRange function imported from utils.js
 
-	it('should maintain valid range when min is increased', () => {
-		const result = ensureValidFontSizeRange(50, 30, 40);
-		expect(result.min).toBe(30);
-		expect(result.preferred).toBe(30);
-		expect(result.max).toBe(50);
+	it('should return true when min <= preferred <= max', () => {
+		expect(isValidFontSizeRange(16, 32, 64)).toBe(true);
+		expect(isValidFontSizeRange(10, 20, 30)).toBe(true);
+		expect(isValidFontSizeRange(8, 16, 24)).toBe(true);
 	});
 
-	it('should maintain valid range when max is decreased below preferred', () => {
-		// When user sets max=30 but preferred is 40, the function expands max to accommodate preferred
-		const result = ensureValidFontSizeRange(20, 40, 30);
-		expect(result.min).toBe(20);
-		expect(result.preferred).toBe(40);
-		expect(result.max).toBe(40); // Max expanded to match preferred
+	it('should return false when min > preferred', () => {
+		expect(isValidFontSizeRange(50, 30, 40)).toBe(false);
+		expect(isValidFontSizeRange(32, 16, 64)).toBe(false);
 	});
 
-	it('should maintain valid range when preferred exceeds max', () => {
-		// When preferred=100 exceeds max=50, max is expanded to accommodate it
-		const result = ensureValidFontSizeRange(10, 100, 50);
-		expect(result.min).toBe(10);
-		expect(result.preferred).toBe(100);
-		expect(result.max).toBe(100); // Max expanded to match preferred
+	it('should return false when preferred > max', () => {
+		expect(isValidFontSizeRange(10, 100, 50)).toBe(false);
+		expect(isValidFontSizeRange(16, 64, 32)).toBe(false);
 	});
 
-	it('should handle all equal values', () => {
-		const result = ensureValidFontSizeRange(30, 30, 30);
-		expect(result.min).toBe(30);
-		expect(result.preferred).toBe(30);
-		expect(result.max).toBe(30);
+	it('should return false when min > max', () => {
+		expect(isValidFontSizeRange(64, 32, 16)).toBe(false);
+		expect(isValidFontSizeRange(100, 50, 25)).toBe(false);
 	});
 
-	it('should handle already valid range', () => {
-		const result = ensureValidFontSizeRange(16, 32, 64);
-		expect(result.min).toBe(16);
-		expect(result.preferred).toBe(32);
-		expect(result.max).toBe(64);
+	it('should return true when all values are equal', () => {
+		expect(isValidFontSizeRange(30, 30, 30)).toBe(true);
+		expect(isValidFontSizeRange(16, 16, 16)).toBe(true);
+	});
+
+	it('should return true when preferred equals min or max', () => {
+		expect(isValidFontSizeRange(16, 16, 64)).toBe(true);
+		expect(isValidFontSizeRange(16, 64, 64)).toBe(true);
 	});
 });
 

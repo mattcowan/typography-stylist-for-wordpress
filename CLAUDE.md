@@ -42,6 +42,16 @@ The plugin provides two distinct interfaces for applying OpenType features:
      - Supports responsive/fluid font sizing
      - ARIA markup with configurable screen reader classes (visually-hidden, sr-only, custom)
 
+**Responsive Font Sizing:**
+- Uses CSS `clamp()` function with three independent size values
+- **Mobile (320px+):** Minimum size for small screens
+- **Intermediate:** Preferred size for medium screens (calculated via viewport units)
+- **Large (up to 1920px):** Maximum size for large screens
+- Breakpoint constants: `RESPONSIVE_FONT_MIN_VIEWPORT = 320`, `RESPONSIVE_FONT_MAX_VIEWPORT = 1920`
+- Size controls operate independently with soft validation (warnings only, no auto-adjustment)
+- CSS `clamp(min, val, max)` does **not** auto-sort out-of-order values; it evaluates to `max(min, min(val, max))`, so when `min > max` the expression effectively collapses to `min` and may clamp to an unintended size. The UI warns when values are out of order to prevent this and does not auto-correct them.
+- Default sizes for new blocks: 16px / 32px / 64px
+
 **Admin Interface:** [includes/admin-page.php](includes/admin-page.php)
 - Tabbed interface showing: Presets, Font Features, Custom Fonts, Accessibility, Help
 - Font management: Upload webfont kits, Adobe Fonts integration, custom font definitions
@@ -171,6 +181,14 @@ npm test -- --coverage    # See test coverage report
 2. Create/edit a post with heading blocks (H1-H6)
 3. Select text and use the Typography Features button in the toolbar
 4. Check frontend rendering with browser DevTools to verify `font-feature-settings` CSS
+5. **Test responsive font sizing:**
+   - Create Typography Stylist block
+   - Set font size to "Responsive (Fluid)" in Inspector Controls
+   - Adjust all three sliders independently - verify no auto-adjustment occurs
+   - Set out-of-order values (e.g., Min: 64, Max: 16) - verify warning message appears
+   - Preview in editor at different viewport widths
+   - Check frontend with browser DevTools responsive mode (320px, 768px, 1920px)
+   - Verify CSS `clamp()` output is correct
 
 **Testing Guidelines:**
 - Tests should import and test ACTUAL functions, not mock implementations
