@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from '../utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -903,11 +903,7 @@ describe('Typography Stylist - Sidebar Feature Highlighting', () => {
  * Tests for isValidFontSizeRange helper function that checks if min <= preferred <= max
  */
 describe('Typography Stylist - Font Size Range Validation', () => {
-	// Mock the helper function since we can't easily import from edit.js
-	// This tests the logic that should be in isValidFontSizeRange
-	const isValidFontSizeRange = (min, preferred, max) => {
-		return min <= preferred && preferred <= max;
-	};
+	// Test the actual isValidFontSizeRange function imported from utils.js
 
 	it('should return true when min <= preferred <= max', () => {
 		expect(isValidFontSizeRange(16, 32, 64)).toBe(true);

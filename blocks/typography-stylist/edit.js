@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod } from './utils';
+import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -110,18 +110,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [resizeStartModalX, setResizeStartModalX] = useState(0);
 	const [resizeStartModalY, setResizeStartModalY] = useState(0);
 	const [resizeDirection, setResizeDirection] = useState(null);
-
-	/**
-	 * Checks if font size values are in valid order
-	 * Does not adjust values - only returns true/false
-	 * @param {number} min - Minimum font size
-	 * @param {number} preferred - Preferred font size
-	 * @param {number} max - Maximum font size
-	 * @return {boolean} True if min <= preferred <= max
-	 */
-	const isValidFontSizeRange = (min, preferred, max) => {
-		return min <= preferred && preferred <= max;
-	};
 
 	// Get selection from block editor store
 	const { selectionStart, selectionEnd } = useSelect(
@@ -466,11 +454,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			setAttributes({ content: originalContentRef.current });
 			originalContentRef.current = null;
 		}
+		// Reset letter-spacing preview state
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
+		// Reset line-height preview state
 		setInlineLineHeight(0);
 		setPreviewLineHeight(0);
-		setCapturedSelection(null); // Clear captured selection
+		// Reset responsive font-size preview state
+		setPreviewFontSize('inherit');
+		setPreviewFontSizeMin(16);
+		setPreviewFontSizePreferred(32);
+		setPreviewFontSizeMax(64);
+		// Clear captured selection and close popover
+		setCapturedSelection(null);
 		setIsPopoverOpen(false);
 	};
 

@@ -49,7 +49,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
 - **Large (up to 1920px):** Maximum size for large screens
 - Breakpoint constants: `RESPONSIVE_FONT_MIN_VIEWPORT = 320`, `RESPONSIVE_FONT_MAX_VIEWPORT = 1920`
 - Size controls operate independently with soft validation (warnings only, no auto-adjustment)
-- CSS `clamp()` gracefully handles out-of-order values by auto-sorting
+- CSS `clamp(min, val, max)` does **not** auto-sort out-of-order values; it evaluates to `max(min, min(val, max))`, so when `min > max` the expression effectively collapses to `min` and may clamp to an unintended size. The UI warns when values are out of order to prevent this and does not auto-correct them.
 - Default sizes for new blocks: 16px / 32px / 64px
 
 **Admin Interface:** [includes/admin-page.php](includes/admin-page.php)

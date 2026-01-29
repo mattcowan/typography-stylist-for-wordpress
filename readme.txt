@@ -232,7 +232,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Improved: Visual warning displayed when responsive font sizes are out of logical order
 * Improved: Default responsive font sizes for new blocks changed to 16/32/64 for more dramatic scaling
 * Fixed: Confusing slider behavior where adjusting one size would move other sliders
-* Developer: Breakpoint values (320px, 1920px) extracted to named constants for future configurability
+* Developer: Breakpoint values (320px, 1920px) extracted to named constants (RESPONSIVE_FONT_MIN_VIEWPORT, RESPONSIVE_FONT_MAX_VIEWPORT) for future configurability across Typography Stylist block and inline editor
 
 = 1.1.4 =
 * Fixed: Mixed content warnings on HTTPS sites when loading custom fonts

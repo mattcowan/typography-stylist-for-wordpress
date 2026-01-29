@@ -6,6 +6,10 @@
 // Import drag/resize utilities (CommonJS for browserify)
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
+// Viewport breakpoints for responsive font sizing
+const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
+const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
     const { BlockControls } = wp.blockEditor;
@@ -1018,7 +1022,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (1920 - 320)) * 100}vw, ${maxPx}px)`);
+                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${maxPx}px)`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -1254,7 +1258,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     attributes['data-fontsize-max'] = fontSizeMax.toString();
 
                     if (styleString) styleString += '; ';
-                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`;
+                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
                 }
 
                 attributes['style'] = styleString;
@@ -1332,7 +1336,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
                     attributes['data-fontsize-max'] = fontSizeMax.toString();
 
                     if (styleString) styleString += '; ';
-                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (1920 - 320)) * 100}vw, ${fontSizeMax}px)`;
+                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
                 }
 
                 attributes['style'] = styleString;

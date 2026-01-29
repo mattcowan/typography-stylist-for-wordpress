@@ -676,3 +676,16 @@ export function stripInlineFeatures(htmlContent) {
 		return htmlContent;
 	}
 }
+
+/**
+ * Checks if font size values are in valid order
+ * Does not adjust values - only returns true/false
+ *
+ * @param {number} min - Minimum font size
+ * @param {number} preferred - Preferred font size
+ * @param {number} max - Maximum font size
+ * @return {boolean} True if min <= preferred <= max
+ */
+export function isValidFontSizeRange(min, preferred, max) {
+	return min <= preferred && preferred <= max;
+}
