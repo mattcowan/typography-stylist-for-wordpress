@@ -349,6 +349,25 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.1.7
+
+**Bug Fixes:**
+- Fixed font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
+- Fixed all inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block
+- Fixed sequential feature application bug where applying multiple inline features would incorrectly affect entire block
+- Fixed state management issue where inline control values wouldn't reset after successful apply
+
+**Improvements:**
+- Added comprehensive validation and fallback mechanisms for all inline text styling functions
+- Inline controls now work reliably when applied sequentially to different selections
+- Inline state variables now reset after successful apply to prevent UI/content desync
+
+**Testing:**
+- Added Playwright E2E testing infrastructure for inline features
+- Added comprehensive E2E test suite covering font size, font weight, letter spacing, line height, and sequential application
+- Added secure credential management for E2E tests with .env files (git-ignored)
+- E2E tests included in repository but excluded from npm package distribution
+
 ### Version 1.1.4
 
 **Bug Fixes:**

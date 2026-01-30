@@ -1171,6 +1171,10 @@ msgstr "Hauteur de Ligne"
 msgid "This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar."
 msgstr "Ce contrôle applique la hauteur de ligne à l'ensemble du bloc. Pour appliquer la hauteur de ligne à des sélections de texte individuelles, utilisez le bouton Quick Features Toggle de la barre d'outils."
 
+#: blocks/typography-stylist/edit.js:1854
+msgid "Typography Stylist Features"
+msgstr "Fonctionnalités de Typography Stylist"
+
 #: blocks/typography-stylist/edit.js:1805
 #: assets/js/block-editor.js:2082
 msgid "Browser default"
