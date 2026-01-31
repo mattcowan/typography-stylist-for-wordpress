@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Typography Stylist
- * Plugin URI: https://github.com/mattcowan/typography-stylist
+ * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
  * Version: 1.1.6
  * Author: Matthew Cowan

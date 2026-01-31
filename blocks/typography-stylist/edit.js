@@ -1485,7 +1485,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
