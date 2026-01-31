@@ -215,11 +215,29 @@ npm test -- --coverage    # See test coverage report
 
 **Localization:** All strings use `__()` with text domain `typography-stylist`
 
-**Debug Logging:**
-- Do NOT add error_log() statements to production code
-- Only use error_log() temporarily when debugging specific issues locally
-- Remove all error_log() statements before committing changes
-- If persistent logging is needed, use WordPress debugging functions with WP_DEBUG_LOG
+**Debug and Console Logging:**
+
+**JavaScript (Browser Console):**
+- **NEVER** use `console.log()`, `console.warn()`, `console.error()`, or `console.debug()` in production code
+- WordPress Plugin Directory standards **prohibit** console logging in submitted plugins
+- All console statements must be removed before committing
+- Browser DevTools and WordPress debug tools provide runtime debugging without polluting production code
+- For test files (Jest, Playwright):
+  - Use test framework logging mechanisms (e.g., `test.skip()` in Playwright)
+  - Never use `console.log()` for conditional test skipping or debugging
+  - Test output should integrate with test reporters
+
+**PHP (Server-side Logging):**
+- Do NOT add `error_log()` statements to production code
+- Only use `error_log()` temporarily when debugging specific issues locally
+- Remove all `error_log()` statements before committing changes
+- If persistent logging is needed, use WordPress debugging functions with `WP_DEBUG_LOG`
+
+**Rationale:**
+- Console/error logging statements violate WordPress Plugin Directory submission standards
+- Logging output can expose sensitive information or implementation details
+- Production plugins should handle errors gracefully without diagnostic output
+- Proper error handling (try/catch, validation) should remain intact without logging side effects
 
 **WordPress Coding Standards Exceptions:**
 - Use `// phpcs:disable RuleName -- Reason` to suppress specific PHPCS warnings when justified

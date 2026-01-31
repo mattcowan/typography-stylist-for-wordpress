@@ -1539,10 +1539,6 @@ describe('Typography Stylist - Font Detection in Typographic Stylist Blocks', ()
 		// Mock getComputedStyle to throw
 		const mock = createMockTypostBlock('error-block', 'Arial');
 		const originalGetComputedStyle = window.getComputedStyle;
-		const originalConsoleError = console.error;
-
-		// Suppress expected console.error during this test
-		console.error = jest.fn();
 
 		window.getComputedStyle = () => {
 			throw new Error('Test error');
@@ -1551,10 +1547,8 @@ describe('Typography Stylist - Font Detection in Typographic Stylist Blocks', ()
 		const result = detectBlockComputedFont('error-block');
 
 		expect(result).toBe('');
-		expect(console.error).toHaveBeenCalled();
 
 		// Restore and cleanup
-		console.error = originalConsoleError;
 		window.getComputedStyle = originalGetComputedStyle;
 		mock.cleanup();
 	});

@@ -395,4 +395,84 @@ test.describe('Typography Stylist - Inline Features', () => {
     const letterSpacingStyle = await letterSpacingSpan.getAttribute('style');
     expect(letterSpacingStyle).toContain('letter-spacing');
   });
+
+  test('font family persists after apply and close', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // Select "Beautiful" using keyboard navigation
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+
+    // Move to start of "Beautiful" (after "Hello ")
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+
+    // Select "Beautiful" (9 characters)
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open Typography Stylist Features
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.waitFor({ state: 'visible', timeout: 10000 });
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+    await popover.waitFor({ state: 'visible', timeout: 10000 });
+
+    // Find and change font family select
+    const fontFamilySelect = popover.getByLabel('Font Family (for selected text)');
+
+    // Get all options to find first non-empty value
+    const options = await fontFamilySelect.locator('option').all();
+    let selectedValue = '';
+
+    for (const option of options) {
+      const value = await option.getAttribute('value');
+      if (value && value.trim() !== '' && value !== 'inherit') {
+        selectedValue = value;
+        break;
+      }
+    }
+
+    // Only run assertions if we have a font available
+    if (selectedValue) {
+      await fontFamilySelect.selectOption(selectedValue);
+      await page.waitForTimeout(500);
+
+      // Click Apply Font Family
+      const applyButton = page.locator('button:has-text("Apply Font Family")');
+      await applyButton.waitFor({ state: 'visible', timeout: 5000 });
+      await applyButton.click();
+      await page.waitForTimeout(2000);
+
+      // Close popover
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(1000);
+
+      // Verify font family persists
+      const styledSpan = editor.locator(`span.typost-styled[data-fontfamily="${selectedValue}"]`);
+      await expect(styledSpan).toHaveText('Beautiful', { timeout: 10000 });
+
+      // Verify only one span was created (selection-only application)
+      const allStyledSpans = editor.locator('span.typost-styled');
+      await expect(allStyledSpans).toHaveCount(1);
+
+      // Verify CSS contains font-family
+      const style = await styledSpan.getAttribute('style');
+      expect(style).toContain('font-family');
+    } else {
+      // No fonts available - skip test gracefully
+      test.skip(true, 'No custom fonts available for testing, skipping font family assertions');
+    }
+  });
 });

@@ -704,19 +704,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-					// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
-					originalContentRef.current = null;
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
 
-					// Reset inline state after successfully applying
-					setInlineLineHeight(0);
-				}
+				// Reset inline state after successfully applying
+				setInlineLineHeight(0);
 			}
 		}
 	};
@@ -970,19 +969,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-					// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
-					originalContentRef.current = null;
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
 
-					// Reset inline state after successfully applying
-					setInlineLetterSpacing(0);
-				}
+				// Reset inline state after successfully applying
+				setInlineLetterSpacing(0);
 			}
 		}
 	};
@@ -1146,28 +1144,27 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-					// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
-					originalContentRef.current = null;
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
 
-					// Clear preview state after applying
-					setPreviewFontSize('inherit');
-					setPreviewFontSizeMin(inlineFontSizeMin);
-					setPreviewFontSizePreferred(inlineFontSizePreferred);
-					setPreviewFontSizeMax(inlineFontSizeMax);
+				// Clear preview state after applying
+				setPreviewFontSize('inherit');
+				setPreviewFontSizeMin(inlineFontSizeMin);
+				setPreviewFontSizePreferred(inlineFontSizePreferred);
+				setPreviewFontSizeMax(inlineFontSizeMax);
 
-					// CRITICAL FIX: Reset inline state after successfully applying
-					setInlineFontSize('inherit');
-					setInlineFontSizeMin(16);
-					setInlineFontSizePreferred(32);
-					setInlineFontSizeMax(64);
-				}
+				// CRITICAL FIX: Reset inline state after successfully applying
+				setInlineFontSize('inherit');
+				setInlineFontSizeMin(16);
+				setInlineFontSizePreferred(32);
+				setInlineFontSizeMax(64);
 			}
 		}
 	};
@@ -1261,19 +1258,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-					// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
-					originalContentRef.current = null;
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
 
-					// Reset inline state after successfully applying
-					setInlineFontWeight('inherit');
-				}
+				// Reset inline state after successfully applying
+				setInlineFontWeight('inherit');
 			}
 		}
 	};
@@ -1373,19 +1369,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-					// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
-					originalContentRef.current = null;
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
 
-					// Reset inline state after successfully applying
-					setInlineFontFamily('');
-				}
+				// Reset inline state after successfully applying
+				setInlineFontFamily('');
 			}
 		}
 	};
@@ -1519,14 +1514,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						if (typeof console !== 'undefined' && console.error) {
 							console.error('Typographic Stylist Block - Both range and string methods failed:', fallbackResult.error);
 						}
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-				}
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
 			}
 		}
 	};

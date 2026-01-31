@@ -292,10 +292,6 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 		return true;
 
 	} catch (error) {
-		// eslint-disable-next-line no-console
-		if (typeof console !== 'undefined' && console.error) {
-			console.error('Typographic Stylist Block - Failed to apply or merge styling:', error);
-		}
 		return false;
 	}
 }
@@ -490,10 +486,6 @@ export function detectBlockComputedFont(clientId, elementSelector = '.typost-blo
 		// Return the font (removing quotes)
 		return detectedFont ? detectedFont.replace(/['"]/g, '') : '';
 	} catch (error) {
-		// eslint-disable-next-line no-console
-		if (typeof console !== 'undefined' && console.error) {
-			console.error('Typographic Stylist Block - Failed to detect computed font:', error);
-		}
 		return '';
 	}
 }
@@ -616,10 +608,6 @@ export function analyzeInlineFeatures(htmlContent) {
 		}
 
 	} catch (error) {
-		// eslint-disable-next-line no-console
-		if (typeof console !== 'undefined' && console.error) {
-			console.error('Typographic Stylist Block - Failed to analyze inline features:', error);
-		}
 		return defaultResult;
 	}
 }
@@ -669,10 +657,6 @@ export function stripInlineFeatures(htmlContent) {
 		return container.innerHTML;
 
 	} catch (error) {
-		// eslint-disable-next-line no-console
-		if (typeof console !== 'undefined' && console.error) {
-			console.error('Typographic Stylist Block - Failed to strip inline features:', error);
-		}
 		return htmlContent;
 	}
 }

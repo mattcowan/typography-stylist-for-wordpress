@@ -349,7 +349,14 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
-### Version 1.1.7
+### Version 1.1.6
+
+**Control Order Improvements:**
+- Standardized control order across all interfaces for better consistency
+- Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
+- Updated inline editor popover control order to match sidebar and quick toggles
+- Updated Typography Stylist block sidebar inspector controls order
+- Updated Typography Stylist block quick feature toggles popover control order
 
 **Bug Fixes:**
 - Fixed font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
@@ -364,7 +371,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 **Testing:**
 - Added Playwright E2E testing infrastructure for inline features
-- Added comprehensive E2E test suite covering font size, font weight, letter spacing, line height, and sequential application
+- Added comprehensive E2E test suite covering font size, font weight, letter spacing, line height, font family, and sequential application
 - Added secure credential management for E2E tests with .env files (git-ignored)
 - E2E tests included in repository but excluded from npm package distribution
 

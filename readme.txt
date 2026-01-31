@@ -221,7 +221,12 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.1.7 =
+= 1.1.6 =
+* Improved: Standardized control order across all interfaces for better consistency
+* Changed: Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
+* Changed: Updated inline editor popover control order to match sidebar and quick toggles
+* Changed: Updated Typography Stylist block sidebar inspector controls order
+* Changed: Updated Typography Stylist block quick feature toggles popover control order
 * Fixed: Font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
 * Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block
 * Fixed: Sequential feature application bug where applying multiple inline features would incorrectly affect entire block
@@ -230,16 +235,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Improved: Inline controls now work reliably when applied sequentially to different selections
 * Improved: Inline state variables now reset after successful apply to prevent UI/content desync
 * Added: Playwright E2E testing infrastructure for inline features
-* Added: Comprehensive E2E test suite covering font size, font weight, letter spacing, line height, and sequential application
+* Added: Comprehensive E2E test suite covering font size, font weight, letter spacing, line height, font family, and sequential application
 * Added: Secure credential management for E2E tests with .env files (git-ignored)
 * Developer: E2E tests included in repository but excluded from npm package distribution
-
-= 1.1.6 =
-* Improved: Standardized control order across all interfaces for better consistency
-* Changed: Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
-* Changed: Updated inline editor popover control order to match sidebar and quick toggles
-* Changed: Updated Typography Stylist block sidebar inspector controls order
-* Changed: Updated Typography Stylist block quick feature toggles popover control order
 
 = 1.1.5 =
 * Added: Line-height controls for block-level and inline text styling
