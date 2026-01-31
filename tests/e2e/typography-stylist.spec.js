@@ -138,6 +138,7 @@ test.describe('Typography Stylist - Inline Features', () => {
     const styledSpan = editor.locator('span.typost-styled[data-fontsize="responsive"]');
     await expect(styledSpan).toHaveText('Beautiful', { timeout: 10000 });
     await expect(styledSpan).toHaveAttribute('data-fontsize-min', '20');
+    await expect(styledSpan).toHaveAttribute('data-fontsize-preferred', '40');
     await expect(styledSpan).toHaveAttribute('data-fontsize-max', '80');
 
     // Verify computed style has clamp()

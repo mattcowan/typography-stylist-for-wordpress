@@ -702,7 +702,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
@@ -967,7 +966,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
@@ -1142,7 +1140,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
@@ -1256,7 +1253,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
@@ -1367,7 +1363,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
 						// Both methods failed - give up and don't update content
 						return;
@@ -1466,25 +1461,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								if (!isIntendedSelection) {
 									wrappedEverything = true;
 
-									// eslint-disable-next-line no-console
-									if (typeof console !== 'undefined' && console.warn) {
-										console.warn('Typographic Stylist Block - Detected nested wrapping bug:', {
-											spanText: spanText.substring(0, 50),
-											spanTextLength: spanText.length,
-											containerTextLength: containerText.length,
-											capturedLength: capturedSelection?.length,
-											numSpans: typostSpans.length
-										});
-									}
 								}
 							}
 						});
 
 						if (wrappedEverything) {
-							// eslint-disable-next-line no-console
-							if (typeof console !== 'undefined' && console.warn) {
-								console.warn('Typographic Stylist Block - Post-validation failed: surroundContents wrapped entire content');
-							}
 							success = false; // Force fallback
 						}
 					}
@@ -1492,10 +1473,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					// eslint-disable-next-line no-console
-					if (typeof console !== 'undefined' && console.warn) {
-						console.warn('Typographic Stylist Block - Range method failed, using string fallback:', validation.reason);
-					}
 
 					const attributes = { 'data-features': featureId };
 					const fallbackResult = applyStylingSafeStringMethod(
@@ -1510,10 +1487,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						newContent = fallbackResult.content;
 						success = true;
 					} else {
-						// eslint-disable-next-line no-console
-						if (typeof console !== 'undefined' && console.error) {
-							console.error('Typographic Stylist Block - Both range and string methods failed:', fallbackResult.error);
-						}
 						// Both methods failed - give up and don't update content
 						return;
 					}
