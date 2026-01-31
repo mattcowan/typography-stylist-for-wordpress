@@ -208,9 +208,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 hideWarning = sessionStorage.getItem('typography_stylist_hide_clear_warning') === 'true';
             } catch (e) {
                 // Session storage might not be available
-                if (window && window.console && typeof window.console.warn === 'function') {
-                    window.console.warn('Typography Stylist: sessionStorage is not available; "don\'t show again" preference for clear warning will not persist.', e);
-                }
             }
 
             this.state = {
@@ -964,13 +961,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Get the currently selected block
             const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
             if (!selectedBlockClientId) {
-                console.error('No block selected');
                 return;
             }
 
             const currentBlock = select('core/block-editor').getBlock(selectedBlockClientId);
             if (!currentBlock) {
-                console.error('Could not get current block');
                 return;
             }
 
@@ -1038,7 +1033,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const textLength = container.textContent.length;
                     const validationResult = validateSelectionBounds(value.start, value.end, textLength);
                     if (!validationResult.valid) {
-                        console.error('Typographic Stylist Inline Editor - Invalid selection bounds:', validationResult.error, { start: value.start, end: value.end, textLength });
                         return;
                     }
 
@@ -1083,7 +1077,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             range.surroundContents(span);
                             contentForBlock = container.innerHTML;
                         } catch (e) {
-                            console.error('Typographic Stylist Inline Editor - Failed to wrap selection, using fallback:', e);
                             // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
                             const beforeText = fullText.substring(0, value.start);
                             const selectedText = fullText.substring(value.start, value.end);
@@ -1413,10 +1406,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 this.setState({ showClearConfirmation: false });
             } catch (error) {
                 // If clearing features fails, do not persist the "don't show again" preference
-                // Optionally, log the error for debugging
-                if (window && window.console && typeof window.console.error === 'function') {
-                    window.console.error('Failed to clear Typography Stylist features:', error);
-                }
             }
         }
 
@@ -2062,40 +2051,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     />
                                 </div>
 
-                                {/* Letter Spacing Control */}
-                                <div className="typost-letterspacing-section">
-                                    <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
-                                    <RangeControl
-                                        value={letterSpacing}
-                                        onChange={this.setLetterSpacing}
-                                        min={-200}
-                                        max={200}
-                                        step={1}
-                                        help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
-                                        allowReset
-                                        resetFallbackValue={0}
-                                    />
-                                </div>
-
-                                {/* Line Height Control */}
-                                <div className="typost-lineheight-section">
-                                    <h4>{__('Line Height', 'typography-stylist')}</h4>
-                                    <RangeControl
-                                        value={lineHeight === 0 ? 1.5 : lineHeight}
-                                        onChange={this.setLineHeight}
-                                        min={0.5}
-                                        max={3}
-                                        step={0.1}
-                                        help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
-                                        allowReset
-                                        resetFallbackValue={0}
-                                        marks={[
-                                            { value: 1.5, label: '1.5' }
-                                        ]}
-                                        renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
-                                    />
-                                </div>
-
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
@@ -2139,6 +2094,40 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             />
                                         </div>
                                     )}
+                                </div>
+
+                                {/* Line Height Control */}
+                                <div className="typost-lineheight-section">
+                                    <h4>{__('Line Height', 'typography-stylist')}</h4>
+                                    <RangeControl
+                                        value={lineHeight === 0 ? 1.5 : lineHeight}
+                                        onChange={this.setLineHeight}
+                                        min={0.5}
+                                        max={3}
+                                        step={0.1}
+                                        help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                        marks={[
+                                            { value: 1.5, label: '1.5' }
+                                        ]}
+                                        renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+                                    />
+                                </div>
+
+                                {/* Letter Spacing Control */}
+                                <div className="typost-letterspacing-section">
+                                    <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
+                                    <RangeControl
+                                        value={letterSpacing}
+                                        onChange={this.setLetterSpacing}
+                                        min={-200}
+                                        max={200}
+                                        step={1}
+                                        help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+                                        allowReset
+                                        resetFallbackValue={0}
+                                    />
                                 </div>
 
                                 {/* Presets Section */}

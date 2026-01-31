@@ -1,0 +1,60 @@
+# E2E Testing (keep in Git, exclude from npm package)
+tests/
+playwright.config.js
+.playwright/
+test-results/
+playwright-report/
+.env
+.env.example
+
+# Development files
+.git/
+.gitignore
+.github/
+node_modules/
+src/
+*.log
+*.md
+!README.md
+package-lock.json
+
+# Build tools and configs
+.babelrc
+.eslintrc
+.prettierrc
+tsconfig.json
+webpack.config.js
+composer.json
+composer.lock
+phpunit.xml
+phpunit.xml.dist
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# CI/CD
+.travis.yml
+.circleci/
+.gitlab-ci.yml
+
+# Documentation (except main README)
+docs/
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE.md
+
+# Development scripts
+scripts/
+
+# PHP dependencies (not needed in distribution)
+vendor/
+
+# Testing and coverage
+coverage/
+.phpunit.result.cache

@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 1.1.5
+Stable tag: 1.1.6
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -220,6 +220,24 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.1.6 =
+* Improved: Standardized control order across all interfaces for better consistency
+* Changed: Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
+* Changed: Updated inline editor popover control order to match sidebar and quick toggles
+* Changed: Updated Typography Stylist block sidebar inspector controls order
+* Changed: Updated Typography Stylist block quick feature toggles popover control order
+* Fixed: Font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
+* Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block
+* Fixed: Sequential feature application bug where applying multiple inline features would incorrectly affect entire block
+* Fixed: State management issue where inline control values wouldn't reset after successful apply
+* Improved: Added comprehensive validation and fallback mechanisms for all inline text styling functions
+* Improved: Inline controls now work reliably when applied sequentially to different selections
+* Improved: Inline state variables now reset after successful apply to prevent UI/content desync
+* Added: Playwright E2E testing infrastructure for inline features
+* Added: Comprehensive E2E test suite covering font size, font weight, letter spacing, line height, font family, and sequential application
+* Added: Secure credential management for E2E tests with .env files (git-ignored)
+* Developer: E2E tests included in repository but excluded from npm package distribution
 
 = 1.1.5 =
 * Added: Line-height controls for block-level and inline text styling

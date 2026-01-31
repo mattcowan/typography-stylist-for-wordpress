@@ -76,7 +76,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewFontSizeMin, setPreviewFontSizeMin] = useState(16);
 	const [previewFontSizePreferred, setPreviewFontSizePreferred] = useState(32);
 	const [previewFontSizeMax, setPreviewFontSizeMax] = useState(64);
-	const [inlineFontWeight, setInlineFontWeight] = useState('400');
+	const [inlineFontWeight, setInlineFontWeight] = useState('inherit');
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
@@ -633,31 +633,88 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				const styleString = styleArray.join('; ');
 
-				// Parse the current content as HTML and wrap the selection
+				// Parse the current content as HTML
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
-					const attributes = {
-						'data-features': ''
-					};
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-features': '' };
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
-						// Get the updated HTML
-						const newContent = container.innerHTML;
-						setAttributes({ content: newContent });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							if (spanText.length >= containerText.length - 1) {
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							success = false; // Force fallback
+						}
 					}
 				}
 
-				// Clear the original content ref since we're committing the change
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					const attributes = { 'data-features': '' };
+
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+					} else {
+						// Both methods failed - give up and don't update content
+						return;
+					}
+				}
+
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
+				// Reset inline state after successfully applying
+				setInlineLineHeight(0);
 			}
 		}
 	};
@@ -840,31 +897,88 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				const styleString = styleArray.join('; ');
 
-				// Parse the current content as HTML and wrap the selection
+				// Parse the current content as HTML
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					// Use the new helper to apply or merge styling (avoids nested typost-styled spans)
-					const attributes = {
-						'data-features': ''
-					};
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-features': '' };
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
-						// Get the updated HTML
-						const newContent = container.innerHTML;
-						setAttributes({ content: newContent });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							if (spanText.length >= containerText.length - 1) {
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							success = false; // Force fallback
+						}
 					}
 				}
 
-				// Clear the original content ref since we're committing the change
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					const attributes = { 'data-features': '' };
+
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+					} else {
+						// Both methods failed - give up and don't update content
+						return;
+					}
+				}
+
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
+				// Reset inline state after successfully applying
+				setInlineLetterSpacing(0);
 			}
 		}
 	};
@@ -943,42 +1057,118 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
+				// Prepare attributes and style
+				const attributes = {
+					'data-fontsize': inlineFontSize
+				};
+
+				let styleString = '';
+				if (inlineFontSize === 'responsive') {
+					attributes['data-fontsize-min'] = inlineFontSizeMin.toString();
+					attributes['data-fontsize-preferred'] = inlineFontSizePreferred.toString();
+					attributes['data-fontsize-max'] = inlineFontSizeMax.toString();
+					styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${inlineFontSizeMax}px)`;
+				}
+
+				// Parse the current content as HTML
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
+
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					const attributes = {
-						'data-fontsize': inlineFontSize
-					};
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					let styleString = '';
-					if (inlineFontSize === 'responsive') {
-						attributes['data-fontsize-min'] = inlineFontSizeMin.toString();
-						attributes['data-fontsize-preferred'] = inlineFontSizePreferred.toString();
-						attributes['data-fontsize-max'] = inlineFontSizeMax.toString();
-						styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${inlineFontSizeMax}px)`;
-					}
+				let success = false;
+				let newContent = content;
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
+
 					if (success) {
-						setAttributes({ content: container.innerHTML });
-						// Clear preview state after applying
-						setPreviewFontSize('inherit');
-						setPreviewFontSizeMin(inlineFontSizeMin);
-						setPreviewFontSizePreferred(inlineFontSizePreferred);
-						setPreviewFontSizeMax(inlineFontSizeMax);
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						// This catches cases where surroundContents() silently fails
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							// If this span's text matches the entire container text, it wrapped everything
+							if (spanText.length >= containerText.length - 1) {
+								// EXCEPTION: If this span is our INTENDED selection, it's valid
+								// Check if span text matches what we captured
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							success = false; // Force fallback
+						}
 					}
 				}
 
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+					} else {
+						// Both methods failed - give up and don't update content
+						return;
+					}
+				}
+
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
+
+				// Clear preview state after applying
+				setPreviewFontSize('inherit');
+				setPreviewFontSizeMin(inlineFontSizeMin);
+				setPreviewFontSizePreferred(inlineFontSizePreferred);
+				setPreviewFontSizeMax(inlineFontSizeMax);
+
+				// CRITICAL FIX: Reset inline state after successfully applying
+				setInlineFontSize('inherit');
+				setInlineFontSizeMin(16);
+				setInlineFontSizePreferred(32);
+				setInlineFontSizeMax(64);
 			}
 		}
 	};
 
 	// Apply font weight to selected text only (inline)
 	const applyInlineFontWeight = () => {
-		if (!content) return;
+		if (!content || inlineFontWeight === 'inherit') return;
 
 		if (selectionStart && selectionEnd &&
 		    selectionStart.clientId === clientId &&
@@ -988,23 +1178,94 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
+				// Parse the current content as HTML
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
+
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					const attributes = {
-						'data-fontweight': inlineFontWeight
-					};
-					const styleString = `font-weight: ${inlineFontWeight}`;
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-fontweight': inlineFontWeight };
+					const styleString = `font-weight: ${inlineFontWeight}`;
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
+
 					if (success) {
-						setAttributes({ content: container.innerHTML });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						// This catches cases where surroundContents() silently fails
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							// If this span's text matches the entire container text, it wrapped everything
+							if (spanText.length >= containerText.length - 1) {
+								// EXCEPTION: If this span is our INTENDED selection, it's valid
+								// Check if span text matches what we captured
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							success = false; // Force fallback
+						}
 					}
 				}
 
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					const attributes = { 'data-fontweight': inlineFontWeight };
+					const styleString = `font-weight: ${inlineFontWeight}`;
+
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+					} else {
+						// Both methods failed - give up and don't update content
+						return;
+					}
+				}
+
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
+
+				// Reset inline state after successfully applying
+				setInlineFontWeight('inherit');
 			}
 		}
 	};
@@ -1021,29 +1282,100 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
+				// Get font details from fontIdMap
+				const fontData = fontIdMap[inlineFontFamily];
+				const fontFamily = fontData?.family || '';
+				const fallbacks = fontData?.fallbacks || '';
+				const fullFontFamily = fallbacks ? `${fontFamily}, ${fallbacks}` : fontFamily;
+
+				// Parse the current content as HTML
 				const parser = new DOMParser();
 				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
 				const container = doc.body.firstChild;
+
+				// STRATEGY: Try Range method first, fallback to string manipulation
+
+				// 1. TRY RANGE METHOD
 				const range = getRangeForOffsets(container, start, end, doc);
 
-				if (range) {
-					// Get font details from fontIdMap
-					const fontData = fontIdMap[inlineFontFamily];
-					const fontFamily = fontData?.family || '';
-					const fallbacks = fontData?.fallbacks || '';
-					const fullFontFamily = fallbacks ? `${fontFamily}, ${fallbacks}` : fontFamily;
+				const validation = validateRangeMatchesSelection(
+					range,
+					capturedSelection?.text || '',
+					capturedSelection?.length || 0
+				);
 
-					const attributes = {
-						'data-fontfamily': inlineFontFamily
-					};
+				let success = false;
+				let newContent = content;
+
+				if (validation.valid) {
+					// Range is valid - try applying with it
+					const attributes = { 'data-fontfamily': inlineFontFamily };
 					const styleString = `font-family: ${fullFontFamily}`;
+					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
-					const success = applyOrMergeStyling(range, attributes, styleString, doc);
 					if (success) {
-						setAttributes({ content: container.innerHTML });
+						newContent = container.innerHTML;
+
+						// POST-VALIDATION: Verify the result doesn't wrap entire content
+						// This catches cases where surroundContents() silently fails
+						const parser2 = new DOMParser();
+						const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+						const container2 = doc2.body.firstChild;
+						const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+						// Check if we accidentally wrapped everything
+						let wrappedEverything = false;
+						typostSpans.forEach(span => {
+							const spanText = span.textContent || '';
+							const containerText = container2.textContent || '';
+
+							// If this span's text matches the entire container text, it wrapped everything
+							if (spanText.length >= containerText.length - 1) {
+								// EXCEPTION: If this span is our INTENDED selection, it's valid
+								// Check if span text matches what we captured
+								const isIntendedSelection = capturedSelection &&
+								                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+
+								if (!isIntendedSelection) {
+									wrappedEverything = true;
+								}
+							}
+						});
+
+						if (wrappedEverything) {
+							success = false; // Force fallback
+						}
 					}
 				}
 
+				// 2. FALLBACK: String manipulation if range failed
+				if (!success) {
+					const attributes = { 'data-fontfamily': inlineFontFamily };
+					const styleString = `font-family: ${fullFontFamily}`;
+
+					const fallbackResult = applyStylingSafeStringMethod(
+						content,
+						start,
+						end,
+						attributes,
+						styleString
+					);
+
+					if (fallbackResult.success) {
+						newContent = fallbackResult.content;
+					} else {
+						// Both methods failed - give up and don't update content
+						return;
+					}
+				}
+
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
+				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
+				originalContentRef.current = null;
+
+				// Reset inline state after successfully applying
+				setInlineFontFamily('');
 			}
 		}
 	};
@@ -1129,25 +1461,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								if (!isIntendedSelection) {
 									wrappedEverything = true;
 
-									// eslint-disable-next-line no-console
-									if (typeof console !== 'undefined' && console.warn) {
-										console.warn('Typographic Stylist Block - Detected nested wrapping bug:', {
-											spanText: spanText.substring(0, 50),
-											spanTextLength: spanText.length,
-											containerTextLength: containerText.length,
-											capturedLength: capturedSelection?.length,
-											numSpans: typostSpans.length
-										});
-									}
 								}
 							}
 						});
 
 						if (wrappedEverything) {
-							// eslint-disable-next-line no-console
-							if (typeof console !== 'undefined' && console.warn) {
-								console.warn('Typographic Stylist Block - Post-validation failed: surroundContents wrapped entire content');
-							}
 							success = false; // Force fallback
 						}
 					}
@@ -1155,10 +1473,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					// eslint-disable-next-line no-console
-					if (typeof console !== 'undefined' && console.warn) {
-						console.warn('Typographic Stylist Block - Range method failed, using string fallback:', validation.reason);
-					}
 
 					const attributes = { 'data-features': featureId };
 					const fallbackResult = applyStylingSafeStringMethod(
@@ -1171,20 +1485,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
-						success = true;
 					} else {
-						// eslint-disable-next-line no-console
-						if (typeof console !== 'undefined' && console.error) {
-							console.error('Typographic Stylist Block - Both range and string methods failed:', fallbackResult.error);
-						}
-						return; // Give up
+						// Both methods failed - give up and don't update content
+						return;
 					}
 				}
 
-				// 3. Update content if either method succeeded
-				if (success) {
-					setAttributes({ content: newContent });
-				}
+				// 3. Update content (success is guaranteed: either step 1 succeeded, or step 2 succeeded, or we returned above)
+				setAttributes({ content: newContent });
 			}
 		}
 	};
@@ -1509,7 +1817,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				<ToolbarGroup>
 					<ToolbarButton
 						icon={TSIcon}
-						label={__('OpenType Features', 'typography-stylist')}
+						label={__('Typography Stylist Features', 'typography-stylist')}
 						onClick={handleToolbarClick}
 						isActive={features.length > 0}
 					/>
@@ -1577,83 +1885,57 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
-								{/* Letter Spacing Control */}
+								{/* Font Family Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<RangeControl
-										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
-										value={inlineLetterSpacing}
-										onChange={handleLetterSpacingChange}
-										min={-200}
-										max={200}
-										step={1}
-										help={inlineLetterSpacing === 0 ? __('Normal', 'typography-stylist') : `${inlineLetterSpacing / 1000}em`}
-										allowReset
-										resetFallbackValue={0}
+									<SelectControl
+										label={__('Font Family (for selected text)', 'typography-stylist')}
+										value={inlineFontFamily}
+										onChange={(value) => setInlineFontFamily(value)}
+										options={[
+											{ label: __('Select a font...', 'typography-stylist'), value: '' },
+											...fontOptions
+										]}
+										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
 									/>
-									{inlineLetterSpacing !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLetterSpacingOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Letter Spacing', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLetterSpacing}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLetterSpacing !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
-										</p>
+									{inlineFontFamily && (
+										<Button
+											variant="primary"
+											onClick={applyInlineFontFamily}
+											style={{ marginTop: '8px', width: '100%' }}
+										>
+											{__('Apply Font Family', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 
-								{/* Line Height Control */}
+								{/* Font Weight Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<RangeControl
-										label={__('Line Height (for selected text)', 'typography-stylist')}
-										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
-										onChange={handleLineHeightChange}
-										min={0.5}
-										max={3}
-										step={0.1}
-										help={inlineLineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : inlineLineHeight}
-										allowReset
-										resetFallbackValue={0}
-										marks={[
-											{ value: 1.5, label: '1.5' }
+									<SelectControl
+										label={__('Font Weight (for selected text)', 'typography-stylist')}
+										value={inlineFontWeight}
+										onChange={(value) => setInlineFontWeight(value)}
+										options={[
+											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
+											{ label: '100 - Thin', value: '100' },
+											{ label: '200 - Extra Light', value: '200' },
+											{ label: '300 - Light', value: '300' },
+											{ label: '400 - Normal', value: '400' },
+											{ label: '500 - Medium', value: '500' },
+											{ label: '600 - Semi Bold', value: '600' },
+											{ label: '700 - Bold', value: '700' },
+											{ label: '800 - Extra Bold', value: '800' },
+											{ label: '900 - Black', value: '900' }
 										]}
-										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+										help={inlineFontWeight !== 'inherit' ? __('Select text and click Apply to change its weight', 'typography-stylist') : ''}
 									/>
-									{inlineLineHeight !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLineHeightOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Line Height', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLineHeight}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLineHeight !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
-										</p>
+									{inlineFontWeight !== 'inherit' && (
+										<Button
+											variant="primary"
+											onClick={applyInlineFontWeight}
+											style={{ marginTop: '8px', width: '100%' }}
+										>
+											{__('Apply Font Weight', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 
@@ -1736,55 +2018,86 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
-								{/* Font Family Control */}
+								{/* Line Height Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
-										label={__('Font Family (for selected text)', 'typography-stylist')}
-										value={inlineFontFamily}
-										onChange={(value) => setInlineFontFamily(value)}
-										options={[
-											{ label: __('Select a font...', 'typography-stylist'), value: '' },
-											...fontOptions
+									<RangeControl
+										label={__('Line Height (for selected text)', 'typography-stylist')}
+										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
+										onChange={handleLineHeightChange}
+										min={0.5}
+										max={3}
+										step={0.1}
+										help={inlineLineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : inlineLineHeight}
+										allowReset
+										resetFallbackValue={0}
+										marks={[
+											{ value: 1.5, label: '1.5' }
 										]}
-										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
+										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
 									/>
-									{inlineFontFamily && (
-										<Button
-											variant="primary"
-											onClick={applyInlineFontFamily}
-											style={{ marginTop: '8px', width: '100%' }}
-										>
-											{__('Apply Font Family', 'typography-stylist')}
-										</Button>
+									{inlineLineHeight !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLineHeightOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Line Height', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLineHeight}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLineHeight !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
+										</p>
 									)}
 								</div>
 
-								{/* Font Weight Control */}
+								{/* Letter Spacing Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
-										label={__('Font Weight (for selected text)', 'typography-stylist')}
-										value={inlineFontWeight}
-										onChange={(value) => setInlineFontWeight(value)}
-										options={[
-											{ label: '100 - Thin', value: '100' },
-											{ label: '200 - Extra Light', value: '200' },
-											{ label: '300 - Light', value: '300' },
-											{ label: '400 - Normal', value: '400' },
-											{ label: '500 - Medium', value: '500' },
-											{ label: '600 - Semi Bold', value: '600' },
-											{ label: '700 - Bold', value: '700' },
-											{ label: '800 - Extra Bold', value: '800' },
-											{ label: '900 - Black', value: '900' }
-										]}
+									<RangeControl
+										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
+										value={inlineLetterSpacing}
+										onChange={handleLetterSpacingChange}
+										min={-200}
+										max={200}
+										step={1}
+										help={inlineLetterSpacing === 0 ? __('Normal', 'typography-stylist') : `${inlineLetterSpacing / 1000}em`}
+										allowReset
+										resetFallbackValue={0}
 									/>
-									<Button
-										variant="primary"
-										onClick={applyInlineFontWeight}
-										style={{ marginTop: '8px', width: '100%' }}
-									>
-										{__('Apply Font Weight', 'typography-stylist')}
-									</Button>
+									{inlineLetterSpacing !== 0 && (
+										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+											<Button
+												variant="primary"
+												onClick={applyLetterSpacingOnly}
+												style={{ flex: 1 }}
+											>
+												{__('Apply Letter Spacing', 'typography-stylist')}
+											</Button>
+											<Button
+												variant="secondary"
+												onClick={clearLetterSpacing}
+												isDestructive
+											>
+												{__('Clear', 'typography-stylist')}
+											</Button>
+										</div>
+									)}
+									{inlineLetterSpacing !== 0 && (
+										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
+										</p>
+									)}
 								</div>
+
 
 								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => {
 									// Check if any features in this category are active
@@ -2004,42 +2317,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					/>
 				</PanelBody>
 
-				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
-					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
-					</p>
-					<RangeControl
-						value={letterSpacing}
-						onChange={(value) => setAttributes({ letterSpacing: value })}
-						min={-200}
-						max={200}
-						step={1}
-						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
-						allowReset
-						resetFallbackValue={0}
-					/>
-				</PanelBody>
-
-				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
-					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
-					</p>
-					<RangeControl
-						value={lineHeight === 0 ? 1.5 : lineHeight}
-						onChange={(value) => setAttributes({ lineHeight: value })}
-						min={0.5}
-						max={3}
-						step={0.1}
-						help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
-						allowReset
-						resetFallbackValue={0}
-						marks={[
-							{ value: 1.5, label: '1.5' }
-						]}
-						renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
-					/>
-				</PanelBody>
-
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
 						value={fontSize}
@@ -2086,6 +2363,42 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							)}
 						</>
 					)}
+				</PanelBody>
+
+				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={lineHeight === 0 ? 1.5 : lineHeight}
+						onChange={(value) => setAttributes({ lineHeight: value })}
+						min={0.5}
+						max={3}
+						step={0.1}
+						help={lineHeight === 0 ? __('Currently using browser default', 'typography-stylist') : lineHeight}
+						allowReset
+						resetFallbackValue={0}
+						marks={[
+							{ value: 1.5, label: '1.5' }
+						]}
+						renderTooltipContent={(value) => lineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
+					/>
+				</PanelBody>
+
+				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
+						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						value={letterSpacing}
+						onChange={(value) => setAttributes({ letterSpacing: value })}
+						min={-200}
+						max={200}
+						step={1}
+						help={letterSpacing === 0 ? __('Normal', 'typography-stylist') : `${letterSpacing / 1000}em`}
+						allowReset
+						resetFallbackValue={0}
+					/>
 				</PanelBody>
 
 				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>

@@ -22,3 +22,14 @@ phpunit.xml
 
 # Windows/system artifacts
 nul
+
+# E2E Testing credentials - NEVER commit
+.env
+.env.local
+.env.*.local
+tests/e2e/auth.json
+
+# Playwright artifacts
+test-results/
+playwright-report/
+playwright/.cache/
