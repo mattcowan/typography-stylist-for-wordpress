@@ -1083,6 +1083,85 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be updated
 		expect(span.getAttribute('style')).toContain('font-weight: 700');
 	});
+
+	// NEW TESTS: Attribute Preservation for Bug Fix
+	it('should preserve existing data-fontfamily when applying line-height', () => {
+		// Arrange: Existing span with inline font-family
+		const html = '<span class="typost-styled" data-fontfamily="arial-id" style="font-family: Arial, sans-serif">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		// Apply line-height without specifying font-family
+		const attributes = { 'data-features': '' };
+		const styleString = 'line-height: 1.5';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-fontfamily')).toBe('arial-id'); // Should be preserved
+		expect(span.getAttribute('style')).toContain('line-height: 1.5'); // New style added
+	});
+
+	it('should preserve multiple inline attributes when applying features', () => {
+		// Arrange: Existing span with font-family and font-size
+		const html = '<span class="typost-styled" data-fontfamily="times-id" data-fontsize="responsive" style="font-family: Times; font-size: 48px">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		// Apply features without specifying font attributes
+		const attributes = { 'data-features': 'liga' };
+		const styleString = 'font-feature-settings: "liga" 1';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-fontfamily')).toBe('times-id'); // Preserved
+		expect(span.getAttribute('data-fontsize')).toBe('responsive'); // Preserved
+		expect(span.getAttribute('data-features')).toBe('liga'); // Added
+	});
+
+	it('should allow explicit override of preserved attributes', () => {
+		// Arrange: Existing span with font-family "arial-id"
+		const html = '<span class="typost-styled" data-fontfamily="arial-id" style="font-family: Arial">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		// Explicitly set a different font-family
+		const attributes = { 'data-fontfamily': 'georgia-id' };
+		const styleString = 'font-family: Georgia';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-fontfamily')).toBe('georgia-id'); // Overridden, not preserved
+		expect(span.getAttribute('style')).toContain('font-family: Georgia');
+	});
+
+	it('should preserve font-weight when applying letter-spacing', () => {
+		// Arrange: Existing span with font-weight
+		const html = '<span class="typost-styled" data-fontweight="700" style="font-weight: 700">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		// Apply letter-spacing without specifying font-weight
+		const attributes = { 'data-features': '' };
+		const styleString = 'letter-spacing: 0.05em';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be preserved
+		expect(span.getAttribute('style')).toContain('letter-spacing: 0.05em');
+		expect(span.getAttribute('style')).toContain('font-weight: 700'); // Style preserved too
+	});
 });
 
 /**

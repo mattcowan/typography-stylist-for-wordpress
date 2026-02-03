@@ -221,6 +221,16 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 			                        existingSpan.contains(range.endContainer);
 
 			if (isEntirelyWithin) {
+				// PRESERVE existing inline attributes that caller isn't explicitly setting
+				// This prevents losing inline font-family when applying line-height, etc.
+				const attributesToPreserve = ['data-fontfamily', 'data-fontsize', 'data-fontweight'];
+				attributesToPreserve.forEach(attr => {
+					if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
+						// Copy existing attribute value so it won't be lost during merge
+						attributes[attr] = existingSpan.getAttribute(attr);
+					}
+				});
+
 				// Merge attributes into existing span
 				Object.keys(attributes).forEach(key => {
 					if (key === 'data-features') {
@@ -234,8 +244,10 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 						mergedFeatures = combined;
 						}
 					} else {
-						// For other attributes, new value overwrites old
-						existingSpan.setAttribute(key, attributes[key]);
+						// For other attributes, new value overwrites old (or preserved value)
+						if (attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '') {
+							existingSpan.setAttribute(key, attributes[key]);
+						}
 					}
 				});
 
