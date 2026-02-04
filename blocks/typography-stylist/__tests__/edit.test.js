@@ -1091,7 +1091,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		// Apply line-height without specifying font-family
-		const attributes = { 'data-features': '' };
+		const attributes = {};
 		const styleString = 'line-height: 1.5';
 
 		// Act
@@ -1148,7 +1148,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		const html = 'Plain text';
 		const { range, doc, container } = createRangeInHTML(html, 0, 5);
 
-		const attributes = { 'data-features': '' };
+		const attributes = {};
 		const styleString = 'line-height: 1.5';  // No font-family!
 
 		// Act
@@ -1167,7 +1167,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		// Apply letter-spacing without specifying font-weight
-		const attributes = { 'data-features': '' };
+		const attributes = {};
 		const styleString = 'letter-spacing: 0.05em';
 
 		// Act
@@ -1206,7 +1206,7 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		const html = '<span data-font-id="12" style="font-family: var(--font-12)" class="typost-styled">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
-		const attributes = { 'data-features': '' };
+		const attributes = {};
 		const styleString = 'line-height: 1.5';
 
 		// Act

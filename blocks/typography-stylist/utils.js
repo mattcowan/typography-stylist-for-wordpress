@@ -276,6 +276,7 @@ export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEn
 export function applyOrMergeStyling(range, attributes, styleString, doc) {
 	try {
 		let mergedFeatures = [];
+		let preservedAttributes = {};
 
 		// Check if the range is entirely within a single typost-styled span
 		let commonAncestor = range.commonAncestorContainer;
@@ -286,7 +287,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 		}
 
 		// Find the closest typost-styled span (if any)
-		const existingSpan = commonAncestor.closest('span.typost-styled');
+		let existingSpan = commonAncestor.closest('span.typost-styled');
 
 		if (existingSpan) {
 			// Check if the entire selection is within this span
@@ -310,7 +311,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 					// PRESERVE existing inline attributes that caller isn't explicitly setting
 					// This prevents losing inline font-family when applying line-height, etc.
 					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
-					const preservedAttributes = {};
+					preservedAttributes = {};  // Reset for this merge operation
 					attributesToPreserve.forEach(attr => {
 						if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
 							// Copy existing attribute value so it won't be lost during merge
