@@ -351,8 +351,13 @@ class Typost {
                 $rendered_content = $this->render_content_for_detection($raw_content);
 
                 // Check if typost-styled class exists in either raw or rendered content
-                $has_styled = (strpos($raw_content, 'typost-styled') !== false ||
-                              strpos($rendered_content, 'typost-styled') !== false) ? 'yes' : 'no';
+                $has_styled_class = (strpos($raw_content, 'typost-styled') !== false ||
+                                    strpos($rendered_content, 'typost-styled') !== false);
+
+                // Also check for Typography Stylist blocks directly (block-level fonts)
+                $has_typost_block = (strpos($raw_content, 'wp:typost/block') !== false);
+
+                $has_styled = ($has_styled_class || $has_typost_block) ? 'yes' : 'no';
 
                 set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
             }
@@ -376,10 +381,16 @@ class Typost {
                 foreach ($wp_query->posts as $loop_post) {
                     $content_to_check = $this->get_archive_post_content($loop_post);
 
-                    // Check raw content first (cheap operation)
+                    // Check for typost-styled class first (cheap operation)
                     if (strpos($content_to_check, 'typost-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
+                    }
+
+                    // Check for Typography Stylist blocks directly (block-level fonts)
+                    if (strpos($content_to_check, 'wp:typost/block') !== false) {
+                        $has_styled = 'yes';
+                        break; // Found Typography Stylist block, no need to check more
                     }
 
                     // Only render blocks if not found in raw content (expensive operation)
@@ -517,11 +528,36 @@ class Typost {
      */
     private function extract_fonts_from_blocks($blocks, &$fonts) {
         foreach ($blocks as $block) {
-            // Check if this is a Typography Stylist block with a fontFamily attribute
-            if ($block['blockName'] === 'typost/block' &&
-                isset($block['attrs']['fontFamily']) &&
-                !empty($block['attrs']['fontFamily'])) {
-                $fonts[] = $block['attrs']['fontFamily'];
+            // Check if this is a Typography Stylist block
+            if ($block['blockName'] === 'typost/block') {
+                // Extract fontFamily (backward compatibility)
+                if (isset($block['attrs']['fontFamily']) && !empty($block['attrs']['fontFamily'])) {
+                    $fonts[] = $block['attrs']['fontFamily'];
+                }
+
+                // Extract fontId (CSS variable references - block level)
+                if (isset($block['attrs']['fontId']) && !empty($block['attrs']['fontId'])) {
+                    $fonts[] = 'id:' . $block['attrs']['fontId'];
+                }
+
+                // Extract inline fonts from content HTML (Quick Feature Toggle fonts)
+                if (isset($block['attrs']['content']) && !empty($block['attrs']['content'])) {
+                    $content = $block['attrs']['content'];
+
+                    // Look for data-font-id attributes in inline spans
+                    if (preg_match_all('/data-font-id=["\'\\\\]*(\d+)["\'\\\\]*/', $content, $matches)) {
+                        foreach ($matches[1] as $font_id) {
+                            $fonts[] = 'id:' . $font_id;
+                        }
+                    }
+
+                    // Look for data-font attributes (backward compatibility)
+                    if (preg_match_all('/data-font=["\'\\\\]*([^"\'\\\\]+)["\'\\\\]*/', $content, $matches)) {
+                        foreach ($matches[1] as $font_family) {
+                            $fonts[] = $font_family;
+                        }
+                    }
+                }
             }
 
             // Recursively check inner blocks

@@ -21,7 +21,7 @@
  * Import shared utilities
  * This ensures we're testing the actual production code
  */
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from '../utils';
+import { parseInlineFeaturesAtCursor, parseInlineFontFamilyAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from '../utils';
 
 /**
  * Load the block-editor.js file to access utilities
@@ -1085,9 +1085,9 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 	});
 
 	// NEW TESTS: Attribute Preservation for Bug Fix
-	it('should preserve existing data-fontfamily when applying line-height', () => {
+	it('should preserve existing data-font-id when applying line-height', () => {
 		// Arrange: Existing span with inline font-family
-		const html = '<span class="typost-styled" data-fontfamily="arial-id" style="font-family: Arial, sans-serif">Text</span>';
+		const html = '<span class="typost-styled" data-font-id="arial-id" style="font-family: Arial, sans-serif">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		// Apply line-height without specifying font-family
@@ -1100,13 +1100,13 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		// Assert
 		expect(success).toBe(true);
 		const span = container.querySelector('span.typost-styled');
-		expect(span.getAttribute('data-fontfamily')).toBe('arial-id'); // Should be preserved
+		expect(span.getAttribute('data-font-id')).toBe('arial-id'); // Should be preserved
 		expect(span.getAttribute('style')).toContain('line-height: 1.5'); // New style added
 	});
 
 	it('should preserve multiple inline attributes when applying features', () => {
 		// Arrange: Existing span with font-family and font-size
-		const html = '<span class="typost-styled" data-fontfamily="times-id" data-fontsize="responsive" style="font-family: Times; font-size: 48px">Text</span>';
+		const html = '<span class="typost-styled" data-font-id="times-id" data-fontsize="responsive" style="font-family: Times; font-size: 48px">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		// Apply features without specifying font attributes
@@ -1119,18 +1119,18 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		// Assert
 		expect(success).toBe(true);
 		const span = container.querySelector('span.typost-styled');
-		expect(span.getAttribute('data-fontfamily')).toBe('times-id'); // Preserved
+		expect(span.getAttribute('data-font-id')).toBe('times-id'); // Preserved
 		expect(span.getAttribute('data-fontsize')).toBe('responsive'); // Preserved
 		expect(span.getAttribute('data-features')).toBe('liga'); // Added
 	});
 
 	it('should allow explicit override of preserved attributes', () => {
 		// Arrange: Existing span with font-family "arial-id"
-		const html = '<span class="typost-styled" data-fontfamily="arial-id" style="font-family: Arial">Text</span>';
+		const html = '<span class="typost-styled" data-font-id="arial-id" style="font-family: Arial">Text</span>';
 		const { range, doc, container } = createRangeInHTML(html, 0, 4);
 
 		// Explicitly set a different font-family
-		const attributes = { 'data-fontfamily': 'georgia-id' };
+		const attributes = { 'data-font-id': 'georgia-id' };
 		const styleString = 'font-family: Georgia';
 
 		// Act
@@ -1139,8 +1139,26 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		// Assert
 		expect(success).toBe(true);
 		const span = container.querySelector('span.typost-styled');
-		expect(span.getAttribute('data-fontfamily')).toBe('georgia-id'); // Overridden, not preserved
+		expect(span.getAttribute('data-font-id')).toBe('georgia-id'); // Overridden, not preserved
 		expect(span.getAttribute('style')).toContain('font-family: Georgia');
+	});
+
+	it('should apply line-height without block-level font-family', () => {
+		// Test that line-height is applied without including font-family
+		const html = 'Plain text';
+		const { range, doc, container } = createRangeInHTML(html, 0, 5);
+
+		const attributes = { 'data-features': '' };
+		const styleString = 'line-height: 1.5';  // No font-family!
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('style')).not.toContain('font-family');
+		expect(span.getAttribute('style')).toContain('line-height: 1.5');
 	});
 
 	it('should preserve font-weight when applying letter-spacing', () => {
@@ -1161,6 +1179,98 @@ describe('Typography Stylist - Nested Span Prevention', () => {
 		expect(span.getAttribute('data-fontweight')).toBe('700'); // Should be preserved
 		expect(span.getAttribute('style')).toContain('letter-spacing: 0.05em');
 		expect(span.getAttribute('style')).toContain('font-weight: 700'); // Style preserved too
+	});
+
+	it('should apply inline font-family using CSS variables', () => {
+		// Test that inline font-family uses CSS variables (var(--font-ID)) instead of literal names
+		const html = 'Plain text';
+		const { range, doc, container } = createRangeInHTML(html, 0, 5);
+
+		const fontId = '12';
+		const attributes = { 'data-font-id': fontId };
+		const styleString = `font-family: var(--font-${fontId})`;
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-font-id')).toBe(fontId);
+		expect(span.getAttribute('style')).toContain(`var(--font-${fontId})`);
+		expect(span.getAttribute('style')).not.toContain('please-vf'); // No literal names
+	});
+
+	it('should preserve inline font CSS variable when applying line-height', () => {
+		// Test that CSS variable for inline font is preserved when applying line-height
+		const html = '<span data-font-id="12" style="font-family: var(--font-12)" class="typost-styled">Text</span>';
+		const { range, doc, container } = createRangeInHTML(html, 0, 4);
+
+		const attributes = { 'data-features': '' };
+		const styleString = 'line-height: 1.5';
+
+		// Act
+		const success = applyOrMergeStyling(range, attributes, styleString, doc);
+
+		// Assert
+		expect(success).toBe(true);
+		const span = container.querySelector('span.typost-styled');
+		expect(span.getAttribute('data-font-id')).toBe('12');
+		expect(span.getAttribute('style')).toContain('var(--font-12)');
+		expect(span.getAttribute('style')).toContain('line-height: 1.5');
+	});
+});
+
+/**
+ * Test Suite: parseInlineFontFamilyAtCursor
+ *
+ * Tests for the utility function that detects inline font family at cursor position
+ */
+describe('Typography Stylist - parseInlineFontFamilyAtCursor', () => {
+	it('should return font ID when cursor is inside span with data-font-id', () => {
+		const html = '<span data-font-id="12" class="typost-styled">Text</span>';
+		const cursorAt = 2; // Inside "Text"
+
+		const fontId = parseInlineFontFamilyAtCursor(html, cursorAt, cursorAt);
+
+		expect(fontId).toBe('12');
+	});
+
+	it('should return null when cursor is outside span with data-font-id', () => {
+		const html = 'Plain <span data-font-id="12" class="typost-styled">Text</span> here';
+		const cursorAt = 2; // Inside "Plain"
+
+		const fontId = parseInlineFontFamilyAtCursor(html, cursorAt, cursorAt);
+
+		expect(fontId).toBe(null);
+	});
+
+	it('should return innermost font ID when spans are nested', () => {
+		const html = '<span data-font-id="5" class="typost-styled">Outer <span data-font-id="12" class="typost-styled">Inner</span> text</span>';
+		const cursorAt = 8; // Inside "Inner"
+
+		const fontId = parseInlineFontFamilyAtCursor(html, cursorAt, cursorAt);
+
+		expect(fontId).toBe('12'); // Should return the innermost span's font
+	});
+
+	it('should return null when no data-font-id attribute exists', () => {
+		const html = '<span class="typost-styled">Text</span>';
+		const cursorAt = 2;
+
+		const fontId = parseInlineFontFamilyAtCursor(html, cursorAt, cursorAt);
+
+		expect(fontId).toBe(null);
+	});
+
+	it('should handle selection range that overlaps span', () => {
+		const html = 'Plain <span data-font-id="12" class="typost-styled">Text</span> here';
+		const start = 6; // Start of "Text"
+		const end = 10; // End of "Text"
+
+		const fontId = parseInlineFontFamilyAtCursor(html, start, end);
+
+		expect(fontId).toBe('12');
 	});
 });
 

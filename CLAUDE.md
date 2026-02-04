@@ -67,6 +67,34 @@ The plugin provides two distinct interfaces for applying OpenType features:
 4. JavaScript applies inline format with `data-features` attribute and `font-feature-settings` style
 5. Frontend displays with CSS only (no JavaScript required)
 
+### Inline Styling Architecture
+
+**Data Attributes (v1.1.6+):**
+All inline styles are stored using standardized data attributes in `<span class="typost-styled">` elements:
+- `data-font-id` - Font family ID (matches block-level `fontId` naming convention)
+- `data-fontsize` - Font size value
+- `data-fontweight` - Font weight value
+- `data-features` - Comma-separated OpenType feature codes
+
+**CSS Variable System (v1.1.6+):**
+Inline fonts use CSS variables for consistent font loading:
+- **Inline fonts:** `font-family: var(--font-12)` (uses CSS variable)
+- **Block-level fonts:** `font-family: var(--font-12)` (uses CSS variable)
+- **Both follow same loading chain:** fontId → CSS variable → PHP detection → @font-face enqueueing
+
+**Attribute Preservation:**
+When applying sequential inline styles (e.g., first font-family, then line-height), the preservation system ensures existing attributes aren't lost:
+- Functions check for existing `data-font-id`, `data-fontsize`, `data-fontweight` attributes
+- Preserved attributes are copied to new styling operations
+- Style properties matching preserved attributes aren't overwritten
+- See `applyOrMergeStyling()` and `applyStylingSafeStringMethod()` in [utils.js](blocks/typography-stylist/utils.js)
+
+**Preview System:**
+Quick Feature Toggle previews detect inline fonts at cursor position:
+- `parseInlineFontFamilyAtCursor()` utility function detects `data-font-id` at selection
+- Memoized for performance (see `inlineFontFamilyAtSelection` in [edit.js](blocks/typography-stylist/edit.js))
+- Preview displays in inline font if detected, otherwise falls back to block-level font
+
 ### REST API Endpoints
 
 **Presets:**
@@ -271,6 +299,8 @@ npm test -- --coverage    # See test coverage report
 ## Important Notes
 
 - Typography features are stored **inline in post content**, not in post meta
+- **Inline styling uses CSS variables (v1.1.6+):** Both block-level and inline fonts use `var(--font-ID)` format for consistent PHP detection and @font-face loading
+- **Data attribute naming (v1.1.6+):** Standardized to `data-font-id` (inline) matching `fontId` (block-level) for consistency
 - No database migrations needed - uses existing `wp_options` for:
   - `TYPOST_presets` - User-created presets
   - `TYPOST_custom_fonts` - Uploaded webfont kits metadata

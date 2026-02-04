@@ -363,6 +363,21 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 - Fixed all inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block
 - Fixed sequential feature application bug where applying multiple inline features would incorrectly affect entire block
 - Fixed state management issue where inline control values wouldn't reset after successful apply
+- **Fixed inline font-family attribute preservation** - applying line-height or letter-spacing no longer loses previously applied inline fonts
+- **Fixed inline fonts not loading on frontend** - inline fonts now properly enqueue @font-face rules (previously only block-level fonts loaded)
+- **Fixed Quick Feature Toggle preview** - now displays in correct inline font instead of block-level font
+- **Fixed block-level fonts incorrectly included** in unrelated inline operations (line-height, letter-spacing, OpenType features)
+
+**Architecture Improvements:**
+- **Inline fonts now use CSS variable system** - Changed from literal font names (e.g., `font-family: please-vf`) to CSS variables (e.g., `font-family: var(--font-12)`) matching block-level architecture
+- **Standardized data attribute naming** - Inline fonts now use `data-font-id` instead of `data-fontfamily` for consistency with block-level `fontId`
+- **Enhanced attribute preservation system** - Prevents style conflicts during sequential inline edits with improved logic
+- **Separated concerns** - Inline styling functions now only apply their specific property without side effects
+- **Unified font loading chain** - Both block and inline fonts follow same path: fontId → CSS variable → PHP detection → @font-face enqueueing
+
+**New Utilities:**
+- Added `parseInlineFontFamilyAtCursor()` utility for detecting inline fonts at cursor position
+- Added memoized inline font detection for improved preview performance
 
 **Improvements:**
 - Added comprehensive validation and fallback mechanisms for all inline text styling functions
@@ -370,10 +385,17 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 - Inline state variables now reset after successful apply to prevent UI/content desync
 
 **Testing:**
+- Added comprehensive test coverage for CSS variable implementation and attribute preservation
+- Added tests for `parseInlineFontFamilyAtCursor()` utility function
 - Added Playwright E2E testing infrastructure for inline features
 - Added comprehensive E2E test suite covering font size, font weight, letter spacing, line height, font family, and sequential application
 - Added secure credential management for E2E tests with .env files (git-ignored)
 - E2E tests included in repository but excluded from npm package distribution
+- All 167 unit tests passing
+
+**Developer Notes:**
+- Inline font CSS now uses `var(--font-ID)` for automatic PHP detection and @font-face enqueueing
+- Consistent data attribute naming: `data-font-id`, `data-fontsize`, `data-fontweight`, `data-features`
 
 ### Version 1.1.4
 

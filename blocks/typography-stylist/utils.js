@@ -188,6 +188,79 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 }
 
 /**
+ * Parse inline font family ID at cursor position
+ * Returns the font ID from the data-font-id attribute of the innermost span at the cursor
+ * Used for showing correct font in feature previews
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Start offset of cursor/selection
+ * @param {number} cursorEnd - End offset of cursor/selection
+ * @returns {string|null} Font ID or null if no inline font found
+ */
+export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return null;
+	}
+
+	// Parse HTML to find styled spans with font-family
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const styledSpans = container.querySelectorAll('span[data-font-id]');
+
+	// Find the smallest (innermost) span with data-font-id that matches the cursor/selection
+	let smallestMatchingSpan = null;
+	let smallestSpanSize = Infinity;
+
+	for (const span of styledSpans) {
+		// Find this span's position in the text
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let spanStart = 0;
+		let spanEnd = 0;
+		let found = false;
+		let offset = 0;
+
+		let node;
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			// Check if this text node is inside our span
+			if (span.contains(node)) {
+				if (!found) {
+					spanStart = offset;
+					found = true;
+				}
+				spanEnd = offset + nodeLength;
+			}
+
+			offset += nodeLength;
+		}
+
+		// Check if the cursor/selection overlaps with this span
+		const isCursor = cursorStart === cursorEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+
+		if (found && (isInside || overlaps)) {
+			const spanSize = spanEnd - spanStart;
+
+			// Keep track of the smallest matching span
+			if (spanSize < smallestSpanSize) {
+				smallestMatchingSpan = span;
+				smallestSpanSize = spanSize;
+			}
+		}
+	}
+
+	if (!smallestMatchingSpan) {
+		return null;
+	}
+
+	// Return the font family ID
+	return smallestMatchingSpan.getAttribute('data-font-id');
+}
+
+/**
  * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
  * This function checks if the selected range is already inside an typost-styled span.
@@ -221,35 +294,61 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 			                        existingSpan.contains(range.endContainer);
 
 			if (isEntirelyWithin) {
-				// PRESERVE existing inline attributes that caller isn't explicitly setting
-				// This prevents losing inline font-family when applying line-height, etc.
-				const attributesToPreserve = ['data-fontfamily', 'data-fontsize', 'data-fontweight'];
-				attributesToPreserve.forEach(attr => {
-					if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
-						// Copy existing attribute value so it won't be lost during merge
-						attributes[attr] = existingSpan.getAttribute(attr);
-					}
-				});
+				// Check if selection covers ENTIRE span text (not just within it)
+				const spanText = existingSpan.textContent || '';
+				const selectedText = range.toString();
+				const isSelectingEntireSpan = (spanText === selectedText);
 
-				// Merge attributes into existing span
-				Object.keys(attributes).forEach(key => {
-					if (key === 'data-features') {
-						// Merge features (combine existing + new, deduplicate)
-						const existingFeatures = existingSpan.getAttribute('data-features') || '';
-						const existingArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()) : [];
-						const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
-						const combined = [...new Set([...existingArray, ...newFeatures])].filter(f => f);
-						if (combined.length > 0) {
-							existingSpan.setAttribute('data-features', combined.join(','));
-						mergedFeatures = combined;
+				// If NOT selecting entire span, DON'T merge - fall through to create nested span
+				if (!isSelectingEntireSpan) {
+					// Selection is partial - should create nested span or split
+					// Fall through to default behavior (range.surroundContents)
+					existingSpan = null; // Force creation of new span
+				} else {
+					// Selection covers entire span - safe to merge
+
+					// PRESERVE existing inline attributes that caller isn't explicitly setting
+					// This prevents losing inline font-family when applying line-height, etc.
+					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+					const preservedAttributes = {};
+					attributesToPreserve.forEach(attr => {
+						if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
+							// Copy existing attribute value so it won't be lost during merge
+							attributes[attr] = existingSpan.getAttribute(attr);
+							preservedAttributes[attr] = true;
 						}
-					} else {
-						// For other attributes, new value overwrites old (or preserved value)
-						if (attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '') {
-							existingSpan.setAttribute(key, attributes[key]);
+					});
+
+					// ALWAYS preserve existing features and merge with new ones
+					const existingFeatures = existingSpan.getAttribute('data-features') || '';
+					const existingFeaturesArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()).filter(f => f) : [];
+
+					// Merge attributes into existing span
+					Object.keys(attributes).forEach(key => {
+						if (key === 'data-features') {
+							// Merge features (combine existing + new, deduplicate)
+							const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
+							const combined = [...new Set([...existingFeaturesArray, ...newFeatures])].filter(f => f);
+							if (combined.length > 0) {
+								existingSpan.setAttribute('data-features', combined.join(','));
+								mergedFeatures = combined;
+							}
+						} else {
+							// For other attributes, new value overwrites old (or preserved value)
+							if (attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '') {
+								existingSpan.setAttribute(key, attributes[key]);
+							}
 						}
+					});
+
+					// If we didn't merge features but there are existing features, preserve them in mergedFeatures
+					if (mergedFeatures.length === 0 && existingFeaturesArray.length > 0) {
+						mergedFeatures = existingFeaturesArray;
 					}
-				});
+				}
+			}
+
+			if (existingSpan && isEntirelyWithin) {
 
 				// Merge styles
 				const existingStyle = existingSpan.getAttribute('style') || '';
@@ -263,11 +362,37 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 					}
 				});
 
-				// Parse new styles (overwrite existing)
+				// Map of data attributes to their corresponding style properties
+				// Used to prevent overwriting styles for preserved attributes
+				const stylePropertyMap = {
+					'data-font-id': 'font-family',
+					'data-fontweight': 'font-weight',
+					'data-fontsize': 'font-size'
+				};
+
+				// Parse new styles (overwrite existing, EXCEPT for preserved attributes)
 				styleString.split(';').forEach(rule => {
 					const [prop, value] = rule.split(':').map(s => s.trim());
 					if (prop && value) {
-						newStyleObj[prop] = value;
+						// Special case: always override font-family when setting new font
+						if (prop === 'font-family' && attributes.hasOwnProperty('data-font-id')) {
+							newStyleObj[prop] = value;
+							return;
+						}
+
+						// Check if this style property corresponds to a preserved attribute
+						let shouldPreserveExisting = false;
+						for (const [dataAttr, styleProp] of Object.entries(stylePropertyMap)) {
+							if (preservedAttributes[dataAttr] && prop === styleProp) {
+								shouldPreserveExisting = true;
+								break;
+							}
+						}
+
+						// Only overwrite if not preserved
+						if (!shouldPreserveExisting) {
+							newStyleObj[prop] = value;
+						}
 					}
 				});
 
@@ -405,6 +530,7 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 		if (affectedNodes.length === 1) {
 			const nodeInfo = affectedNodes[0];
 			const textNode = nodeInfo.node;
+			const parent = textNode.parentNode;
 
 			// Calculate offsets within this text node
 			const nodeRelativeStart = Math.max(0, startOffset - nodeInfo.start);
@@ -415,33 +541,144 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 			const selected = nodeInfo.text.substring(nodeRelativeStart, nodeRelativeEnd);
 			const after = nodeInfo.text.substring(nodeRelativeEnd);
 
-			// Build span
-			const span = doc.createElement('span');
-			span.className = 'typost-styled';
+			// Check if parent is already a typost-styled span AND we're selecting the entire text
+			// Only merge if the entire span's text is being selected, otherwise create nested span
+			const isInTypostSpan = parent.classList && parent.classList.contains('typost-styled');
+			const isSelectingEntireSpanText = isInTypostSpan && before === '' && after === '';
+			let span;
 
-			Object.keys(attributes).forEach(key => {
-				const value = attributes[key];
-				if (value !== null && value !== undefined && value !== '') {
-					span.setAttribute(key, String(value));
+			if (isSelectingEntireSpanText) {
+				// Preserve existing span and merge attributes (entire text is selected)
+				span = parent;
+
+				// PRESERVE existing inline attributes that caller isn't explicitly setting
+				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+				const preservedAttributes = {};
+				attributesToPreserve.forEach(attr => {
+					if (!attributes.hasOwnProperty(attr) && span.hasAttribute(attr)) {
+						attributes[attr] = span.getAttribute(attr);
+						preservedAttributes[attr] = true;
+					}
+				});
+
+				// ALWAYS preserve existing features and merge with new ones
+				const existingFeatures = span.getAttribute('data-features') || '';
+				const existingFeaturesArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()).filter(f => f) : [];
+				let mergedFeatures = [];
+
+				// Merge new attributes
+				Object.keys(attributes).forEach(key => {
+					if (key === 'data-features') {
+						// Merge features (combine existing + new, deduplicate)
+						const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
+						const combined = [...new Set([...existingFeaturesArray, ...newFeatures])].filter(f => f);
+						if (combined.length > 0) {
+							span.setAttribute('data-features', combined.join(','));
+							mergedFeatures = combined;
+						}
+					} else {
+						const value = attributes[key];
+						if (value !== null && value !== undefined && value !== '') {
+							span.setAttribute(key, String(value));
+						}
+					}
+				});
+
+				// If we didn't merge features but there are existing features, preserve them
+				if (mergedFeatures.length === 0 && existingFeaturesArray.length > 0) {
+					mergedFeatures = existingFeaturesArray;
 				}
-			});
 
-			if (styleString) {
-				span.setAttribute('style', styleString);
+				// Merge styles (preserve existing + add new)
+				if (styleString) {
+					const existingStyle = span.getAttribute('style') || '';
+					const newStyleObj = {};
+
+					// Parse existing styles
+					existingStyle.split(';').forEach(rule => {
+						const [prop, value] = rule.split(':').map(s => s.trim());
+						if (prop && value) {
+							newStyleObj[prop] = value;
+						}
+					});
+
+					// Map of data attributes to their corresponding style properties
+					const stylePropertyMap = {
+						'data-font-id': 'font-family',
+						'data-fontweight': 'font-weight',
+						'data-fontsize': 'font-size'
+					};
+
+					// Parse new styles (don't overwrite preserved attributes)
+					styleString.split(';').forEach(rule => {
+						const [prop, value] = rule.split(':').map(s => s.trim());
+						if (prop && value) {
+							// Special case: always override font-family when setting new font
+							if (prop === 'font-family' && attributes.hasOwnProperty('data-font-id')) {
+								newStyleObj[prop] = value;
+								return;
+							}
+
+							// Check if this style property corresponds to a preserved attribute
+							let shouldPreserveExisting = false;
+							for (const [dataAttr, styleProp] of Object.entries(stylePropertyMap)) {
+								if (preservedAttributes[dataAttr] && prop === styleProp) {
+									shouldPreserveExisting = true;
+									break;
+								}
+							}
+
+							// Only overwrite if not preserved
+							if (!shouldPreserveExisting) {
+								newStyleObj[prop] = value;
+							}
+						}
+					});
+
+					// CRITICAL: Rebuild font-feature-settings with ALL features (existing + new)
+					if (mergedFeatures.length > 0) {
+						const featureSettings = mergedFeatures.map(f => `"${f}" 1`).join(', ');
+						newStyleObj['font-feature-settings'] = featureSettings;
+					}
+
+					const mergedStyle = Object.entries(newStyleObj)
+						.map(([prop, value]) => `${prop}: ${value}`)
+						.join('; ');
+					span.setAttribute('style', mergedStyle);
+				}
+
+				// Text stays the same, we're just updating attributes
+				return { success: true, content: container.innerHTML, error: null };
+			} else {
+				// Build new span
+				span = doc.createElement('span');
+				span.className = 'typost-styled';
+
+				Object.keys(attributes).forEach(key => {
+					const value = attributes[key];
+					if (value !== null && value !== undefined && value !== '') {
+						span.setAttribute(key, String(value));
+					}
+				});
+
+				if (styleString) {
+					span.setAttribute('style', styleString);
+				}
+
+				span.textContent = selected;
 			}
 
-			span.textContent = selected;
-
-			// Replace text node with: before + span + after
-			const parent = textNode.parentNode;
-			if (before) {
-				parent.insertBefore(doc.createTextNode(before), textNode);
+			// Replace text node with: before + span + after (only if we created a new span)
+			if (!isSelectingEntireSpanText) {
+				if (before) {
+					parent.insertBefore(doc.createTextNode(before), textNode);
+				}
+				parent.insertBefore(span, textNode);
+				if (after) {
+					parent.insertBefore(doc.createTextNode(after), textNode);
+				}
+				parent.removeChild(textNode);
 			}
-			parent.insertBefore(span, textNode);
-			if (after) {
-				parent.insertBefore(doc.createTextNode(after), textNode);
-			}
-			parent.removeChild(textNode);
 
 			return { success: true, content: container.innerHTML, error: null };
 		}
