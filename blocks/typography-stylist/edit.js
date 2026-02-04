@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
+import { parseInlineFeaturesAtCursor, parseInlineFontFamilyAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -133,13 +133,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Store the original content before preview
 	const originalContentRef = useRef(null);
 
-	// Sanitize font family value to prevent injection
-	const sanitizeFontFamily = (font) => {
-		if (!font) return '';
-		// Remove quotes and semicolons that could break style string
-		return font.replace(/["';]/g, '');
-	};
-
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
 	useEffect(() => {
@@ -168,6 +161,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		const end = selectionEnd.offset || 0;
 
 		return parseInlineFeaturesAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
+	// Get inline font family at current cursor/selection position (for preview rendering)
+	// Memoized for performance, similar to inlineFeaturesAtSelection
+	const inlineFontFamilyAtSelection = useMemo(() => {
+		if (!content) return null;
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return null;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineFontFamilyAtCursor(content, start, end);
 	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
 
 	// Helper to create a Range for the given linear text offsets within a container
@@ -624,11 +631,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// Build the styled span with ONLY line height
 				const styleArray = [];
 
-				if (fontFamily) {
-					const sanitizedFont = sanitizeFontFamily(fontFamily);
-					styleArray.push(`font-family: ${sanitizedFont}`);
-				}
-
 				styleArray.push(`line-height: ${inlineLineHeight}`);
 
 				const styleString = styleArray.join('; ');
@@ -654,7 +656,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = { 'data-features': '' };
+					const attributes = {};
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -690,7 +692,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					const attributes = { 'data-features': '' };
+					const attributes = {};
 
 					const fallbackResult = applyStylingSafeStringMethod(
 						content,
@@ -888,11 +890,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// Build the styled span with ONLY letter spacing
 				const styleArray = [];
 
-				if (fontFamily) {
-					const sanitizedFont = sanitizeFontFamily(fontFamily);
-					styleArray.push(`font-family: ${sanitizedFont}`);
-				}
-
 				styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
 
 				const styleString = styleArray.join('; ');
@@ -918,7 +915,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = { 'data-features': '' };
+					const attributes = {};
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -954,7 +951,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					const attributes = { 'data-features': '' };
+					const attributes = {};
 
 					const fallbackResult = applyStylingSafeStringMethod(
 						content,
@@ -1284,9 +1281,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			if (start !== end) {
 				// Get font details from fontIdMap
 				const fontData = fontIdMap[inlineFontFamily];
-				const fontFamily = fontData?.family || '';
-				const fallbacks = fontData?.fallbacks || '';
-				const fullFontFamily = fallbacks ? `${fontFamily}, ${fallbacks}` : fontFamily;
+
+				// Validate that font exists in the map
+				if (!fontData) {
+					return;
+				}
 
 				// Parse the current content as HTML
 				const parser = new DOMParser();
@@ -1309,8 +1308,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = { 'data-fontfamily': inlineFontFamily };
-					const styleString = `font-family: ${fullFontFamily}`;
+					const attributes = { 'data-font-id': inlineFontFamily };
+					const styleString = `font-family: var(--font-${inlineFontFamily})`;
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -1350,8 +1349,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					const attributes = { 'data-fontfamily': inlineFontFamily };
-					const styleString = `font-family: ${fullFontFamily}`;
+					const attributes = { 'data-font-id': inlineFontFamily };
+					const styleString = `font-family: var(--font-${inlineFontFamily})`;
 
 					const fallbackResult = applyStylingSafeStringMethod(
 						content,
@@ -1396,11 +1395,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// Build the styled span with feature and letter spacing
 				const styleArray = [];
 				styleArray.push(`font-feature-settings: "${featureId}" 1`);
-
-				if (fontFamily) {
-					const sanitizedFont = sanitizeFontFamily(fontFamily);
-					styleArray.push(`font-family: ${sanitizedFont}`);
-				}
 
 				// Always include letter-spacing, even if 0
 				if (inlineLetterSpacing !== 0) {
@@ -2139,7 +2133,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 															onClick={() => applyFeatureToSelection(feature.id)}
 															style={{
 																fontFeatureSettings: `"${feature.id}" 1`,
-																fontFamily: fontFamily || computedFont || 'inherit'
+																fontFamily: inlineFontFamilyAtSelection
+																	? `var(--font-${inlineFontFamilyAtSelection})`
+																	: (fontFamily || computedFont || 'inherit')
 															}}
 														>
 															{sampleText}

@@ -2,7 +2,7 @@
 Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
-Tested up to: 6.9
+Tested up to: 6.9.1
 Stable tag: 1.1.6
 Requires PHP: 7.4
 License: GPLv2 or later
@@ -222,22 +222,27 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.1.6 =
-* Improved: Standardized control order across all interfaces for better consistency
-* Changed: Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features
-* Changed: Updated inline editor popover control order to match sidebar and quick toggles
-* Changed: Updated Typography Stylist block sidebar inspector controls order
-* Changed: Updated Typography Stylist block quick feature toggles popover control order
+* Improved: Standardized control order across all interfaces for better consistency. Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features.
 * Fixed: Font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
-* Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block
+* Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block (sporadic errors before)
 * Fixed: Sequential feature application bug where applying multiple inline features would incorrectly affect entire block
 * Fixed: State management issue where inline control values wouldn't reset after successful apply
+* Fixed: Inline fonts (applied via Quick Feature Toggles) now load correctly on frontend
+* Fixed: Font detection now properly extracts inline fonts from Typography Stylist block content HTML
+* Fixed: Quick Feature Toggle preview now displays in correct inline font instead of block-level font
+* Fixed: OpenType features now apply only to selected text, not entire span when selecting partial text within existing styled spans
+* Fixed: Font-feature-settings CSS now preserved when applying other inline styles (line-height, letter-spacing) to text with existing OpenType features
+* Fixed: Nested span handling - applying features to partial selections within styled text now creates proper nested or split spans instead of merging incorrectly
+* Fixed: Block-level fonts no longer incorrectly included in unrelated inline operations
+* Fixed: Line-height and letter-spacing controls no longer pass incorrect empty data-features attributes that interfered with attribute preservation
+* Improved: Inline fonts now use CSS variable system (var(--font-ID)) matching block-level architecture for consistent font loading and replacement
+* Improved: Enhanced attribute preservation system to prevent style conflicts during sequential inline edits while properly handling font-family overrides
 * Improved: Added comprehensive validation and fallback mechanisms for all inline text styling functions
-* Improved: Inline controls now work reliably when applied sequentially to different selections
 * Improved: Inline state variables now reset after successful apply to prevent UI/content desync
-* Added: Playwright E2E testing infrastructure for inline features
-* Added: Comprehensive E2E test suite covering font size, font weight, letter spacing, line height, font family, and sequential application
-* Added: Secure credential management for E2E tests with .env files (git-ignored)
-* Developer: E2E tests included in repository but excluded from npm package distribution
+* Improved: Font override logic - applying new inline font to text with existing font now properly replaces old font instead of preserving it
+* Added: parseInlineFontFamilyAtCursor() utility for detecting inline fonts at cursor position
+* Added: Memoized inline font detection for improved preview performance
+* Developer: extract_fonts_from_blocks() enhanced to parse inline HTML content for data-font-id attributes
 
 = 1.1.5 =
 * Added: Line-height controls for block-level and inline text styling
