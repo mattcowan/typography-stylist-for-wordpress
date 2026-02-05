@@ -695,23 +695,37 @@
 .typost-resize-handle-se::after {
     content: '';
     position: absolute;
-    bottom: 4px;
-    right: 4px;
-    width: 8px;
-    height: 8px;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
     background-image: linear-gradient(
-        135deg,
-        transparent 0%,
-        transparent 46%,
-        #999 46%,
-        #999 54%,
-        transparent 54%
+        to top left,
+        transparent 5px,
+        #777 5px,
+        #777 7px,
+        #ddd 7px,
+        #ddd 10px,
+        #777 10px,
+        #777 12px,
+        #ddd 12px,
+        #ddd 15px,
+        #777 15px,
+        #777 17px,
+        transparent 17px
     );
-    opacity: 0.4;
+    background-repeat: no-repeat;
+    background-position: bottom right;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+}
+
+.typost-resize-handle-se:hover::after {
+    opacity: 0.8;
 }
 
 .typost-modal.is-resizing .typost-resize-handle-se::after {
-    opacity: 0.8;
+    opacity: 1.0;
 }
 
 /* Modal state classes */
