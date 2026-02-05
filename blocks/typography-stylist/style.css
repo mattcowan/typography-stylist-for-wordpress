@@ -11,14 +11,57 @@
 .wp-block-typost .sr-only,
 .wp-block-typost .screen-reader-text {
 	position: absolute;
-	width: 1px;
-	height: 1px;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
 	padding: 0;
-	margin: -1px;
+	margin: 0;
 	overflow: hidden;
-	clip: rect(0, 0, 0, 0);
+	clip: rect(0, 0, 0, 0); /* Legacy support for older browsers */
+	clip-path: inset(50%);  /* Modern approach - makes content invisible while maintaining full size */
 	white-space: nowrap;
 	border-width: 0;
+	color: transparent; /* Make text invisible */
+	background: transparent; /* Ensure no background shows */
+	pointer-events: none; /* Don't block clicks on the styled text below */
+	z-index: 1; /* Ensure it's above styled text for focus */
+}
+
+/* Windows Narrator Focus Enhancement:
+ * When screen reader heading receives focus, show outline around the styled text area.
+ * The element is already full-size (100% width/height) to match the styled headline.
+ * IMPORTANT: The text content remains invisible (via clip-path/color above).
+ * Only the OUTLINE becomes visible to highlight the styled text area.
+ * Do NOT remove clip-path, overflow:hidden, or color:transparent on focus -
+ * this would cause duplicate visible text and break the dual-content pattern.
+ */
+.wp-block-typost .visually-hidden:focus,
+.wp-block-typost .sr-only:focus,
+.wp-block-typost .screen-reader-text:focus {
+	pointer-events: auto; /* Re-enable pointer events when focused */
+	outline: 3px solid #007acc; /* WordPress standard focus color */
+	outline-offset: 4px; /* Space between text and outline */
+	border-radius: 2px; /* Subtle rounding for modern look */
+}
+
+/* High contrast mode support for Windows users */
+@media (prefers-contrast: high) {
+	.wp-block-typost .visually-hidden:focus,
+	.wp-block-typost .sr-only:focus,
+	.wp-block-typost .screen-reader-text:focus {
+		outline-width: 4px;
+		outline-color: Highlight; /* System color for high contrast */
+	}
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+	.wp-block-typost .visually-hidden:focus,
+	.wp-block-typost .sr-only:focus,
+	.wp-block-typost .screen-reader-text:focus {
+		outline-color: #4cc2ff; /* Lighter blue for dark backgrounds */
+	}
 }
 
 /* Styled content */

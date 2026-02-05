@@ -348,4 +348,78 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 			});
 		});
 	});
+
+	describe('Windows Narrator Focus Enhancement', () => {
+		it('should maintain existing screen reader class structure', () => {
+			const attributes = {
+				content: 'Focus Test',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0,
+				lineHeight: 0
+			};
+
+			const component = create(save({ attributes }));
+			const tree = component.toJSON();
+
+			// Screen reader version should still have visually-hidden class
+			expect(tree.children[0].props.className).toBe('visually-hidden');
+
+			// Visual version should still have typost-styled class
+			expect(tree.children[1].props.className).toBe('typost-styled');
+
+			// Order must be preserved (screen reader first, visual second)
+			expect(tree.children[0].type).toBe('h2');
+			expect(tree.children[1].type).toBe('h2');
+		});
+
+		it('should work with all three screen reader class options', () => {
+			const classes = ['visually-hidden', 'sr-only', 'screen-reader-text'];
+
+			classes.forEach(className => {
+				const attributes = {
+					content: 'Test',
+					tagName: 'h2',
+					features: [],
+					screenReaderClass: className,
+					fontSize: 'inherit',
+					fontWeight: '400',
+					letterSpacing: 0,
+					lineHeight: 0
+				};
+
+				const component = create(save({ attributes }));
+				const tree = component.toJSON();
+
+				expect(tree.children[0].props.className).toBe(className);
+			});
+		});
+
+		it('should maintain semantic heading structure for focus navigation', () => {
+			const headingLevels = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+			headingLevels.forEach(level => {
+				const attributes = {
+					content: `${level} heading`,
+					tagName: level,
+					features: [],
+					screenReaderClass: 'visually-hidden',
+					fontSize: 'inherit',
+					fontWeight: '400',
+					letterSpacing: 0,
+					lineHeight: 0
+				};
+
+				const component = create(save({ attributes }));
+				const tree = component.toJSON();
+
+				// Both versions must maintain same heading level for focus order
+				expect(tree.children[0].type).toBe(level);
+				expect(tree.children[1].type).toBe(level);
+			});
+		});
+	});
 });
