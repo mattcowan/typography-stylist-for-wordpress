@@ -222,11 +222,11 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.1.7 =
-* Improved: Windows Narrator focus enhancement - screen reader accessible headings now expand to full size when focused, providing a clear visual outline that corresponds to the styled headline area
-* Improved: Screen reader elements use modern clip-path technique while maintaining backwards compatibility with legacy clip property
-* Added: High contrast mode support for Windows users with enhanced outline visibility
+* Improved: Windows Narrator focus enhancement - screen reader accessible headings now display a visible focus outline that corresponds to the full styled headline area, making it easier to identify which heading is being read
+* Improved: Screen reader elements maintain full-size dimensions while remaining invisible, using modern clip-path technique with backwards compatibility for legacy browsers
+* Added: High contrast mode support for Windows users with enhanced outline visibility (4px outline with system Highlight color)
 * Added: Dark mode support with adjusted outline colors for better visibility on dark backgrounds
-* Added: pointer-events management to prevent invisible overlay from blocking interactions with styled text
+* Added: pointer-events management to prevent invisible overlay from blocking interactions with styled text when not focused
 
 = 1.1.6 =
 * Improved: Standardized control order across all interfaces for better consistency. Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features.
