@@ -29,7 +29,12 @@
 }
 
 /* Windows Narrator Focus Enhancement:
- * When screen reader heading receives focus, expand to full size and show outline
+ * When screen reader heading receives focus, show outline around the styled text area.
+ * The element is already full-size (100% width/height) to match the styled headline.
+ * IMPORTANT: The text content remains invisible (via clip-path/color above).
+ * Only the OUTLINE becomes visible to highlight the styled text area.
+ * Do NOT remove clip-path, overflow:hidden, or color:transparent on focus -
+ * this would cause duplicate visible text and break the dual-content pattern.
  */
 .wp-block-typost .visually-hidden:focus,
 .wp-block-typost .sr-only:focus,
