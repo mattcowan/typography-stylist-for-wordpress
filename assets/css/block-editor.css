@@ -622,13 +622,17 @@
     z-index: 10;
 }
 
-/* Corner handles - larger hit area (16px) */
+/* Corner handles - larger hit area (24px for SE, 16px for others) */
 .typost-resize-handle-ne,
 .typost-resize-handle-nw,
-.typost-resize-handle-se,
 .typost-resize-handle-sw {
     width: 16px;
     height: 16px;
+}
+
+.typost-resize-handle-se {
+    width: 24px;
+    height: 24px;
 }
 
 /* Edge handles - 8px hit area */
@@ -744,4 +748,21 @@
     .typost-modal .components-modal__frame {
         transition: none !important;
     }
+
+    .typost-resize-handle-se::after {
+        transition: none;
+    }
+}
+
+/* DETECTED Badge for Quick Feature Toggle Controls */
+.typost-detected-badge {
+    margin-left: 8px;
+    font-size: 10px;
+    padding: 6px 12px;
+    background-color: #555;
+    color: white;
+    border-radius: 6px;
+    font-weight: normal;
+    display: inline-block;
+    vertical-align: middle;
 }

@@ -261,6 +261,448 @@ export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEn
 }
 
 /**
+ * Parse inline font weight at cursor position
+ * Returns the font weight from the data-fontweight attribute of the innermost span at the cursor
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Start offset of cursor/selection
+ * @param {number} cursorEnd - End offset of cursor/selection
+ * @returns {string|null} Font weight value or null if no inline weight found
+ */
+export function parseInlineFontWeightAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return null;
+	}
+
+	// Parse HTML to find styled spans with font-weight
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const styledSpans = container.querySelectorAll('span[data-fontweight]');
+
+	// Find the smallest (innermost) span with data-fontweight that matches the cursor/selection
+	let smallestMatchingSpan = null;
+	let smallestSpanSize = Infinity;
+
+	for (const span of styledSpans) {
+		// Find this span's position in the text
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let spanStart = 0;
+		let spanEnd = 0;
+		let found = false;
+		let offset = 0;
+
+		let node;
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			// Check if this text node is inside our span
+			if (span.contains(node)) {
+				if (!found) {
+					spanStart = offset;
+					found = true;
+				}
+				spanEnd = offset + nodeLength;
+			}
+
+			offset += nodeLength;
+		}
+
+		// Check if the cursor/selection overlaps with this span
+		const isCursor = cursorStart === cursorEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+
+		if (found && (isInside || overlaps)) {
+			const spanSize = spanEnd - spanStart;
+
+			// Keep track of the smallest matching span
+			if (spanSize < smallestSpanSize) {
+				smallestMatchingSpan = span;
+				smallestSpanSize = spanSize;
+			}
+		}
+	}
+
+	if (!smallestMatchingSpan) {
+		return null;
+	}
+
+	// Return the font weight
+	return smallestMatchingSpan.getAttribute('data-fontweight');
+}
+
+/**
+ * Parse inline font size at cursor position
+ * Returns font size type and values from data attributes of the innermost span at the cursor
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Start offset of cursor/selection
+ * @param {number} cursorEnd - End offset of cursor/selection
+ * @returns {Object|null} Font size object {type: 'inherit'|'responsive', min, preferred, max} or null
+ */
+export function parseInlineFontSizeAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return null;
+	}
+
+	// Parse HTML to find styled spans with font-size
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const styledSpans = container.querySelectorAll('span[data-fontsize]');
+
+	// Find the smallest (innermost) span with data-fontsize that matches the cursor/selection
+	let smallestMatchingSpan = null;
+	let smallestSpanSize = Infinity;
+
+	for (const span of styledSpans) {
+		// Find this span's position in the text
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let spanStart = 0;
+		let spanEnd = 0;
+		let found = false;
+		let offset = 0;
+
+		let node;
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			// Check if this text node is inside our span
+			if (span.contains(node)) {
+				if (!found) {
+					spanStart = offset;
+					found = true;
+				}
+				spanEnd = offset + nodeLength;
+			}
+
+			offset += nodeLength;
+		}
+
+		// Check if the cursor/selection overlaps with this span
+		const isCursor = cursorStart === cursorEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+
+		if (found && (isInside || overlaps)) {
+			const spanSize = spanEnd - spanStart;
+
+			// Keep track of the smallest matching span
+			if (spanSize < smallestSpanSize) {
+				smallestMatchingSpan = span;
+				smallestSpanSize = spanSize;
+			}
+		}
+	}
+
+	if (!smallestMatchingSpan) {
+		return null;
+	}
+
+	// Extract font size data
+	const type = smallestMatchingSpan.getAttribute('data-fontsize');
+
+	if (type === 'responsive') {
+		return {
+			type: 'responsive',
+			min: parseInt(smallestMatchingSpan.getAttribute('data-fontsize-min') || '16', 10),
+			preferred: parseInt(smallestMatchingSpan.getAttribute('data-fontsize-preferred') || '32', 10),
+			max: parseInt(smallestMatchingSpan.getAttribute('data-fontsize-max') || '64', 10)
+		};
+	}
+
+	return { type: type || 'inherit' };
+}
+
+/**
+ * Parse inline letter spacing at cursor position
+ * Returns letter spacing value (in integer form, multiply by 1000)
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Start offset of cursor/selection
+ * @param {number} cursorEnd - End offset of cursor/selection
+ * @returns {number} Letter spacing value (0 = normal, -200 to 200 range)
+ */
+export function parseInlineLetterSpacingAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return 0;
+	}
+
+	// Parse HTML to find styled spans with letter-spacing
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	// Exclude preview temp spans - they are temporary and should not be detected
+	const styledSpans = Array.from(container.querySelectorAll('span[data-letterspacing], span.typost-styled'))
+		.filter(span => !span.classList.contains('typost-preview-temp'));
+
+	// Find the smallest (innermost) span with data-letterspacing that matches the cursor/selection
+	let smallestMatchingSpan = null;
+	let smallestSpanSize = Infinity;
+
+	for (const span of styledSpans) {
+		// Find this span's position in the text
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let spanStart = 0;
+		let spanEnd = 0;
+		let found = false;
+		let offset = 0;
+
+		let node;
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			// Check if this text node is inside our span
+			if (span.contains(node)) {
+				if (!found) {
+					spanStart = offset;
+					found = true;
+				}
+				spanEnd = offset + nodeLength;
+			}
+
+			offset += nodeLength;
+		}
+
+		// Check if the cursor/selection overlaps with this span
+		const isCursor = cursorStart === cursorEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+
+		if (found && (isInside || overlaps)) {
+			const spanSize = spanEnd - spanStart;
+
+			// Keep track of the smallest matching span
+			if (spanSize < smallestSpanSize) {
+				smallestMatchingSpan = span;
+				smallestSpanSize = spanSize;
+			}
+		}
+	}
+
+	if (!smallestMatchingSpan) {
+		return 0;
+	}
+
+	// Try data attribute first
+	const dataValue = smallestMatchingSpan.getAttribute('data-letterspacing');
+	if (dataValue) {
+		return parseInt(dataValue, 10);
+	}
+
+	// Fallback: parse from style attribute
+	const style = smallestMatchingSpan.getAttribute('style') || '';
+	const match = style.match(/letter-spacing:\s*(-?[\d.]+)em/);
+	if (match) {
+		return Math.round(parseFloat(match[1]) * 1000);
+	}
+
+	return 0;
+}
+
+/**
+ * Parse inline line height at cursor position
+ * Returns line height value as float
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Start offset of cursor/selection
+ * @param {number} cursorEnd - End offset of cursor/selection
+ * @returns {number} Line height value (0 = not set, 0.5-3.0 range)
+ */
+export function parseInlineLineHeightAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return 0;
+	}
+
+	// Parse HTML to find styled spans with line-height
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	// Exclude preview temp spans - they are temporary and should not be detected
+	const styledSpans = Array.from(container.querySelectorAll('span[data-lineheight], span.typost-styled'))
+		.filter(span => !span.classList.contains('typost-preview-temp'));
+
+	// Find the smallest (innermost) span with data-lineheight that matches the cursor/selection
+	let smallestMatchingSpan = null;
+	let smallestSpanSize = Infinity;
+
+	for (const span of styledSpans) {
+		// Find this span's position in the text
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let spanStart = 0;
+		let spanEnd = 0;
+		let found = false;
+		let offset = 0;
+
+		let node;
+		while ((node = walker.nextNode())) {
+			const nodeLength = node.nodeValue.length;
+
+			// Check if this text node is inside our span
+			if (span.contains(node)) {
+				if (!found) {
+					spanStart = offset;
+					found = true;
+				}
+				spanEnd = offset + nodeLength;
+			}
+
+			offset += nodeLength;
+		}
+
+		// Check if the cursor/selection overlaps with this span
+		const isCursor = cursorStart === cursorEnd;
+		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+
+		if (found && (isInside || overlaps)) {
+			const spanSize = spanEnd - spanStart;
+
+			// Keep track of the smallest matching span
+			if (spanSize < smallestSpanSize) {
+				smallestMatchingSpan = span;
+				smallestSpanSize = spanSize;
+			}
+		}
+	}
+
+	if (!smallestMatchingSpan) {
+		return 0;
+	}
+
+	// Try data attribute first
+	const dataValue = smallestMatchingSpan.getAttribute('data-lineheight');
+	if (dataValue) {
+		return parseFloat(dataValue);
+	}
+
+	// Fallback: parse from style attribute
+	const style = smallestMatchingSpan.getAttribute('style') || '';
+	const match = style.match(/line-height:\s*([\d.]+)/);
+	if (match) {
+		return parseFloat(match[1]);
+	}
+
+	return 0;
+}
+
+/**
+ * Detect if a selection contains mixed inline styles
+ *
+ * Scans through all characters in selection range and checks if styled spans
+ * have different values for any property (font-family, font-weight, font-size,
+ * letter-spacing, line-height, features).
+ *
+ * Strategy: Compare first character's styles with all subsequent characters.
+ * If any character has different styling, return true.
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} selectionStart - Start offset of selection
+ * @param {number} selectionEnd - End offset of selection
+ * @returns {Object} { hasMixedStyles: boolean, properties: Array<string> }
+ *   - hasMixedStyles: true if any property varies across selection
+ *   - properties: array of property names that have mixed values ['font-weight', 'letter-spacing']
+ */
+export function detectMixedStyles(htmlContent, selectionStart, selectionEnd) {
+	// Collapsed selection (cursor position) has no mixed styles
+	if (!htmlContent || selectionStart === undefined || selectionEnd === undefined || selectionStart === selectionEnd) {
+		return { hasMixedStyles: false, properties: [] };
+	}
+
+	// Parse HTML
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+
+	// Build a map of character position -> style properties
+	const characterStyles = [];
+
+	// Walk through all text nodes and track their positions
+	const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	let currentOffset = 0;
+	let textNode;
+
+	while ((textNode = walker.nextNode())) {
+		const nodeLength = textNode.nodeValue.length;
+
+		// For each character in this text node
+		for (let i = 0; i < nodeLength; i++) {
+			const charPosition = currentOffset + i;
+
+			// Only track characters within our selection
+			if (charPosition >= selectionStart && charPosition < selectionEnd) {
+				// Find the innermost typost-styled span containing this character
+				// Exclude preview temp spans - they are temporary and should not be detected
+				let currentNode = textNode.parentNode;
+				let innermostSpan = null;
+
+				while (currentNode && currentNode !== container) {
+					if (currentNode.classList && currentNode.classList.contains('typost-styled') &&
+					    !currentNode.classList.contains('typost-preview-temp')) {
+						innermostSpan = currentNode;
+						break; // Found innermost, stop here
+					}
+					currentNode = currentNode.parentNode;
+				}
+
+				// Extract style properties from this span (or null if no span)
+				const styles = {
+					fontId: innermostSpan?.getAttribute('data-font-id') || null,
+					fontWeight: innermostSpan?.getAttribute('data-fontweight') || null,
+					fontSize: innermostSpan?.getAttribute('data-fontsize') || null,
+					letterSpacing: innermostSpan?.getAttribute('data-letterspacing') || null,
+					lineHeight: innermostSpan?.getAttribute('data-lineheight') || null,
+					features: innermostSpan?.getAttribute('data-features') || null
+				};
+
+				characterStyles.push(styles);
+			}
+		}
+
+		currentOffset += nodeLength;
+	}
+
+	// If we have 0 or 1 characters, no mixed styles possible
+	if (characterStyles.length <= 1) {
+		return { hasMixedStyles: false, properties: [] };
+	}
+
+	// Compare first character's styles with all others
+	const firstStyles = characterStyles[0];
+	const mixedProperties = new Set();
+
+	for (let i = 1; i < characterStyles.length; i++) {
+		const currentStyles = characterStyles[i];
+
+		if (firstStyles.fontId !== currentStyles.fontId) {
+			mixedProperties.add('font-family');
+		}
+		if (firstStyles.fontWeight !== currentStyles.fontWeight) {
+			mixedProperties.add('font-weight');
+		}
+		if (firstStyles.fontSize !== currentStyles.fontSize) {
+			mixedProperties.add('font-size');
+		}
+		if (firstStyles.letterSpacing !== currentStyles.letterSpacing) {
+			mixedProperties.add('letter-spacing');
+		}
+		if (firstStyles.lineHeight !== currentStyles.lineHeight) {
+			mixedProperties.add('line-height');
+		}
+		if (firstStyles.features !== currentStyles.features) {
+			mixedProperties.add('features');
+		}
+	}
+
+	const properties = Array.from(mixedProperties);
+	return {
+		hasMixedStyles: properties.length > 0,
+		properties: properties
+	};
+}
+
+/**
  * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
  * This function checks if the selected range is already inside an typost-styled span.
@@ -310,7 +752,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 
 					// PRESERVE existing inline attributes that caller isn't explicitly setting
 					// This prevents losing inline font-family when applying line-height, etc.
-					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
 					preservedAttributes = {};  // Reset for this merge operation
 					attributesToPreserve.forEach(attr => {
 						if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
@@ -368,7 +810,9 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 				const stylePropertyMap = {
 					'data-font-id': 'font-family',
 					'data-fontweight': 'font-weight',
-					'data-fontsize': 'font-size'
+					'data-fontsize': 'font-size',
+					'data-letterspacing': 'letter-spacing',
+					'data-lineheight': 'line-height'
 				};
 
 				// Parse new styles (overwrite existing, EXCEPT for preserved attributes)
@@ -553,7 +997,7 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 				span = parent;
 
 				// PRESERVE existing inline attributes that caller isn't explicitly setting
-				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
 				const preservedAttributes = {};
 				attributesToPreserve.forEach(attr => {
 					if (!attributes.hasOwnProperty(attr) && span.hasAttribute(attr)) {
@@ -607,7 +1051,9 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 					const stylePropertyMap = {
 						'data-font-id': 'font-family',
 						'data-fontweight': 'font-weight',
-						'data-fontsize': 'font-size'
+						'data-fontsize': 'font-size',
+						'data-letterspacing': 'letter-spacing',
+						'data-lineheight': 'line-height'
 					};
 
 					// Parse new styles (don't overwrite preserved attributes)

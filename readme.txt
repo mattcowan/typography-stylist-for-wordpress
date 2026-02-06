@@ -222,6 +222,15 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.1.7 =
+* Improved: Quick Feature Toggle controls now dynamically display currently applied inline styles instead of resetting to defaults, providing better user awareness of existing formatting
+* Improved: Controls automatically update to show detected styles when selection changes, replacing previous reset-to-defaults behavior
+* Improved: Inline style detection now works for all properties: font-family, font-weight, font-size, letter-spacing, line-height, and OpenType features
+* Added: "DETECTED" badge indicators on control labels showing which styles are currently applied to the selection
+* Added: Mixed styles detection with warning notice when selection contains text with different inline style values
+* Added: Letter-spacing and line-height values now stored in data attributes (data-letterspacing, data-lineheight) for reliable detection and preservation
+* Added: Five new parser utility functions for detecting inline styles at cursor position (parseInlineFontWeightAtCursor, parseInlineFontSizeAtCursor, parseInlineLetterSpacingAtCursor, parseInlineLineHeightAtCursor, detectMixedStyles)
+* Fixed: Controls no longer reset to default values after applying inline styles, maintaining context for sequential edits
+* Fixed: Attribute preservation system now includes letter-spacing and line-height to prevent style loss during sequential inline edits
 * Improved: Windows Narrator focus enhancement - screen reader accessible headings now display a visible focus outline that corresponds to the full styled headline area, making it easier to identify which heading is being read
 * Improved: Screen reader elements maintain full-size dimensions while remaining invisible, using modern clip-path technique with backwards compatibility for legacy browsers
 * Added: High contrast mode support for Windows users with enhanced outline visibility (4px outline with system Highlight color)

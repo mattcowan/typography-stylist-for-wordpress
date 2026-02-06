@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineFeaturesAtCursor, parseInlineFontFamilyAtCursor, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
+import { parseInlineFeaturesAtCursor, parseInlineFontFamilyAtCursor, parseInlineFontWeightAtCursor, parseInlineFontSizeAtCursor, parseInlineLetterSpacingAtCursor, parseInlineLineHeightAtCursor, detectMixedStyles, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -177,6 +177,73 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		return parseInlineFontFamilyAtCursor(content, start, end);
 	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
 
+	// Get inline font weight at current cursor/selection position
+	const inlineFontWeightAtSelection = useMemo(() => {
+		if (!content) return null;
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return null;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineFontWeightAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
+	// Get inline font size at current cursor/selection position
+	const inlineFontSizeAtSelection = useMemo(() => {
+		if (!content) return null;
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return null;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineFontSizeAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
+	// Get inline letter spacing at current cursor/selection position
+	const inlineLetterSpacingAtSelection = useMemo(() => {
+		if (!content) return 0;
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return 0;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineLetterSpacingAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
+	// Get inline line height at current cursor/selection position
+	const inlineLineHeightAtSelection = useMemo(() => {
+		if (!content) return 0;
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return 0;
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		return parseInlineLineHeightAtCursor(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
+	// Detect mixed styles in selection
+	const mixedStylesDetection = useMemo(() => {
+		if (!content) return { hasMixedStyles: false, properties: [] };
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
+			return { hasMixedStyles: false, properties: [] };
+		}
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		if (start === end) return { hasMixedStyles: false, properties: [] };
+
+		return detectMixedStyles(content, start, end);
+	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+
 	// Helper to create a Range for the given linear text offsets within a container
 	const getRangeForOffsets = (rootNode, startOffset, endOffset, docContext) => {
 		let currentOffset = 0;
@@ -213,6 +280,35 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		range.setEnd(rangeEndNode, rangeEndOffset);
 
 		return range;
+	};
+
+	/**
+	 * Remove all preview temp spans from HTML content.
+	 * This cleans up any leftover preview spans from previous sessions.
+	 *
+	 * @param {string} htmlContent - HTML content to clean
+	 * @returns {string} - Cleaned HTML content
+	 */
+	const removePreviewTempSpans = (htmlContent) => {
+		if (!htmlContent) return htmlContent;
+
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Find all preview temp spans
+		const previewSpans = container.querySelectorAll('.typost-preview-temp');
+
+		// Replace each preview span with its content
+		previewSpans.forEach(span => {
+			const parent = span.parentNode;
+			while (span.firstChild) {
+				parent.insertBefore(span.firstChild, span);
+			}
+			parent.removeChild(span);
+		});
+
+		return container.innerHTML;
 	};
 
 	/**
@@ -404,6 +500,68 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	}, [isResizing, resizeStartX, resizeStartY, resizeStartWidth, resizeStartHeight, resizeStartModalX, resizeStartModalY, resizeDirection, modalWidth, modalHeight, modalX, modalY]);
 
+	// Sync detected inline styles to control states when selection changes
+	// This replaces the reset-to-defaults behavior with show-current-styles behavior
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	useEffect(() => {
+		// Only sync when Quick Feature Toggle is open
+		if (!isPopoverOpen) return;
+
+		// Only sync when there's a valid selection in this block
+		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) return;
+
+		const start = selectionStart.offset || 0;
+		const end = selectionEnd.offset || 0;
+
+		// Only sync for range selections (not collapsed cursor)
+		if (start === end) return;
+
+		// Sync font family
+		if (inlineFontFamilyAtSelection) {
+			setInlineFontFamily(inlineFontFamilyAtSelection);
+		} else {
+			setInlineFontFamily('');
+		}
+
+		// Sync font weight
+		if (inlineFontWeightAtSelection) {
+			setInlineFontWeight(inlineFontWeightAtSelection);
+		} else {
+			setInlineFontWeight('inherit');
+		}
+
+		// Sync font size
+		if (inlineFontSizeAtSelection) {
+			if (inlineFontSizeAtSelection.type === 'responsive') {
+				setInlineFontSize('responsive');
+				setInlineFontSizeMin(inlineFontSizeAtSelection.min || 16);
+				setInlineFontSizePreferred(inlineFontSizeAtSelection.preferred || 32);
+				setInlineFontSizeMax(inlineFontSizeAtSelection.max || 64);
+			} else {
+				setInlineFontSize('inherit');
+			}
+		} else {
+			setInlineFontSize('inherit');
+		}
+
+		// Sync letter spacing
+		setInlineLetterSpacing(inlineLetterSpacingAtSelection);
+
+		// Sync line height
+		setInlineLineHeight(inlineLineHeightAtSelection);
+
+	}, [
+		isPopoverOpen,
+		selectionStart?.offset,
+		selectionEnd?.offset,
+		selectionStart?.clientId,
+		clientId
+		// NOTE: We intentionally DO NOT include the detected values in dependencies
+		// to avoid resetting controls while the user is actively editing them.
+		// The detected values are used inside the effect, but changes to them
+		// should not trigger the effect - only changes to selection position should.
+	]);
+
 	// Handle toolbar button click
 	const handleToolbarClick = () => {
 		// Extract selected text using RichText API
@@ -448,6 +606,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		// Store original letter spacing when opening
 		if (!isPopoverOpen) {
 			originalLetterSpacingRef.current = letterSpacing;
+
+			// Clean up any orphaned preview temp spans when opening
+			const cleanContent = removePreviewTempSpans(content);
+			if (cleanContent !== content) {
+				setAttributes({ content: cleanContent });
+			}
 		}
 
 		setPreviewText(extractedText);
@@ -458,8 +622,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const handlePopoverClose = () => {
 		// Restore original content if we were previewing
 		if (originalContentRef.current) {
-			setAttributes({ content: originalContentRef.current });
+			// Clean up any preview temp spans before restoring
+			const cleanContent = removePreviewTempSpans(originalContentRef.current);
+			setAttributes({ content: cleanContent });
 			originalContentRef.current = null;
+		} else {
+			// Even if no preview was active, clean up any orphaned preview spans
+			const cleanContent = removePreviewTempSpans(content);
+			if (cleanContent !== content) {
+				setAttributes({ content: cleanContent });
+			}
 		}
 		// Reset letter-spacing preview state
 		setInlineLetterSpacing(0);
@@ -629,15 +801,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 			if (start !== end) {
 				// Build the styled span with ONLY line height
+				const attributes = { 'data-lineheight': inlineLineHeight.toString() };
 				const styleArray = [];
 
 				styleArray.push(`line-height: ${inlineLineHeight}`);
 
 				const styleString = styleArray.join('; ');
 
-				// Parse the current content as HTML
+				// Use original content (without preview spans) or current content
+				// Clean up any leftover preview temp spans
+				const sourceContent = removePreviewTempSpans(originalContentRef.current || content);
+
+				// Parse the source content as HTML
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -656,7 +833,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = {};
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -692,7 +868,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					const attributes = {};
 
 					const fallbackResult = applyStylingSafeStringMethod(
 						content,
@@ -715,8 +890,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
-				// Reset inline state after successfully applying
-				setInlineLineHeight(0);
 			}
 		}
 	};
@@ -888,15 +1061,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 			if (start !== end) {
 				// Build the styled span with ONLY letter spacing
+				const attributes = { 'data-letterspacing': inlineLetterSpacing.toString() };
 				const styleArray = [];
 
 				styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
 
 				const styleString = styleArray.join('; ');
 
-				// Parse the current content as HTML
+				// Use original content (without preview spans) or current content
+				const sourceContent = originalContentRef.current || content;
+
+				// Parse the source content as HTML
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -915,7 +1092,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = {};
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -951,7 +1127,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				// 2. FALLBACK: String manipulation if range failed
 				if (!success) {
-					const attributes = {};
 
 					const fallbackResult = applyStylingSafeStringMethod(
 						content,
@@ -974,8 +1149,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
-				// Reset inline state after successfully applying
-				setInlineLetterSpacing(0);
 			}
 		}
 	};
@@ -1067,9 +1240,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${inlineFontSizeMax}px)`;
 				}
 
-				// Parse the current content as HTML
+				// Use original content (without preview spans) or current content
+				const sourceContent = originalContentRef.current || content;
+
+				// Parse the source content as HTML
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -1175,9 +1351,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			const end = selectionEnd.offset || 0;
 
 			if (start !== end) {
-				// Parse the current content as HTML
+				// Use original content (without preview spans) or current content
+				const sourceContent = originalContentRef.current || content;
+
+				// Parse the source content as HTML
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -1241,7 +1420,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					const styleString = `font-weight: ${inlineFontWeight}`;
 
 					const fallbackResult = applyStylingSafeStringMethod(
-						content,
+						sourceContent,
 						start,
 						end,
 						attributes,
@@ -1261,8 +1440,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
-				// Reset inline state after successfully applying
-				setInlineFontWeight('inherit');
 			}
 		}
 	};
@@ -1287,9 +1464,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					return;
 				}
 
-				// Parse the current content as HTML
+				// Use original content (without preview spans) or current content
+				const sourceContent = originalContentRef.current || content;
+
+				// Parse the source content as HTML
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -1373,8 +1553,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// CRITICAL: Clear originalContentRef so popover close doesn't restore old content
 				originalContentRef.current = null;
 
-				// Reset inline state after successfully applying
-				setInlineFontFamily('');
 			}
 		}
 	};
@@ -1397,16 +1575,21 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				styleArray.push(`font-feature-settings: "${featureId}" 1`);
 
 				// Always include letter-spacing, even if 0
+				const attributes = { 'data-features': featureId };
 				if (inlineLetterSpacing !== 0) {
 					styleArray.push(`letter-spacing: ${inlineLetterSpacing / 1000}em`);
+					attributes['data-letterspacing'] = inlineLetterSpacing.toString();
 				}
 
 				const styleString = styleArray.join('; ');
 
-				// Parse the current content as HTML, find the text node at the selection, and wrap it
+				// Use original content (without preview spans) or current content
+				const sourceContent = originalContentRef.current || content;
+
+				// Parse the source content as HTML, find the text node at the selection, and wrap it
 				// This is a workaround since we need to work with HTML directly
 				const parser = new DOMParser();
-				const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+				const doc = parser.parseFromString(`<div>${sourceContent}</div>`, 'text/html');
 				const container = doc.body.firstChild;
 
 				// STRATEGY: Try Range method first, fallback to string manipulation
@@ -1425,7 +1608,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				if (validation.valid) {
 					// Range is valid - try applying with it
-					const attributes = { 'data-features': featureId };
 					success = applyOrMergeStyling(range, attributes, styleString, doc);
 
 					if (success) {
@@ -1877,12 +2059,42 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									</p>
 								</Notice>
 
+								{/* Mixed Styles Warning - shows when selection has inconsistent styling */}
+								{mixedStylesDetection.hasMixedStyles && (
+									<Notice
+										status="warning"
+										isDismissible={false}
+										className="typost-mixed-styles-notice"
+										style={{ margin: '0 0 16px 0' }}
+									>
+										<p style={{ margin: 0, fontWeight: 600 }}>
+											{__('⚠️ Mixed styles detected', 'typography-stylist')}
+										</p>
+										<p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+											{__('Your selection contains different values for: ', 'typography-stylist')}
+											<strong>{mixedStylesDetection.properties.join(', ')}</strong>
+										</p>
+										<p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
+											{__('Controls show the style of the first character. Applying will override all selected text with the new value.', 'typography-stylist')}
+										</p>
+									</Notice>
+								)}
+
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
 								{/* Font Family Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
-										label={__('Font Family (for selected text)', 'typography-stylist')}
+										label={
+											<span>
+												{__('Font Family (for selected text)', 'typography-stylist')}
+												{inlineFontFamilyAtSelection && (
+													<span className="typost-detected-badge">
+														{__('DETECTED', 'typography-stylist')}
+													</span>
+												)}
+											</span>
+										}
 										value={inlineFontFamily}
 										onChange={(value) => setInlineFontFamily(value)}
 										options={[
@@ -1905,7 +2117,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Font Weight Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
-										label={__('Font Weight (for selected text)', 'typography-stylist')}
+										label={
+											<span>
+												{__('Font Weight (for selected text)', 'typography-stylist')}
+												{inlineFontWeightAtSelection && inlineFontWeightAtSelection !== 'inherit' && (
+													<span className="typost-detected-badge">
+														{__('DETECTED', 'typography-stylist')}
+													</span>
+												)}
+											</span>
+										}
 										value={inlineFontWeight}
 										onChange={(value) => setInlineFontWeight(value)}
 										options={[
@@ -1936,7 +2157,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
-										label={__('Font Size (for selected text)', 'typography-stylist')}
+										label={
+											<span>
+												{__('Font Size (for selected text)', 'typography-stylist')}
+												{inlineFontSizeAtSelection && inlineFontSizeAtSelection.type !== 'inherit' && (
+													<span className="typost-detected-badge">
+														{__('DETECTED', 'typography-stylist')}
+													</span>
+												)}
+											</span>
+										}
 										value={inlineFontSize}
 										onChange={(value) => {
 											setInlineFontSize(value);
@@ -2015,7 +2245,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Line Height Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<RangeControl
-										label={__('Line Height (for selected text)', 'typography-stylist')}
+										label={
+											<span>
+												{__('Line Height (for selected text)', 'typography-stylist')}
+												{inlineLineHeightAtSelection !== 0 && (
+													<span className="typost-detected-badge">
+														{__('DETECTED', 'typography-stylist')}
+													</span>
+												)}
+											</span>
+										}
 										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
 										onChange={handleLineHeightChange}
 										min={0.5}
@@ -2057,7 +2296,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								{/* Letter Spacing Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<RangeControl
-										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
+										label={
+											<span>
+												{__('Letter Spacing (for selected text)', 'typography-stylist')}
+												{inlineLetterSpacingAtSelection !== 0 && (
+													<span className="typost-detected-badge">
+														{__('DETECTED', 'typography-stylist')}
+													</span>
+												)}
+											</span>
+										}
 										value={inlineLetterSpacing}
 										onChange={handleLetterSpacingChange}
 										min={-200}

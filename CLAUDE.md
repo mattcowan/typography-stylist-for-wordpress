@@ -69,11 +69,13 @@ The plugin provides two distinct interfaces for applying OpenType features:
 
 ### Inline Styling Architecture
 
-**Data Attributes (v1.1.6+):**
+**Data Attributes (v1.1.7+):**
 All inline styles are stored using standardized data attributes in `<span class="typost-styled">` elements:
 - `data-font-id` - Font family ID (matches block-level `fontId` naming convention)
 - `data-fontsize` - Font size value
 - `data-fontweight` - Font weight value
+- `data-letterspacing` - Letter spacing value (integer, multiply by 1000 for em)
+- `data-lineheight` - Line height value (float)
 - `data-features` - Comma-separated OpenType feature codes
 
 **CSS Variable System (v1.1.6+):**
@@ -84,16 +86,26 @@ Inline fonts use CSS variables for consistent font loading:
 
 **Attribute Preservation:**
 When applying sequential inline styles (e.g., first font-family, then line-height), the preservation system ensures existing attributes aren't lost:
-- Functions check for existing `data-font-id`, `data-fontsize`, `data-fontweight` attributes
+- Functions check for existing `data-font-id`, `data-fontsize`, `data-fontweight`, `data-letterspacing`, `data-lineheight` attributes
 - Preserved attributes are copied to new styling operations
 - Style properties matching preserved attributes aren't overwritten
 - See `applyOrMergeStyling()` and `applyStylingSafeStringMethod()` in [utils.js](blocks/typography-stylist/utils.js)
 
-**Preview System:**
-Quick Feature Toggle previews detect inline fonts at cursor position:
-- `parseInlineFontFamilyAtCursor()` utility function detects `data-font-id` at selection
-- Memoized for performance (see `inlineFontFamilyAtSelection` in [edit.js](blocks/typography-stylist/edit.js))
-- Preview displays in inline font if detected, otherwise falls back to block-level font
+**Inline Style Detection (v1.1.7+):**
+Quick Feature Toggle controls automatically detect and display currently applied inline styles at the selection:
+- **Parser Functions** (in [utils.js](blocks/typography-stylist/utils.js)):
+  - `parseInlineFeaturesAtCursor()` - Detects OpenType features from `data-features`
+  - `parseInlineFontFamilyAtCursor()` - Detects font from `data-font-id`
+  - `parseInlineFontWeightAtCursor()` - Detects font weight from `data-fontweight`
+  - `parseInlineFontSizeAtCursor()` - Detects font size from `data-fontsize*` attributes
+  - `parseInlineLetterSpacingAtCursor()` - Detects letter spacing from `data-letterspacing`
+  - `parseInlineLineHeightAtCursor()` - Detects line height from `data-lineheight`
+  - `detectMixedStyles()` - Detects when selection contains different style values
+- **Behavior:** Controls dynamically update to show detected styles when selection changes (replaced reset-to-defaults behavior)
+- **Mixed Styles:** Warning notice appears when selection spans text with different inline styles
+- **UI Indicators:** "DETECTED" badge appears next to control labels showing applied styles
+- All parsers are memoized for performance (see memos in [edit.js](blocks/typography-stylist/edit.js))
+- Preview displays use detected inline fonts when present, otherwise fall back to block-level font
 
 ### REST API Endpoints
 
