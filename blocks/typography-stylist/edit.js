@@ -2089,7 +2089,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											<span>
 												{__('Font Family (for selected text)', 'typography-stylist')}
 												{inlineFontFamilyAtSelection && (
-													<span className="typost-detected-badge">
+													<span className="typost-detected-badge" aria-hidden="true">
 														{__('DETECTED', 'typography-stylist')}
 													</span>
 												)}
