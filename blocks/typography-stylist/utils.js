@@ -280,40 +280,63 @@ export function parseInlineFontWeightAtCursor(htmlContent, cursorStart, cursorEn
 	const container = doc.body.firstChild;
 	const styledSpans = container.querySelectorAll('span[data-fontweight]');
 
+	// Compute text ranges for all data-fontweight spans in a single pass
+	const spanRanges = new Map();
+	const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	let offset = 0;
+
+	let node;
+	while ((node = walker.nextNode())) {
+		const nodeValue = node.nodeValue || '';
+		const nodeLength = nodeValue.length;
+		const nodeStart = offset;
+		const nodeEnd = offset + nodeLength;
+
+		// Walk up ancestors and record ranges for any span[data-fontweight]
+		let ancestor = node.parentNode;
+		while (ancestor && ancestor !== container) {
+			if (
+				ancestor.nodeType === Node.ELEMENT_NODE &&
+				ancestor.hasAttribute &&
+				ancestor.hasAttribute('data-fontweight')
+			) {
+				const existing = spanRanges.get(ancestor);
+				if (!existing) {
+					spanRanges.set(ancestor, { start: nodeStart, end: nodeEnd });
+				} else {
+					if (nodeStart < existing.start) {
+						existing.start = nodeStart;
+					}
+					if (nodeEnd > existing.end) {
+						existing.end = nodeEnd;
+					}
+				}
+			}
+			ancestor = ancestor.parentNode;
+		}
+
+		offset += nodeLength;
+	}
+
 	// Find the smallest (innermost) span with data-fontweight that matches the cursor/selection
 	let smallestMatchingSpan = null;
 	let smallestSpanSize = Infinity;
 
 	for (const span of styledSpans) {
-		// Find this span's position in the text
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-		let spanStart = 0;
-		let spanEnd = 0;
-		let found = false;
-		let offset = 0;
-
-		let node;
-		while ((node = walker.nextNode())) {
-			const nodeLength = node.nodeValue.length;
-
-			// Check if this text node is inside our span
-			if (span.contains(node)) {
-				if (!found) {
-					spanStart = offset;
-					found = true;
-				}
-				spanEnd = offset + nodeLength;
-			}
-
-			offset += nodeLength;
+		const range = spanRanges.get(span);
+		if (!range) {
+			continue;
 		}
+
+		const spanStart = range.start;
+		const spanEnd = range.end;
 
 		// Check if the cursor/selection overlaps with this span
 		const isCursor = cursorStart === cursorEnd;
-		const isInside = isCursor && found && cursorStart >= spanStart && cursorStart < spanEnd;
-		const overlaps = !isCursor && found && cursorStart < spanEnd && cursorEnd > spanStart;
+		const isInside = isCursor && cursorStart >= spanStart && cursorStart < spanEnd;
+		const overlaps = !isCursor && cursorStart < spanEnd && cursorEnd > spanStart;
 
-		if (found && (isInside || overlaps)) {
+		if (isInside || overlaps) {
 			const spanSize = spanEnd - spanStart;
 
 			// Keep track of the smallest matching span
