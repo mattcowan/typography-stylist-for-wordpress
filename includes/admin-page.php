@@ -1230,6 +1230,44 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 </p>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="typost_archive_full_content_check">
+                                    <?php esc_html_e('Archive Page Font Detection', 'typography-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="typost_archive_full_content_check"
+                                    name="typost_archive_full_content_check"
+                                    value="1"
+                                    <?php checked(get_option('typost_archive_full_content_check', '1')); ?>
+                                />
+                                <label for="typost_archive_full_content_check">
+                                    <?php esc_html_e('Check full post content on archive pages (recommended)', 'typography-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don\'t have manual excerpts or "Read More" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Clear Font Cache', 'typography-stylist'); ?>
+                            </th>
+                            <td>
+                                <p class="description" style="margin-bottom: 10px;">
+                                    <?php esc_html_e('Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren\'t loading correctly after making changes, you can manually clear the cache here.', 'typography-stylist'); ?>
+                                </p>
+                                <form method="post" action="" style="display: inline;">
+                                    <?php wp_nonce_field('typography_stylist_clear_cache_nonce'); ?>
+                                    <button type="submit" name="typost_clear_cache" class="button button-secondary">
+                                        <?php esc_html_e('Clear Cache Now', 'typography-stylist'); ?>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
                         <?php
                         /*
                          * Variable Font Weights option - commented out for future version

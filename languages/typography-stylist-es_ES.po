@@ -1227,3 +1227,31 @@ msgstr "Grande (hasta 1920px)"
 #: blocks/typography-stylist/edit.js:1625
 msgid "Preview active. Click \"Apply Font Size\" to save changes, or close this panel to cancel."
 msgstr "Vista previa activa. Haga clic en \"Aplicar Tamaño de Fuente\" para guardar los cambios, o cierre este panel para cancelar."
+
+#: includes/admin-page.php:1235
+msgid "Archive Page Font Detection"
+msgstr "Detección de fuentes en páginas de archivo"
+
+#: includes/admin-page.php:1244
+msgid "Check full post content on archive pages (recommended)"
+msgstr "Verificar el contenido completo de las entradas en páginas de archivo (recomendado)"
+
+#: includes/admin-page.php:1247
+msgid "When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don't have manual excerpts or \"Read More\" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts."
+msgstr "Cuando está habilitado, el plugin verifica el contenido completo de las entradas en archivos del blog, páginas de categorías y páginas de etiquetas para detectar fuentes personalizadas. Esto garantiza que las fuentes se carguen correctamente incluso cuando las entradas no tienen extractos manuales o etiquetas \"Leer más\". El impacto en el rendimiento es mínimo debido al almacenamiento en caché de 12 horas (aproximadamente 250-600ms en la primera carga de página, luego < 1ms para cargas posteriores). Desactive esto solo si tiene una preocupación específica de rendimiento o su tema utiliza extractos de texto sin formato."
+
+#: includes/admin-page.php:1258
+msgid "Clear Font Cache"
+msgstr "Borrar caché de fuentes"
+
+#: includes/admin-page.php:1262
+msgid "Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren't loading correctly after making changes, you can manually clear the cache here."
+msgstr "Typography Stylist almacena en caché los datos de detección de fuentes durante 12-24 horas para mejorar el rendimiento. Si las fuentes no se cargan correctamente después de realizar cambios, puede borrar manualmente el caché aquí."
+
+#: includes/admin-page.php:1266
+msgid "Clear Cache Now"
+msgstr "Borrar caché ahora"
+
+#: typography-stylist.php:4336
+msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
+msgstr "Caché de fuentes borrado correctamente. Las fuentes se volverán a detectar en la próxima carga de página."
