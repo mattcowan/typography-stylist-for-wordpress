@@ -53,11 +53,39 @@ The plugin provides two distinct interfaces for applying OpenType features:
 - Default sizes for new blocks: 16px / 32px / 64px
 
 **Admin Interface:** [includes/admin-page.php](includes/admin-page.php)
-- Tabbed interface showing: Presets, Font Features, Custom Fonts, Accessibility, Help
+- Tabbed interface showing: Presets, Font Features, Custom Fonts, Accessibility, Options, Help
 - Font management: Upload webfont kits, Adobe Fonts integration, custom font definitions
 - Font preview for testing OpenType features
+- Options tab: Clear confirmation settings, archive page font detection, manual cache clear button
 - Inline styles and jQuery for tab switching
 - Located at Settings → Typography Stylist
+
+### Font Loading Architecture (v1.1.9+)
+
+**Hook Timing for Font Detection:**
+The plugin uses different WordPress hooks for font detection depending on page type:
+
+**Archive Pages** (blog home, category, tag, date, author archives):
+- `template_redirect` (priority 1) → `detect_frontend_fonts()` detects fonts AFTER main query executes
+- `wp_enqueue_scripts` (priority 10) → `enqueue_frontend_assets()` uses cached detection results
+- `wp_enqueue_scripts` (priority 10) → `enqueue_custom_fonts_optimized()` outputs @font-face CSS
+
+**Singular Pages** (posts, pages, custom post types):
+- `wp_enqueue_scripts` (priority 10) → Uses existing detection logic with `get_queried_object()`
+- No changes to singular page code path (already works correctly)
+
+**Why This Architecture:**
+- WordPress executes the main query AFTER `wp_enqueue_scripts` fires
+- On archive pages, `$wp_query->posts` is empty during `wp_enqueue_scripts`
+- `template_redirect` fires AFTER query execution, so `$wp_query->posts` is populated
+- Detection results cached in instance variables (`$detected_fonts`, `$has_styled_content`, `$fonts_detected`)
+- Singular pages use `get_queried_object()` which doesn't depend on `$wp_query->posts` array
+
+**Cache Management:**
+- Font detection results cached in transients for 12-24 hours
+- Manual cache clear button available in Settings → Typography Stylist → Options
+- Cache automatically cleared when plugin options change
+- Cache keys: `typost_has_styled_*`, `typost_used_fonts_*`, `typost_font_css_*`
 
 ### Data Flow
 
@@ -180,7 +208,9 @@ Block editor JavaScript requires:
 
 - WordPress 5.8+
 - PHP 7.4+
-- This is a plugin within a WordPress installation at `c:\wamp64\www\wplayground\`
+- This is a plugin within a WordPress installation at `c:\wamp64\www\typography-stylist\`
+- **Development site URL:** `http://typography-stylist:8080/`
+- **Test post with Typography Stylist content:** `http://typography-stylist:8080/?p=13` (Post ID 13, displayed as ?p=13)
 
 ### Testing the Plugin
 

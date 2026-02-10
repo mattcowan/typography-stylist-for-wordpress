@@ -33,11 +33,13 @@ cp .env.example .env
 Edit `.env` with your local WordPress installation details:
 
 ```env
-WP_BASE_URL=http://wplayground:8080
+WP_BASE_URL=http://typography-stylist:8080
 WP_USERNAME=your_wordpress_username
 WP_PASSWORD=your_wordpress_password
 WP_ADMIN_PATH=/wp-admin
 ```
+
+**Note:** The development site URL is `http://typography-stylist:8080/` and test page with Typography Stylist content is at `http://typography-stylist:8080/?p=13` (Post ID 13).
 
 **IMPORTANT**: Never commit your `.env` file to Git. It contains sensitive credentials and is already git-ignored.
 

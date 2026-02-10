@@ -9,7 +9,7 @@ module.exports = defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: process.env.WP_BASE_URL || 'http://wplayground:8080',
+    baseURL: process.env.WP_BASE_URL || 'http://typography-stylist:8080',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

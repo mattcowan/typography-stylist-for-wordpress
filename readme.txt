@@ -29,6 +29,7 @@ Typography Stylist provides advanced typography controls for WordPress. This plu
 * **Accessibility Features**: Screen reader support with ARIA markup and a heading structure that maintains proper semantics for both screen reader and visual views
 * **Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
 * **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility
+* **Automatic Archive Detection**: Custom fonts load automatically on blog archives, category pages, and tag pages without requiring manual configuration (configurable via admin)
 
 = Supported OpenType Features =
 
@@ -220,6 +221,17 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.1.9 =
+* Fixed: Archive page font loading - fonts now load correctly on blog home, category pages, tag pages, and all archive types
+* Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
+* Added: Manual cache clear button in Settings → Typography Stylist → Options tab for troubleshooting font loading issues
+* Added: Admin setting to control archive page full content checking (enabled by default)
+* Improved: Singular pages (posts, pages) continue using optimized detection path without changes
+* Improved: Cache clearing when options are changed to ensure settings take effect immediately
+* Updated: Filter `typost_check_full_content_on_archives` now defaults to true (was false)
+* Technical: Font detection results cached in instance variables to avoid redundant queries
+* Note: Existing sites will automatically benefit from improved archive page font loading
 
 = 1.1.8 =
 * Improved: Windows Narrator focus enhancement - screen reader accessible headings now display a visible focus outline that corresponds to the full styled headline area, making it easier to identify which heading is being read

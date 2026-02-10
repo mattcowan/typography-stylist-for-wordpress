@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.1.8
+ * Version: 1.1.9
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '1.1.8');
+    define('TYPOST_VERSION', '1.1.9');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -53,6 +53,14 @@ class Typost {
     private $font_replacements_cache = null;
 
     /**
+     * Frontend font detection state (for archive pages)
+     * @since 1.1.9
+     */
+    private $detected_fonts = null;
+    private $has_styled_content = null;
+    private $fonts_detected = false;
+
+    /**
      * Get instance
      */
     public static function get_instance() {
@@ -78,6 +86,9 @@ class Typost {
 
         // Enqueue assets in the editor iframe (for block rendering)
         add_action('enqueue_block_assets', array($this, 'enqueue_block_assets'));
+
+        // Detect fonts early on archive pages (after main query executes)
+        add_action('template_redirect', array($this, 'detect_frontend_fonts'), 1);
 
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
@@ -257,16 +268,19 @@ class Typost {
             /**
              * Filter whether to check full post content on archive pages when no excerpt or more tag exists
              *
-             * By default, posts without manual excerpts or more tags are not checked for custom fonts
-             * on archive pages, since auto-generated excerpts are plain text without formatting.
-             * Set this to true if your theme shows full post content on archives.
+             * By default (as of v1.1.9), full post content is checked to ensure custom fonts load properly
+             * on archive pages. This can be disabled via Settings > Typography Stylist > Options if needed.
+             * Previous versions defaulted to false for performance reasons, but modern caching makes this
+             * unnecessary.
              *
              * @since 1.0.0
+             * @since 1.1.9 Default changed from false to true (configurable via admin)
              *
-             * @param bool    $check_full_content Whether to check full content (default: false)
+             * @param bool    $check_full_content Whether to check full content (default: true)
              * @param WP_Post $post               The post object being checked
              */
-            $check_full_content = apply_filters('typost_check_full_content_on_archives', false, $post);
+            $default_check = get_option('typost_archive_full_content_check', '1') === '1';
+            $check_full_content = apply_filters('typost_check_full_content_on_archives', $default_check, $post);
             $content_to_check = $check_full_content ? $post->post_content : '';
         }
 
@@ -568,15 +582,35 @@ class Typost {
     }
 
     /**
-     * Enqueue frontend assets
+     * Detect fonts needed on archive pages (runs on template_redirect hook)
+     *
+     * This method runs AFTER the main WordPress query has executed, ensuring
+     * $wp_query->posts is populated on archive pages. It caches the detection
+     * results in instance variables for use by enqueue_frontend_assets() and
+     * enqueue_custom_fonts_optimized().
+     *
+     * Only runs on archive pages (!is_singular()) as singular pages already work
+     * correctly via the wp_enqueue_scripts hook using get_queried_object().
+     *
+     * @since 1.1.9
      */
-    public function enqueue_frontend_assets() {
-        $has_styled = $this->has_styled_content();
+    public function detect_frontend_fonts() {
+        // Only run on archive pages (singular posts already work correctly)
+        if (is_singular()) {
+            return;
+        }
+
+        // Only run on frontend
+        if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+            return;
+        }
+
+        // Detect if current page has styled content
+        $this->has_styled_content = $this->has_styled_content();
 
         // Check if any fonts are set to load on all pages
         $has_always_load_fonts = false;
 
-        // Check uploaded fonts
         $custom_fonts = $this->get_custom_fonts();
         foreach ($custom_fonts as $font) {
             if (!empty($font['load_on_all_pages'])) {
@@ -585,13 +619,87 @@ class Typost {
             }
         }
 
-        // Check Adobe fonts if needed
         if (!$has_always_load_fonts) {
             $adobe_fonts = $this->get_adobe_fonts();
             foreach ($adobe_fonts as $font) {
                 if (!empty($font['load_on_all_pages'])) {
                     $has_always_load_fonts = true;
                     break;
+                }
+            }
+        }
+
+        // Only detect fonts if we have styled content or always-load fonts
+        if ($this->has_styled_content || $has_always_load_fonts) {
+            // Get fonts used in content
+            $used_fonts_raw = $this->get_used_fonts_in_content();
+
+            // Separate font IDs from font family names
+            $used_font_families = array();
+            $used_font_ids = array();
+
+            foreach ($used_fonts_raw as $font_ref) {
+                if (strpos($font_ref, 'id:') === 0) {
+                    $used_font_ids[] = (int) substr($font_ref, 3);
+                } else {
+                    $used_font_families[] = $font_ref;
+                }
+            }
+
+            // Resolve font replacements
+            $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
+
+            // Parse font families
+            if (!empty($used_font_families)) {
+                $parsed_font_families = $this->parse_font_family_list($used_font_families);
+                $used_font_families = array_unique($parsed_font_families);
+            }
+
+            // Store detection results
+            $this->detected_fonts = array(
+                'font_ids' => $used_font_ids,
+                'font_families' => $used_font_families,
+                'has_always_load' => $has_always_load_fonts,
+            );
+        }
+
+        $this->fonts_detected = true;
+    }
+
+    /**
+     * Enqueue frontend assets
+     */
+    public function enqueue_frontend_assets() {
+        // On archive pages, use cached detection results from template_redirect
+        // On singular pages, use existing detection logic (which works correctly)
+        if (!is_singular() && $this->fonts_detected) {
+            // Use cached results for archive pages
+            $has_styled = $this->has_styled_content;
+            $has_always_load_fonts = ($this->detected_fonts && !empty($this->detected_fonts['has_always_load']));
+        } else {
+            // Singular pages or fallback: use existing detection logic
+            $has_styled = $this->has_styled_content();
+
+            // Check if any fonts are set to load on all pages
+            $has_always_load_fonts = false;
+
+            // Check uploaded fonts
+            $custom_fonts = $this->get_custom_fonts();
+            foreach ($custom_fonts as $font) {
+                if (!empty($font['load_on_all_pages'])) {
+                    $has_always_load_fonts = true;
+                    break;
+                }
+            }
+
+            // Check Adobe fonts if needed
+            if (!$has_always_load_fonts) {
+                $adobe_fonts = $this->get_adobe_fonts();
+                foreach ($adobe_fonts as $font) {
+                    if (!empty($font['load_on_all_pages'])) {
+                        $has_always_load_fonts = true;
+                        break;
+                    }
                 }
             }
         }
@@ -665,27 +773,36 @@ class Typost {
         $used_font_families = array();
         $used_font_ids = array();
         if ($has_conditional_fonts) {
-            $used_fonts_raw = $this->get_used_fonts_in_content();
+            // On archive pages, use cached detection results from template_redirect
+            // On singular pages, use existing detection logic (which works correctly)
+            if (!is_singular() && $this->fonts_detected && $this->detected_fonts) {
+                // Use cached results for archive pages
+                $used_font_ids = $this->detected_fonts['font_ids'];
+                $used_font_families = $this->detected_fonts['font_families'];
+            } else {
+                // Singular pages or fallback: use existing detection logic
+                $used_fonts_raw = $this->get_used_fonts_in_content();
 
-            // Separate font IDs from font family names
-            foreach ($used_fonts_raw as $font_ref) {
-                if (strpos($font_ref, 'id:') === 0) {
-                    // This is a font ID reference
-                    $used_font_ids[] = (int) substr($font_ref, 3);
-                } else {
-                    // This is a font family name
-                    $used_font_families[] = $font_ref;
+                // Separate font IDs from font family names
+                foreach ($used_fonts_raw as $font_ref) {
+                    if (strpos($font_ref, 'id:') === 0) {
+                        // This is a font ID reference
+                        $used_font_ids[] = (int) substr($font_ref, 3);
+                    } else {
+                        // This is a font family name
+                        $used_font_families[] = $font_ref;
+                    }
                 }
-            }
 
-            // Resolve font IDs through replacement chain
-            // If content uses font 16 which was replaced by font 29, we need to load font 29
-            $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
+                // Resolve font IDs through replacement chain
+                // If content uses font 16 which was replaced by font 29, we need to load font 29
+                $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
 
-            if (!empty($used_font_families)) {
-                // Parse font families from CSS font-family values (which may include fallbacks)
-                $parsed_font_families = $this->parse_font_family_list($used_font_families);
-                $used_font_families = array_unique($parsed_font_families);
+                if (!empty($used_font_families)) {
+                    // Parse font families from CSS font-family values (which may include fallbacks)
+                    $parsed_font_families = $this->parse_font_family_list($used_font_families);
+                    $used_font_families = array_unique($parsed_font_families);
+                }
             }
         }
 
@@ -4210,6 +4327,18 @@ class Typost {
             }
         }
 
+        // Handle manual cache clear (separate form with dedicated nonce)
+        if (isset($_POST['typost_clear_cache']) &&
+            check_admin_referer('typography_stylist_clear_cache_nonce') &&
+            current_user_can('manage_options')) {
+
+            $this->clear_cache();
+
+            echo '<div class="notice notice-success"><p>' .
+                 esc_html__('Font cache cleared successfully. Fonts will be re-detected on the next page load.', 'typography-stylist') .
+                 '</p></div>';
+        }
+
         // Save options settings
         if (isset($_POST['typost_save_options_settings']) &&
             check_admin_referer('typost_options_settings_nonce') &&
@@ -4224,10 +4353,13 @@ class Typost {
             $allow_variable = isset($_POST['typost_allow_variable_weights']) ? '1' : '0';
             update_option('typost_allow_variable_weights', $allow_variable);
 
-            // Clear cache for all users only when the clear confirmation setting changes
-            if ($previous_show_clear_confirmation !== (bool) $show_clear_confirmation) {
-                $this->clear_cache();
-            }
+            // Save archive full content check setting
+            $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';
+            update_option('typost_archive_full_content_check', $archive_check);
+
+            // Clear cache for all users when options change
+            // Archive content check changes require cache refresh to take effect
+            $this->clear_cache();
 
             echo '<div class="notice notice-success"><p>' .
                  esc_html__('Options saved successfully.', 'typography-stylist') .

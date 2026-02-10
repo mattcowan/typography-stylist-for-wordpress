@@ -834,3 +834,31 @@ msgstr ""
 #: blocks/typography-stylist/edit.js:1625
 msgid "Preview active. Click \"Apply Font Size\" to save changes, or close this panel to cancel."
 msgstr ""
+
+#: includes/admin-page.php:1235
+msgid "Archive Page Font Detection"
+msgstr ""
+
+#: includes/admin-page.php:1244
+msgid "Check full post content on archive pages (recommended)"
+msgstr ""
+
+#: includes/admin-page.php:1247
+msgid "When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don't have manual excerpts or \"Read More\" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts."
+msgstr ""
+
+#: includes/admin-page.php:1297
+msgid "Cache Management"
+msgstr ""
+
+#: includes/admin-page.php:1298
+msgid "Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren't loading correctly after making changes, you can manually clear the cache here."
+msgstr ""
+
+#: includes/admin-page.php:1303
+msgid "Clear Font Cache"
+msgstr ""
+
+#: typography-stylist.php:4336
+msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
+msgstr ""
