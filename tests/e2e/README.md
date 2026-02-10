@@ -39,7 +39,7 @@ WP_PASSWORD=your_wordpress_password
 WP_ADMIN_PATH=/wp-admin
 ```
 
-**Note:** The development site URL is `http://typography-stylist:8080/` and test page with Typography Stylist content is at `http://typography-stylist:8080/?p=13` (Page ID 7).
+**Note:** The development site URL is `http://typography-stylist:8080/` and test page with Typography Stylist content is at `http://typography-stylist:8080/?p=13` (Post ID 13).
 
 **IMPORTANT**: Never commit your `.env` file to Git. It contains sensitive credentials and is already git-ignored.
 

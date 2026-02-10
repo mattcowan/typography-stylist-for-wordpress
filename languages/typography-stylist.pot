@@ -847,16 +847,16 @@ msgstr ""
 msgid "When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don't have manual excerpts or \"Read More\" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts."
 msgstr ""
 
-#: includes/admin-page.php:1258
-msgid "Clear Font Cache"
+#: includes/admin-page.php:1297
+msgid "Cache Management"
 msgstr ""
 
-#: includes/admin-page.php:1262
+#: includes/admin-page.php:1298
 msgid "Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren't loading correctly after making changes, you can manually clear the cache here."
 msgstr ""
 
-#: includes/admin-page.php:1266
-msgid "Clear Cache Now"
+#: includes/admin-page.php:1303
+msgid "Clear Font Cache"
 msgstr ""
 
 #: typography-stylist.php:4336

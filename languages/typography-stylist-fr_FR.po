@@ -1240,17 +1240,17 @@ msgstr "Vérifier le contenu complet des articles sur les pages d'archives (reco
 msgid "When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don't have manual excerpts or \"Read More\" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts."
 msgstr "Lorsque activé, le plugin vérifie le contenu complet des articles sur les archives du blog, les pages de catégories et les pages de tags pour détecter les polices personnalisées. Cela garantit que les polices se chargent correctement même lorsque les articles n'ont pas d'extraits manuels ou de balises \"Lire la suite\". L'impact sur les performances est minimal grâce à la mise en cache de 12 heures (environ 250-600ms au premier chargement, puis < 1ms pour les chargements suivants). Désactivez cette option uniquement si vous avez des préoccupations spécifiques de performance ou si votre thème utilise des extraits en texte brut."
 
-#: includes/admin-page.php:1258
-msgid "Clear Font Cache"
-msgstr "Vider le cache des polices"
+#: includes/admin-page.php:1297
+msgid "Cache Management"
+msgstr "Gestion du cache"
 
-#: includes/admin-page.php:1262
+#: includes/admin-page.php:1298
 msgid "Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren't loading correctly after making changes, you can manually clear the cache here."
 msgstr "Typography Stylist met en cache les données de détection de police pendant 12 à 24 heures pour améliorer les performances. Si les polices ne se chargent pas correctement après avoir apporté des modifications, vous pouvez vider manuellement le cache ici."
 
-#: includes/admin-page.php:1266
-msgid "Clear Cache Now"
-msgstr "Vider le cache maintenant"
+#: includes/admin-page.php:1303
+msgid "Clear Font Cache"
+msgstr "Vider le cache des polices"
 
 #: typography-stylist.php:4336
 msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."

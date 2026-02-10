@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 1.1.8
+ * Version: 1.1.9
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '1.1.8');
+    define('TYPOST_VERSION', '1.1.9');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -4327,7 +4327,7 @@ class Typost {
             }
         }
 
-        // Handle manual cache clear
+        // Handle manual cache clear (separate form with dedicated nonce)
         if (isset($_POST['typost_clear_cache']) &&
             check_admin_referer('typography_stylist_clear_cache_nonce') &&
             current_user_can('manage_options')) {
