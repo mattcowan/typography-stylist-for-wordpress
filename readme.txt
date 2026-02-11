@@ -229,6 +229,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: Admin setting to control archive page full content checking (enabled by default)
 * Improved: Singular pages (posts, pages) continue using optimized detection path without changes
 * Improved: Cache clearing when options are changed to ensure settings take effect immediately
+* Improved: Font detection caches now automatically clear when posts or pages are saved, so typography changes appear on the frontend immediately
 * Updated: Filter `typost_check_full_content_on_archives` now defaults to true (was false)
 * Technical: Font detection results cached in instance variables to avoid redundant queries
 * Note: Existing sites will automatically benefit from improved archive page font loading
