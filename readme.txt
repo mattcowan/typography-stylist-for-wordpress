@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9.1
-Stable tag: 1.1.8
+Stable tag: 1.1.9
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -93,7 +93,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 
 1. Upload the plugin files to `/wp-content/plugins/opentype-stylist`, or install through the WordPress plugins screen
 2. Activate the plugin through the 'Plugins' screen in WordPress
-3. Go to Settings → Headline Typography to view available features and presets
+3. Go to Settings → Typography Stylist to view available features and presets
 4. Start using the typography features in the block editor!
 
 == Frequently Asked Questions ==
@@ -165,12 +165,12 @@ The plugin includes accessibility features for screen reader compatibility:
 * **Inline Format Warnings**: Detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
 * **Typography Stylist Block**: Custom block designed for complex typography that includes ARIA markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
-* **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
+* **Screen Reader Classes**: The Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
 * **Dual Content Approach**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
 
 = How do the accessibility features for the block work? =
 
-the Typography Stylist block creates two versions of your text:
+The Typography Stylist block creates two versions of your text:
 
 1. **For screen readers**: Clean, unformatted text in a semantic heading element (H1-H6) with the `visually-hidden` class applied. This maintains the document outline and heading navigation for assistive technology users.
 2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content with complex OpenType features.

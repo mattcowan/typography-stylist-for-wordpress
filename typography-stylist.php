@@ -1886,18 +1886,22 @@ class Typost {
      * Clears stale font detection transients when post content changes,
      * ensuring the frontend re-detects fonts on the next page load.
      *
-     * @since 1.2.0
+     * @since 1.1.9
      *
-     * @param int     $post_id Post ID.
-     * @param WP_Post $post    Post object.
-     * @param bool    $update  Whether this is an update to an existing post.
+     * @param int     $post_id  Post ID.
+     * @param WP_Post $_post    Post object. Unused but required by the save_post hook signature.
+     * @param bool    $_update  Whether this is an update to an existing post. Unused but required by the hook.
      */
-    public function on_post_save($post_id, $post, $update) {
+    public function on_post_save($post_id, $_post, $_update) {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
 
         if (wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        if (!in_array(get_post_status($post_id), array('publish', 'private'), true)) {
             return;
         }
 
@@ -1907,7 +1911,7 @@ class Typost {
     /**
      * Handle post deletion: clear per-post and archive font detection caches.
      *
-     * @since 1.2.0
+     * @since 1.1.9
      *
      * @param int $post_id Post ID being deleted.
      */
@@ -1932,7 +1936,7 @@ class Typost {
      * because they are keyed by font combination -- when a post's used fonts
      * change, a new cache key is generated automatically.
      *
-     * @since 1.2.0
+     * @since 1.1.9
      * @access private
      *
      * @param int $post_id Post ID whose caches should be cleared.
@@ -1946,6 +1950,8 @@ class Typost {
         // Clear per-post transients (exact key, no wildcard needed)
         delete_transient('typost_has_styled_' . $post_id);
         delete_transient('typost_used_fonts_' . $post_id);
+        wp_cache_delete('typost_has_styled_' . $post_id, 'transient');
+        wp_cache_delete('typost_used_fonts_' . $post_id, 'transient');
 
         // Clear all archive page caches.
         // Archive cache keys use MD5(serialized post IDs), so we cannot target
@@ -1964,6 +1970,9 @@ class Typost {
             )
         );
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+        // Flush object cache to clear archive transients stored in persistent cache (Redis, Memcached)
+        wp_cache_flush();
     }
 
     /**
