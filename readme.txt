@@ -21,13 +21,13 @@ Accessibility features ensure that your styled text remains readable by screen r
 = Key Features =
 
 * **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
-* **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop-up if your selection breaks words and causes accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
+* **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop up if your selection breaks words and causes accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
 * **Live Preview**: Preview changes in real-time before applying.
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
 * **Visual Interface**: User-friendly, resizable, moveable popover with organized feature categories.
 * **Advanced Typography Controls**: Adjust letter spacing, font weight, responsive font sizes, and more.
 * **Block Editor Native**: Seamlessly integrates with Gutenberg.
-* **Custom Fonts Management**: Upload webfont kits from MyFonts, Fontspring, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
+* **Custom Fonts Management**: Upload webfont kits from MyFonts, Font Squirrel, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
 * **Font Fallbacks**: Facing a rebranding and needing to change fonts? No worries. Delete a font previously defined, and use the fallback system to seamlessly replace them.
 * **Font Preview**: Test OpenType features with any uploaded font in the settings > admin page to find exactly the styles you need.
 * **Accessibility Features**: Screen reader support with ARIA markup and a heading structure that maintains proper semantics for both screen reader and visual views
@@ -185,7 +185,7 @@ the Typography Stylist block creates two versions of your text:
 This approach provides both styled visual presentation and screen reader compatibility while preserving semantic document structure.
 
 = Will the alternate text presented to screen readers cause duplicate content issues for SEO? =
-No. The alternate text is hidden from search engines using the aria-hidden attribute. This is a common technique for providing accessible content without affecting SEO.
+Google explicitly recognizes hidden text for accessibility as legitimate (not cloaking/spam). The content is identical in both headings, signaling genuine accessibility use. This dual-heading pattern is a well-known accessibility technique.
 
 = Should I use the inline format or the block? =
 
