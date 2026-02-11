@@ -22,9 +22,9 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Supports modern browsers with OpenType feature support
 
 ### Accessibility Features
-- Smart selection warnings for partial word selections
-- Typost block maintains proper heading semantics for both screen reader and visual views
-- ARIA markup ensures screen reader compatibility while enabling complex typography
+- Smart selection warnings for partial word selections that can cause screen readers to stumble. Convert text to a Typography Stylist block to present text to screen readers without breaking up the word with span tags needed for complex typoography.
+- Typography Stylist block maintains proper heading semantics for both screen reader and visual views.
+- ARIA markup ensures screen reader compatibility
 - Optional aria-label attributes for inline formatted text
 - Configurable screen reader classes (visually-hidden, sr-only, custom)
 - Conversion tool from inline formats to accessible blocks
@@ -32,9 +32,10 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 ### Font Management
 - Upload webfont kits from MyFonts, Fontspring, or other providers
 - Adobe Fonts (Typekit) integration via embed codes
-- Custom font definitions for fonts loaded through themes, plugins, or CDN
+- Custom font definitions for fonts loaded through other spurces such as the theme
 - Font fallback configuration
 - Font preview with OpenType feature testing
+- Fonts only load on pages they are used by default, with option to enable on all content
 
 ## Installation
 
@@ -46,7 +47,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 2. **Activate** the plugin through the WordPress admin panel:
    - Go to Plugins → Installed Plugins
-   - Find "Typost"
+   - Find "Typography Stylist"
    - Click "Activate"
 
 3. **Configure** (optional):
@@ -61,7 +62,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 #### Option 1: Upload Webfont Kits (MyFonts, Fontspring, etc.)
 
 1. **Purchase and download** your webfont kit from MyFonts, Fontspring, or another provider
-2. **Go to** Settings → Typost → Custom Fonts tab
+2. **Go to** Settings → Typography Symtylist → Custom Fonts tab
 3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
 4. **Click "Choose ZIP File"** and select your webfont kit ZIP file
 5. **Click "Upload Font Kit"**
@@ -97,7 +98,7 @@ The fonts will be immediately available in the preview selector and block editor
 If you have fonts loaded through your theme, another plugin, or a CDN (like Google Fonts), you can define them for use with this plugin:
 
 1. **Make sure your font is already loaded** on your site
-2. **Go to** Settings → Typost → Custom Fonts tab
+2. **Go to** Settings → Typography Stylist → Custom Fonts tab
 3. **Scroll to** "Custom Font Definitions" section
 4. **Enter a display name** for the font (e.g., "Playfair Display")
 5. **Enter the CSS font-family value** exactly as it appears in your theme (e.g., `'Playfair Display', serif`)
@@ -111,7 +112,7 @@ The font will be available in the block editor font selector.
 - System fonts: `-apple-system, BlinkMacSystemFont, sans-serif`
 - Theme fonts: `'My Theme Font', Georgia, serif`
 
-**Note:** This plugin does not load fonts - it only applies OpenType features to fonts already loaded on your site.
+**Note:** The custom definitions section does not load fonts, it only applies OpenType features to fonts already loaded on your site.
 
 ### Managing Font Fallbacks
 
@@ -133,7 +134,7 @@ font-family: 'Playfair Display', Georgia, serif;
 1. **Create a heading block** in the WordPress editor (H1-H6)
 2. **Type your headline** text
 3. **Select the text** you want to style (complete words or phrases)
-4. **Click the Typost button** in the toolbar (circle "O" icon)
+4. **Click the Typography Stylist button** in the toolbar (swashy "T" icon)
 5. **Choose a preset** or toggle individual features
 6. **Preview** your changes in real-time
 7. **Click Apply** to save
@@ -143,9 +144,9 @@ font-family: 'Playfair Display', Georgia, serif;
 - Apply anyway (not recommended)
 - Cancel
 
-#### Method 2: Typost Block (for complex typography)
+#### Method 2: Typography Stylist Block (for complex typography)
 
-1. **Add a Typost block** from the block inserter
+1. **Add a Typography Stylist block** from the block inserter
 2. **Select the heading level** (H1-H6, P, or DIV) from the toolbar
 3. **Type your text** directly in the block
 4. **Configure features** in the sidebar Inspector Controls:
@@ -168,9 +169,10 @@ font-family: 'Playfair Display', Georgia, serif;
 This plugin requires fonts that support OpenType features. Many premium script fonts and professional typefaces include these features.
 
 **Examples of fonts with OpenType features:**
-- Script fonts by Alejandro Paul (Sudtipos): Calgary Script, Affair, Adios Script, Parfumerie Script, Samantha
-- Google Fonts: Playfair Display, Cormorant (limited OpenType support)
-- Professional typefaces: Adobe Caslon Pro, Freight Display Pro
+- Script fonts by Alejandro Paul (Sudtipos) like Chocolate OT, Affair, Gratitude Script (with Kathy Milici)
+- Bookmania by Mark Stephenson
+- ITC Avant Garde
+- Orpheus Pro
 
 **Note:** Check the font's documentation or specimen to verify which OpenType features are supported. Not all fonts include all features, and feature support varies by font.
 
