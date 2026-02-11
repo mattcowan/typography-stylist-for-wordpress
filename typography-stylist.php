@@ -93,6 +93,10 @@ class Typost {
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
 
+        // Clear per-post and archive caches when posts are saved or deleted
+        add_action('save_post', array($this, 'on_post_save'), 10, 3);
+        add_action('before_delete_post', array($this, 'on_post_delete'));
+
         // Output CSS variables for fonts
         add_action('wp_head', array($this, 'output_font_css_variables'), 5);
         add_action('admin_head', array($this, 'output_font_css_variables'), 5);
@@ -1874,6 +1878,92 @@ class Typost {
             // Flush object cache for transient group
             wp_cache_flush();
         }
+    }
+
+    /**
+     * Handle post save: clear per-post and archive font detection caches.
+     *
+     * Clears stale font detection transients when post content changes,
+     * ensuring the frontend re-detects fonts on the next page load.
+     *
+     * @since 1.2.0
+     *
+     * @param int     $post_id Post ID.
+     * @param WP_Post $post    Post object.
+     * @param bool    $update  Whether this is an update to an existing post.
+     */
+    public function on_post_save($post_id, $post, $update) {
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return;
+        }
+
+        if (wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        $this->clear_post_content_caches($post_id);
+    }
+
+    /**
+     * Handle post deletion: clear per-post and archive font detection caches.
+     *
+     * @since 1.2.0
+     *
+     * @param int $post_id Post ID being deleted.
+     */
+    public function on_post_delete($post_id) {
+        if (wp_is_post_revision($post_id)) {
+            return;
+        }
+
+        $this->clear_post_content_caches($post_id);
+    }
+
+    /**
+     * Clear font detection caches related to a specific post.
+     *
+     * Removes per-post transients for styled content detection and used fonts,
+     * plus all archive page caches (which cannot be targeted by post ID because
+     * they use MD5 hashes of serialized post ID arrays as cache keys).
+     *
+     * Does NOT clear global font CSS caches (admin_font_css, editor_font_css,
+     * block_font_css, css_variables) because those only change when fonts
+     * themselves are added/removed/modified. Does NOT clear font_css_* caches
+     * because they are keyed by font combination -- when a post's used fonts
+     * change, a new cache key is generated automatically.
+     *
+     * @since 1.2.0
+     * @access private
+     *
+     * @param int $post_id Post ID whose caches should be cleared.
+     */
+    private function clear_post_content_caches($post_id) {
+        $post_id = absint($post_id);
+        if (!$post_id) {
+            return;
+        }
+
+        // Clear per-post transients (exact key, no wildcard needed)
+        delete_transient('typost_has_styled_' . $post_id);
+        delete_transient('typost_used_fonts_' . $post_id);
+
+        // Clear all archive page caches.
+        // Archive cache keys use MD5(serialized post IDs), so we cannot target
+        // specific archives containing this post. Wildcard delete is required.
+        // Direct database call is required for bulk deletion of transients with wildcard patterns.
+        // No caching needed as this is a delete operation.
+        global $wpdb;
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
+                $wpdb->esc_like('_transient_typost_has_styled_archive_') . '%',
+                $wpdb->esc_like('_transient_timeout_typost_has_styled_archive_') . '%',
+                $wpdb->esc_like('_transient_typost_used_fonts_archive_') . '%',
+                $wpdb->esc_like('_transient_timeout_typost_used_fonts_archive_') . '%'
+            )
+        );
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
     }
 
     /**
