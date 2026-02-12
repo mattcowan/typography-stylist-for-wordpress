@@ -12,24 +12,27 @@ Unlock hidden OpenType features like ligatures, swashes, and stylistic sets in t
 
 == Description ==
 
-Typography Stylist provides advanced typography controls for WordPress. This plugin allows you to apply OpenType features directly in the block editor, and set properties like letter spacing, font-weight, and more. With support for ligatures, stylistic sets, swashes, and alternates, you can create elegant headlines and premium typography effects with ease. Accessibility features ensure that your styled text remains readable by screen readers.
+Typography Stylist provides advanced typography controls for WordPress. This plugin allows you to apply OpenType features directly in the block editor, and access glyphs and ligatures hidden within fonts. Additionally, set properties like letter spacing, line-height, responsive sizing, font-weight, and more in the editor, so you can get exactly the look you want from your typefaces. 
+
+Manage fonts from the settings page, either by uploading webfont kits or adding Adobe Typekit embeds. Fonts load intelligently only when they are used.  With support for ligatures, stylistic sets, swashes, and alternates, you can create elegant headlines and premium typography effects with ease. 
+
+Accessibility features ensure that your styled text remains readable by screen readers and assistive technologies: breaking up strings of text with the inline span elements necessary to apply complex features can cause screen readers to read words in fragments or skip them entirely. The plugin includes a custom Typography Stylist block that provides a clean, unbroken set of text to maintain screen reader compatibility while allowing for complex typography to be presented visually. When applying features to partial words in standard heading blocks, the plugin detects potential accessibility issues and provides warnings with options to convert to the Typography Stylist block for maximum accessibility.
 
 = Key Features =
 
 * **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
-* **Inline Text Selection**: Highlight any text within richtext blocks, and apply basic typography features quickly. A warning will pop-up if your selection may cause accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
+* **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop up if your selection breaks words and causes accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
 * **Live Preview**: Preview changes in real-time before applying.
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
-* **Visual Interface**: User-friendly popover with organized feature categories.
+* **Visual Interface**: User-friendly, resizable, moveable popover with organized feature categories.
 * **Advanced Typography Controls**: Adjust letter spacing, font weight, responsive font sizes, and more.
 * **Block Editor Native**: Seamlessly integrates with Gutenberg.
-* **Custom Fonts Management**: Upload webfont kits from MyFonts, Fontspring, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
+* **Custom Fonts Management**: Upload webfont kits from MyFonts, Font Squirrel, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
 * **Font Fallbacks**: Facing a rebranding and needing to change fonts? No worries. Delete a font previously defined, and use the fallback system to seamlessly replace them.
 * **Font Preview**: Test OpenType features with any uploaded font in the settings > admin page to find exactly the styles you need.
 * **Accessibility Features**: Screen reader support with ARIA markup and a heading structure that maintains proper semantics for both screen reader and visual views
-* **Smart Warnings**: Alerts when selecting partial words and offers accessible conversion
-* **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility
-* **Automatic Archive Detection**: Custom fonts load automatically on blog archives, category pages, and tag pages without requiring manual configuration (configurable via admin)
+* **ARIA Label Support**: Optional aria-label attributes for screen reader compatibility for rich text blocks with inline formatting
+* **Automatic Archive Detection**: Custom fonts load automatically on blog archives, category pages, and tag pages without requiring manual configuration
 
 = Supported OpenType Features =
 
@@ -62,14 +65,18 @@ Typography Stylist provides advanced typography controls for WordPress. This plu
 This plugin requires fonts that support OpenType features. Many premium script fonts and professional typefaces include these features.
 
 Examples:
-* Script fonts by Alejandro Paul (Calgary Script, Affair, Adios Script, Parfumerie Script)
+* Script fonts by Alejandro Paul like Inglesa, Gratitude Script (with the wonderful Kathy Milici)
 * Bookmania by Mark Simonson
-* Alana and other fonts by Laura Worthington
-* Professional typefaces with OpenType support
+* Orpheus, designed by Kevin King, Patrick Griffin, and Walter Tiemann, from Canada Type
+* Elaina and other fonts by Laura Worthington
+* Liza from Underware
+* Memoriam by Patrick Griffin
+* ITC Avant Garde designed by André Gürtler, Christian Mengelt, Ed Benguiat, Erich Gschwind, Herb Lubalin, and others. From Monotype
+* Many other typefaces
 
 Check the font's documentation or specimen to verify which OpenType features are supported. Not all fonts have alternates or other advanced features.
 
-= How It Works For Headlines =
+= How It Works For Headings =
 
 1. Create or edit a heading block (H1-H6)
 2. Type your headline text
@@ -91,7 +98,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 
 == Installation ==
 
-1. Upload the plugin files to `/wp-content/plugins/opentype-stylist`, or install through the WordPress plugins screen
+1. Upload the plugin files to `/wp-content/plugins/typography-stylist`, or install through the WordPress plugins screen
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Go to Settings → Typography Stylist to view available features and presets
 4. Start using the typography features in the block editor!
@@ -100,11 +107,11 @@ Check the font's documentation or specimen to verify which OpenType features are
 
 = Do I need special fonts? =
 
-Yes, this plugin requires fonts that support OpenType features. Most premium script fonts and many professional typefaces include these features. Free fonts may have limited support.
+For features like stylistic sets, this plugin requires fonts that support OpenType features. Most premium script fonts and many professional typefaces include these features. Free fonts may have limited support. Letter-spacing, line-height, and other non-opentype features will work with any font.
 
 = Will this work with any font? =
 
-The plugin will work with any font, but you'll only see results if the font includes the OpenType features you're trying to use. Check your font's documentation for supported features.
+The plugin will work with any font, but you'll only see results for stylistic sets or ligatures if the font includes the OpenType features you're trying to use. Check your font's documentation for supported features.
 
 = Does this work with Google Fonts? =
 
@@ -114,10 +121,10 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 Absolutely! You have four options:
 
-1. **Upload webfont kits** from MyFonts, Fontspring, or other providers using the plugin's Custom Fonts tab
+1. **Upload webfont kits** from MyFonts, Font Squirrel, or other providers using the plugin's Custom Fonts tab
 2. **Connect Adobe Fonts** (Typekit) by pasting your project's embed code
 3. **Define custom fonts** loaded through your theme, plugins, or CDN (like Google Fonts)
-4. **Load fonts manually** using @font-face in your theme
+4. **Load fonts manually** using @font-face in your theme - style the default font in your theme for headings without selecting font-family from the plugin's dropdown menu.
 
 The plugin can apply OpenType features to any font loaded on your site, but previews in the admin settings page will only work for fonts uploaded or connected through the plugin.
 
@@ -162,10 +169,10 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 
 The plugin includes accessibility features for screen reader compatibility:
 
-* **Inline Format Warnings**: Detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
-* **Typography Stylist Block**: Custom block designed for complex typography that includes ARIA markup with screen reader-accessible text
+* **Inline Format Warnings**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
+* **Typography Stylist Block**: Custom block designed for complex typography that includes markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
-* **Screen Reader Classes**: The Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text
+* **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text as an alternative
 * **Dual Content Approach**: The block provides duplicate content - one version styled for visual users, one clean version for assistive technology
 
 = How do the accessibility features for the block work? =
@@ -176,6 +183,9 @@ The Typography Stylist block creates two versions of your text:
 2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content with complex OpenType features.
 
 This approach provides both styled visual presentation and screen reader compatibility while preserving semantic document structure.
+
+= Will the alternate text presented to screen readers cause duplicate content issues for SEO? =
+Google explicitly recognizes hidden text for accessibility as legitimate (not cloaking/spam). The content is identical in both headings, signaling genuine accessibility use. This dual-heading pattern is a well-known accessibility technique.
 
 = Should I use the inline format or the block? =
 
@@ -223,7 +233,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.1.9 =
-* Fixed: Archive page font loading - fonts now load correctly on blog home, category pages, tag pages, and all archive types
+* Fixed: Archive page font loading - fonts now load correctly and more consistently on blog home, category pages, tag pages, and all archive types
 * Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
 * Added: Manual cache clear button in Settings → Typography Stylist → Options tab for troubleshooting font loading issues
 * Added: Admin setting to control archive page full content checking (enabled by default)
