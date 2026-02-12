@@ -100,7 +100,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 
 1. Upload the plugin files to `/wp-content/plugins/typography-stylist`, or install through the WordPress plugins screen
 2. Activate the plugin through the 'Plugins' screen in WordPress
-3. Go to Settings → Headline Typography to view available features and presets
+3. Go to Settings → Typography Stylist to view available features and presets
 4. Start using the typography features in the block editor!
 
 == Frequently Asked Questions ==
@@ -177,7 +177,7 @@ The plugin includes accessibility features for screen reader compatibility:
 
 = How do the accessibility features for the block work? =
 
-the Typography Stylist block creates two versions of your text:
+The Typography Stylist block creates two versions of your text:
 
 1. **For screen readers**: Clean, unformatted text in a semantic heading element (H1-H6) with the `visually-hidden` class applied. This maintains the document outline and heading navigation for assistive technology users.
 2. **For visual display**: Styled text with `aria-hidden="true"` to prevent screen readers from reading fragmented content with complex OpenType features.
@@ -239,6 +239,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: Admin setting to control archive page full content checking (enabled by default)
 * Improved: Singular pages (posts, pages) continue using optimized detection path without changes
 * Improved: Cache clearing when options are changed to ensure settings take effect immediately
+* Improved: Font detection caches now automatically clear when posts or pages are saved, so typography changes appear on the frontend immediately
 * Updated: Filter `typost_check_full_content_on_archives` now defaults to true (was false)
 * Technical: Font detection results cached in instance variables to avoid redundant queries
 * Note: Existing sites will automatically benefit from improved archive page font loading

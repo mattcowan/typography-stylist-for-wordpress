@@ -351,6 +351,16 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.1.9
+
+**Cache & Font Loading Improvements:**
+- Fixed: Archive page font loading - fonts now load correctly on blog home, category pages, tag pages, and all archive types
+- Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
+- Added: Manual cache clear button in Settings → Typography Stylist → Options tab
+- Added: Admin setting to control archive page full content checking (enabled by default)
+- Improved: Font detection caches now automatically clear when posts or pages are saved, so typography changes appear on the frontend immediately
+- Improved: Cache clearing when options are changed to ensure settings take effect immediately
+
 ### Version 1.1.6
 
 **Control Order Improvements:**
