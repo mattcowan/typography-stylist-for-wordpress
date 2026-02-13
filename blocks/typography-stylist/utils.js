@@ -764,6 +764,33 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 }
 
 /**
+ * Validate nesting depth before applying styling
+ * Prevents creating excessive nesting (max 3 levels)
+ *
+ * @param {Element} element - Starting element to check depth from
+ * @return {Object} { valid: boolean, depth: number, error: string|null }
+ */
+export function validateNestingDepth(element) {
+	let depth = 0;
+	let current = element;
+	const MAX_DEPTH = 3; // Conservative limit - can increase if approach proves reliable
+
+	while (current && current.classList && current.classList.contains('typost-styled')) {
+		depth++;
+		if (depth > MAX_DEPTH) {
+			return {
+				valid: false,
+				depth: depth,
+				error: `Maximum nesting depth (${MAX_DEPTH}) exceeded`
+			};
+		}
+		current = current.parentElement;
+	}
+
+	return { valid: true, depth: depth, error: null };
+}
+
+/**
  * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
  * This function checks if the selected range is already inside an typost-styled span.
@@ -791,6 +818,15 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 
 		// Find the closest typost-styled span (if any)
 		let existingSpan = commonAncestor.closest('span.typost-styled');
+
+		// Validate nesting depth before creating nested spans
+		if (commonAncestor) {
+			const depthCheck = validateNestingDepth(commonAncestor);
+			if (!depthCheck.valid) {
+				// Don't create deeply nested spans
+				return false;
+			}
+		}
 
 		if (existingSpan) {
 			// Check if the entire selection is within this span
@@ -1191,8 +1227,65 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 			return { success: true, content: container.innerHTML, error: null };
 		}
 
-		// Multi-node selection - defer to range method
-		return { success: false, content: htmlContent, error: 'Multi-node selection - use range method' };
+		// Multi-node selection - handle by preserving DOM structure
+		// When selection spans multiple text nodes (e.g., plain text "M" + feature span "a"),
+		// we need to wrap the ENTIRE DOM structure, not just text content.
+
+		try {
+			const firstNode = affectedNodes[0].node;
+			const lastNode = affectedNodes[affectedNodes.length - 1].node;
+
+			// Find common ancestor that contains all affected nodes
+			let commonParent = firstNode.parentNode;
+			while (commonParent && !commonParent.contains(lastNode)) {
+				commonParent = commonParent.parentNode;
+			}
+
+			if (!commonParent) {
+				return { success: false, content: htmlContent, error: 'No common parent found' };
+			}
+
+			// Create range that encompasses all affected content
+			const multiRange = doc.createRange();
+			multiRange.setStart(firstNode, Math.max(0, startOffset - affectedNodes[0].start));
+			const lastNodeOffset = Math.min(
+				lastNode.length || 0,
+				endOffset - affectedNodes[affectedNodes.length - 1].start
+			);
+			multiRange.setEnd(lastNode, lastNodeOffset);
+
+			// Extract content (preserves nested structure)
+			const fragment = multiRange.extractContents();
+
+			// Wrap in new span
+			const wrapper = doc.createElement('span');
+			wrapper.className = 'typost-styled';
+			Object.keys(attributes).forEach(key => {
+				const value = attributes[key];
+				if (value !== null && value !== undefined && value !== '') {
+					wrapper.setAttribute(key, String(value));
+				}
+			});
+			if (styleString) {
+				wrapper.setAttribute('style', styleString);
+			}
+
+			wrapper.appendChild(fragment);
+			multiRange.insertNode(wrapper);
+
+			// Clean up any empty spans left behind by extractContents()
+			const allSpans = container.querySelectorAll('span.typost-styled');
+			allSpans.forEach(span => {
+				if (!span.textContent || span.textContent.trim().length === 0) {
+					span.remove();
+				}
+			});
+
+			return { success: true, content: container.innerHTML, error: null };
+
+		} catch (error) {
+			return { success: false, content: htmlContent, error: `Multi-node error: ${error.message}` };
+		}
 
 	} catch (error) {
 		return { success: false, content: htmlContent, error: error.message };
