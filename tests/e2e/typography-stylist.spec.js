@@ -461,7 +461,7 @@ test.describe('Typography Stylist - Inline Features', () => {
       await page.waitForTimeout(1000);
 
       // Verify font family persists
-      const styledSpan = editor.locator(`span.typost-styled[data-fontfamily="${selectedValue}"]`);
+      const styledSpan = editor.locator(`span.typost-styled[data-font-id="${selectedValue}"]`);
       await expect(styledSpan).toHaveText('Beautiful', { timeout: 10000 });
 
       // Verify only one span was created (selection-only application)
@@ -475,5 +475,491 @@ test.describe('Typography Stylist - Inline Features', () => {
       // No fonts available - skip test gracefully
       test.skip(true, 'No custom fonts available for testing, skipping font family assertions');
     }
+  });
+
+  // ===== NEW TESTS FOR INLINE STYLE DETECTION & SMART APPLY =====
+
+  test('detection: letter-spacing shows applied value when re-selecting styled text', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // Select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open popover
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.waitFor({ state: 'visible', timeout: 10000 });
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+    await popover.waitFor({ state: 'visible', timeout: 10000 });
+
+    // Set letter-spacing to 150
+    const letterSpacingInput = popover.getByLabel('Letter Spacing', { exact: false });
+    await letterSpacingInput.waitFor({ state: 'visible', timeout: 5000 });
+    await letterSpacingInput.fill('150');
+    await page.waitForTimeout(300);
+
+    // Click Apply Letter Spacing
+    const applyButton = page.locator('button:has-text("Apply Letter Spacing")');
+    await applyButton.waitFor({ state: 'visible', timeout: 5000 });
+    await applyButton.click();
+    await page.waitForTimeout(1000);
+
+    // Close popover
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Re-select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open popover again
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify letter-spacing input shows 150 (not 0)
+    const letterSpacingValue = await letterSpacingInput.inputValue();
+    expect(letterSpacingValue).toBe('150');
+  });
+
+  test('detection: line-height shows applied value when re-selecting styled text', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // Select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open popover
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+    await popover.waitFor({ state: 'visible', timeout: 10000 });
+
+    // Set line-height to 2.0
+    const lineHeightInput = popover.locator('input[type="number"][step="0.1"][min="0.5"]');
+    await lineHeightInput.waitFor({ state: 'visible', timeout: 5000 });
+    await lineHeightInput.fill('2.0');
+    await page.waitForTimeout(300);
+
+    // Click Apply Line Height
+    const applyButton = page.locator('button:has-text("Apply Line Height")');
+    await applyButton.click();
+    await page.waitForTimeout(1000);
+
+    // Close and re-open
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Re-select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify line-height input shows 2.0 (not 0 or default)
+    const lineHeightValue = await lineHeightInput.inputValue();
+    expect(lineHeightValue).toBe('2');
+  });
+
+  test('collapsed cursor: updating letter-spacing modifies existing span in-place', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // First apply letter-spacing to "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+    const letterSpacingInput = popover.locator('input[type="number"][min="-500"]');
+    await letterSpacingInput.fill('100');
+    await page.waitForTimeout(300);
+
+    const applyButton = page.locator('button:has-text("Apply Letter Spacing")');
+    await applyButton.click();
+    await page.waitForTimeout(1000);
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Verify span exists with letter-spacing 100
+    let styledSpan = editor.locator('span.typost-styled[data-letterspacing="100"]');
+    await expect(styledSpan).toHaveText('Beautiful');
+
+    // Now place collapsed cursor inside "Beautiful" (no selection)
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 8; i++) { // Position at "ti" in "Beautiful"
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.waitForTimeout(500);
+
+    // Open popover again
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Change letter-spacing to 200
+    await letterSpacingInput.fill('200');
+    await page.waitForTimeout(300);
+
+    // Click Apply (with collapsed cursor, should update existing span)
+    await applyButton.click();
+    await page.waitForTimeout(2000);
+
+    // Close popover
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Verify: only ONE span with letter-spacing 200 (not nested, not multiple spans)
+    styledSpan = editor.locator('span.typost-styled[data-letterspacing="200"]');
+    await expect(styledSpan).toHaveText('Beautiful');
+
+    // Verify no span with old value 100
+    const oldSpan = editor.locator('span.typost-styled[data-letterspacing="100"]');
+    await expect(oldSpan).toHaveCount(0);
+
+    // Verify only 1 styled span total in the content
+    const allSpans = editor.locator('span.typost-styled');
+    await expect(allSpans).toHaveCount(1);
+  });
+
+  test('partial selection: splitting span into segments', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // First apply letter-spacing to entire "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+    const letterSpacingInput = popover.locator('input[type="number"][min="-500"]');
+    await letterSpacingInput.fill('100');
+    await page.waitForTimeout(300);
+
+    const applyButton = page.locator('button:has-text("Apply Letter Spacing")');
+    await applyButton.click();
+    await page.waitForTimeout(1000);
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Verify original span exists
+    let styledSpan = editor.locator('span.typost-styled[data-letterspacing="100"]');
+    await expect(styledSpan).toHaveText('Beautiful');
+
+    // Now select just "eaut" (partial selection within "Beautiful")
+    // "Beautiful" = B-e-a-u-t-i-f-u-l
+    // Position at "e" (offset 1 in span)
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 7; i++) { // "Hello " + "B" = position at "e"
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+
+    // Select "eaut" (4 characters)
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open popover
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Apply different letter-spacing (200) to the selection
+    await letterSpacingInput.fill('200');
+    await page.waitForTimeout(300);
+
+    await applyButton.click();
+    await page.waitForTimeout(2000);
+
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Verify: should have 3 separate spans (not nested)
+    // Span 1: "B" with letter-spacing 100
+    // Span 2: "eaut" with letter-spacing 200
+    // Span 3: "iful" with letter-spacing 100
+
+    const allSpans = editor.locator('span.typost-styled');
+    const spanCount = await allSpans.count();
+    expect(spanCount).toBe(3);
+
+    // Verify content of each span
+    const span1 = allSpans.nth(0);
+    await expect(span1).toHaveText('B');
+    await expect(span1).toHaveAttribute('data-letterspacing', '100');
+
+    const span2 = allSpans.nth(1);
+    await expect(span2).toHaveText('eaut');
+    await expect(span2).toHaveAttribute('data-letterspacing', '200');
+
+    const span3 = allSpans.nth(2);
+    await expect(span3).toHaveText('iful');
+    await expect(span3).toHaveAttribute('data-letterspacing', '100');
+  });
+
+  test('detection: nested spans - apply font-size then features, both detected', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // Select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+
+    // Apply responsive font size
+    const fontSizeSelect = popover.getByLabel('Font Size (for selected text)');
+    await fontSizeSelect.selectOption('responsive');
+    await page.waitForTimeout(1000);
+
+    const minInput = popover.locator('input[type="number"]').nth(0);
+    await minInput.fill('20');
+    await page.waitForTimeout(300);
+
+    const applyFontSizeButton = page.locator('button:has-text("Apply Font Size")');
+    await applyFontSizeButton.click();
+    await page.waitForTimeout(1000);
+
+    // Now apply an OpenType feature (ss01) to the same selection
+    // First re-select "Beautiful"
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Toggle ss01 feature
+    const ss01Checkbox = popover.locator('input[type="checkbox"][id*="ss01"]');
+    await ss01Checkbox.check();
+    await page.waitForTimeout(300);
+
+    const applyFeatureButton = page.locator('button:has-text("Apply Features")');
+    await applyFeatureButton.click();
+    await page.waitForTimeout(1000);
+
+    // Close popover
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Re-select "Beautiful" one more time
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    // Open popover again
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify BOTH font-size and ss01 feature are detected
+    // Font size should be "responsive" with min 20
+    const fontSizeValue = await fontSizeSelect.inputValue();
+    expect(fontSizeValue).toBe('responsive');
+
+    const minValue = await minInput.inputValue();
+    expect(minValue).toBe('20');
+
+    // ss01 checkbox should be checked
+    const isChecked = await ss01Checkbox.isChecked();
+    expect(isChecked).toBe(true);
+  });
+
+  test('detection: font-weight shows applied value when re-selecting styled text', async ({ page }) => {
+    const iframe = page.frameLocator('iframe[name="editor-canvas"]');
+    const editor = iframe.locator('[data-type="typost/block"] [contenteditable]').first();
+
+    // Select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    const toggleButton = page.locator('button[aria-label="Typography Stylist Features"]');
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    const popover = page.locator('.typost-block-modal');
+
+    // Apply font-weight 700
+    const fontWeightSelect = popover.getByLabel('Font Weight (for selected text)');
+    await fontWeightSelect.selectOption('700');
+    await page.waitForTimeout(300);
+
+    const applyButton = page.locator('button:has-text("Apply Font Weight")');
+    await applyButton.click();
+    await page.waitForTimeout(1000);
+
+    // Close and re-open
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(1000);
+
+    // Re-select "Beautiful"
+    await editor.click();
+    await page.keyboard.press('Home');
+    await page.waitForTimeout(300);
+    for (let i = 0; i < 6; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.down('Shift');
+    for (let i = 0; i < 9; i++) {
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(50);
+    }
+    await page.keyboard.up('Shift');
+    await page.waitForTimeout(500);
+
+    await toggleButton.click();
+    await page.waitForTimeout(1000);
+
+    // Verify font-weight dropdown shows 700 (not "inherit")
+    const fontWeightValue = await fontWeightSelect.inputValue();
+    expect(fontWeightValue).toBe('700');
   });
 });

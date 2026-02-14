@@ -123,6 +123,27 @@ Quick Feature Toggle previews detect inline fonts at cursor position:
 - Memoized for performance (see `inlineFontFamilyAtSelection` in [edit.js](blocks/typography-stylist/edit.js))
 - Preview displays in inline font if detected, otherwise falls back to block-level font
 
+**Nested Span Handling (v1.2.0+):**
+The plugin uses nested `<span class="typost-styled">` elements to layer multiple typography properties (e.g., font-size wrapping font-weight wrapping OpenType features).
+
+**Maximum Nesting Depth:** 3 levels
+- Enforced in `validateNestingDepth()` utility function
+- Conservative limit - can be increased if approach proves reliable
+- Prevents performance degradation and editing complexity
+- Typical usage: 2-3 levels (fontsize → fontweight → features)
+
+**Multi-Node Selections:**
+- When selection spans across nested spans, DOM structure is preserved
+- Uses DOM Range `extractContents()` to maintain nested elements
+- Automatically cleans up empty spans left behind after extraction
+- Falls back gracefully if range operations fail
+
+**Edge Cases Handled:**
+- Partial selections crossing span boundaries
+- Feature spans nested within font property spans
+- Multiple sequential styled spans in selection
+- Empty spans created during content extraction are automatically removed
+
 ### REST API Endpoints
 
 **Presets:**

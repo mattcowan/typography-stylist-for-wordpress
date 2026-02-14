@@ -261,6 +261,536 @@ export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEn
 }
 
 /**
+ * Parse ALL inline style properties from HTML content at a specific cursor position
+ *
+ * Unified parser that detects features, fontId, fontWeight, fontSize (+ breakpoints),
+ * letterSpacing, lineHeight, plus span boundaries (spanText, spanStart, spanEnd).
+ *
+ * @param {string} htmlContent - HTML content to parse
+ * @param {number} cursorStart - Cursor/selection start offset (in text, not HTML)
+ * @param {number} cursorEnd - Cursor/selection end offset (in text, not HTML)
+ * @return {Object|null} Object with all properties, or null if no styled span at cursor
+ */
+export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
+	if (!htmlContent || cursorStart === undefined || cursorEnd === undefined) {
+		return null;
+	}
+
+	try {
+		// Parse HTML
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Get all typost-styled spans
+		const spans = container.querySelectorAll('span.typost-styled');
+		if (!spans.length) {
+			return null;
+		}
+
+		// Build text offset map using TreeWalker
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let currentOffset = 0;
+		let textNode;
+		const textNodeMap = [];
+
+		while ((textNode = walker.nextNode())) {
+			const text = textNode.textContent || '';
+			textNodeMap.push({
+				node: textNode,
+				start: currentOffset,
+				end: currentOffset + text.length,
+				text: text
+			});
+			currentOffset += text.length;
+		}
+
+		// Find spans that overlap cursor position
+		let smallestMatchingSpan = null;
+		let smallestSpanLength = Infinity;
+		let spanStart = 0;
+		let spanEnd = 0;
+
+		spans.forEach(span => {
+			// Calculate span's text range
+			let spanTextStart = Infinity;
+			let spanTextEnd = -1;
+
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (span.contains(node)) {
+					spanTextStart = Math.min(spanTextStart, start);
+					spanTextEnd = Math.max(spanTextEnd, end);
+				}
+			});
+
+			// Check if cursor overlaps this span
+			// For collapsed cursor: cursorStart >= spanTextStart && cursorStart < spanTextEnd
+			// For selection: cursorStart < spanTextEnd && cursorEnd > spanTextStart
+			const overlaps = (cursorStart === cursorEnd)
+				? (cursorStart >= spanTextStart && cursorStart < spanTextEnd)
+				: (cursorStart < spanTextEnd && cursorEnd > spanTextStart);
+
+			if (overlaps) {
+				const spanLength = spanTextEnd - spanTextStart;
+				// Keep the smallest (innermost) matching span
+				// When lengths are equal, prefer the span that is a descendant of the current smallest
+				const isSmallerOrInner = spanLength < smallestSpanLength ||
+					(spanLength === smallestSpanLength && smallestMatchingSpan && smallestMatchingSpan.contains(span));
+
+				if (isSmallerOrInner) {
+					smallestMatchingSpan = span;
+					smallestSpanLength = spanLength;
+					spanStart = spanTextStart;
+					spanEnd = spanTextEnd;
+				}
+			}
+		});
+
+		if (!smallestMatchingSpan) {
+			return null;
+		}
+
+		// Extract properties from the innermost span and walk UP to collect inherited properties
+		const result = {
+			features: [],
+			fontId: null,
+			fontWeight: null,
+			fontSize: null,
+			fontSizeMin: null,
+			fontSizePreferred: null,
+			fontSizeMax: null,
+			letterSpacing: null,
+			lineHeight: null,
+			spanText: smallestMatchingSpan.textContent || '',
+			spanStart: spanStart,
+			spanEnd: spanEnd
+		};
+
+		// Walk up from innermost span to collect properties
+		let currentSpan = smallestMatchingSpan;
+		while (currentSpan) {
+			// Features - ONLY from innermost span (not inherited)
+			if (currentSpan === smallestMatchingSpan) {
+				const featuresAttr = currentSpan.getAttribute('data-features');
+				if (featuresAttr) {
+					result.features = featuresAttr.split(',').map(f => f.trim()).filter(f => f);
+				} else {
+					// Fallback: parse from style attribute
+					const style = currentSpan.getAttribute('style') || '';
+					const featureMatch = style.match(/font-feature-settings:\s*([^;]+)/);
+					if (featureMatch) {
+						const featureStr = featureMatch[1];
+						const features = [];
+						const regex = /"([^"]+)"\s+1/g;
+						let match;
+						while ((match = regex.exec(featureStr))) {
+							features.push(match[1]);
+						}
+						result.features = features;
+					}
+				}
+			}
+
+			// FontId - inherited from first ancestor that has it
+			if (result.fontId === null) {
+				const fontId = currentSpan.getAttribute('data-font-id');
+				if (fontId) {
+					result.fontId = fontId;
+				}
+			}
+
+			// FontWeight - inherited from first ancestor that has it
+			if (result.fontWeight === null) {
+				const fontWeight = currentSpan.getAttribute('data-fontweight');
+				if (fontWeight) {
+					result.fontWeight = fontWeight;
+				}
+			}
+
+			// FontSize - inherited from first ancestor that has it
+			if (result.fontSize === null) {
+				const fontSize = currentSpan.getAttribute('data-fontsize');
+				if (fontSize) {
+					result.fontSize = fontSize;
+					// Also get breakpoints if responsive
+					if (fontSize === 'responsive') {
+						const min = currentSpan.getAttribute('data-fontsize-min');
+						const preferred = currentSpan.getAttribute('data-fontsize-preferred');
+						const max = currentSpan.getAttribute('data-fontsize-max');
+						if (min) result.fontSizeMin = parseInt(min, 10);
+						if (preferred) result.fontSizePreferred = parseInt(preferred, 10);
+						if (max) result.fontSizeMax = parseInt(max, 10);
+					}
+				}
+			}
+
+			// LetterSpacing - inherited from first ancestor that has it
+			if (result.letterSpacing === null) {
+				const letterSpacingAttr = currentSpan.getAttribute('data-letterspacing');
+				if (letterSpacingAttr) {
+					result.letterSpacing = parseInt(letterSpacingAttr, 10);
+				} else {
+					// Fallback: parse from style attribute
+					const style = currentSpan.getAttribute('style') || '';
+					const lsMatch = style.match(/letter-spacing:\s*([-\d.]+)em/);
+					if (lsMatch) {
+						result.letterSpacing = Math.round(parseFloat(lsMatch[1]) * 1000);
+					}
+				}
+			}
+
+			// LineHeight - inherited from first ancestor that has it
+			if (result.lineHeight === null) {
+				const lineHeightAttr = currentSpan.getAttribute('data-lineheight');
+				if (lineHeightAttr) {
+					result.lineHeight = parseFloat(lineHeightAttr);
+				} else {
+					// Fallback: parse from style attribute
+					const style = currentSpan.getAttribute('style') || '';
+					const lhMatch = style.match(/line-height:\s*([\d.]+)/);
+					if (lhMatch) {
+						result.lineHeight = parseFloat(lhMatch[1]);
+					}
+				}
+			}
+
+			// Walk up to parent span.typost-styled (if any)
+			// Use parentElement.closest() to skip the current span and find the next ancestor
+			if (currentSpan.parentElement) {
+				currentSpan = currentSpan.parentElement.closest('span.typost-styled');
+			} else {
+				currentSpan = null;
+			}
+		}
+
+		return result;
+
+	} catch (error) {
+		return null;
+	}
+}
+
+/**
+ * Update a span property in-place (for collapsed cursor)
+ *
+ * @param {string} htmlContent - HTML content
+ * @param {number} cursorOffset - Cursor position
+ * @param {string} propertyDataAttr - Data attribute to check (e.g., 'data-letterspacing')
+ * @param {string} newValue - New attribute value
+ * @param {string} styleProperty - CSS property name
+ * @param {string} styleValue - CSS value
+ * @return {Object} { success: boolean, content: string }
+ */
+export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDataAttr, newValue, styleProperty, styleValue) {
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Find span at cursor that has the property
+		const spans = container.querySelectorAll('span.typost-styled');
+		if (!spans.length) {
+			return { success: false, content: htmlContent };
+		}
+
+		// Build text offset map
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let currentOffset = 0;
+		let textNode;
+		const textNodeMap = [];
+
+		while ((textNode = walker.nextNode())) {
+			const text = textNode.textContent || '';
+			textNodeMap.push({ node: textNode, start: currentOffset, end: currentOffset + text.length });
+			currentOffset += text.length;
+		}
+
+		// Find span at cursor
+		let targetSpan = null;
+		spans.forEach(span => {
+			let spanStart = Infinity, spanEnd = -1;
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (span.contains(node)) {
+					spanStart = Math.min(spanStart, start);
+					spanEnd = Math.max(spanEnd, end);
+				}
+			});
+			if (cursorOffset >= spanStart && cursorOffset < spanEnd) {
+				if (!targetSpan) targetSpan = span;
+			}
+		});
+
+		if (!targetSpan) {
+			return { success: false, content: htmlContent };
+		}
+
+		// Walk up to find span that HAS the property, or use innermost span if none found
+		let spanWithProperty = null;
+		let current = targetSpan;
+		while (current) {
+			if (current.hasAttribute(propertyDataAttr)) {
+				spanWithProperty = current;
+				break;
+			}
+			current = current.parentElement?.closest('span.typost-styled');
+		}
+
+		// If no span has the property yet, add it to the innermost span at cursor
+		if (!spanWithProperty) {
+			spanWithProperty = targetSpan;
+		}
+
+		// Update the property
+		spanWithProperty.setAttribute(propertyDataAttr, newValue);
+
+		// Update style attribute
+		const existingStyle = spanWithProperty.getAttribute('style') || '';
+		const styleObj = {};
+		existingStyle.split(';').forEach(rule => {
+			const [prop, val] = rule.split(':').map(s => s.trim());
+			if (prop && val) styleObj[prop] = val;
+		});
+		styleObj[styleProperty] = styleValue;
+		spanWithProperty.setAttribute('style', Object.entries(styleObj).map(([p, v]) => `${p}: ${v}`).join('; '));
+
+		return { success: true, content: container.innerHTML };
+	} catch (error) {
+		return { success: false, content: htmlContent };
+	}
+}
+
+/**
+ * Split span into segments (for partial selection with same property)
+ *
+ * @param {string} htmlContent - HTML content
+ * @param {number} startOffset - Selection start
+ * @param {number} endOffset - Selection end
+ * @param {string} propertyDataAttr - Data attribute to check
+ * @param {Object} newAttributes - Attributes for selection segment
+ * @param {string} newStyleString - Style for selection segment
+ * @return {Object} { success: boolean, content: string }
+ */
+export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyDataAttr, newAttributes, newStyleString) {
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// Find parent span with the property
+		const spans = container.querySelectorAll('span.typost-styled');
+		if (!spans.length) {
+			return { success: false, content: htmlContent };
+		}
+
+		// Build text offset map
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		let currentOffset = 0;
+		let textNode;
+		const textNodeMap = [];
+
+		while ((textNode = walker.nextNode())) {
+			const text = textNode.textContent || '';
+			textNodeMap.push({ node: textNode, start: currentOffset, end: currentOffset + text.length, text: text });
+			currentOffset += text.length;
+		}
+
+		// Find parent span that has the property and overlaps selection
+		let parentSpan = null;
+		let parentStart = 0, parentEnd = 0;
+
+		spans.forEach(span => {
+			if (!span.hasAttribute(propertyDataAttr)) return;
+
+			let spanStart = Infinity, spanEnd = -1;
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (span.contains(node)) {
+					spanStart = Math.min(spanStart, start);
+					spanEnd = Math.max(spanEnd, end);
+				}
+			});
+
+			const overlaps = startOffset < spanEnd && endOffset > spanStart;
+			if (overlaps && !parentSpan) {
+				parentSpan = span;
+				parentStart = spanStart;
+				parentEnd = spanEnd;
+			}
+		});
+
+		if (!parentSpan) {
+			return { success: false, content: htmlContent };
+		}
+
+		// Check if selection covers entire span
+		if (startOffset <= parentStart && endOffset >= parentEnd) {
+			return { success: false, content: htmlContent };
+		}
+
+		// Check for nested child spans crossing boundaries
+		const childSpans = parentSpan.querySelectorAll('span.typost-styled');
+		for (let child of childSpans) {
+			let childStart = Infinity, childEnd = -1;
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (child.contains(node)) {
+					childStart = Math.min(childStart, start);
+					childEnd = Math.max(childEnd, end);
+				}
+			});
+			// Child is safe if entirely within one segment
+			const entirelyInBefore = childEnd <= startOffset;
+			const entirelyInSelection = childStart >= startOffset && childEnd <= endOffset;
+			const entirelyInAfter = childStart >= endOffset;
+			const isEntirelyWithinOneSegment = entirelyInBefore || entirelyInSelection || entirelyInAfter;
+
+			if (!isEntirelyWithinOneSegment) {
+				return { success: false, content: htmlContent };
+			}
+		}
+
+		// Clone parent attributes and parse styles
+		const parentAttrs = {};
+		for (let attr of parentSpan.attributes) {
+			parentAttrs[attr.name] = attr.value;
+		}
+
+		// Parse parent styles into object
+		const parentStyleObj = {};
+		if (parentAttrs.style) {
+			parentAttrs.style.split(';').forEach(rule => {
+				const [prop, val] = rule.split(':').map(s => s.trim());
+				if (prop && val) parentStyleObj[prop] = val;
+			});
+		}
+
+		// Parse new styles and merge with parent styles
+		const newStyleObj = {};
+		newStyleString.split(';').forEach(rule => {
+			const [prop, val] = rule.split(':').map(s => s.trim());
+			if (prop && val) newStyleObj[prop] = val;
+		});
+		const mergedStyleObj = { ...parentStyleObj, ...newStyleObj };
+		const mergedStyleString = Object.entries(mergedStyleObj).map(([p, v]) => `${p}: ${v}`).join('; ');
+
+		// Split by iterating through parent's childNodes and tracking text offsets
+		const selStart = startOffset - parentStart;
+		const selEnd = endOffset - parentStart;
+		let currentPos = 0;
+		const segments = { before: [], selection: [], after: [] };
+
+		function processNode(node) {
+			if (node.nodeType === Node.TEXT_NODE) {
+				const text = node.textContent || '';
+				const nodeStart = currentPos;
+				const nodeEnd = currentPos + text.length;
+
+				// Determine which segment(s) this text belongs to
+				if (nodeEnd <= selStart) {
+					segments.before.push(text);
+				} else if (nodeStart >= selEnd) {
+					segments.after.push(text);
+				} else if (nodeStart >= selStart && nodeEnd <= selEnd) {
+					segments.selection.push(text);
+				} else {
+					// Text spans multiple segments - split it
+					if (nodeStart < selStart) {
+						segments.before.push(text.substring(0, selStart - nodeStart));
+					}
+					const inSelStart = Math.max(0, selStart - nodeStart);
+					const inSelEnd = Math.min(text.length, selEnd - nodeStart);
+					if (inSelEnd > inSelStart) {
+						segments.selection.push(text.substring(inSelStart, inSelEnd));
+					}
+					if (nodeEnd > selEnd) {
+						segments.after.push(text.substring(selEnd - nodeStart));
+					}
+				}
+				currentPos += text.length;
+			} else if (node.nodeType === Node.ELEMENT_NODE) {
+				const childStart = currentPos;
+				const childText = node.textContent || '';
+				const childEnd = childStart + childText.length;
+
+				// Determine which segment this entire child element belongs to
+				if (childEnd <= selStart) {
+					segments.before.push(node.outerHTML);
+					currentPos += childText.length;
+				} else if (childStart >= selEnd) {
+					segments.after.push(node.outerHTML);
+					currentPos += childText.length;
+				} else if (childStart >= selStart && childEnd <= selEnd) {
+					segments.selection.push(node.outerHTML);
+					currentPos += childText.length;
+				}
+				// If child spans boundaries, it was already rejected by boundary check
+			}
+		}
+
+		Array.from(parentSpan.childNodes).forEach(processNode);
+
+		// Build replacement HTML
+		let html = '';
+		if (segments.before.length > 0) {
+			html += `<span class="typost-styled"`;
+			for (let key in parentAttrs) {
+				if (key !== 'class' && key !== 'style') html += ` ${key}="${parentAttrs[key]}"`;
+			}
+			html += ` style="${parentAttrs.style || ''}">${segments.before.join('')}</span>`;
+		}
+
+		html += `<span class="typost-styled"`;
+		const mergedAttrs = { ...parentAttrs, ...newAttributes };
+		for (let key in mergedAttrs) {
+			if (key !== 'class' && key !== 'style') html += ` ${key}="${mergedAttrs[key]}"`;
+		}
+		html += ` style="${mergedStyleString}">${segments.selection.join('')}</span>`;
+
+		if (segments.after.length > 0) {
+			html += `<span class="typost-styled"`;
+			for (let key in parentAttrs) {
+				if (key !== 'class' && key !== 'style') html += ` ${key}="${parentAttrs[key]}"`;
+			}
+			html += ` style="${parentAttrs.style || ''}">${segments.after.join('')}</span>`;
+		}
+
+		// Replace parent span
+		const tempDiv = doc.createElement('div');
+		tempDiv.innerHTML = html;
+		parentSpan.replaceWith(...tempDiv.childNodes);
+
+		return { success: true, content: container.innerHTML };
+	} catch (error) {
+		return { success: false, content: htmlContent };
+	}
+}
+
+/**
+ * Validate nesting depth before applying styling
+ * Prevents creating excessive nesting (max 3 levels)
+ *
+ * @param {Element} element - Starting element to check depth from
+ * @return {Object} { valid: boolean, depth: number, error: string|null }
+ */
+export function validateNestingDepth(element) {
+	let depth = 0;
+	let current = element;
+	const MAX_DEPTH = 3; // Conservative limit - can increase if approach proves reliable
+
+	while (current && current.classList && current.classList.contains('typost-styled')) {
+		depth++;
+		if (depth > MAX_DEPTH) {
+			return {
+				valid: false,
+				depth: depth,
+				error: `Maximum nesting depth (${MAX_DEPTH}) exceeded`
+			};
+		}
+		current = current.parentElement;
+	}
+
+	return { valid: true, depth: depth, error: null };
+}
+
+/**
  * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
  * This function checks if the selected range is already inside an typost-styled span.
@@ -289,6 +819,15 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 		// Find the closest typost-styled span (if any)
 		let existingSpan = commonAncestor.closest('span.typost-styled');
 
+		// Validate nesting depth before creating nested spans
+		if (commonAncestor) {
+			const depthCheck = validateNestingDepth(commonAncestor);
+			if (!depthCheck.valid) {
+				// Don't create deeply nested spans
+				return false;
+			}
+		}
+
 		if (existingSpan) {
 			// Check if the entire selection is within this span
 			const isEntirelyWithin = existingSpan.contains(range.startContainer) &&
@@ -310,7 +849,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 
 					// PRESERVE existing inline attributes that caller isn't explicitly setting
 					// This prevents losing inline font-family when applying line-height, etc.
-					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
 					preservedAttributes = {};  // Reset for this merge operation
 					attributesToPreserve.forEach(attr => {
 						if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
@@ -368,7 +907,9 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 				const stylePropertyMap = {
 					'data-font-id': 'font-family',
 					'data-fontweight': 'font-weight',
-					'data-fontsize': 'font-size'
+					'data-fontsize': 'font-size',
+					'data-letterspacing': 'letter-spacing',
+					'data-lineheight': 'line-height'
 				};
 
 				// Parse new styles (overwrite existing, EXCEPT for preserved attributes)
@@ -553,7 +1094,7 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 				span = parent;
 
 				// PRESERVE existing inline attributes that caller isn't explicitly setting
-				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontweight'];
+				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
 				const preservedAttributes = {};
 				attributesToPreserve.forEach(attr => {
 					if (!attributes.hasOwnProperty(attr) && span.hasAttribute(attr)) {
@@ -607,7 +1148,9 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 					const stylePropertyMap = {
 						'data-font-id': 'font-family',
 						'data-fontweight': 'font-weight',
-						'data-fontsize': 'font-size'
+						'data-fontsize': 'font-size',
+						'data-letterspacing': 'letter-spacing',
+						'data-lineheight': 'line-height'
 					};
 
 					// Parse new styles (don't overwrite preserved attributes)
@@ -684,8 +1227,65 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 			return { success: true, content: container.innerHTML, error: null };
 		}
 
-		// Multi-node selection - defer to range method
-		return { success: false, content: htmlContent, error: 'Multi-node selection - use range method' };
+		// Multi-node selection - handle by preserving DOM structure
+		// When selection spans multiple text nodes (e.g., plain text "M" + feature span "a"),
+		// we need to wrap the ENTIRE DOM structure, not just text content.
+
+		try {
+			const firstNode = affectedNodes[0].node;
+			const lastNode = affectedNodes[affectedNodes.length - 1].node;
+
+			// Find common ancestor that contains all affected nodes
+			let commonParent = firstNode.parentNode;
+			while (commonParent && !commonParent.contains(lastNode)) {
+				commonParent = commonParent.parentNode;
+			}
+
+			if (!commonParent) {
+				return { success: false, content: htmlContent, error: 'No common parent found' };
+			}
+
+			// Create range that encompasses all affected content
+			const multiRange = doc.createRange();
+			multiRange.setStart(firstNode, Math.max(0, startOffset - affectedNodes[0].start));
+			const lastNodeOffset = Math.min(
+				lastNode.length || 0,
+				endOffset - affectedNodes[affectedNodes.length - 1].start
+			);
+			multiRange.setEnd(lastNode, lastNodeOffset);
+
+			// Extract content (preserves nested structure)
+			const fragment = multiRange.extractContents();
+
+			// Wrap in new span
+			const wrapper = doc.createElement('span');
+			wrapper.className = 'typost-styled';
+			Object.keys(attributes).forEach(key => {
+				const value = attributes[key];
+				if (value !== null && value !== undefined && value !== '') {
+					wrapper.setAttribute(key, String(value));
+				}
+			});
+			if (styleString) {
+				wrapper.setAttribute('style', styleString);
+			}
+
+			wrapper.appendChild(fragment);
+			multiRange.insertNode(wrapper);
+
+			// Clean up any empty spans left behind by extractContents()
+			const allSpans = container.querySelectorAll('span.typost-styled');
+			allSpans.forEach(span => {
+				if (!span.textContent || span.textContent.trim().length === 0) {
+					span.remove();
+				}
+			});
+
+			return { success: true, content: container.innerHTML, error: null };
+
+		} catch (error) {
+			return { success: false, content: htmlContent, error: `Multi-node error: ${error.message}` };
+		}
 
 	} catch (error) {
 		return { success: false, content: htmlContent, error: error.message };
@@ -922,4 +1522,165 @@ export function stripInlineFeatures(htmlContent) {
  */
 export function isValidFontSizeRange(min, preferred, max) {
 	return min <= preferred && preferred <= max;
+}
+
+/**
+ * Debounce function - delays function execution until after delay milliseconds
+ * have elapsed since the last time it was invoked
+ *
+ * @param {Function} func - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @return {Function} - Debounced function with cancel method
+ */
+export function debounce(func, delay) {
+	let timeoutId;
+
+	const debounced = function(...args) {
+		clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => {
+			func.apply(this, args);
+		}, delay);
+	};
+
+	debounced.cancel = () => {
+		clearTimeout(timeoutId);
+	};
+
+	return debounced;
+}
+
+/**
+ * Remove specific property from a typost-styled span
+ * Checks if span should be unwrapped after removal
+ *
+ * @param {HTMLElement} span - The span element to modify
+ * @param {string} dataAttribute - Data attribute to remove (e.g., 'data-letterspacing')
+ * @param {string} styleProperty - Style property to remove (e.g., 'letter-spacing')
+ * @return {boolean} - True if span should be unwrapped (no attributes remain)
+ */
+export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
+	// Remove data attribute
+	span.removeAttribute(dataAttribute);
+
+	// For responsive font-size, also remove related breakpoint attributes
+	if (dataAttribute === 'data-fontsize') {
+		span.removeAttribute('data-fontsize-min');
+		span.removeAttribute('data-fontsize-preferred');
+		span.removeAttribute('data-fontsize-max');
+	}
+
+	// Parse and update style attribute
+	const currentStyle = span.getAttribute('style') || '';
+	const styleObj = {};
+
+	currentStyle.split(';').forEach(rule => {
+		const [prop, value] = rule.split(':').map(s => s.trim());
+		if (prop && value && prop !== styleProperty) {
+			styleObj[prop] = value;
+		}
+	});
+
+	// Rebuild style string if there are remaining styles, otherwise remove style attribute
+	if (Object.keys(styleObj).length > 0) {
+		const newStyle = Object.entries(styleObj)
+			.map(([prop, value]) => `${prop}: ${value}`)
+			.join('; ');
+		span.setAttribute('style', newStyle);
+	} else {
+		span.removeAttribute('style');
+	}
+
+	// Check if any typost attributes remain
+	const hasFeatures = span.getAttribute('data-features');
+	const hasFontId = span.getAttribute('data-font-id');
+	const hasFontSize = span.getAttribute('data-fontsize');
+	const hasFontWeight = span.getAttribute('data-fontweight');
+	const hasLetterSpacing = span.getAttribute('data-letterspacing');
+	const hasLineHeight = span.getAttribute('data-lineheight');
+
+	const hasAnyAttributes = hasFeatures || hasFontId || hasFontSize ||
+	                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+
+	if (!hasAnyAttributes && Object.keys(styleObj).length === 0) {
+		return true; // Signal to unwrap span
+	}
+
+	return false;
+}
+
+/**
+ * Remove specific property from selected text's spans
+ * Unwraps spans that have no remaining attributes
+ *
+ * @param {string} htmlContent - Block HTML content
+ * @param {number} startOffset - Selection start offset
+ * @param {number} endOffset - Selection end offset
+ * @param {string} dataAttribute - Data attribute to remove (e.g., 'data-letterspacing')
+ * @param {string} styleProperty - Style property to remove (e.g., 'letter-spacing')
+ * @return {Object} - { success: boolean, content: string }
+ */
+export function removePropertyFromSelection(htmlContent, startOffset, endOffset, dataAttribute, styleProperty) {
+	if (!htmlContent) {
+		return { success: false, content: htmlContent };
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+
+	// Build text offset map using TreeWalker to find spans at selection
+	const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	let currentOffset = 0;
+	let textNode;
+	const spansAtSelection = new Set();
+
+	// Walk through all text nodes and find spans that overlap with selection
+	while ((textNode = walker.nextNode())) {
+		const textLength = textNode.length;
+		const nodeStart = currentOffset;
+		const nodeEnd = currentOffset + textLength;
+
+		// Check if this text node overlaps with selection
+		if (nodeEnd > startOffset && nodeStart < endOffset) {
+			// Find typost-styled spans containing this text node
+			let parent = textNode.parentElement;
+			while (parent && parent !== container) {
+				if (parent.classList && parent.classList.contains('typost-styled')) {
+					if (parent.getAttribute(dataAttribute)) {
+						spansAtSelection.add(parent);
+					}
+				}
+				parent = parent.parentElement;
+			}
+		}
+
+		currentOffset += textLength;
+	}
+
+	// Remove property from each span found in selection
+	spansAtSelection.forEach(span => {
+		const shouldUnwrap = removePropertyFromSpan(span, dataAttribute, styleProperty);
+
+		if (shouldUnwrap && span.parentNode) {
+			// Unwrap span - move children to parent
+			while (span.firstChild) {
+				span.parentNode.insertBefore(span.firstChild, span);
+			}
+			span.parentNode.removeChild(span);
+		}
+	});
+
+	return {
+		success: true,
+		content: container.innerHTML
+	};
+}
+
+// Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
+if (typeof window !== 'undefined') {
+	window.typostSharedUtils = {
+		parseInlineStylesAtCursor,
+		parseInlineFeaturesAtCursor,
+		parseInlineFontFamilyAtCursor
+	};
 }
