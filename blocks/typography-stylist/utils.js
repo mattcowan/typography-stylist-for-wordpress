@@ -289,7 +289,7 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 		}
 
 		// Build text offset map using TreeWalker
-		const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
 		let currentOffset = 0;
 		let textNode;
 		const textNodeMap = [];
@@ -494,7 +494,7 @@ export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDat
 		}
 
 		// Build text offset map
-		const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
 		let currentOffset = 0;
 		let textNode;
 		const textNodeMap = [];
@@ -583,7 +583,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 		}
 
 		// Build text offset map
-		const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
 		let currentOffset = 0;
 		let textNode;
 		const textNodeMap = [];
@@ -1561,6 +1561,13 @@ export function debounce(func, delay) {
 export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 	// Remove data attribute
 	span.removeAttribute(dataAttribute);
+
+	// For responsive font-size, also remove related breakpoint attributes
+	if (dataAttribute === 'data-fontsize') {
+		span.removeAttribute('data-fontsize-min');
+		span.removeAttribute('data-fontsize-preferred');
+		span.removeAttribute('data-fontsize-max');
+	}
 
 	// Parse and update style attribute
 	const currentStyle = span.getAttribute('style') || '';

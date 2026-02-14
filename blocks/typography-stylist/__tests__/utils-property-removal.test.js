@@ -267,9 +267,31 @@ describe('Typography Stylist - removePropertyFromSelection()', () => {
 
 		expect(result.success).toBe(true);
 		expect(result.content).not.toContain('data-fontsize');
+		expect(result.content).not.toContain('data-fontsize-min');
+		expect(result.content).not.toContain('data-fontsize-preferred');
+		expect(result.content).not.toContain('data-fontsize-max');
 		expect(result.content).not.toContain('font-size');
-		// Note: This test assumes removePropertyFromSpan removes all fontsize-related attributes
-		// In practice, you may need to enhance removePropertyFromSpan to handle related attributes
+		// Span should be completely unwrapped since all attributes removed
+		expect(result.content).toBe('Text');
+	});
+
+	it('should remove responsive font-size while preserving other span styles', () => {
+		const html =
+			'<span class="typost-styled" data-fontsize="responsive" data-fontsize-min="16" data-fontsize-preferred="32" data-fontsize-max="64" data-fontweight="700" style="font-size: clamp(16px, 2vw + 1rem, 64px); font-weight: 700">Text</span>';
+		const result = removePropertyFromSelection(html, 0, 4, 'data-fontsize', 'font-size');
+
+		expect(result.success).toBe(true);
+		// Responsive font-size data attributes and CSS should be removed
+		expect(result.content).not.toContain('data-fontsize="responsive"');
+		expect(result.content).not.toContain('data-fontsize-min');
+		expect(result.content).not.toContain('data-fontsize-preferred');
+		expect(result.content).not.toContain('data-fontsize-max');
+		expect(result.content).not.toContain('font-size');
+		// Other styling should remain and span should be preserved
+		expect(result.content).toContain('<span');
+		expect(result.content).toContain('</span>');
+		expect(result.content).toContain('data-fontweight="700"');
+		expect(result.content).toContain('font-weight: 700');
 	});
 
 	it('should remove font-weight property', () => {

@@ -44,12 +44,19 @@ const removePreviewSpans = (htmlContent) => {
 	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 	const container = doc.body.firstChild;
 
-	// Find all preview spans and unwrap them
+	// Find all preview spans and unwrap them (preserving child nodes)
 	const previewSpans = container.querySelectorAll('span.typost-preview-temp');
 	previewSpans.forEach(span => {
-		// Replace span with its text content
-		const textNode = doc.createTextNode(span.textContent || '');
-		span.parentNode.replaceChild(textNode, span);
+		const parent = span.parentNode;
+		if (!parent) return;
+
+		// Move all child nodes out of the span (preserves nested elements)
+		while (span.firstChild) {
+			parent.insertBefore(span.firstChild, span);
+		}
+
+		// Remove the now-empty span
+		parent.removeChild(span);
 	});
 
 	return container.innerHTML;
@@ -201,6 +208,27 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			}
 		}, 600) // Longer delay for responsive font-size (3 sliders)
 	).current;
+
+	// Cleanup debounced functions on unmount (prevent memory leaks)
+	useEffect(() => {
+		return () => {
+			if (debouncedApplyLetterSpacing && typeof debouncedApplyLetterSpacing.cancel === 'function') {
+				debouncedApplyLetterSpacing.cancel();
+			}
+			if (debouncedApplyLineHeight && typeof debouncedApplyLineHeight.cancel === 'function') {
+				debouncedApplyLineHeight.cancel();
+			}
+			if (debouncedApplyFontFamily && typeof debouncedApplyFontFamily.cancel === 'function') {
+				debouncedApplyFontFamily.cancel();
+			}
+			if (debouncedApplyFontWeight && typeof debouncedApplyFontWeight.cancel === 'function') {
+				debouncedApplyFontWeight.cancel();
+			}
+			if (debouncedApplyFontSize && typeof debouncedApplyFontSize.cancel === 'function') {
+				debouncedApplyFontSize.cancel();
+			}
+		};
+	}, []); // Empty deps - only run on unmount
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
