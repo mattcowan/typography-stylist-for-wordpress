@@ -1524,6 +1524,151 @@ export function isValidFontSizeRange(min, preferred, max) {
 	return min <= preferred && preferred <= max;
 }
 
+/**
+ * Debounce function - delays function execution until after delay milliseconds
+ * have elapsed since the last time it was invoked
+ *
+ * @param {Function} func - Function to debounce
+ * @param {number} delay - Delay in milliseconds
+ * @return {Function} - Debounced function with cancel method
+ */
+export function debounce(func, delay) {
+	let timeoutId;
+
+	const debounced = function(...args) {
+		clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => {
+			func.apply(this, args);
+		}, delay);
+	};
+
+	debounced.cancel = () => {
+		clearTimeout(timeoutId);
+	};
+
+	return debounced;
+}
+
+/**
+ * Remove specific property from a typost-styled span
+ * Checks if span should be unwrapped after removal
+ *
+ * @param {HTMLElement} span - The span element to modify
+ * @param {string} dataAttribute - Data attribute to remove (e.g., 'data-letterspacing')
+ * @param {string} styleProperty - Style property to remove (e.g., 'letter-spacing')
+ * @return {boolean} - True if span should be unwrapped (no attributes remain)
+ */
+export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
+	// Remove data attribute
+	span.removeAttribute(dataAttribute);
+
+	// Parse and update style attribute
+	const currentStyle = span.getAttribute('style') || '';
+	const styleObj = {};
+
+	currentStyle.split(';').forEach(rule => {
+		const [prop, value] = rule.split(':').map(s => s.trim());
+		if (prop && value && prop !== styleProperty) {
+			styleObj[prop] = value;
+		}
+	});
+
+	// Rebuild style string if there are remaining styles, otherwise remove style attribute
+	if (Object.keys(styleObj).length > 0) {
+		const newStyle = Object.entries(styleObj)
+			.map(([prop, value]) => `${prop}: ${value}`)
+			.join('; ');
+		span.setAttribute('style', newStyle);
+	} else {
+		span.removeAttribute('style');
+	}
+
+	// Check if any typost attributes remain
+	const hasFeatures = span.getAttribute('data-features');
+	const hasFontId = span.getAttribute('data-font-id');
+	const hasFontSize = span.getAttribute('data-fontsize');
+	const hasFontWeight = span.getAttribute('data-fontweight');
+	const hasLetterSpacing = span.getAttribute('data-letterspacing');
+	const hasLineHeight = span.getAttribute('data-lineheight');
+
+	const hasAnyAttributes = hasFeatures || hasFontId || hasFontSize ||
+	                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+
+	if (!hasAnyAttributes && Object.keys(styleObj).length === 0) {
+		return true; // Signal to unwrap span
+	}
+
+	return false;
+}
+
+/**
+ * Remove specific property from selected text's spans
+ * Unwraps spans that have no remaining attributes
+ *
+ * @param {string} htmlContent - Block HTML content
+ * @param {number} startOffset - Selection start offset
+ * @param {number} endOffset - Selection end offset
+ * @param {string} dataAttribute - Data attribute to remove (e.g., 'data-letterspacing')
+ * @param {string} styleProperty - Style property to remove (e.g., 'letter-spacing')
+ * @return {Object} - { success: boolean, content: string }
+ */
+export function removePropertyFromSelection(htmlContent, startOffset, endOffset, dataAttribute, styleProperty) {
+	if (!htmlContent) {
+		return { success: false, content: htmlContent };
+	}
+
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+
+	// Build text offset map using TreeWalker to find spans at selection
+	const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+	let currentOffset = 0;
+	let textNode;
+	const spansAtSelection = new Set();
+
+	// Walk through all text nodes and find spans that overlap with selection
+	while ((textNode = walker.nextNode())) {
+		const textLength = textNode.length;
+		const nodeStart = currentOffset;
+		const nodeEnd = currentOffset + textLength;
+
+		// Check if this text node overlaps with selection
+		if (nodeEnd > startOffset && nodeStart < endOffset) {
+			// Find typost-styled spans containing this text node
+			let parent = textNode.parentElement;
+			while (parent && parent !== container) {
+				if (parent.classList && parent.classList.contains('typost-styled')) {
+					if (parent.getAttribute(dataAttribute)) {
+						spansAtSelection.add(parent);
+					}
+				}
+				parent = parent.parentElement;
+			}
+		}
+
+		currentOffset += textLength;
+	}
+
+	// Remove property from each span found in selection
+	spansAtSelection.forEach(span => {
+		const shouldUnwrap = removePropertyFromSpan(span, dataAttribute, styleProperty);
+
+		if (shouldUnwrap && span.parentNode) {
+			// Unwrap span - move children to parent
+			while (span.firstChild) {
+				span.parentNode.insertBefore(span.firstChild, span);
+			}
+			span.parentNode.removeChild(span);
+		}
+	});
+
+	return {
+		success: true,
+		content: container.innerHTML
+	};
+}
+
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {

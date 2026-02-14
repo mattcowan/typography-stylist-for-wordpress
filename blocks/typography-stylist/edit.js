@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange } from './utils';
+import { parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -151,6 +151,56 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	// Store the original content before preview
 	const originalContentRef = useRef(null);
+
+	// Refs to store the latest apply functions (to avoid stale closures in debounced functions)
+	const applyLetterSpacingRef = useRef(null);
+	const applyLineHeightRef = useRef(null);
+	const applyFontFamilyRef = useRef(null);
+	const applyFontWeightRef = useRef(null);
+	const applyFontSizeRef = useRef(null);
+
+	// Debounced auto-apply functions for responsive controls
+	// These are created once and reused across renders to maintain debounce state
+	// They use refs to call the latest version of apply functions (avoiding stale closures)
+	const debouncedApplyLetterSpacing = useRef(
+		debounce(() => {
+			if (applyLetterSpacingRef.current) {
+				applyLetterSpacingRef.current();
+			}
+		}, 400)
+	).current;
+
+	const debouncedApplyLineHeight = useRef(
+		debounce(() => {
+			if (applyLineHeightRef.current) {
+				applyLineHeightRef.current();
+			}
+		}, 400)
+	).current;
+
+	const debouncedApplyFontFamily = useRef(
+		debounce(() => {
+			if (applyFontFamilyRef.current) {
+				applyFontFamilyRef.current();
+			}
+		}, 300)
+	).current;
+
+	const debouncedApplyFontWeight = useRef(
+		debounce(() => {
+			if (applyFontWeightRef.current) {
+				applyFontWeightRef.current();
+			}
+		}, 300)
+	).current;
+
+	const debouncedApplyFontSize = useRef(
+		debounce(() => {
+			if (applyFontSizeRef.current) {
+				applyFontSizeRef.current();
+			}
+		}, 600) // Longer delay for responsive font-size (3 sliders)
+	).current;
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
@@ -594,39 +644,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		});
 	};
 
-	// Clear letter spacing (reset to 0)
+	// Clear letter spacing (reset to 0 and remove from content)
 	const clearLetterSpacing = () => {
+		if (!content || inlineLetterSpacing === 0) return;
+
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
 
-		// Build styles object with remaining active preview values
-		const styles = {};
-
-		if (previewLineHeight !== 0) {
-			styles['line-height'] = previewLineHeight;
-		}
-
-		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
-			styles['font-size'] = clampValue;
-		}
-
-		// If other properties remain, rebuild preview; otherwise restore original
-		if (Object.keys(styles).length > 0) {
-			applyPreviewStyles({
+		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+			const result = removePropertyFromSelection(
 				content,
-				selectionStart,
-				selectionEnd,
-				clientId,
-				styles,
-				setAttributes,
-				originalContentRef
-			});
-		} else {
-			// No more preview properties - restore original content
-			if (originalContentRef.current) {
-				setAttributes({ content: originalContentRef.current });
-				originalContentRef.current = null;
+				selectionStart.offset || 0,
+				selectionEnd.offset || 0,
+				'data-letterspacing',
+				'letter-spacing'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
 			}
 		}
 	};
@@ -663,39 +697,86 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		});
 	};
 
-	// Clear line height (reset to 0)
+	// Clear line height (reset to 0 and remove from content)
 	const clearLineHeight = () => {
+		if (!content || inlineLineHeight === 0) return;
+
 		setInlineLineHeight(0);
 		setPreviewLineHeight(0);
 
-		// Build styles object with remaining active preview values
-		const styles = {};
-
-		if (previewLetterSpacing !== 0) {
-			styles['letter-spacing'] = `${previewLetterSpacing / 1000}em`;
-		}
-
-		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
-			styles['font-size'] = clampValue;
-		}
-
-		// If other properties remain, rebuild preview; otherwise restore original
-		if (Object.keys(styles).length > 0) {
-			applyPreviewStyles({
+		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+			const result = removePropertyFromSelection(
 				content,
-				selectionStart,
-				selectionEnd,
-				clientId,
-				styles,
-				setAttributes,
-				originalContentRef
-			});
-		} else {
-			// No more preview properties - restore original content
-			if (originalContentRef.current) {
-				setAttributes({ content: originalContentRef.current });
-				originalContentRef.current = null;
+				selectionStart.offset || 0,
+				selectionEnd.offset || 0,
+				'data-lineheight',
+				'line-height'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
+	// Reset font family (remove from content)
+	const resetFontFamily = () => {
+		if (!content || !inlineFontFamily) return;
+
+		setInlineFontFamily('');
+
+		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+			const result = removePropertyFromSelection(
+				content,
+				selectionStart.offset || 0,
+				selectionEnd.offset || 0,
+				'data-font-id',
+				'font-family'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
+	// Reset font weight (remove from content)
+	const resetFontWeight = () => {
+		if (!content || inlineFontWeight === 'inherit') return;
+
+		setInlineFontWeight('inherit');
+
+		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+			const result = removePropertyFromSelection(
+				content,
+				selectionStart.offset || 0,
+				selectionEnd.offset || 0,
+				'data-fontweight',
+				'font-weight'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
+	// Reset font size (remove from content)
+	const resetFontSize = () => {
+		if (!content || inlineFontSize === 'inherit') return;
+
+		setInlineFontSize('inherit');
+		setInlineFontSizeMin(16);
+		setInlineFontSizePreferred(32);
+		setInlineFontSizeMax(64);
+
+		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+			const result = removePropertyFromSelection(
+				content,
+				selectionStart.offset || 0,
+				selectionEnd.offset || 0,
+				'data-fontsize',
+				'font-size'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
 			}
 		}
 	};
@@ -2082,6 +2163,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		);
 	};
 
+	// Store latest apply functions in refs for debounced auto-apply (avoids stale closures)
+	applyLineHeightRef.current = applyLineHeightOnly;
+	applyLetterSpacingRef.current = applyLetterSpacingOnly;
+	applyFontSizeRef.current = applyInlineFontSize;
+	applyFontWeightRef.current = applyInlineFontWeight;
+	applyFontFamilyRef.current = applyInlineFontFamily;
+
 	return (
 		<>
 			<BlockControls>
@@ -2161,20 +2249,26 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									<SelectControl
 										label={__('Font Family (for selected text)', 'typography-stylist')}
 										value={inlineFontFamily}
-										onChange={(value) => setInlineFontFamily(value)}
+										onChange={(value) => {
+											setInlineFontFamily(value);
+											if (value) {
+												debouncedApplyFontFamily();
+											}
+										}}
 										options={[
 											{ label: __('Select a font...', 'typography-stylist'), value: '' },
 											...fontOptions
 										]}
-										help={inlineFontFamily ? __('Select text and click Apply to change its font', 'typography-stylist') : ''}
 									/>
 									{inlineFontFamily && (
 										<Button
-											variant="primary"
-											onClick={applyInlineFontFamily}
-											style={{ marginTop: '8px', width: '100%' }}
+											variant="secondary"
+											onClick={resetFontFamily}
+											isDestructive
+											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
 										>
-											{__('Apply Font Family', 'typography-stylist')}
+											{__('Reset Font Family', 'typography-stylist')}
 										</Button>
 									)}
 								</div>
@@ -2184,7 +2278,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									<SelectControl
 										label={__('Font Weight (for selected text)', 'typography-stylist')}
 										value={inlineFontWeight}
-										onChange={(value) => setInlineFontWeight(value)}
+										onChange={(value) => {
+											setInlineFontWeight(value);
+											if (value !== 'inherit') {
+												debouncedApplyFontWeight();
+											}
+										}}
 										options={[
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
 											{ label: '100 - Thin', value: '100' },
@@ -2197,15 +2296,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											{ label: '800 - Extra Bold', value: '800' },
 											{ label: '900 - Black', value: '900' }
 										]}
-										help={inlineFontWeight !== 'inherit' ? __('Select text and click Apply to change its weight', 'typography-stylist') : ''}
 									/>
 									{inlineFontWeight !== 'inherit' && (
 										<Button
-											variant="primary"
-											onClick={applyInlineFontWeight}
-											style={{ marginTop: '8px', width: '100%' }}
+											variant="secondary"
+											onClick={resetFontWeight}
+											isDestructive
+											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
 										>
-											{__('Apply Font Weight', 'typography-stylist')}
+											{__('Reset Font Weight', 'typography-stylist')}
 										</Button>
 									)}
 								</div>
@@ -2217,10 +2317,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										value={inlineFontSize}
 										onChange={(value) => {
 											setInlineFontSize(value);
-											// Clear preview when changing font size type
-											if (value === 'inherit') {
-												setPreviewFontSize('inherit');
-											}
 										}}
 										options={[
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
@@ -2234,9 +2330,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												value={inlineFontSizeMin}
 												onChange={(value) => {
 													setInlineFontSizeMin(value);
-													setPreviewFontSizeMin(value);
-													setPreviewFontSize('responsive');
-													handleFontSizePreviewChange(value, previewFontSizePreferred, previewFontSizeMax);
+													debouncedApplyFontSize();
 												}}
 												min={8}
 												max={200}
@@ -2247,9 +2341,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												value={inlineFontSizePreferred}
 												onChange={(value) => {
 													setInlineFontSizePreferred(value);
-													setPreviewFontSizePreferred(value);
-													setPreviewFontSize('responsive');
-													handleFontSizePreviewChange(previewFontSizeMin, value, previewFontSizeMax);
+													debouncedApplyFontSize();
 												}}
 												min={8}
 												max={400}
@@ -2260,9 +2352,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												value={inlineFontSizeMax}
 												onChange={(value) => {
 													setInlineFontSizeMax(value);
-													setPreviewFontSizeMax(value);
-													setPreviewFontSize('responsive');
-													handleFontSizePreviewChange(previewFontSizeMin, previewFontSizePreferred, value);
+													debouncedApplyFontSize();
 												}}
 												min={8}
 												max={400}
@@ -2273,17 +2363,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 												</Notice>
 											)}
-											{previewFontSize === 'responsive' && (
-												<Notice status="info" isDismissible={false} style={{ marginTop: '8px' }}>
-													{__('Preview active. Click "Apply Font Size" to save changes, or close this panel to cancel.', 'typography-stylist')}
-												</Notice>
-											)}
 											<Button
-												variant="primary"
-												onClick={applyInlineFontSize}
-												style={{ marginTop: '8px', width: '100%' }}
+												variant="secondary"
+												onClick={resetFontSize}
+												isDestructive
+												style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+												icon="undo"
 											>
-												{__('Apply Font Size', 'typography-stylist')}
+												{__('Reset Font Size', 'typography-stylist')}
 											</Button>
 										</>
 									)}
@@ -2294,7 +2381,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									<RangeControl
 										label={__('Line Height (for selected text)', 'typography-stylist')}
 										value={inlineLineHeight === 0 ? 1.5 : inlineLineHeight}
-										onChange={handleLineHeightChange}
+										onChange={(value) => {
+											setInlineLineHeight(value);
+											if (value !== 0) {
+												debouncedApplyLineHeight();
+											}
+										}}
 										min={0.5}
 										max={3}
 										step={0.1}
@@ -2307,27 +2399,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										renderTooltipContent={(value) => inlineLineHeight === 0 ? __('Browser default', 'typography-stylist') : value}
 									/>
 									{inlineLineHeight !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLineHeightOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Line Height', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLineHeight}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLineHeight !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply.', 'typography-stylist')}
-										</p>
+										<Button
+											variant="secondary"
+											onClick={clearLineHeight}
+											isDestructive
+											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
+										>
+											{__('Clear', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 
@@ -2336,7 +2416,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									<RangeControl
 										label={__('Letter Spacing (for selected text)', 'typography-stylist')}
 										value={inlineLetterSpacing}
-										onChange={handleLetterSpacingChange}
+										onChange={(value) => {
+											setInlineLetterSpacing(value);
+											if (value !== 0) {
+												debouncedApplyLetterSpacing();
+											}
+										}}
 										min={-200}
 										max={200}
 										step={1}
@@ -2345,30 +2430,55 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										resetFallbackValue={0}
 									/>
 									{inlineLetterSpacing !== 0 && (
-										<div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-											<Button
-												variant="primary"
-												onClick={applyLetterSpacingOnly}
-												style={{ flex: 1 }}
-											>
-												{__('Apply Letter Spacing', 'typography-stylist')}
-											</Button>
-											<Button
-												variant="secondary"
-												onClick={clearLetterSpacing}
-												isDestructive
-											>
-												{__('Clear', 'typography-stylist')}
-											</Button>
-										</div>
-									)}
-									{inlineLetterSpacing !== 0 && (
-										<p style={{ fontSize: '11px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-											💡 {__('Adjust slider to preview, then click Apply. Or click a feature button below to apply both.', 'typography-stylist')}
-										</p>
+										<Button
+											variant="secondary"
+											onClick={clearLetterSpacing}
+											isDestructive
+											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
+											isSmall
+										>
+											{__('Clear', 'typography-stylist')}
+										</Button>
 									)}
 								</div>
 
+								{/* Active Features Summary */}
+								{inlineFeaturesAtSelection.length > 0 && (
+									<div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f6fc', borderRadius: '4px', border: '1px solid #0783be' }}>
+										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+											<h5 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#0783be' }}>
+												{__('Active Features:', 'typography-stylist')}
+											</h5>
+											<Button
+												variant="secondary"
+												isDestructive
+												onClick={clearInlineFormatting}
+												style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											>
+												{__('Clear All', 'typography-stylist')}
+											</Button>
+										</div>
+										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+											{inlineFeaturesAtSelection.map(featureId => {
+												const featureName = availableFeatures.find(f => f.id === featureId)?.name || featureId;
+												return (
+													<code key={featureId} style={{
+														fontSize: '11px',
+														padding: '4px 8px',
+														backgroundColor: '#fff',
+														border: '1px solid #0783be',
+														borderRadius: '3px',
+														color: '#0783be',
+														fontWeight: 500
+													}}>
+														{featureName} ({featureId})
+													</code>
+												);
+											})}
+										</div>
+									</div>
+								)}
 
 								{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => {
 									// Check if any features in this category are active
@@ -2424,48 +2534,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									</PanelBody>
 									);
 								})}
-
-								{/* Active Features Summary */}
-								{inlineFeaturesAtSelection.length > 0 && (
-									<div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f6fc', borderRadius: '4px', border: '1px solid #0783be' }}>
-										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-											<h5 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#0783be' }}>
-												{__('Active Features:', 'typography-stylist')}
-											</h5>
-											<Button
-												variant="secondary"
-												isDestructive
-												isSmall
-												onClick={clearInlineFormatting}
-												style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
-											>
-												{__('Clear All', 'typography-stylist')}
-											</Button>
-										</div>
-										<div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-											{inlineFeaturesAtSelection.map(featureId => {
-												const featureName = availableFeatures.find(f => f.id === featureId)?.name || featureId;
-												return (
-													<code key={featureId} style={{
-														fontSize: '11px',
-														padding: '4px 8px',
-														backgroundColor: '#fff',
-														border: '1px solid #0783be',
-														borderRadius: '3px',
-														color: '#0783be',
-														fontWeight: 500
-													}}>
-														{featureName} ({featureId})
-													</code>
-												);
-											})}
-										</div>
-									</div>
-								)}
-
-								<p style={{ fontSize: '12px', color: '#757575', marginBottom: 0, marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #ddd' }}>
-									💡 {__('For inline text selection and more options, use the sidebar settings or select text and use the RichText toolbar.', 'typography-stylist')}
-								</p>
 								</div>
 							</div>
 
