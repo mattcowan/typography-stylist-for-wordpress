@@ -94,6 +94,61 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
+     * Build a text offset map from a DOM container, accounting for <br> elements.
+     *
+     * Designed to match WordPress RichText's offset system, where each <br> element
+     * (inserted via Shift+Enter) counts as 1 character position. Without this adjustment,
+     * offsets from wp.richText value.start / value.end would be misaligned with text
+     * node positions, causing styles to be applied to the wrong character.
+     *
+     * Returns only text node entries — <br> elements increment the running offset by 1
+     * but do not produce entries in the returned array, since they cannot be split or
+     * wrapped in <span> elements.
+     *
+     * @param {Node} container - DOM node to walk
+     * @param {Document} docContext - Document context for creating the TreeWalker
+     * @return {Array<{node: Node, start: number, end: number, text: string}>}
+     */
+    function buildTextOffsetMap(container, docContext) {
+        var walker = docContext.createTreeWalker(
+            container,
+            NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+            {
+                acceptNode: function(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    if (node.nodeName === 'BR') {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
+                }
+            }
+        );
+
+        var map = [];
+        var currentOffset = 0;
+        var node;
+
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                var text = node.nodeValue || '';
+                map.push({
+                    node: node,
+                    start: currentOffset,
+                    end: currentOffset + text.length,
+                    text: text
+                });
+                currentOffset += text.length;
+            } else if (node.nodeName === 'BR') {
+                currentOffset += 1;
+            }
+        }
+
+        return map;
+    }
+
+    /**
      * Get block's inherited font-family from computed styles
      * Detects the current font applied by theme or block settings
      *
@@ -329,29 +384,24 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             let smallestMatchingSpan = null;
             let smallestSpanSize = Infinity;
 
+            // Build offset map once (accounts for <br> line breaks)
+            const textNodeMap = buildTextOffsetMap(container, doc);
+
             // Calculate character offset for each span
             for (const span of styledSpans) {
-                // Find this span's position in the text
-                const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+                // Find this span's position in the text using pre-built map
                 let spanStart = 0;
                 let spanEnd = 0;
                 let found = false;
-                let offset = 0;
 
-                let node;
-                while ((node = walker.nextNode())) {
-                    const nodeLength = node.nodeValue.length;
-
-                    // Check if this text node is inside our span
-                    if (span.contains(node)) {
+                for (const entry of textNodeMap) {
+                    if (span.contains(entry.node)) {
                         if (!found) {
-                            spanStart = offset;
+                            spanStart = entry.start;
                             found = true;
                         }
-                        spanEnd = offset + nodeLength;
+                        spanEnd = entry.end;
                     }
-
-                    offset += nodeLength;
                 }
 
                 // Check if the selection overlaps with this span
@@ -1036,28 +1086,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         return;
                     }
 
-                    // Create a range for the selection
-                    const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-                    let currentOffset = 0;
+                    // Create a range for the selection (accounts for <br> line breaks)
+                    const selTextMap = buildTextOffsetMap(container, doc);
                     let startNode = null, startOffset = 0;
                     let endNode = null, endOffset = 0;
 
-                    let textNode;
-                    while ((textNode = walker.nextNode())) {
-                        const nodeLength = textNode.nodeValue.length;
-
-                        if (!startNode && currentOffset + nodeLength >= value.start) {
-                            startNode = textNode;
-                            startOffset = value.start - currentOffset;
+                    for (const entry of selTextMap) {
+                        if (!startNode && entry.end >= value.start) {
+                            startNode = entry.node;
+                            startOffset = value.start - entry.start;
                         }
 
-                        if (currentOffset + nodeLength >= value.end) {
-                            endNode = textNode;
-                            endOffset = value.end - currentOffset;
+                        if (entry.end >= value.end) {
+                            endNode = entry.node;
+                            endOffset = value.end - entry.start;
                             break;
                         }
-
-                        currentOffset += nodeLength;
                     }
 
                     // If we found the nodes, wrap the selection
