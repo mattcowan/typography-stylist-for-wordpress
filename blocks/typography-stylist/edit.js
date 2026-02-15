@@ -2293,7 +2293,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={resetFontFamily}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Reset Font Family', 'typography-stylist')}
@@ -2330,7 +2330,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={resetFontWeight}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Reset Font Weight', 'typography-stylist')}
@@ -2395,7 +2395,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												variant="secondary"
 												onClick={resetFontSize}
 												isDestructive
-												style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+												style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 												icon="undo"
 											>
 												{__('Reset Font Size', 'typography-stylist')}
@@ -2431,7 +2431,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={clearLineHeight}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Clear', 'typography-stylist')}
@@ -2462,7 +2462,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={clearLetterSpacing}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 											isSmall
 										>
