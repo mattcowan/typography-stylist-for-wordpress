@@ -232,6 +232,28 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= 1.2.0 =
+* Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
+* Fixed: TreeWalker document context bug - TreeWalkers now created from correct document object (DOMParser) preventing cross-context errors
+* Fixed: Responsive font-size Reset button now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
+* Fixed: Memory leak in debounced auto-apply functions - cleanup handlers now properly cancel pending debounced calls on component unmount
+* Fixed: Preview span removal now preserves nested elements instead of flattening to text, maintaining complex formatting structure
+* Fixed: Stale closure bug in auto-apply functions - debounced wrappers now call latest version of apply functions via refs, resolving issue where controls wouldn't work when styles were already applied
+* Improved: Quick Features Toggle auto-apply - letter spacing, line height, font family, font weight, and font size now apply automatically with debouncing (400ms for sliders, 300ms for dropdowns, 600ms for responsive font-size)
+* Improved: Consistent UX across all Quick Features controls - all controls now auto-apply like OpenType features, no more confusion about which controls need Apply buttons
+* Improved: Clear/Reset buttons now actually remove properties from content instead of just resetting state - clicking Reset removes the data attribute and CSS property from spans
+* Improved: UI reorganization - Active Features section moved above feature panels for better visibility
+* Added: Individual Reset buttons for font family, font weight, and font size with undo icons for clear visual feedback
+* Added: `buildTextOffsetMap()` utility that accounts for `<br>` elements in character offset calculations, matching WordPress RichText's offset system
+* Added: `getEffectiveTextLength()` utility for accurate text length measurement including line breaks
+* Added: `debounce()` utility function with cancel method for performance optimization during rapid slider adjustments
+* Added: `removePropertyFromSpan()` utility to remove specific properties and unwrap empty spans
+* Added: `removePropertyFromSelection()` utility to find and remove properties from all spans in selection
+* Added: Comprehensive test suite with 24 tests for property removal utilities, including edge cases for responsive font-size
+* Improved: All 12 TreeWalker-based offset calculations across the inline editor, Typography Stylist block, and shared utilities now correctly handle multi-line content
+* Technical: Extracted `classifyAtomicNode()` helper within `splitSpanAndApply` to reduce code duplication in segment classification logic
+* Technical: Debounced functions use refs to avoid stale closures and maintain access to current state across renders
+
 = 1.1.9 =
 * Fixed: Archive page font loading - fonts now load correctly and more consistently on blog home, category pages, tag pages, and all archive types
 * Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
