@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -265,30 +265,25 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const inlineFontFamilyAtSelection = inlineStylesAtSelection?.fontId || null;
 
 	// Helper to create a Range for the given linear text offsets within a container
+	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations
 	const getRangeForOffsets = (rootNode, startOffset, endOffset, docContext) => {
-		let currentOffset = 0;
-		const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT);
-		let textNode;
+		const textMap = buildTextOffsetMap(rootNode, document);
 		let rangeStartNode = null;
 		let rangeStartOffset = 0;
 		let rangeEndNode = null;
 		let rangeEndOffset = 0;
 
-		while ((textNode = walker.nextNode())) {
-			const nodeLength = textNode.nodeValue.length;
-
-			if (currentOffset + nodeLength > startOffset && !rangeStartNode) {
-				rangeStartNode = textNode;
-				rangeStartOffset = startOffset - currentOffset;
+		for (const entry of textMap) {
+			if (entry.end > startOffset && !rangeStartNode) {
+				rangeStartNode = entry.node;
+				rangeStartOffset = startOffset - entry.start;
 			}
 
-			if (currentOffset + nodeLength >= endOffset && !rangeEndNode) {
-				rangeEndNode = textNode;
-				rangeEndOffset = endOffset - currentOffset;
+			if (entry.end >= endOffset && !rangeEndNode) {
+				rangeEndNode = entry.node;
+				rangeEndOffset = endOffset - entry.start;
 				break;
 			}
-
-			currentOffset += nodeLength;
 		}
 
 		if (!rangeStartNode || !rangeEndNode) {
@@ -2293,7 +2288,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={resetFontFamily}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Reset Font Family', 'typography-stylist')}
@@ -2330,7 +2325,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={resetFontWeight}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Reset Font Weight', 'typography-stylist')}
@@ -2395,7 +2390,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 												variant="secondary"
 												onClick={resetFontSize}
 												isDestructive
-												style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+												style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 												icon="undo"
 											>
 												{__('Reset Font Size', 'typography-stylist')}
@@ -2431,7 +2426,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={clearLineHeight}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 										>
 											{__('Clear', 'typography-stylist')}
@@ -2462,7 +2457,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											variant="secondary"
 											onClick={clearLetterSpacing}
 											isDestructive
-											style={{ marginTop: '8px', float: 'right', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
 											icon="undo"
 											isSmall
 										>

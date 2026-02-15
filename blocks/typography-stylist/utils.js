@@ -6,6 +6,88 @@
  */
 
 /**
+ * Build a text offset map from a DOM container, accounting for <br> elements.
+ *
+ * Designed to match WordPress RichText's offset system, where each <br> element
+ * (inserted via Shift+Enter) counts as 1 character position. Without this adjustment,
+ * offsets from wp.data selectionStart.offset / selectionEnd.offset would be misaligned
+ * with text node positions, causing styles to be applied to the wrong character.
+ *
+ * Returns only text node entries — <br> elements increment the running offset by 1
+ * but do not produce entries in the returned array, since they cannot be split or
+ * wrapped in <span> elements. Callers iterate the returned entries to find or wrap
+ * text at a given offset range.
+ *
+ * @param {Node} container - DOM node to walk
+ * @param {Document} docContext - Document context for creating the TreeWalker
+ * @return {Array<{node: Node, start: number, end: number, text: string}>} Text node map with BR-adjusted offsets
+ */
+export function buildTextOffsetMap(container, docContext) {
+	const walker = docContext.createTreeWalker(
+		container,
+		NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+		{
+			acceptNode: function (node) {
+				if (node.nodeType === Node.TEXT_NODE) {
+					return NodeFilter.FILTER_ACCEPT;
+				}
+				if (node.nodeName === 'BR') {
+					return NodeFilter.FILTER_ACCEPT;
+				}
+				// Skip other elements but still visit their children
+				return NodeFilter.FILTER_SKIP;
+			}
+		}
+	);
+
+	const map = [];
+	let currentOffset = 0;
+	let node;
+
+	while ((node = walker.nextNode())) {
+		if (node.nodeType === Node.TEXT_NODE) {
+			const text = node.nodeValue || '';
+			map.push({
+				node: node,
+				start: currentOffset,
+				end: currentOffset + text.length,
+				text: text
+			});
+			currentOffset += text.length;
+		} else if (node.nodeName === 'BR') {
+			// BR counts as 1 character position to match WordPress RichText offsets
+			currentOffset += 1;
+		}
+	}
+
+	return map;
+}
+
+/**
+ * Get the effective text length of a DOM node, counting <br> elements as 1 character.
+ *
+ * Unlike node.textContent.length which returns 0 for <br> elements,
+ * this function counts each <br> as 1 character position to match
+ * WordPress RichText's offset system.
+ *
+ * @param {Node} node - DOM node to measure
+ * @return {number} Effective text length including BR characters
+ */
+export function getEffectiveTextLength(node) {
+	if (node.nodeType === Node.TEXT_NODE) {
+		return (node.textContent || '').length;
+	}
+	if (node.nodeName === 'BR') {
+		return 1;
+	}
+	let length = 0;
+	for (let i = 0; i < node.childNodes.length; i++) {
+		length += getEffectiveTextLength(node.childNodes[i]);
+	}
+	return length;
+}
+
+/**
  * Parse inline features from HTML content at a specific cursor position
  *
  * Finds styled spans in HTML content and extracts OpenType features from the
@@ -31,28 +113,23 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 	let smallestMatchingSpan = null;
 	let smallestSpanSize = Infinity;
 
+	// Build offset map once, reuse for all spans
+	const textNodeMap = buildTextOffsetMap(container, doc);
+
 	for (const span of styledSpans) {
-		// Find this span's position in the text
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		// Find this span's position in the text using pre-built map
 		let spanStart = 0;
 		let spanEnd = 0;
 		let found = false;
-		let offset = 0;
 
-		let node;
-		while ((node = walker.nextNode())) {
-			const nodeLength = node.nodeValue.length;
-
-			// Check if this text node is inside our span
-			if (span.contains(node)) {
+		for (const entry of textNodeMap) {
+			if (span.contains(entry.node)) {
 				if (!found) {
-					spanStart = offset;
+					spanStart = entry.start;
 					found = true;
 				}
-				spanEnd = offset + nodeLength;
+				spanEnd = entry.end;
 			}
-
-			offset += nodeLength;
 		}
 
 		// Check if the cursor/selection overlaps with this span
@@ -94,26 +171,19 @@ export function parseInlineFeaturesAtCursor(htmlContent, cursorStart, cursorEnd)
 	// BUT only include features if cursor is ACTUALLY inside the nested span
 	const nestedStyledSpans = smallestMatchingSpan.querySelectorAll('span.typost-styled');
 	for (const nested of nestedStyledSpans) {
-		// Calculate the text position range for this nested span
-		const nestedWalker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		// Calculate the text position range for this nested span using pre-built map
 		let nestedStart = 0;
 		let nestedEnd = 0;
 		let nestedFound = false;
-		let nestedOffset = 0;
 
-		let nestedNode;
-		while ((nestedNode = nestedWalker.nextNode())) {
-			const nestedNodeLength = nestedNode.nodeValue.length;
-
-			if (nested.contains(nestedNode)) {
+		for (const entry of textNodeMap) {
+			if (nested.contains(entry.node)) {
 				if (!nestedFound) {
-					nestedStart = nestedOffset;
+					nestedStart = entry.start;
 					nestedFound = true;
 				}
-				nestedEnd = nestedOffset + nestedNodeLength;
+				nestedEnd = entry.end;
 			}
-
-			nestedOffset += nestedNodeLength;
 		}
 
 		// Only include features if cursor is inside this nested span
@@ -212,28 +282,23 @@ export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEn
 	let smallestMatchingSpan = null;
 	let smallestSpanSize = Infinity;
 
+	// Build offset map once, reuse for all spans
+	const textNodeMap = buildTextOffsetMap(container, doc);
+
 	for (const span of styledSpans) {
-		// Find this span's position in the text
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+		// Find this span's position in the text using pre-built map
 		let spanStart = 0;
 		let spanEnd = 0;
 		let found = false;
-		let offset = 0;
 
-		let node;
-		while ((node = walker.nextNode())) {
-			const nodeLength = node.nodeValue.length;
-
-			// Check if this text node is inside our span
-			if (span.contains(node)) {
+		for (const entry of textNodeMap) {
+			if (span.contains(entry.node)) {
 				if (!found) {
-					spanStart = offset;
+					spanStart = entry.start;
 					found = true;
 				}
-				spanEnd = offset + nodeLength;
+				spanEnd = entry.end;
 			}
-
-			offset += nodeLength;
 		}
 
 		// Check if the cursor/selection overlaps with this span
@@ -288,22 +353,8 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			return null;
 		}
 
-		// Build text offset map using TreeWalker
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-		let currentOffset = 0;
-		let textNode;
-		const textNodeMap = [];
-
-		while ((textNode = walker.nextNode())) {
-			const text = textNode.textContent || '';
-			textNodeMap.push({
-				node: textNode,
-				start: currentOffset,
-				end: currentOffset + text.length,
-				text: text
-			});
-			currentOffset += text.length;
-		}
+		// Build text offset map (accounts for <br> line breaks)
+		const textNodeMap = buildTextOffsetMap(container, doc);
 
 		// Find spans that overlap cursor position
 		let smallestMatchingSpan = null;
@@ -493,17 +544,8 @@ export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDat
 			return { success: false, content: htmlContent };
 		}
 
-		// Build text offset map
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-		let currentOffset = 0;
-		let textNode;
-		const textNodeMap = [];
-
-		while ((textNode = walker.nextNode())) {
-			const text = textNode.textContent || '';
-			textNodeMap.push({ node: textNode, start: currentOffset, end: currentOffset + text.length });
-			currentOffset += text.length;
-		}
+		// Build text offset map (accounts for <br> line breaks)
+		const textNodeMap = buildTextOffsetMap(container, doc);
 
 		// Find span at cursor
 		let targetSpan = null;
@@ -582,17 +624,8 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			return { success: false, content: htmlContent };
 		}
 
-		// Build text offset map
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-		let currentOffset = 0;
-		let textNode;
-		const textNodeMap = [];
-
-		while ((textNode = walker.nextNode())) {
-			const text = textNode.textContent || '';
-			textNodeMap.push({ node: textNode, start: currentOffset, end: currentOffset + text.length, text: text });
-			currentOffset += text.length;
-		}
+		// Build text offset map (accounts for <br> line breaks)
+		const textNodeMap = buildTextOffsetMap(container, doc);
 
 		// Find parent span that has the property and overlaps selection
 		let parentSpan = null;
@@ -677,6 +710,20 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 		let currentPos = 0;
 		const segments = { before: [], selection: [], after: [] };
 
+		// Classify an atomic (unsplittable) node into a segment by its position
+		function classifyAtomicNode(html, nodeStart, nodeLength) {
+			const nodeEnd = nodeStart + nodeLength;
+			if (nodeEnd <= selStart) {
+				segments.before.push(html);
+			} else if (nodeStart >= selEnd) {
+				segments.after.push(html);
+			} else if (nodeStart >= selStart && nodeEnd <= selEnd) {
+				segments.selection.push(html);
+			}
+			// If node spans boundaries, it was already rejected by boundary check
+			currentPos += nodeLength;
+		}
+
 		function processNode(node) {
 			if (node.nodeType === Node.TEXT_NODE) {
 				const text = node.textContent || '';
@@ -705,23 +752,10 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 					}
 				}
 				currentPos += text.length;
+			} else if (node.nodeName === 'BR') {
+				classifyAtomicNode(node.outerHTML, currentPos, 1);
 			} else if (node.nodeType === Node.ELEMENT_NODE) {
-				const childStart = currentPos;
-				const childText = node.textContent || '';
-				const childEnd = childStart + childText.length;
-
-				// Determine which segment this entire child element belongs to
-				if (childEnd <= selStart) {
-					segments.before.push(node.outerHTML);
-					currentPos += childText.length;
-				} else if (childStart >= selEnd) {
-					segments.after.push(node.outerHTML);
-					currentPos += childText.length;
-				} else if (childStart >= selStart && childEnd <= selEnd) {
-					segments.selection.push(node.outerHTML);
-					currentPos += childText.length;
-				}
-				// If child spans boundaries, it was already rejected by boundary check
+				classifyAtomicNode(node.outerHTML, currentPos, getEffectiveTextLength(node));
 			}
 		}
 
@@ -1042,22 +1076,8 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 		const container = doc.body.firstChild;
 
-		// Build text position map
-		const textMap = [];
-		let currentOffset = 0;
-		const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-		let textNode;
-
-		while ((textNode = walker.nextNode())) {
-			const nodeText = textNode.nodeValue;
-			textMap.push({
-				node: textNode,
-				start: currentOffset,
-				end: currentOffset + nodeText.length,
-				text: nodeText
-			});
-			currentOffset += nodeText.length;
-		}
+		// Build text position map (accounts for <br> line breaks)
+		const textMap = buildTextOffsetMap(container, doc);
 
 		// Find affected text nodes
 		const affectedNodes = textMap.filter(item =>
@@ -1628,22 +1648,16 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 	const container = doc.body.firstChild;
 
-	// Build text offset map using TreeWalker to find spans at selection
-	const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-	let currentOffset = 0;
-	let textNode;
+	// Build text offset map (accounts for <br> line breaks)
+	const textNodeMap = buildTextOffsetMap(container, doc);
 	const spansAtSelection = new Set();
 
-	// Walk through all text nodes and find spans that overlap with selection
-	while ((textNode = walker.nextNode())) {
-		const textLength = textNode.length;
-		const nodeStart = currentOffset;
-		const nodeEnd = currentOffset + textLength;
-
+	// Walk through text nodes and find spans that overlap with selection
+	for (const entry of textNodeMap) {
 		// Check if this text node overlaps with selection
-		if (nodeEnd > startOffset && nodeStart < endOffset) {
+		if (entry.end > startOffset && entry.start < endOffset) {
 			// Find typost-styled spans containing this text node
-			let parent = textNode.parentElement;
+			let parent = entry.node.parentElement;
 			while (parent && parent !== container) {
 				if (parent.classList && parent.classList.contains('typost-styled')) {
 					if (parent.getAttribute(dataAttribute)) {
@@ -1653,8 +1667,6 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 				parent = parent.parentElement;
 			}
 		}
-
-		currentOffset += textLength;
 	}
 
 	// Remove property from each span found in selection
@@ -1679,6 +1691,7 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {
+		buildTextOffsetMap,
 		parseInlineStylesAtCursor,
 		parseInlineFeaturesAtCursor,
 		parseInlineFontFamilyAtCursor

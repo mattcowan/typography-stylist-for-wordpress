@@ -45,6 +45,7 @@ Thumbs.db
 
 # Documentation (except main README)
 docs/
+todo/
 CONTRIBUTING.md
 CHANGELOG.md
 LICENSE.md
