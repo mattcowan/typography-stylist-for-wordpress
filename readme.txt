@@ -232,6 +232,10 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= 1.2.1 =
+* Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
+* Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
+
 = 1.2.0 =
 * Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
 * Fixed: TreeWalker document context bug - TreeWalkers now created from correct document object (DOMParser) preventing cross-context errors

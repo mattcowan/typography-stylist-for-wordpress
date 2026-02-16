@@ -350,6 +350,12 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.2.1
+
+**Accessibility Enforcement:**
+- **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.
+- **Changed: "Cancel" renamed to "Discard Changes"** - Clearer labeling for the action that dismisses the warning without applying styles.
+
 ### Version 1.2.0
 
 **Quick Features Toggle Auto-Apply & UX Improvements:**
