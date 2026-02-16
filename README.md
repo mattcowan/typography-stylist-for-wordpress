@@ -361,7 +361,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 - **Added: Individual Reset buttons** - Font family, font weight, and font size now have dedicated Reset buttons with undo icons for clear visual feedback
 
 **Critical Bug Fixes:**
-- **Fixed: TreeWalker document context bug** - TreeWalkers now created from correct document object (DOMParser `doc` instead of global `document`), preventing cross-context errors in 3 locations
+- **Fixed: TreeWalker document context bug** - TreeWalkers are now created from the correct document object (DOMParser `doc` instead of global `document`), preventing cross-context errors in 3 locations
 - **Fixed: Responsive font-size Reset** - Now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
 - **Fixed: Memory leak** - Debounced auto-apply functions now properly cleanup and cancel pending calls on component unmount
 - **Fixed: Preview span removal** - Now preserves nested elements instead of flattening to text, maintaining complex formatting structure
