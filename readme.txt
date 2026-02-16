@@ -234,7 +234,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 = 1.2.0 =
 * Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
-* Fixed: TreeWalker document context bug - TreeWalkers now created from correct document object (DOMParser) preventing cross-context errors
+* Fixed: TreeWalker document context bug - TreeWalkers are now created from the correct document object (DOMParser), preventing cross-context errors
 * Fixed: Responsive font-size Reset button now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
 * Fixed: Memory leak in debounced auto-apply functions - cleanup handlers now properly cancel pending debounced calls on component unmount
 * Fixed: Preview span removal now preserves nested elements instead of flattening to text, maintaining complex formatting structure
