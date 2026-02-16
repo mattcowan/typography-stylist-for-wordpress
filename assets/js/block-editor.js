@@ -334,7 +334,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setPreviewDevice = this.setPreviewDevice.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
             this.convertToBlock = this.convertToBlock.bind(this);
-            this.applyFeaturesForce = this.applyFeaturesForce.bind(this);
+
             this.applyFeatureFromPreview = this.applyFeatureFromPreview.bind(this);
             this.undoLastChange = this.undoLastChange.bind(this);
             this.saveToHistory = this.saveToHistory.bind(this);
@@ -993,7 +993,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (breaksWordStart || breaksWordEnd) {
                 return {
                     valid: false,
-                    message: __('For better accessibility, select complete words or phrases. Or convert to a Typography Stylist block for accessible styling of partial words.', 'typography-stylist')
+                    message: __('For better accessibility, select complete words or phrases, or convert to a Typography Stylist block for accessible styling of partial words.', 'typography-stylist')
                 };
             }
 
@@ -1319,83 +1319,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setState({ isOpen: false, hasChanges: false });
         }
 
-        /**
-         * Apply features without validation (force apply)
-         */
-        applyFeaturesForce() {
-            const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight } = this.state;
-
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0) {
-                onChange(removeFormat(value, FORMAT_TYPE));
-            } else {
-                const attributes = {};
-                let styleString = '';
-
-                if (selectedFeatures.length > 0) {
-                    const cssValue = this.featuresToCSS(selectedFeatures);
-                    attributes['data-features'] = selectedFeatures.join(',');
-                    styleString += `font-feature-settings: ${cssValue}`;
-                }
-
-                // Add font family - use CSS variable if fontId is available
-                if (selectedFontId) {
-                    attributes['data-font'] = selectedFont;
-                    attributes['data-font-id'] = String(selectedFontId);
-                    if (styleString) styleString += '; ';
-                    styleString += `font-family: var(--font-${selectedFontId})`;
-                } else if (selectedFont) {
-                    attributes['data-font'] = selectedFont;
-                    if (styleString) styleString += '; ';
-                    styleString += `font-family: ${selectedFont}`;
-                }
-
-                attributes['data-fontweight'] = fontWeight;
-                if (styleString) styleString += '; ';
-                styleString += `font-weight: ${fontWeight}`;
-
-                if (letterSpacing !== 0) {
-                    attributes['data-letterspacing'] = letterSpacing.toString();
-                    if (styleString) styleString += '; ';
-                    styleString += `letter-spacing: ${letterSpacing / 1000}em`;
-                }
-
-                if (lineHeight !== 0) {
-                    attributes['data-lineheight'] = lineHeight.toString();
-                    if (styleString) styleString += '; ';
-                    styleString += `line-height: ${lineHeight}`;
-                }
-
-                if (fontSize !== 'inherit') {
-                    attributes['data-fontsize'] = fontSize;
-                    attributes['data-fontsize-min'] = fontSizeMin.toString();
-                    attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
-                    attributes['data-fontsize-max'] = fontSizeMax.toString();
-
-                    if (styleString) styleString += '; ';
-                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
-                }
-
-                attributes['style'] = styleString;
-
-                // Add aria-label if enabled for accessibility (in force apply)
-                if (typostData.enableAriaLabels && value) {
-                    const selectedText = value.start !== value.end
-                        ? getTextContent(slice(value, value.start, value.end))
-                        : getTextContent(value);
-                    if (selectedText) {
-                        attributes['aria-label'] = selectedText;
-                    }
-                }
-
-                onChange(applyFormat(value, {
-                    type: FORMAT_TYPE,
-                    attributes: attributes
-                }));
-            }
-
-            this.setState({ isOpen: false, hasChanges: false });
-        }
 
         /**
          * Apply preset
@@ -2215,19 +2138,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             </Button>
                                             <Button
                                                 isSecondary
-                                                onClick={() => {
-                                                    this.setState({ showAccessibilityWarning: false });
-                                                    // Apply anyway - bypass validation
-                                                    this.applyFeaturesForce();
-                                                }}
-                                            >
-                                                {__('Apply Anyway', 'typography-stylist')}
-                                            </Button>
-                                            <Button
-                                                isTertiary
                                                 onClick={() => this.setState({ showAccessibilityWarning: false })}
                                             >
-                                                {__('Cancel', 'typography-stylist')}
+                                                {__('Discard Changes', 'typography-stylist')}
                                             </Button>
                                         </ButtonGroup>
                                     </div>

@@ -140,9 +140,8 @@ font-family: 'Playfair Display', Georgia, serif;
 7. **Click Apply** to save
 
 **Note:** If you select partial words, you'll see an accessibility warning with options to:
-- Convert to an accessible Typost block
-- Apply anyway (not recommended)
-- Cancel
+- Convert to an accessible Typography Stylist block (recommended)
+- Discard changes
 
 #### Method 2: Typography Stylist Block (for complex typography)
 

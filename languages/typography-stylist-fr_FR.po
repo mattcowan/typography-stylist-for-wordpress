@@ -883,16 +883,16 @@ msgid "Typography Stylist"
 msgstr "Styliste OpenType"
 
 #: assets/js/block-editor.js:356
-msgid "For better accessibility, select complete words or phrases. Or convert to a Typography Stylist block for accessible styling of partial words."
-msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou phrases complètes. Ou convertissez en bloc Typography Stylist pour un style accessible des mots partiels."
+msgid "For better accessibility, select complete words or phrases, or convert to a Typography Stylist block for accessible styling of partial words."
+msgstr "Pour une meilleure accessibilité, sélectionnez des mots ou phrases complètes, ou convertissez en bloc Typography Stylist pour un style accessible des mots partiels."
 
 #: assets/js/block-editor.js:832
 msgid "Convert to Typography Stylist Block"
 msgstr "Convertir en Bloc Styliste OpenType"
 
 #: assets/js/block-editor.js:842
-msgid "Apply Anyway"
-msgstr "Appliquer Quand Même"
+msgid "Discard Changes"
+msgstr "Annuler les Modifications"
 
 #: assets/js/block-editor.js:470
 msgid "Font Weight"

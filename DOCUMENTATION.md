@@ -250,10 +250,9 @@ If you select partial words (like just "Sa" in "Sarah"), you'll see an accessibi
 
 > "Warning: Partial word selection detected. This may fragment text for screen readers."
 
-You have three options:
-- **Convert to Accessible Block** - Converts to an Typography Stylist block (recommended)
-- **Apply Anyway** - Applies the format but may impact accessibility
-- **Cancel** - Cancels the operation
+You have two options:
+- **Convert to Typography Stylist Block** - Converts to an accessible Typography Stylist block (recommended)
+- **Discard Changes** - Cancels the operation
 
 **Why this matters:** Screen readers may read fragmented text in a confusing way. the Typography Stylist block solves this with dual content.
 

@@ -169,7 +169,7 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 
 The plugin includes accessibility features for screen reader compatibility:
 
-* **Inline Format Warnings**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible block or apply anyway
+* **Inline Format Warnings**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible Typography Stylist block or discard changes
 * **Typography Stylist Block**: Custom block designed for complex typography that includes markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
 * **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text as an alternative
