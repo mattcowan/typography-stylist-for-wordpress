@@ -67,7 +67,10 @@ export default function save({ attributes }) {
 	const styleString = buildStyle();
 
 	// Get clean text content (strip HTML tags for screen reader version)
-	const cleanText = content.replace(/<[^>]*>/g, '');
+	// Replace <br> tags with spaces first to prevent word concatenation
+	const cleanText = content
+		.replace(/<br\s*\/?>/gi, ' ')
+		.replace(/<[^>]*>/g, '');
 
 	// Parse style string into object
 	const styleObj = {};

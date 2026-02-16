@@ -352,6 +352,9 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ### Version 1.2.1
 
+**Bug Fix:**
+- **Fixed: Screen reader text missing spaces at line breaks** - When using Shift+Enter in Typography Stylist blocks, the visually-hidden screen reader text concatenated words without a space (e.g. "MILANOCORTINA" instead of "MILANO CORTINA"). Line breaks are now replaced with spaces in the accessible text output.
+
 **Accessibility Enforcement:**
 - **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.
 - **Changed: "Cancel" renamed to "Discard Changes"** - Clearer labeling for the action that dismisses the warning without applying styles.

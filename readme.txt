@@ -233,6 +233,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.2.1 =
+* Fixed: Line breaks (Shift+Enter) in Typography Stylist blocks caused words to run together in screen reader text (e.g. "MILANOCORTINA" instead of "MILANO CORTINA")
 * Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
 * Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
 
