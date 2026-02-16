@@ -54,6 +54,7 @@
 
 .typost-tab-content.active {
     display: block;
+    background: #FAF9F6;
 }
 
 .typost-preset-controls {
@@ -1083,7 +1084,7 @@
 /* Developer Support Section */
 .typost-developer-support {
     margin-top: 30px;
-    background: #fff;
+    background: #fffff0;
     border: 1px solid #c3c4c7;
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
     padding: 20px;

@@ -140,9 +140,8 @@ font-family: 'Playfair Display', Georgia, serif;
 7. **Click Apply** to save
 
 **Note:** If you select partial words, you'll see an accessibility warning with options to:
-- Convert to an accessible Typost block
-- Apply anyway (not recommended)
-- Cancel
+- Convert to an accessible Typography Stylist block (recommended)
+- Discard changes
 
 #### Method 2: Typography Stylist Block (for complex typography)
 
@@ -350,6 +349,12 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
+
+### Version 1.2.1
+
+**Accessibility Enforcement:**
+- **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.
+- **Changed: "Cancel" renamed to "Discard Changes"** - Clearer labeling for the action that dismisses the warning without applying styles.
 
 ### Version 1.2.0
 
