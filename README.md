@@ -351,6 +351,42 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.2.0
+
+**Quick Features Toggle Auto-Apply & UX Improvements:**
+- **Improved: Auto-apply functionality** - Letter spacing, line height, font family, font weight, and font size now apply automatically with intelligent debouncing (400ms for sliders, 300ms for dropdowns, 600ms for responsive font-size with 3 sliders)
+- **Improved: Consistent UX** - All Quick Features controls now auto-apply like OpenType features, eliminating confusion about which controls need Apply buttons
+- **Improved: Functional Reset buttons** - Clear/Reset buttons now actually remove properties from content spans instead of just resetting UI state
+- **Improved: UI reorganization** - Active Features section moved above feature panels for better visibility
+- **Added: Individual Reset buttons** - Font family, font weight, and font size now have dedicated Reset buttons with undo icons for clear visual feedback
+
+**Critical Bug Fixes:**
+- **Fixed: TreeWalker document context bug** - TreeWalkers are now created from the correct document object (DOMParser `doc` instead of global `document`), preventing cross-context errors in 3 locations
+- **Fixed: Responsive font-size Reset** - Now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
+- **Fixed: Memory leak** - Debounced auto-apply functions now properly clean up and cancel pending calls on component unmount
+- **Fixed: Preview span removal** - Now preserves nested elements instead of flattening to text, maintaining complex formatting structure
+- **Fixed: Stale closure bug** - Debounced wrappers now call latest version of apply functions via refs, resolving issue where controls wouldn't work when styles were already applied
+
+**Bug Fix: Line Break Offset Misalignment**
+- Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter). WordPress RichText counts `<br>` as 1 character position, but the plugin's offset calculations skipped them entirely, causing a cumulative off-by-one error per line break.
+- All 12 TreeWalker-based offset calculations across the inline editor, Typography Stylist block, and shared utilities now correctly handle multi-line content.
+
+**New Utilities:**
+- Added `buildTextOffsetMap()` - builds a text node offset map that accounts for `<br>` elements, matching WordPress RichText's offset system
+- Added `getEffectiveTextLength()` - measures text length including `<br>` elements as 1 character
+- Added `debounce()` - utility function with cancel method for performance optimization during rapid slider adjustments
+- Added `removePropertyFromSpan()` - removes specific properties and unwraps empty spans
+- Added `removePropertyFromSelection()` - finds and removes properties from all spans in selection
+
+**Testing:**
+- Added comprehensive test suite with 24 tests for property removal utilities
+- Tests cover edge cases including responsive font-size with other properties, nested spans, and span preservation logic
+- All 252 unit tests passing
+
+**Code Quality:**
+- Extracted `classifyAtomicNode()` helper within `splitSpanAndApply` to reduce duplication in segment classification logic
+- Debounced functions use refs to avoid stale closures and maintain access to current state across renders
+
 ### Version 1.1.9
 
 **Cache & Font Loading Improvements:**
