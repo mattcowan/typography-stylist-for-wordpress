@@ -1662,9 +1662,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Use preview text or default sample text
             const sampleText = previewText || 'ffi ffl Th AE';
 
-            // Build preview styles - with this feature only
+            // Build preview styles - with this feature AND all currently selected features
+            const allPreviewFeatures = [...new Set([feature.id, ...selectedFeatures])];
             const previewStyle = {
-                fontFeatureSettings: `"${feature.id}" 1`
+                fontFeatureSettings: allPreviewFeatures.map(f => `"${f}" 1`).join(', ')
             };
             // Use selected font, or fallback to block's inherited font when Default is selected
             const fontToUse = selectedFont || blockInheritedFont;

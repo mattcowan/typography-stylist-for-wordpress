@@ -239,6 +239,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
 * Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
 * Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
+* Improved: OpenType feature previews now show cumulative checked features - toggling a stylistic set updates ALL preview windows to include that feature, accurately showing how features combine (essential for fonts like Bookmania where stylistic sets interact to produce different glyphs)
 
 = 1.2.0 =
 * Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
