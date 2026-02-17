@@ -360,6 +360,9 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 **UX Improvement:**
 - **Improved: Convert-to-block link in apply notice** - The "Click Apply below the preview to confirm changes" notice now includes a "Convert to a Typography Stylist block" link that converts the current block with features applied, guiding users toward the block type that supports real-time preview.
 
+**Preview Enhancement:**
+- **Improved: Cumulative OpenType feature previews** - Feature preview windows now show all currently-checked features combined, not just the individual feature in isolation. This accurately represents how features interact in fonts like Bookmania, where combining stylistic sets (e.g., ss10 + ss16) produces different glyphs than either set alone. Each preview always includes its own feature plus all other active features, updating in real time as features are toggled. Applies to both the inline editor popover and the Typography Stylist block's Quick Features Toggle.
+
 **Accessibility Enforcement:**
 - **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.
 - **Changed: "Cancel" renamed to "Discard Changes"** - Clearer labeling for the action that dismisses the warning without applying styles.
