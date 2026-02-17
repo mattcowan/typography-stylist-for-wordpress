@@ -2542,7 +2542,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 															className="typost-feature-preview-on typost-feature-apply-btn"
 															onClick={() => applyFeatureToSelection(feature.id)}
 															style={{
-																fontFeatureSettings: `"${feature.id}" 1`,
+																fontFeatureSettings: [...new Set([feature.id, ...features, ...inlineFeaturesAtSelection])].map(f => `"${f}" 1`).join(', '),
 																fontFamily: inlineFontFamilyAtSelection
 																	? `var(--font-${inlineFontFamilyAtSelection})`
 																	: (fontFamily || computedFont || 'inherit')
