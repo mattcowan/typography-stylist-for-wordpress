@@ -352,8 +352,13 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ### Version 1.2.1
 
-**Bug Fix:**
+**Bug Fixes:**
 - **Fixed: Screen reader text missing spaces at line breaks** - When using Shift+Enter in Typography Stylist blocks, the visually-hidden screen reader text concatenated words without a space (e.g. "MILANOCORTINA" instead of "MILANO CORTINA"). Line breaks are now replaced with spaces in the accessible text output.
+- **Fixed: Inline editor modal lost font selection on close/reopen** - Selecting a font family, closing the modal without applying, then reopening and clicking Apply would silently fail. The root cause was `selectedFontId` not being reset in `togglePopover()`, leaving stale state that caused `applyFeatures()` to enter the `removeFormat` branch instead of `applyFormat`.
+- **Fixed: Missing `data-lineheight` in format type registration** - Line-height values were silently dropped when reading back existing formatted content because the attribute wasn't registered with WordPress's `registerFormatType`.
+
+**UX Improvement:**
+- **Improved: Convert-to-block link in apply notice** - The "Click Apply below the preview to confirm changes" notice now includes a "Convert to a Typography Stylist block" link that converts the current block with features applied, guiding users toward the block type that supports real-time preview.
 
 **Accessibility Enforcement:**
 - **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.

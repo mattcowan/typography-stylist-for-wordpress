@@ -52,6 +52,15 @@
     border-radius: 0;
 }
 
+.typost-convert-link.components-button.is-link {
+    font-size: inherit;
+    padding: 0;
+    height: auto;
+    min-height: 0;
+    vertical-align: baseline;
+    text-decoration: underline;
+}
+
 /* Scrollable Content Wrapper */
 .typost-scrollable-content {
     flex: 1;

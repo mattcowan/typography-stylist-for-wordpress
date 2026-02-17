@@ -234,6 +234,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 = 1.2.1 =
 * Fixed: Line breaks (Shift+Enter) in Typography Stylist blocks caused words to run together in screen reader text (e.g. "MILANOCORTINA" instead of "MILANO CORTINA")
+* Fixed: Inline editor modal lost font selection state on close/reopen - selecting a font, closing the modal without applying, then reopening and clicking Apply would silently fail because stale state caused the apply logic to enter the wrong code path
+* Fixed: Missing data-lineheight attribute in format type registration - line-height values were silently dropped when reading back existing formatted content
+* Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
 * Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
 * Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
 

@@ -1997,7 +1997,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             className: 'typost-apply-notice'
                                         },
                                             wp.element.createElement('p', { style: { margin: 0 } },
-                                                __('Click "Apply" below the preview to confirm changes.', 'typography-stylist')
+                                                __('Click "Apply" below the preview to confirm changes.', 'typography-stylist'),
+                                                ' ',
+                                                wp.element.createElement(Button, {
+                                                    variant: 'link',
+                                                    onClick: this.convertToBlock,
+                                                    className: 'typost-convert-link'
+                                                }, __('Convert to a Typography Stylist block', 'typography-stylist')),
+                                                ' ',
+                                                __('to see changes in real time.', 'typography-stylist')
                                             )
                                         )}
                                     </div>
