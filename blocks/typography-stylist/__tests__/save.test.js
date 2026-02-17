@@ -203,6 +203,58 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 			expect(tree.children[0].children[0]).toBe('Nested tags');
 		});
 
+		it('should replace <br> tags with spaces in screen reader version', () => {
+			const attributes = {
+				content: 'MILANO<br>CORTINA',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0
+			};
+
+			const component = create(save({ attributes }));
+			const tree = component.toJSON();
+
+			// Screen reader version should have a space where <br> was
+			expect(tree.children[0].children[0]).toBe('MILANO CORTINA');
+		});
+
+		it('should replace self-closing <br/> tags with spaces in screen reader version', () => {
+			const attributes = {
+				content: 'Line One<br/>Line Two<br />Line Three',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0
+			};
+
+			const component = create(save({ attributes }));
+			const tree = component.toJSON();
+
+			expect(tree.children[0].children[0]).toBe('Line One Line Two Line Three');
+		});
+
+		it('should replace RichText <br data-rich-text-line-break="true"> tags with spaces in screen reader version', () => {
+			const attributes = {
+				content: 'Line One<br data-rich-text-line-break="true">Line Two',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0
+			};
+
+			const component = create(save({ attributes }));
+			const tree = component.toJSON();
+
+			expect(tree.children[0].children[0]).toBe('Line One Line Two');
+		});
+
 		it('should handle empty content gracefully', () => {
 			const attributes = {
 				content: '',
