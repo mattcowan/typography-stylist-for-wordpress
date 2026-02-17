@@ -862,3 +862,15 @@ msgstr ""
 #: typography-stylist.php:4336
 msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
 msgstr ""
+
+#: assets/js/block-editor.js:2000
+msgid "Click \"Apply\" below the preview to confirm changes."
+msgstr ""
+
+#: assets/js/block-editor.js:2006
+msgid "Convert to a Typography Stylist block"
+msgstr ""
+
+#: assets/js/block-editor.js:2008
+msgid "to see changes in real time."
+msgstr ""

@@ -1090,9 +1090,17 @@ msgstr "No se pudo detectar la fuente para este tipo de bloque."
 msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
 msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere usar el bloque Typography Stylist en lugar de la barra de herramientas en línea."
 
-#: assets/js/block-editor.js:1572
+#: assets/js/block-editor.js:2000
 msgid "Click \"Apply\" below the preview to confirm changes."
 msgstr "Haga clic en \"Aplicar\" debajo de la vista previa para confirmar los cambios."
+
+#: assets/js/block-editor.js:2006
+msgid "Convert to a Typography Stylist block"
+msgstr "Convertir a un bloque Typography Stylist"
+
+#: assets/js/block-editor.js:2008
+msgid "to see changes in real time."
+msgstr "para ver los cambios en tiempo real."
 
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
