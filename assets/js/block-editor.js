@@ -971,10 +971,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         /**
          * Validate selection to detect word boundary issues
          */
-        validateSelection() {
+        validateSelection(explicitStart = null, explicitEnd = null) {
             const { value } = this.props;
 
-            if (!value || value.start === value.end) {
+            // Accept explicit start/end to support saved selection bounds
+            const start = explicitStart !== null ? explicitStart : (value ? value.start : null);
+            const end = explicitEnd !== null ? explicitEnd : (value ? value.end : null);
+
+            if (!value || start === null || end === null || start === end) {
                 return { valid: true };
             }
 
@@ -988,7 +992,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Get the full text and selection
             const fullText = getTextContent(value);
-            const { start, end } = value;
 
             // Check if selection breaks word boundaries
             const beforeChar = start > 0 ? fullText[start - 1] : ' ';
@@ -1059,7 +1062,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 const fullText = getTextContent(value);
 
                 // Build style string for the selected portion
-                const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing } = this.state;
+                const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight } = this.state;
                 const styleArray = [];
 
                 if (selectedFeatures.length > 0) {
@@ -1079,6 +1082,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const sanitizedSpacing = parseFloat(letterSpacing) || 0;
                     styleArray.push(`letter-spacing: ${sanitizedSpacing / 1000}em`);
                 }
+                if (lineHeight && lineHeight !== 0) {
+                    const sanitizedLineHeight = parseFloat(lineHeight) || 0;
+                    if (sanitizedLineHeight > 0) {
+                        styleArray.push(`line-height: ${sanitizedLineHeight}`);
+                    }
+                }
                 if (fontSize === 'responsive') {
                     // Ensure all numeric values are actually numbers
                     const minPx = parseFloat(fontSizeMin) || 16;
@@ -1096,15 +1105,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const doc = parser.parseFromString(`<div>${existingContent}</div>`, 'text/html');
                     const container = doc.body.firstChild;
 
-                    // Validate selection bounds
-                    const textLength = container.textContent.length;
+                    // Create offset map for the selection (accounts for <br> line breaks)
+                    const selTextMap = buildTextOffsetMap(container, doc);
+
+                    // Use offset map's final position for text length (matches BR counting)
+                    const textLength = selTextMap.length > 0 ? selTextMap[selTextMap.length - 1].end : container.textContent.length;
                     const validationResult = validateSelectionBounds(effectiveStart, effectiveEnd, textLength);
                     if (!validationResult.valid) {
                         return;
                     }
-
-                    // Create a range for the selection (accounts for <br> line breaks)
-                    const selTextMap = buildTextOffsetMap(container, doc);
                     let startNode = null, startOffset = 0;
                     let endNode = null, endOffset = 0;
 
@@ -1177,7 +1186,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
                         fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing
+                        letterSpacing: this.state.letterSpacing,
+                        lineHeight: this.state.lineHeight
                     });
                 } else {
                     // Create new Typography Stylist block preserving user's settings from inline editor
@@ -1192,7 +1202,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
                         fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing
+                        letterSpacing: this.state.letterSpacing,
+                        lineHeight: this.state.lineHeight
                     });
 
                     // Replace current block
@@ -1236,8 +1247,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             }
 
-            // Close popover
-            this.setState({ isOpen: false });
+            // Close popover and reset open/changes flags
+            this.setState({ isOpen: false, hasChanges: false });
         }
 
         /**
@@ -1250,8 +1261,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            // Validate selection
-            const validation = this.validateSelection();
+            // Validate selection (use saved bounds if selection was lost)
+            const validation = selectionLost
+                ? this.validateSelection(savedSelectionStart, savedSelectionEnd)
+                : this.validateSelection();
             if (!validation.valid) {
                 // Show warning with options
                 this.setState({
@@ -1326,8 +1339,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 // Add aria-label if enabled for accessibility
                 if (typostData.enableAriaLabels && value) {
-                    const selectedText = value.start !== value.end
-                        ? getTextContent(slice(value, value.start, value.end))
+                    const effectiveStart = selectionLost ? savedSelectionStart : value.start;
+                    const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
+                    const selectedText = effectiveStart !== effectiveEnd
+                        ? getTextContent(slice(value, effectiveStart, effectiveEnd))
                         : getTextContent(value);
                     if (selectedText) {
                         attributes['aria-label'] = selectedText;
