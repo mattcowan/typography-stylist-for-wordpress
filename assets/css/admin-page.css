@@ -1099,3 +1099,24 @@
 .typost-developer-support .typost-separator {
     margin: 0 10px;
 }
+
+/* Available font weight checkboxes */
+.typost-weight-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-top: 8px;
+}
+
+.typost-weight-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 400 !important;
+    cursor: pointer;
+    min-width: 140px;
+}
+
+.typost-weight-checkbox-label input[type="checkbox"] {
+    margin: 0;
+}

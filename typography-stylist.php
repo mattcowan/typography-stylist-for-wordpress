@@ -3121,8 +3121,8 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+        if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
+            return new WP_Error('missing_params', esc_html__('Either fallbacks or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -3130,7 +3130,12 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3199,8 +3204,8 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['fallbacks'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+        if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
+            return new WP_Error('missing_params', esc_html__('Either fallbacks or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -3208,7 +3213,12 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3364,8 +3374,8 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['font_family'])) {
-            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typography-stylist'), array('status' => 400));
+        if (!isset($params['font_family']) && !isset($params['available_weights'])) {
+            return new WP_Error('missing_params', esc_html__('Either font_family or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_manual_fonts();
@@ -3373,8 +3383,15 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['font_family'] = sanitize_text_field($params['font_family']);
-                $fonts[$key]['fallbacks'] = isset($params['fallbacks']) ? sanitize_text_field($params['fallbacks']) : '';
+                if (isset($params['font_family'])) {
+                    $fonts[$key]['font_family'] = sanitize_text_field($params['font_family']);
+                }
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3853,7 +3870,7 @@ class Typost {
             if (isset($font['font_id']) && !empty($font['font_faces'][0])) {
                 // Use first face for main variable - sanitize for CSS context
                 $family = $this->sanitize_css_value($font['font_faces'][0]['family']);
-                $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
+                $fallback = !empty($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                 $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
             }
         }
@@ -3874,7 +3891,7 @@ class Typost {
                 }
 
                 if ($family) {
-                    $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
+                    $fallback = !empty($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                     $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
                 }
             }
@@ -4339,6 +4356,38 @@ class Typost {
 
         // Use CSS-specific sanitization
         return $this->sanitize_css_value($fallbacks);
+    }
+
+    /**
+     * Sanitize available font weights
+     *
+     * Validates and filters an array of font weight values against the standard
+     * CSS font-weight scale (100-900). Returns empty array if all 9 weights are
+     * provided (meaning "all weights available").
+     *
+     * @since 1.3.0
+     *
+     * @param mixed $weights Input weights array.
+     * @return array Sanitized array of weight strings, or empty array for "all weights".
+     */
+    private function sanitize_available_weights($weights) {
+        if (!is_array($weights)) {
+            return array();
+        }
+
+        $allowed = array('100', '200', '300', '400', '500', '600', '700', '800', '900');
+        $sanitized = array_values(array_intersect(
+            array_map('sanitize_text_field', $weights),
+            $allowed
+        ));
+
+        // If all 9 weights selected, store empty array (= "all weights available")
+        if (count($sanitized) === 9) {
+            return array();
+        }
+
+        sort($sanitized);
+        return $sanitized;
     }
 
     /**

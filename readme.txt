@@ -233,12 +233,17 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.2.1 =
+* Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
+* Added: Single-weight auto-apply - when a font has only one available weight, the weight selector is hidden and the weight is automatically applied
+* Added: Weight validation on font change - switching fonts automatically adjusts the weight to the closest available option
+* Fixed: CSS variable trailing comma caused fonts without fallbacks to fail loading on both frontend and block editor (e.g. `--font-20: "EsmeraldaPro", ;` produced invalid CSS)
 * Fixed: Line breaks (Shift+Enter) in Typography Stylist blocks caused words to run together in screen reader text (e.g. "MILANOCORTINA" instead of "MILANO CORTINA")
 * Fixed: Inline editor modal lost font selection state on close/reopen - selecting a font, closing the modal without applying, then reopening and clicking Apply would silently fail because stale state caused the apply logic to enter the wrong code path
 * Fixed: Missing data-lineheight attribute in format type registration - line-height values were silently dropped when reading back existing formatted content
 * Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
 * Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
 * Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
+* Changed: "Edit Fallbacks" button renamed to "Edit Settings" in admin font management to reflect expanded functionality
 * Improved: OpenType feature previews now show cumulative checked features - toggling a stylistic set updates ALL preview windows to include that feature, accurately showing how features combine (essential for fonts like Bookmania where stylistic sets interact to produce different glyphs)
 
 = 1.2.0 =

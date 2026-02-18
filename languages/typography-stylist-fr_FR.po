@@ -1263,3 +1263,33 @@ msgstr "Vider le cache des polices"
 #: typography-stylist.php:4336
 msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
 msgstr "Cache des polices vidé avec succès. Les polices seront à nouveau détectées lors du prochain chargement de page."
+
+#: includes/admin-page.php
+msgid "Edit Settings"
+msgstr "Modifier les paramètres"
+
+#: includes/admin-page.php
+msgid "Available Font Weights:"
+msgstr "Graisses de police disponibles :"
+
+#: includes/admin-page.php
+msgid "Uncheck weights this font doesn't include to exclude them from being selected. You can leave all checked for variable fonts."
+msgstr "Décochez les graisses que cette police n'inclut pas pour les exclure de la sélection. Vous pouvez laisser tout coché pour les polices variables."
+
+#: includes/admin-page.php
+msgid "Auto-detected from font files."
+msgstr "Détecté automatiquement à partir des fichiers de police."
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr "Modifier les paramètres pour : %s"
+
+#: typography-stylist.php:3125
+#: typography-stylist.php:3208
+msgid "Either fallbacks or available_weights parameter is required"
+msgstr "Le paramètre fallbacks ou available_weights est requis"
+
+#: typography-stylist.php:3378
+msgid "Either font_family or available_weights parameter is required"
+msgstr "Le paramètre font_family ou available_weights est requis"

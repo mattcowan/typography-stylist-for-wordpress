@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -1008,7 +1008,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					fontFamily: family,
 					fontId: font.font_id
 				});
-				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
+				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
 			});
 		}
 	});
@@ -1023,7 +1023,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				fontFamily: font.font_family,
 				fontId: font.font_id
 			});
-			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
 		}
 		// Handle legacy structure: font_families (plural array - multiple families per entry)
 		else if (font.font_families && font.font_families.length > 0 && font.font_id) {
@@ -1034,7 +1034,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					fontFamily: family,
 					fontId: font.font_id
 				});
-				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
+				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
 			});
 		}
 	});
@@ -1048,9 +1048,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				fontFamily: font.font_family,
 				fontId: font.font_id
 			});
-			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
 		}
 	});
+
+	// Wrappers around utils.js helpers, binding to local fontIdMap
+	const getFilteredWeightOptions = (targetFontId, includeInherit = false) =>
+		getFilteredWeightOptionsUtil(targetFontId, fontIdMap, includeInherit);
+
+	const getClosestWeight = (currentWeight, availableWeights) =>
+		getClosestWeightUtil(currentWeight, availableWeights);
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
@@ -2276,6 +2283,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											setInlineFontFamily(value);
 											if (value) {
 												debouncedApplyFontFamily();
+												// Validate inline weight against new font
+												const newFontId = parseInt(value, 10);
+												if (!isNaN(newFontId) && fontIdMap[newFontId]) {
+													const available = fontIdMap[newFontId].availableWeights;
+													if (available && available.length > 0 && inlineFontWeight !== 'inherit') {
+														if (!available.includes(inlineFontWeight)) {
+															setInlineFontWeight(getClosestWeight(inlineFontWeight, available));
+														}
+														if (available.length === 1) {
+															setInlineFontWeight(available[0]);
+															debouncedApplyFontWeight();
+														}
+													}
+												}
 											}
 										}}
 										options={[
@@ -2296,42 +2317,40 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
-								{/* Font Weight Control */}
-								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
-										label={__('Font Weight (for selected text)', 'typography-stylist')}
-										value={inlineFontWeight}
-										onChange={(value) => {
-											setInlineFontWeight(value);
-											if (value !== 'inherit') {
-												debouncedApplyFontWeight();
-											}
-										}}
-										options={[
-											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
-											{ label: '100 - Thin', value: '100' },
-											{ label: '200 - Extra Light', value: '200' },
-											{ label: '300 - Light', value: '300' },
-											{ label: '400 - Normal', value: '400' },
-											{ label: '500 - Medium', value: '500' },
-											{ label: '600 - Semi Bold', value: '600' },
-											{ label: '700 - Bold', value: '700' },
-											{ label: '800 - Extra Bold', value: '800' },
-											{ label: '900 - Black', value: '900' }
-										]}
-									/>
-									{inlineFontWeight !== 'inherit' && (
-										<Button
-											variant="secondary"
-											onClick={resetFontWeight}
-											isDestructive
-											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
-											icon="undo"
-										>
-											{__('Reset Font Weight', 'typography-stylist')}
-										</Button>
-									)}
-								</div>
+								{/* Font Weight Control - use inline font if present, else block font */}
+								{(() => {
+									const activeFontId = inlineFontFamilyAtSelection || fontId;
+									const inlineWeightOptions = getFilteredWeightOptions(activeFontId, true);
+									// Hide if only "Inherit" + 1 weight (or fewer) — means the font has a single weight
+									const weightOnlyOptions = inlineWeightOptions.filter(o => o.value !== 'inherit');
+									if (weightOnlyOptions.length <= 1) return null;
+									return (
+										<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+											<SelectControl
+												label={__('Font Weight (for selected text)', 'typography-stylist')}
+												value={inlineFontWeight}
+												onChange={(value) => {
+													setInlineFontWeight(value);
+													if (value !== 'inherit') {
+														debouncedApplyFontWeight();
+													}
+												}}
+												options={inlineWeightOptions}
+											/>
+											{inlineFontWeight !== 'inherit' && (
+												<Button
+													variant="secondary"
+													onClick={resetFontWeight}
+													isDestructive
+													style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+													icon="undo"
+												>
+													{__('Reset Font Weight', 'typography-stylist')}
+												</Button>
+											)}
+										</div>
+									);
+								})()}
 
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
@@ -2646,10 +2665,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									if (!isNaN(selectedFontId) && fontIdMap[selectedFontId]) {
 										// New ID-based system
 										const fontData = fontIdMap[selectedFontId];
-										setAttributes({
+										const newAttrs = {
 											fontFamily: fontData.family,
 											fontId: selectedFontId
-										});
+										};
+
+										// Validate weight against new font's available weights
+										const available = fontData.availableWeights;
+										if (available && available.length > 0) {
+											if (!available.includes(fontWeight)) {
+												newAttrs.fontWeight = getClosestWeight(fontWeight, available);
+											}
+											if (available.length === 1 && fontWeight !== available[0]) {
+												newAttrs.fontWeight = available[0];
+											}
+										}
+
+										setAttributes(newAttrs);
 									} else {
 										// Old string-based system (backward compatibility)
 										setAttributes({
@@ -2663,23 +2695,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					</PanelBody>
 				)}
 
-				<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
-					<SelectControl
-						value={fontWeight}
-						options={[
-							{ label: __('100 - Thin', 'typography-stylist'), value: '100' },
-							{ label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
-							{ label: __('300 - Light', 'typography-stylist'), value: '300' },
-							{ label: __('400 - Normal', 'typography-stylist'), value: '400' },
-							{ label: __('500 - Medium', 'typography-stylist'), value: '500' },
-							{ label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
-							{ label: __('700 - Bold', 'typography-stylist'), value: '700' },
-							{ label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
-							{ label: __('900 - Black', 'typography-stylist'), value: '900' }
-						]}
-						onChange={(value) => setAttributes({ fontWeight: value })}
-					/>
-				</PanelBody>
+				{/* Font Weight - hidden when font has only one available weight */}
+				{(() => {
+					const sidebarWeightOptions = getFilteredWeightOptions(fontId, false);
+					if (sidebarWeightOptions.length <= 1) return null;
+					return (
+						<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
+							<SelectControl
+								value={fontWeight}
+								options={sidebarWeightOptions}
+								onChange={(value) => setAttributes({ fontWeight: value })}
+							/>
+						</PanelBody>
+					);
+				})()}
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl

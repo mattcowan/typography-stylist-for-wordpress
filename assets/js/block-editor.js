@@ -838,12 +838,26 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 const fontId = parseInt(value, 10);
                 const fontData = this.fontIdMap && this.fontIdMap[fontId];
                 if (!isNaN(fontId) && fontData) {
-                    // New ID-based system
-                    this.setState({
+                    const newState = {
                         selectedFont: fontData.family,
                         selectedFontId: fontId,
                         hasChanges: true
-                    });
+                    };
+
+                    // Validate current weight against new font's available weights
+                    const available = fontData.availableWeights;
+                    if (available && available.length > 0) {
+                        const currentWeight = this.state.fontWeight || '400';
+                        if (!available.includes(currentWeight)) {
+                            newState.fontWeight = this.getClosestWeight(currentWeight, available);
+                        }
+                        // Auto-apply single weight (if not default 400)
+                        if (available.length === 1 && this.state.fontWeight !== available[0]) {
+                            newState.fontWeight = available[0];
+                        }
+                    }
+
+                    this.setState(newState);
                 } else {
                     // Old string-based system (backward compatibility)
                     this.setState({
@@ -1513,7 +1527,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 fontFamily: family,
                                 fontId: font.font_id
                             });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
+                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
                         });
                     }
                 });
@@ -1530,7 +1544,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             fontFamily: font.font_family,
                             fontId: font.font_id
                         });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
                     }
                     // Handle legacy structure: font_families (plural array - multiple families per entry)
                     else if (font.font_families && font.font_families.length > 0 && font.font_id) {
@@ -1541,7 +1555,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 fontFamily: family,
                                 fontId: font.font_id
                             });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks };
+                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
                         });
                     }
                 });
@@ -1557,12 +1571,63 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             fontFamily: font.font_family,
                             fontId: font.font_id
                         });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks };
+                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
                     }
                 });
             }
 
             return options;
+        }
+
+        /**
+         * Get filtered weight options based on the selected font's available weights.
+         * Returns all weights if no font is selected or font has no restrictions.
+         */
+        getFilteredWeightOptions(fontId) {
+            const ALL_WEIGHTS = [
+                { label: __('100 - Thin', 'typography-stylist'), value: '100' },
+                { label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
+                { label: __('300 - Light', 'typography-stylist'), value: '300' },
+                { label: __('400 - Normal', 'typography-stylist'), value: '400' },
+                { label: __('500 - Medium', 'typography-stylist'), value: '500' },
+                { label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
+                { label: __('700 - Bold', 'typography-stylist'), value: '700' },
+                { label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
+                { label: __('900 - Black', 'typography-stylist'), value: '900' }
+            ];
+
+            if (!fontId || !this.fontIdMap || !this.fontIdMap[fontId]) {
+                return ALL_WEIGHTS;
+            }
+
+            const available = this.fontIdMap[fontId].availableWeights;
+            if (!available || available.length === 0) {
+                return ALL_WEIGHTS;
+            }
+
+            return ALL_WEIGHTS.filter(w => available.includes(w.value));
+        }
+
+        /**
+         * Get the closest available weight to the given weight.
+         * Used when switching fonts and the current weight isn't available.
+         */
+        getClosestWeight(currentWeight, availableWeights) {
+            if (!availableWeights || availableWeights.length === 0) return currentWeight;
+            if (availableWeights.includes(currentWeight)) return currentWeight;
+
+            const current = parseInt(currentWeight, 10);
+            let closest = availableWeights[0];
+            let minDiff = Math.abs(current - parseInt(closest, 10));
+
+            for (const w of availableWeights) {
+                const diff = Math.abs(current - parseInt(w, 10));
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = w;
+                }
+            }
+            return closest;
         }
 
         /**
@@ -2060,25 +2125,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </div>
                                 )}
 
-                                {/* Font Weight Control */}
-                                <div className="typost-fontweight-section">
-                                    <h4>{__('Font Weight', 'typography-stylist')}</h4>
-                                    <SelectControl
-                                        value={fontWeight}
-                                        options={[
-                                            { label: __('100 - Thin', 'typography-stylist'), value: '100' },
-                                            { label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
-                                            { label: __('300 - Light', 'typography-stylist'), value: '300' },
-                                            { label: __('400 - Normal', 'typography-stylist'), value: '400' },
-                                            { label: __('500 - Medium', 'typography-stylist'), value: '500' },
-                                            { label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
-                                            { label: __('700 - Bold', 'typography-stylist'), value: '700' },
-                                            { label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
-                                            { label: __('900 - Black', 'typography-stylist'), value: '900' }
-                                        ]}
-                                        onChange={this.setFontWeight}
-                                    />
-                                </div>
+                                {/* Font Weight Control - hidden when font has only one available weight */}
+                                {(() => {
+                                    const weightOptions = this.getFilteredWeightOptions(this.state.selectedFontId);
+                                    if (weightOptions.length <= 1) return null;
+                                    return (
+                                        <div className="typost-fontweight-section">
+                                            <h4>{__('Font Weight', 'typography-stylist')}</h4>
+                                            <SelectControl
+                                                value={fontWeight}
+                                                options={weightOptions}
+                                                onChange={this.setFontWeight}
+                                            />
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">

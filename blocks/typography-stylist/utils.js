@@ -1688,6 +1688,71 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 	};
 }
 
+/**
+ * Standard CSS font weight options.
+ */
+export const ALL_WEIGHT_OPTIONS = [
+	{ label: '100 - Thin', value: '100' },
+	{ label: '200 - Extra Light', value: '200' },
+	{ label: '300 - Light', value: '300' },
+	{ label: '400 - Normal', value: '400' },
+	{ label: '500 - Medium', value: '500' },
+	{ label: '600 - Semi Bold', value: '600' },
+	{ label: '700 - Bold', value: '700' },
+	{ label: '800 - Extra Bold', value: '800' },
+	{ label: '900 - Black', value: '900' }
+];
+
+/**
+ * Get filtered font weight options based on a font's available weights.
+ *
+ * @param {number|string} targetFontId   The font ID to check weights for.
+ * @param {Object}        fontIdMap      Map of font ID to font data (must include availableWeights).
+ * @param {boolean}       includeInherit Whether to include an "Inherit from block" option.
+ * @return {Array} Filtered weight options array with { label, value } objects.
+ */
+export function getFilteredWeightOptions(targetFontId, fontIdMap, includeInherit = false) {
+	const options = includeInherit
+		? [{ label: 'Inherit from block', value: 'inherit' }]
+		: [];
+
+	if (!targetFontId || !fontIdMap || !fontIdMap[targetFontId]) {
+		return options.concat(ALL_WEIGHT_OPTIONS);
+	}
+
+	const available = fontIdMap[targetFontId].availableWeights;
+	if (!available || available.length === 0) {
+		return options.concat(ALL_WEIGHT_OPTIONS);
+	}
+
+	return options.concat(ALL_WEIGHT_OPTIONS.filter(w => available.includes(w.value)));
+}
+
+/**
+ * Get the closest available weight to the given weight.
+ *
+ * @param {string} currentWeight    The current weight value (e.g., '400').
+ * @param {Array}  availableWeights Array of available weight strings (e.g., ['200', '700']).
+ * @return {string} The closest available weight.
+ */
+export function getClosestWeight(currentWeight, availableWeights) {
+	if (!availableWeights || availableWeights.length === 0) return currentWeight;
+	if (availableWeights.includes(currentWeight)) return currentWeight;
+
+	const current = parseInt(currentWeight, 10);
+	let closest = availableWeights[0];
+	let minDiff = Math.abs(current - parseInt(closest, 10));
+
+	for (const w of availableWeights) {
+		const diff = Math.abs(current - parseInt(w, 10));
+		if (diff < minDiff) {
+			minDiff = diff;
+			closest = w;
+		}
+	}
+	return closest;
+}
+
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {

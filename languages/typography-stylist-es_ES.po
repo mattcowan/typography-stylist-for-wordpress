@@ -1263,3 +1263,33 @@ msgstr "Borrar caché de fuentes"
 #: typography-stylist.php:4336
 msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
 msgstr "Caché de fuentes borrado correctamente. Las fuentes se volverán a detectar en la próxima carga de página."
+
+#: includes/admin-page.php
+msgid "Edit Settings"
+msgstr "Editar configuración"
+
+#: includes/admin-page.php
+msgid "Available Font Weights:"
+msgstr "Pesos de fuente disponibles:"
+
+#: includes/admin-page.php
+msgid "Uncheck weights this font doesn't include to exclude them from being selected. You can leave all checked for variable fonts."
+msgstr "Desmarca los pesos que esta fuente no incluye para excluirlos de la selección. Puedes dejar todos marcados para fuentes variables."
+
+#: includes/admin-page.php
+msgid "Auto-detected from font files."
+msgstr "Detectado automáticamente de los archivos de fuente."
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr "Editar configuración para: %s"
+
+#: typography-stylist.php:3125
+#: typography-stylist.php:3208
+msgid "Either fallbacks or available_weights parameter is required"
+msgstr "Se requiere el parámetro fallbacks o available_weights"
+
+#: typography-stylist.php:3378
+msgid "Either font_family or available_weights parameter is required"
+msgstr "Se requiere el parámetro font_family o available_weights"
