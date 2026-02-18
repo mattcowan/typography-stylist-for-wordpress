@@ -1284,3 +1284,12 @@ msgstr "Détecté automatiquement à partir des fichiers de police."
 #, php-format
 msgid "Edit settings for: %s"
 msgstr "Modifier les paramètres pour : %s"
+
+#: typography-stylist.php:3125
+#: typography-stylist.php:3208
+msgid "Either fallbacks or available_weights parameter is required"
+msgstr "Le paramètre fallbacks ou available_weights est requis"
+
+#: typography-stylist.php:3378
+msgid "Either font_family or available_weights parameter is required"
+msgstr "Le paramètre font_family ou available_weights est requis"

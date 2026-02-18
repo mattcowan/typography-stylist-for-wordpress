@@ -3122,7 +3122,7 @@ class Typost {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Either fallbacks or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_adobe_fonts();
@@ -3205,7 +3205,7 @@ class Typost {
         $params = $request->get_json_params();
 
         if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
-            return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Either fallbacks or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_custom_fonts();
@@ -3375,7 +3375,7 @@ class Typost {
         $params = $request->get_json_params();
 
         if (!isset($params['font_family']) && !isset($params['available_weights'])) {
-            return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typography-stylist'), array('status' => 400));
+            return new WP_Error('missing_params', esc_html__('Either font_family or available_weights parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
         $fonts = $this->get_manual_fonts();

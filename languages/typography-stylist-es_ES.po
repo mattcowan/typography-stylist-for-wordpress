@@ -1284,3 +1284,12 @@ msgstr "Detectado automáticamente de los archivos de fuente."
 #, php-format
 msgid "Edit settings for: %s"
 msgstr "Editar configuración para: %s"
+
+#: typography-stylist.php:3125
+#: typography-stylist.php:3208
+msgid "Either fallbacks or available_weights parameter is required"
+msgstr "Se requiere el parámetro fallbacks o available_weights"
+
+#: typography-stylist.php:3378
+msgid "Either font_family or available_weights parameter is required"
+msgstr "Se requiere el parámetro font_family o available_weights"
