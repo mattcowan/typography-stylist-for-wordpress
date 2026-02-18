@@ -874,3 +874,24 @@ msgstr ""
 #: assets/js/block-editor.js:2008
 msgid "to see changes in real time."
 msgstr ""
+
+#: includes/admin-page.php
+msgid "Edit Settings"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Available Font Weights:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Uncheck weights this font doesn't include to exclude them from being selected. You can leave all checked for variable fonts."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Auto-detected from font files."
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr ""

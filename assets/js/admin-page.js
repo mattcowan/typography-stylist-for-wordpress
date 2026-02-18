@@ -655,6 +655,10 @@ jQuery(document).ready(function($) {
         var $message = $card.find('.typost-font-edit-message');
         var fontId = $card.find('.typost-edit-font').data('font-id');
         var fallbacks = $card.find('.typost-font-fallback-input').val().trim();
+        var availableWeights = [];
+        $card.find('.typost-font-weight-checkbox:checked').each(function() {
+            availableWeights.push($(this).val());
+        });
 
         $message.html('');
         $btn.prop('disabled', true).text(typostAdmin.strings.saving);
@@ -662,7 +666,7 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: typostAdmin.restUrl + 'fonts/' + fontId + '/fallback',
             method: 'PATCH',
-            data: JSON.stringify({ fallbacks: fallbacks }),
+            data: JSON.stringify({ fallbacks: fallbacks, available_weights: availableWeights }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -715,6 +719,10 @@ jQuery(document).ready(function($) {
         var $message = $card.find('.typost-adobe-font-edit-message');
         var fontId = $card.find('.typost-edit-adobe-font').data('font-id');
         var fallbacks = $card.find('.typost-adobe-font-fallback-input').val().trim();
+        var availableWeights = [];
+        $card.find('.typost-adobe-weight-checkbox:checked').each(function() {
+            availableWeights.push($(this).val());
+        });
 
         $message.html('');
         $btn.prop('disabled', true).text(typostAdmin.strings.saving);
@@ -722,7 +730,7 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
             method: 'PATCH',
-            data: JSON.stringify({ fallbacks: fallbacks }),
+            data: JSON.stringify({ fallbacks: fallbacks, available_weights: availableWeights }),
             contentType: 'application/json',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -773,6 +781,10 @@ jQuery(document).ready(function($) {
         var fontId = $card.find('.typost-edit-manual-font').data('font-id');
         var fontFamily = $card.find('.typost-manual-font-family-input').val().trim();
         var fallbacks = $card.find('.typost-manual-font-fallback-input').val().trim();
+        var availableWeights = [];
+        $card.find('.typost-manual-weight-checkbox:checked').each(function() {
+            availableWeights.push($(this).val());
+        });
 
         $message.html('');
 
@@ -791,7 +803,8 @@ jQuery(document).ready(function($) {
             method: 'PATCH',
             data: JSON.stringify({
                 font_family: fontFamily,
-                fallbacks: fallbacks
+                fallbacks: fallbacks,
+                available_weights: availableWeights
             }),
             contentType: 'application/json',
             beforeSend: function(xhr) {

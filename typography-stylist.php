@@ -2534,6 +2534,12 @@ class Typost {
             // Extract just the @font-face rules for this family from CSS
             $family_css = $this->extract_font_face_css($css_content, $family);
 
+            // Auto-detect available weights from font faces
+            $detected_weights = array_values(array_unique(array_map(function($face) {
+                return isset($face['weight']) ? $face['weight'] : '400';
+            }, $faces)));
+            sort($detected_weights);
+
             $font_entries[] = array(
                 'id' => sanitize_key($composite_font_id),
                 'name' => sanitize_text_field($family), // Use family name as font name
@@ -2542,6 +2548,7 @@ class Typost {
                 'kit_name' => sanitize_text_field($kit_name), // For display/grouping
                 'css_content' => $family_css,
                 'font_faces' => $faces,                  // Only this family's faces
+                'available_weights' => $this->sanitize_available_weights($detected_weights),
                 'upload_path' => $kit_base_path,         // Shared directory
                 'upload_url' => $kit_base_url,
                 'uploaded_date' => current_time('mysql')
@@ -3121,7 +3128,7 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['fallbacks'])) {
+        if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
             return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
@@ -3130,7 +3137,12 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3199,7 +3211,7 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['fallbacks'])) {
+        if (!isset($params['fallbacks']) && !isset($params['available_weights'])) {
             return new WP_Error('missing_fallbacks', esc_html__('Fallbacks parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
@@ -3208,7 +3220,12 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3364,7 +3381,7 @@ class Typost {
         $id = sanitize_key($request->get_param('id'));
         $params = $request->get_json_params();
 
-        if (!isset($params['font_family'])) {
+        if (!isset($params['font_family']) && !isset($params['available_weights'])) {
             return new WP_Error('missing_font_family', esc_html__('Font family parameter is required', 'typography-stylist'), array('status' => 400));
         }
 
@@ -3373,8 +3390,15 @@ class Typost {
 
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
-                $fonts[$key]['font_family'] = sanitize_text_field($params['font_family']);
-                $fonts[$key]['fallbacks'] = isset($params['fallbacks']) ? sanitize_text_field($params['fallbacks']) : '';
+                if (isset($params['font_family'])) {
+                    $fonts[$key]['font_family'] = sanitize_text_field($params['font_family']);
+                }
+                if (isset($params['fallbacks'])) {
+                    $fonts[$key]['fallbacks'] = sanitize_text_field($params['fallbacks']);
+                }
+                if (isset($params['available_weights'])) {
+                    $fonts[$key]['available_weights'] = $this->sanitize_available_weights($params['available_weights']);
+                }
                 $found = true;
                 break;
             }
@@ -3853,7 +3877,7 @@ class Typost {
             if (isset($font['font_id']) && !empty($font['font_faces'][0])) {
                 // Use first face for main variable - sanitize for CSS context
                 $family = $this->sanitize_css_value($font['font_faces'][0]['family']);
-                $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
+                $fallback = !empty($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                 $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
             }
         }
@@ -3874,7 +3898,7 @@ class Typost {
                 }
 
                 if ($family) {
-                    $fallback = isset($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
+                    $fallback = !empty($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
                     $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
                 }
             }
@@ -4339,6 +4363,38 @@ class Typost {
 
         // Use CSS-specific sanitization
         return $this->sanitize_css_value($fallbacks);
+    }
+
+    /**
+     * Sanitize available font weights
+     *
+     * Validates and filters an array of font weight values against the standard
+     * CSS font-weight scale (100-900). Returns empty array if all 9 weights are
+     * provided (meaning "all weights available").
+     *
+     * @since 1.3.0
+     *
+     * @param mixed $weights Input weights array.
+     * @return array Sanitized array of weight strings, or empty array for "all weights".
+     */
+    private function sanitize_available_weights($weights) {
+        if (!is_array($weights)) {
+            return array();
+        }
+
+        $allowed = array('100', '200', '300', '400', '500', '600', '700', '800', '900');
+        $sanitized = array_values(array_intersect(
+            array_map('sanitize_text_field', $weights),
+            $allowed
+        ));
+
+        // If all 9 weights selected, store empty array (= "all weights available")
+        if (count($sanitized) === 9) {
+            return array();
+        }
+
+        sort($sanitized);
+        return $sanitized;
     }
 
     /**

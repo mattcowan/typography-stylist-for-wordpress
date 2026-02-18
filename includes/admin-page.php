@@ -20,6 +20,53 @@ if (!defined('ABSPATH')) {
  * @param array              $adobe_fonts   Array of Adobe Fonts configurations
  * @param array              $manual_fonts  Array of manually defined fonts
  */
+/**
+ * Render available font weight checkboxes for the admin edit form
+ *
+ * @param array  $font       Font data array containing 'id' and optionally 'available_weights'.
+ * @param string $prefix     CSS class/ID prefix for the font type (e.g., 'font', 'adobe', 'manual').
+ * @param bool   $show_auto  Whether to show "Auto-detected from font files" note.
+ */
+function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
+    $weights = array(
+        '100' => __('100 - Thin', 'typography-stylist'),
+        '200' => __('200 - Extra Light', 'typography-stylist'),
+        '300' => __('300 - Light', 'typography-stylist'),
+        '400' => __('400 - Normal', 'typography-stylist'),
+        '500' => __('500 - Medium', 'typography-stylist'),
+        '600' => __('600 - Semi Bold', 'typography-stylist'),
+        '700' => __('700 - Bold', 'typography-stylist'),
+        '800' => __('800 - Extra Bold', 'typography-stylist'),
+        '900' => __('900 - Black', 'typography-stylist'),
+    );
+    $available = !empty($font['available_weights']) ? $font['available_weights'] : array();
+    $all_available = empty($available); // Empty array = all weights available
+    ?>
+    <div class="typost-form-field">
+        <label><?php esc_html_e('Available Font Weights:', 'typography-stylist'); ?></label>
+        <p class="description" id="typost-<?php echo esc_attr($prefix); ?>-weights-desc-<?php echo esc_attr($font['id']); ?>">
+            <?php esc_html_e('Uncheck weights this font doesn\'t include to exclude them from being selected. You can leave all checked for variable fonts.', 'typography-stylist'); ?>
+            <?php if ($show_auto && !empty($font['available_weights'])): ?>
+                <br><em><?php esc_html_e('Auto-detected from font files.', 'typography-stylist'); ?></em>
+            <?php endif; ?>
+        </p>
+        <div class="typost-weight-checkboxes"
+            aria-describedby="typost-<?php echo esc_attr($prefix); ?>-weights-desc-<?php echo esc_attr($font['id']); ?>">
+            <?php foreach ($weights as $value => $label): ?>
+                <label class="typost-weight-checkbox-label">
+                    <input
+                        type="checkbox"
+                        class="typost-<?php echo esc_attr($prefix); ?>-weight-checkbox"
+                        value="<?php echo esc_attr($value); ?>"
+                        <?php checked($all_available || in_array((string) $value, $available, true)); ?> />
+                    <?php echo esc_html($label); ?>
+                </label>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php
+}
+
 function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {
     ?>
 <div class="wrap typost-admin-wrap">
@@ -380,9 +427,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                         data-font-id="<?php echo esc_attr($font['id']); ?>"
                                         data-font-name="<?php echo esc_attr($font['name']); ?>"
                                         <?php /* translators: %s: The name of the font to be edited */ ?>
-                                        aria-label="<?php echo esc_attr(sprintf(__('Edit fallback fonts for: %s', 'typography-stylist'), $font['name'])); ?>">
+                                        aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
                                         <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                        <?php esc_html_e('Edit Fallbacks', 'typography-stylist'); ?>
+                                        <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
                                     </button>
                                     <button
                                         class="button typost-delete-font"
@@ -457,6 +504,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                         <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                                     </p>
                                 </div>
+                                <?php typost_render_weight_checkboxes($font, 'font', true); ?>
                                 <div class="typost-form-actions">
                                     <button type="button" class="button button-primary typost-save-font-edit">
                                         <?php esc_html_e('Save Changes', 'typography-stylist'); ?>
@@ -484,9 +532,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 data-font-id="<?php echo esc_attr($font['id']); ?>"
                                 data-font-name="<?php echo esc_attr($font['name']); ?>"
                                 <?php /* translators: %s: The name of the font kit to be edited */ ?>
-                                aria-label="<?php echo esc_attr(sprintf(__('Edit fallback fonts for: %s', 'typography-stylist'), $font['name'])); ?>">
+                                aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
                                 <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                <?php esc_html_e('Edit Fallbacks', 'typography-stylist'); ?>
+                                <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
                             </button>
                             <button
                                 class="button typost-delete-font"
@@ -578,6 +626,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                             </p>
                         </div>
+                        <?php typost_render_weight_checkboxes($font, 'font', true); ?>
                         <div class="typost-form-actions">
                             <button type="button" class="button button-primary typost-save-font-edit">
                                 <?php esc_html_e('Save Changes', 'typography-stylist'); ?>
@@ -776,9 +825,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                             data-font-id="<?php echo esc_attr($font['id']); ?>"
                                             data-font-name="<?php echo esc_attr($font['name']); ?>"
                                             <?php /* translators: %s: The name of the Adobe font to be edited */ ?>
-                                            aria-label="<?php echo esc_attr(sprintf(__('Edit fallback fonts for: %s', 'typography-stylist'), $font['name'])); ?>">
+                                            aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
                                             <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                            <?php esc_html_e('Edit Fallbacks', 'typography-stylist'); ?>
+                                            <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
                                         </button>
                                         <button
                                             class="button typost-delete-adobe-font"
@@ -839,6 +888,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                             <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                                         </p>
                                     </div>
+                                    <?php typost_render_weight_checkboxes($font, 'adobe', false); ?>
                                     <div class="typost-form-actions">
                                         <button type="button" class="button button-primary typost-save-adobe-font-edit">
                                             <?php esc_html_e('Save Changes', 'typography-stylist'); ?>
@@ -866,9 +916,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     data-font-id="<?php echo esc_attr($font['id']); ?>"
                                     data-font-name="<?php echo esc_attr($font['name']); ?>"
                                     <?php /* translators: %s: The name of the Adobe font project to be edited */ ?>
-                                    aria-label="<?php echo esc_attr(sprintf(__('Edit fallback fonts for: %s', 'typography-stylist'), $font['name'])); ?>">
+                                    aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
                                     <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                    <?php esc_html_e('Edit Fallbacks', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
                                 </button>
                                 <button
                                     class="button typost-delete-adobe-font"
@@ -950,6 +1000,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                                 </p>
                             </div>
+                            <?php typost_render_weight_checkboxes($font, 'adobe', false); ?>
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-adobe-font-edit">
                                     <?php esc_html_e('Save Changes', 'typography-stylist'); ?>
@@ -1113,6 +1164,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Enter the exact CSS font-family value including any fallback fonts (e.g., \'Playfair Display\', Georgia, serif)', 'typography-stylist'); ?>
                                 </p>
                             </div>
+                            <?php typost_render_weight_checkboxes($font, 'manual', false); ?>
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-manual-font-edit">
                                     <?php esc_html_e('Save Changes', 'typography-stylist'); ?>
