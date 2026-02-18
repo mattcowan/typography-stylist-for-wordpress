@@ -2534,12 +2534,6 @@ class Typost {
             // Extract just the @font-face rules for this family from CSS
             $family_css = $this->extract_font_face_css($css_content, $family);
 
-            // Auto-detect available weights from font faces
-            $detected_weights = array_values(array_unique(array_map(function($face) {
-                return isset($face['weight']) ? $face['weight'] : '400';
-            }, $faces)));
-            sort($detected_weights);
-
             $font_entries[] = array(
                 'id' => sanitize_key($composite_font_id),
                 'name' => sanitize_text_field($family), // Use family name as font name
@@ -2548,7 +2542,6 @@ class Typost {
                 'kit_name' => sanitize_text_field($kit_name), // For display/grouping
                 'css_content' => $family_css,
                 'font_faces' => $faces,                  // Only this family's faces
-                'available_weights' => $this->sanitize_available_weights($detected_weights),
                 'upload_path' => $kit_base_path,         // Shared directory
                 'upload_url' => $kit_base_url,
                 'uploaded_date' => current_time('mysql')

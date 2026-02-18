@@ -234,7 +234,6 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 = 1.2.1 =
 * Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
-* Added: Weight auto-detection for uploaded font kits - available weights are automatically detected from font files during upload
 * Added: Single-weight auto-apply - when a font has only one available weight, the weight selector is hidden and the weight is automatically applied
 * Added: Weight validation on font change - switching fonts automatically adjusts the weight to the closest available option
 * Fixed: CSS variable trailing comma caused fonts without fallbacks to fail loading on both frontend and block editor (e.g. `--font-20: "EsmeraldaPro", ;` produced invalid CSS)

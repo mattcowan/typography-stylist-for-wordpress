@@ -352,7 +352,14 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ### Version 1.2.1
 
+**New Feature: Per-Font Weight Restrictions:**
+- **Added: Per-font weight configuration** - Configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). All weights are enabled by default for variable font compatibility. Uncheck weights a font doesn't include to prevent users from selecting unavailable weights.
+- **Added: Single-weight auto-apply** - When a font has only one available weight, the weight selector is hidden and the weight is automatically applied.
+- **Added: Weight validation on font change** - Switching fonts automatically adjusts the weight to the closest available option if the current weight isn't supported by the new font.
+- **Changed: "Edit Fallbacks" renamed to "Edit Settings"** - Admin font management buttons now reflect the expanded functionality (fallbacks + weight configuration).
+
 **Bug Fixes:**
+- **Fixed: CSS variable trailing comma broke font loading** - Fonts without fallbacks produced invalid CSS variables (e.g. `--font-20: "EsmeraldaPro", ;` with a trailing comma), causing browsers to silently reject the `font-family` declaration on both frontend and block editor. Changed `isset()` to `!empty()` for fallback string checks.
 - **Fixed: Screen reader text missing spaces at line breaks** - When using Shift+Enter in Typography Stylist blocks, the visually-hidden screen reader text concatenated words without a space (e.g. "MILANOCORTINA" instead of "MILANO CORTINA"). Line breaks are now replaced with spaces in the accessible text output.
 - **Fixed: Inline editor modal lost font selection on close/reopen** - Selecting a font family, closing the modal without applying, then reopening and clicking Apply would silently fail. The root cause was `selectedFontId` not being reset in `togglePopover()`, leaving stale state that caused `applyFeatures()` to enter the `removeFormat` branch instead of `applyFormat`.
 - **Fixed: Missing `data-lineheight` in format type registration** - Line-height values were silently dropped when reading back existing formatted content because the attribute wasn't registered with WordPress's `registerFormatType`.
