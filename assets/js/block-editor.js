@@ -2471,6 +2471,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 'stylistic-sets': __('Stylistic Sets', 'typography-stylist'),
                 'alternates': __('Swashes & Alternates', 'typography-stylist'),
                 'decorative': __('Decorative', 'typography-stylist'),
+                'numerals': __('Numerals & Figures', 'typography-stylist'),
+                'capitals': __('Capitals & Case', 'typography-stylist'),
+                'positional': __('Positional Forms', 'typography-stylist'),
+                'super-sub': __('Superscript & Ordinals', 'typography-stylist'),
                 'other': __('Other Features', 'typography-stylist')
             };
 

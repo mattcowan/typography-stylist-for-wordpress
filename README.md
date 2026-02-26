@@ -4,11 +4,16 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ## Features
 
-### Typography Control
-- Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt)
+### Typography Control (51 OpenType Features)
+- Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt), Contextual Ligatures (clig), Historical Ligatures (hlig)
 - Stylistic Sets: ss01 through ss20
-- Swashes: Regular (swsh) and Contextual (cswh)
-- Alternates: Stylistic alternates (salt), Titling (titl), Ornaments (ornm)
+- Swashes & Alternates: Swashes (swsh), Contextual Swashes (cswh), Stylistic Alternates (salt), Titling (titl), Historical Forms (hist)
+- Decorative: Ornaments (ornm)
+- Numerals & Figures: Proportional (pnum), Tabular (tnum), Lining (lnum), Oldstyle (onum), Fractions (frac), Slashed Zero (zero)
+- Capitals & Case: Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
+- Positional Forms: Initial (init), Medial (medi), Terminal (fina), Isolated (isol)
+- Superscript & Ordinals: Superscript (sups), Subscript (subs), Ordinals (ordn)
+- Other: Kerning (kern), Localized Forms (locl), Randomize (rand)
 
 ### User Interface
 - Inline text selection in the block editor
@@ -349,6 +354,21 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
+
+### Version 1.2.2
+
+**New OpenType Features:**
+- **Added: 23 new OpenType features** across 5 new categories, bringing the total from 28 to 51 supported features
+- **Added: Numerals & Figures category** - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
+- **Added: Capitals & Case category** - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
+- **Added: Positional Forms category** - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
+- **Added: Superscript & Ordinals category** - Superscript (sups), Subscript (subs), Ordinals (ordn)
+- **Added: Other Features category** - Kerning (kern), Localized Forms (locl), Randomize (rand)
+- **Added: Contextual Ligatures (clig) and Historical Ligatures (hlig)** to the existing Ligatures category
+- **Added: Historical Forms (hist)** to the existing Swashes & Alternates category
+
+**Bug Fix:**
+- **Fixed: Unchecking OpenType feature removed other inline properties** - In the Quick Features Toggle, unchecking an OpenType feature would strip font-family, font-weight, and other properties from the styled span. The `removeFeatureFromSelection()` function was unconditionally unwrapping spans when no features remained, even when the span still had other data attributes (`data-font-id`, `data-fontweight`, etc.). The fix checks for remaining attributes before deciding whether to unwrap, following the same pattern used in `removePropertyFromSpan()`.
 
 ### Version 1.2.1
 

@@ -237,6 +237,214 @@ msgstr "Ornements"
 msgid "Decorative ornaments"
 msgstr "Ornements décoratifs"
 
+#: typography-stylist.php
+msgid "Contextual Ligatures"
+msgstr "Ligatures contextuelles"
+
+#: typography-stylist.php
+msgid "Context-dependent ligature substitutions"
+msgstr "Substitutions de ligatures dépendantes du contexte"
+
+#: typography-stylist.php
+msgid "Historical Ligatures"
+msgstr "Ligatures historiques"
+
+#: typography-stylist.php
+msgid "Archaic and historical ligature forms"
+msgstr "Formes de ligatures archaïques et historiques"
+
+#: typography-stylist.php
+msgid "Historical Forms"
+msgstr "Formes historiques"
+
+#: typography-stylist.php
+msgid "Archaic and historical letterforms"
+msgstr "Formes de lettres archaïques et historiques"
+
+#: typography-stylist.php
+msgid "Proportional Figures"
+msgstr "Chiffres proportionnels"
+
+#: typography-stylist.php
+msgid "Variable-width number spacing"
+msgstr "Espacement de chiffres à largeur variable"
+
+#: typography-stylist.php
+msgid "Tabular Figures"
+msgstr "Chiffres tabulaires"
+
+#: typography-stylist.php
+msgid "Fixed-width number spacing for alignment"
+msgstr "Espacement de chiffres à largeur fixe pour l'alignement"
+
+#: typography-stylist.php
+msgid "Lining Figures"
+msgstr "Chiffres alignés"
+
+#: typography-stylist.php
+msgid "Numbers aligned to the baseline"
+msgstr "Chiffres alignés sur la ligne de base"
+
+#: typography-stylist.php
+msgid "Oldstyle Figures"
+msgstr "Chiffres elzéviriens"
+
+#: typography-stylist.php
+msgid "Numbers with varying heights and descenders"
+msgstr "Chiffres avec hauteurs variables et jambages"
+
+#: typography-stylist.php
+msgid "Fractions"
+msgstr "Fractions"
+
+#: typography-stylist.php
+msgid "Automatic fraction formation"
+msgstr "Formation automatique de fractions"
+
+#: typography-stylist.php
+msgid "Slashed Zero"
+msgstr "Zéro barré"
+
+#: typography-stylist.php
+msgid "Zero with slash to distinguish from letter O"
+msgstr "Zéro avec barre pour le distinguer de la lettre O"
+
+#: typography-stylist.php
+msgid "Small Capitals"
+msgstr "Petites capitales"
+
+#: typography-stylist.php
+msgid "Lowercase letters as small capital forms"
+msgstr "Lettres minuscules sous forme de petites capitales"
+
+#: typography-stylist.php
+msgid "Capitals to Small Caps"
+msgstr "Capitales en petites capitales"
+
+#: typography-stylist.php
+msgid "Convert uppercase letters to small capitals"
+msgstr "Convertir les lettres majuscules en petites capitales"
+
+#: typography-stylist.php
+msgid "Petite Capitals"
+msgstr "Capitales miniatures"
+
+#: typography-stylist.php
+msgid "Smaller than small capitals, matching x-height"
+msgstr "Plus petites que les petites capitales, correspondant à la hauteur d'x"
+
+#: typography-stylist.php
+msgid "Case-Sensitive Forms"
+msgstr "Formes sensibles à la casse"
+
+#: typography-stylist.php
+msgid "Punctuation and symbols adjusted for all-caps text"
+msgstr "Ponctuation et symboles ajustés pour le texte en majuscules"
+
+#: typography-stylist.php
+msgid "Initial Forms"
+msgstr "Formes initiales"
+
+#: typography-stylist.php
+msgid "Letterforms used at the beginning of a word"
+msgstr "Formes de lettres utilisées au début d'un mot"
+
+#: typography-stylist.php
+msgid "Medial Forms"
+msgstr "Formes médianes"
+
+#: typography-stylist.php
+msgid "Letterforms used in the middle of a word"
+msgstr "Formes de lettres utilisées au milieu d'un mot"
+
+#: typography-stylist.php
+msgid "Terminal Forms"
+msgstr "Formes terminales"
+
+#: typography-stylist.php
+msgid "Letterforms used at the end of a word"
+msgstr "Formes de lettres utilisées à la fin d'un mot"
+
+#: typography-stylist.php
+msgid "Isolated Forms"
+msgstr "Formes isolées"
+
+#: typography-stylist.php
+msgid "Standalone letterforms not connected to adjacent characters"
+msgstr "Formes de lettres autonomes non connectées aux caractères adjacents"
+
+#: typography-stylist.php
+msgid "Superscript"
+msgstr "Exposant"
+
+#: typography-stylist.php
+msgid "Raised characters for footnotes and exponents"
+msgstr "Caractères surélevés pour les notes de bas de page et les exposants"
+
+#: typography-stylist.php
+msgid "Subscript"
+msgstr "Indice"
+
+#: typography-stylist.php
+msgid "Lowered characters for chemical formulas and indices"
+msgstr "Caractères abaissés pour les formules chimiques et les indices"
+
+#: typography-stylist.php
+msgid "Ordinals"
+msgstr "Ordinaux"
+
+#: typography-stylist.php
+msgid "Ordinal indicators like 1st, 2nd, 3rd"
+msgstr "Indicateurs ordinaux comme 1er, 2e, 3e"
+
+#: typography-stylist.php
+msgid "Kerning"
+msgstr "Crénage"
+
+#: typography-stylist.php
+msgid "Fine-tuned letter spacing adjustments"
+msgstr "Ajustements fins de l'espacement des lettres"
+
+#: typography-stylist.php
+msgid "Localized Forms"
+msgstr "Formes localisées"
+
+#: typography-stylist.php
+msgid "Script and language-specific character variants"
+msgstr "Variantes de caractères spécifiques à l'écriture et à la langue"
+
+#: typography-stylist.php
+msgid "Randomize"
+msgstr "Aléatoire"
+
+#: typography-stylist.php
+msgid "Randomized glyph variants for handwriting and calligraphic fonts"
+msgstr "Variantes de glyphes aléatoires pour les polices manuscrites et calligraphiques"
+
+#: includes/admin-page.php
+#: blocks/typography-stylist/edit.js
+#: assets/js/block-editor.js
+msgid "Numerals & Figures"
+msgstr "Chiffres et figures"
+
+#: includes/admin-page.php
+#: blocks/typography-stylist/edit.js
+#: assets/js/block-editor.js
+msgid "Capitals & Case"
+msgstr "Capitales et casse"
+
+#: includes/admin-page.php
+#: blocks/typography-stylist/edit.js
+#: assets/js/block-editor.js
+msgid "Positional Forms"
+msgstr "Formes positionnelles"
+
+#: includes/admin-page.php
+#: blocks/typography-stylist/edit.js
+#: assets/js/block-editor.js
+msgid "Superscript & Ordinals"
+msgstr "Exposants et ordinaux"
+
 #: headline-ligatures-styles.php:871
 msgid "Missing required parameters"
 msgstr "Paramètres obligatoires manquants"

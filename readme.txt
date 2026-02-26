@@ -40,6 +40,8 @@ Accessibility features ensure that your styled text remains readable by screen r
 * Standard Ligatures (liga)
 * Discretionary Ligatures (dlig)
 * Contextual Alternates (calt)
+* Contextual Ligatures (clig)
+* Historical Ligatures (hlig)
 
 **Stylistic Sets:**
 * ss01 through ss20
@@ -49,7 +51,40 @@ Accessibility features ensure that your styled text remains readable by screen r
 * Contextual Swashes (cswh)
 * Stylistic Alternates (salt)
 * Titling (titl)
+* Historical Forms (hist)
+
+**Decorative:**
 * Ornaments (ornm)
+
+**Numerals & Figures:**
+* Proportional Figures (pnum)
+* Tabular Figures (tnum)
+* Lining Figures (lnum)
+* Oldstyle Figures (onum)
+* Fractions (frac)
+* Slashed Zero (zero)
+
+**Capitals & Case:**
+* Small Capitals (smcp)
+* Capitals to Small Caps (c2sc)
+* Petite Capitals (pcap)
+* Case-Sensitive Forms (case)
+
+**Positional Forms:**
+* Initial Forms (init)
+* Medial Forms (medi)
+* Terminal Forms (fina)
+* Isolated Forms (isol)
+
+**Superscript & Ordinals:**
+* Superscript (sups)
+* Subscript (subs)
+* Ordinals (ordn)
+
+**Other Features:**
+* Kerning (kern)
+* Localized Forms (locl)
+* Randomize (rand)
 
 = Perfect For =
 
@@ -231,6 +266,17 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.2.2 =
+* Added: 23 new OpenType features across 5 new categories, bringing the total to 51 supported features
+* Added: Numerals & Figures category - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
+* Added: Capitals & Case category - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
+* Added: Positional Forms category - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
+* Added: Superscript & Ordinals category - Superscript (sups), Subscript (subs), Ordinals (ordn)
+* Added: Other Features category - Kerning (kern), Localized Forms (locl), Randomize (rand)
+* Added: Contextual Ligatures (clig) and Historical Ligatures (hlig) to Ligatures category
+* Added: Historical Forms (hist) to Swashes & Alternates category
+* Fixed: Unchecking an OpenType feature in the Quick Features Toggle removed font-family, font-weight, and other properties from the styled text. The feature removal code now preserves all other data attributes and styles on the span, only unwrapping it when no attributes remain
 
 = 1.2.1 =
 * Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
