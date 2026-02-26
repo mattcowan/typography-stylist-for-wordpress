@@ -175,12 +175,18 @@ All endpoints include:
 
 ### Available OpenType Features
 
-The plugin supports these feature categories:
-- **Ligatures:** liga, dlig, calt
-- **Stylistic Sets:** ss01-ss05 (hardcoded, but supports through ss20)
-- **Alternates:** swsh, cswh, salt, titl, ornm
+The plugin supports these feature categories (52 features total):
+- **Ligatures:** liga, dlig, calt, clig, hlig
+- **Stylistic Sets:** ss01-ss20
+- **Swashes & Alternates:** swsh, cswh, salt, titl, hist
+- **Decorative:** ornm
+- **Numerals & Figures:** pnum, tnum, lnum, onum, frac, zero
+- **Capitals & Case:** smcp, c2sc, pcap, case
+- **Positional Forms:** init, medi, fina, isol
+- **Superscript & Ordinals:** sups, subs, ordn
+- **Other Features:** kern, locl, rand
 
-Feature data structure in [typography-stylist.php](typography-stylist.php:247-328):
+Feature data structure in [typography-stylist.php](typography-stylist.php):
 ```php
 array(
     'id' => 'calt',           // OpenType feature code

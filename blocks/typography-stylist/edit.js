@@ -1937,12 +1937,47 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							const featureList = dataFeatures.split(',').map(f => f.trim()).filter(f => f && f !== featureId);
 
 							if (featureList.length === 0) {
-								// No features left - unwrap the span
-								if (span.parentNode) {
-									while (span.firstChild) {
-										span.parentNode.insertBefore(span.firstChild, span);
+								// No features left - remove data-features attribute
+								span.removeAttribute('data-features');
+
+								// Remove font-feature-settings from style, keep other styles
+								const currentStyleForRemoval = span.getAttribute('style') || '';
+								const remainingStyleObj = {};
+								currentStyleForRemoval.split(';').forEach(rule => {
+									const [prop, value] = rule.split(':').map(s => s.trim());
+									if (prop && value && prop !== 'font-feature-settings') {
+										remainingStyleObj[prop] = value;
 									}
-									span.parentNode.removeChild(span);
+								});
+
+								// Rebuild style or remove it entirely
+								if (Object.keys(remainingStyleObj).length > 0) {
+									const newStyle = Object.entries(remainingStyleObj)
+										.map(([prop, value]) => `${prop}: ${value}`)
+										.join('; ');
+									span.setAttribute('style', newStyle);
+								} else {
+									span.removeAttribute('style');
+								}
+
+								// Check if any other typost attributes remain before unwrapping
+								const hasFontId = span.getAttribute('data-font-id');
+								const hasFontSize = span.getAttribute('data-fontsize');
+								const hasFontWeight = span.getAttribute('data-fontweight');
+								const hasLetterSpacing = span.getAttribute('data-letterspacing');
+								const hasLineHeight = span.getAttribute('data-lineheight');
+
+								const hasAnyAttributes = hasFontId || hasFontSize ||
+								                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+
+								if (!hasAnyAttributes && Object.keys(remainingStyleObj).length === 0) {
+									// No attributes or styles remain - safe to unwrap the span
+									if (span.parentNode) {
+										while (span.firstChild) {
+											span.parentNode.insertBefore(span.firstChild, span);
+										}
+										span.parentNode.removeChild(span);
+									}
 								}
 							} else {
 								// Update the span with remaining features (comma-separated)
@@ -2094,6 +2129,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			'stylistic-sets': __('Stylistic Sets', 'typography-stylist'),
 			'alternates': __('Swashes & Alternates', 'typography-stylist'),
 			'decorative': __('Decorative', 'typography-stylist'),
+			'numerals': __('Numerals & Figures', 'typography-stylist'),
+			'capitals': __('Capitals & Case', 'typography-stylist'),
+			'positional': __('Positional Forms', 'typography-stylist'),
+			'super-sub': __('Superscript & Ordinals', 'typography-stylist'),
 			'other': __('Other Features', 'typography-stylist')
 		};
 		return titles[category] || category;

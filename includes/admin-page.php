@@ -284,7 +284,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 'ligatures' => esc_html__('Ligatures', 'typography-stylist'),
                 'stylistic-sets' => esc_html__('Stylistic Sets', 'typography-stylist'),
                 'alternates' => esc_html__('Swashes & Alternates', 'typography-stylist'),
-                'decorative' => esc_html__('Decorative', 'typography-stylist')
+                'decorative' => esc_html__('Decorative', 'typography-stylist'),
+                'numerals' => esc_html__('Numerals & Figures', 'typography-stylist'),
+                'capitals' => esc_html__('Capitals & Case', 'typography-stylist'),
+                'positional' => esc_html__('Positional Forms', 'typography-stylist'),
+                'super-sub' => esc_html__('Superscript & Ordinals', 'typography-stylist'),
+                'other' => esc_html__('Other Features', 'typography-stylist')
             );
             ?>
 

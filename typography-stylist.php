@@ -1432,7 +1432,42 @@ class Typost {
             'cswh' => 'Beautiful Swashes',
             'salt' => 'Alternative Glyphs',
             'titl' => 'TITLING CAPS',
-            'ornm' => '* § ¶ † ‡ • ◆'
+            'hist' => 'Long ſ and hiſtoric',
+            'ornm' => '* § ¶ † ‡ • ◆',
+
+            // Additional Ligatures
+            'clig' => 'ffi ffl ct st',
+            'hlig' => 'ct ſt ſi ſl',
+
+            // Numerals & Figures
+            'pnum' => '0123456789',
+            'tnum' => '0123456789',
+            'lnum' => '0123456789',
+            'onum' => '0123456789',
+            'frac' => '1/2 3/4 5/8 7/16',
+            'zero' => 'O0 l1 Z2 S5',
+
+            // Capitals & Case
+            'smcp' => 'Small Capitals',
+            'c2sc' => 'CAPITALS TO SMALL CAPS',
+            'pcap' => 'Petite Capitals',
+            'case' => 'H[A]R{D} (CAPS)',
+
+            // Positional Forms
+            'init' => 'Initial',
+            'medi' => 'Medium',
+            'fina' => 'Final',
+            'isol' => 'Isolated',
+
+            // Superscript & Ordinals
+            'sups' => 'H2O x2 1st',
+            'subs' => 'H2O CO2 x1',
+            'ordn' => '1st 2nd 3rd 4th',
+
+            // Other Features
+            'kern' => 'AV To WA Ty',
+            'locl' => 'Localized Forms',
+            'rand' => 'Handwritten Style'
         );
 
         return isset($demo_texts[$feature_id]) ? $demo_texts[$feature_id] : 'Sample Text';
@@ -1461,6 +1496,18 @@ class Typost {
                     'name' => esc_html__('Contextual Alternates', 'typography-stylist'),
                     'category' => 'ligatures',
                     'description' => esc_html__('Context-aware letter forms', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'clig',
+                    'name' => esc_html__('Contextual Ligatures', 'typography-stylist'),
+                    'category' => 'ligatures',
+                    'description' => esc_html__('Context-dependent ligature substitutions', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'hlig',
+                    'name' => esc_html__('Historical Ligatures', 'typography-stylist'),
+                    'category' => 'ligatures',
+                    'description' => esc_html__('Archaic and historical ligature forms', 'typography-stylist')
                 ),
                 array(
                     'id' => 'ss01',
@@ -1607,10 +1654,141 @@ class Typost {
                     'description' => esc_html__('Optimized for large titles', 'typography-stylist')
                 ),
                 array(
+                    'id' => 'hist',
+                    'name' => esc_html__('Historical Forms', 'typography-stylist'),
+                    'category' => 'alternates',
+                    'description' => esc_html__('Archaic and historical letterforms', 'typography-stylist')
+                ),
+                array(
                     'id' => 'ornm',
                     'name' => esc_html__('Ornaments', 'typography-stylist'),
                     'category' => 'decorative',
                     'description' => esc_html__('Decorative ornaments', 'typography-stylist')
+                ),
+                // Numerals & Figures
+                array(
+                    'id' => 'pnum',
+                    'name' => esc_html__('Proportional Figures', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Variable-width number spacing', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'tnum',
+                    'name' => esc_html__('Tabular Figures', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Fixed-width number spacing for alignment', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'lnum',
+                    'name' => esc_html__('Lining Figures', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Numbers aligned to the baseline', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'onum',
+                    'name' => esc_html__('Oldstyle Figures', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Numbers with varying heights and descenders', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'frac',
+                    'name' => esc_html__('Fractions', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Automatic fraction formation', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'zero',
+                    'name' => esc_html__('Slashed Zero', 'typography-stylist'),
+                    'category' => 'numerals',
+                    'description' => esc_html__('Zero with slash to distinguish from letter O', 'typography-stylist')
+                ),
+                // Capitals & Case
+                array(
+                    'id' => 'smcp',
+                    'name' => esc_html__('Small Capitals', 'typography-stylist'),
+                    'category' => 'capitals',
+                    'description' => esc_html__('Lowercase letters as small capital forms', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'c2sc',
+                    'name' => esc_html__('Capitals to Small Caps', 'typography-stylist'),
+                    'category' => 'capitals',
+                    'description' => esc_html__('Convert uppercase letters to small capitals', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'pcap',
+                    'name' => esc_html__('Petite Capitals', 'typography-stylist'),
+                    'category' => 'capitals',
+                    'description' => esc_html__('Smaller than small capitals, matching x-height', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'case',
+                    'name' => esc_html__('Case-Sensitive Forms', 'typography-stylist'),
+                    'category' => 'capitals',
+                    'description' => esc_html__('Punctuation and symbols adjusted for all-caps text', 'typography-stylist')
+                ),
+                // Positional Forms
+                array(
+                    'id' => 'init',
+                    'name' => esc_html__('Initial Forms', 'typography-stylist'),
+                    'category' => 'positional',
+                    'description' => esc_html__('Letterforms used at the beginning of a word', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'medi',
+                    'name' => esc_html__('Medial Forms', 'typography-stylist'),
+                    'category' => 'positional',
+                    'description' => esc_html__('Letterforms used in the middle of a word', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'fina',
+                    'name' => esc_html__('Terminal Forms', 'typography-stylist'),
+                    'category' => 'positional',
+                    'description' => esc_html__('Letterforms used at the end of a word', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'isol',
+                    'name' => esc_html__('Isolated Forms', 'typography-stylist'),
+                    'category' => 'positional',
+                    'description' => esc_html__('Standalone letterforms not connected to adjacent characters', 'typography-stylist')
+                ),
+                // Superscript & Ordinals
+                array(
+                    'id' => 'sups',
+                    'name' => esc_html__('Superscript', 'typography-stylist'),
+                    'category' => 'super-sub',
+                    'description' => esc_html__('Raised characters for footnotes and exponents', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'subs',
+                    'name' => esc_html__('Subscript', 'typography-stylist'),
+                    'category' => 'super-sub',
+                    'description' => esc_html__('Lowered characters for chemical formulas and indices', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'ordn',
+                    'name' => esc_html__('Ordinals', 'typography-stylist'),
+                    'category' => 'super-sub',
+                    'description' => esc_html__('Ordinal indicators like 1st, 2nd, 3rd', 'typography-stylist')
+                ),
+                // Other Features
+                array(
+                    'id' => 'kern',
+                    'name' => esc_html__('Kerning', 'typography-stylist'),
+                    'category' => 'other',
+                    'description' => esc_html__('Fine-tuned letter spacing adjustments', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'locl',
+                    'name' => esc_html__('Localized Forms', 'typography-stylist'),
+                    'category' => 'other',
+                    'description' => esc_html__('Script and language-specific character variants', 'typography-stylist')
+                ),
+                array(
+                    'id' => 'rand',
+                    'name' => esc_html__('Randomize', 'typography-stylist'),
+                    'category' => 'other',
+                    'description' => esc_html__('Randomized glyph variants for handwriting and calligraphic fonts', 'typography-stylist')
                 )
             );
         }
