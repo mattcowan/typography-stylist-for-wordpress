@@ -268,7 +268,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 1.2.2 =
-* Added: 23 new OpenType features across 5 new categories, bringing the total to 52 supported features
+* Added: 23 new OpenType features across 5 new categories, bringing the total to 51 supported features
 * Added: Numerals & Figures category - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
 * Added: Capitals & Case category - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
 * Added: Positional Forms category - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)

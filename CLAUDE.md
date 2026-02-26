@@ -175,7 +175,7 @@ All endpoints include:
 
 ### Available OpenType Features
 
-The plugin supports these feature categories (52 features total):
+The plugin supports these feature categories (51 features total):
 - **Ligatures:** liga, dlig, calt, clig, hlig
 - **Stylistic Sets:** ss01-ss20
 - **Swashes & Alternates:** swsh, cswh, salt, titl, hist

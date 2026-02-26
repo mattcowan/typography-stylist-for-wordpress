@@ -4,7 +4,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ## Features
 
-### Typography Control (52 OpenType Features)
+### Typography Control (51 OpenType Features)
 - Ligatures: Standard (liga), Discretionary (dlig), Contextual Alternates (calt), Contextual Ligatures (clig), Historical Ligatures (hlig)
 - Stylistic Sets: ss01 through ss20
 - Swashes & Alternates: Swashes (swsh), Contextual Swashes (cswh), Stylistic Alternates (salt), Titling (titl), Historical Forms (hist)
@@ -358,7 +358,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 ### Version 1.2.2
 
 **New OpenType Features:**
-- **Added: 23 new OpenType features** across 5 new categories, bringing the total from 29 to 52 supported features
+- **Added: 23 new OpenType features** across 5 new categories, bringing the total from 28 to 51 supported features
 - **Added: Numerals & Figures category** - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
 - **Added: Capitals & Case category** - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
 - **Added: Positional Forms category** - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
