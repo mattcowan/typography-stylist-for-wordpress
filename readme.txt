@@ -16,12 +16,12 @@ Typography Stylist provides advanced typography controls for WordPress. This plu
 
 Manage fonts from the settings page, either by uploading webfont kits or adding Adobe Typekit embeds. Fonts load intelligently only when they are used.  With support for ligatures, stylistic sets, swashes, and alternates, you can create elegant headlines and premium typography effects with ease. 
 
-Accessibility features ensure that your styled text remains readable by screen readers and assistive technologies: breaking up strings of text with the inline span elements necessary to apply complex features can cause screen readers to read words in fragments or skip them entirely. The plugin includes a custom Typography Stylist block that provides a clean, unbroken set of text to maintain screen reader compatibility while allowing for complex typography to be presented visually. When applying features to partial words in standard heading blocks, the plugin detects potential accessibility issues and provides warnings with options to convert to the Typography Stylist block for maximum accessibility.
+Accessibility features ensure that your styled text remains readable by screen readers and assistive technologies: breaking up strings of text with the inline span elements necessary to apply complex features can cause screen readers to read words in fragments or skip them entirely. The plugin includes a custom Typography Stylist block that provides a clean, unbroken set of text to maintain screen reader compatibility while allowing for complex typography to be presented visually. When applying features to partial words in standard heading blocks, the plugin detects potential accessibility issues and provides a warning with options to convert to the Typography Stylist block for maximum accessibility, or to apply the features anyway. When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden and the warning adjusts accordingly. The warning can be disabled entirely in Settings → Typography Stylist → Accessibility.
 
 = Key Features =
 
 * **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
-* **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop up if your selection breaks words and causes accessibility issues, and you can quickly convert to the Custom Typography Stylist Block for maximum accessibility.
+* **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop up if your selection breaks words and causes accessibility issues, with options to convert to the Custom Typography Stylist Block for maximum accessibility or apply anyway. The warning can be disabled in Settings → Accessibility.
 * **Live Preview**: Preview changes in real-time before applying.
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
 * **Visual Interface**: User-friendly, resizable, moveable popover with organized feature categories.
@@ -119,7 +119,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 4. Click the "Typography Features" button in the toolbar (a swashy "T" icon)
 5. Select individual features
 6. See the live preview at the bottom of the popover
-7. If using partial word selections, heed any accessibility warnings to convert to the Typography Stylist Block for maximum accessibility
+7. If using partial word selections, you'll see an accessibility warning with options to convert to the Typography Stylist Block for maximum accessibility, or apply the features anyway. If the block cannot be converted (e.g., inside a locked pattern), only the "Apply Anyway" option is shown. This warning can be disabled in Settings → Typography Stylist → Accessibility.
 8. Click Apply
 
 = How It Works For Custom Blocks =
@@ -204,7 +204,7 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 
 The plugin includes accessibility features for screen reader compatibility:
 
-* **Inline Format Warnings**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible Typography Stylist block or discard changes
+* **Inline Format Warnings**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a warning with options to convert to an accessible Typography Stylist block, apply anyway, or discard changes. When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. This warning can be disabled entirely via the "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility.
 * **Typography Stylist Block**: Custom block designed for complex typography that includes markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
 * **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text as an alternative
@@ -227,7 +227,7 @@ Google explicitly recognizes hidden text for accessibility as legitimate (not cl
 * **Use Inline Format** when applying features to complete words or phrases in existing heading blocks
 * **Use Typography Stylist Block** when you need letter-by-letter styling, complex typography, or maximum accessibility control
 
-The plugin will warn you if an inline selection might cause accessibility issues.
+The plugin will warn you if an inline selection might cause accessibility issues. You can apply anyway or disable the warning entirely in Settings → Accessibility.
 
 = What file formats are supported for font uploads? =
 
@@ -267,6 +267,13 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= 1.2.3 =
+* Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation
+* Added: Smart conversion detection - the "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., inside a locked pattern), with an adjusted warning message
+* Added: Safety fallback - if block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user
+* Added: "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility to skip the partial word warning entirely
+* Added: "Manage this setting" link in the warning message that opens the admin accessibility settings page
+
 = 1.2.2 =
 * Added: 23 new OpenType features across 5 new categories, bringing the total to 51 supported features
 * Added: Numerals & Figures category - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
@@ -287,7 +294,6 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Fixed: Inline editor modal lost font selection state on close/reopen - selecting a font, closing the modal without applying, then reopening and clicking Apply would silently fail because stale state caused the apply logic to enter the wrong code path
 * Fixed: Missing data-lineheight attribute in format type registration - line-height values were silently dropped when reading back existing formatted content
 * Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
-* Removed: "Apply Anyway" option from accessibility warning - users must now convert to a Typography Stylist block or discard changes when selecting partial words, reinforcing the plugin's accessibility-first approach
 * Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
 * Changed: "Edit Fallbacks" button renamed to "Edit Settings" in admin font management to reflect expanded functionality
 * Improved: OpenType feature previews now show cumulative checked features - toggling a stylistic set updates ALL preview windows to include that feature, accurately showing how features combine (essential for fonts like Bookmania where stylistic sets interact to produce different glyphs)

@@ -45,6 +45,38 @@ jQuery(document).ready(function($) {
         }
     });
 
+    // Handle URL parameters for deep linking to specific tabs and settings
+    (function() {
+        var params = new URLSearchParams(window.location.search);
+        var tab = params.get('tab');
+        var highlight = params.get('highlight');
+
+        if (tab) {
+            var $tabButton = $('.typost-tab-button[data-tab="' + tab + '"]');
+            if ($tabButton.length) {
+                $tabButton.click();
+            }
+        }
+
+        if (highlight) {
+            var $target = $('#' + highlight);
+            if ($target.length) {
+                var $row = $target.closest('tr');
+                if ($row.length) {
+                    $row.addClass('typost-highlight-row');
+                    // Scroll to the highlighted row after a short delay for tab animation
+                    setTimeout(function() {
+                        $row[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                    // Remove highlight after animation completes
+                    setTimeout(function() {
+                        $row.removeClass('typost-highlight-row');
+                    }, 3000);
+                }
+            }
+        }
+    })();
+
     // Kit toggle handling
     $(document).on('click', '.typost-toggle-kit', function() {
         var $button = $(this);

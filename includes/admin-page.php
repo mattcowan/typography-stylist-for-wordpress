@@ -1415,6 +1415,28 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 </p>
                             </td>
                         </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="typost_disable_accessibility_warning">
+                                    <?php esc_html_e('Disable Word Boundary Warning', 'typography-stylist'); ?>
+                                </label>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="typost_disable_accessibility_warning"
+                                    name="typost_disable_accessibility_warning"
+                                    value="1"
+                                    <?php checked(get_option('typost_disable_accessibility_warning', false)); ?>
+                                />
+                                <label for="typost_disable_accessibility_warning">
+                                    <?php esc_html_e('Skip the warning when applying features to partial words', 'typography-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When applying inline typography features to a partial word (e.g., a single letter), the editor normally shows a warning recommending conversion to a Typography Stylist block. Enable this option to skip the warning and apply features directly. Screen readers handle inline spans well, so this is safe for most use cases.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
 

@@ -230,7 +230,9 @@ class Typost {
                 'restUrl' => rest_url('typost/v1/'),
                 'nonce' => wp_create_nonce('wp_rest'),
                 'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
-                'showClearConfirmation' => get_option('typost_show_clear_confirmation', true)
+                'disableAccessibilityWarning' => get_option('typost_disable_accessibility_warning', false),
+                'showClearConfirmation' => get_option('typost_show_clear_confirmation', true),
+                'settingsUrl' => admin_url('options-general.php?page=typography-stylist')
             );
 
             // Cache for 1 hour
@@ -4671,7 +4673,7 @@ class Typost {
 
         // Save options settings
         if (isset($_POST['typost_save_options_settings']) &&
-            check_admin_referer('typost_options_settings_nonce') &&
+            check_admin_referer('typography_stylist_options_settings_nonce') &&
             current_user_can('manage_options')) {
 
             // Get previous value to detect changes
@@ -4698,12 +4700,15 @@ class Typost {
 
         // Save accessibility settings
         if (isset($_POST['typost_save_accessibility_settings']) &&
-            check_admin_referer('typost_accessibility_settings_nonce') &&
+            check_admin_referer('typography_stylist_accessibility_settings_nonce') &&
             current_user_can('manage_options')) {
 
             // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
             $enable_aria = isset($_POST['typost_enable_aria_labels']) ? '1' : '0';
             update_option('typost_enable_aria_labels', $enable_aria);
+
+            $disable_warning = isset($_POST['typost_disable_accessibility_warning']) ? '1' : '0';
+            update_option('typost_disable_accessibility_warning', $disable_warning);
 
             // Clear cache when accessibility settings change
             $this->clear_cache();

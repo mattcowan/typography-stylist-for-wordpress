@@ -21,6 +21,7 @@ delete_option('typost_manual_fonts');
 delete_option('typost_font_replacements');
 delete_option('typost_htaccess_verified');
 delete_option('typost_enable_aria_labels');
+delete_option('typost_disable_accessibility_warning');
 delete_option('typost_show_clear_confirmation');
 delete_option('typost_global_settings');
 
