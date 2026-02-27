@@ -1229,9 +1229,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
 
                     // Safety fallback: verify replacement succeeded
+                    // replaceBlocks removes the old block and creates a new one with a different clientId.
+                    // If the old block is gone, the replacement succeeded (even if the user deselected
+                    // within the timeout window). Only fall back when the old block still exists,
+                    // meaning replaceBlocks was silently blocked (e.g., by pattern locking).
                     setTimeout(() => {
-                        const blockAfter = select('core/block-editor').getBlock(selectedBlockClientId);
-                        if (blockAfter && blockAfter.name !== 'typost/block') {
+                        const blockEditorSelect = select('core/block-editor');
+                        const oldBlock = blockEditorSelect.getBlock(selectedBlockClientId);
+
+                        if (!oldBlock) {
+                            return;
+                        }
+
+                        const selectedAfter = blockEditorSelect.getSelectedBlock();
+                        if (!selectedAfter || selectedAfter.name !== 'typost/block') {
                             this._doApplyFeatures();
                             dispatch('core/notices').createInfoNotice(
                                 __('Block could not be converted. Features were applied directly.', 'typography-stylist'),
@@ -1276,10 +1287,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     // Replace current block
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
 
-                    // Safety fallback: verify replacement succeeded
+                    // Safety fallback: verify replacement succeeded (see partial-selection branch for explanation)
                     setTimeout(() => {
-                        const blockAfter = select('core/block-editor').getBlock(selectedBlockClientId);
-                        if (blockAfter && blockAfter.name !== 'typost/block') {
+                        const blockEditorSelect = select('core/block-editor');
+                        const oldBlock = blockEditorSelect.getBlock(selectedBlockClientId);
+
+                        if (!oldBlock) {
+                            return;
+                        }
+
+                        const selectedAfter = blockEditorSelect.getSelectedBlock();
+                        if (!selectedAfter || selectedAfter.name !== 'typost/block') {
                             this._doApplyFeatures();
                             dispatch('core/notices').createInfoNotice(
                                 __('Block could not be converted. Features were applied directly.', 'typography-stylist'),

@@ -361,29 +361,17 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
-### Version 1.2.3
+### Version 1.2.2
 
 **Apply Anyway & Smart Conversion Detection:**
 - **Added: Re-introduced "Apply Anyway" button** - The word boundary accessibility warning when applying features to partial words in core blocks now offers an "Apply Anyway" option, giving users the choice to proceed despite potential screen reader fragmentation.
 - **Added: Smart conversion detection** - The "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., the block is inside a locked pattern). The warning message adjusts to reflect the available options.
 - **Added: Safety fallback** - If block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user.
 - **Added: "Disable Word Boundary Warning" option** - New setting in Settings → Typography Stylist → Accessibility that skips the partial word warning entirely for users who frequently style partial words and understand the implications.
-- **Added: "Manage this setting" link** - The warning message now includes a direct link to the admin accessibility settings page for quick access.
-
-### Version 1.2.2
-
-**New OpenType Features:**
-- **Added: 23 new OpenType features** across 5 new categories, bringing the total from 28 to 51 supported features
-- **Added: Numerals & Figures category** - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
-- **Added: Capitals & Case category** - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
-- **Added: Positional Forms category** - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
-- **Added: Superscript & Ordinals category** - Superscript (sups), Subscript (subs), Ordinals (ordn)
-- **Added: Other Features category** - Kerning (kern), Localized Forms (locl), Randomize (rand)
-- **Added: Contextual Ligatures (clig) and Historical Ligatures (hlig)** to the existing Ligatures category
-- **Added: Historical Forms (hist)** to the existing Swashes & Alternates category
+- **Added: "Manage this setting" deep-link** - The warning message includes a link to the admin accessibility settings page that auto-switches to the Accessibility tab and highlights the relevant setting with a fade animation.
 
 **Bug Fix:**
-- **Fixed: Unchecking OpenType feature removed other inline properties** - In the Quick Features Toggle, unchecking an OpenType feature would strip font-family, font-weight, and other properties from the styled span. The `removeFeatureFromSelection()` function was unconditionally unwrapping spans when no features remained, even when the span still had other data attributes (`data-font-id`, `data-fontweight`, etc.). The fix checks for remaining attributes before deciding whether to unwrap, following the same pattern used in `removePropertyFromSpan()`.
+- **Fixed: Nonce mismatch in admin settings forms** - The Accessibility and Options settings forms used mismatched nonce names between `wp_nonce_field()` and `check_admin_referer()`, causing "The link you followed has expired" errors when saving settings.
 
 ### Version 1.2.1
 

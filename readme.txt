@@ -267,23 +267,13 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.2.3 =
+= 1.2.2 =
 * Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation
 * Added: Smart conversion detection - the "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., inside a locked pattern), with an adjusted warning message
 * Added: Safety fallback - if block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user
 * Added: "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility to skip the partial word warning entirely
-* Added: "Manage this setting" link in the warning message that opens the admin accessibility settings page
-
-= 1.2.2 =
-* Added: 23 new OpenType features across 5 new categories, bringing the total to 51 supported features
-* Added: Numerals & Figures category - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
-* Added: Capitals & Case category - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
-* Added: Positional Forms category - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
-* Added: Superscript & Ordinals category - Superscript (sups), Subscript (subs), Ordinals (ordn)
-* Added: Other Features category - Kerning (kern), Localized Forms (locl), Randomize (rand)
-* Added: Contextual Ligatures (clig) and Historical Ligatures (hlig) to Ligatures category
-* Added: Historical Forms (hist) to Swashes & Alternates category
-* Fixed: Unchecking an OpenType feature in the Quick Features Toggle removed font-family, font-weight, and other properties from the styled text. The feature removal code now preserves all other data attributes and styles on the span, only unwrapping it when no attributes remain
+* Added: "Manage this setting" link in the warning message that deep-links to the admin accessibility settings page, auto-switching to the Accessibility tab and highlighting the relevant setting
+* Fixed: Nonce mismatch in Accessibility and Options settings forms caused "The link you followed has expired" error when saving - the nonce names in wp_nonce_field() and check_admin_referer() did not match
 
 = 1.2.1 =
 * Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
