@@ -497,6 +497,17 @@
     min-height: 36px;
 }
 
+.typost-warning-settings-link {
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    text-align: right;
+}
+
+.typost-warning-settings-link a {
+    color: #0073aa;
+    text-decoration: underline;
+}
+
 /* Active Feature Panel Highlighting */
 .typost-feature-category-panel.has-active-features > .components-panel__body-title {
     background-color: #f0f6fc !important;

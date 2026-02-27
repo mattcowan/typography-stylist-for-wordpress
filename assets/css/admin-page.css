@@ -1120,3 +1120,14 @@
 .typost-weight-checkbox-label input[type="checkbox"] {
     margin: 0;
 }
+
+/* Deep-link highlight animation for settings rows */
+.typost-highlight-row {
+    animation: typost-highlight-fade 3s ease-out;
+}
+
+@keyframes typost-highlight-fade {
+    0% { background-color: #fff3cd; }
+    70% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}

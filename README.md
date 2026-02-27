@@ -27,7 +27,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Supports modern browsers with OpenType feature support
 
 ### Accessibility Features
-- Smart selection warnings for partial word selections that can cause screen readers to stumble. Convert text to a Typography Stylist block to present text to screen readers without breaking up the word with span tags needed for complex typoography.
+- Smart selection warnings for partial word selections that can cause screen readers to stumble, with options to convert to an accessible Typography Stylist block or apply anyway. The warning detects when conversion is not possible (e.g., inside a locked pattern) and adjusts accordingly. The warning can be disabled entirely in Settings → Accessibility.
 - Typography Stylist block maintains proper heading semantics for both screen reader and visual views.
 - ARIA markup ensures screen reader compatibility
 - Optional aria-label attributes for inline formatted text
@@ -146,7 +146,10 @@ font-family: 'Playfair Display', Georgia, serif;
 
 **Note:** If you select partial words, you'll see an accessibility warning with options to:
 - Convert to an accessible Typography Stylist block (recommended)
+- Apply anyway (proceeds with the features despite potential screen reader fragmentation)
 - Discard changes
+
+When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. The warning includes a "Manage this setting" link to the admin accessibility settings. You can disable this warning entirely via "Disable Word Boundary Warning" in Settings → Typography Stylist → Accessibility.
 
 #### Method 2: Typography Stylist Block (for complex typography)
 
@@ -289,7 +292,9 @@ Yes, this plugin requires fonts that support OpenType features. Most premium scr
 The plugin includes accessibility features for screen reader compatibility:
 
 **For Inline Formats:**
-- Warns when partial word selections could fragment text
+- Warns when partial word selections could fragment text, with options to convert to an accessible block, apply anyway, or discard changes
+- Smart conversion detection hides the convert option when conversion is not possible (e.g., locked patterns), with a safety fallback that applies features directly if conversion fails
+- "Disable Word Boundary Warning" option in Settings → Accessibility to skip the warning entirely
 - Optional aria-label support (configurable in Settings → Accessibility)
 - Conversion tool to accessible block format
 
@@ -302,6 +307,7 @@ The plugin includes accessibility features for screen reader compatibility:
 **Recommended Usage:**
 - Use inline format for simple, complete word/phrase styling
 - Use Typost block for complex or letter-by-letter typography
+- If you frequently apply features to partial words and understand the screen reader implications, disable the word boundary warning in Settings → Accessibility
 - Test with screen readers like NVDA (Windows) or VoiceOver (macOS) to verify compatibility with your content
 
 ### How does the Typost block ensure accessibility?
@@ -357,18 +363,15 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ### Version 1.2.2
 
-**New OpenType Features:**
-- **Added: 23 new OpenType features** across 5 new categories, bringing the total from 28 to 51 supported features
-- **Added: Numerals & Figures category** - Proportional Figures (pnum), Tabular Figures (tnum), Lining Figures (lnum), Oldstyle Figures (onum), Fractions (frac), Slashed Zero (zero)
-- **Added: Capitals & Case category** - Small Capitals (smcp), Capitals to Small Caps (c2sc), Petite Capitals (pcap), Case-Sensitive Forms (case)
-- **Added: Positional Forms category** - Initial Forms (init), Medial Forms (medi), Terminal Forms (fina), Isolated Forms (isol)
-- **Added: Superscript & Ordinals category** - Superscript (sups), Subscript (subs), Ordinals (ordn)
-- **Added: Other Features category** - Kerning (kern), Localized Forms (locl), Randomize (rand)
-- **Added: Contextual Ligatures (clig) and Historical Ligatures (hlig)** to the existing Ligatures category
-- **Added: Historical Forms (hist)** to the existing Swashes & Alternates category
+**Apply Anyway & Smart Conversion Detection:**
+- **Added: Re-introduced "Apply Anyway" button** - The word boundary accessibility warning when applying features to partial words in core blocks now offers an "Apply Anyway" option, giving users the choice to proceed despite potential screen reader fragmentation.
+- **Added: Smart conversion detection** - The "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., the block is inside a locked pattern). The warning message adjusts to reflect the available options.
+- **Added: Safety fallback** - If block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user.
+- **Added: "Disable Word Boundary Warning" option** - New setting in Settings → Typography Stylist → Accessibility that skips the partial word warning entirely for users who frequently style partial words and understand the implications.
+- **Added: "Manage this setting" deep-link** - The warning message includes a link to the admin accessibility settings page that auto-switches to the Accessibility tab and highlights the relevant setting with a fade animation.
 
 **Bug Fix:**
-- **Fixed: Unchecking OpenType feature removed other inline properties** - In the Quick Features Toggle, unchecking an OpenType feature would strip font-family, font-weight, and other properties from the styled span. The `removeFeatureFromSelection()` function was unconditionally unwrapping spans when no features remained, even when the span still had other data attributes (`data-font-id`, `data-fontweight`, etc.). The fix checks for remaining attributes before deciding whether to unwrap, following the same pattern used in `removePropertyFromSpan()`.
+- **Fixed: Nonce mismatch in admin settings forms** - The Accessibility and Options settings forms used mismatched nonce names between `wp_nonce_field()` and `check_admin_referer()`, causing "The link you followed has expired" errors when saving settings.
 
 ### Version 1.2.1
 
@@ -390,8 +393,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 **Preview Enhancement:**
 - **Improved: Cumulative OpenType feature previews** - Feature preview windows now show all currently-checked features combined, not just the individual feature in isolation. This accurately represents how features interact in fonts like Bookmania, where combining stylistic sets (e.g., ss10 + ss16) produces different glyphs than either set alone. Each preview always includes its own feature plus all other active features, updating in real time as features are toggled. Applies to both the inline editor popover and the Typography Stylist block's Quick Features Toggle.
 
-**Accessibility Enforcement:**
-- **Removed: "Apply Anyway" option** - The accessibility warning when selecting partial words in rich text blocks no longer offers a bypass. Users must either convert to a Typography Stylist block (which provides accessible dual-content markup) or discard their changes. This reinforces the plugin's accessibility-first approach.
+**Accessibility UX:**
 - **Changed: "Cancel" renamed to "Discard Changes"** - Clearer labeling for the action that dismisses the warning without applying styles.
 
 ### Version 1.2.0

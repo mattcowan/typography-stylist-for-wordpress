@@ -283,6 +283,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 previewDevice: 'tablet',
                 showAccessibilityWarning: false,
                 warningMessage: '',
+                canConvert: true,
                 changeHistory: [],
                 showClearConfirmation: false,
                 dontShowClearWarning: hideWarning,
@@ -321,6 +322,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.togglePopover = this.togglePopover.bind(this);
             this.toggleFeature = this.toggleFeature.bind(this);
             this.applyFeatures = this.applyFeatures.bind(this);
+            this.applyFeaturesForced = this.applyFeaturesForced.bind(this);
             this.applyPreset = this.applyPreset.bind(this);
             this.clearFeatures = this.clearFeatures.bind(this);
             this.handleClearClick = this.handleClearClick.bind(this);
@@ -807,8 +809,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 blockInheritedFont: inheritedFont,
                 fontDetectionFailed: detectionFailed,
                 initialState: capturedInitialState,
-                // Reset hasChanges when closing popover (discarding unapplied changes)
+                // Reset hasChanges and accessibility warning when closing popover
                 hasChanges: state.isOpen ? false : state.hasChanges,
+                showAccessibilityWarning: false,
+                warningMessage: '',
+                canConvert: true,
                 // Save selection bounds when opening, clear when closing
                 savedSelectionStart: !state.isOpen ? selectionStart : null,
                 savedSelectionEnd: !state.isOpen ? selectionEnd : null,
@@ -1022,7 +1027,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (breaksWordStart || breaksWordEnd) {
                 return {
                     valid: false,
-                    message: __('For better accessibility, select complete words or phrases, or convert to a Typography Stylist block for accessible styling of partial words.', 'typography-stylist')
+                    message: __('Your selection breaks a word boundary. Screen readers generally handle inline spans well, but for the best accessibility, consider converting to a Typography Stylist block which provides dedicated screen reader text.', 'typography-stylist')
                 };
             }
 
@@ -1222,6 +1227,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                     // Replace current block
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
+
+                    // Safety fallback: verify replacement succeeded
+                    // replaceBlocks removes the old block and creates a new one with a different clientId.
+                    // If the old block is gone, the replacement succeeded (even if the user deselected
+                    // within the timeout window). Only fall back when the old block still exists,
+                    // meaning replaceBlocks was silently blocked (e.g., by pattern locking).
+                    setTimeout(() => {
+                        const blockEditorSelect = select('core/block-editor');
+                        const oldBlock = blockEditorSelect.getBlock(selectedBlockClientId);
+
+                        if (!oldBlock) {
+                            return;
+                        }
+
+                        const selectedAfter = blockEditorSelect.getSelectedBlock();
+                        if (!selectedAfter || selectedAfter.name !== 'typost/block') {
+                            this._doApplyFeatures();
+                            dispatch('core/notices').createInfoNotice(
+                                __('Block could not be converted. Features were applied directly.', 'typography-stylist'),
+                                { type: 'snackbar', isDismissible: true }
+                            );
+                        }
+                    }, 100);
                 }
             } else {
                 // No selection - apply to entire block (original behavior)
@@ -1258,6 +1286,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                     // Replace current block
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
+
+                    // Safety fallback: verify replacement succeeded (see partial-selection branch for explanation)
+                    setTimeout(() => {
+                        const blockEditorSelect = select('core/block-editor');
+                        const oldBlock = blockEditorSelect.getBlock(selectedBlockClientId);
+
+                        if (!oldBlock) {
+                            return;
+                        }
+
+                        const selectedAfter = blockEditorSelect.getSelectedBlock();
+                        if (!selectedAfter || selectedAfter.name !== 'typost/block') {
+                            this._doApplyFeatures();
+                            dispatch('core/notices').createInfoNotice(
+                                __('Block could not be converted. Features were applied directly.', 'typography-stylist'),
+                                { type: 'snackbar', isDismissible: true }
+                            );
+                        }
+                    }, 100);
                 }
             }
 
@@ -1269,24 +1316,63 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Apply selected features
          */
         applyFeatures() {
-            const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd } = this.state;
+            const { value } = this.props;
+            const { savedSelectionStart, savedSelectionEnd } = this.state;
+            const { select } = wp.data;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+
+            // Skip validation if admin has disabled the warning
+            if (typostData.disableAccessibilityWarning) {
+                this._doApplyFeatures();
+                return;
+            }
 
             // Validate selection (use saved bounds if selection was lost)
             const validation = selectionLost
                 ? this.validateSelection(savedSelectionStart, savedSelectionEnd)
                 : this.validateSelection();
             if (!validation.valid) {
+                // Pre-check if conversion to Typography Stylist block is possible
+                const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+                const rootClientId = selectedBlockClientId
+                    ? select('core/block-editor').getBlockRootClientId(selectedBlockClientId)
+                    : null;
+                const canConvert = selectedBlockClientId &&
+                    select('core/block-editor').canRemoveBlock(selectedBlockClientId) &&
+                    select('core/block-editor').canInsertBlockType('typost/block', rootClientId);
+
                 // Show warning with options
                 this.setState({
                     showAccessibilityWarning: true,
-                    warningMessage: validation.message
+                    warningMessage: validation.message,
+                    canConvert: !!canConvert
                 });
                 return;
             }
+
+            this._doApplyFeatures();
+        }
+
+        /**
+         * Apply features bypassing word boundary validation.
+         * Called when user clicks "Apply Anyway" in the accessibility warning.
+         */
+        applyFeaturesForced() {
+            this.setState({ showAccessibilityWarning: false, warningMessage: '' });
+            this._doApplyFeatures();
+        }
+
+        /**
+         * Core feature application logic (shared by applyFeatures and applyFeaturesForced).
+         */
+        _doApplyFeatures() {
+            const { value, onChange } = this.props;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd } = this.state;
+
+            // Check if selection was lost due to modal focus and we have saved bounds
+            const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
             if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
@@ -1944,7 +2030,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
         render() {
             const { isActive, isInTypostBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
+            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, canConvert, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -2250,22 +2336,39 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 {showAccessibilityWarning && (
                                     <div className="typost-accessibility-warning">
                                         <p className="typost-warning-message">
-                                            ⚠️ {warningMessage}
+                                            {canConvert
+                                                ? warningMessage
+                                                : __('Your selection breaks a word boundary. This block cannot be converted to a Typography Stylist block (it may be locked or inside a pattern).', 'typography-stylist')
+                                            }
                                         </p>
                                         <ButtonGroup>
+                                            {canConvert && (
+                                                <Button
+                                                    isPrimary
+                                                    onClick={this.convertToBlock}
+                                                >
+                                                    {__('Convert to Typography Stylist Block', 'typography-stylist')}
+                                                </Button>
+                                            )}
                                             <Button
-                                                isPrimary
-                                                onClick={this.convertToBlock}
+                                                isPrimary={!canConvert}
+                                                isSecondary={canConvert}
+                                                onClick={this.applyFeaturesForced}
                                             >
-                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
+                                                {__('Apply Anyway', 'typography-stylist')}
                                             </Button>
                                             <Button
-                                                isSecondary
+                                                isTertiary
                                                 onClick={() => this.setState({ showAccessibilityWarning: false })}
                                             >
                                                 {__('Discard Changes', 'typography-stylist')}
                                             </Button>
                                         </ButtonGroup>
+                                        <p className="typost-warning-settings-link">
+                                            <a href={typostData.settingsUrl + '&tab=accessibility&highlight=typost_disable_accessibility_warning'} target="_blank" rel="noopener noreferrer">
+                                                {__('Manage this setting', 'typography-stylist')}
+                                            </a>
+                                        </p>
                                     </div>
                                 )}
 

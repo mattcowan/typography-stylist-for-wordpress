@@ -1090,10 +1090,6 @@ msgstr "Otras Características"
 msgid "Typography Stylist"
 msgstr "Estilista OpenType"
 
-#: assets/js/block-editor.js:356
-msgid "For better accessibility, select complete words or phrases, or convert to a Typography Stylist block for accessible styling of partial words."
-msgstr "Para mejor accesibilidad, selecciona palabras o frases completas, o conviértelo a un bloque Estilista OpenType para estilizar palabras parciales de forma accesible."
-
 #: assets/js/block-editor.js:832
 msgid "Convert to Typography Stylist Block"
 msgstr "Convertir a Bloque Estilista OpenType"
@@ -1501,3 +1497,35 @@ msgstr "Se requiere el parámetro fallbacks o available_weights"
 #: typography-stylist.php:3378
 msgid "Either font_family or available_weights parameter is required"
 msgstr "Se requiere el parámetro font_family o available_weights"
+
+#: assets/js/block-editor.js
+msgid "Apply Anyway"
+msgstr "Aplicar de todos modos"
+
+#: assets/js/block-editor.js
+msgid "Manage this setting"
+msgstr "Gestionar este ajuste"
+
+#: assets/js/block-editor.js
+msgid "Block could not be converted. Features were applied directly."
+msgstr "El bloque no pudo ser convertido. Las características se aplicaron directamente."
+
+#: assets/js/block-editor.js
+msgid "Your selection breaks a word boundary. Screen readers generally handle inline spans well, but for the best accessibility, consider converting to a Typography Stylist block which provides dedicated screen reader text."
+msgstr "Su selección rompe un límite de palabra. Los lectores de pantalla generalmente manejan bien los elementos span en línea, pero para una mejor accesibilidad, considere convertir a un bloque Typography Stylist que proporciona texto dedicado para lectores de pantalla."
+
+#: assets/js/block-editor.js
+msgid "Your selection breaks a word boundary. This block cannot be converted to a Typography Stylist block (it may be locked or inside a pattern)."
+msgstr "Su selección rompe un límite de palabra. Este bloque no puede ser convertido a un bloque Typography Stylist (puede estar bloqueado o dentro de un patrón)."
+
+#: includes/admin-page.php
+msgid "Disable Word Boundary Warning"
+msgstr "Desactivar advertencia de límite de palabra"
+
+#: includes/admin-page.php
+msgid "Skip the warning when applying features to partial words"
+msgstr "Omitir la advertencia al aplicar características a palabras parciales"
+
+#: includes/admin-page.php
+msgid "When applying inline typography features to a partial word (e.g., a single letter), the editor normally shows a warning recommending conversion to a Typography Stylist block. Enable this option to skip the warning and apply features directly. Screen readers handle inline spans well, so this is safe for most use cases."
+msgstr "Al aplicar características tipográficas en línea a una palabra parcial (por ej., una sola letra), el editor normalmente muestra una advertencia recomendando la conversión a un bloque Typography Stylist. Active esta opción para omitir la advertencia y aplicar las características directamente. Los lectores de pantalla manejan bien los elementos span en línea, así que es seguro en la mayoría de los casos."

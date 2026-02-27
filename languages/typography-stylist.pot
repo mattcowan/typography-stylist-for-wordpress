@@ -1112,3 +1112,35 @@ msgstr ""
 #: typography-stylist.php:3378
 msgid "Either font_family or available_weights parameter is required"
 msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Apply Anyway"
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Manage this setting"
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Block could not be converted. Features were applied directly."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Your selection breaks a word boundary. Screen readers generally handle inline spans well, but for the best accessibility, consider converting to a Typography Stylist block which provides dedicated screen reader text."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Your selection breaks a word boundary. This block cannot be converted to a Typography Stylist block (it may be locked or inside a pattern)."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Disable Word Boundary Warning"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Skip the warning when applying features to partial words"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "When applying inline typography features to a partial word (e.g., a single letter), the editor normally shows a warning recommending conversion to a Typography Stylist block. Enable this option to skip the warning and apply features directly. Screen readers handle inline spans well, so this is safe for most use cases."
+msgstr ""
