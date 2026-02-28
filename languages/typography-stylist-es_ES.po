@@ -1499,12 +1499,20 @@ msgid "Either font_family or available_weights parameter is required"
 msgstr "Se requiere el parámetro font_family o available_weights"
 
 #: assets/js/block-editor.js
+msgid "Accessibility Notice"
+msgstr "Aviso de accesibilidad"
+
+#: assets/js/block-editor.js
+msgid "Close"
+msgstr "Cerrar"
+
+#: assets/js/block-editor.js
 msgid "Apply Anyway"
 msgstr "Aplicar de todos modos"
 
 #: assets/js/block-editor.js
-msgid "Manage this setting"
-msgstr "Gestionar este ajuste"
+msgid "Manage accessibility settings"
+msgstr "Gestionar configuración de accesibilidad"
 
 #: assets/js/block-editor.js
 msgid "Block could not be converted. Features were applied directly."

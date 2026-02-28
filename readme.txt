@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
 Tested up to: 6.9.1
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -266,6 +266,18 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
 
 == Changelog ==
+
+= 1.3.0 =
+* **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
+* Removed: Apply button from inline editor toolbar
+* Removed: "Apply Anyway" and "Discard Changes" buttons - no longer needed with live preview
+* Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
+* Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
+* Changed: Word boundary accessibility warning is now non-blocking informational notice at top of modal instead of blocking application
+* Changed: Warning can be dismissed by proceeding with edits or converting to Typography Stylist block
+* Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
+* Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
+* Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
 
 = 1.2.2 =
 * Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation

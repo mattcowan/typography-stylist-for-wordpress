@@ -361,6 +361,31 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 1.3.0
+
+**Major UX Overhaul: Live Preview in Inline Editor**
+
+This release brings the inline text editor (richtext toolbar) to feature parity with the Typography Stylist block by implementing live preview and removing the Apply button paradigm.
+
+**Breaking Changes:**
+- **Removed: Apply button** - The "Apply" button is removed from the inline editor. All controls now apply changes immediately as you adjust them.
+- **Removed: "Apply Anyway" button** - No longer needed with live preview. Features are applied immediately regardless of word boundary warnings.
+- **Removed: Internal Undo system** - The "Undo" button inside the modal is removed. Use native WordPress undo (Ctrl+Z) to undo individual changes.
+- **Removed: Redundant preview panel** - The separate preview panel with device toggles (Mobile/Tablet/Desktop) is removed. Live preview on the actual selected text makes it unnecessary. Feature toggle previews (on each checkbox) still show selected text with individual features applied.
+
+**Improved UX:**
+- **Live preview with smart debouncing** - All controls apply automatically with intelligent debounce timings:
+  - OpenType features: Instant (0ms)
+  - Letter spacing, line height sliders: 400ms debounce
+  - Font family, font weight dropdowns: 300ms debounce
+  - Responsive font-size (3 sliders): 600ms debounce
+- **Non-blocking accessibility warning** - Word boundary warnings are now informational notices at the top of the modal, not blocking popups. Users can proceed with edits or convert to Typography Stylist block if needed.
+- **Consistent with Typography Stylist block** - The inline editor now uses the same UX patterns as the dedicated Typography Stylist block.
+
+**Developer Notes:**
+- Each debounced change creates its own WordPress undo step. Users press Ctrl+Z multiple times to undo a full modal session's worth of changes (more granular than the previous single-click Apply undo).
+- The internal `changeHistory` state machine is removed. Changes are now tracked by WordPress's native undo system.
+
 ### Version 1.2.2
 
 **Apply Anyway & Smart Conversion Detection:**
