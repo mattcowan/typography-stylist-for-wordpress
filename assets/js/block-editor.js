@@ -17,7 +17,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
-    const { compose } = wp.compose;
+    const { compose, debounce } = wp.compose;
 
     // Define the format type name
     const FORMAT_TYPE = 'typost/features';
@@ -277,14 +277,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
-                showPreview: true,
+                selectedText: '', // Extracted text for feature previews
                 activePreset: null,
-                previewText: '',
-                previewDevice: 'tablet',
-                showAccessibilityWarning: false,
-                warningMessage: '',
+                wordBoundaryWarning: '',
                 canConvert: true,
-                changeHistory: [],
                 showClearConfirmation: false,
                 dontShowClearWarning: hideWarning,
                 // Inline features cached when popover opens (for inline editor toolbar)
@@ -294,10 +290,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 blockInheritedFont: '',
                 // Flag to track if font detection failed (no text element found)
                 fontDetectionFailed: false,
-                // Track if user has made changes to show apply notice
-                hasChanges: false,
-                // Initial state when popover opens (for comparing on undo)
-                initialState: null,
                 // Saved selection bounds (survive modal focus changes)
                 savedSelectionStart: null,
                 savedSelectionEnd: null,
@@ -321,8 +313,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             this.togglePopover = this.togglePopover.bind(this);
             this.toggleFeature = this.toggleFeature.bind(this);
-            this.applyFeatures = this.applyFeatures.bind(this);
-            this.applyFeaturesForced = this.applyFeaturesForced.bind(this);
             this.applyPreset = this.applyPreset.bind(this);
             this.clearFeatures = this.clearFeatures.bind(this);
             this.handleClearClick = this.handleClearClick.bind(this);
@@ -336,13 +326,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setFontWeight = this.setFontWeight.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
             this.setLineHeight = this.setLineHeight.bind(this);
-            this.setPreviewDevice = this.setPreviewDevice.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
             this.convertToBlock = this.convertToBlock.bind(this);
 
             this.applyFeatureFromPreview = this.applyFeatureFromPreview.bind(this);
-            this.undoLastChange = this.undoLastChange.bind(this);
-            this.saveToHistory = this.saveToHistory.bind(this);
             // Modal drag/resize handlers
             this.initializeModalPosition = this.initializeModalPosition.bind(this);
             this.handleDragStart = this.handleDragStart.bind(this);
@@ -352,6 +339,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.handleResizeMove = this.handleResizeMove.bind(this);
             this.handleResizeEnd = this.handleResizeEnd.bind(this);
             this.handleHeaderKeyDown = this.handleHeaderKeyDown.bind(this);
+
+            // Create debounced apply functions (v1.3.0 - live preview)
+            // These are created once in constructor and persist across renders
+            this.debouncedApplySlider = debounce(this._doApplyFeatures.bind(this), 400);
+            this.debouncedApplyDropdown = debounce(this._doApplyFeatures.bind(this), 300);
+            this.debouncedApplyFontSize = debounce(this._doApplyFeatures.bind(this), 600);
         }
 
         /**
@@ -740,27 +733,28 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         togglePopover() {
             const { value } = this.props;
+            const { select } = wp.data;
 
-            // Extract selected text and compute inline features when opening popover
-            let extractedText = '';
+            // Compute inline features when opening popover
             let computedInlineFeatures = [];
             let inheritedFont = '';
             let detectionFailed = false;
-            let capturedInitialState = null;
+            let extractedText = '';
             let modalPosition = {};
             let selectionStart = null;
             let selectionEnd = null;
+            let wordBoundaryWarning = '';
+            let canConvert = true;
 
             if (!this.state.isOpen && value) {
                 // Save selection bounds so they survive modal focus changes
                 selectionStart = value.start;
                 selectionEnd = value.end;
+                // Extract selected text for feature previews
                 if (value.start !== value.end) {
-                    // There's a selection - extract it
                     const slicedValue = slice(value, value.start, value.end);
                     extractedText = getTextContent(slicedValue);
                 } else {
-                    // No selection - use entire text
                     extractedText = getTextContent(value);
                 }
 
@@ -775,18 +769,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     detectionFailed = true;
                 }
 
-                // Capture initial state when opening popover (for undo comparison)
-                capturedInitialState = {
-                    selectedFeatures: this.getActiveFeatures() || [],
-                    selectedFont: this.getActiveFont() || '',
-                    fontSize: this.getActiveFontSize() || 'inherit',
-                    fontSizeMin: this.getActiveFontSizeMin() || 16,
-                    fontSizePreferred: this.getActiveFontSizePreferred() || 24,
-                    fontSizeMax: this.getActiveFontSizeMax() || 32,
-                    fontWeight: this.getActiveFontWeight() || '400',
-                    letterSpacing: this.getActiveLetterSpacing() || 0,
-                    lineHeight: this.getActiveLineHeight() || 0
-                };
+                // Check word boundary when opening (v1.3.0 - now informational, not blocking)
+                if (selectionStart !== selectionEnd) {
+                    const validation = this.validateSelection(selectionStart, selectionEnd);
+                    if (!validation.valid) {
+                        wordBoundaryWarning = validation.message;
+                        // Compute canConvert when there's a warning
+                        const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+                        const rootClientId = selectedBlockClientId
+                            ? select('core/block-editor').getBlockRootClientId(selectedBlockClientId)
+                            : null;
+                        canConvert = selectedBlockClientId &&
+                            select('core/block-editor').canRemoveBlock(selectedBlockClientId) &&
+                            select('core/block-editor').canInsertBlockType('typost/block', rootClientId);
+                    }
+                }
 
                 // Initialize modal position when opening
                 modalPosition = this.initializeModalPosition();
@@ -804,16 +801,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
-                previewText: extractedText,
+                selectedText: !state.isOpen ? extractedText : '',
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
                 fontDetectionFailed: detectionFailed,
-                initialState: capturedInitialState,
-                // Reset hasChanges and accessibility warning when closing popover
-                hasChanges: state.isOpen ? false : state.hasChanges,
-                showAccessibilityWarning: false,
-                warningMessage: '',
-                canConvert: true,
+                wordBoundaryWarning: !state.isOpen ? wordBoundaryWarning : '',
+                canConvert: canConvert,
                 // Save selection bounds when opening, clear when closing
                 savedSelectionStart: !state.isOpen ? selectionStart : null,
                 savedSelectionEnd: !state.isOpen ? selectionEnd : null,
@@ -828,15 +821,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font family (value can be font ID or font family string)
          */
         setFont(value) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             if (value === '') {
                 // Reset to default
                 this.setState({
                     selectedFont: '',
-                    selectedFontId: 0,
-                    hasChanges: true
+                    selectedFontId: 0
+                }, () => {
+                    this.debouncedApplyDropdown();
                 });
             } else {
                 // Try to parse as ID (new system)
@@ -845,8 +836,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 if (!isNaN(fontId) && fontData) {
                     const newState = {
                         selectedFont: fontData.family,
-                        selectedFontId: fontId,
-                        hasChanges: true
+                        selectedFontId: fontId
                     };
 
                     // Validate current weight against new font's available weights
@@ -862,13 +852,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         }
                     }
 
-                    this.setState(newState);
+                    this.setState(newState, () => {
+                        this.debouncedApplyDropdown();
+                    });
                 } else {
                     // Old string-based system (backward compatibility)
                     this.setState({
                         selectedFont: value,
-                        selectedFontId: 0,
-                        hasChanges: true
+                        selectedFontId: 0
+                    }, () => {
+                        this.debouncedApplyDropdown();
                     });
                 }
             }
@@ -878,12 +871,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size mode
          */
         setFontSize(mode) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState({
-                fontSize: mode,
-                hasChanges: true
+                fontSize: mode
+            }, () => {
+                this.debouncedApplyFontSize();
             });
         }
 
@@ -893,6 +884,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         setFontSizeMin(value) {
             this.setState({
                 fontSizeMin: value
+            }, () => {
+                this.debouncedApplyFontSize();
             });
         }
 
@@ -902,6 +895,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         setFontSizePreferred(value) {
             this.setState({
                 fontSizePreferred: value
+            }, () => {
+                this.debouncedApplyFontSize();
             });
         }
 
@@ -911,6 +906,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         setFontSizeMax(value) {
             this.setState({
                 fontSizeMax: value
+            }, () => {
+                this.debouncedApplyFontSize();
             });
         }
 
@@ -918,12 +915,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font weight
          */
         setFontWeight(value) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState({
-                fontWeight: value,
-                hasChanges: true
+                fontWeight: value
+            }, () => {
+                this.debouncedApplyDropdown();
             });
         }
 
@@ -931,12 +926,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set letter spacing
          */
         setLetterSpacing(value) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState({
-                letterSpacing: value,
-                hasChanges: true
+                letterSpacing: value
+            }, () => {
+                this.debouncedApplySlider();
             });
         }
 
@@ -944,21 +937,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set line height
          */
         setLineHeight(value) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState({
-                lineHeight: value,
-                hasChanges: true
-            });
-        }
-
-        /**
-         * Set preview device
-         */
-        setPreviewDevice(device) {
-            this.setState({
-                previewDevice: device
+                lineHeight: value
+            }, () => {
+                this.debouncedApplySlider();
             });
         }
 
@@ -966,9 +948,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Toggle individual feature
          */
         toggleFeature(featureId) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState(state => {
                 const features = [...state.selectedFeatures];
                 const index = features.indexOf(featureId);
@@ -981,9 +960,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 return {
                     selectedFeatures: features,
-                    activePreset: null,
-                    hasChanges: true
+                    activePreset: null
                 };
+            }, () => {
+                this._doApplyFeatures(); // instant apply, no debounce
             });
         }
 
@@ -1308,64 +1288,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             }
 
-            // Close popover and reset open/changes flags
-            this.setState({ isOpen: false, hasChanges: false });
+            // Close popover
+            this.setState({ isOpen: false });
         }
 
         /**
-         * Apply selected features
-         */
-        applyFeatures() {
-            const { value } = this.props;
-            const { savedSelectionStart, savedSelectionEnd } = this.state;
-            const { select } = wp.data;
-
-            // Check if selection was lost due to modal focus and we have saved bounds
-            const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
-
-            // Skip validation if admin has disabled the warning
-            if (typostData.disableAccessibilityWarning) {
-                this._doApplyFeatures();
-                return;
-            }
-
-            // Validate selection (use saved bounds if selection was lost)
-            const validation = selectionLost
-                ? this.validateSelection(savedSelectionStart, savedSelectionEnd)
-                : this.validateSelection();
-            if (!validation.valid) {
-                // Pre-check if conversion to Typography Stylist block is possible
-                const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
-                const rootClientId = selectedBlockClientId
-                    ? select('core/block-editor').getBlockRootClientId(selectedBlockClientId)
-                    : null;
-                const canConvert = selectedBlockClientId &&
-                    select('core/block-editor').canRemoveBlock(selectedBlockClientId) &&
-                    select('core/block-editor').canInsertBlockType('typost/block', rootClientId);
-
-                // Show warning with options
-                this.setState({
-                    showAccessibilityWarning: true,
-                    warningMessage: validation.message,
-                    canConvert: !!canConvert
-                });
-                return;
-            }
-
-            this._doApplyFeatures();
-        }
-
-        /**
-         * Apply features bypassing word boundary validation.
-         * Called when user clicks "Apply Anyway" in the accessibility warning.
-         */
-        applyFeaturesForced() {
-            this.setState({ showAccessibilityWarning: false, warningMessage: '' });
-            this._doApplyFeatures();
-        }
-
-        /**
-         * Core feature application logic (shared by applyFeatures and applyFeaturesForced).
+         * Core feature application logic (live preview auto-apply)
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
@@ -1462,7 +1390,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             }
 
-            this.setState({ isOpen: false, hasChanges: false });
+            // v1.3.0: Don't close modal on apply - modal stays open for live preview
         }
 
 
@@ -1470,14 +1398,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Apply preset
          */
         applyPreset(preset) {
-            // Save to history before making changes
-            this.saveToHistory();
-
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
-                activePreset: preset.id,
-                hasChanges: true
+                activePreset: preset.id
+            }, () => {
+                this._doApplyFeatures(); // instant apply, no debounce for presets
             });
         }
 
@@ -1535,9 +1461,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Clear all features
          */
         clearFeatures() {
-            // Save to history before clearing
-            this.saveToHistory();
-
             const { value, onChange } = this.props;
             const { savedSelectionStart, savedSelectionEnd } = this.state;
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -1557,8 +1480,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontWeight: '400',
                 letterSpacing: 0,
                 lineHeight: 0,
-                activePreset: null,
-                hasChanges: false
+                activePreset: null
                 // Note: Keep popover open (isOpen: true) so user can see cleared state
             });
         }
@@ -1717,88 +1639,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
-         * Save current state to history
-         */
-        saveToHistory() {
-            const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, changeHistory } = this.state;
-
-            const snapshot = {
-                selectedFeatures: [...selectedFeatures],
-                selectedFont,
-                fontSize,
-                fontSizeMin,
-                fontSizePreferred,
-                fontSizeMax,
-                fontWeight,
-                letterSpacing,
-                lineHeight
-            };
-
-            // Limit history to last 20 changes
-            const newHistory = [...changeHistory, snapshot].slice(-20);
-
-            this.setState({ changeHistory: newHistory });
-        }
-
-        /**
          * Apply feature from preview button
          */
         applyFeatureFromPreview(featureId) {
             const { selectedFeatures } = this.state;
 
-            // Save current state to history before making changes
-            // (consistent with toggleFeature behavior - always create history entry)
-            this.saveToHistory();
-
             // Add feature if not already active (idempotent operation)
             if (!selectedFeatures.includes(featureId)) {
                 this.setState({
                     selectedFeatures: [...selectedFeatures, featureId]
-                });
-            }
-        }
-
-        /**
-         * Undo last change - restore previous state from history
-         */
-        undoLastChange() {
-            const { changeHistory, initialState } = this.state;
-
-            if (changeHistory.length > 0) {
-                // Get the last history entry
-                const newHistory = [...changeHistory];
-                const previousState = newHistory.pop();
-
-                // Check if we're back to initial state (when popover opened)
-                let isBackToInitialState = false;
-                if (initialState) {
-                    // Compare against initial state (use spread to avoid mutating arrays)
-                    isBackToInitialState =
-                        JSON.stringify([...(previousState.selectedFeatures || [])].sort()) === JSON.stringify([...(initialState.selectedFeatures || [])].sort()) &&
-                        previousState.selectedFont === initialState.selectedFont &&
-                        previousState.fontSize === initialState.fontSize &&
-                        previousState.fontSizeMin === initialState.fontSizeMin &&
-                        previousState.fontSizePreferred === initialState.fontSizePreferred &&
-                        previousState.fontSizeMax === initialState.fontSizeMax &&
-                        previousState.fontWeight === initialState.fontWeight &&
-                        previousState.letterSpacing === initialState.letterSpacing &&
-                        previousState.lineHeight === initialState.lineHeight;
-                }
-
-                // Restore previous state
-                this.setState({
-                    selectedFeatures: previousState.selectedFeatures,
-                    selectedFont: previousState.selectedFont,
-                    fontSize: previousState.fontSize,
-                    fontSizeMin: previousState.fontSizeMin,
-                    fontSizePreferred: previousState.fontSizePreferred,
-                    fontSizeMax: previousState.fontSizeMax,
-                    fontWeight: previousState.fontWeight,
-                    letterSpacing: previousState.letterSpacing,
-                    lineHeight: previousState.lineHeight,
-                    changeHistory: newHistory,
-                    // Reset hasChanges if we're back to initial state
-                    hasChanges: !isBackToInitialState
+                }, () => {
+                    this._doApplyFeatures();
                 });
             }
         }
@@ -1807,11 +1658,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Render feature toggle
          */
         renderFeatureToggle(feature) {
-            const { selectedFeatures, selectedFont, previewText, blockInheritedFont } = this.state;
+            const { selectedFeatures, selectedFont, selectedText, blockInheritedFont } = this.state;
             const isActive = selectedFeatures.includes(feature.id);
 
-            // Use preview text or default sample text
-            const sampleText = previewText || 'ffi ffl Th AE';
+            // Use selected text or default sample text for feature preview
+            const previewText = selectedText || 'ffi ffl Th AE';
 
             // Build preview styles - with this feature AND all currently selected features
             const allPreviewFeatures = [...new Set([feature.id, ...selectedFeatures])];
@@ -1841,7 +1692,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             aria-label={sprintf(__('Click to apply %s feature', 'typography-stylist'), feature.name)}
                             title={sprintf(__('Click to apply %s', 'typography-stylist'), feature.name)}
                         >
-                            {sampleText}
+                            {previewText}
                         </Button>
                     </div>
                 </div>
@@ -2019,58 +1870,28 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
-         * Cleanup event listeners when component unmounts
+         * Cleanup event listeners and debounced functions when component unmounts
          */
         componentWillUnmount() {
+            // Cleanup modal drag/resize event listeners
             document.removeEventListener('mousemove', this.handleDragMove);
             document.removeEventListener('mouseup', this.handleDragEnd);
             document.removeEventListener('mousemove', this.handleResizeMove);
             document.removeEventListener('mouseup', this.handleResizeEnd);
+
+            // Cleanup debounced apply functions (v1.3.0 - live preview)
+            this.debouncedApplySlider.cancel();
+            this.debouncedApplyDropdown.cancel();
+            this.debouncedApplyFontSize.cancel();
         }
 
         render() {
             const { isActive, isInTypostBlock = false } = this.props;
-            const { isOpen, selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, showPreview, previewText, previewDevice, showAccessibilityWarning, warningMessage, canConvert, showClearConfirmation, dontShowClearWarning, blockInheritedFont, fontDetectionFailed } = this.state;
+            const { isOpen, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, wordBoundaryWarning, canConvert, showClearConfirmation, dontShowClearWarning, fontDetectionFailed } = this.state;
             const groupedFeatures = this.groupFeatures();
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
             const hasFonts = fontOptions.length > 0;
-
-            // Use stored preview text or fallback
-            const displayText = previewText || __('Elegant Typography & Flourish', 'typography-stylist');
-
-            // Build preview style
-            const previewStyle = {
-                fontFeatureSettings: this.featuresToCSS(selectedFeatures)
-            };
-            // Use selected font, or fallback to block's inherited font when Default is selected
-            const fontToUse = selectedFont || blockInheritedFont;
-            if (fontToUse) {
-                previewStyle.fontFamily = fontToUse;
-            }
-            // Apply font weight to preview
-            previewStyle.fontWeight = fontWeight;
-
-            // Apply letter spacing to preview
-            if (letterSpacing !== 0) {
-                previewStyle.letterSpacing = `${letterSpacing / 1000}em`;
-            }
-
-            // Apply line height to preview
-            if (lineHeight !== 0) {
-                previewStyle.lineHeight = lineHeight;
-            }
-
-            // Apply font size to preview based on device selection
-            if (fontSize === 'responsive') {
-                let previewSize = fontSizePreferred;
-                if (previewDevice === 'mobile') {
-                    previewSize = fontSizeMin;
-                } else if (previewDevice === 'desktop') {
-                    previewSize = fontSizeMax;
-                }
-                previewStyle.fontSize = `${previewSize}px`;
-            }
 
             return (
                 <Fragment>
@@ -2154,29 +1975,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         )
                                     )}
                                 </div>
-
-                                {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
-                                {this.state.hasChanges && (
-                                    <div className="typost-sticky-notice-wrapper">
-                                        {wp.element.createElement(Notice, {
-                                            status: 'info',
-                                            isDismissible: false,
-                                            className: 'typost-apply-notice'
-                                        },
-                                            wp.element.createElement('p', { style: { margin: 0 } },
-                                                __('Click "Apply" below the preview to confirm changes.', 'typography-stylist'),
-                                                ' ',
-                                                wp.element.createElement(Button, {
-                                                    variant: 'link',
-                                                    onClick: this.convertToBlock,
-                                                    className: 'typost-convert-link'
-                                                }, __('Convert to a Typography Stylist block', 'typography-stylist')),
-                                                ' ',
-                                                __('to see changes in real time.', 'typography-stylist')
-                                            )
-                                        )}
-                                    </div>
-                                )}
 
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">
@@ -2332,93 +2130,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     ))}
                                 </div>
 
-                                {/* Accessibility Warning */}
-                                {showAccessibilityWarning && (
-                                    <div className="typost-accessibility-warning">
-                                        <p className="typost-warning-message">
-                                            {canConvert
-                                                ? warningMessage
-                                                : __('Your selection breaks a word boundary. This block cannot be converted to a Typography Stylist block (it may be locked or inside a pattern).', 'typography-stylist')
-                                            }
-                                        </p>
-                                        <ButtonGroup>
-                                            {canConvert && (
-                                                <Button
-                                                    isPrimary
-                                                    onClick={this.convertToBlock}
-                                                >
-                                                    {__('Convert to Typography Stylist Block', 'typography-stylist')}
-                                                </Button>
-                                            )}
-                                            <Button
-                                                isPrimary={!canConvert}
-                                                isSecondary={canConvert}
-                                                onClick={this.applyFeaturesForced}
-                                            >
-                                                {__('Apply Anyway', 'typography-stylist')}
+                                {/* Accessibility Warning - Non-blocking Notice (v1.3.0) */}
+                                {wordBoundaryWarning && (
+                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
+                                        <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
+                                        <p>{wordBoundaryWarning}</p>
+                                        {canConvert && (
+                                            <Button isLink onClick={this.convertToBlock}>
+                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                             </Button>
-                                            <Button
-                                                isTertiary
-                                                onClick={() => this.setState({ showAccessibilityWarning: false })}
-                                            >
-                                                {__('Discard Changes', 'typography-stylist')}
-                                            </Button>
-                                        </ButtonGroup>
+                                        )}
                                         <p className="typost-warning-settings-link">
-                                            <a href={typostData.settingsUrl + '&tab=accessibility&highlight=typost_disable_accessibility_warning'} target="_blank" rel="noopener noreferrer">
-                                                {__('Manage this setting', 'typography-stylist')}
+                                            <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
+                                                {__('Manage accessibility settings', 'typography-stylist')}
                                             </a>
                                         </p>
-                                    </div>
-                                )}
-
-                                {/* Preview Section */}
-                                {showPreview && !showAccessibilityWarning && (
-                                    <div className="typost-preview-section">
-                                        <div className="typost-preview-header">
-                                            <h4>{__('Preview', 'typography-stylist')}</h4>
-                                            {fontSize === 'responsive' && (
-                                                <ButtonGroup className="typost-preview-device-toggle">
-                                                    <Button
-                                                        isSmall
-                                                        isPrimary={previewDevice === 'mobile'}
-                                                        isSecondary={previewDevice !== 'mobile'}
-                                                        onClick={() => this.setPreviewDevice('mobile')}
-                                                    >
-                                                        {__('Mobile', 'typography-stylist')}
-                                                    </Button>
-                                                    <Button
-                                                        isSmall
-                                                        isPrimary={previewDevice === 'tablet'}
-                                                        isSecondary={previewDevice !== 'tablet'}
-                                                        onClick={() => this.setPreviewDevice('tablet')}
-                                                    >
-                                                        {__('Tablet', 'typography-stylist')}
-                                                    </Button>
-                                                    <Button
-                                                        isSmall
-                                                        isPrimary={previewDevice === 'desktop'}
-                                                        isSecondary={previewDevice !== 'desktop'}
-                                                        onClick={() => this.setPreviewDevice('desktop')}
-                                                    >
-                                                        {__('Desktop', 'typography-stylist')}
-                                                    </Button>
-                                                </ButtonGroup>
-                                            )}
-                                        </div>
-                                        <div
-                                            className="typost-preview-text"
-                                            style={previewStyle}
-                                        >
-                                            {displayText}
-                                        </div>
-                                        {selectedFeatures.length > 0 && (
-                                            <div className="typost-preview-features">
-                                                <strong>{__('Active: ', 'typography-stylist')}</strong>
-                                                {selectedFeatures.join(', ')}
-                                            </div>
-                                        )}
-                                    </div>
+                                    </Notice>
                                 )}
 
                                 {/* Clear Confirmation - Inline */}
@@ -2454,25 +2181,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </div>
                                 )}
 
-                                {/* Action Buttons */}
+                                {/* Action Buttons (v1.3.0 - live preview, no Apply button) */}
                                 {!showClearConfirmation && (
                                     <div className="typost-popover-actions">
                                         <ButtonGroup>
-                                            <Button
-                                                isPrimary
-                                                onClick={this.applyFeatures}
-                                            >
-                                                {__('Apply', 'typography-stylist')}
-                                            </Button>
-                                            {this.state.changeHistory.length > 0 && (
-                                                <Button
-                                                    isSecondary
-                                                    onClick={this.undoLastChange}
-                                                    title={__('Undo last change', 'typography-stylist')}
-                                                >
-                                                    {__('Undo', 'typography-stylist')} {this.state.changeHistory.length > 1 && `(${this.state.changeHistory.length})`}
-                                                </Button>
-                                            )}
                                             <Button
                                                 isSecondary
                                                 onClick={this.handleClearClick}
@@ -2483,7 +2195,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 isTertiary
                                                 onClick={this.togglePopover}
                                             >
-                                                {__('Cancel', 'typography-stylist')}
+                                                {__('Close', 'typography-stylist')}
                                             </Button>
                                         </ButtonGroup>
                                     </div>

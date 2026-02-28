@@ -1294,18 +1294,6 @@ msgstr "No se pudo detectar la fuente para este tipo de bloque."
 msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
 msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere usar el bloque Typography Stylist en lugar de la barra de herramientas en línea."
 
-#: assets/js/block-editor.js:2000
-msgid "Click \"Apply\" below the preview to confirm changes."
-msgstr "Haga clic en \"Aplicar\" debajo de la vista previa para confirmar los cambios."
-
-#: assets/js/block-editor.js:2006
-msgid "Convert to a Typography Stylist block"
-msgstr "Convertir a un bloque Typography Stylist"
-
-#: assets/js/block-editor.js:2008
-msgid "to see changes in real time."
-msgstr "para ver los cambios en tiempo real."
-
 #: assets/js/block-editor.js:1825
 msgid "Do not show this warning again (this session)"
 msgstr "No volver a mostrar esta advertencia (esta sesión)"
@@ -1499,12 +1487,16 @@ msgid "Either font_family or available_weights parameter is required"
 msgstr "Se requiere el parámetro font_family o available_weights"
 
 #: assets/js/block-editor.js
-msgid "Apply Anyway"
-msgstr "Aplicar de todos modos"
+msgid "Accessibility Notice"
+msgstr "Aviso de accesibilidad"
 
 #: assets/js/block-editor.js
-msgid "Manage this setting"
-msgstr "Gestionar este ajuste"
+msgid "Close"
+msgstr "Cerrar"
+
+#: assets/js/block-editor.js
+msgid "Manage accessibility settings"
+msgstr "Gestionar configuración de accesibilidad"
 
 #: assets/js/block-editor.js
 msgid "Block could not be converted. Features were applied directly."
