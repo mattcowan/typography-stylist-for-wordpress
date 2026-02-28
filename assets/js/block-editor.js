@@ -1288,8 +1288,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             }
 
-            // Close popover and reset open/changes flags
-            this.setState({ isOpen: false, hasChanges: false });
+            // Close popover
+            this.setState({ isOpen: false });
         }
 
         /**
@@ -1975,29 +1975,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         )
                                     )}
                                 </div>
-
-                                {/* Info Notice - Features require Apply button - STICKY - Only show after changes */}
-                                {this.state.hasChanges && (
-                                    <div className="typost-sticky-notice-wrapper">
-                                        {wp.element.createElement(Notice, {
-                                            status: 'info',
-                                            isDismissible: false,
-                                            className: 'typost-apply-notice'
-                                        },
-                                            wp.element.createElement('p', { style: { margin: 0 } },
-                                                __('Click "Apply" below the preview to confirm changes.', 'typography-stylist'),
-                                                ' ',
-                                                wp.element.createElement(Button, {
-                                                    variant: 'link',
-                                                    onClick: this.convertToBlock,
-                                                    className: 'typost-convert-link'
-                                                }, __('Convert to a Typography Stylist block', 'typography-stylist')),
-                                                ' ',
-                                                __('to see changes in real time.', 'typography-stylist')
-                                            )
-                                        )}
-                                    </div>
-                                )}
 
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">

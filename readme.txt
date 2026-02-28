@@ -270,11 +270,11 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 = 1.3.0 =
 * **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
 * Removed: Apply button from inline editor toolbar
-* Removed: "Apply Anyway" and "Discard Changes" buttons - no longer needed with live preview
+* Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
 * Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
 * Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
-* Changed: Word boundary accessibility warning is now non-blocking informational notice at top of modal instead of blocking application
-* Changed: Warning can be dismissed by proceeding with edits or converting to Typography Stylist block
+* Changed: Word boundary accessibility warning is now a persistent, non-blocking informational notice at top of modal instead of blocking application; it remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block
+* Changed: Users can still choose to convert to a Typography Stylist block for improved accessibility when needed, but this is now an optional follow-up action rather than a requirement to proceed
 * Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
 * Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
 * Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)

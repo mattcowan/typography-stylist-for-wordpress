@@ -369,7 +369,7 @@ This release brings the inline text editor (richtext toolbar) to feature parity 
 
 **Breaking Changes:**
 - **Removed: Apply button** - The "Apply" button is removed from the inline editor. All controls now apply changes immediately as you adjust them.
-- **Removed: "Apply Anyway" button** - No longer needed with live preview. Features are applied immediately regardless of word boundary warnings.
+- **Removed: "Apply Anyway" and "Discard Changes" buttons** - These warning-specific actions from the word boundary accessibility warning workflow are now obsolete. The warning no longer blocks editing, and changes apply immediately via live preview instead of requiring explicit approval.
 - **Removed: Internal Undo system** - The "Undo" button inside the modal is removed. Use native WordPress undo (Ctrl+Z) to undo individual changes.
 - **Removed: Redundant preview panel** - The separate preview panel with device toggles (Mobile/Tablet/Desktop) is removed. Live preview on the actual selected text makes it unnecessary. Feature toggle previews (on each checkbox) still show selected text with individual features applied.
 
@@ -379,7 +379,7 @@ This release brings the inline text editor (richtext toolbar) to feature parity 
   - Letter spacing, line height sliders: 400ms debounce
   - Font family, font weight dropdowns: 300ms debounce
   - Responsive font-size (3 sliders): 600ms debounce
-- **Non-blocking accessibility warning** - Word boundary warnings are now informational notices at the top of the modal, not blocking popups. Users can proceed with edits or convert to Typography Stylist block if needed.
+- **Non-blocking accessibility warning** - Word boundary warnings are now persistent, non-blocking informational notices at the top of the modal instead of blocking popups. The warning remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block for improved accessibility.
 - **Consistent with Typography Stylist block** - The inline editor now uses the same UX patterns as the dedicated Typography Stylist block.
 
 **Developer Notes:**
