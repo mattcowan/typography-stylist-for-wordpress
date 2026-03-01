@@ -36,6 +36,42 @@ import { calculateResize } from '../../assets/js/modal-drag-resize';
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
+/**
+ * Typography Stylist Hook System
+ *
+ * Lightweight action/filter system for extension plugins.
+ * Duplicated from block-editor.js due to separate build pipelines.
+ *
+ * @since 1.3.0
+ */
+window.typostHooks = window.typostHooks || {
+	_actions: {},
+	_filters: {},
+	addAction: function(name, callback, priority) {
+		priority = priority || 10;
+		this._actions[name] = this._actions[name] || [];
+		this._actions[name].push({ callback: callback, priority: priority });
+		this._actions[name].sort(function(a, b) { return a.priority - b.priority; });
+	},
+	doAction: function(name) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		(this._actions[name] || []).forEach(function(h) { h.callback.apply(null, args); });
+	},
+	addFilter: function(name, callback, priority) {
+		priority = priority || 10;
+		this._filters[name] = this._filters[name] || [];
+		this._filters[name].push({ callback: callback, priority: priority });
+		this._filters[name].sort(function(a, b) { return a.priority - b.priority; });
+	},
+	applyFilters: function(name, value) {
+		var args = Array.prototype.slice.call(arguments, 1);
+		(this._filters[name] || []).forEach(function(h) {
+			args[0] = h.callback.apply(null, args);
+		});
+		return args[0];
+	}
+};
+
 // Utility: Remove preview spans from content (prevents saving temporary preview state)
 const removePreviewSpans = (htmlContent) => {
 	if (!htmlContent) return htmlContent;
@@ -84,7 +120,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
-		textAlign
+		textAlign,
+		styleClass
 	} = attributes;
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -229,6 +266,100 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			}
 		};
 	}, []); // Empty deps - only run on unmount
+
+	// Extension hook: Listen for paragraph style application (v1.3.0)
+	useEffect(() => {
+		const handleParagraphStyle = (e) => {
+			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
+				const props = e.detail.properties;
+				// Apply to block-level attributes
+				const newAttrs = {};
+				if (props.fontId !== undefined) {
+					newAttrs.fontId = props.fontId;
+					// Resolve fontFamily from fontIdMap (same pattern as Inspector Controls onChange)
+					if (fontIdMap[props.fontId]) {
+						const fontData = fontIdMap[props.fontId];
+						newAttrs.fontFamily = fontData.family;
+						// Validate weight against new font's available weights
+						const weight = props.fontWeight || fontWeight;
+						const available = fontData.availableWeights;
+						if (available && available.length > 0 && !available.includes(weight)) {
+							newAttrs.fontWeight = getClosestWeight(weight, available);
+						}
+					}
+				}
+				if (props.fontWeight !== undefined) newAttrs.fontWeight = props.fontWeight;
+				if (props.fontSize !== undefined) newAttrs.fontSize = props.fontSize;
+				if (props.fontSizeMin !== undefined) newAttrs.fontSizeMin = props.fontSizeMin;
+				if (props.fontSizePreferred !== undefined) newAttrs.fontSizePreferred = props.fontSizePreferred;
+				if (props.fontSizeMax !== undefined) newAttrs.fontSizeMax = props.fontSizeMax;
+				if (props.letterSpacing !== undefined) newAttrs.letterSpacing = props.letterSpacing;
+				if (props.lineHeight !== undefined) newAttrs.lineHeight = props.lineHeight;
+				if (props.features !== undefined) newAttrs.features = props.features;
+				// Generic styleClass support: extensions can pass a CSS class to apply
+				if (e.detail.styleClass !== undefined) {
+					newAttrs.styleClass = e.detail.styleClass;
+				}
+				setAttributes(newAttrs);
+
+				// Sync QFT inline state so controls reflect the applied style
+				if (props.fontId !== undefined) {
+					setInlineFontFamily(String(props.fontId));
+				}
+				if (newAttrs.fontWeight !== undefined) {
+					setInlineFontWeight(newAttrs.fontWeight);
+				} else if (props.fontWeight !== undefined) {
+					setInlineFontWeight(props.fontWeight);
+				}
+				if (props.letterSpacing !== undefined) {
+					setInlineLetterSpacing(props.letterSpacing);
+				}
+				if (props.lineHeight !== undefined) {
+					setInlineLineHeight(props.lineHeight);
+				}
+				if (props.fontSize !== undefined) {
+					setInlineFontSize(props.fontSize);
+				}
+				if (props.fontSizeMin !== undefined) {
+					setInlineFontSizeMin(props.fontSizeMin);
+				}
+				if (props.fontSizePreferred !== undefined) {
+					setInlineFontSizePreferred(props.fontSizePreferred);
+				}
+				if (props.fontSizeMax !== undefined) {
+					setInlineFontSizeMax(props.fontSizeMax);
+				}
+			}
+		};
+		document.addEventListener('typost-apply-paragraph-style', handleParagraphStyle);
+		return () => {
+			document.removeEventListener('typost-apply-paragraph-style', handleParagraphStyle);
+		};
+	}, [setAttributes]);
+
+	// Extension hook: Register state provider for QFT editor (v1.3.0)
+	useEffect(() => {
+		const stateProvider = (state, editorType) => {
+			if (editorType === 'qft') {
+				return {
+					editorType: 'qft',
+					fontId: fontId,
+					fontWeight: fontWeight,
+					fontSize: fontSize,
+					fontSizeMin: fontSizeMin,
+					fontSizePreferred: fontSizePreferred,
+					fontSizeMax: fontSizeMax,
+					letterSpacing: letterSpacing,
+					lineHeight: lineHeight,
+					features: features,
+					paragraphStyleId: styleClass ? styleClass.replace('typost-ps-', '') : 0
+				};
+			}
+			return state;
+		};
+		window.typostHooks.addFilter('typost_current_editor_state', stateProvider, 10);
+		// Note: No cleanup needed since filter array persists for component lifetime
+	}, [fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, letterSpacing, lineHeight, features, styleClass]);
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
@@ -2089,6 +2220,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const buildStyle = () => {
 		const styles = {};
 
+		// Note: styleClass is used by save.js to skip inline styles on the frontend
+		// (CSS class provides styling there). In the editor, we always need inline
+		// styles for visual preview since the block element doesn't carry the class.
+
 		if (features.length > 0) {
 			styles.fontFeatureSettings = features.map(f => `"${f}" 1`).join(', ');
 		}
@@ -2313,6 +2448,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
+								{/* Extension hook point: top of QFT modal (e.g., Paragraph Styles dropdown) */}
+								<div className="typost-hook-point" data-hook="typost_qft_modal_top" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_qft_modal_top', el, {
+											fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax,
+											letterSpacing, lineHeight, features, content, capturedSelection,
+											inlineFontFamily, inlineFontWeight
+										});
+									}
+								}} />
+
 								{/* Font Family Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
@@ -2390,6 +2537,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										</div>
 									);
 								})()}
+
+								{/* Extension hook point: after font controls (e.g., Variable Font axes) */}
+								<div className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_qft_after_font_controls', el, {
+											fontId, fontWeight, inlineFontFamily, inlineFontWeight
+										});
+									}
+								}} />
 
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
@@ -2524,6 +2681,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
+								{/* Extension hook point: before features (e.g., Glyphs panel) */}
+								<div className="typost-hook-point" data-hook="typost_qft_before_features" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_qft_before_features', el, {
+											fontId, features, inlineFontFamily, capturedSelection, content
+										});
+									}
+								}} />
+
 								{/* Active Features Summary */}
 								{inlineFeaturesAtSelection.length > 0 && (
 									<div style={{ marginBottom: '16px', padding: '12px', backgroundColor: '#f0f6fc', borderRadius: '4px', border: '1px solid #0783be' }}>
@@ -2616,6 +2783,16 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									);
 								})}
 								</div>
+
+								{/* Extension hook point: after features */}
+								<div className="typost-hook-point" data-hook="typost_qft_after_features" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_qft_after_features', el, {
+											fontId, features, content
+										});
+									}
+								}} />
 							</div>
 
 							{/* Resize handles */}
@@ -2687,6 +2864,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			</BlockControls>
 
 			<InspectorControls>
+				<div className="typost-hook-point" data-hook="typost_inspector_top" ref={(el) => {
+					if (el && !el._hooked) {
+						el._hooked = true;
+						window.typostHooks.doAction('typost_inspector_top', el, { fontId, fontWeight, features, fontSize, letterSpacing, lineHeight });
+					}
+				}} />
+
 				{fontOptions.length > 0 && (
 					<PanelBody title={__('Font Family', 'typography-stylist')} initialOpen={false}>
 						<SelectControl
@@ -2748,6 +2932,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						</PanelBody>
 					);
 				})()}
+
+				{/* Extension hook point: after font weight (e.g., Variable Font axes) */}
+				<div className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={(el) => {
+					if (el && !el._hooked) {
+						el._hooked = true;
+						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight });
+					}
+				}} />
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl
@@ -2833,6 +3025,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					/>
 				</PanelBody>
 
+				{/* Extension hook point: before features (e.g., Glyphs panel) */}
+				<div className="typost-hook-point" data-hook="typost_inspector_before_features" ref={(el) => {
+					if (el && !el._hooked) {
+						el._hooked = true;
+						window.typostHooks.doAction('typost_inspector_before_features', el, { fontId, features });
+					}
+				}} />
+
 				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
 						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
@@ -2877,6 +3077,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						{__('The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme.', 'typography-stylist')}
 					</p>
 				</PanelBody>
+
+				<div className="typost-hook-point" data-hook="typost_inspector_after_features" ref={(el) => {
+					if (el && !el._hooked) {
+						el._hooked = true;
+						window.typostHooks.doAction('typost_inspector_after_features', el, { fontId, features });
+					}
+				}} />
 
 				<PanelBody title={__('Reset Features', 'typography-stylist')} initialOpen={false}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px' }}>

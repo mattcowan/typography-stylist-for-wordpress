@@ -23,12 +23,21 @@ export default function save({ attributes }) {
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
-		textAlign
+		textAlign,
+		styleClass
 	} = attributes;
 
-	// Build inline style
+	// Build inline style — skipped when styleClass is set (CSS class provides styling)
 	const buildStyle = () => {
 		const styleArray = [];
+
+		// When a styleClass is active, only output textAlign (layout, not typography)
+		if (styleClass) {
+			if (textAlign) {
+				styleArray.push(`text-align: ${textAlign}`);
+			}
+			return styleArray.join('; ');
+		}
 
 		if (features.length > 0) {
 			styleArray.push(`font-feature-settings: ${features.map(f => `"${f}" 1`).join(', ')}`);
@@ -86,6 +95,9 @@ export default function save({ attributes }) {
 		});
 	}
 
+	// Derive style ID from styleClass (e.g., 'typost-ps-1' → '1')
+	const styleId = styleClass ? styleClass.replace('typost-ps-', '') : undefined;
+
 	return (
 		<div className="wp-block-typost">
 			{/* Screen reader accessible text (hidden visually, maintains semantic heading structure) */}
@@ -100,10 +112,11 @@ export default function save({ attributes }) {
 				tagName={tagName}
 				value={content}
 				style={styleObj}
-				className="typost-styled"
+				className={styleClass ? `typost-styled ${styleClass}` : 'typost-styled'}
 				aria-hidden="true"
 				data-font={fontFamily || undefined}
 				data-font-id={fontId || undefined}
+				data-style-id={styleId}
 			/>
 		</div>
 	);

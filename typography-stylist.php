@@ -217,6 +217,7 @@ class Typost {
         );
 
         // Cache the localized data with transient
+        // Note: nonce is added after cache read since it's session-specific
         $cache_key = 'typost_editor_data_' . get_current_user_id();
         $localized_data = get_transient($cache_key);
 
@@ -228,7 +229,6 @@ class Typost {
                 'adobeFonts' => $this->get_adobe_fonts(),
                 'manualFonts' => $this->get_manual_fonts(),
                 'restUrl' => rest_url('typost/v1/'),
-                'nonce' => wp_create_nonce('wp_rest'),
                 'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
                 'disableAccessibilityWarning' => get_option('typost_disable_accessibility_warning', false),
                 'showClearConfirmation' => get_option('typost_show_clear_confirmation', true),
@@ -239,8 +239,33 @@ class Typost {
             set_transient($cache_key, $localized_data, HOUR_IN_SECONDS);
         }
 
+        // Add nonce after cache read (session-specific, must not be cached)
+        $localized_data['nonce'] = wp_create_nonce('wp_rest');
+
+        /**
+         * Filter editor data passed to JavaScript as typostData.
+         *
+         * Allows extension plugins to add their own data to the editor context.
+         * This data is available in both the inline editor (block-editor.js) and
+         * the Typography Stylist block editor (edit.js).
+         *
+         * @since 1.3.0
+         * @param array $localized_data Editor data array.
+         */
+        $localized_data = apply_filters('typost_editor_data', $localized_data);
+
         // Pass data to JavaScript
         wp_localize_script('typost-block-editor', 'typostData', $localized_data);
+
+        /**
+         * Fires after core editor assets are enqueued.
+         *
+         * Allows extension plugins to enqueue their own editor scripts and styles
+         * with 'typost-block-editor' as a dependency.
+         *
+         * @since 1.3.0
+         */
+        do_action('typost_editor_assets');
     }
 
     /**
@@ -931,7 +956,7 @@ class Typost {
         $this->enqueue_adobe_fonts();
 
         // Localize script for translations and data
-        wp_localize_script('typost-admin', 'typostAdmin', array(
+        $admin_data = array(
             'restUrl' => rest_url('typost/v1/'),
             'nonce' => wp_create_nonce('wp_rest'),
             'fonts' => $this->get_custom_fonts(),
@@ -981,7 +1006,29 @@ class Typost {
                 'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'typography-stylist'),
                 'updateFontError' => esc_html__('Failed to update font.', 'typography-stylist')
             )
-        ));
+        );
+
+        /**
+         * Filter admin page data passed to JavaScript as typostAdmin.
+         *
+         * Allows extension plugins to add their own data to the admin page context.
+         *
+         * @since 1.3.0
+         * @param array $admin_data Admin data array.
+         */
+        $admin_data = apply_filters('typost_admin_localize_data', $admin_data);
+
+        wp_localize_script('typost-admin', 'typostAdmin', $admin_data);
+
+        /**
+         * Fires after core admin assets are enqueued.
+         *
+         * Allows extension plugins to enqueue their own admin scripts and styles
+         * with 'typost-admin' as a dependency.
+         *
+         * @since 1.3.0
+         */
+        do_action('typost_admin_assets');
     }
 
     /**
@@ -1342,6 +1389,17 @@ class Typost {
             'callback' => array($this, 'get_unassigned_fonts_endpoint'),
             'permission_callback' => array($this, 'check_permissions')
         ));
+
+        /**
+         * Fires after core REST API routes are registered.
+         *
+         * Allows extension plugins to register their own REST API routes under
+         * the typost/v1 namespace. Extensions can reuse Typost::check_permissions()
+         * for authorization and rate limiting.
+         *
+         * @since 1.3.0
+         */
+        do_action('typost_register_rest_routes');
     }
 
     /**
@@ -1387,7 +1445,16 @@ class Typost {
         if (null === $this->presets_cache) {
             $this->presets_cache = get_option('typost_presets', $this->get_default_presets());
         }
-        return $this->presets_cache;
+
+        /**
+         * Filter the default presets list.
+         *
+         * Allows extension plugins to inject additional presets or modify existing ones.
+         *
+         * @since 1.3.0
+         * @param array $presets Array of preset objects.
+         */
+        return apply_filters('typost_default_presets', $this->presets_cache);
     }
 
     /**
@@ -1794,7 +1861,16 @@ class Typost {
                 )
             );
         }
-        return $this->features_cache;
+        /**
+         * Filter the available OpenType features list.
+         *
+         * Allows extension plugins to add custom features or modify the features list.
+         * Each feature should have: id, name, category, description.
+         *
+         * @since 1.3.0
+         * @param array $features Array of feature objects.
+         */
+        return apply_filters('typost_available_features', $this->features_cache);
     }
 
     /**
@@ -2035,6 +2111,16 @@ class Typost {
 
         // Clear editor data cache for all users
         $this->invalidate_editor_data_cache();
+
+        /**
+         * Fires after all Typography Stylist caches are cleared.
+         *
+         * Allows extension plugins to clear their own caches when
+         * the core plugin clears its caches.
+         *
+         * @since 1.3.0
+         */
+        do_action('typost_cache_clear');
     }
 
     /**
@@ -2452,6 +2538,17 @@ class Typost {
             // Clear cache
             $this->clear_cache();
 
+            /**
+             * Fires after a font kit is successfully uploaded and processed.
+             *
+             * Allows extension plugins to perform additional processing on newly
+             * uploaded fonts, such as variable font axis detection or glyph parsing.
+             *
+             * @since 1.3.0
+             * @param array $font_entries Array of font entry objects that were added.
+             */
+            do_action('typost_font_uploaded', $font_entries);
+
             return rest_ensure_response(array(
                 'success' => true,
                 'fonts' => $font_entries,
@@ -2524,6 +2621,17 @@ class Typost {
 
         // Clear cache
         $this->clear_cache();
+
+        /**
+         * Fires after a font is successfully deleted.
+         *
+         * Allows extension plugins to clean up related data when a font is removed.
+         *
+         * @since 1.3.0
+         * @param string $id        The deleted font's ID.
+         * @param array  $font_data The deleted font's data.
+         */
+        do_action('typost_font_deleted', $id, $font_to_delete);
 
         return rest_ensure_response(array('success' => true));
     }

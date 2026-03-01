@@ -11,6 +11,7 @@ playwright-profile/
 coverage/
 .playwright-mcp/
 blocks/*/build/
+blueprints/
 
 # PHP dependencies
 vendor/

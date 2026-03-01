@@ -78,70 +78,56 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
     </a>
 
     <div class="typost-admin-container" id="typost-main-content" tabindex="-1">
+        <?php
+        /**
+         * Filter the admin settings tabs.
+         *
+         * Allows extension plugins to register new tabs in the admin interface.
+         * Each tab needs: 'id' (string), 'label' (string), 'priority' (int).
+         * Built-in tabs use priorities 10-100. Extensions should use gaps between.
+         *
+         * @since 1.3.0
+         * @param array $tabs Array of tab definitions.
+         */
+        $built_in_tab_ids = array('fonts', 'presets', 'options', 'accessibility', 'replacements', 'help');
+        $tabs = apply_filters('typost_admin_tabs', array(
+            array('id' => 'fonts',         'label' => __('Custom Fonts', 'typography-stylist'),     'priority' => 10),
+            array('id' => 'presets',       'label' => __('Font Features', 'typography-stylist'),     'priority' => 20),
+            array('id' => 'options',       'label' => __('Options', 'typography-stylist'),            'priority' => 30),
+            array('id' => 'accessibility', 'label' => __('Accessibility', 'typography-stylist'),     'priority' => 40),
+            array('id' => 'replacements',  'label' => __('Replacement Fonts', 'typography-stylist'), 'priority' => 50),
+            array('id' => 'help',          'label' => __('Help', 'typography-stylist'),               'priority' => 100),
+        ));
+        usort($tabs, function($a, $b) { return $a['priority'] - $b['priority']; });
+
+        // Determine which tab should be active (URL parameter or first tab)
+        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : $tabs[0]['id']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab display only, no data modification
+        $tab_ids = array_column($tabs, 'id');
+        if (!in_array($active_tab, $tab_ids, true)) {
+            $active_tab = $tabs[0]['id'];
+        }
+        ?>
         <div class="typost-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
+            <?php foreach ($tabs as $tab): ?>
             <button
-                class="typost-tab-button active"
-                data-tab="fonts"
+                class="typost-tab-button <?php echo $tab['id'] === $active_tab ? 'active' : ''; ?>"
+                data-tab="<?php echo esc_attr($tab['id']); ?>"
                 role="tab"
-                aria-selected="true"
-                aria-controls="typost-tab-fonts"
-                id="typost-tab-button-fonts">
-                <?php esc_html_e('Custom Fonts', 'typography-stylist'); ?>
+                aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
+                aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
+                id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
+                <?php echo esc_html($tab['label']); ?>
             </button>
-            <button
-                class="typost-tab-button"
-                data-tab="presets"
-                role="tab"
-                aria-selected="false"
-                aria-controls="typost-tab-presets"
-                id="typost-tab-button-presets">
-                <?php esc_html_e('Font Features', 'typography-stylist'); ?>
-            </button>
-            <button
-                class="typost-tab-button"
-                data-tab="options"
-                role="tab"
-                aria-selected="false"
-                aria-controls="typost-tab-options"
-                id="typost-tab-button-options">
-                <?php esc_html_e('Options', 'typography-stylist'); ?>
-            </button>
-            <button
-                class="typost-tab-button"
-                data-tab="accessibility"
-                role="tab"
-                aria-selected="false"
-                aria-controls="typost-tab-accessibility"
-                id="typost-tab-button-accessibility">
-                <?php esc_html_e('Accessibility', 'typography-stylist'); ?>
-            </button>
-            <button
-                class="typost-tab-button"
-                data-tab="replacements"
-                role="tab"
-                aria-selected="false"
-                aria-controls="typost-tab-replacements"
-                id="typost-tab-button-replacements">
-                <?php esc_html_e('Replacement Fonts', 'typography-stylist'); ?>
-            </button>
-            <button
-                class="typost-tab-button"
-                data-tab="help"
-                role="tab"
-                aria-selected="false"
-                aria-controls="typost-tab-help"
-                id="typost-tab-button-help">
-                <?php esc_html_e('Help', 'typography-stylist'); ?>
-            </button>
+            <?php endforeach; ?>
         </div>
 
         <!-- Presets Tab -->
         <div
-            class="typost-tab-content"
+            class="typost-tab-content <?php echo 'presets' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-presets"
             role="tabpanel"
             aria-labelledby="typost-tab-button-presets"
-            hidden="hidden"
+            <?php echo 'presets' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Font Features', 'typography-stylist'); ?></h2>
             <p><?php esc_html_e('Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography.', 'typography-stylist'); ?></p>
@@ -347,14 +333,16 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 </div>
             </div>
             <?php endif; ?>
+            <?php do_action('typost_admin_tab_after_presets', $instance); ?>
         </div>
 
         <!-- Fonts Tab -->
         <div
-            class="typost-tab-content active"
+            class="typost-tab-content <?php echo 'fonts' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-fonts"
             role="tabpanel"
             aria-labelledby="typost-tab-button-fonts"
+            <?php echo 'fonts' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Custom Fonts', 'typography-stylist'); ?></h2>
             <p><?php esc_html_e('Upload webfont kits (MyFonts, Fontspring, etc.) to use custom fonts with OpenType features. Once uploaded, fonts will be available in the block editor, and you can edit fallback fonts for each kit.', 'typography-stylist'); ?></p>
@@ -1247,15 +1235,16 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <p><strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin does not load fonts for you - it only applies OpenType features to fonts already loaded on your site.', 'typography-stylist'); ?></p>
                 </div>
             </div>
+            <?php do_action('typost_admin_tab_after_fonts', $instance); ?>
         </div>
 
         <!-- Options Tab -->
         <div
-            class="typost-tab-content"
+            class="typost-tab-content <?php echo 'options' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-options"
             role="tabpanel"
             aria-labelledby="typost-tab-button-options"
-            hidden="hidden"
+            <?php echo 'options' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Options', 'typography-stylist'); ?></h2>
             <p><?php esc_html_e('Configure general plugin settings and user experience preferences.', 'typography-stylist'); ?></p>
@@ -1362,15 +1351,16 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     </button>
                 </p>
             </form>
+            <?php do_action('typost_admin_tab_after_options', $instance); ?>
         </div>
 
         <!-- Accessibility Tab -->
         <div
-            class="typost-tab-content"
+            class="typost-tab-content <?php echo 'accessibility' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-accessibility"
             role="tabpanel"
             aria-labelledby="typost-tab-button-accessibility"
-            hidden="hidden"
+            <?php echo 'accessibility' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Accessibility Settings', 'typography-stylist'); ?></h2>
 
@@ -1456,15 +1446,16 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <li><?php esc_html_e('The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block.', 'typography-stylist'); ?></li>
                 </ul>
             </div>
+            <?php do_action('typost_admin_tab_after_accessibility', $instance); ?>
         </div>
 
         <!-- Replacement Fonts Tab -->
         <div
-            class="typost-tab-content"
+            class="typost-tab-content <?php echo 'replacements' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-replacements"
             role="tabpanel"
             aria-labelledby="typost-tab-button-replacements"
-            hidden="hidden"
+            <?php echo 'replacements' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Replacement Fonts', 'typography-stylist'); ?></h2>
             <p><?php esc_html_e('When a font is deleted, you can map it to a replacement font. Content using the deleted font will automatically display with the replacement.', 'typography-stylist'); ?></p>
@@ -1522,15 +1513,16 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <!-- Populated by JavaScript -->
                 </div>
             </div>
+            <?php do_action('typost_admin_tab_after_replacements', $instance); ?>
         </div>
 
         <!-- Help Tab -->
         <div
-            class="typost-tab-content"
+            class="typost-tab-content <?php echo 'help' === $active_tab ? 'active' : ''; ?>"
             id="typost-tab-help"
             role="tabpanel"
             aria-labelledby="typost-tab-button-help"
-            hidden="hidden"
+            <?php echo 'help' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('How to Use', 'typography-stylist'); ?></h2>
 
@@ -1606,7 +1598,38 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     </a>
                 </p>
             </div>
+            <?php do_action('typost_admin_tab_after_help', $instance); ?>
         </div>
+
+        <?php
+        // Render tab panels for extension-registered tabs
+        foreach ($tabs as $tab) {
+            if (!in_array($tab['id'], $built_in_tab_ids, true)) {
+                ?>
+                <div
+                    class="typost-tab-content <?php echo $tab['id'] === $active_tab ? 'active' : ''; ?>"
+                    id="typost-tab-<?php echo esc_attr($tab['id']); ?>"
+                    role="tabpanel"
+                    aria-labelledby="typost-tab-button-<?php echo esc_attr($tab['id']); ?>"
+                    <?php echo $tab['id'] !== $active_tab ? 'hidden="hidden"' : ''; ?>
+                    tabindex="0">
+                    <?php
+                    /**
+                     * Render content for an extension-registered admin tab.
+                     *
+                     * The dynamic portion of the hook name, `$tab_id`, refers to the
+                     * tab's 'id' value registered via the typost_admin_tabs filter.
+                     *
+                     * @since 1.3.0
+                     * @param Typost $instance Plugin instance.
+                     */
+                    do_action("typost_admin_tab_content_{$tab['id']}", $instance);
+                    ?>
+                </div>
+                <?php
+            }
+        }
+        ?>
     </div>
 
     <!-- Font Deletion Modal -->
