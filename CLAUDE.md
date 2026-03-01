@@ -302,7 +302,7 @@ npm test -- --coverage    # See test coverage report
 
 **Filter hooks for extensibility:**
 - `TYPOST_available_features` - Filter available features
-- `TYPOST_default_presets` - Filter default presets
+- `typost_presets` - Filter presets list (renamed from `TYPOST_default_presets`; update any custom integrations using the old hook name)
 
 ### Code Patterns
 

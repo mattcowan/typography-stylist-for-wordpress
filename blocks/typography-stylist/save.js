@@ -95,8 +95,12 @@ export default function save({ attributes }) {
 		});
 	}
 
-	// Derive style ID from styleClass (e.g., 'typost-ps-1' → '1')
-	const styleId = styleClass ? styleClass.replace('typost-ps-', '') : undefined;
+	// Derive style ID from styleClass.
+	// Expected format: styleClass contains a token "typost-ps-<number>" (e.g., "typost-ps-1"),
+	// and the numeric part is used as the styleId. If the pattern is not present, styleId
+	// will be undefined and no data-style-id attribute will be emitted.
+	const styleIdMatch = styleClass ? styleClass.match(/typost-ps-(\d+)/) : null;
+	const styleId = styleIdMatch ? styleIdMatch[1] : undefined;
 
 	return (
 		<div className="wp-block-typost">

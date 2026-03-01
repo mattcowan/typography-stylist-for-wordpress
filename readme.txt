@@ -280,7 +280,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: `typost_admin_assets` action for extensions to enqueue admin scripts/styles
 * Added: `typost_register_rest_routes` action for extensions to register REST API endpoints
 * Added: `typost_available_features` filter for modifying the available OpenType features list
-* Added: `typost_default_presets` filter for modifying the default presets list
+* Added: `typost_presets` filter (replacing legacy `typost_default_presets`) for modifying the combined presets list
 * Added: `typost_cache_clear` action for extensions to clear their caches when core clears
 * Added: `typost_font_uploaded` and `typost_font_deleted` actions for font lifecycle events
 * Added: `typost_admin_tab_content_{id}` and `typost_admin_tab_after_{id}` actions for admin tab content

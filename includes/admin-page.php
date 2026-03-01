@@ -90,14 +90,37 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
          * @param array $tabs Array of tab definitions.
          */
         $built_in_tab_ids = array('fonts', 'presets', 'options', 'accessibility', 'replacements', 'help');
-        $tabs = apply_filters('typost_admin_tabs', array(
+        $built_in_tabs = array(
             array('id' => 'fonts',         'label' => __('Custom Fonts', 'typography-stylist'),     'priority' => 10),
             array('id' => 'presets',       'label' => __('Font Features', 'typography-stylist'),     'priority' => 20),
             array('id' => 'options',       'label' => __('Options', 'typography-stylist'),            'priority' => 30),
             array('id' => 'accessibility', 'label' => __('Accessibility', 'typography-stylist'),     'priority' => 40),
             array('id' => 'replacements',  'label' => __('Replacement Fonts', 'typography-stylist'), 'priority' => 50),
             array('id' => 'help',          'label' => __('Help', 'typography-stylist'),               'priority' => 100),
-        ));
+        );
+        $tabs = apply_filters('typost_admin_tabs', $built_in_tabs);
+
+        // Validate and sanitize filtered tabs
+        if ( ! is_array( $tabs ) || empty( $tabs ) ) {
+            $tabs = $built_in_tabs;
+        }
+        $tabs = array_filter( $tabs, function( $tab ) {
+            return is_array( $tab ) && ! empty( $tab['id'] ) && ! empty( $tab['label'] );
+        } );
+        $tabs = array_values( $tabs );
+        if ( empty( $tabs ) ) {
+            $tabs = $built_in_tabs;
+        }
+
+        // Sanitize extension tab IDs and default missing priority
+        foreach ( $tabs as &$tab ) {
+            if ( ! in_array( $tab['id'], $built_in_tab_ids, true ) ) {
+                $tab['id'] = sanitize_key( $tab['id'] );
+            }
+            $tab['priority'] = isset( $tab['priority'] ) && is_numeric( $tab['priority'] ) ? absint( $tab['priority'] ) : 50;
+        }
+        unset( $tab );
+
         usort($tabs, function($a, $b) { return $a['priority'] - $b['priority']; });
 
         // Determine which tab should be active (URL parameter or first tab)
@@ -1403,7 +1426,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. The Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
                                     <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. the Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
                                 </p>
-                            </td>
+                                    <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. The Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
                         </tr>
                         <tr>
                             <th scope="row">

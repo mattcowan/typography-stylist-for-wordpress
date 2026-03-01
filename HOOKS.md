@@ -82,31 +82,36 @@ add_action('typost_cache_clear', function() {
 
 #### `typost_font_uploaded`
 
-Fired after a font is successfully uploaded. Receives the font data array and font ID.
+Fired after a font kit is successfully uploaded and processed. Receives an array of font entry objects that were added (a single ZIP kit may contain multiple font files). **Note:** This is a change from the pre-1.3.0 signature, which passed `$font_data` and `$font_id` as separate parameters.
 
 ```php
-add_action('typost_font_uploaded', function($font_data, $font_id) {
+add_action('typost_font_uploaded', function($font_entries) {
     // Example: Parse variable font axes on upload
-    $axes = parse_font_axes($font_data['file_path']);
-    if ($axes) {
-        update_option('my_extension_axes_' . $font_id, $axes);
+    foreach ($font_entries as $entry) {
+        $axes = parse_font_axes($entry['file_path']);
+        if ($axes) {
+            update_option('my_extension_axes_' . $entry['id'], $axes);
+        }
     }
+}, 10, 1);
+```
+
+**Parameters:**
+- `$font_entries` (array) — Array of font entry objects that were added from the kit
+
+#### `typost_font_deleted`
+
+Fired after a font is successfully deleted. Receives the font ID and the deleted font's data.
+
+```php
+add_action('typost_font_deleted', function($id, $font_data) {
+    delete_option('my_extension_axes_' . $id);
 }, 10, 2);
 ```
 
 **Parameters:**
-- `$font_data` (array) — Font data including file paths and metadata
-- `$font_id` (int) — The font's numeric ID
-
-#### `typost_font_deleted`
-
-Fired after a font is successfully deleted.
-
-```php
-add_action('typost_font_deleted', function($font_id) {
-    delete_option('my_extension_axes_' . $font_id);
-}, 10, 1);
-```
+- `$id` (string) — The deleted font's ID
+- `$font_data` (array) — The deleted font's data array
 
 #### `typost_admin_tab_content_{tab_id}`
 
@@ -197,12 +202,12 @@ add_filter('typost_available_features', function($features) {
 });
 ```
 
-#### `typost_default_presets`
+#### `typost_presets`
 
-Filter the default presets list.
+Filter the presets list (saved and default presets combined).
 
 ```php
-add_filter('typost_default_presets', function($presets) {
+add_filter('typost_presets', function($presets) {
     $presets[] = array(
         'id'       => 'my-preset',
         'name'     => 'Custom Preset',
@@ -224,16 +229,34 @@ Typography Stylist provides a lightweight action/filter system on `window.typost
 // Actions — execute callbacks, no return value
 window.typostHooks.addAction(hookName, callback, priority);
 window.typostHooks.doAction(hookName, ...args);
+window.typostHooks.removeAction(hookName, callback);
 
 // Filters — execute callbacks, return modified value
 window.typostHooks.addFilter(hookName, callback, priority);
 window.typostHooks.applyFilters(hookName, value, ...args);
+window.typostHooks.removeFilter(hookName, callback);
 ```
 
 **Parameters:**
-- `hookName` (string) — The hook name to register or fire
-- `callback` (function) — The function to execute
+- `hookName` (string) — The hook name to register or fire/remove
+- `callback` (function) — The function to execute. Must be a named or stored reference for removal
 - `priority` (number, optional) — Execution order, lower runs first (default: 10)
+
+**Removing hooks:** To remove a callback, you must pass the same function reference that was used when adding it. Anonymous functions cannot be removed — store the callback in a variable first:
+
+```javascript
+// Store the callback so it can be removed later
+var myFilter = function(state, editorType) {
+    if (editorType === 'inline') {
+        state.customField = 'value';
+    }
+    return state;
+};
+window.typostHooks.addFilter('typost_current_editor_state', myFilter, 10);
+
+// Later, to clean up:
+window.typostHooks.removeFilter('typost_current_editor_state', myFilter);
+```
 
 ### Inline Editor Hook Points
 

@@ -254,6 +254,9 @@ class Typost {
          */
         $localized_data = apply_filters('typost_editor_data', $localized_data);
 
+        // Re-inject nonce after filter to prevent extensions from overwriting it
+        $localized_data['nonce'] = wp_create_nonce('wp_rest');
+
         // Pass data to JavaScript
         wp_localize_script('typost-block-editor', 'typostData', $localized_data);
 
@@ -1018,6 +1021,9 @@ class Typost {
          */
         $admin_data = apply_filters('typost_admin_localize_data', $admin_data);
 
+        // Re-inject nonce after filter to prevent extensions from overwriting it
+        $admin_data['nonce'] = wp_create_nonce('wp_rest');
+
         wp_localize_script('typost-admin', 'typostAdmin', $admin_data);
 
         /**
@@ -1447,14 +1453,14 @@ class Typost {
         }
 
         /**
-         * Filter the default presets list.
+         * Filter the presets list (saved and default presets combined).
          *
          * Allows extension plugins to inject additional presets or modify existing ones.
          *
          * @since 1.3.0
          * @param array $presets Array of preset objects.
          */
-        return apply_filters('typost_default_presets', $this->presets_cache);
+        return apply_filters('typost_presets', $this->presets_cache);
     }
 
     /**

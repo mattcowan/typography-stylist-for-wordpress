@@ -53,6 +53,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 args[0] = h.callback.apply(null, args);
             });
             return args[0];
+        },
+        removeAction: function(name, callback) {
+            if (!this._actions[name]) return;
+            this._actions[name] = this._actions[name].filter(function(h) {
+                return h.callback !== callback;
+            });
+        },
+        removeFilter: function(name, callback) {
+            if (!this._filters[name]) return;
+            this._filters[name] = this._filters[name].filter(function(h) {
+                return h.callback !== callback;
+            });
         }
     };
 
@@ -387,7 +399,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Extension hook: Register state provider for extensions to read current state
             const self = this;
-            window.typostHooks.addFilter('typost_current_editor_state', function(state, editorType) {
+            this._stateProviderFilter = function(state, editorType) {
                 if (editorType === 'inline') {
                     return {
                         editorType: 'inline',
@@ -404,24 +416,27 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     };
                 }
                 return state;
-            }, 10);
+            };
+            window.typostHooks.addFilter('typost_current_editor_state', this._stateProviderFilter, 10);
 
             // Extension hook: Listen for paragraph style application
+            // Uses !== undefined checks so partial updates only override fields
+            // present in the event, preserving current state for missing fields
             this._handleParagraphStyle = function(e) {
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
                     self.setState({
-                        selectedFontId: props.fontId || 0,
-                        selectedFont: props.fontId ? self.resolveFontFamily(props.fontId) : '',
-                        fontWeight: props.fontWeight || '400',
-                        fontSize: props.fontSize || 'inherit',
-                        fontSizeMin: props.fontSizeMin || 16,
-                        fontSizePreferred: props.fontSizePreferred || 24,
-                        fontSizeMax: props.fontSizeMax || 32,
-                        letterSpacing: props.letterSpacing || 0,
-                        lineHeight: props.lineHeight || 0,
-                        selectedFeatures: props.features || [],
-                        paragraphStyleId: e.detail.paragraphStyleId || 0
+                        selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
+                        selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
+                        fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
+                        fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
+                        fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
+                        fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
+                        fontSizeMax: props.fontSizeMax !== undefined ? (props.fontSizeMax || 32) : self.state.fontSizeMax,
+                        letterSpacing: props.letterSpacing !== undefined ? (props.letterSpacing || 0) : self.state.letterSpacing,
+                        lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
+                        selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
+                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId
                     }, function() {
                         self._doApplyFeatures();
                     });
@@ -2042,6 +2057,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Cleanup extension hook listener
             if (this._handleParagraphStyle) {
                 document.removeEventListener('typost-apply-paragraph-style', this._handleParagraphStyle);
+            }
+
+            // Cleanup state provider filter
+            if (this._stateProviderFilter) {
+                window.typostHooks.removeFilter('typost_current_editor_state', this._stateProviderFilter);
             }
         }
 

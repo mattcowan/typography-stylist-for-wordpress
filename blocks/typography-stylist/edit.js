@@ -268,23 +268,29 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	}, []); // Empty deps - only run on unmount
 
 	// Extension hook: Listen for paragraph style application (v1.3.0)
+	// Uses ref pattern to avoid stale closures — handler registered once,
+	// reads current fontIdMap/fontWeight from ref
+	const paragraphStyleRef = useRef({});
+	paragraphStyleRef.current = { fontIdMap, fontWeight, getClosestWeight };
+
 	useEffect(() => {
 		const handleParagraphStyle = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight } = paragraphStyleRef.current;
 				// Apply to block-level attributes
 				const newAttrs = {};
 				if (props.fontId !== undefined) {
 					newAttrs.fontId = props.fontId;
 					// Resolve fontFamily from fontIdMap (same pattern as Inspector Controls onChange)
-					if (fontIdMap[props.fontId]) {
-						const fontData = fontIdMap[props.fontId];
+					if (idMap[props.fontId]) {
+						const fontData = idMap[props.fontId];
 						newAttrs.fontFamily = fontData.family;
 						// Validate weight against new font's available weights
-						const weight = props.fontWeight || fontWeight;
+						const weight = props.fontWeight || curWeight;
 						const available = fontData.availableWeights;
 						if (available && available.length > 0 && !available.includes(weight)) {
-							newAttrs.fontWeight = getClosestWeight(weight, available);
+							newAttrs.fontWeight = closestWeight(weight, available);
 						}
 					}
 				}
@@ -335,31 +341,43 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		return () => {
 			document.removeEventListener('typost-apply-paragraph-style', handleParagraphStyle);
 		};
-	}, [setAttributes]);
+	}, [setAttributes, setInlineFontFamily, setInlineFontWeight, setInlineLetterSpacing, setInlineLineHeight, setInlineFontSize, setInlineFontSizeMin, setInlineFontSizePreferred, setInlineFontSizeMax]); // eslint-disable-line react-hooks/exhaustive-deps -- fontIdMap/fontWeight/getClosestWeight read from ref
 
 	// Extension hook: Register state provider for QFT editor (v1.3.0)
+	// Uses ref pattern to avoid filter accumulation — filter registered once,
+	// reads current values from ref on each call
+	const qftStateRef = useRef({});
+	qftStateRef.current = {
+		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
+		fontSizeMax, letterSpacing, lineHeight, features, styleClass
+	};
+
 	useEffect(() => {
 		const stateProvider = (state, editorType) => {
 			if (editorType === 'qft') {
+				const s = qftStateRef.current;
+				const styleIdMatch = s.styleClass ? s.styleClass.match(/typost-ps-(\d+)/) : null;
 				return {
 					editorType: 'qft',
-					fontId: fontId,
-					fontWeight: fontWeight,
-					fontSize: fontSize,
-					fontSizeMin: fontSizeMin,
-					fontSizePreferred: fontSizePreferred,
-					fontSizeMax: fontSizeMax,
-					letterSpacing: letterSpacing,
-					lineHeight: lineHeight,
-					features: features,
-					paragraphStyleId: styleClass ? styleClass.replace('typost-ps-', '') : 0
+					fontId: s.fontId,
+					fontWeight: s.fontWeight,
+					fontSize: s.fontSize,
+					fontSizeMin: s.fontSizeMin,
+					fontSizePreferred: s.fontSizePreferred,
+					fontSizeMax: s.fontSizeMax,
+					letterSpacing: s.letterSpacing,
+					lineHeight: s.lineHeight,
+					features: s.features,
+					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0
 				};
 			}
 			return state;
 		};
 		window.typostHooks.addFilter('typost_current_editor_state', stateProvider, 10);
-		// Note: No cleanup needed since filter array persists for component lifetime
-	}, [fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, letterSpacing, lineHeight, features, styleClass]);
+		return () => {
+			window.typostHooks.removeFilter('typost_current_editor_state', stateProvider);
+		};
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps -- reads from ref
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
