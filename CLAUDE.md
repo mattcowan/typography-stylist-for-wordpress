@@ -152,7 +152,7 @@ The plugin provides a lightweight action/filter system (`window.typostHooks`) fo
 **Key concepts:**
 - Extensions are separate WordPress plugins (not merged into core)
 - JS hook containers use `data-hook` attribute for context-aware CSS: `[data-hook="typost_qft_modal_top"]`
-- `typost-apply-paragraph-style` CustomEvent is the bridge for extensions to set editor properties
+- `typost-apply-block-properties` CustomEvent is the generic bridge for extensions to set editor properties
 - Block attribute `styleClass` + inline attribute `data-style-id` provide generic infrastructure for class-based styling by extensions
 - **Editor vs Save rendering:** `edit.js` always uses inline styles (for visual preview). `save.js` uses CSS class when `styleClass` is set (for frontend). The editor iframe receives CSS via `enqueue_block_assets`.
 
@@ -303,7 +303,6 @@ npm test -- --coverage    # See test coverage report
 **Filter hooks for extensibility:**
 - `TYPOST_available_features` - Filter available features
 - `typost_presets` - Filter presets list (renamed from `TYPOST_default_presets`; update any custom integrations using the old hook name)
-
 ### Code Patterns
 
 **Sanitization:** All user input is sanitized using `sanitize_key()` for IDs, `sanitize_text_field()` for text, and `array_map()` for arrays

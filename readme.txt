@@ -285,7 +285,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: `typost_font_uploaded` and `typost_font_deleted` actions for font lifecycle events
 * Added: `typost_admin_tab_content_{id}` and `typost_admin_tab_after_{id}` actions for admin tab content
 * Added: 5 inline editor hook points, 4 Quick Feature Toggle hook points, 3 Inspector Controls hook points
-* Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-paragraph-style` CustomEvent
+* Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
 * Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
 * Added: Blueprint specifications for Variable Font Axes and Glyphs Panel future extensions
 * Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)

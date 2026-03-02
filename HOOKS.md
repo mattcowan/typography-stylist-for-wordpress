@@ -357,10 +357,10 @@ The `paragraphStyleId` field contains the active paragraph style ID (integer), o
 
 #### Writing Editor State
 
-Dispatch a `typost-apply-paragraph-style` CustomEvent to apply properties to the editor:
+Dispatch a `typost-apply-block-properties` CustomEvent to programmatically apply properties to the editor. This is a generic mechanism — any extension can use it to set block attributes and inline editor state.
 
 ```javascript
-document.dispatchEvent(new CustomEvent('typost-apply-paragraph-style', {
+document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
     detail: {
         properties: {
             fontId: 12,
@@ -376,7 +376,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-paragraph-style', {
 }));
 ```
 
-Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly.
+Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly. Only fields present in `properties` are updated — missing fields preserve current state.
+
+**Note:** This event was renamed from `typost-apply-paragraph-style` in v1.3.0 to reflect its generic purpose.
 
 **Class-based styling fields:**
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.

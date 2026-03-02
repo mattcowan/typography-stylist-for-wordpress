@@ -419,10 +419,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             };
             window.typostHooks.addFilter('typost_current_editor_state', this._stateProviderFilter, 10);
 
-            // Extension hook: Listen for paragraph style application
+            // Extension hook: Listen for block property application from extensions
             // Uses !== undefined checks so partial updates only override fields
             // present in the event, preserving current state for missing fields
-            this._handleParagraphStyle = function(e) {
+            this._handleApplyBlockProperties = function(e) {
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
                     self.setState({
@@ -442,7 +442,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     });
                 }
             };
-            document.addEventListener('typost-apply-paragraph-style', this._handleParagraphStyle);
+            document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
         }
 
         /**
@@ -2055,8 +2055,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.debouncedApplyFontSize.cancel();
 
             // Cleanup extension hook listener
-            if (this._handleParagraphStyle) {
-                document.removeEventListener('typost-apply-paragraph-style', this._handleParagraphStyle);
+            if (this._handleApplyBlockProperties) {
+                document.removeEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
             }
 
             // Cleanup state provider filter

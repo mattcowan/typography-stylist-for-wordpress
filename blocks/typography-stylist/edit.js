@@ -267,17 +267,17 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		};
 	}, []); // Empty deps - only run on unmount
 
-	// Extension hook: Listen for paragraph style application (v1.3.0)
+	// Extension hook: Listen for block property application from extensions (v1.3.0)
 	// Uses ref pattern to avoid stale closures — handler registered once,
-	// reads current fontIdMap/fontWeight from ref
-	const paragraphStyleRef = useRef({});
-	paragraphStyleRef.current = { fontIdMap, fontWeight, getClosestWeight };
+	// reads current fontIdMap/fontWeight from ref.
+	// Note: ref.current is assigned later (after fontIdMap/getClosestWeight are declared)
+	const blockPropsRef = useRef({});
 
 	useEffect(() => {
-		const handleParagraphStyle = (e) => {
+		const handleApplyBlockProperties = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
-				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight } = paragraphStyleRef.current;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight } = blockPropsRef.current;
 				// Apply to block-level attributes
 				const newAttrs = {};
 				if (props.fontId !== undefined) {
@@ -337,9 +337,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}
 			}
 		};
-		document.addEventListener('typost-apply-paragraph-style', handleParagraphStyle);
+		document.addEventListener('typost-apply-block-properties', handleApplyBlockProperties);
 		return () => {
-			document.removeEventListener('typost-apply-paragraph-style', handleParagraphStyle);
+			document.removeEventListener('typost-apply-block-properties', handleApplyBlockProperties);
 		};
 	}, [setAttributes, setInlineFontFamily, setInlineFontWeight, setInlineLetterSpacing, setInlineLineHeight, setInlineFontSize, setInlineFontSizeMin, setInlineFontSizePreferred, setInlineFontSizeMax]); // eslint-disable-line react-hooks/exhaustive-deps -- fontIdMap/fontWeight/getClosestWeight read from ref
 
@@ -1207,6 +1207,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	const getClosestWeight = (currentWeight, availableWeights) =>
 		getClosestWeightUtil(currentWeight, availableWeights);
+
+	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight };
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
