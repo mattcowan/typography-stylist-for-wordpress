@@ -103,6 +103,7 @@ All inline styles are stored using standardized data attributes in `<span class=
 - `data-fontsize` - Font size value
 - `data-fontweight` - Font weight value
 - `data-features` - Comma-separated OpenType feature codes
+- `data-style-id` - Paragraph style ID (v1.3.0+, set by extension). When present, inline `style` is omitted; a CSS class provides rendering
 
 **CSS Variable System (v1.1.6+):**
 Inline fonts use CSS variables for consistent font loading:
@@ -143,6 +144,17 @@ The plugin uses nested `<span class="typost-styled">` elements to layer multiple
 - Feature spans nested within font property spans
 - Multiple sequential styled spans in selection
 - Empty spans created during content extraction are automatically removed
+
+### Extensibility / Hook System (v1.3.0+)
+
+The plugin provides a lightweight action/filter system (`window.typostHooks`) for JavaScript and standard WordPress hooks for PHP. See [HOOKS.md](HOOKS.md) for the complete developer reference.
+
+**Key concepts:**
+- Extensions are separate WordPress plugins (not merged into core)
+- JS hook containers use `data-hook` attribute for context-aware CSS: `[data-hook="typost_qft_modal_top"]`
+- `typost-apply-block-properties` CustomEvent is the generic bridge for extensions to set editor properties
+- Block attribute `styleClass` + inline attribute `data-style-id` provide generic infrastructure for class-based styling by extensions
+- **Editor vs Save rendering:** `edit.js` always uses inline styles (for visual preview). `save.js` uses CSS class when `styleClass` is set (for frontend). The editor iframe receives CSS via `enqueue_block_assets`.
 
 ### REST API Endpoints
 
@@ -290,8 +302,7 @@ npm test -- --coverage    # See test coverage report
 
 **Filter hooks for extensibility:**
 - `TYPOST_available_features` - Filter available features
-- `TYPOST_default_presets` - Filter default presets
-
+- `typost_presets` - Filter presets list (renamed from `TYPOST_default_presets`; update any custom integrations using the old hook name)
 ### Code Patterns
 
 **Sanitization:** All user input is sanitized using `sanitize_key()` for IDs, `sanitize_text_field()` for text, and `array_map()` for arrays

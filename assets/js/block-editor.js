@@ -19,6 +19,55 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { __, sprintf } = wp.i18n;
     const { compose, debounce } = wp.compose;
 
+    /**
+     * Typography Stylist Hook System
+     *
+     * Lightweight action/filter system for extension plugins.
+     * Mirrors WordPress PHP hooks. Extensions register callbacks
+     * that fire at specific points in the editor lifecycle.
+     *
+     * @since 1.3.0
+     */
+    window.typostHooks = window.typostHooks || {
+        _actions: {},
+        _filters: {},
+        addAction: function(name, callback, priority) {
+            priority = priority || 10;
+            this._actions[name] = this._actions[name] || [];
+            this._actions[name].push({ callback: callback, priority: priority });
+            this._actions[name].sort(function(a, b) { return a.priority - b.priority; });
+        },
+        doAction: function(name) {
+            var args = Array.prototype.slice.call(arguments, 1);
+            (this._actions[name] || []).forEach(function(h) { h.callback.apply(null, args); });
+        },
+        addFilter: function(name, callback, priority) {
+            priority = priority || 10;
+            this._filters[name] = this._filters[name] || [];
+            this._filters[name].push({ callback: callback, priority: priority });
+            this._filters[name].sort(function(a, b) { return a.priority - b.priority; });
+        },
+        applyFilters: function(name, value) {
+            var args = Array.prototype.slice.call(arguments, 1);
+            (this._filters[name] || []).forEach(function(h) {
+                args[0] = h.callback.apply(null, args);
+            });
+            return args[0];
+        },
+        removeAction: function(name, callback) {
+            if (!this._actions[name]) return;
+            this._actions[name] = this._actions[name].filter(function(h) {
+                return h.callback !== callback;
+            });
+        },
+        removeFilter: function(name, callback) {
+            if (!this._filters[name]) return;
+            this._filters[name] = this._filters[name].filter(function(h) {
+                return h.callback !== callback;
+            });
+        }
+    };
+
     // Define the format type name
     const FORMAT_TYPE = 'typost/features';
 
@@ -308,7 +357,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 resizeStartY: 0,
                 resizeStartWidth: 0,
                 resizeStartHeight: 0,
-                resizeDirection: null
+                resizeDirection: null,
+                // Paragraph style ID (set by extension via event, 0 = no style)
+                paragraphStyleId: 0
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -345,6 +396,53 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.debouncedApplySlider = debounce(this._doApplyFeatures.bind(this), 400);
             this.debouncedApplyDropdown = debounce(this._doApplyFeatures.bind(this), 300);
             this.debouncedApplyFontSize = debounce(this._doApplyFeatures.bind(this), 600);
+
+            // Extension hook: Register state provider for extensions to read current state
+            const self = this;
+            this._stateProviderFilter = function(state, editorType) {
+                if (editorType === 'inline') {
+                    return {
+                        editorType: 'inline',
+                        fontId: self.state.selectedFontId,
+                        fontWeight: self.state.fontWeight,
+                        fontSize: self.state.fontSize,
+                        fontSizeMin: self.state.fontSizeMin,
+                        fontSizePreferred: self.state.fontSizePreferred,
+                        fontSizeMax: self.state.fontSizeMax,
+                        letterSpacing: self.state.letterSpacing,
+                        lineHeight: self.state.lineHeight,
+                        features: self.state.selectedFeatures,
+                        paragraphStyleId: self.state.paragraphStyleId
+                    };
+                }
+                return state;
+            };
+            window.typostHooks.addFilter('typost_current_editor_state', this._stateProviderFilter, 10);
+
+            // Extension hook: Listen for block property application from extensions
+            // Uses !== undefined checks so partial updates only override fields
+            // present in the event, preserving current state for missing fields
+            this._handleApplyBlockProperties = function(e) {
+                if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
+                    const props = e.detail.properties;
+                    self.setState({
+                        selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
+                        selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
+                        fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
+                        fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
+                        fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
+                        fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
+                        fontSizeMax: props.fontSizeMax !== undefined ? (props.fontSizeMax || 32) : self.state.fontSizeMax,
+                        letterSpacing: props.letterSpacing !== undefined ? (props.letterSpacing || 0) : self.state.letterSpacing,
+                        lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
+                        selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
+                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId
+                    }, function() {
+                        self._doApplyFeatures();
+                    });
+                }
+            };
+            document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
         }
 
         /**
@@ -712,6 +810,30 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Get active paragraph style ID from format attributes.
+         * Returns the style ID string if set, or 0 if no style is applied.
+         */
+        getActiveStyleId() {
+            const { value } = this.props;
+
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-style-id']) {
+                return activeFormat.attributes['data-style-id'];
+            }
+
+            // Check for styled span in Typographic Stylist block
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const styleId = styledSpan.getAttribute('data-style-id');
+                if (styleId) {
+                    return styleId;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Initialize modal position (center in viewport)
          */
         initializeModalPosition() {
@@ -789,6 +911,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 modalPosition = this.initializeModalPosition();
             }
 
+            const wasOpen = this.state.isOpen;
+
             this.setState(state => ({
                 isOpen: !state.isOpen,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -813,8 +937,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Reset modal position and drag/resize state
                 ...(!state.isOpen && modalPosition),
                 isDragging: false,
-                isResizing: false
-            }));
+                isResizing: false,
+                // Reset paragraph style ID (extension sets via event)
+                paragraphStyleId: !state.isOpen ? (this.getActiveStyleId() || 0) : 0
+            }), () => {
+                // Fire lifecycle hooks for extensions
+                if (!wasOpen && this.state.isOpen) {
+                    window.typostHooks.doAction('typost_inline_modal_opened', this.state);
+                } else if (wasOpen && !this.state.isOpen) {
+                    window.typostHooks.doAction('typost_inline_modal_closed');
+                }
+            });
         }
 
         /**
@@ -865,6 +998,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     });
                 }
             }
+        }
+
+        /**
+         * Resolve a font ID to its family string.
+         * Used by extension hooks to populate selectedFont from a fontId.
+         */
+        resolveFontFamily(fontId) {
+            const id = parseInt(fontId, 10);
+            if (!isNaN(id) && this.fontIdMap && this.fontIdMap[id]) {
+                return this.fontIdMap[id].family;
+            }
+            return '';
         }
 
         /**
@@ -1297,12 +1442,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1314,42 +1459,62 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 const attributes = {};
                 let styleString = '';
 
+                // When a paragraph style is active, the CSS class provides rendering.
+                // We still set data attributes for font detection but skip inline style.
+                const hasActiveStyle = paragraphStyleId && paragraphStyleId !== 0;
+
+                if (hasActiveStyle) {
+                    attributes['data-style-id'] = String(paragraphStyleId);
+                }
+
                 // Add features
                 if (selectedFeatures.length > 0) {
                     const cssValue = this.featuresToCSS(selectedFeatures);
                     attributes['data-features'] = selectedFeatures.join(',');
-                    styleString += `font-feature-settings: ${cssValue}`;
+                    if (!hasActiveStyle) {
+                        styleString += `font-feature-settings: ${cssValue}`;
+                    }
                 }
 
                 // Add font family - use CSS variable if fontId is available
                 if (selectedFontId) {
                     attributes['data-font'] = selectedFont;
                     attributes['data-font-id'] = String(selectedFontId);
-                    if (styleString) styleString += '; ';
-                    styleString += `font-family: var(--font-${selectedFontId})`;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-family: var(--font-${selectedFontId})`;
+                    }
                 } else if (selectedFont) {
                     attributes['data-font'] = selectedFont;
-                    if (styleString) styleString += '; ';
-                    styleString += `font-family: ${selectedFont}`;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-family: ${selectedFont}`;
+                    }
                 }
 
                 // Add font weight (always apply, default to normal)
                 attributes['data-fontweight'] = fontWeight;
-                if (styleString) styleString += '; ';
-                styleString += `font-weight: ${fontWeight}`;
+                if (!hasActiveStyle) {
+                    if (styleString) styleString += '; ';
+                    styleString += `font-weight: ${fontWeight}`;
+                }
 
                 // Add letter spacing
                 if (letterSpacing !== 0) {
                     attributes['data-letterspacing'] = letterSpacing.toString();
-                    if (styleString) styleString += '; ';
-                    styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `letter-spacing: ${letterSpacing / 1000}em`;
+                    }
                 }
 
                 // Add line height
                 if (lineHeight !== 0) {
                     attributes['data-lineheight'] = lineHeight.toString();
-                    if (styleString) styleString += '; ';
-                    styleString += `line-height: ${lineHeight}`;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `line-height: ${lineHeight}`;
+                    }
                 }
 
                 // Add font size
@@ -1359,11 +1524,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
                     attributes['data-fontsize-max'] = fontSizeMax.toString();
 
-                    if (styleString) styleString += '; ';
-                    styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    }
                 }
 
-                attributes['style'] = styleString;
+                // Only set inline style when no paragraph style is active
+                if (!hasActiveStyle) {
+                    attributes['style'] = styleString;
+                }
 
                 // Add aria-label if enabled for accessibility
                 if (typostData.enableAriaLabels && value) {
@@ -1883,6 +2053,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.debouncedApplySlider.cancel();
             this.debouncedApplyDropdown.cancel();
             this.debouncedApplyFontSize.cancel();
+
+            // Cleanup extension hook listener
+            if (this._handleApplyBlockProperties) {
+                document.removeEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+            }
+
+            // Cleanup state provider filter
+            if (this._stateProviderFilter) {
+                window.typostHooks.removeFilter('typost_current_editor_state', this._stateProviderFilter);
+            }
         }
 
         render() {
@@ -1978,6 +2158,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">
+
+                                {/* Extension hook point: top of modal (e.g., Paragraph Styles dropdown) */}
+                                <div className="typost-hook-point" data-hook="typost_inline_modal_top" ref={(el) => {
+                                    if (el && !el._hooked) {
+                                        el._hooked = true;
+                                        window.typostHooks.doAction('typost_inline_modal_top', el, this.state);
+                                    }
+                                }} />
+
                                 {/* Font Detection Warning */}
                                 {fontDetectionFailed && !selectedFont && (
                                     wp.element.createElement(Notice, {
@@ -2024,6 +2213,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         </div>
                                     );
                                 })()}
+
+                                {/* Extension hook point: after font controls (e.g., Variable Font axes) */}
+                                <div className="typost-hook-point" data-hook="typost_inline_after_font_controls" ref={(el) => {
+                                    if (el && !el._hooked) {
+                                        el._hooked = true;
+                                        window.typostHooks.doAction('typost_inline_after_font_controls', el, this.state);
+                                    }
+                                }} />
 
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">
@@ -2114,6 +2311,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </div>
                                 )}
 
+                                {/* Extension hook point: before features (e.g., Glyphs panel) */}
+                                <div className="typost-hook-point" data-hook="typost_inline_before_features" ref={(el) => {
+                                    if (el && !el._hooked) {
+                                        el._hooked = true;
+                                        window.typostHooks.doAction('typost_inline_before_features', el, this.state);
+                                    }
+                                }} />
+
                                 {/* Features Section */}
                                 <div className="typost-features-section">
                                     <h4>{__('Individual Features', 'typography-stylist')}</h4>
@@ -2129,6 +2334,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         </PanelBody>
                                     ))}
                                 </div>
+
+                                {/* Extension hook point: after features */}
+                                <div className="typost-hook-point" data-hook="typost_inline_after_features" ref={(el) => {
+                                    if (el && !el._hooked) {
+                                        el._hooked = true;
+                                        window.typostHooks.doAction('typost_inline_after_features', el, this.state);
+                                    }
+                                }} />
 
                                 {/* Accessibility Warning - Non-blocking Notice (v1.3.0) */}
                                 {wordBoundaryWarning && (
@@ -2180,6 +2393,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         )}
                                     </div>
                                 )}
+
+                                {/* Extension hook point: bottom of modal */}
+                                <div className="typost-hook-point" data-hook="typost_inline_modal_bottom" ref={(el) => {
+                                    if (el && !el._hooked) {
+                                        el._hooked = true;
+                                        window.typostHooks.doAction('typost_inline_modal_bottom', el, this.state);
+                                    }
+                                }} />
 
                                 {/* Action Buttons (v1.3.0 - live preview, no Apply button) */}
                                 {!showClearConfirmation && (
@@ -2315,6 +2536,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-fontweight': 'data-fontweight',
             'data-letterspacing': 'data-letterspacing',
             'data-lineheight': 'data-lineheight',
+            'data-style-id': 'data-style-id',
             'style': 'style',
             'aria-label': 'aria-label'
         },

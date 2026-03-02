@@ -269,12 +269,33 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 = 1.3.0 =
 * **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
+* **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
+* **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
+* **NEW: JavaScript hook system** (`window.typostHooks`) - Lightweight action/filter system for both the inline editor and Typography Stylist block, with container-based hook points for rendering extension UI
+* **NEW: Paragraph Styles extension** (separate plugin) - Save and load paragraph style presets from a dropdown at the top of both editors; manage styles from a dedicated admin tab
+* Added: `typost_editor_data` filter for extensions to add data to the block editor
+* Added: `typost_editor_assets` action for extensions to enqueue editor scripts
+* Added: `typost_admin_tabs` filter for registering custom admin settings tabs
+* Added: `typost_admin_localize_data` filter for extensions to add admin page data
+* Added: `typost_admin_assets` action for extensions to enqueue admin scripts/styles
+* Added: `typost_register_rest_routes` action for extensions to register REST API endpoints
+* Added: `typost_available_features` filter for modifying the available OpenType features list
+* Added: `typost_presets` filter (replacing legacy `typost_default_presets`) for modifying the combined presets list
+* Added: `typost_cache_clear` action for extensions to clear their caches when core clears
+* Added: `typost_font_uploaded` and `typost_font_deleted` actions for font lifecycle events
+* Added: `typost_admin_tab_content_{id}` and `typost_admin_tab_after_{id}` actions for admin tab content
+* Added: 5 inline editor hook points, 4 Quick Feature Toggle hook points, 3 Inspector Controls hook points
+* Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
+* Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
+* Added: Blueprint specifications for Variable Font Axes and Glyphs Panel future extensions
+* Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
 * Removed: Apply button from inline editor toolbar
 * Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
 * Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
 * Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
 * Changed: Word boundary accessibility warning is now a persistent, non-blocking informational notice at top of modal instead of blocking application; it remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block
 * Changed: Users can still choose to convert to a Typography Stylist block for improved accessibility when needed, but this is now an optional follow-up action rather than a requirement to proceed
+* Changed: Admin settings tabs are now data-driven with priority-based ordering (supports URL deep-linking via `?tab=` parameter)
 * Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
 * Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
 * Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
