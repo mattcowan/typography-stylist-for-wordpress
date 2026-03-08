@@ -88,6 +88,14 @@
 		"styleClass": {
 			"type": "string",
 			"default": ""
+		},
+		"fontVariationSettings": {
+			"type": "string",
+			"default": ""
+		},
+		"layeredConfigId": {
+			"type": "number",
+			"default": 0
 		}
 	},
 	"editorScript": "file:./build/index.js",

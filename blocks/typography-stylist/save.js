@@ -24,7 +24,9 @@ export default function save({ attributes }) {
 		lineHeight,
 		screenReaderClass,
 		textAlign,
-		styleClass
+		styleClass,
+		fontVariationSettings,
+		layeredConfigId
 	} = attributes;
 
 	// Build inline style — skipped when styleClass is set (CSS class provides styling)
@@ -64,6 +66,10 @@ export default function save({ attributes }) {
 
 		if (fontSize === 'responsive') {
 			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
+		}
+
+		if (fontVariationSettings) {
+			styleArray.push(`font-variation-settings: ${fontVariationSettings}`);
 		}
 
 		if (textAlign) {
@@ -121,6 +127,7 @@ export default function save({ attributes }) {
 				data-font={fontFamily || undefined}
 				data-font-id={fontId || undefined}
 				data-style-id={styleId}
+				data-layered-config-id={layeredConfigId || undefined}
 			/>
 		</div>
 	);

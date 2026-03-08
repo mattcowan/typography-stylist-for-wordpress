@@ -65,6 +65,17 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
         </div>
     </div>
     <?php
+    /**
+     * Fires after the weight checkboxes in a font edit form.
+     *
+     * Allows extension plugins to inject additional per-font settings
+     * (e.g., variable font axes configuration) into the font edit form.
+     *
+     * @since 1.4.0
+     * @param array  $font   The font data array.
+     * @param string $prefix The font type prefix ('font', 'adobe', or 'manual').
+     */
+    do_action( 'typost_after_weight_checkboxes', $font, $prefix );
 }
 
 function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {

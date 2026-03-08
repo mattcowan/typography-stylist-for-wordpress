@@ -359,7 +359,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 resizeStartHeight: 0,
                 resizeDirection: null,
                 // Paragraph style ID (set by extension via event, 0 = no style)
-                paragraphStyleId: 0
+                paragraphStyleId: 0,
+                // Font variation settings (set by extension via event, '' = none)
+                fontVariationSettings: ''
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -412,7 +414,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         letterSpacing: self.state.letterSpacing,
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
-                        paragraphStyleId: self.state.paragraphStyleId
+                        paragraphStyleId: self.state.paragraphStyleId,
+                        fontVariationSettings: self.state.fontVariationSettings
                     };
                 }
                 return state;
@@ -436,7 +439,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         letterSpacing: props.letterSpacing !== undefined ? (props.letterSpacing || 0) : self.state.letterSpacing,
                         lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
                         selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
-                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId
+                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId,
+                        fontVariationSettings: props.fontVariationSettings !== undefined ? (props.fontVariationSettings || '') : self.state.fontVariationSettings
                     }, function() {
                         self._doApplyFeatures();
                     });
@@ -1442,12 +1446,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1527,6 +1531,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
                         styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    }
+                }
+
+                // Add font variation settings (variable font axes)
+                if (fontVariationSettings) {
+                    attributes['data-font-variation-settings'] = fontVariationSettings;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-variation-settings: ${fontVariationSettings}`;
                     }
                 }
 
@@ -2198,8 +2211,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </div>
                                 )}
 
-                                {/* Font Weight Control - hidden when font has only one available weight */}
+                                {/* Font Weight Control - replaceable via typost_weight_control filter */}
                                 {(() => {
+                                    const weightControlType = window.typostHooks
+                                        ? window.typostHooks.applyFilters('typost_weight_control', 'default', this.state.selectedFontId)
+                                        : 'default';
+
+                                    if (weightControlType !== 'default') {
+                                        return (
+                                            <div className="typost-fontweight-section">
+                                                <div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+                                                    if (el && !el._hooked) {
+                                                        el._hooked = true;
+                                                        window.typostHooks.doAction('typost_weight_control', el, this.state);
+                                                    }
+                                                }} />
+                                            </div>
+                                        );
+                                    }
+
                                     const weightOptions = this.getFilteredWeightOptions(this.state.selectedFontId);
                                     if (weightOptions.length <= 1) return null;
                                     return (
@@ -2537,6 +2567,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-letterspacing': 'data-letterspacing',
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',
+            'data-font-variation-settings': 'data-font-variation-settings',
             'style': 'style',
             'aria-label': 'aria-label'
         },

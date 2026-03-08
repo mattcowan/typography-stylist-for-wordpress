@@ -121,7 +121,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		lineHeight,
 		screenReaderClass,
 		textAlign,
-		styleClass
+		styleClass,
+		fontVariationSettings
 	} = attributes;
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -302,9 +303,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (props.letterSpacing !== undefined) newAttrs.letterSpacing = props.letterSpacing;
 				if (props.lineHeight !== undefined) newAttrs.lineHeight = props.lineHeight;
 				if (props.features !== undefined) newAttrs.features = props.features;
+				if (props.fontVariationSettings !== undefined) newAttrs.fontVariationSettings = props.fontVariationSettings;
 				// Generic styleClass support: extensions can pass a CSS class to apply
 				if (e.detail.styleClass !== undefined) {
 					newAttrs.styleClass = e.detail.styleClass;
+				}
+				// Layered font config ID support (v1.3.1)
+				if (props.layeredConfigId !== undefined) {
+					newAttrs.layeredConfigId = props.layeredConfigId;
 				}
 				setAttributes(newAttrs);
 
@@ -349,7 +355,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const qftStateRef = useRef({});
 	qftStateRef.current = {
 		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
-		fontSizeMax, letterSpacing, lineHeight, features, styleClass
+		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
+		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
+		content: attributes.content || '', tagName: attributes.tagName || 'h2'
 	};
 
 	useEffect(() => {
@@ -368,7 +376,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					letterSpacing: s.letterSpacing,
 					lineHeight: s.lineHeight,
 					features: s.features,
-					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0
+					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
+					fontVariationSettings: s.fontVariationSettings || '',
+					layeredConfigId: s.layeredConfigId || 0,
+					content: s.content || '',
+					tagName: s.tagName || 'h2'
 				};
 			}
 			return state;
@@ -2271,6 +2283,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
+		if (fontVariationSettings) {
+			styles.fontVariationSettings = fontVariationSettings;
+		}
+
 		if (textAlign) {
 			styles.textAlign = textAlign;
 		}
@@ -2524,9 +2540,28 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									)}
 								</div>
 
-								{/* Font Weight Control - use inline font if present, else block font */}
+								{/* Font Weight Control - replaceable via typost_weight_control filter */}
 								{(() => {
 									const activeFontId = inlineFontFamilyAtSelection || fontId;
+									const weightControlType = window.typostHooks
+										? window.typostHooks.applyFilters('typost_weight_control', 'default', activeFontId)
+										: 'default';
+
+									if (weightControlType !== 'default') {
+										return (
+											<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+												<div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+													if (el && !el._hooked) {
+														el._hooked = true;
+														window.typostHooks.doAction('typost_weight_control', el, {
+															fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
+														});
+													}
+												}} />
+											</div>
+										);
+									}
+
 									const inlineWeightOptions = getFilteredWeightOptions(activeFontId, true);
 									// Hide if only "Inherit" + 1 weight (or fewer) — means the font has a single weight
 									const weightOnlyOptions = inlineWeightOptions.filter(o => o.value !== 'inherit');
@@ -2939,8 +2974,25 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					</PanelBody>
 				)}
 
-				{/* Font Weight - hidden when font has only one available weight */}
+				{/* Font Weight - replaceable via typost_weight_control filter */}
 				{(() => {
+					const weightControlType = window.typostHooks
+						? window.typostHooks.applyFilters('typost_weight_control', 'default', fontId)
+						: 'default';
+
+					if (weightControlType !== 'default') {
+						return (
+							<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
+								<div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight });
+									}
+								}} />
+							</PanelBody>
+						);
+					}
+
 					const sidebarWeightOptions = getFilteredWeightOptions(fontId, false);
 					if (sidebarWeightOptions.length <= 1) return null;
 					return (

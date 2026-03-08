@@ -3387,8 +3387,10 @@ class Typost {
         $fonts = $this->get_adobe_fonts();
 
         $found = false;
+        $font_to_delete = null;
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
+                $font_to_delete = $font;
                 unset($fonts[$key]);
                 $found = true;
                 break;
@@ -3401,6 +3403,9 @@ class Typost {
 
         update_option('typost_adobe_fonts', array_values($fonts));
         $this->clear_cache();
+
+        /** This action is documented in typography-stylist.php delete_font_endpoint */
+        do_action( 'typost_font_deleted', $id, $font_to_delete );
 
         return rest_ensure_response(array('success' => true));
     }
@@ -3445,6 +3450,16 @@ class Typost {
 
         update_option('typost_adobe_fonts', $fonts);
         $this->clear_cache();
+
+        /**
+         * Fires after a font's settings are saved via the REST API.
+         *
+         * @since 1.4.0
+         * @param string $id        The font's string ID.
+         * @param array  $font_data The updated font data.
+         * @param string $type      The font type ('uploaded', 'adobe', or 'manual').
+         */
+        do_action( 'typost_font_saved', $id, $fonts[$key], 'adobe' );
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }
@@ -3528,6 +3543,9 @@ class Typost {
 
         update_option('typost_custom_fonts', $fonts);
         $this->clear_cache();
+
+        /** This action is documented in typography-stylist.php update_adobe_font_fallback_endpoint */
+        do_action( 'typost_font_saved', $id, $fonts[$key], 'uploaded' );
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }
@@ -3640,8 +3658,10 @@ class Typost {
         $fonts = $this->get_manual_fonts();
 
         $found = false;
+        $font_to_delete = null;
         foreach ($fonts as $key => $font) {
             if ($font['id'] === $id) {
+                $font_to_delete = $font;
                 unset($fonts[$key]);
                 $found = true;
                 break;
@@ -3654,6 +3674,9 @@ class Typost {
 
         update_option('typost_manual_fonts', array_values($fonts));
         $this->clear_cache();
+
+        /** This action is documented in typography-stylist.php delete_font_endpoint */
+        do_action( 'typost_font_deleted', $id, $font_to_delete );
 
         return rest_ensure_response(array('success' => true));
     }
@@ -3701,6 +3724,9 @@ class Typost {
 
         update_option('typost_manual_fonts', $fonts);
         $this->clear_cache();
+
+        /** This action is documented in typography-stylist.php update_adobe_font_fallback_endpoint */
+        do_action( 'typost_font_saved', $id, $fonts[$key], 'manual' );
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }
