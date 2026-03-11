@@ -143,6 +143,27 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
+     * Validate and sanitize font-variation-settings value.
+     * Ensures each entry matches "axis" number format (e.g. "wght" 700, "wdth" 100).
+     * Returns empty string for invalid input.
+     * @param {string} value - font-variation-settings string
+     * @return {string} Validated and normalized value, or empty string
+     */
+    function sanitizeFontVariationSettings(value) {
+        if (!value) return '';
+        var str = String(value).trim();
+        if (!str) return '';
+        var entries = str.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
+        var validEntries = [];
+        for (var i = 0; i < entries.length; i++) {
+            var match = entries[i].match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
+            if (!match) return '';
+            validEntries.push('"' + match[1] + '" ' + match[2]);
+        }
+        return validEntries.join(', ');
+    }
+
+    /**
      * Build a text offset map from a DOM container, accounting for <br> elements.
      *
      * Designed to match WordPress RichText's offset system, where each <br> element
@@ -278,6 +299,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             validateSelectionBounds,
             sanitizeFontFamily,
             sanitizeCSSValue,
+            sanitizeFontVariationSettings,
             getBlockInheritedFont
         };
     }
@@ -359,7 +381,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 resizeStartHeight: 0,
                 resizeDirection: null,
                 // Paragraph style ID (set by extension via event, 0 = no style)
-                paragraphStyleId: 0
+                paragraphStyleId: 0,
+                // Font variation settings (set by extension via event, '' = none)
+                fontVariationSettings: this.getActiveFontVariationSettings() || ''
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -412,7 +436,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         letterSpacing: self.state.letterSpacing,
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
-                        paragraphStyleId: self.state.paragraphStyleId
+                        paragraphStyleId: self.state.paragraphStyleId,
+                        fontVariationSettings: self.state.fontVariationSettings
                     };
                 }
                 return state;
@@ -436,7 +461,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         letterSpacing: props.letterSpacing !== undefined ? (props.letterSpacing || 0) : self.state.letterSpacing,
                         lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
                         selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
-                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId
+                        paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId,
+                        fontVariationSettings: props.fontVariationSettings !== undefined ? sanitizeFontVariationSettings(props.fontVariationSettings || '') : self.state.fontVariationSettings
                     }, function() {
                         self._doApplyFeatures();
                     });
@@ -711,6 +737,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             return '400';
         }
 
+        getActiveFontVariationSettings() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font-variation-settings']) {
+                return activeFormat.attributes['data-font-variation-settings'];
+            }
+
+            return '';
+        }
+
         /**
          * Get block's inherited font-family from computed styles
          * Detects the current font applied by theme or block settings
@@ -925,6 +962,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
+                fontVariationSettings: this.getActiveFontVariationSettings() || '',
                 selectedText: !state.isOpen ? extractedText : '',
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
@@ -1442,12 +1480,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1527,6 +1565,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
                         styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    }
+                }
+
+                // Add font variation settings (variable font axes)
+                if (fontVariationSettings) {
+                    const safeFontVariationSettings = sanitizeFontVariationSettings(fontVariationSettings);
+                    if (safeFontVariationSettings) {
+                        attributes['data-font-variation-settings'] = safeFontVariationSettings;
+                        if (!hasActiveStyle) {
+                            if (styleString) styleString += '; ';
+                            styleString += `font-variation-settings: ${safeFontVariationSettings}`;
+                        }
                     }
                 }
 
@@ -2198,8 +2248,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </div>
                                 )}
 
-                                {/* Font Weight Control - hidden when font has only one available weight */}
+                                {/* Font Weight Control - replaceable via typost_weight_control filter */}
                                 {(() => {
+                                    const weightControlType = window.typostHooks
+                                        ? window.typostHooks.applyFilters('typost_weight_control', 'default', this.state.selectedFontId)
+                                        : 'default';
+
+                                    if (weightControlType !== 'default') {
+                                        return (
+                                            <div className="typost-fontweight-section">
+                                                <div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+                                                    if (el && !el._hooked) {
+                                                        el._hooked = true;
+                                                        window.typostHooks.doAction('typost_weight_control', el, this.state);
+                                                    }
+                                                }} />
+                                            </div>
+                                        );
+                                    }
+
                                     const weightOptions = this.getFilteredWeightOptions(this.state.selectedFontId);
                                     if (weightOptions.length <= 1) return null;
                                     return (
@@ -2537,6 +2604,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-letterspacing': 'data-letterspacing',
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',
+            'data-font-variation-settings': 'data-font-variation-settings',
             'style': 'style',
             'aria-label': 'aria-label'
         },

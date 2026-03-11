@@ -705,6 +705,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
+                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'uploaded', $card: $card });
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
@@ -769,6 +770,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
+                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'adobe', $card: $card });
                 setTimeout(function() {
                     location.reload();
                 }, 1500);
@@ -844,6 +846,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fontUpdated + '</p></div>');
+                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'manual', $card: $card });
                 setTimeout(function() {
                     location.reload();
                 }, 1500);

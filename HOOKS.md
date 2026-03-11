@@ -12,6 +12,8 @@ This document describes all action and filter hooks available in Typography Styl
   - [Inline Editor Hook Points](#inline-editor-hook-points)
   - [Quick Feature Toggle Hook Points](#quick-feature-toggle-hook-points)
   - [Inspector Controls Hook Points](#inspector-controls-hook-points)
+  - [Weight Control Replacement](#weight-control-replacement)
+  - [Admin jQuery Events](#admin-jquery-events)
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [State Communication](#state-communication)
 - [Admin Tab Extensibility](#admin-tab-extensibility)
@@ -112,6 +114,40 @@ add_action('typost_font_deleted', function($id, $font_data) {
 **Parameters:**
 - `$id` (string) — The deleted font's ID
 - `$font_data` (array) — The deleted font's data array
+
+#### `typost_after_weight_checkboxes`
+
+Fired after the weight checkboxes in font edit forms on the admin page. Use this to inject additional per-font controls (e.g., variable font axis configuration).
+
+```php
+add_action('typost_after_weight_checkboxes', function($font, $prefix) {
+    // $font  — Font data array
+    // $prefix — Form prefix string ('font', 'adobe', or 'manual')
+    echo '<div class="my-extension-font-options">';
+    echo '<label><input type="checkbox" /> Enable Variable Font</label>';
+    echo '</div>';
+}, 10, 2);
+```
+
+**Parameters:**
+- `$font` (array) — The font data array for the current font being edited
+- `$prefix` (string) — Form field prefix: `'font'` (uploaded), `'adobe'`, or `'manual'`
+
+#### `typost_font_saved`
+
+Fired after a font's settings are saved via PATCH endpoints (fallback updates, weight changes, etc.). Use this to save extension-specific per-font data.
+
+```php
+add_action('typost_font_saved', function($id, $font_data, $type) {
+    // Save extension data for this font
+    update_option('my_extension_font_' . $id, $my_data);
+}, 10, 3);
+```
+
+**Parameters:**
+- `$id` (string) — The font's string ID (e.g., `'kit-123-inter'`)
+- `$font_data` (array) — The updated font data array
+- `$type` (string) — Font type: `'uploaded'`, `'adobe'`, or `'manual'`
 
 #### `typost_admin_tab_content_{tab_id}`
 
@@ -313,6 +349,57 @@ window.typostHooks.addAction('typost_inspector_after_font_weight', function(cont
 }, 10);
 ```
 
+### Weight Control Replacement
+
+#### `typost_weight_control` (Filter)
+
+Filter that determines whether the standard weight dropdown should be replaced by a custom control. Return `'default'` for the normal dropdown, or any other value (e.g., `'variable'`) to replace it with a hook container.
+
+```javascript
+window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
+    // Return 'variable' to replace the dropdown with a custom control
+    if (fontHasVariableWeightAxis(fontId)) {
+        return 'variable';
+    }
+    return type; // 'default' = normal dropdown
+}, 10);
+```
+
+**Parameters:**
+- `type` (string) — Current control type (`'default'` initially)
+- `fontId` (number) — The active font's numeric ID
+
+**Checked in three locations:** inline editor, Quick Feature Toggle, Inspector Controls.
+
+#### `typost_weight_control` (Action)
+
+When the filter returns a non-default value, the core renders a hook container (`<div data-hook="typost_weight_control">`) and fires this action. Render your custom weight control into the container.
+
+```javascript
+window.typostHooks.addAction('typost_weight_control', function(containerEl, state) {
+    // Render a custom weight slider into containerEl
+    // state varies by editor:
+    //   inline:    { selectedFontId, fontWeight, selectedFont, ... }
+    //   qft:       { fontId, fontWeight, inlineFontFamily, inlineFontWeight, ... }
+    //   inspector: { fontId, fontWeight }
+}, 10);
+```
+
+### Admin jQuery Events
+
+#### `typost:font-saved`
+
+jQuery event triggered on `$(document)` after a font's settings are saved in the admin. Use this to save extension-specific data that was injected into the font edit form.
+
+```javascript
+$(document).on('typost:font-saved', function(e, data) {
+    // data.fontId — Font string ID (e.g., 'kit-123-inter')
+    // data.type   — Font type: 'uploaded', 'adobe', or 'manual'
+    // data.$card  — jQuery element of the font card
+    saveMyExtensionData(data.fontId, data.type);
+});
+```
+
 ### Lifecycle Hooks
 
 #### `typost_inline_modal_opened`
@@ -350,10 +437,12 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
+
+The `layeredConfigId` field contains the active layered font configuration ID (integer), or `0` if no layered font is applied. The `content` and `tagName` fields provide the block's current text content (HTML) and heading tag (e.g., `h2`) for use by extensions that need to render previews.
 
 #### Writing Editor State
 
@@ -367,6 +456,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
             fontWeight: '700',
             letterSpacing: 50,
             features: ['liga', 'dlig', 'ss01'],
+            fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes
         },
         source: 'inline', // or 'qft' or 'inspector'
         // Optional: class-based styling (used by paragraph styles extension)
