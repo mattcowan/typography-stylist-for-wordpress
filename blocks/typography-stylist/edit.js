@@ -308,7 +308,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (e.detail.styleClass !== undefined) {
 					newAttrs.styleClass = e.detail.styleClass;
 				}
-				// Layered font config ID support (v1.3.1)
+				// Layered font configuration ID support
 				if (props.layeredConfigId !== undefined) {
 					newAttrs.layeredConfigId = props.layeredConfigId;
 				}

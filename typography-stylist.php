@@ -3500,6 +3500,8 @@ class Typost {
         update_option('typost_adobe_fonts', $fonts);
         $this->clear_cache();
 
+        do_action( 'typost_font_saved', $id, $fonts[$key], 'adobe' );
+
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }
 
@@ -3585,6 +3587,8 @@ class Typost {
 
         update_option('typost_custom_fonts', $fonts);
         $this->clear_cache();
+
+        do_action( 'typost_font_saved', $id, $fonts[$key], 'uploaded' );
 
         return rest_ensure_response(array('success' => true, 'font' => $fonts[$key]));
     }

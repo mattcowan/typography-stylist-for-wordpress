@@ -8,6 +8,25 @@ import { RichText } from '@wordpress/block-editor';
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
+// Validate and sanitize font-variation-settings value.
+// Ensures each entry matches the "axis" number format (e.g. "wght" 700, "wdth" 100).
+// Returns empty string for invalid input.
+const sanitizeFontVariationSettings = (value) => {
+	if (!value) return '';
+	const str = String(value).trim();
+	if (!str) return '';
+	// Split on commas and validate each entry
+	const entries = str.split(',').map(e => e.trim()).filter(Boolean);
+	const validEntries = [];
+	for (const entry of entries) {
+		// Match: quoted 4-char tag + numeric value (int or float, optional negative)
+		const match = entry.match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
+		if (!match) return '';
+		validEntries.push(`"${match[1]}" ${match[2]}`);
+	}
+	return validEntries.join(', ');
+};
+
 export default function save({ attributes }) {
 	const {
 		content,
@@ -69,7 +88,10 @@ export default function save({ attributes }) {
 		}
 
 		if (fontVariationSettings) {
-			styleArray.push(`font-variation-settings: ${fontVariationSettings}`);
+			const safeFVS = sanitizeFontVariationSettings(fontVariationSettings);
+			if (safeFVS) {
+				styleArray.push(`font-variation-settings: ${safeFVS}`);
+			}
 		}
 
 		if (textAlign) {

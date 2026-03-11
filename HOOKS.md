@@ -438,9 +438,11 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 
 The returned state object includes:
 - **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
+
+The `layeredConfigId` field contains the active layered font configuration ID (integer), or `0` if no layered font is applied. The `content` and `tagName` fields provide the block's current text content (HTML) and heading tag (e.g., `h2`) for use by extensions that need to render previews.
 
 #### Writing Editor State
 

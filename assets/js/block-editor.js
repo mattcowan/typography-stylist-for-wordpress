@@ -143,6 +143,27 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
+     * Validate and sanitize font-variation-settings value.
+     * Ensures each entry matches "axis" number format (e.g. "wght" 700, "wdth" 100).
+     * Returns empty string for invalid input.
+     * @param {string} value - font-variation-settings string
+     * @return {string} Validated and normalized value, or empty string
+     */
+    function sanitizeFontVariationSettings(value) {
+        if (!value) return '';
+        var str = String(value).trim();
+        if (!str) return '';
+        var entries = str.split(',').map(function(e) { return e.trim(); }).filter(Boolean);
+        var validEntries = [];
+        for (var i = 0; i < entries.length; i++) {
+            var match = entries[i].match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
+            if (!match) return '';
+            validEntries.push('"' + match[1] + '" ' + match[2]);
+        }
+        return validEntries.join(', ');
+    }
+
+    /**
      * Build a text offset map from a DOM container, accounting for <br> elements.
      *
      * Designed to match WordPress RichText's offset system, where each <br> element
@@ -278,6 +299,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             validateSelectionBounds,
             sanitizeFontFamily,
             sanitizeCSSValue,
+            sanitizeFontVariationSettings,
             getBlockInheritedFont
         };
     }
@@ -361,7 +383,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Paragraph style ID (set by extension via event, 0 = no style)
                 paragraphStyleId: 0,
                 // Font variation settings (set by extension via event, '' = none)
-                fontVariationSettings: ''
+                fontVariationSettings: this.getActiveFontVariationSettings() || ''
             };
 
             this.togglePopover = this.togglePopover.bind(this);
@@ -440,7 +462,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
                         selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
                         paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId,
-                        fontVariationSettings: props.fontVariationSettings !== undefined ? (props.fontVariationSettings || '') : self.state.fontVariationSettings
+                        fontVariationSettings: props.fontVariationSettings !== undefined ? sanitizeFontVariationSettings(props.fontVariationSettings || '') : self.state.fontVariationSettings
                     }, function() {
                         self._doApplyFeatures();
                     });
@@ -715,6 +737,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             return '400';
         }
 
+        getActiveFontVariationSettings() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font-variation-settings']) {
+                return activeFormat.attributes['data-font-variation-settings'];
+            }
+
+            return '';
+        }
+
         /**
          * Get block's inherited font-family from computed styles
          * Detects the current font applied by theme or block settings
@@ -929,6 +962,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontWeight: this.getActiveFontWeight() || '400',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
+                fontVariationSettings: this.getActiveFontVariationSettings() || '',
                 selectedText: !state.isOpen ? extractedText : '',
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
@@ -1536,10 +1570,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 // Add font variation settings (variable font axes)
                 if (fontVariationSettings) {
-                    attributes['data-font-variation-settings'] = fontVariationSettings;
-                    if (!hasActiveStyle) {
-                        if (styleString) styleString += '; ';
-                        styleString += `font-variation-settings: ${fontVariationSettings}`;
+                    const safeFontVariationSettings = sanitizeFontVariationSettings(fontVariationSettings);
+                    if (safeFontVariationSettings) {
+                        attributes['data-font-variation-settings'] = safeFontVariationSettings;
+                        if (!hasActiveStyle) {
+                            if (styleString) styleString += '; ';
+                            styleString += `font-variation-settings: ${safeFontVariationSettings}`;
+                        }
                     }
                 }
 

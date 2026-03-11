@@ -54,7 +54,7 @@ global.wp = {
 require('../../../assets/js/block-editor.js');
 
 // Get utilities from the global object exposed by block-editor.js
-const { escapeHTML, hasHTMLTags, validateSelectionBounds, sanitizeFontFamily, sanitizeCSSValue } = window.typostUtils || {};
+const { escapeHTML, hasHTMLTags, validateSelectionBounds, sanitizeFontFamily, sanitizeCSSValue, sanitizeFontVariationSettings } = window.typostUtils || {};
 
 /**
  * Test Suite: Helper Functions
@@ -170,6 +170,56 @@ describe('Typography Stylist - Helper Functions', () => {
 
 			expect(result).not.toContain('<');
 			expect(result).not.toContain('>');
+		});
+	});
+
+	/**
+	 * Test: sanitizeFontVariationSettings function
+	 *
+	 * Validates and sanitizes font-variation-settings CSS values,
+	 * ensuring each entry matches "axis" number format.
+	 */
+	describe('sanitizeFontVariationSettings', () => {
+		it('should accept valid single axis', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700')).toBe('"wght" 700');
+		});
+
+		it('should accept valid multiple axes', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700, "wdth" 100')).toBe('"wght" 700, "wdth" 100');
+		});
+
+		it('should accept float values', () => {
+			expect(sanitizeFontVariationSettings('"wght" 400.5')).toBe('"wght" 400.5');
+		});
+
+		it('should accept negative values', () => {
+			expect(sanitizeFontVariationSettings('"slnt" -12')).toBe('"slnt" -12');
+		});
+
+		it('should normalize single quotes to double quotes', () => {
+			expect(sanitizeFontVariationSettings("'wght' 700")).toBe('"wght" 700');
+		});
+
+		it('should reject malformed entries and return empty string', () => {
+			expect(sanitizeFontVariationSettings('wght 700')).toBe('');
+			expect(sanitizeFontVariationSettings('"wght"')).toBe('');
+			expect(sanitizeFontVariationSettings('"wght" abc')).toBe('');
+			expect(sanitizeFontVariationSettings('"toolongaxis" 700')).toBe('');
+		});
+
+		it('should reject injection attempts', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700; color: red')).toBe('');
+			expect(sanitizeFontVariationSettings('"wght" 700, "wdth" 100; background: url(evil)')).toBe('');
+		});
+
+		it('should handle null, undefined, and empty string', () => {
+			expect(sanitizeFontVariationSettings(null)).toBe('');
+			expect(sanitizeFontVariationSettings(undefined)).toBe('');
+			expect(sanitizeFontVariationSettings('')).toBe('');
+		});
+
+		it('should handle whitespace-only input', () => {
+			expect(sanitizeFontVariationSettings('   ')).toBe('');
 		});
 	});
 
