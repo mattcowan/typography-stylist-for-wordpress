@@ -7,12 +7,12 @@ jQuery(document).ready(function($) {
     'use strict';
 
     // Tab switching with ARIA support
-    $('.typost-tab-button').on('click', function() {
+    $('.typost-admin-tabs .nav-tab').on('click', function() {
         var tab = $(this).data('tab');
 
         // Update ARIA states
-        $('.typost-tab-button').removeClass('active').attr('aria-selected', 'false');
-        $(this).addClass('active').attr('aria-selected', 'true');
+        $('.typost-admin-tabs .nav-tab').removeClass('nav-tab-active').attr('aria-selected', 'false');
+        $(this).addClass('nav-tab-active').attr('aria-selected', 'true');
 
         $('.typost-tab-content').removeClass('active').attr('hidden', 'true');
         var $panel = $('#typost-tab-' + tab);
@@ -23,8 +23,8 @@ jQuery(document).ready(function($) {
     });
 
     // Add keyboard navigation (arrow keys for tabs)
-    $('.typost-tab-button').on('keydown', function(e) {
-        var $tabs = $('.typost-tab-button');
+    $('.typost-admin-tabs .nav-tab').on('keydown', function(e) {
+        var $tabs = $('.typost-admin-tabs .nav-tab');
         var currentIndex = $tabs.index(this);
         var newIndex;
 
@@ -52,7 +52,7 @@ jQuery(document).ready(function($) {
         var highlight = params.get('highlight');
 
         if (tab) {
-            var $tabButton = $('.typost-tab-button[data-tab="' + tab + '"]');
+            var $tabButton = $('.typost-admin-tabs .nav-tab[data-tab="' + tab + '"]');
             if ($tabButton.length) {
                 $tabButton.click();
             }
@@ -76,23 +76,6 @@ jQuery(document).ready(function($) {
             }
         }
     })();
-
-    // Kit toggle handling
-    $(document).on('click', '.typost-toggle-kit', function() {
-        var $button = $(this);
-        var $kitFonts = $('#' + $button.attr('aria-controls'));
-        var isExpanded = $button.attr('aria-expanded') === 'true';
-
-        if (isExpanded) {
-            $button.attr('aria-expanded', 'false');
-            $button.find('.dashicons').removeClass('dashicons-arrow-down').addClass('dashicons-arrow-right');
-            $kitFonts.attr('hidden', 'true');
-        } else {
-            $button.attr('aria-expanded', 'true');
-            $button.find('.dashicons').removeClass('dashicons-arrow-right').addClass('dashicons-arrow-down');
-            $kitFonts.removeAttr('hidden');
-        }
-    });
 
     // File selection handling
     var selectedFile = null;
@@ -1239,7 +1222,7 @@ jQuery(document).ready(function($) {
     });
 
     // Load replacements when tab is opened
-    $('.typost-tab-button[data-tab="replacements"]').on('click', function() {
+    $('.typost-admin-tabs .nav-tab[data-tab="replacements"]').on('click', function() {
         loadReplacementsList();
         populateAddReplacementForm();
     });

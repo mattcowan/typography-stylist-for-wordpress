@@ -14,37 +14,18 @@
     margin-top: 20px;
 }
 
-.typost-admin-tabs {
-    border-bottom: 1px solid #ccd0d4;
-    background: #f6f7f7;
+/* Override WP nav-tab float with flexbox for modern layout */
+.typost-admin-tabs.nav-tab-wrapper {
     display: flex;
+    padding-top: 0;
 }
 
-.typost-tab-button {
-    background: none;
-    border: none;
-    padding: 15px 20px;
+.typost-admin-tabs .nav-tab {
+    float: none;
     min-height: 44px;
+    display: flex;
+    align-items: center;
     cursor: pointer;
-    font-size: 14px;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-}
-
-.typost-tab-button:hover {
-    background: #fff;
-}
-
-.typost-tab-button.active {
-    background: #fff;
-    border-bottom-color: #2271b1;
-    font-weight: 600;
-}
-
-.typost-tab-button:focus {
-    outline: 2px solid #2271b1;
-    outline-offset: -2px;
-    box-shadow: inset 0 0 0 1px #2271b1;
 }
 
 .typost-tab-content {
@@ -499,8 +480,8 @@
     background: #fafafa;
 }
 
-/* Kit grouping styles */
-.typost-font-kit-card {
+/* Kit grouping styles - uses native <details>/<summary> */
+details.typost-font-kit-card {
     border: 1px solid #c3c4c7;
     margin-bottom: 20px;
     border-radius: 4px;
@@ -508,53 +489,60 @@
 }
 
 .typost-font-kit-header {
+    cursor: pointer;
+    list-style: none;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 15px;
+    padding-left: 36px;
+    gap: 10px;
     background: #f0f0f1;
     border-bottom: 1px solid #c3c4c7;
+    position: relative;
 }
 
-.typost-font-kit-header h4 {
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
+/* Remove browser default markers */
+.typost-font-kit-header::-webkit-details-marker,
+.typost-font-kit-header::marker {
+    display: none;
 }
 
-.typost-toggle-kit {
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* Custom arrow */
+.typost-font-kit-header::before {
+    content: '▶';
+    position: absolute;
+    left: 15px;
     color: #1d2327;
+    transition: transform 0.2s;
+    font-size: 12px;
 }
 
-.typost-toggle-kit:hover {
-    color: #2271b1;
+details.typost-font-kit-card[open] > .typost-font-kit-header::before {
+    transform: rotate(90deg);
 }
 
-.typost-toggle-kit:focus {
+.typost-font-kit-header:hover {
+    background: #e8e8e9;
+}
+
+.typost-font-kit-header:focus {
     outline: 2px solid #2271b1;
     outline-offset: 2px;
     border-radius: 2px;
 }
 
-.typost-toggle-kit .dashicons {
-    transition: transform 0.2s;
+.typost-kit-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1d2327;
 }
 
 .typost-kit-font-count {
     font-size: 13px;
     font-weight: 400;
     color: #646970;
+    min-width: 60px;
+    text-align: left;
 }
 
 .typost-kit-fonts {
@@ -596,6 +584,7 @@
 .typost-font-meta {
     color: #666;
     font-size: 12px;
+    margin-left: auto;
 }
 
 .typost-upload-font-section {
