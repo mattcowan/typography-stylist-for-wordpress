@@ -10,9 +10,9 @@ jQuery(document).ready(function($) {
     $('.typost-admin-tabs .nav-tab').on('click', function() {
         var tab = $(this).data('tab');
 
-        // Update ARIA states
-        $('.typost-admin-tabs .nav-tab').removeClass('nav-tab-active').attr('aria-selected', 'false');
-        $(this).addClass('nav-tab-active').attr('aria-selected', 'true');
+        // Update ARIA states and tab order
+        $('.typost-admin-tabs .nav-tab').removeClass('nav-tab-active').attr('aria-selected', 'false').attr('tabindex', '-1');
+        $(this).addClass('nav-tab-active').attr('aria-selected', 'true').attr('tabindex', '0');
 
         $('.typost-tab-content').removeClass('active').attr('hidden', 'true');
         var $panel = $('#typost-tab-' + tab);

@@ -144,10 +144,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
         <nav class="typost-admin-tabs nav-tab-wrapper" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
             <?php foreach ($tabs as $tab): ?>
             <button
+                type="button"
                 class="nav-tab <?php echo $tab['id'] === $active_tab ? 'nav-tab-active' : ''; ?>"
                 data-tab="<?php echo esc_attr($tab['id']); ?>"
                 role="tab"
                 aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
+                tabindex="<?php echo $tab['id'] === $active_tab ? '0' : '-1'; ?>"
                 aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
                 id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
                 <?php echo esc_html($tab['label']); ?>
