@@ -318,7 +318,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <?php foreach ($grouped_features as $category => $features): ?>
             <details <?php echo $category === 'ligatures' ? 'open' : ''; ?> class="typost-feature-category-section">
                 <summary class="typost-feature-category-summary">
-                    <h3><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></h3>
+                    <span class="typost-feature-category-title" role="heading" aria-level="3"><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></span>
                     <span class="typost-feature-category-count"><?php
                         $count = count($features);
                         echo esc_html(sprintf(

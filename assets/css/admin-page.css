@@ -204,7 +204,7 @@
     display: flex;
     align-items: center;
     padding: 15px;
-    padding-left: 36px;
+    padding-inline-start: 36px;
     gap: 10px;
     background: #f0f0f1;
     border-bottom: 1px solid #c3c4c7;
@@ -221,7 +221,7 @@
 .typost-feature-category-summary::before {
     content: '▶';
     position: absolute;
-    left: 15px;
+    inset-inline-start: 15px;
     color: #1d2327;
     transition: transform 0.2s;
     font-size: 12px;
@@ -242,11 +242,10 @@
 }
 
 /* Category name in summary */
-.typost-feature-category-summary h3 {
+.typost-feature-category-title {
     color: #1d2327;
     font-size: 16px;
     font-weight: 600;
-    margin: 0;
 }
 
 /* Feature count badge */
@@ -255,7 +254,7 @@
     font-weight: 400;
     color: #646970;
     min-width: 60px;
-    text-align: left;
+    text-align: start;
 }
 
 /* Feature Demos Grid */
@@ -489,7 +488,7 @@ details.typost-font-kit-card {
     display: flex;
     align-items: center;
     padding: 15px;
-    padding-left: 36px;
+    padding-inline-start: 36px;
     gap: 10px;
     background: #f0f0f1;
     border-bottom: 1px solid #c3c4c7;
@@ -506,7 +505,7 @@ details.typost-font-kit-card {
 .typost-font-kit-header::before {
     content: '▶';
     position: absolute;
-    left: 15px;
+    inset-inline-start: 15px;
     color: #1d2327;
     transition: transform 0.2s;
     font-size: 12px;
@@ -537,7 +536,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-weight: 400;
     color: #646970;
     min-width: 60px;
-    text-align: left;
+    text-align: start;
 }
 
 .typost-kit-fonts {
