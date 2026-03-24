@@ -319,6 +319,14 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <details <?php echo $category === 'ligatures' ? 'open' : ''; ?> class="typost-feature-category-section">
                 <summary class="typost-feature-category-summary">
                     <h3><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></h3>
+                    <span class="typost-feature-category-count"><?php
+                        $count = count($features);
+                        echo esc_html(sprintf(
+                            /* translators: %d: number of features in category */
+                            _n('%d feature', '%d features', $count, 'typography-stylist'),
+                            $count
+                        ));
+                    ?></span>
                 </summary>
 
                 <div class="typost-feature-demos-grid">
