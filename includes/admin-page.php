@@ -141,19 +141,21 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             $active_tab = $tabs[0]['id'];
         }
         ?>
-        <div class="typost-admin-tabs" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
+        <nav class="typost-admin-tabs nav-tab-wrapper" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
             <?php foreach ($tabs as $tab): ?>
             <button
-                class="typost-tab-button <?php echo $tab['id'] === $active_tab ? 'active' : ''; ?>"
+                type="button"
+                class="nav-tab <?php echo $tab['id'] === $active_tab ? 'nav-tab-active' : ''; ?>"
                 data-tab="<?php echo esc_attr($tab['id']); ?>"
                 role="tab"
                 aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
+                tabindex="<?php echo $tab['id'] === $active_tab ? '0' : '-1'; ?>"
                 aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
                 id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
                 <?php echo esc_html($tab['label']); ?>
             </button>
             <?php endforeach; ?>
-        </div>
+        </nav>
 
         <!-- Presets Tab -->
         <div
@@ -410,23 +412,14 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
 
                 <?php // Display font kits (grouped) ?>
                 <?php foreach ($fonts_by_kit as $kit_id => $kit_data): ?>
-                <div class="typost-font-kit-card">
-                    <div class="typost-font-kit-header">
-                        <h4>
-                            <button
-                                type="button"
-                                class="typost-toggle-kit"
-                                aria-expanded="false"
-                                aria-controls="typost-kit-<?php echo esc_attr($kit_id); ?>">
-                                <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
-                                <?php echo esc_html($kit_data['kit_name']); ?>
-                            </button>
-                            <span class="typost-kit-font-count"><?php
-                                /* translators: %d: number of fonts in the custom font kit (Custom Fonts tab) */
-                                echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'typography-stylist'), count($kit_data['fonts'])));
-                            ?></span>
-                        </h4>
-                        <div class="typost-font-meta">
+                <details class="typost-font-kit-card">
+                    <summary class="typost-font-kit-header">
+                        <span class="typost-kit-name"><?php echo esc_html($kit_data['kit_name']); ?></span>
+                        <span class="typost-kit-font-count"><?php
+                            /* translators: %d: number of fonts in the custom font kit (Custom Fonts tab) */
+                            echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'typography-stylist'), count($kit_data['fonts'])));
+                        ?></span>
+                        <span class="typost-font-meta">
                             <small>
                                 <?php
                                 $upload_date = $kit_data['uploaded_date'];
@@ -440,10 +433,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 echo esc_html(sprintf(__('Uploaded: %s', 'typography-stylist'), $formatted_date));
                                 ?>
                             </small>
-                        </div>
-                    </div>
+                        </span>
+                    </summary>
 
-                    <div id="typost-kit-<?php echo esc_attr($kit_id); ?>" class="typost-kit-fonts" hidden>
+                    <div class="typost-kit-fonts">
                         <?php foreach ($kit_data['fonts'] as $font): ?>
                         <div class="typost-font-card typost-kit-font">
                             <div class="typost-font-header">
@@ -545,7 +538,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </div>
                         <?php endforeach; ?>
                     </div>
-                </div>
+                </details>
                 <?php endforeach; ?>
 
                 <?php // Display standalone fonts (legacy or single fonts) ?>
@@ -806,23 +799,14 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
 
                     <?php // Display Adobe font kits (grouped) ?>
                     <?php foreach ($adobe_kits as $kit_id => $kit_data): ?>
-                    <div class="typost-font-kit-card">
-                        <div class="typost-font-kit-header">
-                            <h4>
-                                <button
-                                    type="button"
-                                    class="typost-toggle-kit"
-                                    aria-expanded="false"
-                                    aria-controls="typost-adobe-kit-<?php echo esc_attr($kit_id); ?>">
-                                    <span class="dashicons dashicons-arrow-right" aria-hidden="true"></span>
-                                    <?php echo esc_html($kit_data['kit_name']); ?>
-                                </button>
-                                <span class="typost-kit-font-count"><?php
-                                    /* translators: %d: number of fonts in the Adobe Fonts kit (Adobe Fonts tab) */
-                                    echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'typography-stylist'), count($kit_data['fonts'])));
-                                ?></span>
-                            </h4>
-                            <div class="typost-font-meta">
+                    <details class="typost-font-kit-card">
+                        <summary class="typost-font-kit-header">
+                            <span class="typost-kit-name"><?php echo esc_html($kit_data['kit_name']); ?></span>
+                            <span class="typost-kit-font-count"><?php
+                                /* translators: %d: number of fonts in the Adobe Fonts kit (Adobe Fonts tab) */
+                                echo esc_html(sprintf(_n('%d font', '%d fonts', count($kit_data['fonts']), 'typography-stylist'), count($kit_data['fonts'])));
+                            ?></span>
+                            <span class="typost-font-meta">
                                 <small>
                                     <code><?php echo esc_html($kit_data['css_url']); ?></code>
                                     <?php
@@ -838,10 +822,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     echo esc_html(sprintf(__('Added: %s', 'typography-stylist'), $formatted_date));
                                     ?>
                                 </small>
-                            </div>
-                        </div>
+                            </span>
+                        </summary>
 
-                        <div id="typost-adobe-kit-<?php echo esc_attr($kit_id); ?>" class="typost-kit-fonts" hidden>
+                        <div class="typost-kit-fonts">
                             <?php foreach ($kit_data['fonts'] as $font): ?>
                             <div class="typost-font-card typost-kit-font">
                                 <div class="typost-font-header">
@@ -929,7 +913,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             </div>
                             <?php endforeach; ?>
                         </div>
-                    </div>
+                    </details>
                     <?php endforeach; ?>
 
                     <?php // Display standalone Adobe fonts (legacy, before kit refactor) ?>
