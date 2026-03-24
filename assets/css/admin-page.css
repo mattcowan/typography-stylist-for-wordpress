@@ -189,21 +189,26 @@
     hyphens: auto;
 }
 
-/* Feature Category Section */
+/* Feature Category Section — card style matching font kit headers */
 .typost-feature-category-section {
-    margin: 30px 0;
-    border-bottom: 1px solid #ddd;
-}
-
-.typost-feature-category-section:last-of-type {
-    border-bottom: none;
+    border: 1px solid #c3c4c7;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    background: #fff;
 }
 
 /* Collapsible summary styles */
 .typost-feature-category-summary {
     cursor: pointer;
     list-style: none;
-    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    padding-inline-start: 36px;
+    gap: 10px;
+    background: #f0f0f1;
+    border-bottom: 1px solid #c3c4c7;
+    position: relative;
 }
 
 /* Remove default marker/disclosure triangle */
@@ -212,55 +217,44 @@
     display: none;
 }
 
-.typost-feature-category-summary:focus {
-    outline: 2px solid #2271b1;
-    outline-offset: 8px;
-}
-
-/* Style the h3 to include the arrow */
-.typost-feature-category-section > summary > h3,
-.typost-feature-category-section > .typost-feature-category-summary > h3 {
-    color: #2271b1;
-    font-size: 18px;
-    margin: 0;
-    padding-bottom: 16px;
-    padding-left: 30px;
-    border-bottom: 2px solid #2271b1;
-    position: relative;
-    display: inline-block;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-/* Add arrow before h3 */
-.typost-feature-category-section > summary > h3::before,
-.typost-feature-category-section > .typost-feature-category-summary > h3::before {
+/* Custom arrow */
+.typost-feature-category-summary::before {
     content: '▶';
     position: absolute;
-    left: 0;
-    color: #2271b1;
+    inset-inline-start: 15px;
+    color: #1d2327;
     transition: transform 0.2s;
-    display: inline-block;
-    width: 20px;
+    font-size: 12px;
 }
 
-/* Rotate arrow when open */
-.typost-feature-category-section[open] > summary > h3::before,
-.typost-feature-category-section[open] > .typost-feature-category-summary > h3::before {
+.typost-feature-category-section[open] > .typost-feature-category-summary::before {
     transform: rotate(90deg);
 }
 
-.typost-feature-category-summary:hover > h3 {
-    opacity: 0.8;
+.typost-feature-category-summary:hover {
+    background: #e8e8e9;
 }
 
-/* Legacy support for non-collapsible sections */
-.typost-feature-category-section > h3 {
-    color: #2271b1;
-    font-size: 18px;
-    margin-bottom: 20px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #2271b1;
+.typost-feature-category-summary:focus {
+    outline: 2px solid #2271b1;
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Category name in summary */
+.typost-feature-category-title {
+    color: #1d2327;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Feature count badge */
+.typost-feature-category-count {
+    font-size: 13px;
+    font-weight: 400;
+    color: #646970;
+    min-width: 60px;
+    text-align: start;
 }
 
 /* Feature Demos Grid */
@@ -268,7 +262,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 20px;
-    margin: 20px 0;
+    padding: 15px;
 }
 
 .typost-feature-demo-card {
@@ -494,7 +488,7 @@ details.typost-font-kit-card {
     display: flex;
     align-items: center;
     padding: 15px;
-    padding-left: 36px;
+    padding-inline-start: 36px;
     gap: 10px;
     background: #f0f0f1;
     border-bottom: 1px solid #c3c4c7;
@@ -511,7 +505,7 @@ details.typost-font-kit-card {
 .typost-font-kit-header::before {
     content: '▶';
     position: absolute;
-    left: 15px;
+    inset-inline-start: 15px;
     color: #1d2327;
     transition: transform 0.2s;
     font-size: 12px;
@@ -542,7 +536,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-weight: 400;
     color: #646970;
     min-width: 60px;
-    text-align: left;
+    text-align: start;
 }
 
 .typost-kit-fonts {
