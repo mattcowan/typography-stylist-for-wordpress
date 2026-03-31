@@ -18,8 +18,8 @@ jQuery(document).ready(function($) {
         var $panel = $('#typost-tab-' + tab);
         $panel.addClass('active').removeAttr('hidden');
 
-        // Move focus to panel for screen readers
-        $panel.focus();
+        // Move focus to panel for screen readers (without scrolling away from tabs)
+        $panel[0].focus({ preventScroll: true });
     });
 
     // Add keyboard navigation (arrow keys for tabs)

@@ -107,6 +107,10 @@ class Typost {
         // Register settings
         add_action('admin_init', array($this, 'register_settings'));
 
+        // Process color scheme save early (before admin_enqueue_scripts)
+        // so inline CSS matches the newly-selected scheme on the save request
+        add_action('admin_init', array($this, 'early_save_color_scheme'));
+
         // Ensure .htaccess exists for existing installations
         add_action('admin_init', array($this, 'maybe_create_htaccess'), 1);
 
@@ -946,6 +950,9 @@ class Typost {
             TYPOST_VERSION
         );
 
+        // Output color scheme CSS variable overrides
+        $this->output_admin_color_scheme();
+
         wp_enqueue_script(
             'typost-admin',
             TYPOST_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
@@ -1035,6 +1042,213 @@ class Typost {
          * @since 1.3.0
          */
         do_action('typost_admin_assets');
+    }
+
+    /**
+     * Sanitize color scheme option value
+     *
+     * @param string $value The color scheme value to sanitize.
+     * @return string Sanitized color scheme value.
+     */
+    public function sanitize_color_scheme($value) {
+        $valid = array('default', 'admin-colors', 'alice-blue', 'dark', 'high-contrast');
+        return in_array($value, $valid, true) ? $value : 'default';
+    }
+
+    /**
+     * Process color scheme save early in admin_init, before admin_enqueue_scripts.
+     * This ensures the inline CSS matches the newly-selected scheme on the same request.
+     */
+    public function early_save_color_scheme() {
+        if (
+            isset($_POST['typost_save_options_settings']) &&
+            isset($_POST['typost_admin_color_scheme']) &&
+            current_user_can('manage_options') &&
+            check_admin_referer('typography_stylist_options_settings_nonce')
+        ) {
+            $color_scheme = sanitize_key(wp_unslash($_POST['typost_admin_color_scheme']));
+            update_option('typost_admin_color_scheme', $this->sanitize_color_scheme($color_scheme));
+        }
+    }
+
+    /**
+     * Output admin color scheme CSS variable overrides via inline style
+     */
+    public function output_admin_color_scheme() {
+        $scheme = get_option('typost_admin_color_scheme', 'alice-blue');
+
+        if ('default' === $scheme) {
+            return;
+        }
+
+        $css = '';
+
+        switch ($scheme) {
+            case 'admin-colors':
+                $css = $this->get_admin_colors_css();
+                break;
+
+            case 'alice-blue':
+                $css = '.typost-admin-wrap {
+                    --typost-color-primary: #4a90c4;
+                    --typost-color-primary-dark: #2e6da4;
+                    --typost-color-primary-focus: rgba(74, 144, 196, 0.3);
+                    --typost-bg-page: #f0f8ff;
+                    --typost-bg-surface: #ffffff;
+                    --typost-bg-surface-alt: #f7fbff;
+                    --typost-bg-section: #eef5fc;
+                    --typost-bg-info: #e3f0fc;
+                    --typost-bg-header: #dce9f5;
+                    --typost-bg-header-hover: #cdddef;
+                    --typost-bg-muted: #e8f1fa;
+                    --typost-bg-code: #dce9f5;
+                    --typost-bg-adobe-card: #eaf3fc;
+                    --typost-border-default: #b3cde0;
+                    --typost-border-strong: #8bb0cf;
+                    --typost-border-container: #a6c5dd;
+                    --typost-border-subtle: #c5d9eb;
+                    --typost-border-input: #7ea5c3;
+                    --typost-text-primary: #1a2a3a;
+                    --typost-text-secondary: #4a6580;
+                    --typost-text-muted: #5a7a94;
+                    --typost-color-support-bg: #f0f8ff;
+                }';
+                break;
+
+            case 'dark':
+                $css = '.typost-admin-wrap {
+                    --typost-color-primary: #6db3e8;
+                    --typost-color-primary-dark: #8ec5f0;
+                    --typost-color-primary-focus: rgba(109, 179, 232, 0.35);
+                    --typost-bg-page: #0f1729;
+                    --typost-bg-surface: #1a2538;
+                    --typost-bg-surface-alt: #1f2b3d;
+                    --typost-bg-section: #152030;
+                    --typost-bg-info: #162540;
+                    --typost-bg-header: #243348;
+                    --typost-bg-header-hover: #2d3d55;
+                    --typost-bg-muted: #1c2a3e;
+                    --typost-bg-code: #1f2d44;
+                    --typost-bg-adobe-card: #162238;
+                    --typost-border-default: #2e4562;
+                    --typost-border-strong: #3a5575;
+                    --typost-border-container: #2a3f5a;
+                    --typost-border-subtle: #253750;
+                    --typost-border-input: #3a5575;
+                    --typost-text-primary: #f0f4f8;
+                    --typost-text-secondary: #c4d0dc;
+                    --typost-text-muted: #8fa4b8;
+                    --typost-text-on-primary: #ffffff;
+                    --typost-color-danger: #f06060;
+                    --typost-color-danger-hover: #f57575;
+                    --typost-color-danger-bright: #ff8888;
+                    --typost-color-support-bg: #1a2510;
+                    --typost-color-warning-bg: #2a2510;
+                    --typost-color-warning-text: #e8b830;
+                    --typost-color-highlight-bg: #2e3520;
+                }';
+                break;
+
+            case 'high-contrast':
+                $css = '.typost-admin-wrap {
+                    --typost-color-primary: #0050a0;
+                    --typost-color-primary-dark: #003870;
+                    --typost-color-primary-focus: rgba(0, 80, 160, 0.4);
+                    --typost-bg-page: #ffffff;
+                    --typost-bg-surface: #ffffff;
+                    --typost-bg-surface-alt: #f5f5f5;
+                    --typost-bg-section: #f0f0f0;
+                    --typost-bg-info: #e8f0f8;
+                    --typost-bg-header: #e0e0e0;
+                    --typost-bg-header-hover: #d0d0d0;
+                    --typost-bg-muted: #ebebeb;
+                    --typost-bg-code: #e0e0e0;
+                    --typost-bg-adobe-card: #f0f5fa;
+                    --typost-border-default: #333333;
+                    --typost-border-strong: #222222;
+                    --typost-border-container: #333333;
+                    --typost-border-subtle: #444444;
+                    --typost-border-input: #222222;
+                    --typost-text-primary: #000000;
+                    --typost-text-secondary: #333333;
+                    --typost-text-muted: #444444;
+                    --typost-color-danger: #cc0000;
+                    --typost-color-danger-hover: #ee0000;
+                    --typost-color-danger-bright: #ff0000;
+                }';
+                break;
+        }
+
+        if (!empty($css)) {
+            wp_add_inline_style('typost-admin', $css);
+        }
+    }
+
+    /**
+     * Generate CSS variable overrides from the user's WordPress admin color scheme
+     *
+     * @return string CSS string with variable overrides.
+     */
+    private function get_admin_colors_css() {
+        global $_wp_admin_css_colors;
+
+        $scheme_name = get_user_option('admin_color');
+        if (empty($scheme_name) || empty($_wp_admin_css_colors[$scheme_name])) {
+            return ''; // Fall back to default
+        }
+
+        $scheme = $_wp_admin_css_colors[$scheme_name];
+        $colors = $scheme->colors;
+
+        // WordPress admin color schemes provide 4 base colors:
+        // [0] = base (sidebar bg), [1] = highlight (hover/accent), [2] = notification, [3] = action/link
+        $base    = isset($colors[0]) ? $colors[0] : '#23282d';
+        $accent  = isset($colors[1]) ? $colors[1] : '#0073aa';
+        $notify  = isset($colors[2]) ? $colors[2] : '#0073aa';
+        $action  = isset($colors[3]) ? $colors[3] : '#00a0d2';
+
+        // Use action color as primary, accent as primary-dark
+        $primary      = $action;
+        $primary_dark = $accent;
+
+        // Derive lighter variants by mixing with white
+        $info_bg   = $this->mix_hex_color($primary, '#ffffff', 0.9);
+        $header_bg = $this->mix_hex_color($primary, '#ffffff', 0.85);
+        $hover_bg  = $this->mix_hex_color($primary, '#ffffff', 0.78);
+        $muted_bg  = $this->mix_hex_color($primary, '#ffffff', 0.88);
+
+        // Derive border from primary at medium opacity
+        $border_primary = $this->mix_hex_color($primary, '#ffffff', 0.6);
+
+        return ".typost-admin-wrap {
+            --typost-color-primary: {$primary};
+            --typost-color-primary-dark: {$primary_dark};
+            --typost-bg-info: {$info_bg};
+            --typost-bg-header: {$header_bg};
+            --typost-bg-header-hover: {$hover_bg};
+            --typost-bg-muted: {$muted_bg};
+            --typost-bg-code: {$header_bg};
+            --typost-bg-adobe-card: {$info_bg};
+        }";
+    }
+
+    /**
+     * Mix two hex colors at a given ratio
+     *
+     * @param string $color1 First hex color (e.g., '#2271b1').
+     * @param string $color2 Second hex color (e.g., '#ffffff').
+     * @param float  $ratio  Ratio of color2 (0.0 = all color1, 1.0 = all color2).
+     * @return string Mixed hex color.
+     */
+    private function mix_hex_color($color1, $color2, $ratio) {
+        $c1 = array_map('hexdec', str_split(ltrim($color1, '#'), 2));
+        $c2 = array_map('hexdec', str_split(ltrim($color2, '#'), 2));
+
+        $r = round($c1[0] * (1 - $ratio) + $c2[0] * $ratio);
+        $g = round($c1[1] * (1 - $ratio) + $c2[1] * $ratio);
+        $b = round($c1[2] * (1 - $ratio) + $c2[2] * $ratio);
+
+        return sprintf('#%02x%02x%02x', min(255, $r), min(255, $g), min(255, $b));
     }
 
     /**
@@ -4832,6 +5046,12 @@ class Typost {
             // Save archive full content check setting
             $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';
             update_option('typost_archive_full_content_check', $archive_check);
+
+            // Save color scheme setting
+            $color_scheme = isset($_POST['typost_admin_color_scheme'])
+                ? sanitize_key(wp_unslash($_POST['typost_admin_color_scheme']))
+                : 'default';
+            update_option('typost_admin_color_scheme', $this->sanitize_color_scheme($color_scheme));
 
             // Clear cache for all users when options change
             // Archive content check changes require cache refresh to take effect
