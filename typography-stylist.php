@@ -950,8 +950,13 @@ class Typost {
             TYPOST_VERSION
         );
 
-        // Output color scheme CSS variable overrides
-        $this->output_admin_color_scheme();
+        // Output color scheme CSS variable overrides only once per request
+        static $color_scheme_output = false;
+
+        if (!$color_scheme_output) {
+            $this->output_admin_color_scheme();
+            $color_scheme_output = true;
+        }
 
         wp_enqueue_script(
             'typost-admin',
@@ -1217,18 +1222,18 @@ class Typost {
         $hover_bg  = $this->mix_hex_color($primary, '#ffffff', 0.78);
         $muted_bg  = $this->mix_hex_color($primary, '#ffffff', 0.88);
 
-        // Derive border from primary at medium opacity
-        $border_primary = $this->mix_hex_color($primary, '#ffffff', 0.6);
-
         return ".typost-admin-wrap {
             --typost-color-primary: {$primary};
             --typost-color-primary-dark: {$primary_dark};
+            --typost-bg-page: #f0f0f1;
             --typost-bg-info: {$info_bg};
             --typost-bg-header: {$header_bg};
             --typost-bg-header-hover: {$hover_bg};
             --typost-bg-muted: {$muted_bg};
             --typost-bg-code: {$header_bg};
             --typost-bg-adobe-card: {$info_bg};
+            --typost-text-primary: #1d2327;
+            --typost-border-default: #c3c4c7;
         }";
     }
 

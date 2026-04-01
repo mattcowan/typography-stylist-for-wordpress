@@ -1280,6 +1280,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
    custom color schemes so tabs match the chosen palette.
    ========================================================================= */
 [data-color-scheme="alice-blue"] .nav-tab,
+[data-color-scheme="admin-colors"] .nav-tab,
 [data-color-scheme="dark"] .nav-tab,
 [data-color-scheme="high-contrast"] .nav-tab {
     color: var(--typost-text-primary);
@@ -1288,12 +1289,14 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 [data-color-scheme="alice-blue"] .nav-tab:hover,
+[data-color-scheme="admin-colors"] .nav-tab:hover,
 [data-color-scheme="dark"] .nav-tab:hover,
 [data-color-scheme="high-contrast"] .nav-tab:hover {
     background: var(--typost-bg-header-hover);
 }
 
 [data-color-scheme="alice-blue"] .nav-tab-active,
+[data-color-scheme="admin-colors"] .nav-tab-active,
 [data-color-scheme="dark"] .nav-tab-active,
 [data-color-scheme="high-contrast"] .nav-tab-active {
     background: var(--typost-bg-page);
@@ -1302,6 +1305,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 [data-color-scheme="alice-blue"] .nav-tab-active:hover,
+[data-color-scheme="admin-colors"] .nav-tab-active:hover,
 [data-color-scheme="dark"] .nav-tab-active:hover,
 [data-color-scheme="high-contrast"] .nav-tab-active:hover {
     background: var(--typost-bg-page);
