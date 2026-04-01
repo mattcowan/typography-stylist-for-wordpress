@@ -1521,3 +1521,36 @@ msgstr "Ignorer l'avertissement lors de l'application de fonctionnalités à des
 #: includes/admin-page.php
 msgid "When applying inline typography features to a partial word (e.g., a single letter), the editor normally shows a warning recommending conversion to a Typography Stylist block. Enable this option to skip the warning and apply features directly. Screen readers handle inline spans well, so this is safe for most use cases."
 msgstr "Lors de l'application de fonctionnalités typographiques en ligne à un mot partiel (par ex., une seule lettre), l'éditeur affiche normalement un avertissement recommandant la conversion en bloc Typography Stylist. Activez cette option pour ignorer l'avertissement et appliquer les fonctionnalités directement. Les lecteurs d'écran gèrent bien les éléments span en ligne, donc c'est sûr dans la plupart des cas."
+
+#: includes/admin-page.php:1296
+msgid "Admin Color Scheme"
+msgstr "Schéma de couleurs admin"
+
+#: includes/admin-page.php:1303
+msgid "Default"
+msgstr "Par défaut"
+
+#: includes/admin-page.php:1306
+msgid "Match Admin Theme"
+msgstr "Correspondre au thème admin"
+
+#: includes/admin-page.php:1309
+msgid "Alice Blue"
+msgstr "Bleu Alice"
+
+#: includes/admin-page.php:1312
+msgid "Dark Mode"
+msgstr "Mode sombre"
+
+#: includes/admin-page.php:1315
+msgid "High Contrast"
+msgstr "Contraste élevé"
+
+#: includes/admin-page.php:1319
+msgid "Choose a color scheme for the Typography Stylist admin page. \"Match Admin Theme\" adapts to your WordPress admin color palette."
+msgstr "Choisissez un schéma de couleurs pour la page d'administration de Typography Stylist. « Correspondre au thème admin » s'adapte à la palette de couleurs de votre administration WordPress."
+
+#: includes/admin-page.php:454
+#, php-format
+msgid "Actions for %s"
+msgstr "Actions pour %s"

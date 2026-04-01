@@ -1,16 +1,81 @@
 /**
  * Admin Page Styles
- * Headline Ligatures & Styles Plugin
+ * Typography Stylist Plugin
  */
 
+/* =========================================================================
+   CSS CUSTOM PROPERTIES — Color & Typography Tokens
+   ========================================================================= */
 .typost-admin-wrap {
-    max-width: 1200px;
+    /* --- Color tokens --- */
+    --typost-color-primary: #2271b1;
+    --typost-color-primary-dark: #135e96;
+    --typost-color-primary-focus: rgba(34, 113, 177, 0.3);
+    --typost-color-accent-alt: #0073aa;
+
+    --typost-bg-page: #FAF9F6;
+    --typost-bg-surface: #fff;
+    --typost-bg-surface-alt: #fafafa;
+    --typost-bg-section: #f9f9f9;
+    --typost-bg-info: #f0f6fc;
+    --typost-bg-header: #f0f0f1;
+    --typost-bg-header-hover: #e8e8e9;
+    --typost-bg-muted: #f6f7f7;
+    --typost-bg-code: #f0f0f1;
+    --typost-bg-adobe-card: #f8fbff;
+
+    --typost-border-default: #ddd;
+    --typost-border-strong: #c3c4c7;
+    --typost-border-subtle: #dcdcde;
+    --typost-border-input: #8c8f94;
+    --typost-border-container: #ccd0d4;
+
+    --typost-text-primary: #1d2327;
+    --typost-text-secondary: #646970;
+    --typost-text-muted: #666;
+    --typost-text-on-primary: #fff;
+
+    --typost-color-danger: #b32d2e;
+    --typost-color-danger-hover: #d63638;
+    --typost-color-danger-bright: #dc3232;
+
+    --typost-color-warning-bg: #fcf9e8;
+    --typost-color-warning-border: #dba617;
+    --typost-color-warning-text: #996800;
+
+    --typost-color-highlight-bg: #fff3cd;
+    --typost-color-support-bg: #fffff0;
+
+    /* --- Typography tokens (bumped +1px from original) --- */
+    --typost-font-size-base: 16px;
+    --typost-font-size-sm: 15px;
+    --typost-font-size-xs: 14px;
+    --typost-font-size-xxs: 13px;
+    --typost-font-size-label-small: 12px;
+    --typost-font-size-lg: 16px;
+    --typost-font-size-xl: 16px;
+    --typost-font-size-heading: 18px;
+
+    /* --- Layout tokens --- */
+    --typost-line-length: 45em;
+
+    /* --- Base font size and color --- */
+    font-size: var(--typost-font-size-base);
+    color: var(--typost-text-primary);
 }
 
+/* Override WP common.css "h2, h3 { color: #1d2327 }" inside our admin wrap */
+.typost-admin-wrap h2,
+.typost-admin-wrap h3 {
+    color: var(--typost-text-primary);
+}
+
+/* =========================================================================
+   LAYOUT & CONTAINER
+   ========================================================================= */
 .typost-admin-container {
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    background: transparent;
+    border-bottom: 1px solid var(--typost-border-container);
     margin-top: 20px;
 }
 
@@ -26,6 +91,8 @@
     display: flex;
     align-items: center;
     cursor: pointer;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
 }
 
 .typost-tab-content {
@@ -35,14 +102,39 @@
 
 .typost-tab-content.active {
     display: block;
-    background: #FAF9F6;
+    background: var(--typost-bg-page);
+    border-left: 1px solid var(--typost-border-container);
+    border-right: 1px solid var(--typost-border-container);
 }
 
+/* Bringhurst line-length constraint for readable text (~66 characters) */
+.typost-tab-content > p,
+.typost-tab-content > .description,
+.typost-help-section p,
+.typost-help-section li,
+.typost-font-help p,
+.typost-font-help li,
+.typost-adobe-help p,
+.typost-adobe-help li,
+.typost-manual-help p,
+.typost-manual-help li,
+.typost-developer-support p,
+.typost-preset-controls .description,
+.typost-preset-font-selector .description,
+.form-table .description,
+.typost-feature-demo-description,
+.typost-accessibility-recommendations li {
+    max-width: var(--typost-line-length);
+}
+
+/* =========================================================================
+   PRESET CONTROLS (Font Features Tab)
+   ========================================================================= */
 .typost-preset-controls {
     margin: 20px 0;
     padding: 20px;
-    background: #f0f6fc;
-    border-left: 4px solid #2271b1;
+    background: var(--typost-bg-info);
+    border-left: 4px solid var(--typost-color-primary);
     border-radius: 4px;
 }
 
@@ -59,27 +151,27 @@
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    font-size: 14px;
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-font-select {
     max-width: 400px;
     padding: 8px;
-    font-size: 14px;
-    border: 1px solid #8c8f94;
+    font-size: var(--typost-font-size-sm);
+    border: 1px solid var(--typost-border-input);
     border-radius: 4px;
 }
 
 .typost-font-select:focus {
-    outline: 2px solid #2271b1;
+    outline: 2px solid var(--typost-color-primary);
     outline-offset: 0;
 }
 
 .typost-preset-font-selector .description,
 .typost-preset-size-control .description {
     margin-top: 8px;
-    color: #646970;
-    font-size: 13px;
+    color: var(--typost-text-secondary);
+    font-size: var(--typost-font-size-xs);
 }
 
 .typost-preset-size-control {
@@ -90,7 +182,7 @@
     display: inline-block;
     min-width: 50px;
     text-align: right;
-    color: #2271b1;
+    color: var(--typost-color-primary);
     font-weight: 700;
     margin-left: 8px;
 }
@@ -101,7 +193,7 @@
     height: 8px;
     -webkit-appearance: none;
     appearance: none;
-    background: #ddd;
+    background: var(--typost-border-default);
     outline: none;
     border-radius: 4px;
     margin-bottom: 8px;
@@ -112,20 +204,20 @@
     appearance: none;
     width: 20px;
     height: 20px;
-    background: #2271b1;
+    background: var(--typost-color-primary);
     cursor: pointer;
     border-radius: 50%;
     transition: background 0.2s;
 }
 
 .typost-size-slider::-webkit-slider-thumb:hover {
-    background: #135e96;
+    background: var(--typost-color-primary-dark);
 }
 
 .typost-size-slider::-moz-range-thumb {
     width: 20px;
     height: 20px;
-    background: #2271b1;
+    background: var(--typost-color-primary);
     cursor: pointer;
     border-radius: 50%;
     border: none;
@@ -133,46 +225,48 @@
 }
 
 .typost-size-slider::-moz-range-thumb:hover {
-    background: #135e96;
+    background: var(--typost-color-primary-dark);
 }
 
 .typost-size-slider:focus {
-    outline: 2px solid #2271b1;
+    outline: 2px solid var(--typost-color-primary);
     outline-offset: 2px;
 }
 
 .typost-size-slider:focus::-webkit-slider-thumb {
-    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
+    box-shadow: 0 0 0 3px var(--typost-color-primary-focus);
 }
 
 .typost-size-slider:focus::-moz-range-thumb {
-    box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.3);
+    box-shadow: 0 0 0 3px var(--typost-color-primary-focus);
 }
 
-/* Baseline Preview Section */
+/* =========================================================================
+   BASELINE PREVIEW
+   ========================================================================= */
 .typost-baseline-preview-section {
     margin: 30px 0;
     padding: 20px;
-    background: #f9f9f9;
-    border: 1px solid #ddd;
+    background: var(--typost-bg-section);
+    border: 1px solid var(--typost-border-default);
     border-radius: 6px;
 }
 
 .typost-baseline-preview-section h3 {
     margin: 0 0 8px 0;
-    font-size: 16px;
-    color: #1d2327;
+    font-size: var(--typost-font-size-xl);
+    color: var(--typost-text-primary);
 }
 
 .typost-baseline-preview-section .description {
     margin: 0 0 20px 0;
-    color: #666;
-    font-size: 13px;
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xs);
 }
 
 .typost-baseline-preview-container {
-    background: #fff;
-    border: 2px solid #2271b1;
+    background: var(--typost-bg-surface);
+    border: 2px solid var(--typost-color-primary);
     border-radius: 4px;
     padding: 30px;
     overflow: hidden;
@@ -185,16 +279,18 @@
     font-family: Georgia, serif;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    color: #1d2327;
+    color: var(--typost-text-primary);
     hyphens: auto;
 }
 
-/* Feature Category Section — card style matching font kit headers */
+/* =========================================================================
+   FEATURE CATEGORY SECTIONS
+   ========================================================================= */
 .typost-feature-category-section {
-    border: 1px solid #c3c4c7;
+    border: 1px solid var(--typost-border-strong);
     margin-bottom: 20px;
     border-radius: 4px;
-    background: #fff;
+    background: var(--typost-bg-surface);
 }
 
 /* Collapsible summary styles */
@@ -206,8 +302,8 @@
     padding: 15px;
     padding-inline-start: 36px;
     gap: 10px;
-    background: #f0f0f1;
-    border-bottom: 1px solid #c3c4c7;
+    background: var(--typost-bg-header);
+    border-bottom: 1px solid var(--typost-border-strong);
     position: relative;
 }
 
@@ -219,12 +315,12 @@
 
 /* Custom arrow */
 .typost-feature-category-summary::before {
-    content: '▶';
+    content: '\25B6';
     position: absolute;
     inset-inline-start: 15px;
-    color: #1d2327;
+    color: var(--typost-text-primary);
     transition: transform 0.2s;
-    font-size: 12px;
+    font-size: var(--typost-font-size-label-small);
 }
 
 .typost-feature-category-section[open] > .typost-feature-category-summary::before {
@@ -232,44 +328,46 @@
 }
 
 .typost-feature-category-summary:hover {
-    background: #e8e8e9;
+    background: var(--typost-bg-header-hover);
 }
 
 .typost-feature-category-summary:focus {
-    outline: 2px solid #2271b1;
+    outline: 2px solid var(--typost-color-primary);
     outline-offset: 2px;
     border-radius: 2px;
 }
 
 /* Category name in summary */
 .typost-feature-category-title {
-    color: #1d2327;
-    font-size: 16px;
+    color: var(--typost-text-primary);
+    font-size: var(--typost-font-size-xl);
     font-weight: 600;
 }
 
 /* Feature count badge */
 .typost-feature-category-count {
-    font-size: 13px;
+    font-size: var(--typost-font-size-xs);
     font-weight: 400;
-    color: #646970;
+    color: var(--typost-text-secondary);
     min-width: 60px;
     text-align: start;
 }
 
-/* Feature Demos Grid */
+/* =========================================================================
+   FEATURE DEMO CARDS
+   ========================================================================= */
 .typost-feature-demos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
     padding: 15px;
 }
 
 .typost-feature-demo-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--typost-border-default);
     padding: 20px;
     border-radius: 6px;
-    background: #fafafa;
+    background: var(--typost-bg-surface-alt);
     transition: box-shadow 0.2s;
 }
 
@@ -286,22 +384,22 @@
 
 .typost-feature-demo-header h4 {
     margin: 0;
-    font-size: 15px;
-    color: #1d2327;
+    font-size: var(--typost-font-size-lg);
+    color: var(--typost-text-primary);
 }
 
 .typost-feature-demo-header .typost-feature-code {
-    background: #2271b1;
-    color: #fff;
+    background: var(--typost-color-primary);
+    color: var(--typost-text-on-primary);
     padding: 4px 8px;
     border-radius: 3px;
-    font-size: 12px;
+    font-size: var(--typost-font-size-xxs);
     font-weight: 600;
 }
 
 .typost-feature-demo-description {
-    color: #666;
-    font-size: 13px;
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xs);
     margin: 0 0 15px 0;
     line-height: 1.5;
 }
@@ -315,8 +413,8 @@
 }
 
 .typost-feature-preview-container {
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-default);
     border-radius: 4px;
     padding: 12px;
     flex: 1 1 150px;
@@ -324,10 +422,10 @@
 }
 
 .typost-feature-preview-label {
-    font-size: 11px;
+    font-size: var(--typost-font-size-label-small);
     font-weight: 600;
     text-transform: uppercase;
-    color: #666;
+    color: var(--typost-text-muted);
     margin-bottom: 8px;
     letter-spacing: 0.5px;
 }
@@ -345,30 +443,32 @@
 }
 
 .typost-feature-preview-off {
-    color: #666;
+    color: var(--typost-text-muted);
 }
 
 .typost-feature-preview-on {
-    color: #1d2327;
+    color: var(--typost-text-primary);
     font-weight: 500;
     width: 100%;
-    background: #fff;
-    border: 2px solid #ddd;
+    background: var(--typost-bg-surface);
+    border: 2px solid var(--typost-border-default);
     border-radius: 4px;
     position: relative;
     box-sizing: border-box;
 }
 
-/* User Presets Section */
+/* =========================================================================
+   USER PRESETS SECTION
+   ========================================================================= */
 .typost-user-presets-section {
     margin-top: 40px;
     padding-top: 30px;
-    border-top: 3px solid #2271b1;
+    border-top: 3px solid var(--typost-color-primary);
 }
 
 .typost-user-presets-section > h3 {
-    color: #2271b1;
-    font-size: 18px;
+    color: var(--typost-color-primary);
+    font-size: var(--typost-font-size-heading);
     margin-bottom: 15px;
 }
 
@@ -380,35 +480,35 @@
 }
 
 .typost-preset-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--typost-border-default);
     padding: 20px;
     border-radius: 4px;
-    background: #fafafa;
+    background: var(--typost-bg-surface-alt);
 }
 
 .typost-preset-card h4 {
     margin: 0 0 10px 0;
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
 }
 
 .typost-preset-description {
-    color: #666;
-    font-size: 13px;
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xs);
     margin-bottom: 10px;
 }
 
 .typost-preset-features {
-    font-size: 12px;
+    font-size: var(--typost-font-size-xxs);
     margin-bottom: 15px;
     padding: 8px;
-    background: #fff;
+    background: var(--typost-bg-surface);
     border-radius: 3px;
 }
 
 .typost-preset-preview {
     font-size: 50px;
     padding: 15px;
-    background: #fff;
+    background: var(--typost-bg-surface);
     border-radius: 3px;
     text-align: center;
     font-family: Georgia, serif;
@@ -426,20 +526,23 @@
 .typost-feature-category h3 {
     margin-bottom: 10px;
     padding-bottom: 5px;
-    border-bottom: 2px solid #2271b1;
+    border-bottom: 2px solid var(--typost-color-primary);
 }
 
 .typost-feature-category table code {
-    background: #f0f0f1;
+    background: var(--typost-bg-code);
     padding: 3px 6px;
     border-radius: 3px;
     font-weight: 600;
 }
 
+/* =========================================================================
+   HELP TAB
+   ========================================================================= */
 .typost-help-section {
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--typost-border-default);
 }
 
 .typost-help-section:last-child {
@@ -447,7 +550,7 @@
 }
 
 .typost-help-section h3 {
-    color: #2271b1;
+    color: var(--typost-color-primary);
 }
 
 .typost-help-section ul, .typost-help-section ol {
@@ -457,29 +560,31 @@
 .typost-add-preset-section {
     margin-top: 30px;
     padding: 20px;
-    background: #f0f6fc;
-    border-left: 4px solid #2271b1;
+    background: var(--typost-bg-info);
+    border-left: 4px solid var(--typost-color-primary);
 }
 
-/* Fonts Tab Styles */
+/* =========================================================================
+   FONTS TAB
+   ========================================================================= */
 .typost-fonts-list {
     margin: 20px 0;
 }
 
 .typost-font-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--typost-border-default);
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 4px;
-    background: #fafafa;
+    background: var(--typost-bg-surface-alt);
 }
 
 /* Kit grouping styles - uses native <details>/<summary> */
 details.typost-font-kit-card {
-    border: 1px solid #c3c4c7;
+    border: 1px solid var(--typost-border-strong);
     margin-bottom: 20px;
     border-radius: 4px;
-    background: #fff;
+    background: var(--typost-bg-surface);
 }
 
 .typost-font-kit-header {
@@ -490,8 +595,8 @@ details.typost-font-kit-card {
     padding: 15px;
     padding-inline-start: 36px;
     gap: 10px;
-    background: #f0f0f1;
-    border-bottom: 1px solid #c3c4c7;
+    background: var(--typost-bg-header);
+    border-bottom: 1px solid var(--typost-border-strong);
     position: relative;
 }
 
@@ -503,12 +608,12 @@ details.typost-font-kit-card {
 
 /* Custom arrow */
 .typost-font-kit-header::before {
-    content: '▶';
+    content: '\25B6';
     position: absolute;
     inset-inline-start: 15px;
-    color: #1d2327;
+    color: var(--typost-text-primary);
     transition: transform 0.2s;
-    font-size: 12px;
+    font-size: var(--typost-font-size-label-small);
 }
 
 details.typost-font-kit-card[open] > .typost-font-kit-header::before {
@@ -516,42 +621,42 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-font-kit-header:hover {
-    background: #e8e8e9;
+    background: var(--typost-bg-header-hover);
 }
 
 .typost-font-kit-header:focus {
-    outline: 2px solid #2271b1;
+    outline: 2px solid var(--typost-color-primary);
     outline-offset: 2px;
     border-radius: 2px;
 }
 
 .typost-kit-name {
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
     font-weight: 600;
-    color: #1d2327;
+    color: var(--typost-text-primary);
 }
 
 .typost-kit-font-count {
-    font-size: 13px;
+    font-size: var(--typost-font-size-xs);
     font-weight: 400;
-    color: #646970;
+    color: var(--typost-text-secondary);
     min-width: 60px;
     text-align: start;
 }
 
 .typost-kit-fonts {
     padding: 15px;
-    background: #f6f7f7;
+    background: var(--typost-bg-muted);
 }
 
 .typost-kit-fonts .typost-font-card {
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-default);
 }
 
 .typost-kit-font .typost-font-header h5 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--typost-font-size-lg);
     font-weight: 500;
 }
 
@@ -564,28 +669,31 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-font-header h4 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
 }
 
 .typost-font-families {
     padding: 10px;
-    background: #fff;
+    background: var(--typost-bg-surface);
     border-radius: 3px;
     margin-bottom: 10px;
-    font-size: 13px;
+    font-size: var(--typost-font-size-xs);
 }
 
 .typost-font-meta {
-    color: #666;
-    font-size: 12px;
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xxs);
     margin-left: auto;
 }
 
+/* =========================================================================
+   UPLOAD FONT SECTION
+   ========================================================================= */
 .typost-upload-font-section {
     margin-top: 30px;
     padding: 20px;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-default);
     border-radius: 4px;
 }
 
@@ -603,11 +711,32 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-weight: 600;
 }
 
+/* Fieldset/legend for weight checkbox groups (accessibility fix) */
+.typost-weight-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+}
+
+.typost-weight-fieldset > legend {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    font-size: var(--typost-font-size-base);
+}
+
+/* Display-only field label (not associated with an input) */
+.typost-field-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
 .typost-font-help {
     margin-top: 30px;
     padding: 15px;
-    background: #f0f6fc;
-    border-left: 4px solid #2271b1;
+    background: var(--typost-bg-info);
+    border-left: 4px solid var(--typost-color-primary);
 }
 
 .typost-font-help h4 {
@@ -621,9 +750,9 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-empty-state {
     padding: 40px;
     text-align: center;
-    color: #666;
-    background: #f9f9f9;
-    border: 1px dashed #ddd;
+    color: var(--typost-text-muted);
+    background: var(--typost-bg-section);
+    border: 1px dashed var(--typost-border-default);
     border-radius: 4px;
 }
 
@@ -642,15 +771,15 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-upload-method-buttons .dashicons {
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
     width: 16px;
     height: 16px;
 }
 
 .typost-or-separator {
-    color: #666;
+    color: var(--typost-text-muted);
     font-style: italic;
-    font-size: 13px;
+    font-size: var(--typost-font-size-xs);
 }
 
 .typost-selected-file {
@@ -658,14 +787,14 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background: #f0f6fc;
-    border: 1px solid #2271b1;
+    background: var(--typost-bg-info);
+    border: 1px solid var(--typost-color-primary);
     border-radius: 3px;
     margin-bottom: 10px;
 }
 
 .typost-selected-file .dashicons-media-document {
-    color: #2271b1;
+    color: var(--typost-color-primary);
     font-size: 18px;
     width: 18px;
     height: 18px;
@@ -674,11 +803,11 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-selected-file #typost-file-name {
     flex: 1;
     font-weight: 500;
-    color: #2271b1;
+    color: var(--typost-color-primary);
 }
 
 .typost-selected-file .button-link {
-    color: #b32d2e;
+    color: var(--typost-color-danger);
     text-decoration: none;
     padding: 0;
     background: none;
@@ -687,18 +816,18 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-selected-file .button-link .dashicons {
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
     width: 16px;
     height: 16px;
 }
 
 .typost-selected-file .button-link:hover {
-    color: #dc3232;
+    color: var(--typost-color-danger-bright);
 }
 
 .typost-file-size {
-    color: #666;
-    font-size: 12px;
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xxs);
     margin-left: 8px;
 }
 
@@ -709,7 +838,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-progress-bar {
     width: 100%;
     height: 30px;
-    background: #f0f0f1;
+    background: var(--typost-bg-code);
     border-radius: 3px;
     overflow: hidden;
     position: relative;
@@ -717,7 +846,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #2271b1 0%, #135e96 100%);
+    background: linear-gradient(90deg, var(--typost-color-primary) 0%, var(--typost-color-primary-dark) 100%);
     transition: width 0.3s ease;
     display: flex;
     align-items: center;
@@ -727,18 +856,20 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-progress-text {
     text-align: center;
     margin-top: 8px;
-    font-size: 13px;
-    color: #666;
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-text-muted);
 }
 
 .typost-selected-file .dashicons-media-archive {
-    color: #2271b1;
+    color: var(--typost-color-primary);
     font-size: 18px;
     width: 18px;
     height: 18px;
 }
 
-/* Accessibility helpers */
+/* =========================================================================
+   ACCESSIBILITY HELPERS
+   ========================================================================= */
 .screen-reader-text {
     border: 0;
     clip: rect(1px, 1px, 1px, 1px);
@@ -758,9 +889,9 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     box-shadow: 0 0 2px 2px rgba(0, 0, 0, .6);
     clip: auto !important;
     clip-path: none;
-    color: #0073aa;
+    color: var(--typost-color-accent-alt);
     display: block;
-    font-size: 14px;
+    font-size: var(--typost-font-size-sm);
     font-weight: 600;
     height: auto;
     left: 5px;
@@ -783,19 +914,21 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     margin: 0 1rem;
 }
 
-/* Adobe Fonts Section */
+/* =========================================================================
+   ADOBE FONTS SECTION
+   ========================================================================= */
 .typost-adobe-fonts-section {
     margin-top: 40px;
     padding: 20px;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-default);
     border-radius: 4px;
 }
 
 .typost-adobe-fonts-section h3 {
     margin-top: 0;
     padding-bottom: 10px;
-    border-bottom: 2px solid #2271b1;
+    border-bottom: 2px solid var(--typost-color-primary);
 }
 
 .typost-adobe-fonts-list {
@@ -803,27 +936,27 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-adobe-fonts-list h4 {
-    font-size: 15px;
+    font-size: var(--typost-font-size-lg);
     margin-bottom: 15px;
 }
 
 .typost-adobe-font-card {
-    border: 1px solid #ddd;
+    border: 1px solid var(--typost-border-default);
     padding: 15px;
     margin-bottom: 15px;
     border-radius: 4px;
-    background: #f8fbff;
+    background: var(--typost-bg-adobe-card);
 }
 
 .typost-adobe-font-card h5 {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--typost-font-size-lg);
 }
 
 .typost-add-adobe-font-form {
     margin: 20px 0;
     padding: 20px;
-    background: #f9f9f9;
+    background: var(--typost-bg-section);
     border-radius: 4px;
 }
 
@@ -834,8 +967,8 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-adobe-help {
     margin-top: 30px;
     padding: 15px;
-    background: #f0f6fc;
-    border-left: 4px solid #2271b1;
+    background: var(--typost-bg-info);
+    border-left: 4px solid var(--typost-color-primary);
     border-radius: 4px;
 }
 
@@ -848,18 +981,20 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-delete-adobe-font {
-    color: #b32d2e;
+    color: var(--typost-color-danger);
 }
 
 .typost-delete-adobe-font:hover {
-    color: #d63638;
+    color: var(--typost-color-danger-hover);
 }
 
-/* Manual Fonts Section */
+/* =========================================================================
+   MANUAL FONTS SECTION
+   ========================================================================= */
 .typost-manual-fonts-section {
     margin-top: 40px;
     padding-top: 40px;
-    border-top: 1px solid #dcdcde;
+    border-top: 1px solid var(--typost-border-subtle);
 }
 
 .typost-manual-fonts-list {
@@ -867,8 +1002,8 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-manual-font-card {
-    background: #fff;
-    border: 1px solid #dcdcde;
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-subtle);
     padding: 20px;
     margin-bottom: 15px;
     border-radius: 4px;
@@ -883,7 +1018,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-manual-font-card h5 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--typost-font-size-xl);
 }
 
 .typost-manual-font-card .typost-font-families,
@@ -893,14 +1028,14 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-manual-font-card .typost-font-families code,
 .typost-manual-font-card .typost-font-fallbacks code {
-    background: #f6f7f7;
+    background: var(--typost-bg-muted);
     padding: 4px 8px;
     border-radius: 3px;
 }
 
 .typost-add-manual-font-form {
-    background: #f6f7f7;
-    border: 1px solid #dcdcde;
+    background: var(--typost-bg-muted);
+    border: 1px solid var(--typost-border-subtle);
     border-radius: 4px;
     padding: 20px;
     margin: 20px 0;
@@ -909,8 +1044,8 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-manual-help {
     margin-top: 30px;
     padding: 20px;
-    background: #f0f6fc;
-    border-left: 4px solid #0073aa;
+    background: var(--typost-bg-info);
+    border-left: 4px solid var(--typost-color-accent-alt);
     border-radius: 4px;
 }
 
@@ -923,24 +1058,23 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-manual-help code {
-    background: #fff;
+    background: var(--typost-bg-surface);
     padding: 2px 6px;
     border-radius: 3px;
-    font-size: 13px;
+    font-size: var(--typost-font-size-xs);
 }
 
 .typost-delete-manual-font {
-    color: #b32d2e;
+    color: var(--typost-color-danger);
 }
 
 .typost-delete-manual-font:hover {
-    color: #d63638;
+    color: var(--typost-color-danger-hover);
 }
 
 /* =========================================================================
    FONT DELETION MODAL & REPLACEMENT MANAGEMENT
    ========================================================================= */
-
 .typost-modal {
     position: fixed;
     top: 0;
@@ -965,7 +1099,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-modal-content {
     position: relative;
-    background: #fff;
+    background: var(--typost-bg-surface);
     max-width: 500px;
     width: 90%;
     z-index: 2;
@@ -975,13 +1109,13 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-modal-header {
     padding: 20px;
-    border-bottom: 1px solid #dcdcde;
+    border-bottom: 1px solid var(--typost-border-subtle);
     position: relative;
 }
 
 .typost-modal-header h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: var(--typost-font-size-heading);
 }
 
 .typost-modal-close {
@@ -993,12 +1127,12 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-size: 28px;
     line-height: 1;
     cursor: pointer;
-    color: #50575e;
+    color: var(--typost-text-secondary);
     padding: 5px 10px;
 }
 
 .typost-modal-close:hover {
-    color: #135e96;
+    color: var(--typost-color-primary-dark);
 }
 
 .typost-modal-body {
@@ -1021,13 +1155,13 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-modal-field .description {
     margin-top: 6px;
-    font-size: 13px;
-    color: #646970;
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-text-secondary);
 }
 
 .typost-modal-footer {
     padding: 15px 20px;
-    border-top: 1px solid #dcdcde;
+    border-top: 1px solid var(--typost-border-subtle);
     text-align: right;
 }
 
@@ -1047,28 +1181,30 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-no-replacements {
     padding: 40px 20px;
     text-align: center;
-    color: #646970;
-    background: #f6f7f7;
+    color: var(--typost-text-secondary);
+    background: var(--typost-bg-muted);
     border-radius: 4px;
 }
 
 #typost-unassigned-fonts {
     padding: 20px;
-    background: #fcf9e8;
-    border-left: 4px solid #dba617;
+    background: var(--typost-color-warning-bg);
+    border-left: 4px solid var(--typost-color-warning-border);
     border-radius: 4px;
 }
 
 #typost-unassigned-fonts h3 {
     margin-top: 0;
-    color: #996800;
+    color: var(--typost-color-warning-text);
 }
 
-/* Developer Support Section */
+/* =========================================================================
+   DEVELOPER SUPPORT SECTION
+   ========================================================================= */
 .typost-developer-support {
     margin-top: 30px;
-    background: #fffff0;
-    border: 1px solid #c3c4c7;
+    background: var(--typost-color-support-bg);
+    border: 1px solid var(--typost-border-strong);
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
     padding: 20px;
     border-radius: 4px;
@@ -1076,14 +1212,16 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-developer-support h3 {
     margin-top: 0;
-    color: #2271b1;
+    color: var(--typost-color-primary);
 }
 
 .typost-developer-support .typost-separator {
     margin: 0 10px;
 }
 
-/* Available font weight checkboxes */
+/* =========================================================================
+   WEIGHT CHECKBOXES
+   ========================================================================= */
 .typost-weight-checkboxes {
     display: flex;
     flex-wrap: wrap;
@@ -1104,13 +1242,185 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     margin: 0;
 }
 
-/* Deep-link highlight animation for settings rows */
+/* =========================================================================
+   DEEP-LINK HIGHLIGHT ANIMATION
+   ========================================================================= */
 .typost-highlight-row {
     animation: typost-highlight-fade 3s ease-out;
 }
 
 @keyframes typost-highlight-fade {
-    0% { background-color: #fff3cd; }
-    70% { background-color: #fff3cd; }
+    0% { background-color: var(--typost-color-highlight-bg); }
+    70% { background-color: var(--typost-color-highlight-bg); }
     100% { background-color: transparent; }
+}
+
+/* =========================================================================
+   REPLACEMENT FONTS TAB
+   ========================================================================= */
+.typost-add-replacement-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: var(--typost-bg-info);
+    border: 1px solid var(--typost-border-default);
+    border-radius: 6px;
+}
+
+.typost-add-replacement-section .typost-form-field {
+    margin-bottom: 15px;
+}
+
+.typost-add-replacement-section .typost-message {
+    margin-top: 10px;
+}
+
+/* =========================================================================
+   SCHEME-AWARE SUPPLEMENTAL OVERRIDES
+   WordPress core nav-tabs use hardcoded colors; override them for all
+   custom color schemes so tabs match the chosen palette.
+   ========================================================================= */
+[data-color-scheme="alice-blue"] .nav-tab,
+[data-color-scheme="admin-colors"] .nav-tab,
+[data-color-scheme="dark"] .nav-tab,
+[data-color-scheme="high-contrast"] .nav-tab {
+    color: var(--typost-text-primary);
+    background: var(--typost-bg-header);
+    border-color: var(--typost-border-default);
+}
+
+[data-color-scheme="alice-blue"] .nav-tab:hover,
+[data-color-scheme="admin-colors"] .nav-tab:hover,
+[data-color-scheme="dark"] .nav-tab:hover,
+[data-color-scheme="high-contrast"] .nav-tab:hover {
+    background: var(--typost-bg-header-hover);
+}
+
+[data-color-scheme="alice-blue"] .nav-tab-active,
+[data-color-scheme="admin-colors"] .nav-tab-active,
+[data-color-scheme="dark"] .nav-tab-active,
+[data-color-scheme="high-contrast"] .nav-tab-active {
+    background: var(--typost-bg-page);
+    border-bottom-color: var(--typost-bg-page);
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="alice-blue"] .nav-tab-active:hover,
+[data-color-scheme="admin-colors"] .nav-tab-active:hover,
+[data-color-scheme="dark"] .nav-tab-active:hover,
+[data-color-scheme="high-contrast"] .nav-tab-active:hover {
+    background: var(--typost-bg-page);
+}
+
+[data-color-scheme="dark"] .button {
+    color: var(--typost-text-primary);
+    border-color: var(--typost-border-default);
+    background: var(--typost-bg-surface-alt);
+}
+
+[data-color-scheme="dark"] .button:hover {
+    background: var(--typost-bg-header);
+    border-color: var(--typost-border-strong);
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] .button-primary {
+    background: var(--typost-color-primary);
+    color: #0f1729;
+    border-color: var(--typost-color-primary);
+}
+
+[data-color-scheme="dark"] .button-primary:hover {
+    background: var(--typost-color-primary-dark);
+    color: #0f1729;
+    border-color: var(--typost-color-primary-dark);
+}
+
+/* High contrast: override WP default #2271b1 buttons (~4.6:1) with #0050a0 (~7.85:1 AAA) */
+[data-color-scheme="high-contrast"] .button {
+    color: var(--typost-color-primary);
+    border-color: var(--typost-color-primary);
+}
+
+[data-color-scheme="high-contrast"] .button:hover {
+    color: var(--typost-color-primary-dark);
+    border-color: var(--typost-color-primary-dark);
+}
+
+[data-color-scheme="high-contrast"] .button-primary {
+    background: var(--typost-color-primary);
+    color: #fff;
+    border-color: var(--typost-color-primary);
+}
+
+[data-color-scheme="high-contrast"] .button-primary:hover {
+    background: var(--typost-color-primary-dark);
+    color: #fff;
+    border-color: var(--typost-color-primary-dark);
+}
+
+/* High contrast: override WP .description #646970 (5.5:1) to meet AAA 7:1 */
+[data-color-scheme="high-contrast"] .description {
+    color: var(--typost-text-secondary);
+}
+
+/* High contrast: override WP input borders #949494 (~3:1) with #222 (~18:1) */
+[data-color-scheme="high-contrast"] input[type="text"],
+[data-color-scheme="high-contrast"] input[type="url"],
+[data-color-scheme="high-contrast"] input[type="email"],
+[data-color-scheme="high-contrast"] textarea,
+[data-color-scheme="high-contrast"] select {
+    border-color: var(--typost-border-input);
+}
+
+[data-color-scheme="dark"] input[type="text"],
+[data-color-scheme="dark"] input[type="url"],
+[data-color-scheme="dark"] input[type="email"],
+[data-color-scheme="dark"] textarea,
+[data-color-scheme="dark"] select {
+    background: var(--typost-bg-surface-alt);
+    color: var(--typost-text-primary);
+    border-color: var(--typost-border-default);
+}
+
+[data-color-scheme="dark"] select option {
+    background: var(--typost-bg-surface-alt);
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] select option:checked {
+    background: var(--typost-color-primary);
+    color: #0f1729;
+}
+
+/* Override WP .wp-core-ui select:focus { color: #1e1e1e } */
+[data-color-scheme="dark"] select:focus {
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] .form-table th {
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] .notice,
+[data-color-scheme="dark"] .notice p {
+    background: var(--typost-bg-surface-alt);
+    border-color: var(--typost-border-default);
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] .notice-info {
+    border-left-color: var(--typost-color-primary);
+}
+
+[data-color-scheme="dark"] .notice-success {
+    border-left-color: #46b450;
+}
+
+[data-color-scheme="dark"] code {
+    background: var(--typost-bg-code);
+    color: var(--typost-text-primary);
+}
+
+[data-color-scheme="dark"] .description {
+    color: var(--typost-text-secondary);
 }

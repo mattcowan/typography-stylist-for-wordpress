@@ -42,8 +42,8 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
     $available = !empty($font['available_weights']) ? $font['available_weights'] : array();
     $all_available = empty($available); // Empty array = all weights available
     ?>
-    <div class="typost-form-field">
-        <label><?php esc_html_e('Available Font Weights:', 'typography-stylist'); ?></label>
+    <fieldset class="typost-form-field typost-weight-fieldset">
+        <legend><?php esc_html_e('Available Font Weights:', 'typography-stylist'); ?></legend>
         <p class="description" id="typost-<?php echo esc_attr($prefix); ?>-weights-desc-<?php echo esc_attr($font['id']); ?>">
             <?php esc_html_e('Uncheck weights this font doesn\'t include to exclude them from being selected. You can leave all checked for variable fonts.', 'typography-stylist'); ?>
             <?php if ($show_auto && !empty($font['available_weights'])): ?>
@@ -63,7 +63,7 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
                 </label>
             <?php endforeach; ?>
         </div>
-    </div>
+    </fieldset>
     <?php
     /**
      * Fires after the weight checkboxes in a font edit form.
@@ -80,7 +80,7 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
 
 function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {
     ?>
-<div class="wrap typost-admin-wrap">
+<div class="wrap typost-admin-wrap" data-color-scheme="<?php echo esc_attr(get_option('typost_admin_color_scheme', 'alice-blue')); ?>">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
 
     <!-- Skip link for accessibility -->
@@ -449,7 +449,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <div class="typost-font-card typost-kit-font">
                             <div class="typost-font-header">
                                 <h5><?php echo esc_html($font['name']); ?></h5>
-                                <div class="typost-font-actions">
+                                <div class="typost-font-actions" role="group"
+                                        <?php /* translators: %s: The name of the font */ ?>
+                                        aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
                                     <button
                                         class="button typost-edit-font"
                                         data-font-id="<?php echo esc_attr($font['id']); ?>"
@@ -505,7 +507,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             </div>
                             <div class="typost-font-edit-form" style="display: none;">
                                 <div class="typost-form-field">
-                                    <label><?php esc_html_e('Font Families:', 'typography-stylist'); ?></label>
+                                    <span class="typost-field-label"><?php esc_html_e('Font Families:', 'typography-stylist'); ?></span>
                                     <div class="typost-font-families-display">
                                         <?php
                                         if (!empty($font['font_faces'])) {
@@ -554,7 +556,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 <div class="typost-font-card">
                     <div class="typost-font-header">
                         <h4><?php echo esc_html($font['name']); ?></h4>
-                        <div class="typost-font-actions">
+                        <div class="typost-font-actions" role="group"
+                                        <?php /* translators: %s: The name of the font */ ?>
+                                        aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
                             <button
                                 class="button typost-edit-font"
                                 data-font-id="<?php echo esc_attr($font['id']); ?>"
@@ -627,7 +631,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     </div>
                     <div class="typost-font-edit-form" style="display: none;">
                         <div class="typost-form-field">
-                            <label><?php esc_html_e('Font Families:', 'typography-stylist'); ?></label>
+                            <span class="typost-field-label"><?php esc_html_e('Font Families:', 'typography-stylist'); ?></span>
                             <div class="typost-font-families-display">
                                 <?php
                                 if (!empty($font['font_faces'])) {
@@ -700,9 +704,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     </div>
 
                     <div class="typost-form-field">
-                        <label for="typost-font-file">
+                        <span class="typost-field-label">
                             <?php esc_html_e('ZIP File:', 'typography-stylist'); ?>
-                        </label>
+                        </span>
                         <label for="typost-font-file" class="screen-reader-text">
                             <?php esc_html_e('Choose ZIP file containing webfont kit', 'typography-stylist'); ?>
                         </label>
@@ -838,7 +842,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <div class="typost-font-card typost-kit-font">
                                 <div class="typost-font-header">
                                     <h5><?php echo esc_html($font['name']); ?></h5>
-                                    <div class="typost-font-actions">
+                                    <div class="typost-font-actions" role="group"
+                                        <?php /* translators: %s: The name of the font */ ?>
+                                        aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
                                         <button
                                             class="button typost-edit-adobe-font"
                                             data-font-id="<?php echo esc_attr($font['id']); ?>"
@@ -887,7 +893,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 </div>
                                 <div class="typost-font-edit-form" style="display: none;">
                                     <div class="typost-form-field">
-                                        <label><?php esc_html_e('Font Family:', 'typography-stylist'); ?></label>
+                                        <span class="typost-field-label"><?php esc_html_e('Font Family:', 'typography-stylist'); ?></span>
                                         <div class="typost-font-families-display">
                                             <code><?php echo esc_html($font['font_family']); ?></code>
                                         </div>
@@ -929,7 +935,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <div class="typost-font-card">
                         <div class="typost-font-header">
                             <h5><?php echo esc_html($font['name']); ?></h5>
-                            <div class="typost-font-actions">
+                            <div class="typost-font-actions" role="group"
+                                        <?php /* translators: %s: The name of the font */ ?>
+                                        aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
                                 <button
                                     class="button typost-edit-adobe-font"
                                     data-font-id="<?php echo esc_attr($font['id']); ?>"
@@ -997,7 +1005,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </div>
                         <div class="typost-font-edit-form" style="display: none;">
                             <div class="typost-form-field">
-                                <label><?php esc_html_e('Font Families:', 'typography-stylist'); ?></label>
+                                <span class="typost-field-label"><?php esc_html_e('Font Families:', 'typography-stylist'); ?></span>
                                 <div class="typost-font-families-display">
                                     <?php if (!empty($font['font_families'])): ?>
                                         <code><?php echo esc_html(implode(', ', $font['font_families'])); ?></code>
@@ -1124,7 +1132,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <div class="typost-manual-font-card">
                         <div class="typost-font-header">
                             <h5><?php echo esc_html($font['name']); ?></h5>
-                            <div class="typost-font-actions">
+                            <div class="typost-font-actions" role="group"
+                                        <?php /* translators: %s: The name of the font */ ?>
+                                        aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
                                 <button
                                     class="button typost-edit-manual-font"
                                     data-font-id="<?php echo esc_attr($font['id']); ?>"
@@ -1282,9 +1292,37 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <tbody>
                         <tr>
                             <th scope="row">
-                                <label for="typost_show_clear_confirmation">
-                                    <?php esc_html_e('Clear Button Confirmation', 'typography-stylist'); ?>
+                                <label for="typost_admin_color_scheme">
+                                    <?php esc_html_e('Admin Color Scheme', 'typography-stylist'); ?>
                                 </label>
+                            </th>
+                            <td>
+                                <?php $current_scheme = get_option('typost_admin_color_scheme', 'alice-blue'); ?>
+                                <select id="typost_admin_color_scheme" name="typost_admin_color_scheme">
+                                    <option value="default" <?php selected($current_scheme, 'default'); ?>>
+                                        <?php esc_html_e('Default', 'typography-stylist'); ?>
+                                    </option>
+                                    <option value="admin-colors" <?php selected($current_scheme, 'admin-colors'); ?>>
+                                        <?php esc_html_e('Match Admin Theme', 'typography-stylist'); ?>
+                                    </option>
+                                    <option value="alice-blue" <?php selected($current_scheme, 'alice-blue'); ?>>
+                                        <?php esc_html_e('Alice Blue', 'typography-stylist'); ?>
+                                    </option>
+                                    <option value="dark" <?php selected($current_scheme, 'dark'); ?>>
+                                        <?php esc_html_e('Dark Mode', 'typography-stylist'); ?>
+                                    </option>
+                                    <option value="high-contrast" <?php selected($current_scheme, 'high-contrast'); ?>>
+                                        <?php esc_html_e('High Contrast', 'typography-stylist'); ?>
+                                    </option>
+                                </select>
+                                <p class="description">
+                                    <?php esc_html_e('Choose a color scheme for the Typography Stylist admin page. "Match Admin Theme" adapts to your WordPress admin color palette.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('Clear Button Confirmation', 'typography-stylist'); ?>
                             </th>
                             <td>
                                 <input
@@ -1304,9 +1342,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </tr>
                         <tr>
                             <th scope="row">
-                                <label for="typost_archive_full_content_check">
-                                    <?php esc_html_e('Archive Page Font Detection', 'typography-stylist'); ?>
-                                </label>
+                                <?php esc_html_e('Archive Page Font Detection', 'typography-stylist'); ?>
                             </th>
                             <td>
                                 <input
@@ -1409,9 +1445,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <tbody>
                         <tr>
                             <th scope="row">
-                                <label for="typost_enable_aria_labels">
-                                    <?php esc_html_e('Inline Format: Add aria-label Attributes', 'typography-stylist'); ?>
-                                </label>
+                                <?php esc_html_e('Inline Format: Add aria-label Attributes', 'typography-stylist'); ?>
                             </th>
                             <td>
                                 <input
@@ -1427,15 +1461,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <p class="description">
                                     <?php esc_html_e('When enabled, text styled with the inline format toolbar button will include aria-label attributes containing the original, unmodified text. This helps prevent screen reader mispronunciation of OpenType ligatures (e.g., "fi" rendered as "ﬁ").', 'typography-stylist'); ?>
                                     <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. The Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
-                                    <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. the Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
                                 </p>
-                                    <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. The Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
+                            </td>
                         </tr>
                         <tr>
                             <th scope="row">
-                                <label for="typost_disable_accessibility_warning">
-                                    <?php esc_html_e('Disable Word Boundary Warning', 'typography-stylist'); ?>
-                                </label>
+                                <?php esc_html_e('Disable Word Boundary Warning', 'typography-stylist'); ?>
                             </th>
                             <td>
                                 <input
@@ -1491,12 +1522,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 <p class="typost-no-replacements"><?php esc_html_e('No font replacements configured.', 'typography-stylist'); ?></p>
             </div>
 
-            <div class="typost-add-replacement-section" style="margin-top: 30px; padding: 20px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
+            <div class="typost-add-replacement-section">
                 <h3><?php esc_html_e('Add New Replacement Mapping', 'typography-stylist'); ?></h3>
                 <p><?php esc_html_e('Manually create a replacement mapping for a font ID that was previously deleted.', 'typography-stylist'); ?></p>
 
                 <div class="typost-add-replacement-form">
-                    <div class="typost-form-field" style="margin-bottom: 15px;">
+                    <div class="typost-form-field">
                         <label for="typost-new-deleted-id">
                             <?php esc_html_e('Deleted Font ID:', 'typography-stylist'); ?>
                         </label>
@@ -1509,7 +1540,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </p>
                     </div>
 
-                    <div class="typost-form-field" style="margin-bottom: 15px;">
+                    <div class="typost-form-field">
                         <label for="typost-new-replacement-id">
                             <?php esc_html_e('Replacement Font:', 'typography-stylist'); ?>
                         </label>
@@ -1528,7 +1559,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </button>
                     </div>
 
-                    <div id="typost-add-replacement-message" class="typost-message" role="alert" aria-live="assertive" style="margin-top: 10px;"></div>
+                    <div id="typost-add-replacement-message" class="typost-message" role="alert" aria-live="assertive"></div>
                 </div>
             </div>
 
@@ -1553,7 +1584,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <h2><?php esc_html_e('How to Use', 'typography-stylist'); ?></h2>
 
             <div class="typost-help-section">
-                <h4><?php esc_html_e('Method 1: Inline Format (Quick Styling)', 'typography-stylist'); ?></h4>
+                <h3><?php esc_html_e('Method 1: Inline Format (Quick Styling)', 'typography-stylist'); ?></h3>
                 <p><?php esc_html_e('Use this method for applying features to complete words or phrases in any heading or paragraph block.', 'typography-stylist'); ?></p>
                 <ol>
                     <li><?php esc_html_e('Create or edit a heading (H1-H6) or paragraph block', 'typography-stylist'); ?></li>
@@ -1563,7 +1594,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <li><?php esc_html_e('Preview the changes and click Apply', 'typography-stylist'); ?></li>
                 </ol>
 
-                <h4><?php esc_html_e('Method 2: Typography Stylist Block (Advanced)', 'typography-stylist'); ?></h4>
+                <h3><?php esc_html_e('Method 2: Typography Stylist Block (Advanced)', 'typography-stylist'); ?></h3>
                 <p><?php esc_html_e('Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed.', 'typography-stylist'); ?></p>
                 <ol>
                     <li><?php esc_html_e('Add the "Typography Stylist" block from the block inserter', 'typography-stylist'); ?></li>
