@@ -128,6 +128,73 @@
 }
 
 /* =========================================================================
+   TAB HELP PANELS
+   ========================================================================= */
+.typost-tab-help {
+    background: var(--typost-bg-info);
+    border: 1px solid var(--typost-border-strong);
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.typost-tab-help summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: var(--typost-font-size-sm);
+    color: var(--typost-color-primary);
+    list-style: none;
+}
+
+.typost-tab-help summary::-webkit-details-marker,
+.typost-tab-help summary::marker {
+    display: none;
+}
+
+.typost-tab-help summary::before {
+    content: '\25B6';
+    display: inline-block;
+    margin-right: 8px;
+    font-size: var(--typost-font-size-label-small);
+    transition: transform 0.2s;
+}
+
+.typost-tab-help[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+.typost-tab-help summary:hover {
+    color: var(--typost-color-primary-dark);
+}
+
+.typost-tab-help summary:focus {
+    outline: 2px solid var(--typost-color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.typost-tab-help-content {
+    padding: 0 16px 16px;
+    font-size: var(--typost-font-size-xs);
+    line-height: 1.6;
+    color: var(--typost-text-secondary);
+}
+
+.typost-tab-help-content p {
+    max-width: var(--typost-line-length);
+}
+
+.typost-tab-help-content ul,
+.typost-tab-help-content ol {
+    margin-left: 20px;
+    max-width: var(--typost-line-length);
+}
+
+.typost-tab-help-content li {
+    margin-bottom: 4px;
+}
+
+/* =========================================================================
    PRESET CONTROLS (Font Features Tab)
    ========================================================================= */
 .typost-preset-controls {
@@ -239,6 +306,17 @@
 
 .typost-size-slider:focus::-moz-range-thumb {
     box-shadow: 0 0 0 3px var(--typost-color-primary-focus);
+}
+
+.typost-preset-card-width-control {
+    margin: 20px 15px 0 15px;
+}
+
+.typost-preset-card-width-control label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: var(--typost-font-size-sm);
 }
 
 /* =========================================================================
@@ -358,9 +436,15 @@
    ========================================================================= */
 .typost-feature-demos-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr));
     gap: 20px;
     padding: 15px;
+}
+
+@media (min-width: 1200px) {
+    .typost-feature-demos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(min(600px, 100%), 1fr));
+    }
 }
 
 .typost-feature-demo-card {
@@ -373,6 +457,53 @@
 
 .typost-feature-demo-card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.typost-feature-demo-card.typost-feature-disabled {
+    opacity: 0.45;
+}
+
+/* Feature visibility checkbox */
+.typost-feature-visibility-control {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--typost-border-default);
+}
+
+.typost-feature-visibility-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-text-muted);
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.typost-feature-visibility-label:hover {
+    color: var(--typost-text-primary);
+}
+
+/* Master visibility controls (shown when a font is selected) */
+.typost-visibility-master-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.typost-visibility-save-indicator {
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-color-success, #2ea44f);
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.typost-visibility-save-indicator.typost-save-visible {
+    opacity: 1;
 }
 
 .typost-feature-demo-header {
@@ -1240,6 +1371,288 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-weight-checkbox-label input[type="checkbox"] {
     margin: 0;
+}
+
+/* =========================================================================
+   FEATURE VISIBILITY — FONT EDIT FORM SECTION
+   ========================================================================= */
+.typost-feature-visibility-section {
+    border: 1px solid var(--typost-border-default);
+    border-radius: 4px;
+    margin-top: 16px;
+    padding: 0;
+}
+
+.typost-feature-visibility-summary {
+    padding: 10px 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.typost-feature-visibility-summary::-webkit-details-marker {
+    color: var(--typost-text-muted);
+}
+
+.typost-feature-visibility-summary-hint {
+    font-weight: 400;
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-text-muted);
+}
+
+.typost-feature-visibility-form-controls {
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--typost-border-default);
+}
+
+.typost-form-visibility-master {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.typost-form-visibility-category {
+    border: none;
+    margin: 0 0 12px 0;
+    padding: 0;
+}
+
+.typost-form-visibility-category > legend {
+    font-weight: 600;
+    font-size: var(--typost-font-size-xs);
+    color: var(--typost-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 6px;
+}
+
+.typost-form-visibility-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.typost-form-visibility-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 400;
+    cursor: pointer;
+    min-width: 160px;
+}
+
+.typost-form-visibility-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.typost-form-visibility-feature-name {
+    font-size: var(--typost-font-size-xs);
+}
+
+.typost-form-visibility-feature-code {
+    font-size: var(--typost-font-size-xxs);
+    background: var(--typost-bg-surface);
+    border: 1px solid var(--typost-border-default);
+    border-radius: 2px;
+    padding: 1px 4px;
+    color: var(--typost-text-muted);
+}
+
+/* =========================================================================
+   UNIFIED FONT LIST
+   ========================================================================= */
+.typost-unified-font-list {
+    list-style: none;
+    margin: 20px 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.typost-unified-font-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--typost-bg-surface-alt);
+    border: 1px solid var(--typost-border-default);
+    border-radius: 6px;
+    padding: 0;
+    transition: box-shadow 0.2s;
+}
+
+.typost-unified-font-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.typost-unified-font-item.ui-sortable-helper {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    opacity: 0.95;
+}
+
+.typost-unified-font-item.ui-sortable-placeholder {
+    background: var(--typost-color-primary-focus);
+    border: 2px dashed var(--typost-color-primary);
+    visibility: visible !important;
+}
+
+.typost-drag-handle {
+    flex-shrink: 0;
+    width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--typost-text-muted);
+    cursor: grab;
+    align-self: stretch;
+    border-right: 1px solid var(--typost-border-default);
+    font-size: 18px;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+    border-radius: 6px 0 0 6px;
+}
+
+.typost-drag-handle:hover {
+    opacity: 1;
+    color: var(--typost-color-primary);
+    background: var(--typost-bg-surface);
+}
+
+.typost-drag-handle:active {
+    cursor: grabbing;
+}
+
+.typost-unified-font-item .typost-font-card {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 14px 16px;
+    border-radius: 0 6px 6px 0;
+}
+
+.typost-unified-font-item .typost-font-card:hover {
+    box-shadow: none;
+}
+
+/* ── Type badges ─────────────────────────────────────────────────────── */
+.typost-font-type-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 10px;
+    vertical-align: middle;
+    margin-left: 6px;
+    white-space: nowrap;
+}
+
+.typost-badge-uploaded {
+    background: #d4edda;
+    color: #155724;
+}
+
+.typost-badge-adobe {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.typost-badge-manual {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.typost-badge-wplibrary {
+    background: #e2d9f3;
+    color: #4a235a;
+}
+
+/* Dark mode badge overrides */
+@media (prefers-color-scheme: dark) {
+    .typost-badge-uploaded  { background: #1a3d24; color: #a3d9b1; }
+    .typost-badge-adobe     { background: #0a2d4d; color: #90c8f6; }
+    .typost-badge-manual    { background: #3d2d00; color: #ffd980; }
+    .typost-badge-wplibrary { background: #2d1a3d; color: #c5a8e8; }
+}
+
+.typost-font-header h4 {
+    display: inline;
+    margin: 0;
+    font-size: var(--typost-font-size-lg);
+}
+
+.typost-font-kit-label {
+    color: var(--typost-text-muted);
+    font-size: var(--typost-font-size-xs);
+    margin: 2px 0 6px;
+}
+
+/* WP Library read-only card */
+.typost-wpl-card .typost-font-header h4 {
+    color: var(--typost-text-secondary, var(--typost-text-muted));
+}
+
+/* ── Add Font section ────────────────────────────────────────────────── */
+.typost-add-font-section {
+    border: 1px solid var(--typost-border-default);
+    border-radius: 6px;
+    margin-top: 20px;
+}
+
+.typost-add-font-summary {
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: var(--typost-font-size-base);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.typost-add-font-summary::-webkit-details-marker {
+    color: var(--typost-color-primary);
+}
+
+.typost-add-font-content {
+    border-top: 1px solid var(--typost-border-default);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.typost-add-font-subsection {
+    border-bottom: 1px solid var(--typost-border-default);
+}
+
+.typost-add-font-subsection:last-child {
+    border-bottom: none;
+}
+
+.typost-add-font-subsection > summary {
+    padding: 10px 0;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--typost-color-primary);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.typost-add-font-subsection > summary::-webkit-details-marker {
+    color: var(--typost-text-muted);
+}
+
+.typost-add-font-subsection-body {
+    padding: 12px 0 16px;
 }
 
 /* =========================================================================

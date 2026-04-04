@@ -582,6 +582,218 @@ msgstr "Ajustar tamaño del texto de vista previa"
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr "Ajusta el tamaño del texto de vista previa para ver mejor las características tipográficas."
 
+#: includes/admin-page.php:279
+msgid "Card Width:"
+msgstr "Ancho de tarjetas:"
+
+#: includes/admin-page.php:289
+msgid "Adjust feature card width"
+msgstr "Ajustar el ancho de las tarjetas de características"
+
+#: includes/admin-page.php:297
+msgid "Adjust the minimum width of feature preview cards."
+msgstr "Ajusta el ancho mínimo de las tarjetas de vista previa de características."
+
+#: includes/admin-page.php
+msgid "About Font Features"
+msgstr "Acerca de las características tipográficas"
+
+#: includes/admin-page.php
+msgid "OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more."
+msgstr "Las características OpenType son capacidades tipográficas avanzadas integradas en los archivos de fuentes. Incluyen ligaduras (pares de letras conectadas), conjuntos estilísticos (diseños alternativos de caracteres), ornamentos, versalitas y más."
+
+#: includes/admin-page.php
+msgid "Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features."
+msgstr "Usa esta página para previsualizar cómo cada característica afecta tus fuentes. Selecciona una fuente personalizada del menú desplegable para ver resultados reales — diferentes fuentes admiten diferentes características."
+
+#: includes/admin-page.php
+msgid "Features are grouped by category (ligatures, stylistic sets, numerals, etc.)"
+msgstr "Las características están agrupadas por categoría (ligaduras, conjuntos estilísticos, números, etc.)"
+
+#: includes/admin-page.php
+msgid "Use the card width slider to adjust preview size for easier comparison"
+msgstr "Usa el control deslizante de ancho de tarjeta para ajustar el tamaño de vista previa y facilitar la comparación"
+
+#: includes/admin-page.php
+msgid "When a font is selected, you can enable or disable individual features for that font in the editor"
+msgstr "Cuando se selecciona una fuente, puedes activar o desactivar características individuales para esa fuente en el editor"
+
+#: includes/admin-page.php
+msgid "Why & How to Use Custom Fonts"
+msgstr "Por qué y cómo usar fuentes personalizadas"
+
+#: includes/admin-page.php
+msgid "Why use custom fonts?"
+msgstr "¿Por qué usar fuentes personalizadas?"
+
+#: includes/admin-page.php
+msgid "OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin."
+msgstr "Las características OpenType (ligaduras, ornamentos, conjuntos estilísticos) están integradas en archivos de fuentes específicos. Las fuentes del sistema estándar y muchas fuentes web tienen soporte OpenType limitado. Las fuentes especializadas de fundiciones como MyFonts, Adobe Fonts o Font Squirrel a menudo incluyen tablas de características OpenType ricas que desbloquean todo el potencial de este complemento."
+
+#: includes/admin-page.php
+msgid "Performance benefit:"
+msgstr "Beneficio de rendimiento:"
+
+#: includes/admin-page.php
+msgid "Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site."
+msgstr "Las fuentes agregadas aquí solo se cargan en las páginas donde se usan realmente. Si necesitas una fuente decorativa particular en solo una página, no ralentizará las demás páginas de tu sitio."
+
+#: includes/admin-page.php
+msgid "Three ways to add fonts:"
+msgstr "Tres formas de agregar fuentes:"
+
+#: includes/admin-page.php
+msgid "Upload Font Kit"
+msgstr "Subir kit de fuentes"
+
+#: includes/admin-page.php
+msgid "Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded."
+msgstr "Sube un archivo ZIP de proveedores de fuentes como MyFonts o Fontspring. Ideal para fuentes que has comprado y descargado."
+
+#: includes/admin-page.php
+msgid "Adobe Fonts"
+msgstr "Adobe Fonts"
+
+#: includes/admin-page.php
+msgid "Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers."
+msgstr "Pega el código de inserción de tu proyecto Adobe Fonts (Typekit). Ideal para suscriptores de Adobe Creative Cloud."
+
+#: includes/admin-page.php
+msgid "Custom Font Definition"
+msgstr "Definición de fuente personalizada"
+
+#: includes/admin-page.php
+msgid "Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it."
+msgstr "Referencia fuentes ya cargadas por tu tema, un complemento o un CDN. Ideal cuando ya tienes una fuente disponible y solo necesitas que Typography Stylist la reconozca."
+
+#: includes/admin-page.php
+msgid "About Options"
+msgstr "Acerca de las opciones"
+
+#: includes/admin-page.php
+msgid "These settings control plugin behavior across your site. Changes take effect immediately."
+msgstr "Estos ajustes controlan el comportamiento del complemento en todo tu sitio. Los cambios surten efecto inmediatamente."
+
+#: includes/admin-page.php
+msgid "Clear confirmation:"
+msgstr "Confirmación de limpieza:"
+
+#: includes/admin-page.php
+msgid "Controls whether a confirmation dialog appears when clearing typography formatting in the editor."
+msgstr "Controla si aparece un cuadro de diálogo de confirmación al limpiar el formato tipográfico en el editor."
+
+#: includes/admin-page.php
+msgid "Archive font detection:"
+msgstr "Detección de fuentes en archivos:"
+
+#: includes/admin-page.php
+msgid "When enabled, the plugin scans full post content on archive pages to detect fonts. This ensures fonts load correctly but may impact performance on sites with many posts per page."
+msgstr "Cuando está activado, el complemento analiza el contenido completo de las entradas en las páginas de archivo para detectar fuentes. Esto garantiza que las fuentes se carguen correctamente pero puede afectar el rendimiento en sitios con muchas entradas por página."
+
+#: includes/admin-page.php
+msgid "Cache management:"
+msgstr "Gestión de caché:"
+
+#: includes/admin-page.php
+msgid "The plugin caches font detection results for performance. Clear the cache after making significant changes to fonts or content."
+msgstr "El complemento almacena en caché los resultados de detección de fuentes para mejorar el rendimiento. Limpia la caché después de realizar cambios significativos en las fuentes o el contenido."
+
+#: includes/admin-page.php
+msgid "About Accessibility"
+msgstr "Acerca de la accesibilidad"
+
+#: includes/admin-page.php
+msgid "Typography Stylist is designed with accessibility in mind. The Typography Stylist block automatically creates dual headings — a clean text version for screen readers and a visually styled version for sighted users."
+msgstr "Typography Stylist está diseñado con la accesibilidad en mente. El bloque Typography Stylist crea automáticamente títulos duales — una versión de texto limpia para lectores de pantalla y una versión visualmente estilizada para usuarios videntes."
+
+#: includes/admin-page.php
+msgid "The settings below let you fine-tune how assistive technologies interact with styled content. The default settings work well for most sites — only change them if you have specific accessibility requirements."
+msgstr "Los ajustes a continuación te permiten ajustar cómo las tecnologías de asistencia interactúan con el contenido estilizado. Los ajustes predeterminados funcionan bien para la mayoría de los sitios — solo cámbialos si tienes requisitos de accesibilidad específicos."
+
+#: includes/admin-page.php
+msgid "About Replacement Fonts"
+msgstr "Acerca de las fuentes de reemplazo"
+
+#: includes/admin-page.php
+msgid "Font replacements ensure your content looks correct even after deleting a font. When a font is removed, any content that used it would normally lose its styling. Replacement mappings redirect that content to display with a different font instead."
+msgstr "Los reemplazos de fuentes garantizan que tu contenido se vea correcto incluso después de eliminar una fuente. Cuando se elimina una fuente, cualquier contenido que la usara perdería normalmente su estilo. Los mapeos de reemplazo redirigen ese contenido para que se muestre con una fuente diferente."
+
+#: includes/admin-page.php
+msgid "Replacements are created automatically when you delete a font and choose a replacement. You can also create them manually for fonts that were deleted before this feature was available."
+msgstr "Los reemplazos se crean automáticamente cuando eliminas una fuente y eliges un reemplazo. También puedes crearlos manualmente para fuentes que se eliminaron antes de que esta función estuviera disponible."
+
+#: blocks/typography-stylist/edit.js
+msgid "Help & Tips"
+msgstr "Ayuda y consejos"
+
+#: blocks/typography-stylist/edit.js
+msgid "The Typography Stylist block provides two levels of control:"
+msgstr "El bloque Typography Stylist ofrece dos niveles de control:"
+
+#: blocks/typography-stylist/edit.js
+msgid "Sidebar controls"
+msgstr "Controles de la barra lateral"
+
+#: blocks/typography-stylist/edit.js
+msgid "Apply settings to the entire block (font, size, weight, features)."
+msgstr "Aplica ajustes a todo el bloque (fuente, tamaño, grosor, características)."
+
+#: blocks/typography-stylist/edit.js
+msgid "Quick Features Toggle"
+msgstr "Alternancia rápida de características"
+
+#: blocks/typography-stylist/edit.js
+msgid "Select text and use the toolbar popover to style individual words or phrases."
+msgstr "Selecciona texto y usa el popover de la barra de herramientas para estilizar palabras o frases individuales."
+
+#: blocks/typography-stylist/edit.js
+msgid "A clean semantic heading is automatically generated for screen readers — no extra configuration needed."
+msgstr "Se genera automáticamente un título semántico limpio para lectores de pantalla — no se necesita configuración adicional."
+
+#: blocks/typography-stylist/edit.js
+msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages where they are used, keeping your site fast."
+msgstr "Consejo: Las fuentes agregadas en Ajustes → Typography Stylist solo se cargan en las páginas donde se usan, manteniendo tu sitio rápido."
+
+#: blocks/typography-stylist/edit.js
+msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
+msgstr "Elige una fuente personalizada. Las fuentes solo se cargan en las páginas donde se usan."
+
+#: blocks/typography-stylist/edit.js
+msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
+msgstr "El modo responsivo usa CSS clamp() con tamaños separados para móvil, tableta y escritorio."
+
+#: blocks/typography-stylist/edit.js
+msgid "OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features."
+msgstr "Las características OpenType son capacidades tipográficas avanzadas integradas en los archivos de fuentes, como ligaduras y alternativas estilísticas. No todas las fuentes admiten todas las características."
+
+#: assets/js/block-editor.js
+msgid "Choose a custom font. Fonts only load on pages where used."
+msgstr "Elige una fuente personalizada. Las fuentes solo se cargan en las páginas usadas."
+
+#: assets/js/block-editor.js
+msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
+msgstr "El modo responsivo usa CSS clamp() para un dimensionamiento fluido entre pantallas."
+
+#: assets/js/block-editor.js
+msgid "Tips"
+msgstr "Consejos"
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly to your selected text as live preview."
+msgstr "Los cambios se aplican instantáneamente al texto seleccionado como vista previa en vivo."
+
+#: assets/js/block-editor.js
+msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
+msgstr "Usa Ctrl+Z (Cmd+Z en Mac) para deshacer cambios individuales."
+
+#: assets/js/block-editor.js
+msgid "Fonts only load on pages where they are used, keeping your site fast."
+msgstr "Las fuentes solo se cargan en las páginas donde se usan, manteniendo tu sitio rápido."
+
+#: assets/js/block-editor.js
+msgid "For more control over accessibility, use the Typography Stylist block instead."
+msgstr "Para más control sobre la accesibilidad, usa el bloque Typography Stylist en su lugar."
+
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
 msgstr "Texto de Vista Previa Personalizado:"
@@ -1554,3 +1766,107 @@ msgstr "Elija un esquema de colores para la página de administración de Typogr
 #, php-format
 msgid "Actions for %s"
 msgstr "Acciones para %s"
+
+#: includes/admin-page.php
+msgid "Enable All Features"
+msgstr "Activar todas las características"
+
+#: includes/admin-page.php
+msgid "Disable All Features"
+msgstr "Desactivar todas las características"
+
+#: includes/admin-page.php
+msgid "Show in editor"
+msgstr "Mostrar en el editor"
+
+#: includes/admin-page.php
+msgid "Feature Visibility"
+msgstr "Visibilidad de características"
+
+#: includes/admin-page.php
+msgid "Control which features appear in the editor for this font"
+msgstr "Controlar qué características aparecen en el editor para esta fuente"
+
+#: includes/admin-page.php
+msgid "Enable All"
+msgstr "Activar todo"
+
+#: includes/admin-page.php
+msgid "Disable All"
+msgstr "Desactivar todo"
+
+#: typography-stylist.php
+msgid "Saved"
+msgstr "Guardado"
+
+#: typography-stylist.php
+msgid "Failed to save feature visibility."
+msgstr "Error al guardar la visibilidad de características."
+
+#: includes/admin-page.php
+msgid "Uploaded"
+msgstr "Subida"
+
+#: includes/admin-page.php
+msgid "Custom"
+msgstr "Personalizada"
+
+#: includes/admin-page.php
+msgid "WP Library"
+msgstr "Biblioteca de WP"
+
+#: includes/admin-page.php
+msgid "Font list — drag to reorder"
+msgstr "Lista de fuentes — arrastrar para reordenar"
+
+#: includes/admin-page.php
+msgid "Drag to reorder"
+msgstr "Arrastrar para reordenar"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr "Editar configuración para: %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit custom font: %s"
+msgstr "Editar fuente personalizada: %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete font: %s"
+msgstr "Eliminar fuente: %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete custom font: %s"
+msgstr "Eliminar fuente personalizada: %s"
+
+#: includes/admin-page.php
+msgid "Manage fonts in Appearance Editor (opens in new tab)"
+msgstr "Administrar fuentes en el editor de apariencia (se abre en una nueva pestaña)"
+
+#: includes/admin-page.php
+msgid "Manage in Editor"
+msgstr "Administrar en el editor"
+
+#: includes/admin-page.php
+msgid "This font is managed by the WordPress Font Library. To edit or remove it, use Appearance → Editor → Styles → Typography."
+msgstr "Esta fuente está administrada por la biblioteca de fuentes de WordPress. Para editarla o eliminarla, usa Apariencia → Editor → Estilos → Tipografía."
+
+#: includes/admin-page.php
+msgid "No fonts added yet."
+msgstr "Aún no se han añadido fuentes."
+
+#: includes/admin-page.php
+msgid "Use the \"Add Font\" section below to upload a font kit, add an Adobe Fonts project, or define a custom font."
+msgstr "Usa la sección «Añadir fuente» a continuación para subir un kit de fuentes, añadir un proyecto de Adobe Fonts o definir una fuente personalizada."
+
+#: includes/admin-page.php
+msgid "Add Font"
+msgstr "Añadir fuente"
+
+#: typography-stylist.php
+msgid "Failed to save font order."
+msgstr "Error al guardar el orden de las fuentes."

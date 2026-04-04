@@ -24,12 +24,13 @@ import {
 	Popover,
 	Modal,
 	Button,
-	Notice
+	Notice,
+	Tooltip
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -104,6 +105,32 @@ const TSIcon = () => (
 		<path d="M22.621,323.219c0,116.595 86.232,204.042 200.398,204.042c81.374,0 134.814,-41.294 134.814,-100.806c0,-36.436 -26.72,-68.014 -66.799,-68.014c-71.658,0 -75.301,80.159 -122.668,80.159c-54.654,0 -87.447,-58.298 -87.447,-115.381c0,-78.945 52.225,-137.243 156.675,-137.243c78.945,0 162.748,29.149 250.194,59.512l0,647.348c0,92.305 -20.647,99.592 -117.81,105.665l0,30.363l355.859,0l0,-30.363c-97.163,-6.073 -117.81,-13.36 -117.81,-105.665l0,-609.697c65.585,20.647 133.599,36.436 206.471,36.436c144.53,0 229.547,-83.803 229.547,-184.609c0,-57.083 -32.792,-97.163 -80.159,-97.163c-40.08,0 -72.872,27.934 -72.872,69.229c0,49.796 42.509,65.585 42.509,100.806c0,36.436 -38.865,58.298 -106.879,58.298c-136.028,0 -329.139,-171.25 -534.396,-171.25c-173.679,0 -269.627,109.308 -269.627,228.333Z" fill="currentColor"/>
 	</svg>
 );
+
+/**
+ * Inline info tooltip — WCAG 2.1 compliant.
+ * Renders as a focusable Button with Tooltip on hover/focus.
+ * Tooltip content is plain text only (no interactive elements).
+ */
+function InfoTip({ text }) {
+	return (
+		<Tooltip text={text}>
+			<Button
+				icon="info-outline"
+				label={text}
+				className="typost-info-tooltip-trigger"
+				isSmall
+				style={{
+					minWidth: '20px',
+					height: '20px',
+					padding: 0,
+					opacity: 0.5,
+					marginLeft: '4px',
+					verticalAlign: 'middle',
+				}}
+			/>
+		</Tooltip>
+	);
+}
 
 export default function Edit({ attributes, setAttributes, clientId }) {
 	const {
@@ -1140,8 +1167,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		className: 'wp-block-typost'
 	});
 
-	// Get available features from localized data
-	const availableFeatures = window.typostData?.features || [];
+	// Get available features from localized data, filtered by per-font visibility
+	const allFeatures = window.typostData?.features || [];
+	const visibilityMap = window.typostData?.fontFeatureVisibility || {};
+	const availableFeatures = filterFeaturesByVisibility(allFeatures, fontId, visibilityMap);
 	const groupedFeatures = {};
 	availableFeatures.forEach(feature => {
 		const category = feature.category || 'other';
@@ -1212,6 +1241,30 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
 		}
 	});
+
+	// Sort fontOptions by the saved font display order
+	const fontOrder = window.typostData?.fontOrder || [];
+	if (fontOrder.length > 0) {
+		fontOptions.sort((a, b) => {
+			const keyVariants = (opt) => [
+				'font-' + opt.fontId,
+				'adobe-' + opt.fontId,
+				'manual-' + opt.fontId,
+			];
+			const posA = keyVariants(a).reduce((best, key) => {
+				const idx = fontOrder.indexOf(key);
+				return idx !== -1 ? Math.min(best, idx) : best;
+			}, Infinity);
+			const posB = keyVariants(b).reduce((best, key) => {
+				const idx = fontOrder.indexOf(key);
+				return idx !== -1 ? Math.min(best, idx) : best;
+			}, Infinity);
+			if (posA === Infinity && posB === Infinity) return 0;
+			if (posA === Infinity) return 1;
+			if (posB === Infinity) return -1;
+			return posA - posB;
+		});
+	}
 
 	// Wrappers around utils.js helpers, binding to local fontIdMap
 	const getFilteredWeightOptions = (targetFontId, includeInherit = false) =>
@@ -2920,6 +2973,22 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			</BlockControls>
 
 			<InspectorControls>
+				<PanelBody title={__('Help & Tips', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '13px', lineHeight: '1.6', marginTop: 0 }}>
+						{__('The Typography Stylist block provides two levels of control:', 'typography-stylist')}
+					</p>
+					<ul style={{ fontSize: '13px', lineHeight: '1.6', marginLeft: '16px', listStyleType: 'disc' }}>
+						<li><strong>{__('Sidebar controls', 'typography-stylist')}</strong> — {__('Apply settings to the entire block (font, size, weight, features).', 'typography-stylist')}</li>
+						<li><strong>{__('Quick Features Toggle', 'typography-stylist')}</strong> — {__('Select text and use the toolbar popover to style individual words or phrases.', 'typography-stylist')}</li>
+					</ul>
+					<p style={{ fontSize: '13px', lineHeight: '1.6' }}>
+						{__('A clean semantic heading is automatically generated for screen readers — no extra configuration needed.', 'typography-stylist')}
+					</p>
+					<p style={{ fontSize: '12px', lineHeight: '1.5', color: '#757575' }}>
+						{__('Tip: Fonts added in Settings → Typography Stylist only load on pages where they are used, keeping your site fast.', 'typography-stylist')}
+					</p>
+				</PanelBody>
+
 				<div className="typost-hook-point" data-hook="typost_inspector_top" ref={(el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
@@ -2929,6 +2998,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				{fontOptions.length > 0 && (
 					<PanelBody title={__('Font Family', 'typography-stylist')} initialOpen={false}>
+						<InfoTip text={__('Choose a custom font. Fonts only load on pages where they are used, keeping your site fast.', 'typography-stylist')} />
 						<SelectControl
 							value={fontId ? String(fontId) : (fontFamily || '')}
 							options={[
@@ -3015,6 +3085,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}} />
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
+					<InfoTip text={__('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')} />
 					<SelectControl
 						value={fontSize}
 						options={[
@@ -3107,6 +3178,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}} />
 
 				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>
+					<InfoTip text={__('OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features.', 'typography-stylist')} />
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
 						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
 					</p>

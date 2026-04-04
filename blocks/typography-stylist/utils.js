@@ -1753,12 +1753,31 @@ export function getClosestWeight(currentWeight, availableWeights) {
 	return closest;
 }
 
+/**
+ * Filter the full features list to only those enabled for a given font.
+ *
+ * @since 1.4.0
+ * @param {Array}  allFeatures   Full array of feature objects from typostData.features
+ * @param {number} fontId        Numeric font ID (0 or falsy = no filter applied)
+ * @param {Object} visibilityMap typostData.fontFeatureVisibility keyed by font_id
+ * @returns {Array} Filtered feature objects (same references, not copies)
+ */
+export function filterFeaturesByVisibility(allFeatures, fontId, visibilityMap) {
+	if (!fontId || !visibilityMap) return allFeatures;
+	const entry = visibilityMap[fontId];
+	if (!entry || !Array.isArray(entry.disabled_features) || entry.disabled_features.length === 0) {
+		return allFeatures;
+	}
+	return allFeatures.filter(f => !entry.disabled_features.includes(f.id));
+}
+
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {
 		buildTextOffsetMap,
 		parseInlineStylesAtCursor,
 		parseInlineFeaturesAtCursor,
-		parseInlineFontFamilyAtCursor
+		parseInlineFontFamilyAtCursor,
+		filterFeaturesByVisibility
 	};
 }
