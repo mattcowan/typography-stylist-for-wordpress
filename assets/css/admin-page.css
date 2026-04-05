@@ -142,7 +142,7 @@
     cursor: pointer;
     font-weight: 600;
     font-size: var(--typost-font-size-sm);
-    color: var(--typost-color-primary);
+    color: var(--typost-text-primary);
     list-style: none;
 }
 
@@ -164,7 +164,7 @@
 }
 
 .typost-tab-help summary:hover {
-    color: var(--typost-color-primary-dark);
+    color: var(--typost-text-primary);
 }
 
 .typost-tab-help summary:focus {
@@ -177,7 +177,7 @@
     padding: 0 16px 16px;
     font-size: var(--typost-font-size-xs);
     line-height: 1.6;
-    color: var(--typost-text-secondary);
+    color: var(--typost-text-primary);
 }
 
 .typost-tab-help-content p {
@@ -705,7 +705,6 @@
 .typost-font-card {
     border: 1px solid var(--typost-border-default);
     padding: 15px;
-    margin-bottom: 15px;
     border-radius: 4px;
     background: var(--typost-bg-surface-alt);
 }
@@ -791,12 +790,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-weight: 500;
 }
 
-.typost-font-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
+/* .typost-font-header styles are defined in the unified font list section */
 
 .typost-font-header h4 {
     margin: 0;
@@ -1354,19 +1348,18 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
    WEIGHT CHECKBOXES
    ========================================================================= */
 .typost-weight-checkboxes {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 16px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 16px;
     margin-top: 8px;
 }
 
 .typost-weight-checkbox-label {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-weight: 400 !important;
     cursor: pointer;
-    min-width: 140px;
 }
 
 .typost-weight-checkbox-label input[type="checkbox"] {
@@ -1379,7 +1372,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-feature-visibility-section {
     border: 1px solid var(--typost-border-default);
     border-radius: 4px;
-    margin-top: 16px;
+    margin-top: 0;
     padding: 0;
 }
 
@@ -1388,14 +1381,33 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     font-weight: 600;
     cursor: pointer;
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
+    list-style: none;
     -webkit-user-select: none;
     user-select: none;
 }
 
-.typost-feature-visibility-summary::-webkit-details-marker {
+.typost-feature-visibility-summary::-webkit-details-marker,
+.typost-feature-visibility-summary::marker {
+    display: none;
+}
+
+.typost-feature-visibility-summary::before {
+    content: '\25B6';
+    display: inline-block;
+    flex-shrink: 0;
+    font-size: var(--typost-font-size-label-small);
     color: var(--typost-text-muted);
+    transition: transform 0.2s;
+}
+
+.typost-feature-visibility-section[open] > .typost-feature-visibility-summary::before {
+    transform: rotate(90deg);
+}
+
+.typost-feature-visibility-summary:hover::before {
+    color: var(--typost-color-primary);
 }
 
 .typost-feature-visibility-summary-hint {
@@ -1477,14 +1489,12 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-unified-font-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
     background: var(--typost-bg-surface-alt);
     border: 1px solid var(--typost-border-default);
     border-radius: 6px;
     padding: 0;
     transition: box-shadow 0.2s;
+    overflow: hidden;
 }
 
 .typost-unified-font-item:hover {
@@ -1503,19 +1513,19 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-drag-handle {
+    /* Sits inside .typost-font-header flex row — naturally matches header height */
     flex-shrink: 0;
-    width: 28px;
+    align-self: stretch;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--typost-text-muted);
     cursor: grab;
-    align-self: stretch;
     border-right: 1px solid var(--typost-border-default);
-    font-size: 18px;
-    opacity: 0.5;
-    transition: opacity 0.15s;
-    border-radius: 6px 0 0 6px;
+    padding: 20px 10px;
+    font-size: 16px;
+    opacity: 0.4;
+    transition: opacity 0.15s, background 0.15s;
 }
 
 .typost-drag-handle:hover {
@@ -1526,18 +1536,113 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-drag-handle:active {
     cursor: grabbing;
+    opacity: 1;
 }
 
 .typost-unified-font-item .typost-font-card {
-    flex: 1;
     border: none;
     background: transparent;
-    padding: 14px 16px;
-    border-radius: 0 6px 6px 0;
+    padding: 0;
+    min-width: 0;
 }
 
 .typost-unified-font-item .typost-font-card:hover {
     box-shadow: none;
+}
+
+/* ── Expand toggle button ─────────────────────────────────────────────── */
+.typost-font-header {
+    display: flex;
+    align-items: center;
+    padding: 0;
+}
+
+.typost-font-expand-toggle {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    flex: 1;
+    min-width: 0;
+}
+
+.typost-font-expand-toggle:focus {
+    outline: 2px solid var(--typost-color-primary);
+    border-radius: 3px;
+}
+
+/* ▶ arrow — matches tab-help and feature-category style */
+.typost-font-expand-toggle::before {
+    content: '\25B6';
+    display: inline-block;
+    flex-shrink: 0;
+    margin-right: 8px;
+    font-size: var(--typost-font-size-label-small);
+    color: var(--typost-text-muted);
+    transition: transform 0.2s, color 0.15s;
+}
+
+.typost-font-expand-toggle[aria-expanded="true"]::before {
+    transform: rotate(90deg);
+}
+
+.typost-font-expand-toggle:hover::before,
+.typost-font-expand-toggle:focus::before {
+    color: var(--typost-color-primary);
+}
+
+.typost-font-expand-toggle h4 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Expanded details panel ───────────────────────────────────────────── */
+/* Explicit rule needed: display:flex would override the [hidden] attribute's display:none */
+.typost-font-details[hidden] {
+    display: none;
+}
+
+.typost-font-details {
+    padding: 30px 30px;
+    border-top: 1px solid var(--typost-border-default);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.typost-font-details .typost-form-field {
+    margin-bottom: 0;
+}
+
+.typost-font-families-display {
+    border-radius: 3px;
+    margin: 10px 0 8px;
+}
+
+/* WP Library inline info */
+.typost-wpl-manage-btn {
+    margin: 0 20px 0 auto;
+    flex-shrink: 0;
+}
+
+.typost-wpl-family {
+    font-size: var(--typost-font-size-xs);
+    color: #666;
+    background: #f0f0f1;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    padding: 2px 8px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    font-family: monospace;
 }
 
 /* ── Type badges ─────────────────────────────────────────────────────── */
@@ -1582,21 +1687,23 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     .typost-badge-wplibrary { background: #2d1a3d; color: #c5a8e8; }
 }
 
-.typost-font-header h4 {
-    display: inline;
+/* .typost-font-kit-label removed — kit name is no longer shown in the unified list */
+
+/* Type badge right padding */
+.typost-font-header .typost-font-type-badge {
+    margin-right: 10px;
+}
+
+/* WP Library read-only card — h4 sits directly in header without a toggle button */
+.typost-wpl-card h4 {
+    font-size: 22px;
+    font-weight: 400;
     margin: 0;
-    font-size: var(--typost-font-size-lg);
-}
-
-.typost-font-kit-label {
-    color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xs);
-    margin: 2px 0 6px;
-}
-
-/* WP Library read-only card */
-.typost-wpl-card .typost-font-header h4 {
-    color: var(--typost-text-secondary, var(--typost-text-muted));
+    flex: 1;
+    padding: 10px 6px 10px 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ── Add Font section ────────────────────────────────────────────────── */

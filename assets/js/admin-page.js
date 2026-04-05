@@ -579,12 +579,12 @@ jQuery(document).ready(function($) {
     // Delete font - show replacement modal
     var deleteFontContext = null; // Store deletion context
 
-    $('.typost-delete-font').on('click', function() {
+    $(document).on('click', '.typost-delete-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
-        // Store context for modal
         deleteFontContext = {
             button: $btn,
             fontId: fontId,
@@ -693,10 +693,11 @@ jQuery(document).ready(function($) {
     });
 
     // Delete Adobe Font - show replacement modal
-    $('.typost-delete-adobe-font').on('click', function() {
+    $(document).on('click', '.typost-delete-adobe-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
         deleteFontContext = {
             button: $btn,
@@ -710,7 +711,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle Adobe Font "Load on all pages" checkbox
-    $('.typost-adobe-font-load-all-pages').on('change', function() {
+    $(document).on('change', '.typost-adobe-font-load-all-pages', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -826,10 +827,11 @@ jQuery(document).ready(function($) {
     });
 
     // Delete Manual Font - show replacement modal
-    $('.typost-delete-manual-font').on('click', function() {
+    $(document).on('click', '.typost-delete-manual-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
         deleteFontContext = {
             button: $btn,
@@ -843,7 +845,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle MyFonts "Load on all pages" checkbox
-    $('.typost-font-load-all-pages').on('change', function() {
+    $(document).on('change', '.typost-font-load-all-pages', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -888,31 +890,43 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit MyFonts (uploaded fonts) fallback
-    $('.typost-edit-font').on('click', function() {
-        var $card = $(this).closest('.typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
+    // ── Unified font card expand/collapse ────────────────────────────────────
+    $(document).on('click', '.typost-font-expand-toggle', function() {
+        var $toggle = $(this);
+        var $card = $toggle.closest('.typost-font-card');
+        var $details = $card.find('.typost-font-details');
+        var expanded = $toggle.attr('aria-expanded') === 'true';
 
-        // Hide card content, show edit form (keep loading-option visible)
-        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
+        $toggle.attr('aria-expanded', expanded ? 'false' : 'true');
+
+        if (expanded) {
+            $details.slideUp(150, function() { $details.attr('hidden', ''); });
+        } else {
+            $details.removeAttr('hidden').hide().slideDown(150);
+        }
     });
 
-    $('.typost-cancel-font-edit').on('click', function() {
-        var $card = $(this).closest('.typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
+    // Shared collapse helper
+    function collapseCard($card) {
+        var $toggle = $card.find('.typost-font-expand-toggle');
+        var $details = $card.find('.typost-font-details');
+        $toggle.attr('aria-expanded', 'false');
+        $details.slideUp(150, function() { $details.attr('hidden', ''); });
+        $card.find('.typost-font-edit-message, .typost-adobe-font-edit-message, .typost-manual-font-edit-message').html('');
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-font-edit-message').html('');
+    // Cancel handlers (all types — collapse the card)
+    $(document).on('click', '.typost-cancel-font-edit, .typost-cancel-adobe-font-edit, .typost-cancel-manual-font-edit', function() {
+        collapseCard($(this).closest('.typost-font-card'));
     });
 
-    $('.typost-save-font-edit').on('click', function() {
+    // Save uploaded font
+    $(document).on('click', '.typost-save-font-edit', function() {
         var $btn = $(this);
         var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-font-edit-message');
-        var fontId = $card.find('.typost-edit-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fallbacks = $card.find('.typost-font-fallback-input').val().trim();
         var availableWeights = [];
         $card.find('.typost-font-weight-checkbox:checked').each(function() {
@@ -950,34 +964,12 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit Adobe Fonts fallback
-    $('.typost-edit-adobe-font').on('click', function() {
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Hide card content, show edit form
-        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
-    });
-
-    $('.typost-cancel-adobe-font-edit').on('click', function() {
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-adobe-font-edit-message').html('');
-    });
-
-    $('.typost-save-adobe-font-edit').on('click', function() {
+    // Save Adobe font
+    $(document).on('click', '.typost-save-adobe-font-edit', function() {
         var $btn = $(this);
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $btn.closest('.typost-adobe-font-card, .typost-font-card');
+        var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-adobe-font-edit-message');
-        var fontId = $card.find('.typost-edit-adobe-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fallbacks = $card.find('.typost-adobe-font-fallback-input').val().trim();
         var availableWeights = [];
         $card.find('.typost-adobe-weight-checkbox:checked').each(function() {
@@ -1015,31 +1007,12 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit Manual Font
-    $('.typost-edit-manual-font').on('click', function() {
-        var $card = $(this).closest('.typost-manual-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Hide card content, show edit form
-        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
-    });
-
-    $('.typost-cancel-manual-font-edit').on('click', function() {
-        var $card = $(this).closest('.typost-manual-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-manual-font-edit-message').html('');
-    });
-
-    $('.typost-save-manual-font-edit').on('click', function() {
+    // Save manual font
+    $(document).on('click', '.typost-save-manual-font-edit', function() {
         var $btn = $(this);
-        var $card = $btn.closest('.typost-manual-font-card');
+        var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-manual-font-edit-message');
-        var fontId = $card.find('.typost-edit-manual-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fontFamily = $card.find('.typost-manual-font-family-input').val().trim();
         var fallbacks = $card.find('.typost-manual-font-fallback-input').val().trim();
         var availableWeights = [];

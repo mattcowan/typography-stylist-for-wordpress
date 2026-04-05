@@ -1776,8 +1776,9 @@ msgid "Disable All Features"
 msgstr "Desactivar todas las características"
 
 #: includes/admin-page.php
-msgid "Show in editor"
-msgstr "Mostrar en el editor"
+#, php-format
+msgid "Enable %s in editor for this font"
+msgstr "Habilitar %s en el editor para esta fuente"
 
 #: includes/admin-page.php
 msgid "Feature Visibility"

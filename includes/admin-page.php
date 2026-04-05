@@ -493,7 +493,13 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     class="typost-feature-visibility-checkbox"
                                     data-feature-id="<?php echo esc_attr($feature['id']); ?>"
                                     checked />
-                                <?php esc_html_e('Show in editor', 'typography-stylist'); ?>
+                                <?php
+                                echo esc_html(sprintf(
+                                    /* translators: %s: OpenType feature name e.g. "Standard Ligatures" */
+                                    __('Enable %s in editor for this font', 'typography-stylist'),
+                                    $feature['name']
+                                ));
+                                ?>
                             </label>
                         </div>
                     </div>
@@ -537,7 +543,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             tabindex="0">
             <h2><?php esc_html_e('Custom Fonts', 'typography-stylist'); ?></h2>
 
-            <details class="typost-tab-help" open>
+            <details class="typost-tab-help">
                 <summary><?php esc_html_e('Why & How to Use Custom Fonts', 'typography-stylist'); ?></summary>
                 <div class="typost-tab-help-content">
                     <p><strong><?php esc_html_e('Why use custom fonts?', 'typography-stylist'); ?></strong> <?php esc_html_e('OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin.', 'typography-stylist'); ?></p>
@@ -630,7 +636,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 );
             ?>
             <li class="typost-unified-font-item typost-type-<?php echo esc_attr($u_type); ?>" data-font-key="<?php echo esc_attr($u_key); ?>">
-                <span class="typost-drag-handle dashicons dashicons-move" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
 
                 <?php if ('uploaded' === $u_type): ?>
                     <?php
@@ -641,57 +646,25 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         $families_list = implode(', ', $fams);
                     }
                     $kit_label = !empty($font['kit_name']) ? $font['kit_name'] : (!empty($font['kit_id']) ? $font['kit_id'] : '');
+                    $details_id = 'typost-font-details-' . esc_attr($font['id']);
                     ?>
-                    <div class="typost-font-card" id="typost-font-card-<?php echo esc_attr($font['id']); ?>">
+                    <div class="typost-font-card" id="typost-font-card-<?php echo esc_attr($font['id']); ?>"
+                        data-font-id="<?php echo esc_attr($font['id']); ?>"
+                        data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
+                        data-font-name="<?php echo esc_attr($font['name']); ?>">
                         <div class="typost-font-header">
-                            <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
+                            <button class="typost-font-expand-toggle"
+                                aria-expanded="false"
+                                aria-controls="<?php echo esc_attr($details_id); ?>">
+                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            </button>
                             <span class="typost-font-type-badge typost-badge-uploaded"><?php echo esc_html($badge_labels['uploaded']); ?></span>
-                            <div class="typost-font-actions" role="group"
-                                aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
-                                <button class="button typost-edit-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                    <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
-                                </button>
-                                <button class="button typost-delete-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Delete font: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
-                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
-                                </button>
-                            </div>
                         </div>
-                        <?php if ($families_list): ?>
-                        <div class="typost-font-families"><strong><?php esc_html_e('Font Family:', 'typography-stylist'); ?></strong> <?php echo esc_html($families_list); ?></div>
-                        <?php endif; ?>
-                        <?php if ($kit_label): ?>
-                        <div class="typost-font-kit-label"><small><?php echo esc_html($kit_label); ?></small></div>
-                        <?php endif; ?>
-                        <?php if (!empty($font['fallbacks'])): ?>
-                        <div class="typost-font-fallbacks"><strong><?php esc_html_e('Fallbacks:', 'typography-stylist'); ?></strong> <code><?php echo esc_html($font['fallbacks']); ?></code></div>
-                        <?php endif; ?>
-                        <div class="typost-font-loading-option">
-                            <label for="typost-load-all-pages-font-<?php echo esc_attr($font['id']); ?>">
-                                <input type="checkbox" class="typost-font-load-all-pages"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    id="typost-load-all-pages-font-<?php echo esc_attr($font['id']); ?>"
-                                    <?php checked(!empty($font['load_on_all_pages'])); ?>
-                                    aria-describedby="typost-load-all-pages-font-desc-<?php echo esc_attr($font['id']); ?>" />
-                                <?php esc_html_e('Load on all pages', 'typography-stylist'); ?>
-                            </label>
-                            <p id="typost-load-all-pages-font-desc-<?php echo esc_attr($font['id']); ?>" class="description">
-                                <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
-                            </p>
-                        </div>
-                        <div class="typost-font-edit-form" style="display: none;">
-                            <div class="typost-form-field">
-                                <span class="typost-field-label"><?php esc_html_e('Font Families:', 'typography-stylist'); ?></span>
-                                <div class="typost-font-families-display"><code><?php echo esc_html($families_list); ?></code></div>
-                            </div>
+                        <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
+                            <?php if ($families_list): ?>
+                            <div class="typost-font-families-display"><strong><?php esc_html_e('Font Families:', 'typography-stylist'); ?></strong> <code><?php echo esc_html($families_list); ?></code></div>
+                            <?php endif; ?>
                             <div class="typost-form-field">
                                 <label for="typost-font-fallback-<?php echo esc_attr($font['id']); ?>"><?php esc_html_e('Fallback Fonts (optional):', 'typography-stylist'); ?></label>
                                 <input type="text" id="typost-font-fallback-<?php echo esc_attr($font['id']); ?>"
@@ -703,72 +676,58 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                                 </p>
                             </div>
+                            <div class="typost-font-loading-option">
+                                <label for="typost-load-all-pages-font-<?php echo esc_attr($font['id']); ?>">
+                                    <input type="checkbox" class="typost-font-load-all-pages"
+                                        data-font-id="<?php echo esc_attr($font['id']); ?>"
+                                        id="typost-load-all-pages-font-<?php echo esc_attr($font['id']); ?>"
+                                        <?php checked(!empty($font['load_on_all_pages'])); ?>
+                                        aria-describedby="typost-load-all-pages-font-desc-<?php echo esc_attr($font['id']); ?>" />
+                                    <?php esc_html_e('Load on all pages', 'typography-stylist'); ?>
+                                </label>
+                                <p id="typost-load-all-pages-font-desc-<?php echo esc_attr($font['id']); ?>" class="description">
+                                    <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
+                                </p>
+                            </div>
                             <?php typost_render_weight_checkboxes($font, 'font', true); ?>
                             <?php typost_render_feature_visibility_checkboxes($font, $instance); ?>
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-font-edit"><?php esc_html_e('Save Changes', 'typography-stylist'); ?></button>
                                 <button type="button" class="button typost-cancel-font-edit"><?php esc_html_e('Cancel', 'typography-stylist'); ?></button>
+                                <button type="button" class="button typost-delete-font"
+                                    aria-label="<?php echo esc_attr(sprintf(__('Delete font: %s', 'typography-stylist'), $font['name'])); ?>">
+                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
+                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
+                                </button>
                             </div>
                             <div class="typost-font-edit-message" role="alert" aria-live="assertive" aria-atomic="true"></div>
                         </div>
                     </div>
 
                 <?php elseif ('adobe' === $u_type): ?>
-                    <?php $font = $u_font; ?>
-                    <div class="typost-font-card" id="typost-font-card-adobe-<?php echo esc_attr($font['id']); ?>">
+                    <?php
+                    $font = $u_font;
+                    $adobe_family = !empty($font['font_family'])  ? $font['font_family']
+                                  : (!empty($font['font_families']) ? implode(', ', $font['font_families']) : '');
+                    $details_id = 'typost-font-details-adobe-' . esc_attr($font['id']);
+                    ?>
+                    <div class="typost-font-card" id="typost-font-card-adobe-<?php echo esc_attr($font['id']); ?>"
+                        data-font-id="<?php echo esc_attr($font['id']); ?>"
+                        data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
+                        data-font-name="<?php echo esc_attr($font['name']); ?>">
                         <div class="typost-font-header">
-                            <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
+                            <button class="typost-font-expand-toggle"
+                                aria-expanded="false"
+                                aria-controls="<?php echo esc_attr($details_id); ?>">
+                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            </button>
                             <span class="typost-font-type-badge typost-badge-adobe"><?php echo esc_html($badge_labels['adobe']); ?></span>
-                            <div class="typost-font-actions" role="group"
-                                aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
-                                <button class="button typost-edit-adobe-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Edit settings for: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                    <?php esc_html_e('Edit Settings', 'typography-stylist'); ?>
-                                </button>
-                                <button class="button typost-delete-adobe-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Delete font: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
-                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
-                                </button>
-                            </div>
                         </div>
-                        <?php
-                        $adobe_family = !empty($font['font_family'])  ? $font['font_family']
-                                      : (!empty($font['font_families']) ? implode(', ', $font['font_families']) : '');
-                        ?>
-                        <?php if ($adobe_family): ?>
-                        <div class="typost-font-families"><strong><?php esc_html_e('Font Family:', 'typography-stylist'); ?></strong> <?php echo esc_html($adobe_family); ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($font['kit_name'])): ?>
-                        <div class="typost-font-kit-label"><small><?php echo esc_html($font['kit_name']); ?></small></div>
-                        <?php endif; ?>
-                        <?php if (!empty($font['fallbacks'])): ?>
-                        <div class="typost-font-fallbacks"><strong><?php esc_html_e('Fallbacks:', 'typography-stylist'); ?></strong> <code><?php echo esc_html($font['fallbacks']); ?></code></div>
-                        <?php endif; ?>
-                        <div class="typost-font-loading-option">
-                            <label for="typost-load-all-pages-adobe-<?php echo esc_attr($font['id']); ?>">
-                                <input type="checkbox" class="typost-adobe-font-load-all-pages"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    id="typost-load-all-pages-adobe-<?php echo esc_attr($font['id']); ?>"
-                                    <?php checked(!empty($font['load_on_all_pages'])); ?>
-                                    aria-describedby="typost-load-all-pages-adobe-desc-<?php echo esc_attr($font['id']); ?>" />
-                                <?php esc_html_e('Load on all pages', 'typography-stylist'); ?>
-                            </label>
-                            <p id="typost-load-all-pages-adobe-desc-<?php echo esc_attr($font['id']); ?>" class="description">
-                                <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
-                            </p>
-                        </div>
-                        <div class="typost-font-edit-form" style="display: none;">
-                            <div class="typost-form-field">
-                                <span class="typost-field-label"><?php esc_html_e('Font Family:', 'typography-stylist'); ?></span>
-                                <div class="typost-font-families-display"><code><?php echo esc_html($adobe_family); ?></code></div>
-                            </div>
+                        <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
+                            <?php if ($adobe_family): ?>
+                            <div class="typost-font-families-display"><strong><?php esc_html_e('Font Family:', 'typography-stylist'); ?></strong> <code><?php echo esc_html($adobe_family); ?></code></div>
+                            <?php endif; ?>
                             <div class="typost-form-field">
                                 <label for="typost-adobe-font-fallback-<?php echo esc_attr($font['id']); ?>"><?php esc_html_e('Fallback Fonts (optional):', 'typography-stylist'); ?></label>
                                 <input type="text" id="typost-adobe-font-fallback-<?php echo esc_attr($font['id']); ?>"
@@ -780,43 +739,53 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
                                 </p>
                             </div>
+                            <div class="typost-font-loading-option">
+                                <label for="typost-load-all-pages-adobe-<?php echo esc_attr($font['id']); ?>">
+                                    <input type="checkbox" class="typost-adobe-font-load-all-pages"
+                                        data-font-id="<?php echo esc_attr($font['id']); ?>"
+                                        id="typost-load-all-pages-adobe-<?php echo esc_attr($font['id']); ?>"
+                                        <?php checked(!empty($font['load_on_all_pages'])); ?>
+                                        aria-describedby="typost-load-all-pages-adobe-desc-<?php echo esc_attr($font['id']); ?>" />
+                                    <?php esc_html_e('Load on all pages', 'typography-stylist'); ?>
+                                </label>
+                                <p id="typost-load-all-pages-adobe-desc-<?php echo esc_attr($font['id']); ?>" class="description">
+                                    <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
+                                </p>
+                            </div>
                             <?php typost_render_weight_checkboxes($font, 'adobe', false); ?>
                             <?php typost_render_feature_visibility_checkboxes($font, $instance); ?>
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-adobe-font-edit"><?php esc_html_e('Save Changes', 'typography-stylist'); ?></button>
                                 <button type="button" class="button typost-cancel-adobe-font-edit"><?php esc_html_e('Cancel', 'typography-stylist'); ?></button>
+                                <button type="button" class="button typost-delete-adobe-font"
+                                    aria-label="<?php echo esc_attr(sprintf(__('Delete font: %s', 'typography-stylist'), $font['name'])); ?>">
+                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
+                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
+                                </button>
                             </div>
                             <div class="typost-adobe-font-edit-message" role="alert" aria-live="assertive" aria-atomic="true"></div>
                         </div>
                     </div>
 
                 <?php elseif ('manual' === $u_type): ?>
-                    <?php $font = $u_font; ?>
-                    <div class="typost-font-card typost-manual-font-card" id="typost-font-card-manual-<?php echo esc_attr($font['id']); ?>">
+                    <?php
+                    $font = $u_font;
+                    $details_id = 'typost-font-details-manual-' . esc_attr($font['id']);
+                    ?>
+                    <div class="typost-font-card typost-manual-font-card" id="typost-font-card-manual-<?php echo esc_attr($font['id']); ?>"
+                        data-font-id="<?php echo esc_attr($font['id']); ?>"
+                        data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
+                        data-font-name="<?php echo esc_attr($font['name']); ?>">
                         <div class="typost-font-header">
-                            <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
+                            <button class="typost-font-expand-toggle"
+                                aria-expanded="false"
+                                aria-controls="<?php echo esc_attr($details_id); ?>">
+                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                            </button>
                             <span class="typost-font-type-badge typost-badge-manual"><?php echo esc_html($badge_labels['manual']); ?></span>
-                            <div class="typost-font-actions" role="group"
-                                aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $font['name'])); ?>">
-                                <button class="button typost-edit-manual-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Edit custom font: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-edit"></span>
-                                    <?php esc_html_e('Edit', 'typography-stylist'); ?>
-                                </button>
-                                <button class="button typost-delete-manual-font"
-                                    data-font-id="<?php echo esc_attr($font['id']); ?>"
-                                    data-font-numeric-id="<?php echo isset($font['font_id']) ? esc_attr($font['font_id']) : '0'; ?>"
-                                    data-font-name="<?php echo esc_attr($font['name']); ?>"
-                                    aria-label="<?php echo esc_attr(sprintf(__('Delete custom font: %s', 'typography-stylist'), $font['name'])); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
-                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
-                                </button>
-                            </div>
                         </div>
-                        <div class="typost-font-families"><strong><?php esc_html_e('CSS Font Family:', 'typography-stylist'); ?></strong> <code><?php echo esc_html($font['font_family']); ?></code></div>
-                        <div class="typost-font-edit-form" style="display: none;">
+                        <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <div class="typost-form-field">
                                 <label for="typost-manual-font-family-edit-<?php echo esc_attr($font['id']); ?>">
                                     <?php esc_html_e('CSS Font Family:', 'typography-stylist'); ?>
@@ -837,6 +806,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-manual-font-edit"><?php esc_html_e('Save Changes', 'typography-stylist'); ?></button>
                                 <button type="button" class="button typost-cancel-manual-font-edit"><?php esc_html_e('Cancel', 'typography-stylist'); ?></button>
+                                <button type="button" class="button typost-delete-manual-font"
+                                    aria-label="<?php echo esc_attr(sprintf(__('Delete custom font: %s', 'typography-stylist'), $font['name'])); ?>">
+                                    <span aria-hidden="true" class="dashicons dashicons-trash"></span>
+                                    <?php esc_html_e('Delete', 'typography-stylist'); ?>
+                                </button>
                             </div>
                             <div class="typost-manual-font-edit-message" role="alert" aria-live="assertive" aria-atomic="true"></div>
                         </div>
@@ -846,22 +820,19 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <?php $wpl = $u_font; ?>
                     <div class="typost-font-card typost-wpl-card">
                         <div class="typost-font-header">
+                            <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
                             <h4><?php echo esc_html($wpl['name']); ?></h4>
+                            <?php if (!empty($wpl['font_family'])): ?>
+                            <code class="typost-wpl-family"><?php echo esc_html($wpl['font_family']); ?></code>
+                            <?php endif; ?>
+                            <a href="<?php echo esc_url(admin_url('themes.php?page=gutenberg-edit-site')); ?>"
+                                class="button typost-wpl-manage-btn" target="_blank"
+                                aria-label="<?php esc_attr_e('Manage fonts in Appearance Editor (opens in new tab)', 'typography-stylist'); ?>">
+                                <span aria-hidden="true" class="dashicons dashicons-external"></span>
+                                <?php esc_html_e('Manage in Editor', 'typography-stylist'); ?>
+                            </a>
                             <span class="typost-font-type-badge typost-badge-wplibrary"><?php echo esc_html($badge_labels['wplibrary']); ?></span>
-                            <div class="typost-font-actions" role="group"
-                                aria-label="<?php echo esc_attr(sprintf(__('Actions for %s', 'typography-stylist'), $wpl['name'])); ?>">
-                                <a href="<?php echo esc_url(admin_url('themes.php?page=gutenberg-edit-site')); ?>"
-                                    class="button" target="_blank"
-                                    aria-label="<?php esc_attr_e('Manage fonts in Appearance Editor (opens in new tab)', 'typography-stylist'); ?>">
-                                    <span aria-hidden="true" class="dashicons dashicons-external"></span>
-                                    <?php esc_html_e('Manage in Editor', 'typography-stylist'); ?>
-                                </a>
-                            </div>
                         </div>
-                        <?php if (!empty($wpl['font_family'])): ?>
-                        <div class="typost-font-families"><strong><?php esc_html_e('Font Family:', 'typography-stylist'); ?></strong> <?php echo esc_html($wpl['font_family']); ?></div>
-                        <?php endif; ?>
-                        <p class="description"><?php esc_html_e('This font is managed by the WordPress Font Library. To edit or remove it, use Appearance → Editor → Styles → Typography.', 'typography-stylist'); ?></p>
                     </div>
                 <?php endif; ?>
 

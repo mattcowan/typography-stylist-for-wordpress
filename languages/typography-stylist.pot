@@ -1395,7 +1395,8 @@ msgid "Disable All Features"
 msgstr ""
 
 #: includes/admin-page.php
-msgid "Show in editor"
+#, php-format
+msgid "Enable %s in editor for this font"
 msgstr ""
 
 #: includes/admin-page.php

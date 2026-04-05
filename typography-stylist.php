@@ -964,7 +964,7 @@ class Typost {
         wp_enqueue_script(
             'typost-admin',
             TYPOST_PLUGIN_URL . "assets/js/admin-page{$suffix}.js",
-            array('jquery'),
+            array('jquery', 'jquery-ui-sortable'),
             TYPOST_VERSION,
             true
         );
@@ -2489,40 +2489,76 @@ class Typost {
      * @return array Normalized font entries with keys: post_id, name, font_family, slug.
      */
     public function get_wp_font_library_fonts() {
-        if (!post_type_exists('wp_font_family')) {
-            return array();
-        }
-
-        $families = get_posts(array(
-            'post_type'      => 'wp_font_family',
-            'posts_per_page' => -1,
-            'post_status'    => 'publish',
-            'orderby'        => 'title',
-            'order'          => 'ASC',
-        ));
-
         $result = array();
-        foreach ($families as $post) {
-            // The font family name and slug are in post_title / post_name
-            $name = $post->post_title;
-            $slug = $post->post_name;
 
-            // Font family CSS value may be in post_content JSON
-            $font_family = $name;
-            if (!empty($post->post_content)) {
-                $data = json_decode($post->post_content, true);
-                if (is_array($data) && !empty($data['fontFamily'])) {
-                    $font_family = $data['fontFamily'];
+        // Source 1: Fonts registered in theme.json (theme, parent-theme, and user/custom keys).
+        // This covers fonts bundled with the active theme AND fonts installed via the
+        // Appearance > Font Library UI (WP 6.5+), which land in the 'custom' key.
+        if (class_exists('WP_Theme_JSON_Resolver')) {
+            $theme_json = WP_Theme_JSON_Resolver::get_merged_data();
+            $settings   = $theme_json->get_settings();
+            $all_groups = isset($settings['typography']['fontFamilies'])
+                ? $settings['typography']['fontFamilies']
+                : array();
+
+            // Iterate all source groups (theme, custom, etc.)
+            foreach ($all_groups as $group_key => $families) {
+                if (!is_array($families)) {
+                    continue;
+                }
+                foreach ($families as $family) {
+                    if (empty($family['name']) || empty($family['slug'])) {
+                        continue;
+                    }
+                    $font_family = isset($family['fontFamily']) ? $family['fontFamily'] : $family['name'];
+                    $result[]    = array(
+                        'post_id'     => 0,
+                        'name'        => $family['name'],
+                        'font_family' => $font_family,
+                        'slug'        => $family['slug'],
+                        'source'      => $group_key, // 'theme', 'custom', etc.
+                    );
                 }
             }
-
-            $result[] = array(
-                'post_id'     => $post->ID,
-                'name'        => $name,
-                'font_family' => $font_family,
-                'slug'        => $slug,
-            );
         }
+
+        // Source 2: wp_font_family posts (fonts installed via Font Library when theme.json
+        // integration isn't the storage mechanism — rare but possible on some setups).
+        if (post_type_exists('wp_font_family')) {
+            $existing_slugs = wp_list_pluck($result, 'slug');
+            $posts = get_posts(array(
+                'post_type'      => 'wp_font_family',
+                'posts_per_page' => -1,
+                'post_status'    => 'publish',
+                'orderby'        => 'title',
+                'order'          => 'ASC',
+            ));
+            foreach ($posts as $post) {
+                // Skip if already captured via theme.json
+                if (in_array($post->post_name, $existing_slugs, true)) {
+                    continue;
+                }
+                $font_family = $post->post_title;
+                if (!empty($post->post_content)) {
+                    $data = json_decode($post->post_content, true);
+                    if (is_array($data) && !empty($data['fontFamily'])) {
+                        $font_family = $data['fontFamily'];
+                    }
+                }
+                $result[] = array(
+                    'post_id'     => $post->ID,
+                    'name'        => $post->post_title,
+                    'font_family' => $font_family,
+                    'slug'        => $post->post_name,
+                    'source'      => 'installed',
+                );
+            }
+        }
+
+        // Sort alphabetically by name
+        usort($result, function($a, $b) {
+            return strcmp($a['name'], $b['name']);
+        });
 
         return $result;
     }
