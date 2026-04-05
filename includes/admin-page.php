@@ -597,7 +597,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             }
             foreach ($wp_library_fonts as $wpl) {
                 $all_fonts_list[] = array(
-                    'key'     => 'wpl-' . $wpl['post_id'],
+                    'key'     => 'wpl-' . $wpl['slug'],
                     'type'    => 'wplibrary',
                     'font_id' => 0,
                     'name'    => $wpl['name'],

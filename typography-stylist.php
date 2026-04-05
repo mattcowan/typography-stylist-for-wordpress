@@ -51,6 +51,7 @@ class Typost {
     private $features_cache = null;
     private $manual_fonts_cache = null;
     private $font_replacements_cache = null;
+    private $wp_font_library_cache = null;
 
     /**
      * Frontend font detection state (for archive pages)
@@ -2411,8 +2412,8 @@ class Typost {
         $visibility[$font_id] = array('disabled_features' => $sanitized);
         update_option('typost_font_feature_visibility', $visibility);
 
-        // Bust the editor data cache so next page load picks up the updated visibility
-        delete_transient('typost_editor_data_' . get_current_user_id());
+        // Bust the editor data cache for all users — feature visibility is global
+        $this->invalidate_editor_data_cache();
 
         return rest_ensure_response(array(
             'success'  => true,
@@ -2466,12 +2467,16 @@ class Typost {
         $sanitized = array();
         foreach ($body['order'] as $key) {
             $key = sanitize_text_field((string) $key);
-            if (preg_match('/^(font|adobe|manual|wpl)-\d+$/', $key)) {
+            // font/adobe/manual keys use numeric IDs; wpl keys use slugs (alphanumeric + hyphens)
+            if (preg_match('/^(font|adobe|manual)-\d+$/', $key) || preg_match('/^wpl-[a-z0-9][a-z0-9\-]*$/', $key)) {
                 $sanitized[] = $key;
             }
         }
 
         update_option('typost_font_order', $sanitized);
+
+        // Bust the editor data cache for all users — font order is global
+        $this->invalidate_editor_data_cache();
 
         return rest_ensure_response(array(
             'success' => true,
@@ -2489,6 +2494,10 @@ class Typost {
      * @return array Normalized font entries with keys: post_id, name, font_family, slug.
      */
     public function get_wp_font_library_fonts() {
+        if ($this->wp_font_library_cache !== null) {
+            return $this->wp_font_library_cache;
+        }
+
         $result = array();
 
         // Source 1: Fonts registered in theme.json (theme, parent-theme, and user/custom keys).
@@ -2560,7 +2569,8 @@ class Typost {
             return strcmp($a['name'], $b['name']);
         });
 
-        return $result;
+        $this->wp_font_library_cache = $result;
+        return $this->wp_font_library_cache;
     }
 
     /**
@@ -2570,6 +2580,7 @@ class Typost {
         $this->presets_cache = null;
         $this->fonts_cache = null;
         $this->manual_fonts_cache = null;
+        $this->wp_font_library_cache = null;
 
         // Clear all font CSS caches
         delete_transient('typost_combined_font_css');

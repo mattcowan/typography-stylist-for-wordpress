@@ -265,6 +265,16 @@ jQuery(document).ready(function($) {
         $masterControls.show();
     }
 
+    // Debounce timer for feature grid visibility saves
+    var featureVisibilitySaveTimer = null;
+
+    function scheduleFeatureVisibilitySave() {
+        if (featureVisibilitySaveTimer) {
+            clearTimeout(featureVisibilitySaveTimer);
+        }
+        featureVisibilitySaveTimer = setTimeout(saveFeatureVisibility, 400);
+    }
+
     // Save visibility for the current font via REST API
     function saveFeatureVisibility() {
         if (!currentVisibilityFontId) {
@@ -345,26 +355,42 @@ jQuery(document).ready(function($) {
         updateFeatureVisibilityState(selectedFont ? selectedFontId : null);
     });
 
-    // Visibility checkbox — auto-save on change
+    // Visibility checkbox — auto-save on change (debounced to avoid rate limit)
     $(document).on('change', '.typost-feature-visibility-checkbox', function() {
         var $card = $(this).closest('.typost-feature-demo-card');
         $card.toggleClass('typost-feature-disabled', !$(this).prop('checked'));
-        saveFeatureVisibility();
+        scheduleFeatureVisibilitySave();
     });
 
     // Enable All features for current font
     $('#typost-enable-all-features').on('click', function() {
         $('.typost-feature-visibility-checkbox').prop('checked', true);
         $('.typost-feature-demo-card').removeClass('typost-feature-disabled');
-        saveFeatureVisibility();
+        scheduleFeatureVisibilitySave();
     });
 
     // Disable All features for current font
     $('#typost-disable-all-features').on('click', function() {
         $('.typost-feature-visibility-checkbox').prop('checked', false);
         $('.typost-feature-demo-card').addClass('typost-feature-disabled');
-        saveFeatureVisibility();
+        scheduleFeatureVisibilitySave();
     });
+
+    // Debounce timers for font edit form visibility saves, keyed by font numeric ID
+    var formVisibilitySaveTimers = {};
+
+    function scheduleFormFeatureVisibilitySave($section) {
+        var fontNumericId = $section.data('font-numeric-id');
+        if (!fontNumericId) {
+            return;
+        }
+        if (formVisibilitySaveTimers[fontNumericId]) {
+            clearTimeout(formVisibilitySaveTimers[fontNumericId]);
+        }
+        formVisibilitySaveTimers[fontNumericId] = setTimeout(function() {
+            saveFormFeatureVisibility($section);
+        }, 400);
+    }
 
     // Helper: save visibility from a font edit form section
     function saveFormFeatureVisibility($section) {
@@ -372,6 +398,9 @@ jQuery(document).ready(function($) {
         if (!fontNumericId) {
             return;
         }
+
+        // Clean up the timer reference now that it has fired
+        delete formVisibilitySaveTimers[fontNumericId];
 
         var disabledFeatures = [];
         $section.find('.typost-font-form-visibility-checkbox').each(function() {
@@ -407,24 +436,24 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Font edit form: visibility checkbox change → auto-save
+    // Font edit form: visibility checkbox change → auto-save (debounced)
     $(document).on('change', '.typost-font-form-visibility-checkbox', function() {
         var $section = $(this).closest('.typost-feature-visibility-section');
-        saveFormFeatureVisibility($section);
+        scheduleFormFeatureVisibilitySave($section);
     });
 
     // Font edit form: Enable All
     $(document).on('click', '.typost-form-enable-all', function() {
         var $section = $(this).closest('.typost-feature-visibility-section');
         $section.find('.typost-font-form-visibility-checkbox').prop('checked', true);
-        saveFormFeatureVisibility($section);
+        scheduleFormFeatureVisibilitySave($section);
     });
 
     // Font edit form: Disable All
     $(document).on('click', '.typost-form-disable-all', function() {
         var $section = $(this).closest('.typost-feature-visibility-section');
         $section.find('.typost-font-form-visibility-checkbox').prop('checked', false);
-        saveFormFeatureVisibility($section);
+        scheduleFormFeatureVisibilitySave($section);
     });
 
     // ── Unified font list: drag-to-reorder ──────────────────────────────────
@@ -496,7 +525,12 @@ jQuery(document).ready(function($) {
 
     // Card width slider — restore saved preference on page load
     (function() {
-        var saved = localStorage.getItem('typost_card_width');
+        var saved;
+        try {
+            saved = localStorage.getItem('typost_card_width');
+        } catch (e) {
+            // localStorage unavailable (private browsing, blocked storage) — use default
+        }
         if (saved) {
             var $slider = $('#typost-card-width-slider');
             $slider.val(saved).attr('aria-valuenow', saved).attr('aria-valuetext', saved + ' pixels');
