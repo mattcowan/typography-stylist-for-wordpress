@@ -228,9 +228,103 @@ jQuery(document).ready(function($) {
         });
     });
 
+    // Tracks which font_id is currently being edited for feature visibility
+    var currentVisibilityFontId = null;
+
+    // Show/hide visibility checkboxes and update their state for the selected font
+    function updateFeatureVisibilityState(fontId) {
+        var $controls = $('.typost-feature-visibility-control');
+        var $masterControls = $('#typost-visibility-master-controls');
+
+        if (!fontId) {
+            $controls.hide().attr('aria-hidden', 'true');
+            $masterControls.hide();
+            $('.typost-feature-demo-card').removeClass('typost-feature-disabled');
+            currentVisibilityFontId = null;
+            return;
+        }
+
+        currentVisibilityFontId = fontId;
+
+        // Load disabled features for this font from localized data
+        var visibilityMap = (typostAdmin && typostAdmin.fontFeatureVisibility) ? typostAdmin.fontFeatureVisibility : {};
+        var entry = visibilityMap[fontId];
+        var disabledFeatures = (entry && Array.isArray(entry.disabled_features)) ? entry.disabled_features : [];
+
+        // Update each checkbox and card state
+        $controls.each(function() {
+            var $card = $(this).closest('.typost-feature-demo-card');
+            var featureId = $(this).find('.typost-feature-visibility-checkbox').data('feature-id');
+            var isEnabled = disabledFeatures.indexOf(featureId) === -1;
+            $(this).find('.typost-feature-visibility-checkbox').prop('checked', isEnabled);
+            $card.toggleClass('typost-feature-disabled', !isEnabled);
+        });
+
+        // Show controls
+        $controls.show().attr('aria-hidden', 'false');
+        $masterControls.show();
+    }
+
+    // Debounce timer for feature grid visibility saves
+    var featureVisibilitySaveTimer = null;
+
+    function scheduleFeatureVisibilitySave() {
+        if (featureVisibilitySaveTimer) {
+            clearTimeout(featureVisibilitySaveTimer);
+        }
+        featureVisibilitySaveTimer = setTimeout(saveFeatureVisibility, 400);
+    }
+
+    // Save visibility for the current font via REST API
+    function saveFeatureVisibility() {
+        if (!currentVisibilityFontId) {
+            return;
+        }
+
+        var disabledFeatures = [];
+        $('.typost-feature-visibility-checkbox').each(function() {
+            if (!$(this).prop('checked')) {
+                disabledFeatures.push($(this).data('feature-id'));
+            }
+        });
+
+        var fontId = currentVisibilityFontId;
+        $.ajax({
+            url: typostAdmin.restUrl + 'font-feature-visibility/' + fontId,
+            method: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            contentType: 'application/json',
+            data: JSON.stringify({ disabled_features: disabledFeatures }),
+            success: function(response) {
+                // Update local cache so re-selecting the font reflects new state
+                if (!typostAdmin.fontFeatureVisibility) {
+                    typostAdmin.fontFeatureVisibility = {};
+                }
+                typostAdmin.fontFeatureVisibility[fontId] = { disabled_features: disabledFeatures };
+
+                // Flash "Saved" indicator
+                var $indicator = $('#typost-visibility-save-indicator');
+                $indicator.text(typostAdmin.strings.featureVisibilitySaved || 'Saved').addClass('typost-save-visible');
+                setTimeout(function() {
+                    $indicator.removeClass('typost-save-visible');
+                }, 2000);
+            },
+            error: function() {
+                var $indicator = $('#typost-visibility-save-indicator');
+                $indicator.text(typostAdmin.strings.featureVisibilityError || 'Error saving').addClass('typost-save-visible');
+                setTimeout(function() {
+                    $indicator.removeClass('typost-save-visible');
+                }, 3000);
+            }
+        });
+    }
+
     // Font preview selector
     $('#typost-preview-font-select').on('change', function() {
         var selectedFont = $(this).val();
+        var selectedFontId = $(this).find('option:selected').data('font-id') || null;
 
         // Update all feature demo previews
         $('.typost-feature-preview').each(function() {
@@ -256,7 +350,146 @@ jQuery(document).ready(function($) {
         } else {
             $('#typost-baseline-preview').css('font-family', 'Georgia, serif');
         }
+
+        // Update feature visibility checkboxes for this font
+        updateFeatureVisibilityState(selectedFont ? selectedFontId : null);
     });
+
+    // Visibility checkbox — auto-save on change (debounced to avoid rate limit)
+    $(document).on('change', '.typost-feature-visibility-checkbox', function() {
+        var $card = $(this).closest('.typost-feature-demo-card');
+        $card.toggleClass('typost-feature-disabled', !$(this).prop('checked'));
+        scheduleFeatureVisibilitySave();
+    });
+
+    // Enable All features for current font
+    $('#typost-enable-all-features').on('click', function() {
+        $('.typost-feature-visibility-checkbox').prop('checked', true);
+        $('.typost-feature-demo-card').removeClass('typost-feature-disabled');
+        scheduleFeatureVisibilitySave();
+    });
+
+    // Disable All features for current font
+    $('#typost-disable-all-features').on('click', function() {
+        $('.typost-feature-visibility-checkbox').prop('checked', false);
+        $('.typost-feature-demo-card').addClass('typost-feature-disabled');
+        scheduleFeatureVisibilitySave();
+    });
+
+    // Debounce timers for font edit form visibility saves, keyed by font numeric ID
+    var formVisibilitySaveTimers = {};
+
+    function scheduleFormFeatureVisibilitySave($section) {
+        var fontNumericId = $section.data('font-numeric-id');
+        if (!fontNumericId) {
+            return;
+        }
+        if (formVisibilitySaveTimers[fontNumericId]) {
+            clearTimeout(formVisibilitySaveTimers[fontNumericId]);
+        }
+        formVisibilitySaveTimers[fontNumericId] = setTimeout(function() {
+            saveFormFeatureVisibility($section);
+        }, 400);
+    }
+
+    // Helper: save visibility from a font edit form section
+    function saveFormFeatureVisibility($section) {
+        var fontNumericId = $section.data('font-numeric-id');
+        if (!fontNumericId) {
+            return;
+        }
+
+        // Clean up the timer reference now that it has fired
+        delete formVisibilitySaveTimers[fontNumericId];
+
+        var disabledFeatures = [];
+        $section.find('.typost-font-form-visibility-checkbox').each(function() {
+            if (!$(this).prop('checked')) {
+                disabledFeatures.push($(this).data('feature-id'));
+            }
+        });
+
+        $.ajax({
+            url: typostAdmin.restUrl + 'font-feature-visibility/' + fontNumericId,
+            method: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            contentType: 'application/json',
+            data: JSON.stringify({ disabled_features: disabledFeatures }),
+            success: function() {
+                // Update local cache
+                if (!typostAdmin.fontFeatureVisibility) {
+                    typostAdmin.fontFeatureVisibility = {};
+                }
+                typostAdmin.fontFeatureVisibility[fontNumericId] = { disabled_features: disabledFeatures };
+
+                var $indicator = $section.find('.typost-form-visibility-save-indicator');
+                $indicator.text(typostAdmin.strings.featureVisibilitySaved || 'Saved').addClass('typost-save-visible');
+                setTimeout(function() { $indicator.removeClass('typost-save-visible'); }, 2000);
+            },
+            error: function() {
+                var $indicator = $section.find('.typost-form-visibility-save-indicator');
+                $indicator.text(typostAdmin.strings.featureVisibilityError || 'Error saving').addClass('typost-save-visible');
+                setTimeout(function() { $indicator.removeClass('typost-save-visible'); }, 3000);
+            }
+        });
+    }
+
+    // Font edit form: visibility checkbox change → auto-save (debounced)
+    $(document).on('change', '.typost-font-form-visibility-checkbox', function() {
+        var $section = $(this).closest('.typost-feature-visibility-section');
+        scheduleFormFeatureVisibilitySave($section);
+    });
+
+    // Font edit form: Enable All
+    $(document).on('click', '.typost-form-enable-all', function() {
+        var $section = $(this).closest('.typost-feature-visibility-section');
+        $section.find('.typost-font-form-visibility-checkbox').prop('checked', true);
+        scheduleFormFeatureVisibilitySave($section);
+    });
+
+    // Font edit form: Disable All
+    $(document).on('click', '.typost-form-disable-all', function() {
+        var $section = $(this).closest('.typost-feature-visibility-section');
+        $section.find('.typost-font-form-visibility-checkbox').prop('checked', false);
+        scheduleFormFeatureVisibilitySave($section);
+    });
+
+    // ── Unified font list: drag-to-reorder ──────────────────────────────────
+    var $unifiedList = $('#typost-unified-font-list');
+    if ($unifiedList.length && $.fn.sortable) {
+        $unifiedList.sortable({
+            handle: '.typost-drag-handle',
+            axis: 'y',
+            cursor: 'grabbing',
+            placeholder: 'typost-unified-font-item ui-sortable-placeholder',
+            update: function() {
+                var order = [];
+                $unifiedList.find('.typost-unified-font-item').each(function() {
+                    var key = $(this).data('font-key');
+                    if (key) {
+                        order.push(key);
+                    }
+                });
+                $.ajax({
+                    url: typostAdmin.restUrl + 'font-order',
+                    method: 'POST',
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+                    },
+                    contentType: 'application/json',
+                    data: JSON.stringify({ order: order }),
+                    error: function() {
+                        if (typostAdmin.strings && typostAdmin.strings.orderSaveError) {
+                            window.alert(typostAdmin.strings.orderSaveError);
+                        }
+                    }
+                });
+            }
+        });
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     // Auto-select first non-system font on page load
     var $fontSelect = $('#typost-preview-font-select');
@@ -288,6 +521,51 @@ jQuery(document).ready(function($) {
 
         // Update baseline preview
         $('#typost-baseline-preview').css('font-size', size + 'px');
+    });
+
+    // Card width slider — restore saved preference on page load
+    (function() {
+        var saved;
+        try {
+            saved = localStorage.getItem('typost_card_width');
+        } catch (e) {
+            // localStorage unavailable (private browsing, blocked storage) — use default
+        }
+        if (saved) {
+            var $slider = $('#typost-card-width-slider');
+            $slider.val(saved).attr('aria-valuenow', saved).attr('aria-valuetext', saved + ' pixels');
+            $('#typost-card-width-value').text(saved + 'px');
+            $('.typost-feature-demos-grid').css(
+                'grid-template-columns',
+                'repeat(auto-fill, minmax(' + saved + 'px, 1fr))'
+            );
+        }
+    }());
+
+    // Card width slider — update grid and save preference
+    $('#typost-card-width-slider').on('input', function() {
+        var width = $(this).val();
+        var $slider = $(this);
+
+        // Update the displayed value
+        $('#typost-card-width-value').text(width + 'px');
+
+        // Update ARIA attributes
+        $slider.attr('aria-valuenow', width);
+        $slider.attr('aria-valuetext', width + ' pixels');
+
+        // Update grid template columns on all feature demo grids
+        $('.typost-feature-demos-grid').css(
+            'grid-template-columns',
+            'repeat(auto-fill, minmax(' + width + 'px, 1fr))'
+        );
+
+        // Persist preference in localStorage
+        try {
+            localStorage.setItem('typost_card_width', width);
+        } catch (e) {
+            // localStorage unavailable (private browsing, storage quota) — silent fail
+        }
     });
 
     // Custom preview text input
@@ -335,12 +613,12 @@ jQuery(document).ready(function($) {
     // Delete font - show replacement modal
     var deleteFontContext = null; // Store deletion context
 
-    $('.typost-delete-font').on('click', function() {
+    $(document).on('click', '.typost-delete-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
-        // Store context for modal
         deleteFontContext = {
             button: $btn,
             fontId: fontId,
@@ -449,10 +727,11 @@ jQuery(document).ready(function($) {
     });
 
     // Delete Adobe Font - show replacement modal
-    $('.typost-delete-adobe-font').on('click', function() {
+    $(document).on('click', '.typost-delete-adobe-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
         deleteFontContext = {
             button: $btn,
@@ -466,7 +745,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle Adobe Font "Load on all pages" checkbox
-    $('.typost-adobe-font-load-all-pages').on('change', function() {
+    $(document).on('change', '.typost-adobe-font-load-all-pages', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -582,10 +861,11 @@ jQuery(document).ready(function($) {
     });
 
     // Delete Manual Font - show replacement modal
-    $('.typost-delete-manual-font').on('click', function() {
+    $(document).on('click', '.typost-delete-manual-font', function() {
         var $btn = $(this);
-        var fontId = $btn.data('font-id');
-        var fontNumericId = $btn.data('font-numeric-id');
+        var $card = $btn.closest('.typost-font-card');
+        var fontId = $card.data('font-id');
+        var fontNumericId = $card.data('font-numeric-id');
 
         deleteFontContext = {
             button: $btn,
@@ -599,7 +879,7 @@ jQuery(document).ready(function($) {
     });
 
     // Handle MyFonts "Load on all pages" checkbox
-    $('.typost-font-load-all-pages').on('change', function() {
+    $(document).on('change', '.typost-font-load-all-pages', function() {
         var $checkbox = $(this);
         var fontId = $checkbox.data('font-id');
         var loadOnAllPages = $checkbox.is(':checked');
@@ -644,31 +924,43 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit MyFonts (uploaded fonts) fallback
-    $('.typost-edit-font').on('click', function() {
-        var $card = $(this).closest('.typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
+    // ── Unified font card expand/collapse ────────────────────────────────────
+    $(document).on('click', '.typost-font-expand-toggle', function() {
+        var $toggle = $(this);
+        var $card = $toggle.closest('.typost-font-card');
+        var $details = $card.find('.typost-font-details');
+        var expanded = $toggle.attr('aria-expanded') === 'true';
 
-        // Hide card content, show edit form (keep loading-option visible)
-        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
+        $toggle.attr('aria-expanded', expanded ? 'false' : 'true');
+
+        if (expanded) {
+            $details.slideUp(150, function() { $details.attr('hidden', ''); });
+        } else {
+            $details.removeAttr('hidden').hide().slideDown(150);
+        }
     });
 
-    $('.typost-cancel-font-edit').on('click', function() {
-        var $card = $(this).closest('.typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
+    // Shared collapse helper
+    function collapseCard($card) {
+        var $toggle = $card.find('.typost-font-expand-toggle');
+        var $details = $card.find('.typost-font-details');
+        $toggle.attr('aria-expanded', 'false');
+        $details.slideUp(150, function() { $details.attr('hidden', ''); });
+        $card.find('.typost-font-edit-message, .typost-adobe-font-edit-message, .typost-manual-font-edit-message').html('');
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-font-edit-message').html('');
+    // Cancel handlers (all types — collapse the card)
+    $(document).on('click', '.typost-cancel-font-edit, .typost-cancel-adobe-font-edit, .typost-cancel-manual-font-edit', function() {
+        collapseCard($(this).closest('.typost-font-card'));
     });
 
-    $('.typost-save-font-edit').on('click', function() {
+    // Save uploaded font
+    $(document).on('click', '.typost-save-font-edit', function() {
         var $btn = $(this);
         var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-font-edit-message');
-        var fontId = $card.find('.typost-edit-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fallbacks = $card.find('.typost-font-fallback-input').val().trim();
         var availableWeights = [];
         $card.find('.typost-font-weight-checkbox:checked').each(function() {
@@ -706,34 +998,12 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit Adobe Fonts fallback
-    $('.typost-edit-adobe-font').on('click', function() {
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Hide card content, show edit form
-        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
-    });
-
-    $('.typost-cancel-adobe-font-edit').on('click', function() {
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $(this).closest('.typost-adobe-font-card, .typost-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-loading-option, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-adobe-font-edit-message').html('');
-    });
-
-    $('.typost-save-adobe-font-edit').on('click', function() {
+    // Save Adobe font
+    $(document).on('click', '.typost-save-adobe-font-edit', function() {
         var $btn = $(this);
-        // Support both .typost-adobe-font-card (legacy) and .typost-font-card (new kit structure)
-        var $card = $btn.closest('.typost-adobe-font-card, .typost-font-card');
+        var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-adobe-font-edit-message');
-        var fontId = $card.find('.typost-edit-adobe-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fallbacks = $card.find('.typost-adobe-font-fallback-input').val().trim();
         var availableWeights = [];
         $card.find('.typost-adobe-weight-checkbox:checked').each(function() {
@@ -771,31 +1041,12 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // Edit Manual Font
-    $('.typost-edit-manual-font').on('click', function() {
-        var $card = $(this).closest('.typost-manual-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Hide card content, show edit form
-        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').hide();
-        $editForm.show();
-    });
-
-    $('.typost-cancel-manual-font-edit').on('click', function() {
-        var $card = $(this).closest('.typost-manual-font-card');
-        var $editForm = $card.find('.typost-font-edit-form');
-
-        // Show card content, hide edit form
-        $card.find('.typost-font-families, .typost-font-fallbacks, .typost-font-meta, .typost-font-actions').show();
-        $editForm.hide();
-        $editForm.find('.typost-manual-font-edit-message').html('');
-    });
-
-    $('.typost-save-manual-font-edit').on('click', function() {
+    // Save manual font
+    $(document).on('click', '.typost-save-manual-font-edit', function() {
         var $btn = $(this);
-        var $card = $btn.closest('.typost-manual-font-card');
+        var $card = $btn.closest('.typost-font-card');
         var $message = $card.find('.typost-manual-font-edit-message');
-        var fontId = $card.find('.typost-edit-manual-font').data('font-id');
+        var fontId = $card.data('font-id');
         var fontFamily = $card.find('.typost-manual-font-family-input').val().trim();
         var fallbacks = $card.find('.typost-manual-font-fallback-input').val().trim();
         var availableWeights = [];

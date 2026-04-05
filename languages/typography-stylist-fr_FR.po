@@ -582,6 +582,218 @@ msgstr "Ajuster la taille du texte d'aperçu"
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr "Ajustez la taille du texte d'aperçu pour mieux voir les fonctionnalités typographiques."
 
+#: includes/admin-page.php:279
+msgid "Card Width:"
+msgstr "Largeur des cartes :"
+
+#: includes/admin-page.php:289
+msgid "Adjust feature card width"
+msgstr "Ajuster la largeur des cartes de fonctionnalités"
+
+#: includes/admin-page.php:297
+msgid "Adjust the minimum width of feature preview cards."
+msgstr "Ajustez la largeur minimale des cartes d'aperçu des fonctionnalités."
+
+#: includes/admin-page.php
+msgid "About Font Features"
+msgstr "À propos des fonctionnalités typographiques"
+
+#: includes/admin-page.php
+msgid "OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more."
+msgstr "Les fonctionnalités OpenType sont des capacités typographiques avancées intégrées dans les fichiers de polices. Elles incluent les ligatures (paires de lettres connectées), les ensembles stylistiques (designs de caractères alternatifs), les ornements, les petites capitales, et plus encore."
+
+#: includes/admin-page.php
+msgid "Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features."
+msgstr "Utilisez cette page pour prévisualiser l'effet de chaque fonctionnalité sur vos polices. Sélectionnez une police personnalisée dans le menu déroulant pour voir les résultats réels — différentes polices prennent en charge différentes fonctionnalités."
+
+#: includes/admin-page.php
+msgid "Features are grouped by category (ligatures, stylistic sets, numerals, etc.)"
+msgstr "Les fonctionnalités sont regroupées par catégorie (ligatures, ensembles stylistiques, chiffres, etc.)"
+
+#: includes/admin-page.php
+msgid "Use the card width slider to adjust preview size for easier comparison"
+msgstr "Utilisez le curseur de largeur des cartes pour ajuster la taille d'aperçu et faciliter la comparaison"
+
+#: includes/admin-page.php
+msgid "When a font is selected, you can enable or disable individual features for that font in the editor"
+msgstr "Lorsqu'une police est sélectionnée, vous pouvez activer ou désactiver des fonctionnalités individuelles pour cette police dans l'éditeur"
+
+#: includes/admin-page.php
+msgid "Why & How to Use Custom Fonts"
+msgstr "Pourquoi et comment utiliser des polices personnalisées"
+
+#: includes/admin-page.php
+msgid "Why use custom fonts?"
+msgstr "Pourquoi utiliser des polices personnalisées ?"
+
+#: includes/admin-page.php
+msgid "OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin."
+msgstr "Les fonctionnalités OpenType (ligatures, ornements, ensembles stylistiques) sont intégrées dans des fichiers de polices spécifiques. Les polices système standard et de nombreuses polices web ont un support OpenType limité. Les polices spécialisées de fonderies comme MyFonts, Adobe Fonts ou Font Squirrel incluent souvent des tables de fonctionnalités OpenType riches qui exploitent tout le potentiel de cette extension."
+
+#: includes/admin-page.php
+msgid "Performance benefit:"
+msgstr "Avantage de performance :"
+
+#: includes/admin-page.php
+msgid "Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site."
+msgstr "Les polices ajoutées ici ne se chargent que sur les pages où elles sont réellement utilisées. Si vous avez besoin d'une police décorative particulière sur une seule page, elle ne ralentira pas les autres pages de votre site."
+
+#: includes/admin-page.php
+msgid "Three ways to add fonts:"
+msgstr "Trois façons d'ajouter des polices :"
+
+#: includes/admin-page.php
+msgid "Upload Font Kit"
+msgstr "Télécharger un kit de polices"
+
+#: includes/admin-page.php
+msgid "Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded."
+msgstr "Téléchargez un fichier ZIP de fournisseurs de polices comme MyFonts ou Fontspring. Idéal pour les polices que vous avez achetées et téléchargées."
+
+#: includes/admin-page.php
+msgid "Adobe Fonts"
+msgstr "Adobe Fonts"
+
+#: includes/admin-page.php
+msgid "Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers."
+msgstr "Collez le code d'intégration de votre projet Adobe Fonts (Typekit). Idéal pour les abonnés Adobe Creative Cloud."
+
+#: includes/admin-page.php
+msgid "Custom Font Definition"
+msgstr "Définition de police personnalisée"
+
+#: includes/admin-page.php
+msgid "Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it."
+msgstr "Référencez des polices déjà chargées par votre thème, une extension ou un CDN. Idéal quand vous avez déjà une police disponible et souhaitez simplement que Typography Stylist la reconnaisse."
+
+#: includes/admin-page.php
+msgid "About Options"
+msgstr "À propos des options"
+
+#: includes/admin-page.php
+msgid "These settings control plugin behavior across your site. Changes take effect immediately."
+msgstr "Ces paramètres contrôlent le comportement de l'extension sur votre site. Les modifications prennent effet immédiatement."
+
+#: includes/admin-page.php
+msgid "Clear confirmation:"
+msgstr "Confirmation de suppression :"
+
+#: includes/admin-page.php
+msgid "Controls whether a confirmation dialog appears when clearing typography formatting in the editor."
+msgstr "Contrôle si une boîte de dialogue de confirmation apparaît lors de la suppression de la mise en forme typographique dans l'éditeur."
+
+#: includes/admin-page.php
+msgid "Archive font detection:"
+msgstr "Détection des polices sur les archives :"
+
+#: includes/admin-page.php
+msgid "When enabled, the plugin scans full post content on archive pages to detect fonts. This ensures fonts load correctly but may impact performance on sites with many posts per page."
+msgstr "Lorsque activé, l'extension analyse le contenu complet des articles sur les pages d'archives pour détecter les polices. Cela garantit le chargement correct des polices mais peut affecter les performances sur les sites avec de nombreux articles par page."
+
+#: includes/admin-page.php
+msgid "Cache management:"
+msgstr "Gestion du cache :"
+
+#: includes/admin-page.php
+msgid "The plugin caches font detection results for performance. Clear the cache after making significant changes to fonts or content."
+msgstr "L'extension met en cache les résultats de détection des polices pour les performances. Videz le cache après avoir apporté des modifications importantes aux polices ou au contenu."
+
+#: includes/admin-page.php
+msgid "About Accessibility"
+msgstr "À propos de l'accessibilité"
+
+#: includes/admin-page.php
+msgid "Typography Stylist is designed with accessibility in mind. The Typography Stylist block automatically creates dual headings — a clean text version for screen readers and a visually styled version for sighted users."
+msgstr "Typography Stylist est conçu avec l'accessibilité à l'esprit. Le bloc Typography Stylist crée automatiquement des titres doubles — une version texte propre pour les lecteurs d'écran et une version stylisée visuellement pour les utilisateurs voyants."
+
+#: includes/admin-page.php
+msgid "The settings below let you fine-tune how assistive technologies interact with styled content. The default settings work well for most sites — only change them if you have specific accessibility requirements."
+msgstr "Les paramètres ci-dessous vous permettent d'ajuster la façon dont les technologies d'assistance interagissent avec le contenu stylisé. Les paramètres par défaut fonctionnent bien pour la plupart des sites — ne les modifiez que si vous avez des exigences d'accessibilité spécifiques."
+
+#: includes/admin-page.php
+msgid "About Replacement Fonts"
+msgstr "À propos des polices de remplacement"
+
+#: includes/admin-page.php
+msgid "Font replacements ensure your content looks correct even after deleting a font. When a font is removed, any content that used it would normally lose its styling. Replacement mappings redirect that content to display with a different font instead."
+msgstr "Les remplacements de polices garantissent que votre contenu s'affiche correctement même après la suppression d'une police. Lorsqu'une police est supprimée, tout contenu qui l'utilisait perdrait normalement sa mise en forme. Les mappages de remplacement redirigent ce contenu pour qu'il s'affiche avec une autre police."
+
+#: includes/admin-page.php
+msgid "Replacements are created automatically when you delete a font and choose a replacement. You can also create them manually for fonts that were deleted before this feature was available."
+msgstr "Les remplacements sont créés automatiquement lorsque vous supprimez une police et choisissez un remplacement. Vous pouvez également les créer manuellement pour les polices qui ont été supprimées avant que cette fonctionnalité ne soit disponible."
+
+#: blocks/typography-stylist/edit.js
+msgid "Help & Tips"
+msgstr "Aide et conseils"
+
+#: blocks/typography-stylist/edit.js
+msgid "The Typography Stylist block provides two levels of control:"
+msgstr "Le bloc Typography Stylist offre deux niveaux de contrôle :"
+
+#: blocks/typography-stylist/edit.js
+msgid "Sidebar controls"
+msgstr "Contrôles de la barre latérale"
+
+#: blocks/typography-stylist/edit.js
+msgid "Apply settings to the entire block (font, size, weight, features)."
+msgstr "Appliquer les paramètres à l'ensemble du bloc (police, taille, graisse, fonctionnalités)."
+
+#: blocks/typography-stylist/edit.js
+msgid "Quick Features Toggle"
+msgstr "Basculement rapide des fonctionnalités"
+
+#: blocks/typography-stylist/edit.js
+msgid "Select text and use the toolbar popover to style individual words or phrases."
+msgstr "Sélectionnez du texte et utilisez le popover de la barre d'outils pour styliser des mots ou phrases individuels."
+
+#: blocks/typography-stylist/edit.js
+msgid "A clean semantic heading is automatically generated for screen readers — no extra configuration needed."
+msgstr "Un titre sémantique propre est automatiquement généré pour les lecteurs d'écran — aucune configuration supplémentaire nécessaire."
+
+#: blocks/typography-stylist/edit.js
+msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages where they are used, keeping your site fast."
+msgstr "Conseil : Les polices ajoutées dans Réglages → Typography Stylist ne se chargent que sur les pages où elles sont utilisées, gardant votre site rapide."
+
+#: blocks/typography-stylist/edit.js
+msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
+msgstr "Choisissez une police personnalisée. Les polices ne se chargent que sur les pages où elles sont utilisées."
+
+#: blocks/typography-stylist/edit.js
+msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
+msgstr "Le mode responsive utilise CSS clamp() avec des tailles distinctes pour les écrans mobiles, tablettes et ordinateurs."
+
+#: blocks/typography-stylist/edit.js
+msgid "OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features."
+msgstr "Les fonctionnalités OpenType sont des capacités typographiques avancées intégrées dans les fichiers de polices, comme les ligatures et les alternances stylistiques. Toutes les polices ne prennent pas en charge toutes les fonctionnalités."
+
+#: assets/js/block-editor.js
+msgid "Choose a custom font. Fonts only load on pages where used."
+msgstr "Choisissez une police personnalisée. Les polices ne se chargent que sur les pages utilisées."
+
+#: assets/js/block-editor.js
+msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
+msgstr "Le mode responsive utilise CSS clamp() pour un dimensionnement fluide entre les écrans."
+
+#: assets/js/block-editor.js
+msgid "Tips"
+msgstr "Conseils"
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly to your selected text as live preview."
+msgstr "Les modifications s'appliquent instantanément à votre texte sélectionné en aperçu direct."
+
+#: assets/js/block-editor.js
+msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
+msgstr "Utilisez Ctrl+Z (Cmd+Z sur Mac) pour annuler les modifications individuelles."
+
+#: assets/js/block-editor.js
+msgid "Fonts only load on pages where they are used, keeping your site fast."
+msgstr "Les polices ne se chargent que sur les pages où elles sont utilisées, gardant votre site rapide."
+
+#: assets/js/block-editor.js
+msgid "For more control over accessibility, use the Typography Stylist block instead."
+msgstr "Pour plus de contrôle sur l'accessibilité, utilisez le bloc Typography Stylist à la place."
+
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
 msgstr "Texte d'Aperçu Personnalisé :"
@@ -1554,3 +1766,108 @@ msgstr "Choisissez un schéma de couleurs pour la page d'administration de Typog
 #, php-format
 msgid "Actions for %s"
 msgstr "Actions pour %s"
+
+#: includes/admin-page.php
+msgid "Enable All Features"
+msgstr "Activer toutes les fonctionnalités"
+
+#: includes/admin-page.php
+msgid "Disable All Features"
+msgstr "Désactiver toutes les fonctionnalités"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Enable %s in editor for this font"
+msgstr "Activer %s dans l'éditeur pour cette police"
+
+#: includes/admin-page.php
+msgid "Feature Visibility"
+msgstr "Visibilité des fonctionnalités"
+
+#: includes/admin-page.php
+msgid "Control which features appear in the editor for this font"
+msgstr "Contrôler quelles fonctionnalités apparaissent dans l'éditeur pour cette police"
+
+#: includes/admin-page.php
+msgid "Enable All"
+msgstr "Tout activer"
+
+#: includes/admin-page.php
+msgid "Disable All"
+msgstr "Tout désactiver"
+
+#: typography-stylist.php
+msgid "Saved"
+msgstr "Enregistré"
+
+#: typography-stylist.php
+msgid "Failed to save feature visibility."
+msgstr "Échec de l'enregistrement de la visibilité des fonctionnalités."
+
+#: includes/admin-page.php
+msgid "Uploaded"
+msgstr "Téléchargée"
+
+#: includes/admin-page.php
+msgid "Custom"
+msgstr "Personnalisée"
+
+#: includes/admin-page.php
+msgid "WP Library"
+msgstr "Bibliothèque WP"
+
+#: includes/admin-page.php
+msgid "Font list — drag to reorder"
+msgstr "Liste des polices — glisser pour réorganiser"
+
+#: includes/admin-page.php
+msgid "Drag to reorder"
+msgstr "Glisser pour réorganiser"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr "Modifier les paramètres pour : %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit custom font: %s"
+msgstr "Modifier la police personnalisée : %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete font: %s"
+msgstr "Supprimer la police : %s"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete custom font: %s"
+msgstr "Supprimer la police personnalisée : %s"
+
+#: includes/admin-page.php
+msgid "Manage fonts in Appearance Editor (opens in new tab)"
+msgstr "Gérer les polices dans l'éditeur d'apparence (ouvre dans un nouvel onglet)"
+
+#: includes/admin-page.php
+msgid "Manage in Editor"
+msgstr "Gérer dans l'éditeur"
+
+#: includes/admin-page.php
+msgid "This font is managed by the WordPress Font Library. To edit or remove it, use Appearance → Editor → Styles → Typography."
+msgstr "Cette police est gérée par la bibliothèque de polices WordPress. Pour la modifier ou la supprimer, utilisez Apparence → Éditeur → Styles → Typographie."
+
+#: includes/admin-page.php
+msgid "No fonts added yet."
+msgstr "Aucune police ajoutée pour l'instant."
+
+#: includes/admin-page.php
+msgid "Use the \"Add Font\" section below to upload a font kit, add an Adobe Fonts project, or define a custom font."
+msgstr "Utilisez la section « Ajouter une police » ci-dessous pour télécharger un kit de polices, ajouter un projet Adobe Fonts ou définir une police personnalisée."
+
+#: includes/admin-page.php
+msgid "Add Font"
+msgstr "Ajouter une police"
+
+#: typography-stylist.php
+msgid "Failed to save font order."
+msgstr "Échec de l'enregistrement de l'ordre des polices."

@@ -19,6 +19,8 @@ delete_option('typost_custom_fonts');
 delete_option('typost_adobe_fonts');
 delete_option('typost_manual_fonts');
 delete_option('typost_font_replacements');
+delete_option('typost_font_feature_visibility');
+delete_option('typost_font_order');
 delete_option('typost_htaccess_verified');
 delete_option('typost_enable_aria_labels');
 delete_option('typost_disable_accessibility_warning');

@@ -15,7 +15,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
-    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
+    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice, Tooltip } = wp.components;
     const { __, sprintf } = wp.i18n;
     const { compose, debounce } = wp.compose;
 
@@ -469,6 +469,33 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             };
             document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+        }
+
+        /**
+         * Render WCAG-compliant info tooltip.
+         * Uses Button for keyboard focusability, Tooltip for hover/focus display.
+         * @param {string} text - Plain text tooltip content
+         * @returns {JSX.Element}
+         */
+        renderInfoTip(text) {
+            return (
+                <Tooltip text={text}>
+                    <Button
+                        icon="info-outline"
+                        label={text}
+                        className="typost-info-tooltip-trigger"
+                        isSmall
+                        style={{
+                            minWidth: '20px',
+                            height: '20px',
+                            padding: 0,
+                            opacity: 0.5,
+                            marginLeft: '4px',
+                            verticalAlign: 'middle',
+                        }}
+                    />
+                </Tooltip>
+            );
         }
 
         /**
@@ -1716,9 +1743,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Group features by category
          */
         groupFeatures() {
-            const features = typostData.features || [];
-            const grouped = {};
+            const allFeatures = typostData.features || [];
+            const visibilityMap = typostData.fontFeatureVisibility || {};
+            const fontId = this.state.selectedFontId || 0;
 
+            // Filter by per-font visibility if the utility is available
+            const features = (window.typostSharedUtils && window.typostSharedUtils.filterFeaturesByVisibility)
+                ? window.typostSharedUtils.filterFeaturesByVisibility(allFeatures, fontId, visibilityMap)
+                : allFeatures;
+
+            const grouped = {};
             features.forEach(feature => {
                 const category = feature.category || 'other';
                 if (!grouped[category]) {
@@ -1801,6 +1835,30 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         });
                         this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
                     }
+                });
+            }
+
+            // Sort by saved font display order
+            const fontOrder = typostData.fontOrder || [];
+            if (fontOrder.length > 0) {
+                options.sort((a, b) => {
+                    const keyVariants = (opt) => [
+                        'font-' + opt.fontId,
+                        'adobe-' + opt.fontId,
+                        'manual-' + opt.fontId,
+                    ];
+                    const posA = keyVariants(a).reduce((best, key) => {
+                        const idx = fontOrder.indexOf(key);
+                        return idx !== -1 ? Math.min(best, idx) : best;
+                    }, Infinity);
+                    const posB = keyVariants(b).reduce((best, key) => {
+                        const idx = fontOrder.indexOf(key);
+                        return idx !== -1 ? Math.min(best, idx) : best;
+                    }, Infinity);
+                    if (posA === Infinity && posB === Infinity) return 0;
+                    if (posA === Infinity) return 1;
+                    if (posB === Infinity) return -1;
+                    return posA - posB;
                 });
             }
 
@@ -2236,7 +2294,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 {/* Font Selector */}
                                 {hasFonts && (
                                     <div className="typost-font-section">
-                                        <h4>{__('Font Family', 'typography-stylist')}</h4>
+                                        <h4>{__('Font Family', 'typography-stylist')} {this.renderInfoTip(__('Choose a custom font. Fonts only load on pages where used.', 'typography-stylist'))}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
                                             options={[
@@ -2291,7 +2349,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">
-                                    <h4>{__('Font Size', 'typography-stylist')}</h4>
+                                    <h4>{__('Font Size', 'typography-stylist')} {this.renderInfoTip(__('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist'))}</h4>
                                     <SelectControl
                                         value={fontSize}
                                         options={[
@@ -2468,6 +2526,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         window.typostHooks.doAction('typost_inline_modal_bottom', el, this.state);
                                     }
                                 }} />
+
+                                {/* Collapsible Tips Section */}
+                                <details style={{ marginTop: '12px', fontSize: '12px', color: '#757575', borderTop: '1px solid #ddd', paddingTop: '8px' }}>
+                                    <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#2271b1', fontSize: '13px' }}>
+                                        {__('Tips', 'typography-stylist')}
+                                    </summary>
+                                    <ul style={{ marginTop: '8px', marginLeft: '16px', lineHeight: '1.6', listStyleType: 'disc' }}>
+                                        <li>{__('Changes apply instantly to your selected text as live preview.', 'typography-stylist')}</li>
+                                        <li>{__('Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes.', 'typography-stylist')}</li>
+                                        <li>{__('Fonts only load on pages where they are used, keeping your site fast.', 'typography-stylist')}</li>
+                                        <li>{__('For more control over accessibility, use the Typography Stylist block instead.', 'typography-stylist')}</li>
+                                    </ul>
+                                </details>
 
                                 {/* Action Buttons (v1.3.0 - live preview, no Apply button) */}
                                 {!showClearConfirmation && (

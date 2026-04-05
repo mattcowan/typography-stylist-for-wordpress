@@ -579,6 +579,222 @@ msgstr ""
 msgid "Adjust the size of the preview text to better see typography features."
 msgstr ""
 
+#: includes/admin-page.php:279
+msgid "Card Width:"
+msgstr ""
+
+#: includes/admin-page.php:289
+msgid "Adjust feature card width"
+msgstr ""
+
+#: includes/admin-page.php:297
+msgid "Adjust the minimum width of feature preview cards."
+msgstr ""
+
+#. Phase 2: Documentation strings — Admin tab help panels
+
+#: includes/admin-page.php
+msgid "About Font Features"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Features are grouped by category (ligatures, stylistic sets, numerals, etc.)"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Use the card width slider to adjust preview size for easier comparison"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "When a font is selected, you can enable or disable individual features for that font in the editor"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Why & How to Use Custom Fonts"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Why use custom fonts?"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Performance benefit:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Three ways to add fonts:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Upload Font Kit"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Adobe Fonts"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Custom Font Definition"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "About Options"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "These settings control plugin behavior across your site. Changes take effect immediately."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Clear confirmation:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Controls whether a confirmation dialog appears when clearing typography formatting in the editor."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Archive font detection:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "When enabled, the plugin scans full post content on archive pages to detect fonts. This ensures fonts load correctly but may impact performance on sites with many posts per page."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Cache management:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "The plugin caches font detection results for performance. Clear the cache after making significant changes to fonts or content."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "About Accessibility"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Typography Stylist is designed with accessibility in mind. The Typography Stylist block automatically creates dual headings — a clean text version for screen readers and a visually styled version for sighted users."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "The settings below let you fine-tune how assistive technologies interact with styled content. The default settings work well for most sites — only change them if you have specific accessibility requirements."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "About Replacement Fonts"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Font replacements ensure your content looks correct even after deleting a font. When a font is removed, any content that used it would normally lose its styling. Replacement mappings redirect that content to display with a different font instead."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Replacements are created automatically when you delete a font and choose a replacement. You can also create them manually for fonts that were deleted before this feature was available."
+msgstr ""
+
+#. Phase 2: Documentation strings — Block editor
+
+#: blocks/typography-stylist/edit.js
+msgid "Help & Tips"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "The Typography Stylist block provides two levels of control:"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Sidebar controls"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Apply settings to the entire block (font, size, weight, features)."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Quick Features Toggle"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Select text and use the toolbar popover to style individual words or phrases."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "A clean semantic heading is automatically generated for screen readers — no extra configuration needed."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages where they are used, keeping your site fast."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Choose a custom font. Fonts only load on pages where used."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Tips"
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly to your selected text as live preview."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Fonts only load on pages where they are used, keeping your site fast."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "For more control over accessibility, use the Typography Stylist block instead."
+msgstr ""
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr ""
@@ -1168,4 +1384,109 @@ msgstr ""
 #: includes/admin-page.php:454
 #, php-format
 msgid "Actions for %s"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enable All Features"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Disable All Features"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Enable %s in editor for this font"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Feature Visibility"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Control which features appear in the editor for this font"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enable All"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Disable All"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Saved"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to save feature visibility."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Uploaded"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Custom"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "WP Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Font list \xe2\x80\x94 drag to reorder"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Drag to reorder"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit settings for: %s"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Edit custom font: %s"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete font: %s"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Delete custom font: %s"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Manage fonts in Appearance Editor (opens in new tab)"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Manage in Editor"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "This font is managed by the WordPress Font Library. To edit or remove it, use Appearance \xe2\x86\x92 Editor \xe2\x86\x92 Styles \xe2\x86\x92 Typography."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "No fonts added yet."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Use the \"Add Font\" section below to upload a font kit, add an Adobe Fonts project, or define a custom font."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Add Font"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to save font order."
 msgstr ""

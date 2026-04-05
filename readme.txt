@@ -2,8 +2,8 @@
 Contributors: matthewneilcowan
 Tags: typography, opentype, ligatures, stylistic-sets, webfonts
 Requires at least: 5.8
-Tested up to: 6.9.1
-Stable tag: 1.3.0
+Tested up to: 6.9.4
+Stable tag: 2.0.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -267,12 +267,21 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= 1.3.0 =
+= 2.0.0 =
 * **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
 * **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
 * **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
 * **NEW: JavaScript hook system** (`window.typostHooks`) - Lightweight action/filter system for both the inline editor and Typography Stylist block, with container-based hook points for rendering extension UI
 * **NEW: Paragraph Styles extension** (separate plugin) - Save and load paragraph style presets from a dropdown at the top of both editors; manage styles from a dedicated admin tab
+* **NEW: Per-font OpenType feature visibility** - Configure which of the 51 OpenType features appear in the editor on a per-font basis; defaults to all features visible for full backward compatibility
+* **NEW: Unified font list** - All font sources (uploaded kits, Adobe Fonts, custom definitions, WP Font Library) now appear in a single organized list with color-coded type badges instead of three separate sections
+* **NEW: Drag-to-reorder fonts** - Drag fonts up and down the list to control the order they appear in editor dropdowns; order is persisted via the REST API
+* **NEW: WordPress Font Library integration** - Fonts registered through the WordPress Font Library (WP 6.5+) now appear in the Custom Fonts admin list as read-only entries with a link to manage them in the Appearance Editor; gracefully absent on older WordPress versions
+* **NEW: Font name preview** - Font names in the Custom Fonts admin list now render in their actual typeface using CSS variables, making it easy to identify fonts at a glance
+* **NEW: Card width slider** - Adjustable preview card width (280–800px) in the Font Features tab, persisted per-browser via localStorage
+* **NEW: Contextual help panels** - Collapsible help panels added to each admin tab (Custom Fonts, Font Features, Options, Accessibility, Replacement Fonts) explaining what each section does and how to use it
+* **NEW: Block editor Help & Tips panel** - A collapsible "Help & Tips" inspector panel in the Typography Stylist block explains when to use block vs. inline styling, accessibility features, and font selection guidance
+* **NEW: Contextual tooltips** - Info tooltips on key block editor controls (font family, font weight, font size, letter spacing, line height, OpenType features) using WCAG-compliant `<Tooltip>` + `<Button>` pattern; keyboard focusable with screen reader support
 * Added: `typost_editor_data` filter for extensions to add data to the block editor
 * Added: `typost_editor_assets` action for extensions to enqueue editor scripts
 * Added: `typost_admin_tabs` filter for registering custom admin settings tabs
@@ -288,17 +297,26 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
 * Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
 * Added: Blueprint specifications for Variable Font Axes and Glyphs Panel future extensions
+* Added: REST endpoints for font feature visibility (`GET/POST /typost/v1/font-feature-visibility/{font_id}`) and font order (`GET/POST /typost/v1/font-order`)
+* Added: `filterFeaturesByVisibility()` utility function (exported from utils.js and exposed via `window.typostSharedUtils`) for filtering features based on per-font visibility settings
 * Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
 * Removed: Apply button from inline editor toolbar
 * Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
 * Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
 * Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
+* Removed: Separate Uploaded Fonts, Adobe Fonts, and Custom Font Definitions sections — replaced by unified font list
 * Changed: Word boundary accessibility warning is now a persistent, non-blocking informational notice at top of modal instead of blocking application; it remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block
 * Changed: Users can still choose to convert to a Typography Stylist block for improved accessibility when needed, but this is now an optional follow-up action rather than a requirement to proceed
 * Changed: Admin settings tabs are now data-driven with priority-based ordering (supports URL deep-linking via `?tab=` parameter)
+* Changed: Add Font forms (upload kit, Adobe Fonts, custom definition) are now grouped in a collapsible accordion section beneath the font list
+* Changed: Feature visibility is editor-UI-only — already-applied features in saved content continue to render correctly regardless of visibility settings
 * Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
 * Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
+* Improved: Font Features tab preview selector now includes WP Font Library fonts (when available) alongside uploaded, Adobe, and custom fonts
+* Improved: Feature visibility changes auto-save on toggle with a brief "Saved" confirmation — no Save button needed
+* Improved: Per-font feature visibility includes master "Enable All" / "Disable All" controls both on the Font Features tab and inside each font's edit form
 * Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
+* Note: WP Font Library fonts appear in the admin list as read-only; font order and feature visibility settings for WP Library fonts are not yet supported in this release
 
 = 1.2.2 =
 * Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation
