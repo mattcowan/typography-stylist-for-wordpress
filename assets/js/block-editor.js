@@ -11,7 +11,7 @@ const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
 (function(wp) {
-    const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
+    const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
@@ -469,6 +469,73 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             };
             document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+
+            // Extension hook: Listen for content insertion from extensions (e.g., Glyphs Panel)
+            // Inserts text at the cursor (or replaces the selection), optionally
+            // wrapping the inserted text in a typost-styled span via format attributes.
+            this._handleInsertContent = function(e) {
+                if (!e.detail || e.detail.source !== 'inline' || !e.detail.text) {
+                    return;
+                }
+                // Only a mounted instance handles insertion. React StrictMode
+                // constructs discarded shadow instances whose constructor-added
+                // listeners are never cleaned up — without this guard each
+                // insert would be applied twice.
+                if (!self._isMounted) {
+                    return;
+                }
+                const { value, onChange } = self.props;
+                if (!value || !onChange) {
+                    return;
+                }
+                const { savedSelectionStart, savedSelectionEnd } = self.state;
+
+                // Selection may be lost to modal focus; fall back to saved
+                // bounds, then to the range captured by the extension when its
+                // UI launched (detail.range), then append at the end
+                const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+                let start = selectionLost ? savedSelectionStart : value.start;
+                let end = selectionLost ? savedSelectionEnd : value.end;
+                if (typeof start !== 'number') {
+                    if (e.detail.range && typeof e.detail.range.start === 'number') {
+                        start = e.detail.range.start;
+                        end = typeof e.detail.range.end === 'number' ? e.detail.range.end : start;
+                    } else {
+                        start = value.text.length;
+                        end = start;
+                    }
+                }
+                if (typeof end !== 'number') end = start;
+                start = Math.max(0, Math.min(start, value.text.length));
+                end = Math.max(start, Math.min(end, value.text.length));
+
+                const text = String(e.detail.text).slice(0, 50);
+                let newValue = insert(value, text, start, end);
+                const insertEnd = start + text.length;
+
+                // Copy formats from the preceding character so insertion inside
+                // formatted text behaves like typing (continuity)
+                const inherited = (start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : [];
+                inherited.forEach(function(format) {
+                    newValue = applyFormat(newValue, format, start, insertEnd);
+                });
+
+                // Wrap inserted text in a typost-styled span when attributes provided
+                // (replaces any inherited typost format on just the inserted range)
+                if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+                    newValue = applyFormat(newValue, {
+                        type: FORMAT_TYPE,
+                        attributes: e.detail.attributes
+                    }, start, insertEnd);
+                }
+
+                // Collapse caret after the inserted text
+                newValue.start = insertEnd;
+                newValue.end = insertEnd;
+                onChange(newValue);
+                self.setState({ savedSelectionStart: insertEnd, savedSelectionEnd: insertEnd });
+            };
+            document.addEventListener('typost-insert-content', this._handleInsertContent);
         }
 
         /**
@@ -2150,7 +2217,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         /**
          * Cleanup event listeners and debounced functions when component unmounts
          */
+        componentDidMount() {
+            // Distinguishes the live instance from StrictMode shadow instances
+            // (whose constructors run but which are never mounted) — see
+            // _handleInsertContent guard
+            this._isMounted = true;
+        }
+
         componentWillUnmount() {
+            this._isMounted = false;
+
             // Cleanup modal drag/resize event listeners
             document.removeEventListener('mousemove', this.handleDragMove);
             document.removeEventListener('mouseup', this.handleDragEnd);
@@ -2162,9 +2238,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.debouncedApplyDropdown.cancel();
             this.debouncedApplyFontSize.cancel();
 
-            // Cleanup extension hook listener
+            // Cleanup extension hook listeners
             if (this._handleApplyBlockProperties) {
                 document.removeEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+            }
+            if (this._handleInsertContent) {
+                document.removeEventListener('typost-insert-content', this._handleInsertContent);
             }
 
             // Cleanup state provider filter

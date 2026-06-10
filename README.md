@@ -219,7 +219,7 @@ typost/
 
 **Block Editor (Gutenberg)**
 - Uses `@wordpress/format-api` for inline formatting
-- Registers custom format type: `typost/typography-features`
+- Registers custom format type: `typost/features`
 - React-based UI components
 
 **REST API Endpoints**

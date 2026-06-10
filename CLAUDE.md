@@ -25,7 +25,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **What:** Toolbar button (with "T" icon) available on standard rich text blocks (core/heading, core/paragraph, etc.)
    - **When:** Use for applying features to complete words/phrases in any heading or paragraph block
    - **How:** Opens a popover with presets, individual features, font controls, and preview
-   - **Implementation:** Registers custom format type `typost/typography-features` using WordPress `@wordpress/format-api`
+   - **Implementation:** Registers custom format type `typost/features` using WordPress `@wordpress/format-api`
    - **Output:** Applies formatting using inline `<span class="typost-styled" data-features="..." style="font-feature-settings: ...">`
    - **Storage:** Features are stored directly in post content (no separate meta table)
    - **Note:** Features must be explicitly applied via the "Apply" button (not automatic on toggle)
