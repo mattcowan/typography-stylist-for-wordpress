@@ -1579,7 +1579,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings) {
+            // Preserve raw feature settings (indexed alternates like "salt" 2,
+            // set by extensions via data-feature-settings) across re-applies —
+            // the comma-tag data-features format cannot express them
+            const activeFormatForRaw = getActiveFormat(value, FORMAT_TYPE);
+            const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1599,10 +1605,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     attributes['data-style-id'] = String(paragraphStyleId);
                 }
 
-                // Add features
-                if (selectedFeatures.length > 0) {
-                    const cssValue = this.featuresToCSS(selectedFeatures);
-                    attributes['data-features'] = selectedFeatures.join(',');
+                // Add features. Raw feature settings (indexed alternates) take
+                // precedence; toggled tags not already present are appended.
+                if (rawFeatureSettings || selectedFeatures.length > 0) {
+                    let cssValue;
+                    if (rawFeatureSettings) {
+                        attributes['data-feature-settings'] = rawFeatureSettings;
+                        const extraTags = selectedFeatures.filter((tag) => rawFeatureSettings.indexOf('"' + tag + '"') === -1);
+                        cssValue = rawFeatureSettings + (extraTags.length > 0 ? ', ' + this.featuresToCSS(extraTags) : '');
+                    } else {
+                        cssValue = this.featuresToCSS(selectedFeatures);
+                    }
+                    if (selectedFeatures.length > 0) {
+                        attributes['data-features'] = selectedFeatures.join(',');
+                    }
                     if (!hasActiveStyle) {
                         styleString += `font-feature-settings: ${cssValue}`;
                     }
@@ -2755,6 +2771,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',
             'data-font-variation-settings': 'data-font-variation-settings',
+            // Raw font-feature-settings value for indexed alternates (e.g. "salt" 2)
+            // that the comma-tag data-features format cannot express
+            // (set by extensions such as the Glyphs Panel)
+            'data-feature-settings': 'data-feature-settings',
             'style': 'style',
             'aria-label': 'aria-label'
         },

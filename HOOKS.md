@@ -508,6 +508,8 @@ Behavior:
 
 **Availability:** Handled by both the inline editor (format type `typost/features`) and the Typography Stylist block.
 
+**Indexed alternates (`data-feature-settings`):** The comma-tag `data-features` format implies `"tag" 1` and cannot express indexed alternates like `font-feature-settings: "salt" 2`. For those, set the raw value in a `data-feature-settings` attribute (registered on the `typost/features` format) and put the full value in `style`. List any plain index-1 tags in `data-features` as usual. The inline editor preserves `data-feature-settings` verbatim when other properties are re-applied to the span, and appends newly toggled tags that aren't already present in the raw value.
+
 ---
 
 ## Admin Tab Extensibility
