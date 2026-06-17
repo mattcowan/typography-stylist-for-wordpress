@@ -496,16 +496,24 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
                 let start = selectionLost ? savedSelectionStart : value.start;
                 let end = selectionLost ? savedSelectionEnd : value.end;
-                if (typeof start !== 'number') {
-                    if (e.detail.range && typeof e.detail.range.start === 'number') {
+                if (!Number.isFinite(start)) {
+                    if (e.detail.range && Number.isFinite(e.detail.range.start)) {
                         start = e.detail.range.start;
-                        end = typeof e.detail.range.end === 'number' ? e.detail.range.end : start;
+                        end = Number.isFinite(e.detail.range.end) ? e.detail.range.end : start;
                     } else {
                         start = value.text.length;
                         end = start;
                     }
                 }
-                if (typeof end !== 'number') end = start;
+                if (!Number.isFinite(end)) end = start;
+                // Normalize: integers, swap if reversed, clamp to text bounds
+                start = Math.floor(start);
+                end = Math.floor(end);
+                if (end < start) {
+                    const swap = start;
+                    start = end;
+                    end = swap;
+                }
                 start = Math.max(0, Math.min(start, value.text.length));
                 end = Math.max(start, Math.min(end, value.text.length));
 
@@ -1581,8 +1589,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Preserve raw feature settings (indexed alternates like "salt" 2,
             // set by extensions via data-feature-settings) across re-applies —
-            // the comma-tag data-features format cannot express them
-            const activeFormatForRaw = getActiveFormat(value, FORMAT_TYPE);
+            // the comma-tag data-features format cannot express them.
+            // When the live selection collapsed due to modal focus, the format
+            // must be read at the saved bounds — getActiveFormat() looks at the
+            // collapsed caret, which may sit outside the styled span.
+            let activeFormatForRaw;
+            if (selectionLost) {
+                const formatsAtSaved = (value.formats && value.formats[savedSelectionStart]) || [];
+                activeFormatForRaw = formatsAtSaved.find((format) => format.type === FORMAT_TYPE);
+            } else {
+                activeFormatForRaw = getActiveFormat(value, FORMAT_TYPE);
+            }
             const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
 
             if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings && !rawFeatureSettings) {

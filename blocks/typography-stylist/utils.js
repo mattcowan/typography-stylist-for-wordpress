@@ -1555,7 +1555,7 @@ export function resolveQftInsertionRange(capturedSelection, selectionStart, sele
 	let start = null;
 	let end = null;
 
-	if (capturedSelection && typeof capturedSelection.start === 'number' && typeof capturedSelection.end === 'number') {
+	if (capturedSelection && Number.isFinite(capturedSelection.start) && Number.isFinite(capturedSelection.end)) {
 		start = capturedSelection.start;
 		end = capturedSelection.end;
 	} else if (

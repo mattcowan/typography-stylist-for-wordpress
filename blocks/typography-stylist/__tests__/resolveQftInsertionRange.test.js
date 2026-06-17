@@ -44,6 +44,17 @@ describe('resolveQftInsertionRange', () => {
 			);
 			expect(result).toEqual({ start: 4, end: 9 });
 		});
+
+		test('ignores capturedSelection with NaN/Infinity offsets (falls back to block selection)', () => {
+			const result = resolveQftInsertionRange(
+				{ start: NaN, end: Infinity },
+				{ clientId: CLIENT_ID, offset: 4 },
+				{ clientId: CLIENT_ID, offset: 9 },
+				CLIENT_ID,
+				TEXT_LENGTH
+			);
+			expect(result).toEqual({ start: 4, end: 9 });
+		});
 	});
 
 	describe('block editor selection fallback', () => {
@@ -127,7 +138,7 @@ describe('resolveQftInsertionRange', () => {
 			expect(result).toEqual({ start: 3, end: 9 });
 		});
 
-		test('coerces non-finite offsets to 0', () => {
+		test('non-finite capturedSelection with no other signal appends at end', () => {
 			const result = resolveQftInsertionRange(
 				{ start: NaN, end: Infinity },
 				null,
@@ -135,8 +146,20 @@ describe('resolveQftInsertionRange', () => {
 				CLIENT_ID,
 				TEXT_LENGTH
 			);
-			// Non-finite values are coerced to 0 before clamping
-			expect(result).toEqual({ start: 0, end: 0 });
+			// A junk captured range is ignored entirely (not coerced to 0) —
+			// with no block selection either, insertion appends at the end
+			expect(result).toEqual({ start: TEXT_LENGTH, end: TEXT_LENGTH });
+		});
+
+		test('non-finite block selection offsets are coerced to 0 by clamping', () => {
+			const result = resolveQftInsertionRange(
+				null,
+				{ clientId: CLIENT_ID, offset: NaN },
+				{ clientId: CLIENT_ID, offset: 9 },
+				CLIENT_ID,
+				TEXT_LENGTH
+			);
+			expect(result).toEqual({ start: 0, end: 9 });
 		});
 	});
 });
