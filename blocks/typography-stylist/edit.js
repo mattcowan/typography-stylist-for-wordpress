@@ -29,8 +29,8 @@ import {
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
-import { create, slice as sliceRichText, getTextContent } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility } from './utils';
+import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange } from './utils';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -70,6 +70,18 @@ window.typostHooks = window.typostHooks || {
 			args[0] = h.callback.apply(null, args);
 		});
 		return args[0];
+	},
+	removeAction: function(name, callback) {
+		if (!this._actions[name]) return;
+		this._actions[name] = this._actions[name].filter(function(h) {
+			return h.callback !== callback;
+		});
+	},
+	removeFilter: function(name, callback) {
+		if (!this._filters[name]) return;
+		this._filters[name] = this._filters[name].filter(function(h) {
+			return h.callback !== callback;
+		});
 	}
 };
 
@@ -375,6 +387,67 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			document.removeEventListener('typost-apply-block-properties', handleApplyBlockProperties);
 		};
 	}, [setAttributes, setInlineFontFamily, setInlineFontWeight, setInlineLetterSpacing, setInlineLineHeight, setInlineFontSize, setInlineFontSizeMin, setInlineFontSizePreferred, setInlineFontSizeMax]); // eslint-disable-line react-hooks/exhaustive-deps -- fontIdMap/fontWeight/getClosestWeight read from ref
+
+	// Extension hook: Listen for content insertion from extensions (e.g., Glyphs Panel)
+	// Inserts text at the captured/current selection, optionally wrapping it in a
+	// typost-styled span via format attributes. Uses ref pattern to avoid stale closures.
+	const insertContentRef = useRef({});
+	insertContentRef.current = { content, capturedSelection, selectionStart, selectionEnd, clientId, isPopoverOpen };
+
+	useEffect(() => {
+		const handleInsertContent = (e) => {
+			if (!e.detail || e.detail.source !== 'qft' || !e.detail.text) {
+				return;
+			}
+			// Every Typography Stylist block registers this listener — only the
+			// targeted block (detail.clientId, captured by the extension when
+			// its UI launched) handles the insertion. Fallback for events
+			// without clientId: the block whose QFT popover is open.
+			const { content: curContent, capturedSelection: captured, selectionStart: selStart, selectionEnd: selEnd, clientId: curClientId, isPopoverOpen: popoverOpen } = insertContentRef.current;
+			if (e.detail.clientId ? e.detail.clientId !== curClientId : !popoverOpen) {
+				return;
+			}
+
+			// Drop temporary preview spans (text-preserving, so offsets stay valid)
+			const cleanContent = removePreviewSpans(curContent || '');
+			const value = create({ html: cleanContent });
+			// Selection priority: own captured selection → range captured by the
+			// extension at launch (detail.range) → live block selection → append
+			const range = resolveQftInsertionRange(
+				captured || e.detail.range || null,
+				selStart, selEnd, curClientId, value.text.length
+			);
+
+			const text = String(e.detail.text).slice(0, 50);
+			let newValue = insertRichText(value, text, range.start, range.end);
+			const insertEnd = range.start + text.length;
+
+			// Copy formats from the preceding character so insertion inside
+			// formatted text behaves like typing (continuity)
+			const inherited = (range.start > 0 && value.formats[range.start - 1]) ? value.formats[range.start - 1] : [];
+			inherited.forEach((format) => {
+				newValue = applyFormat(newValue, format, range.start, insertEnd);
+			});
+
+			// Wrap inserted text in a typost-styled span when attributes provided
+			// (replaces any inherited typost format on just the inserted range)
+			if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+				newValue = applyFormat(newValue, {
+					type: 'typost/features',
+					attributes: e.detail.attributes
+				}, range.start, insertEnd);
+			}
+
+			// Commit: clear preview-restore so popover close doesn't revert the insertion
+			originalContentRef.current = null;
+			setAttributes({ content: toHTMLString({ value: newValue }) });
+			setCapturedSelection({ start: insertEnd, end: insertEnd, text: '', length: 0 });
+		};
+		document.addEventListener('typost-insert-content', handleInsertContent);
+		return () => {
+			document.removeEventListener('typost-insert-content', handleInsertContent);
+		};
+	}, [setAttributes]); // eslint-disable-line react-hooks/exhaustive-deps -- content/selection read from insertContentRef
 
 	// Extension hook: Register state provider for QFT editor (v1.3.0)
 	// Uses ref pattern to avoid filter accumulation — filter registered once,
@@ -2795,7 +2868,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									if (el && !el._hooked) {
 										el._hooked = true;
 										window.typostHooks.doAction('typost_qft_before_features', el, {
-											fontId, features, inlineFontFamily, capturedSelection, content
+											fontId, features, inlineFontFamily, capturedSelection, content, clientId
 										});
 									}
 								}} />

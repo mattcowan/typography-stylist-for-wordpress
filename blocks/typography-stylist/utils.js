@@ -1532,6 +1532,56 @@ export function stripInlineFeatures(htmlContent) {
 }
 
 /**
+ * Resolve the target text range for content insertion in the Typography Stylist
+ * block (Quick Feature Toggles context).
+ *
+ * Priority order:
+ * 1. capturedSelection — offsets captured before the QFT modal stole focus
+ * 2. Block editor selection — when it belongs to this block
+ * 3. End of content — degraded fallback (append)
+ *
+ * Offsets are clamped to [0, textLength] and normalized so start <= end.
+ *
+ * @param {Object|null} capturedSelection - {start, end} captured at modal open, or null
+ * @param {Object|null} selectionStart - Block editor selection start {clientId, offset}
+ * @param {Object|null} selectionEnd - Block editor selection end {clientId, offset}
+ * @param {string} clientId - This block's client ID
+ * @param {number} textLength - Plain text length of the block content
+ * @return {{start: number, end: number}} Insertion range
+ */
+export function resolveQftInsertionRange(capturedSelection, selectionStart, selectionEnd, clientId, textLength) {
+	const clamp = (n) => Math.max(0, Math.min(typeof n === 'number' && isFinite(n) ? n : 0, textLength));
+
+	let start = null;
+	let end = null;
+
+	if (capturedSelection && Number.isFinite(capturedSelection.start) && Number.isFinite(capturedSelection.end)) {
+		start = capturedSelection.start;
+		end = capturedSelection.end;
+	} else if (
+		selectionStart && selectionEnd &&
+		selectionStart.clientId === clientId &&
+		selectionEnd.clientId === clientId
+	) {
+		start = selectionStart.offset || 0;
+		end = selectionEnd.offset || 0;
+	} else {
+		start = textLength;
+		end = textLength;
+	}
+
+	start = clamp(start);
+	end = clamp(end);
+	if (start > end) {
+		const tmp = start;
+		start = end;
+		end = tmp;
+	}
+
+	return { start, end };
+}
+
+/**
  * Checks if font size values are in valid order
  * Does not adjust values - only returns true/false
  *

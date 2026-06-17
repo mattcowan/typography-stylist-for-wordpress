@@ -11,7 +11,7 @@ const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
 (function(wp) {
-    const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent } = wp.richText;
+    const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
@@ -469,6 +469,81 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             };
             document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+
+            // Extension hook: Listen for content insertion from extensions (e.g., Glyphs Panel)
+            // Inserts text at the cursor (or replaces the selection), optionally
+            // wrapping the inserted text in a typost-styled span via format attributes.
+            this._handleInsertContent = function(e) {
+                if (!e.detail || e.detail.source !== 'inline' || !e.detail.text) {
+                    return;
+                }
+                // Only a mounted instance handles insertion. React StrictMode
+                // constructs discarded shadow instances whose constructor-added
+                // listeners are never cleaned up — without this guard each
+                // insert would be applied twice.
+                if (!self._isMounted) {
+                    return;
+                }
+                const { value, onChange } = self.props;
+                if (!value || !onChange) {
+                    return;
+                }
+                const { savedSelectionStart, savedSelectionEnd } = self.state;
+
+                // Selection may be lost to modal focus; fall back to saved
+                // bounds, then to the range captured by the extension when its
+                // UI launched (detail.range), then append at the end
+                const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+                let start = selectionLost ? savedSelectionStart : value.start;
+                let end = selectionLost ? savedSelectionEnd : value.end;
+                if (!Number.isFinite(start)) {
+                    if (e.detail.range && Number.isFinite(e.detail.range.start)) {
+                        start = e.detail.range.start;
+                        end = Number.isFinite(e.detail.range.end) ? e.detail.range.end : start;
+                    } else {
+                        start = value.text.length;
+                        end = start;
+                    }
+                }
+                if (!Number.isFinite(end)) end = start;
+                // Normalize: integers, swap if reversed, clamp to text bounds
+                start = Math.floor(start);
+                end = Math.floor(end);
+                if (end < start) {
+                    const swap = start;
+                    start = end;
+                    end = swap;
+                }
+                start = Math.max(0, Math.min(start, value.text.length));
+                end = Math.max(start, Math.min(end, value.text.length));
+
+                const text = String(e.detail.text).slice(0, 50);
+                let newValue = insert(value, text, start, end);
+                const insertEnd = start + text.length;
+
+                // Copy formats from the preceding character so insertion inside
+                // formatted text behaves like typing (continuity)
+                const inherited = (start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : [];
+                inherited.forEach(function(format) {
+                    newValue = applyFormat(newValue, format, start, insertEnd);
+                });
+
+                // Wrap inserted text in a typost-styled span when attributes provided
+                // (replaces any inherited typost format on just the inserted range)
+                if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+                    newValue = applyFormat(newValue, {
+                        type: FORMAT_TYPE,
+                        attributes: e.detail.attributes
+                    }, start, insertEnd);
+                }
+
+                // Collapse caret after the inserted text
+                newValue.start = insertEnd;
+                newValue.end = insertEnd;
+                onChange(newValue);
+                self.setState({ savedSelectionStart: insertEnd, savedSelectionEnd: insertEnd });
+            };
+            document.addEventListener('typost-insert-content', this._handleInsertContent);
         }
 
         /**
@@ -1512,7 +1587,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings) {
+            // Preserve raw feature settings (indexed alternates like "salt" 2,
+            // set by extensions via data-feature-settings) across re-applies —
+            // the comma-tag data-features format cannot express them.
+            // When the live selection collapsed due to modal focus, the format
+            // must be read at the saved bounds — getActiveFormat() looks at the
+            // collapsed caret, which may sit outside the styled span.
+            let activeFormatForRaw;
+            if (selectionLost) {
+                const formatsAtSaved = (value.formats && value.formats[savedSelectionStart]) || [];
+                activeFormatForRaw = formatsAtSaved.find((format) => format.type === FORMAT_TYPE);
+            } else {
+                activeFormatForRaw = getActiveFormat(value, FORMAT_TYPE);
+            }
+            const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1532,10 +1622,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     attributes['data-style-id'] = String(paragraphStyleId);
                 }
 
-                // Add features
-                if (selectedFeatures.length > 0) {
-                    const cssValue = this.featuresToCSS(selectedFeatures);
-                    attributes['data-features'] = selectedFeatures.join(',');
+                // Add features. Raw feature settings (indexed alternates) take
+                // precedence; toggled tags not already present are appended.
+                if (rawFeatureSettings || selectedFeatures.length > 0) {
+                    let cssValue;
+                    if (rawFeatureSettings) {
+                        attributes['data-feature-settings'] = rawFeatureSettings;
+                        const extraTags = selectedFeatures.filter((tag) => rawFeatureSettings.indexOf('"' + tag + '"') === -1);
+                        cssValue = rawFeatureSettings + (extraTags.length > 0 ? ', ' + this.featuresToCSS(extraTags) : '');
+                    } else {
+                        cssValue = this.featuresToCSS(selectedFeatures);
+                    }
+                    if (selectedFeatures.length > 0) {
+                        attributes['data-features'] = selectedFeatures.join(',');
+                    }
                     if (!hasActiveStyle) {
                         styleString += `font-feature-settings: ${cssValue}`;
                     }
@@ -2150,7 +2250,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         /**
          * Cleanup event listeners and debounced functions when component unmounts
          */
+        componentDidMount() {
+            // Distinguishes the live instance from StrictMode shadow instances
+            // (whose constructors run but which are never mounted) — see
+            // _handleInsertContent guard
+            this._isMounted = true;
+        }
+
         componentWillUnmount() {
+            this._isMounted = false;
+
             // Cleanup modal drag/resize event listeners
             document.removeEventListener('mousemove', this.handleDragMove);
             document.removeEventListener('mouseup', this.handleDragEnd);
@@ -2162,9 +2271,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.debouncedApplyDropdown.cancel();
             this.debouncedApplyFontSize.cancel();
 
-            // Cleanup extension hook listener
+            // Cleanup extension hook listeners
             if (this._handleApplyBlockProperties) {
                 document.removeEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
+            }
+            if (this._handleInsertContent) {
+                document.removeEventListener('typost-insert-content', this._handleInsertContent);
             }
 
             // Cleanup state provider filter
@@ -2676,6 +2788,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',
             'data-font-variation-settings': 'data-font-variation-settings',
+            // Raw font-feature-settings value for indexed alternates (e.g. "salt" 2)
+            // that the comma-tag data-features format cannot express
+            // (set by extensions such as the Glyphs Panel)
+            'data-feature-settings': 'data-feature-settings',
             'style': 'style',
             'aria-label': 'aria-label'
         },

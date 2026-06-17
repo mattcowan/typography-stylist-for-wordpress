@@ -474,6 +474,42 @@ Each editor listens for this event and applies properties matching its `source`.
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.
 - `styleClass` — When set, the Typography Stylist block stores this as a block attribute. The `save()` function outputs the class on the element and skips inline styles. The editor always renders inline styles for visual preview regardless of `styleClass`.
 
+#### Inserting Content
+
+Dispatch a `typost-insert-content` CustomEvent to insert text at the cursor (or replace the current selection) in the editor, optionally wrapping the inserted text in a `<span class="typost-styled">` element. This is the generic insertion bridge used by extensions like the Glyphs Panel.
+
+```javascript
+document.dispatchEvent(new CustomEvent('typost-insert-content', {
+    detail: {
+        source: 'inline', // or 'qft' — must match the editor being targeted
+        text: 'A',        // Character(s) to insert (max 50 chars; e.g., 'fi' for a ligature)
+        // Optional: wrap the inserted text in a typost-styled span.
+        // Omit (or pass null) to insert plain text that inherits surrounding formatting.
+        attributes: {
+            'data-features': 'ss01',
+            'data-font-id': '12',
+            'style': 'font-feature-settings: "ss01" 1; font-family: var(--font-12)',
+        },
+        // Optional targeting (recommended): capture these from the hook state
+        // snapshot when your UI launches. They keep insertion working after the
+        // host editor modal closes (which resets its internal selection state).
+        clientId: 'abc-123',          // QFT only: block clientId from the hook snapshot
+        range: { start: 0, end: 10 }, // Fallback text range to insert into/replace
+    },
+}));
+```
+
+Behavior:
+- **Selection vs cursor:** If text is selected, the insertion replaces it; with a collapsed cursor, the text is inserted in place. Both editors fall back to selection bounds captured before their modal stole focus (inline: saved selection state; QFT: `capturedSelection`), then to `detail.range`. If no selection information exists in the QFT context, the text is appended to the end of the block content.
+- **Targeting:** Every Typography Stylist block listens for this event. When `detail.clientId` is set, only the matching block handles it; without it, only the block whose QFT popover is currently open does. In the inline editor, only the live (mounted) format component instance handles the event.
+- **Format continuity:** The inserted text copies the formats of the preceding character, so inserting inside styled text behaves like typing. When `attributes` is provided, the typost format on just the inserted range is replaced with those attributes — include any context features in `data-features` you want preserved on the inserted text.
+- **Caret:** After insertion the caret collapses to the end of the inserted text.
+- **Frontend rendering:** The `style` attribute carries the actual CSS (same convention as the editors' own apply logic). Include `data-font-id` when the inserted text uses a different font than its surroundings so the frontend `@font-face` detection enqueues the font.
+
+**Availability:** Handled by both the inline editor (format type `typost/features`) and the Typography Stylist block.
+
+**Indexed alternates (`data-feature-settings`):** The comma-tag `data-features` format implies `"tag" 1` and cannot express indexed alternates like `font-feature-settings: "salt" 2`. For those, set the raw value in a `data-feature-settings` attribute (registered on the `typost/features` format) and put the full value in `style`. List any plain index-1 tags in `data-features` as usual. The inline editor preserves `data-feature-settings` verbatim when other properties are re-applied to the span, and appends newly toggled tags that aren't already present in the raw value.
+
 ---
 
 ## Admin Tab Extensibility
