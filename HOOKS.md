@@ -84,7 +84,7 @@ add_action('typost_cache_clear', function() {
 
 #### `typost_font_uploaded`
 
-Fired after a font kit is successfully uploaded and processed. Receives an array of font entry objects that were added (a single ZIP kit may contain multiple font files). **Note:** This is a change from the pre-2.0.0 signature, which passed `$font_data` and `$font_id` as separate parameters.
+Fired after a font kit is successfully uploaded and processed. Receives an array of font entry objects that were added (a single ZIP kit may contain multiple font files).
 
 ```php
 add_action('typost_font_uploaded', function($font_entries) {
