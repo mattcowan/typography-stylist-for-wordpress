@@ -43,7 +43,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
  * Lightweight action/filter system for extension plugins.
  * Duplicated from block-editor.js due to separate build pipelines.
  *
- * @since 1.3.0
+ * @since 2.0.0
  */
 window.typostHooks = window.typostHooks || {
 	_actions: {},
@@ -307,7 +307,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		};
 	}, []); // Empty deps - only run on unmount
 
-	// Extension hook: Listen for block property application from extensions (v1.3.0)
+	// Extension hook: Listen for block property application from extensions (v2.0.0)
 	// Uses ref pattern to avoid stale closures — handler registered once,
 	// reads current fontIdMap/fontWeight from ref.
 	// Note: ref.current is assigned later (after fontIdMap/getClosestWeight are declared)
@@ -449,7 +449,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		};
 	}, [setAttributes]); // eslint-disable-line react-hooks/exhaustive-deps -- content/selection read from insertContentRef
 
-	// Extension hook: Register state provider for QFT editor (v1.3.0)
+	// Extension hook: Register state provider for QFT editor (v2.0.0)
 	// Uses ref pattern to avoid filter accumulation — filter registered once,
 	// reads current values from ref on each call
 	const qftStateRef = useRef({});
@@ -457,17 +457,33 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
-		content: attributes.content || '', tagName: attributes.tagName || 'h2'
+		content: attributes.content || '', tagName: attributes.tagName || 'h2',
+		// clientId of the block holding the active selection — used so only the
+		// selected block answers the shared typost_current_editor_state filter.
+		selectionClientId: selectionStart?.clientId || null
 	};
 
 	useEffect(() => {
 		const stateProvider = (state, editorType) => {
 			if (editorType === 'qft') {
 				const s = qftStateRef.current;
+				// Every typost/block instance registers this shared filter. Only the
+				// block that holds the active selection should answer; the rest pass
+				// the value through so the selected block's state isn't clobbered by
+				// later-registered instances.
+				if (s.selectionClientId !== clientId) {
+					return state;
+				}
 				const styleIdMatch = s.styleClass ? s.styleClass.match(/typost-ps-(\d+)/) : null;
+				// Prefer the font of the inline span at the cursor (stored as a
+				// string data-font-id) over the block-level font, so consumers
+				// like the Glyphs panel reflect the actually-selected font.
+				const activeFontId = s.inlineFontId
+					? parseInt(s.inlineFontId, 10)
+					: s.fontId;
 				return {
 					editorType: 'qft',
-					fontId: s.fontId,
+					fontId: activeFontId,
 					fontWeight: s.fontWeight,
 					fontSize: s.fontSize,
 					fontSizeMin: s.fontSizeMin,
@@ -490,6 +506,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			window.typostHooks.removeFilter('typost_current_editor_state', stateProvider);
 		};
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps -- reads from ref
+
+	// Extension hook: when the Glyphs panel (a separate Modal that forced this
+	// block's Quick Feature Toggle Modal closed) is dismissed, reopen the QFT
+	// popover so the author returns to where they launched from. Scoped by
+	// clientId so only the block that opened it reopens (every block registers
+	// this shared action).
+	useEffect(() => {
+		const handler = (src, info) => {
+			if (src === 'qft' && info && info.clientId === clientId) {
+				setIsPopoverOpen(true);
+			}
+		};
+		window.typostHooks.addAction('typost_glyphs_panel_closed', handler, 10);
+		return () => {
+			window.typostHooks.removeAction('typost_glyphs_panel_closed', handler);
+		};
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps -- clientId stable per instance
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
@@ -524,6 +557,12 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// Derive individual properties from unified detection for backward compatibility
 	const inlineFeaturesAtSelection = inlineStylesAtSelection?.features || [];
 	const inlineFontFamilyAtSelection = inlineStylesAtSelection?.fontId || null;
+
+	// Surface the inline font-id at the cursor to QFT-state consumers (e.g. the
+	// Glyphs panel) so they pre-select the span's font rather than only the
+	// block-level font. data-font-id is stored as a string; the consumer side
+	// normalizes type, but qftStateRef carries the raw value.
+	qftStateRef.current.inlineFontId = inlineFontFamilyAtSelection;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations

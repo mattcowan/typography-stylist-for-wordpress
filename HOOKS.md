@@ -1,6 +1,6 @@
 # Typography Stylist — Developer Hooks Reference
 
-This document describes all action and filter hooks available in Typography Stylist v1.3.0+ for building extensions. Extensions are standalone WordPress plugins that hook into these integration points.
+This document describes all action and filter hooks available in Typography Stylist v2.0.0+ for building extensions. Extensions are standalone WordPress plugins that hook into these integration points.
 
 ## Table of Contents
 
@@ -84,7 +84,7 @@ add_action('typost_cache_clear', function() {
 
 #### `typost_font_uploaded`
 
-Fired after a font kit is successfully uploaded and processed. Receives an array of font entry objects that were added (a single ZIP kit may contain multiple font files). **Note:** This is a change from the pre-1.3.0 signature, which passed `$font_data` and `$font_id` as separate parameters.
+Fired after a font kit is successfully uploaded and processed. Receives an array of font entry objects that were added (a single ZIP kit may contain multiple font files). **Note:** This is a change from the pre-2.0.0 signature, which passed `$font_data` and `$font_id` as separate parameters.
 
 ```php
 add_action('typost_font_uploaded', function($font_entries) {
@@ -468,7 +468,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
 
 Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly. Only fields present in `properties` are updated — missing fields preserve current state.
 
-**Note:** This event was renamed from `typost-apply-paragraph-style` in v1.3.0 to reflect its generic purpose.
+**Note:** This event was renamed from `typost-apply-paragraph-style` in v2.0.0 to reflect its generic purpose.
 
 **Class-based styling fields:**
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.

@@ -131,6 +131,15 @@ Check the font's documentation or specimen to verify which OpenType features are
 5. Click the "Typography Features" button in the toolbar (a swashy "T" icon)
 6. Select individual features and see the live preview
 
+= Bundled Third-Party Libraries =
+
+The Glyphs Panel reads font files in the browser using two open-source libraries, bundled unmodified in `glyphs-panel/assets/js/vendor/`. They are loaded on demand (only when you open the Glyphs Panel) and run entirely client-side; no font data is sent to any server.
+
+* **opentype.js** v1.3.4 — parses TTF/OTF/WOFF font files. MIT License. Source: https://github.com/opentypejs/opentype.js
+* **wawoff2** — decompresses WOFF2 font files (Emscripten/WebAssembly build of Google's woff2). MIT License. Source: https://github.com/fontello/wawoff2
+
+See BUILD.txt for build and source details.
+
 == Installation ==
 
 1. Upload the plugin files to `/wp-content/plugins/typography-stylist`, or install through the WordPress plugins screen
@@ -268,6 +277,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 2.0.0 =
+* **NEW: Glyphs Panel (built into core) — the flagship feature of 2.0.** An Illustrator-style full-font glyph browser.. Explore every character and OpenType feature in a font; search by character, U+ codepoint, or glyph name; filter by Unicode block, stylistic set, or OpenType feature; and view all alternates for a single character. Click or press Enter to insert any glyph (including indexed feature alternates) directly into your content via a "Glyphs…" button in the inline rich-text toolbar (any heading or paragraph), in the Typography Stylist block's Quick Feature Toggles, or from a dedicated "Glyphs" admin tab (browse + copy to clipboard); closing the panel returns you to the editor popover you launched it from. Accessible by design: the glyph grid is a fully keyboard-navigable ARIA grid (arrow keys, Home/End, Page Up/Down, Enter to insert) with row/column semantics, and insertions and result counts are announced to screen readers — inserted glyphs use the real Unicode character plus CSS font-feature-settings, so assistive technology always reads the underlying text. Works with uploaded webfont kits, Adobe Fonts, custom font definitions, and WordPress Font Library fonts; font files are read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored, and nothing font-derived is written to your server, making sure you respect font EULA's.
 * **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
 * **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
 * **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
@@ -296,7 +306,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: 5 inline editor hook points, 4 Quick Feature Toggle hook points, 3 Inspector Controls hook points
 * Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
 * Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
-* Added: Blueprint specifications for Variable Font Axes and Glyphs Panel future extensions
+* Added: Blueprint specification for the Variable Font Axes extension
 * Added: REST endpoints for font feature visibility (`GET/POST /typost/v1/font-feature-visibility/{font_id}`) and font order (`GET/POST /typost/v1/font-order`)
 * Added: `filterFeaturesByVisibility()` utility function (exported from utils.js and exposed via `window.typostSharedUtils`) for filtering features based on per-font visibility settings
 * Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
@@ -456,6 +466,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Rate-limited REST API endpoints (50 requests/minute per user)
 
 == Upgrade Notice ==
+
+= 2.0.0 =
+Major release: the Glyphs Panel — a full-font glyph browser — is now built into the core plugin, available in both editors and a new Glyphs admin tab. Also adds an extensibility hook system, live preview in the inline editor, and unified font management. Existing content and settings are preserved.
 
 = 1.1.4 =
 Fixes mixed content warnings on HTTPS sites. Custom fonts now load securely using protocol-agnostic URLs.

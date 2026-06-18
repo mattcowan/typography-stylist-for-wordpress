@@ -18,6 +18,10 @@ const includeList = [
   'assets/fonts/',        // if you have any fonts
   'languages/',           // if you have translations
   'blocks/typography-stylist/**',  // All block files (source + build)
+  'glyphs-panel/glyphs-panel.php', // Bundled Glyphs Panel module (production only)
+  'glyphs-panel/assets/**',        // (excludes __tests__, jest.config.js, package.json)
+  'glyphs-panel/includes/**',
+  'glyphs-panel/languages/**',
   'package.json',         // For developers
   'README.txt',           // WordPress.org readme if exists
   'readme.txt',           // lowercase variant
@@ -105,6 +109,30 @@ if (fs.existsSync(blockBuildDir)) {
   fs.mkdirSync(distBlockBuildDir, { recursive: true });
   copyDirectory(blockBuildDir, distBlockBuildDir);
   console.log('✓ Copied block build files');
+}
+
+// Copy bundled Glyphs Panel module (production files only). The module's own
+// dev files — __tests__/ (skipped by copyDirectory), jest.config.js, and
+// package.json — are intentionally NOT copied; only the runtime files ship.
+const glyphsDir = path.join(__dirname, '..', 'glyphs-panel');
+if (fs.existsSync(glyphsDir)) {
+  const distGlyphsDir = path.join(distDir, 'glyphs-panel');
+  fs.mkdirSync(distGlyphsDir, { recursive: true });
+
+  // Main module file
+  fs.copyFileSync(
+    path.join(glyphsDir, 'glyphs-panel.php'),
+    path.join(distGlyphsDir, 'glyphs-panel.php')
+  );
+
+  // Production subdirectories (copyDirectory skips __tests__/node_modules/.git)
+  ['assets', 'includes', 'languages'].forEach(sub => {
+    const subSrc = path.join(glyphsDir, sub);
+    if (fs.existsSync(subSrc)) {
+      copyDirectory(subSrc, path.join(distGlyphsDir, sub));
+    }
+  });
+  console.log('✓ Copied Glyphs Panel module (production files only)');
 }
 
 // Copy optional files if they exist
@@ -204,7 +232,8 @@ function validateJavaScriptFile(filePath) {
   const expectedMinified = [
     path.sep + 'build' + path.sep + 'index.js',    // wp-scripts build output
     'block-editor.min.js',                          // browserify output
-    'admin-page.min.js'                             // terser output
+    'admin-page.min.js',                            // terser output
+    'glyphs-panel/assets/js/vendor/'                // third-party libs (opentype.js, wawoff2)
   ];
 
   // Check if this is an expected minified file

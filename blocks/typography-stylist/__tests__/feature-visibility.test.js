@@ -1,7 +1,7 @@
 /**
  * Tests for filterFeaturesByVisibility utility.
  *
- * @since 1.4.0
+ * @since 2.0.0
  */
 import { filterFeaturesByVisibility } from '../utils';
 

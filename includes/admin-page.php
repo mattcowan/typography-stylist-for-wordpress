@@ -71,7 +71,7 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
      * Allows extension plugins to inject additional per-font settings
      * (e.g., variable font axes configuration) into the font edit form.
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @param array  $font   The font data array.
      * @param string $prefix The font type prefix ('font', 'adobe', or 'manual').
      */
@@ -84,7 +84,7 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
  * @param array  $font     The font data array (must include 'font_id' numeric key).
  * @param object $instance The Typost plugin instance.
  *
- * @since 1.4.0
+ * @since 2.0.0
  */
 function typost_render_feature_visibility_checkboxes($font, $instance) {
     $font_numeric_id = isset($font['font_id']) ? (int) $font['font_id'] : 0;
@@ -175,7 +175,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
          * Each tab needs: 'id' (string), 'label' (string), 'priority' (int).
          * Built-in tabs use priorities 10-100. Extensions should use gaps between.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param array $tabs Array of tab definitions.
          */
         $built_in_tab_ids = array('fonts', 'presets', 'options', 'accessibility', 'replacements', 'help');
@@ -1484,7 +1484,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                      * The dynamic portion of the hook name, `$tab_id`, refers to the
                      * tab's 'id' value registered via the typost_admin_tabs filter.
                      *
-                     * @since 1.3.0
+                     * @since 2.0.0
                      * @param Typost $instance Plugin instance.
                      */
                     do_action("typost_admin_tab_content_{$tab['id']}", $instance);

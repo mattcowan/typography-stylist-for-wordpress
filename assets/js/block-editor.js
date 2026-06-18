@@ -26,7 +26,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
      * Mirrors WordPress PHP hooks. Extensions register callbacks
      * that fire at specific points in the editor lifecycle.
      *
-     * @since 1.3.0
+     * @since 2.0.0
      */
     window.typostHooks = window.typostHooks || {
         _actions: {},
@@ -415,7 +415,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.handleResizeEnd = this.handleResizeEnd.bind(this);
             this.handleHeaderKeyDown = this.handleHeaderKeyDown.bind(this);
 
-            // Create debounced apply functions (v1.3.0 - live preview)
+            // Create debounced apply functions (v2.0.0 - live preview)
             // These are created once in constructor and persist across renders
             this.debouncedApplySlider = debounce(this._doApplyFeatures.bind(this), 400);
             this.debouncedApplyDropdown = debounce(this._doApplyFeatures.bind(this), 300);
@@ -544,6 +544,26 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 self.setState({ savedSelectionStart: insertEnd, savedSelectionEnd: insertEnd });
             };
             document.addEventListener('typost-insert-content', this._handleInsertContent);
+
+            // Extension hook: when the Glyphs panel (a separate Modal that forced
+            // this inline Modal closed) is dismissed, reopen the inline editor so
+            // the author returns to where they launched from. The saved selection
+            // range travels back with the event because togglePopover cleared it
+            // when WordPress force-closed this Modal.
+            this._handleGlyphsClosed = function(src, info) {
+                if (src !== 'inline') {
+                    return;
+                }
+                var reopenState = { isOpen: true };
+                if (info && info.range) {
+                    reopenState.savedSelectionStart = info.range.start;
+                    reopenState.savedSelectionEnd = info.range.end;
+                }
+                self.setState(reopenState, function() {
+                    window.typostHooks.doAction('typost_inline_modal_opened', self.state);
+                });
+            };
+            window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
         }
 
         /**
@@ -1030,7 +1050,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     detectionFailed = true;
                 }
 
-                // Check word boundary when opening (v1.3.0 - now informational, not blocking)
+                // Check word boundary when opening (v2.0.0 - now informational, not blocking)
                 if (selectionStart !== selectionEnd) {
                     const validation = this.validateSelection(selectionStart, selectionEnd);
                     if (!validation.valid) {
@@ -1737,7 +1757,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
             }
 
-            // v1.3.0: Don't close modal on apply - modal stays open for live preview
+            // v2.0.0: Don't close modal on apply - modal stays open for live preview
         }
 
 
@@ -2266,7 +2286,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             document.removeEventListener('mousemove', this.handleResizeMove);
             document.removeEventListener('mouseup', this.handleResizeEnd);
 
-            // Cleanup debounced apply functions (v1.3.0 - live preview)
+            // Cleanup debounced apply functions (v2.0.0 - live preview)
             this.debouncedApplySlider.cancel();
             this.debouncedApplyDropdown.cancel();
             this.debouncedApplyFontSize.cancel();
@@ -2282,6 +2302,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Cleanup state provider filter
             if (this._stateProviderFilter) {
                 window.typostHooks.removeFilter('typost_current_editor_state', this._stateProviderFilter);
+            }
+
+            // Cleanup glyphs-panel reopen handler
+            if (this._handleGlyphsClosed) {
+                window.typostHooks.removeAction('typost_glyphs_panel_closed', this._handleGlyphsClosed);
             }
         }
 
@@ -2580,7 +2605,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     }
                                 }} />
 
-                                {/* Accessibility Warning - Non-blocking Notice (v1.3.0) */}
+                                {/* Accessibility Warning - Non-blocking Notice (v2.0.0) */}
                                 {wordBoundaryWarning && (
                                     <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
                                         <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
@@ -2652,7 +2677,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     </ul>
                                 </details>
 
-                                {/* Action Buttons (v1.3.0 - live preview, no Apply button) */}
+                                {/* Action Buttons (v2.0.0 - live preview, no Apply button) */}
                                 {!showClearConfirmation && (
                                     <div className="typost-popover-actions">
                                         <ButtonGroup>

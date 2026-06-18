@@ -1,0 +1,192 @@
+/**
+ * Glyphs Panel — Modal & Grid Styles
+ */
+
+/* Large modal */
+.typost-glyphs-modal {
+	width: min(90vw, 980px);
+	max-height: 85vh;
+}
+
+.typost-glyphs-modal .components-modal__content {
+	display: flex;
+	flex-direction: column;
+}
+
+/* Header: font selector + target indicator */
+.typost-glyphs-header {
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	margin-bottom: 12px;
+}
+
+.typost-glyphs-header .components-base-control {
+	flex: 0 1 320px;
+	margin-bottom: 0;
+}
+
+.typost-glyphs-target {
+	color: #6a6a6a;
+	font-size: 12px;
+	padding-bottom: 6px;
+}
+
+/* Notices (e.g. the Adobe Fonts subset warning) — give them breathing room
+   above the toolbar/search bar that follows. */
+.typost-glyphs-modal .components-notice {
+	margin-bottom: 16px;
+}
+
+/* Loading state */
+.typost-glyphs-loading {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 24px 0;
+	color: #6a6a6a;
+}
+
+/* Toolbar: search + filters */
+.typost-glyphs-toolbar {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 12px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.typost-glyphs-toolbar .components-base-control {
+	flex: 1 1 200px;
+	margin-bottom: 0;
+}
+
+/* Windowed grid */
+.typost-glyphs-grid {
+	overflow-y: auto;
+	height: 50vh;
+	min-height: 240px;
+	border: 1px solid #ddd;
+	border-radius: 2px;
+	background: #fff;
+}
+
+.typost-glyphs-grid-track {
+	box-sizing: border-box;
+}
+
+/* Each grid row (role="row") lays its cells out horizontally; rows stack in
+   normal flow so the virtualization height math (rows × cell size) holds. */
+.typost-glyphs-grid-row {
+	display: flex;
+}
+
+/* Visible focus ring for the grid itself (the single keyboard tab stop) */
+.typost-glyphs-grid:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color, #3858e9);
+	outline-offset: -2px;
+}
+
+.typost-glyph-cell {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	border: 1px solid #e0e0e0;
+	margin: 0 -1px -1px 0;
+	background: #fff;
+	cursor: pointer;
+	font-size: 26px;
+	line-height: 1;
+	color: #1e1e1e;
+	overflow: hidden;
+	padding: 0;
+}
+
+.typost-glyph-cell:hover,
+.typost-glyph-cell:focus,
+.typost-glyph-cell.is-active {
+	background: #f0f6fc;
+	border-color: var(--wp-admin-theme-color, #3858e9);
+	position: relative;
+	z-index: 1;
+	outline: none;
+	box-shadow: 0 0 0 1px var(--wp-admin-theme-color, #3858e9);
+}
+
+.typost-glyphs-empty {
+	padding: 24px;
+	color: #6a6a6a;
+	text-align: center;
+}
+
+/* Detail bar */
+.typost-glyphs-detail {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	min-height: 72px;
+	border: 1px solid #ddd;
+	border-top: none;
+	border-radius: 0 0 2px 2px;
+	padding: 8px 16px;
+	background: #f9f9f9;
+}
+
+.typost-glyphs-detail-preview {
+	font-size: 48px;
+	line-height: 1;
+	min-width: 56px;
+	text-align: center;
+}
+
+.typost-glyphs-detail-info {
+	font-size: 13px;
+	color: #1e1e1e;
+}
+
+.typost-glyphs-detail-hint {
+	font-size: 12px;
+	color: #6a6a6a;
+}
+
+/* Footer */
+.typost-glyphs-footer {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 12px;
+}
+
+.typost-glyphs-footnote,
+.typost-glyphs-count {
+	font-size: 12px;
+	color: #6a6a6a;
+}
+
+.typost-glyphs-count {
+	margin-left: auto;
+}
+
+/* Alternates-for-character control group */
+.typost-glyphs-altchar {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 0 1 220px;
+}
+
+.typost-glyphs-altchar .components-base-control {
+	flex: 1 1 120px;
+	margin-bottom: 0;
+}
+
+/* Button inside the editor popovers */
+.typost-glyphs-button-wrap {
+	margin: 8px 0;
+}
+
+/* Admin tab */
+.typost-glyphs-admin-tab {
+	max-width: 720px;
+}
