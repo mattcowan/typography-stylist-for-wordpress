@@ -257,7 +257,7 @@ class Typost {
          * This data is available in both the inline editor (block-editor.js) and
          * the Typography Stylist block editor (edit.js).
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param array $localized_data Editor data array.
          */
         $localized_data = apply_filters('typost_editor_data', $localized_data);
@@ -274,7 +274,7 @@ class Typost {
          * Allows extension plugins to enqueue their own editor scripts and styles
          * with 'typost-block-editor' as a dependency.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          */
         do_action('typost_editor_assets');
     }
@@ -1046,7 +1046,7 @@ class Typost {
          *
          * Allows extension plugins to add their own data to the admin page context.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param array $admin_data Admin data array.
          */
         $admin_data = apply_filters('typost_admin_localize_data', $admin_data);
@@ -1062,7 +1062,7 @@ class Typost {
          * Allows extension plugins to enqueue their own admin scripts and styles
          * with 'typost-admin' as a dependency.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          */
         do_action('typost_admin_assets');
     }
@@ -1671,7 +1671,7 @@ class Typost {
          * the typost/v1 namespace. Extensions can reuse Typost::check_permissions()
          * for authorization and rate limiting.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          */
         do_action('typost_register_rest_routes');
     }
@@ -1725,7 +1725,7 @@ class Typost {
          *
          * Allows extension plugins to inject additional presets or modify existing ones.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param array $presets Array of preset objects.
          */
         return apply_filters('typost_presets', $this->presets_cache);
@@ -2141,7 +2141,7 @@ class Typost {
          * Allows extension plugins to add custom features or modify the features list.
          * Each feature should have: id, name, category, description.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param array $features Array of feature objects.
          */
         return apply_filters('typost_available_features', $this->features_cache);
@@ -2361,7 +2361,7 @@ class Typost {
      * Returns an associative array keyed by numeric font_id, each containing
      * a 'disabled_features' array. Missing entry = all features enabled (backward compatible).
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @return array
      */
     public function get_font_feature_visibility() {
@@ -2371,7 +2371,7 @@ class Typost {
     /**
      * REST callback: GET /font-feature-visibility
      *
-     * @since 1.4.0
+     * @since 2.0.0
      */
     public function rest_get_font_feature_visibility() {
         return rest_ensure_response($this->get_font_feature_visibility());
@@ -2383,7 +2383,7 @@ class Typost {
      * Expects JSON body: { "disabled_features": ["ss15", "ornm"] }
      * An empty array means all features are enabled for this font.
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @param WP_REST_Request $request
      */
     public function rest_update_font_feature_visibility(WP_REST_Request $request) {
@@ -2428,7 +2428,7 @@ class Typost {
      * Returns an array of font keys like ['font-12', 'adobe-34', 'manual-56', 'wpl-78'].
      * Fonts not present in the array are appended at the end when building the list.
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @return array
      */
     public function get_font_order() {
@@ -2438,7 +2438,7 @@ class Typost {
     /**
      * REST callback: GET /font-order
      *
-     * @since 1.4.0
+     * @since 2.0.0
      */
     public function rest_get_font_order() {
         return rest_ensure_response($this->get_font_order());
@@ -2449,7 +2449,7 @@ class Typost {
      *
      * Expects JSON body: { "order": ["font-12", "adobe-34", "manual-56"] }
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @param WP_REST_Request $request
      */
     public function rest_update_font_order(WP_REST_Request $request) {
@@ -2490,7 +2490,7 @@ class Typost {
      * Returns an empty array on older WordPress versions.
      * Results are read-only — the WP Font Library manages its own CRUD.
      *
-     * @since 1.4.0
+     * @since 2.0.0
      * @return array Normalized font entries with keys: post_id, name, font_family, slug.
      */
     public function get_wp_font_library_fonts() {
@@ -2611,7 +2611,7 @@ class Typost {
          * Allows extension plugins to clear their own caches when
          * the core plugin clears its caches.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          */
         do_action('typost_cache_clear');
     }
@@ -3037,7 +3037,7 @@ class Typost {
              * Allows extension plugins to perform additional processing on newly
              * uploaded fonts, such as variable font axis detection or glyph parsing.
              *
-             * @since 1.3.0
+             * @since 2.0.0
              * @param array $font_entries Array of font entry objects that were added.
              */
             do_action('typost_font_uploaded', $font_entries);
@@ -3120,7 +3120,7 @@ class Typost {
          *
          * Allows extension plugins to clean up related data when a font is removed.
          *
-         * @since 1.3.0
+         * @since 2.0.0
          * @param string $id        The deleted font's ID.
          * @param array  $font_data The deleted font's data.
          */
@@ -3941,7 +3941,7 @@ class Typost {
         /**
          * Fires after a font's settings are saved via the REST API.
          *
-         * @since 1.4.0
+         * @since 2.0.0
          * @param string $id        The font's string ID.
          * @param array  $font_data The updated font data.
          * @param string $type      The font type ('uploaded', 'adobe', or 'manual').
@@ -5180,7 +5180,7 @@ class Typost {
      * CSS font-weight scale (100-900). Returns empty array if all 9 weights are
      * provided (meaning "all weights available").
      *
-     * @since 1.3.0
+     * @since 2.0.0
      *
      * @param mixed $weights Input weights array.
      * @return array Sanitized array of weight strings, or empty array for "all weights".
@@ -5387,7 +5387,17 @@ class Typost {
  * @return Typost The plugin instance.
  */
 function typost_init() {
-    return Typost::get_instance();
+    $instance = Typost::get_instance();
+
+    // Load the bundled Glyphs Panel module (integrated into core in v2.0).
+    // Guarded so a still-active standalone copy of the former extension wins
+    // gracefully instead of triggering a fatal class redeclare.
+    if ( ! class_exists( 'Typost_Glyphs_Panel' ) ) {
+        require_once TYPOST_PLUGIN_DIR . 'glyphs-panel/glyphs-panel.php';
+        Typost_Glyphs_Panel::get_instance();
+    }
+
+    return $instance;
 }
 
 // Start plugin

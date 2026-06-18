@@ -1806,7 +1806,7 @@ export function getClosestWeight(currentWeight, availableWeights) {
 /**
  * Filter the full features list to only those enabled for a given font.
  *
- * @since 1.4.0
+ * @since 2.0.0
  * @param {Array}  allFeatures   Full array of feature objects from typostData.features
  * @param {number} fontId        Numeric font ID (0 or falsy = no filter applied)
  * @param {Object} visibilityMap typostData.fontFeatureVisibility keyed by font_id

@@ -21,6 +21,12 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Organized feature categories
 - Visual popover interface
 
+### Glyphs Panel (built in)
+- Illustrator-style glyph browser to explore every character and OpenType feature in a font
+- Search by character, `U+` codepoint, or glyph name; filter by Unicode block or stylistic set
+- Insert glyphs directly into the inline or block editor via the "Glyphs…" button, or browse and copy from the dedicated Glyphs admin tab
+- Font data is read in the browser, on demand, for metadata only — no glyph outlines are ever extracted or stored
+
 ### Technical Implementation
 - Native CSS font-feature-settings
 - Gutenberg block editor integration
@@ -361,30 +367,34 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
-### Version 1.3.0
+### Version 2.0.0
 
-**Major UX Overhaul: Live Preview in Inline Editor**
+**Flagship feature: the Glyphs Panel (built into core)**
 
-This release brings the inline text editor (richtext toolbar) to feature parity with the Typography Stylist block by implementing live preview and removing the Apply button paradigm.
+An Illustrator-style full-font glyph browser, now bundled into the core plugin (previously a separate add-on):
 
-**Breaking Changes:**
-- **Removed: Apply button** - The "Apply" button is removed from the inline editor. All controls now apply changes immediately as you adjust them.
-- **Removed: "Apply Anyway" and "Discard Changes" buttons** - These warning-specific actions from the word boundary accessibility warning workflow are now obsolete. The warning no longer blocks editing, and changes apply immediately via live preview instead of requiring explicit approval.
-- **Removed: Internal Undo system** - The "Undo" button inside the modal is removed. Use native WordPress undo (Ctrl+Z) to undo individual changes.
-- **Removed: Redundant preview panel** - The separate preview panel with device toggles (Mobile/Tablet/Desktop) is removed. Live preview on the actual selected text makes it unnecessary. Feature toggle previews (on each checkbox) still show selected text with individual features applied.
+- **Browse & search every glyph** - Explore every character and OpenType feature in a font. Search by character, `U+` codepoint, or glyph name; filter by Unicode block, stylistic set, or OpenType feature; view all alternates for a single character.
+- **Insert anywhere** - Click or press Enter to insert any glyph (including indexed feature alternates) into your content. Available as a "Glyphs…" button in the inline rich-text toolbar, in the Typography Stylist block's Quick Feature Toggles, and as a dedicated **Glyphs** admin tab (browse + copy to clipboard). Closing the panel returns you to the editor popover you launched it from.
+- **Accessible by design (ATAG-conscious)** - The glyph grid is a fully keyboard-navigable ARIA grid (arrow keys, Home/End, Page Up/Down, Enter/Space to insert) with row/column semantics. Insertions, copies, and result counts are announced to screen readers. Inserted glyphs use the real Unicode character plus CSS `font-feature-settings`, so assistive technology always reads the underlying text.
+- **Broad font support, privacy-first** - Works with uploaded webfont kits, Adobe Fonts, custom font definitions, and WordPress Font Library fonts. Font files are parsed in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored, and nothing font-derived is written to your server. Parsing runs in a Web Worker with IndexedDB caching.
 
-**Improved UX:**
-- **Live preview with smart debouncing** - All controls apply automatically with intelligent debounce timings:
-  - OpenType features: Instant (0ms)
-  - Letter spacing, line height sliders: 400ms debounce
-  - Font family, font weight dropdowns: 300ms debounce
-  - Responsive font-size (3 sliders): 600ms debounce
-- **Non-blocking accessibility warning** - Word boundary warnings are now persistent, non-blocking informational notices at the top of the modal instead of blocking popups. The warning remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block for improved accessibility.
-- **Consistent with Typography Stylist block** - The inline editor now uses the same UX patterns as the dedicated Typography Stylist block.
+**Inline editor: live preview overhaul**
 
-**Developer Notes:**
-- Each debounced change creates its own WordPress undo step. Users press Ctrl+Z multiple times to undo a full modal session's worth of changes (more granular than the previous single-click Apply undo).
-- The internal `changeHistory` state machine is removed. Changes are now tracked by WordPress's native undo system.
+The inline text editor (richtext toolbar) reaches feature parity with the Typography Stylist block by implementing live preview and removing the Apply button paradigm.
+
+- **Removed: Apply button** - All controls now apply changes immediately as you adjust them.
+- **Removed: "Apply Anyway" and "Discard Changes" buttons** - These word-boundary-warning actions are obsolete; the warning no longer blocks editing.
+- **Removed: Internal Undo system** - The in-modal "Undo" button is gone; use native WordPress undo (Ctrl+Z), which now records each debounced change as its own step. The internal `changeHistory` state machine is removed.
+- **Removed: Redundant preview panel** - The separate preview panel with device toggles is removed; live preview on the actual selected text makes it unnecessary (per-feature checkbox previews remain).
+- **Live preview with smart debouncing** - OpenType features apply instantly; letter-spacing/line-height sliders at 400ms; font-family/weight dropdowns at 300ms; responsive font-size (3 sliders) at 600ms.
+- **Non-blocking accessibility warning** - Word boundary warnings are persistent, non-blocking notices at the top of the modal instead of blocking popups.
+
+**Other 2.0 highlights**
+
+- **Extensibility hook system** - Comprehensive PHP and JavaScript hooks (`window.typostHooks`, admin-tab registration, REST route hooks) enabling third-party extensions.
+- **Unified font management** - All font sources (uploaded, Adobe, custom, WP Font Library) in one drag-to-reorder list, with per-font OpenType feature visibility.
+
+See [readme.txt](readme.txt) for the complete 2.0.0 changelog.
 
 ### Version 1.2.2
 
@@ -658,6 +668,10 @@ This project is licensed under the GPL v2 or later - see the [LICENSE](LICENSE) 
 ## Credits
 
 **Developed by:** Matthew Neil Cowan (github: mattcowan)
+
+**Bundled third-party libraries** (Glyphs Panel, `glyphs-panel/assets/js/vendor/`, loaded on demand, client-side only):
+- [opentype.js](https://github.com/opentypejs/opentype.js) v1.3.4 — TTF/OTF/WOFF font parsing (MIT License)
+- [wawoff2](https://github.com/fontello/wawoff2) — WOFF2 decompression, Emscripten/WebAssembly build of Google's woff2 (MIT License)
 
 **Special Thanks:**
 - The WordPress community

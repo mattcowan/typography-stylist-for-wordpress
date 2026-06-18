@@ -156,6 +156,48 @@ BUILD CONFIGURATION
 - Package Scripts: package.json - All build commands
 
 ===============================================================================
+GLYPHS PANEL MODULE (glyphs-panel/)
+===============================================================================
+
+The Glyphs Panel (bundled into core in v2.0.0) lives in glyphs-panel/. Its
+browser JavaScript is hand-written ES5 using wp.element.createElement (no JSX,
+no bundler), so there is NO build step for it — editing a file under
+glyphs-panel/assets/js/ is the deployable change. Pure helper modules under
+glyphs-panel/assets/js/lib/ have Jest unit tests in glyphs-panel/__tests__/
+(run by the top-level `npm test`).
+
+THIRD-PARTY LIBRARIES (bundled, unmodified, in glyphs-panel/assets/js/vendor/)
+-----------------------------------------------------------------------------
+These are upstream distributions, included as-is, loaded on demand in the
+browser. They are NOT minified/obfuscated first-party code.
+
+- opentype.js v1.3.4 (MIT) — TTF/OTF/WOFF parser.
+  File: glyphs-panel/assets/js/vendor/opentype.min.js
+  Source / non-minified build: https://github.com/opentypejs/opentype.js
+  (release v1.3.4; the unminified dist/opentype.js is available there)
+
+- wawoff2 (MIT) — WOFF2 -> TTF decompressor (Emscripten/WebAssembly build of
+  Google's woff2, single file with embedded WASM).
+  File: glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js
+  Source: https://github.com/fontello/wawoff2
+
+To update a library, replace the file with the corresponding upstream release.
+
+TRANSLATIONS (glyphs-panel/languages/)
+--------------------------------------
+The module uses its own text domain, "typost-glyphs-panel". Compiled files are
+built with WP-CLI from the .po sources:
+
+   wp i18n make-mo   glyphs-panel/languages glyphs-panel/languages
+   wp i18n make-json glyphs-panel/languages glyphs-panel/languages --no-purge
+
+IMPORTANT: the .po file references (#: lines) for JS files must be plugin-root
+relative (e.g. "glyphs-panel/assets/js/glyphs-modal.js"), because WordPress
+locates a script's JSON translations by md5() of that path. If the references
+are wrong, make-json produces .json files with the wrong filename hash and JS
+strings will not translate.
+
+===============================================================================
 PACKAGING FOR DISTRIBUTION
 ===============================================================================
 

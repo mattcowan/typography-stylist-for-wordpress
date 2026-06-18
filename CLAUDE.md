@@ -103,7 +103,7 @@ All inline styles are stored using standardized data attributes in `<span class=
 - `data-fontsize` - Font size value
 - `data-fontweight` - Font weight value
 - `data-features` - Comma-separated OpenType feature codes
-- `data-style-id` - Paragraph style ID (v1.3.0+, set by extension). When present, inline `style` is omitted; a CSS class provides rendering
+- `data-style-id` - Paragraph style ID (v2.0.0+, set by extension). When present, inline `style` is omitted; a CSS class provides rendering
 
 **CSS Variable System (v1.1.6+):**
 Inline fonts use CSS variables for consistent font loading:
@@ -145,16 +145,26 @@ The plugin uses nested `<span class="typost-styled">` elements to layer multiple
 - Multiple sequential styled spans in selection
 - Empty spans created during content extraction are automatically removed
 
-### Extensibility / Hook System (v1.3.0+)
+### Extensibility / Hook System (v2.0.0+)
 
 The plugin provides a lightweight action/filter system (`window.typostHooks`) for JavaScript and standard WordPress hooks for PHP. See [HOOKS.md](HOOKS.md) for the complete developer reference.
 
 **Key concepts:**
-- Extensions are separate WordPress plugins (not merged into core)
+- Extensions are generally separate WordPress plugins (the bundled Glyphs Panel module is the one exception — see below)
 - JS hook containers use `data-hook` attribute for context-aware CSS: `[data-hook="typost_qft_modal_top"]`
 - `typost-apply-block-properties` CustomEvent is the generic bridge for extensions to set editor properties
 - Block attribute `styleClass` + inline attribute `data-style-id` provide generic infrastructure for class-based styling by extensions
 - **Editor vs Save rendering:** `edit.js` always uses inline styles (for visual preview). `save.js` uses CSS class when `styleClass` is set (for frontend). The editor iframe receives CSS via `enqueue_block_assets`.
+
+### Bundled Glyphs Panel Module (v2.0+)
+
+The Glyphs Panel (an Illustrator-style full-font glyph browser) was originally a separate extension plugin and is **bundled into core** for the 2.0 release. It lives in [glyphs-panel/](glyphs-panel/) and is a self-contained module that consumes core's *public* extension API exactly as an external extension would — it never calls core internals.
+
+- **Loading:** `typography-stylist.php` (`typost_init()`) does `require_once TYPOST_PLUGIN_DIR . 'glyphs-panel/glyphs-panel.php'` then `Typost_Glyphs_Panel::get_instance()`, guarded by `! class_exists('Typost_Glyphs_Panel')` so a leftover/active standalone copy cannot cause a fatal `final class` redeclare. The bundled file also guards `! defined('TYPOST_GP_VERSION')` around its constants for the same reason.
+- **No plugin header:** `glyphs-panel/glyphs-panel.php` is the former standalone main file with the `Plugin Name:` header and `plugins_loaded` bootstrap stripped. `TYPOST_GP_PLUGIN_DIR/URL` resolve to the subdirectory automatically via `plugin_dir_path/url(__FILE__)`.
+- **Integration points (unchanged from the extension):** `typost_editor_data` (injects `glyphsPanel` data), `typost_editor_assets` (enqueues the lib chain + modal + `editor.js`), `typost_admin_tabs` / `typost_admin_tab_content_glyphs` / `typost_admin_assets` (the Glyphs admin tab). The editor button is injected at the `typost_inline_before_features` and `typost_qft_before_features` JS hook points; insertion uses the `typost-insert-content` CustomEvent (handlers already live in core `assets/js/block-editor.js` and `blocks/typography-stylist/edit.js`).
+- **Separate concerns kept separate:** its JS is hand-written ES5 (no build step), its Jest tests live in `glyphs-panel/__tests__/` (picked up automatically by core's `npm test`), and it keeps its own `typost-glyphs-panel` text domain + bundled `glyphs-panel/languages/`. EULA constraint preserved: metadata-only parsing, IndexedDB-only caching, text-rendered glyph cells. See `glyphs-panel/CLAUDE.md` for module internals.
+- Other extensions (Paragraph Styles, Variable Fonts, Layered Fonts) **remain separate plugins**; only the Glyphs Panel was merged.
 
 ### REST API Endpoints
 
