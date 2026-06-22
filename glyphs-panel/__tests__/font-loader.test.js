@@ -6,10 +6,44 @@
 const {
 	parseSrcUrls,
 	formatFromUrl,
+	normalizeFetchUrl,
 	pickBestUrl,
 	pickFaceForWeight,
 	sniffFormat
 } = require('../assets/js/lib/font-loader.js');
+
+describe('normalizeFetchUrl', () => {
+	const httpsPage = { protocol: 'https:', host: 'mnc4.com' };
+	const httpPage = { protocol: 'http:', host: 'mnc4.com' };
+
+	test('upgrades a same-host http:// font URL to https on an HTTPS page', () => {
+		expect(normalizeFetchUrl(
+			'http://mnc4.com/bus1984/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2',
+			httpsPage
+		)).toBe('https://mnc4.com/bus1984/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2');
+	});
+
+	test('leaves a cross-origin http:// URL untouched (other origin may not serve HTTPS)', () => {
+		const url = 'http://cdn.example.com/font.woff2';
+		expect(normalizeFetchUrl(url, httpsPage)).toBe(url);
+	});
+
+	test('does not change URLs when the page is not HTTPS', () => {
+		const url = 'http://mnc4.com/font.woff2';
+		expect(normalizeFetchUrl(url, httpPage)).toBe(url);
+	});
+
+	test('leaves already-secure, protocol-relative, and root-relative URLs as-is', () => {
+		expect(normalizeFetchUrl('https://mnc4.com/font.woff2', httpsPage)).toBe('https://mnc4.com/font.woff2');
+		expect(normalizeFetchUrl('//mnc4.com/font.woff2', httpsPage)).toBe('//mnc4.com/font.woff2');
+		expect(normalizeFetchUrl('/wp-content/uploads/font.woff2', httpsPage)).toBe('/wp-content/uploads/font.woff2');
+	});
+
+	test('returns non-string and malformed input unchanged', () => {
+		expect(normalizeFetchUrl(null, httpsPage)).toBe(null);
+		expect(normalizeFetchUrl('http://', httpsPage)).toBe('http://');
+	});
+});
 
 describe('parseSrcUrls', () => {
 	test('parses a typical webfont kit @font-face block', () => {
