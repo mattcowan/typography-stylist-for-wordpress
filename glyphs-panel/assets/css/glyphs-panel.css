@@ -47,13 +47,14 @@
 	color: #6a6a6a;
 }
 
-/* Toolbar: search + filters */
+/* Toolbar: search + filters. Controls carry visible labels (stacked above each
+   field), so bottom-align them with the altchar group's inline button. */
 .typost-glyphs-toolbar {
 	display: flex;
 	gap: 8px;
 	margin-bottom: 12px;
 	flex-wrap: wrap;
-	align-items: center;
+	align-items: flex-end;
 }
 
 .typost-glyphs-toolbar .components-base-control {
@@ -171,7 +172,7 @@
 /* Alternates-for-character control group */
 .typost-glyphs-altchar {
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	gap: 4px;
 	flex: 0 1 220px;
 }

@@ -659,7 +659,7 @@
 						el(TextControl, {
 							label: __('Alternates for character', 'typost-glyphs-panel'),
 							__next40pxDefaultSize: true,
-							hideLabelFromVision: true,
+							hideLabelFromVision: false,
 							placeholder: __('Alternates for…', 'typost-glyphs-panel'),
 							value: altChar,
 							maxLength: 2,
@@ -687,7 +687,7 @@
 					altCp === null && el(TextControl, {
 						label: __('Search', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
-						hideLabelFromVision: true,
+						hideLabelFromVision: false,
 						placeholder: searchPlaceholder,
 						value: search,
 						onChange: setSearch,
@@ -697,7 +697,7 @@
 					altCp === null && el(SelectControl, {
 						label: __('OpenType feature', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
-						hideLabelFromVision: true,
+						hideLabelFromVision: false,
 						value: featureFilter,
 						options: featureOptions,
 						onChange: function(value) {
@@ -714,7 +714,7 @@
 					altCp === null && el(SelectControl, {
 						label: __('Unicode block', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
-						hideLabelFromVision: true,
+						hideLabelFromVision: false,
 						value: blockFilter,
 						options: blockOptions,
 						onChange: setBlockFilter,

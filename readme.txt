@@ -1,6 +1,6 @@
 === Typography Stylist ===
 Contributors: matthewneilcowan
-Tags: typography, opentype, ligatures, stylistic-sets, webfonts
+Tags: typography, opentype, fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9.4
 Stable tag: 2.0.0
@@ -8,11 +8,11 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Unlock hidden OpenType features like ligatures, swashes, and stylistic sets in the WordPress block editor with advanced typography controls.
+Unlock OpenType features like ligatures, swashes, and stylistic sets in the WordPress block editor with a glyphs panel and typography controls.
 
 == Description ==
 
-Typography Stylist provides advanced typography controls for WordPress. This plugin allows you to apply OpenType features directly in the block editor, and access glyphs and ligatures hidden within fonts. Additionally, set properties like letter spacing, line-height, responsive sizing, font-weight, and more in the editor, so you can get exactly the look you want from your typefaces. 
+Typography Stylist provides advanced typography controls for WordPress, including a glyphs panel! This plugin allows you to apply OpenType features directly in the block editor, and access glyphs and ligatures hidden within fonts. Additionally, set properties like letter spacing, line-height, responsive sizing, font-weight, and more in the editor, so you can get exactly the look you want from your typefaces. 
 
 Manage fonts from the settings page, either by uploading webfont kits or adding Adobe Typekit embeds. Fonts load intelligently only when they are used.  With support for ligatures, stylistic sets, swashes, and alternates, you can create elegant headlines and premium typography effects with ease. 
 
@@ -163,14 +163,13 @@ Some Google Fonts support OpenType features. Check the individual font's specime
 
 = Can I use this with custom web fonts? =
 
-Absolutely! You have four options:
+Absolutely! There are three ways to make fonts available in the plugin:
 
 1. **Upload webfont kits** from MyFonts, Font Squirrel, or other providers using the plugin's Custom Fonts tab
 2. **Connect Adobe Fonts** (Typekit) by pasting your project's embed code
-3. **Define custom fonts** loaded through your theme, plugins, or CDN (like Google Fonts)
-4. **Load fonts manually** using @font-face in your theme - style the default font in your theme for headings without selecting font-family from the plugin's dropdown menu.
+3. **Define custom fonts** loaded through your theme, plugins, or CDN (like Google Fonts) so they appear in the editor's font dropdown
 
-The plugin can apply OpenType features to any font loaded on your site, but previews in the admin settings page will only work for fonts uploaded or connected through the plugin.
+Beyond these, the plugin can apply OpenType features to any font already loaded on your site (for example via @font-face in your theme) even without selecting it from the plugin's dropdown. Previews in the admin settings page only work for fonts uploaded or connected through the plugin.
 
 = How do I upload custom fonts? =
 
@@ -478,39 +477,13 @@ Initial release of Typography Stylist with accessibility features, font manageme
 
 == Technical Details ==
 
-= Browser Support =
-
-* Chrome/Edge: Full support
-* Firefox: Full support
-* Safari: Full support
-* Internet Explorer 10+: Partial support
-
-= Performance =
-
-Features are applied using CSS font-feature-settings, which is hardware-accelerated in modern browsers. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
-
 = Data Storage =
 
 Typography features are stored as inline styles and data attributes within post content. No additional database tables are created.
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters. REST API endpoints are available at `/wp-json/typography-stylist/v1/`.
-
-= Font Management =
-
-The plugin provides three ways to add custom fonts:
-
-**Upload Webfont Kits:**
-Upload complete webfont kits (ZIP files) from MyFonts, Fontspring, or other providers. The plugin extracts fonts, processes CSS, and stores files securely in your WordPress uploads directory.
-
-**Adobe Fonts Integration:**
-Connect Adobe Fonts (Typekit) projects by pasting the embed code. Fonts load directly from Adobe's servers.
-
-**Custom Font Definitions:**
-Define fonts that are already loaded through your theme, plugins, or CDN (like Google Fonts). Simply provide the font family name and optional fallbacks. No files are uploaded to WordPress—fonts continue loading from their original source.
-
-All three methods make fonts available in the block editor and preview selector.
+Developers can extend the plugin using WordPress hooks and filters (see HOOKS.md). REST API endpoints are available at `/wp-json/typost/v1/`.
 
 = Source Code =
 

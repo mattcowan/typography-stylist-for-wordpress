@@ -681,7 +681,7 @@
 }
 
 .typost-help-section h3 {
-    color: var(--typost-color-primary);
+    color: var(--typost-text-primary);
 }
 
 .typost-help-section ul, .typost-help-section ol {
@@ -1337,7 +1337,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-developer-support h3 {
     margin-top: 0;
-    color: var(--typost-color-primary);
+    color: var(--typost-text-primary);
 }
 
 .typost-developer-support .typost-separator {
