@@ -226,9 +226,13 @@
 			var items = (meta.codepoints || []).map(function(cp) {
 				return { type: 'char', cp: cp };
 			});
+			// Push variants into the existing array rather than reallocating a
+			// growing array with concat() on each feature (matters for large fonts)
 			var features = meta.features || {};
 			Object.keys(features).sort().forEach(function(tag) {
-				items = items.concat(featureItems(features[tag], tag));
+				featureItems(features[tag], tag).forEach(function(item) {
+					items.push(item);
+				});
 			});
 			return items;
 		}
