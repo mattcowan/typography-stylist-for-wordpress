@@ -284,7 +284,6 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
 * **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
 * **NEW: JavaScript hook system** (`window.typostHooks`) - Lightweight action/filter system for both the inline editor and Typography Stylist block, with container-based hook points for rendering extension UI
-* **NEW: Paragraph Styles extension** (separate plugin) - Save and load paragraph style presets from a dropdown at the top of both editors; manage styles from a dedicated admin tab
 * **NEW: Per-font OpenType feature visibility** - Configure which of the 51 OpenType features appear in the editor on a per-font basis; defaults to all features visible for full backward compatibility
 * **NEW: Unified font list** - All font sources (uploaded kits, Adobe Fonts, custom definitions, WP Font Library) now appear in a single organized list with color-coded type badges instead of three separate sections
 * **NEW: Drag-to-reorder fonts** - Drag fonts up and down the list to control the order they appear in editor dropdowns; order is persisted via the REST API
