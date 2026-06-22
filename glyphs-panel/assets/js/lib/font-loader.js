@@ -92,6 +92,39 @@
 	}
 
 	/**
+	 * Upgrade an insecure same-host font URL to HTTPS so it isn't blocked as
+	 * mixed content on an HTTPS page.
+	 *
+	 * Uploaded webfont-kit CSS can contain absolute http:// file URLs. The
+	 * rendered @font-face CSS is relativized at output time, but the Glyphs
+	 * Panel parses the raw stored CSS and fetches the file directly, so it must
+	 * upgrade the protocol itself. Only same-host URLs are upgraded — a
+	 * cross-origin http:// URL is left untouched because we can't assume the
+	 * other origin serves HTTPS (the browser blocks it as mixed content either
+	 * way, surfaced as a fetch/cors failure).
+	 *
+	 * @param {string} url      Font file URL
+	 * @param {Object} [location] Page location ({protocol, host}); defaults to window.location
+	 * @return {string} Possibly-upgraded URL
+	 */
+	function normalizeFetchUrl(url, location) {
+		var loc = location || (typeof window !== 'undefined' ? window.location : null);
+		if (typeof url !== 'string' || url.indexOf('http://') !== 0 || !loc || loc.protocol !== 'https:') {
+			return url;
+		}
+		try {
+			var parsed = new URL(url);
+			if (parsed.host === loc.host) {
+				parsed.protocol = 'https:';
+				return parsed.href;
+			}
+		} catch (e) {
+			// Malformed URL — fall through and return the original
+		}
+		return url;
+	}
+
+	/**
 	 * Pick the best parseable URL from a face's src list.
 	 * Preference: woff2 > woff > ttf > otf. EOT/unknown are excluded.
 	 *
@@ -466,6 +499,9 @@
 			if (!resolved.ok) {
 				return resolved;
 			}
+			// Upgrade same-host http:// URLs to https on secure pages so the
+			// file fetch isn't blocked as mixed content
+			resolved.url = normalizeFetchUrl(resolved.url);
 			return fetch(resolved.url, { mode: 'cors' }).then(function(response) {
 				if (!response.ok) {
 					return { ok: false, reason: 'fetch-failed' };
@@ -526,6 +562,9 @@
 			if (!resolved.ok) {
 				return resolved;
 			}
+			// Upgrade same-host http:// URLs to https on secure pages so the
+			// file fetch isn't blocked as mixed content
+			resolved.url = normalizeFetchUrl(resolved.url);
 			return fetch(resolved.url, { mode: 'cors' }).then(function(response) {
 				if (!response.ok) {
 					return { ok: false, reason: 'fetch-failed' };
@@ -564,6 +603,7 @@
 	var api = {
 		parseSrcUrls: parseSrcUrls,
 		formatFromUrl: formatFromUrl,
+		normalizeFetchUrl: normalizeFetchUrl,
 		pickBestUrl: pickBestUrl,
 		pickFaceForWeight: pickFaceForWeight,
 		sniffFormat: sniffFormat,

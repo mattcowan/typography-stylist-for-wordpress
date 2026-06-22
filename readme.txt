@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9.4
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -275,6 +275,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= 2.0.1 =
+* Fixed: Mixed-content blocking of locally-hosted fonts in the Glyphs Panel — same-host `http://` font file URLs are now upgraded to `https://` before fetching, so fonts whose stored kit CSS contains absolute insecure URLs load correctly on HTTPS sites (cross-origin URLs are left untouched)
+
 = 2.0.0 =
 * **NEW: Glyphs Panel (built into core) — the flagship feature of 2.0.** An Illustrator-style full-font glyph browser. Explore every character and OpenType feature in a font; search by character, U+ codepoint, or glyph name; filter by Unicode block, stylistic set, or OpenType feature; and view all alternates for a single character. Click or press Enter to insert any glyph (including indexed feature alternates) directly into your content via a "Glyphs…" button in the inline rich-text toolbar (any heading or paragraph), in the Typography Stylist block's Quick Feature Toggles, or from a dedicated "Glyphs" admin tab (browse + copy to clipboard); closing the panel returns you to the editor popover you launched it from. Accessible by design: the glyph grid is a fully keyboard-navigable ARIA grid (arrow keys, Home/End, Page Up/Down, Enter to insert) with row/column semantics, and insertions and result counts are announced to screen readers — inserted glyphs use the real Unicode character plus CSS font-feature-settings, so assistive technology always reads the underlying text. Works with uploaded webfont kits, Adobe Fonts, custom font definitions, and WordPress Font Library fonts; font files are read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored, and nothing font-derived is written to your server, making sure you respect font EULAs.
 * **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
@@ -309,6 +312,8 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Added: REST endpoints for font feature visibility (`GET/POST /typost/v1/font-feature-visibility/{font_id}`) and font order (`GET/POST /typost/v1/font-order`)
 * Added: `filterFeaturesByVisibility()` utility function (exported from utils.js and exposed via `window.typostSharedUtils`) for filtering features based on per-font visibility settings
 * Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
+* Fixed: Help tab section headers now use the primary text color instead of the accent color, fixing low contrast in the Alice Blue admin color scheme (WCAG-compliant across all schemes)
+* Fixed: REST API namespace in bundled documentation corrected to the canonical `/wp-json/typost/v1/`
 * Removed: Apply button from inline editor toolbar
 * Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
 * Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
@@ -324,6 +329,8 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Improved: Font Features tab preview selector now includes WP Font Library fonts (when available) alongside uploaded, Adobe, and custom fonts
 * Improved: Feature visibility changes auto-save on toggle with a brief "Saved" confirmation — no Save button needed
 * Improved: Per-font feature visibility includes master "Enable All" / "Disable All" controls both on the Font Features tab and inside each font's edit form
+* Improved: Glyphs Panel toolbar controls (Alternates, Search, OpenType feature, Unicode block) now show visible labels
+* Improved: Glyphs Panel default "All glyphs" view also lists OpenType feature variants (e.g. stylistic alternates) previously reachable only by filtering or typing a character
 * Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
 * Note: WP Font Library fonts appear in the admin list as read-only; font order and feature visibility settings for WP Library fonts are not yet supported in this release
 
@@ -465,6 +472,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Rate-limited REST API endpoints (50 requests/minute per user)
 
 == Upgrade Notice ==
+
+= 2.0.1 =
+Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.
 
 = 2.0.0 =
 Major release: the Glyphs Panel — a full-font glyph browser — is now built into the core plugin, available in both editors and a new Glyphs admin tab. Also adds an extensibility hook system, live preview in the inline editor, and unified font management. Existing content and settings are preserved.
