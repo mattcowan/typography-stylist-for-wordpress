@@ -124,11 +124,27 @@ describe('buildGridItems', () => {
 		}
 	};
 
-	test('no feature → all codepoints as char items', () => {
+	test('no feature → base codepoints first, then every feature\'s variants (tags sorted)', () => {
 		expect(buildGridItems(meta, null)).toEqual([
+			// Base encoded characters
 			{ type: 'char', cp: 65 },
-			{ type: 'char', cp: 97 }
+			{ type: 'char', cp: 97 },
+			// Then feature variants in sorted tag order: dlig, salt, ss01
+			{ type: 'lig', text: 'fi', cps: [102, 105], feature: 'dlig' },
+			{ type: 'char', cp: 65, feature: 'salt', altIndex: 1, altCount: 3 },
+			{ type: 'char', cp: 65, feature: 'salt', altIndex: 2, altCount: 3 },
+			{ type: 'char', cp: 65, feature: 'salt', altIndex: 3, altCount: 3 },
+			{ type: 'char', cp: 97, feature: 'salt', altIndex: 1, altCount: 2 },
+			{ type: 'char', cp: 97, feature: 'salt', altIndex: 2, altCount: 2 },
+			{ type: 'char', cp: 65, feature: 'ss01' }
 		]);
+	});
+
+	test('no feature → all base (feature-less) items precede any feature variant', () => {
+		const items = buildGridItems(meta, null);
+		const firstFeatured = items.findIndex((item) => 'feature' in item);
+		const lastBase = items.reduce((acc, item, i) => ('feature' in item ? acc : i), -1);
+		expect(firstFeatured).toBeGreaterThan(lastBase);
 	});
 
 	test('sub feature → covered codepoints with feature tag', () => {

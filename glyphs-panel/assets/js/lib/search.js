@@ -167,7 +167,51 @@
 	}
 
 	/**
+	 * Build the grid cells contributed by a single feature entry.
+	 *
+	 * A feature entry may carry any combination of codepoints (single
+	 * substitutions), alts (indexed alternate sets), and ligatures — compose
+	 * the cells from whatever is present.
+	 *
+	 * @param {Object} feature Feature metadata entry
+	 * @param {string} tag     Feature tag (stamped onto each item)
+	 * @return {Array} Grid items
+	 */
+	function featureItems(feature, tag) {
+		var items = [];
+
+		(feature.codepoints || []).forEach(function(cp) {
+			items.push({ type: 'char', cp: cp, feature: tag });
+		});
+
+		// One cell per alternate index — each renders the base character
+		// with e.g. font-feature-settings: "salt" 2
+		Object.keys(feature.alts || {}).map(function(cpKey) {
+			return parseInt(cpKey, 10);
+		}).sort(function(a, b) { return a - b; }).forEach(function(cp) {
+			var count = feature.alts[String(cp)];
+			for (var i = 1; i <= count; i++) {
+				items.push({ type: 'char', cp: cp, feature: tag, altIndex: i, altCount: count });
+			}
+		});
+
+		(feature.ligatures || []).forEach(function(lig) {
+			items.push({ type: 'lig', text: lig.text, cps: lig.components, feature: tag });
+		});
+
+		return items;
+	}
+
+	/**
 	 * Build the base grid items for a font + optional feature filter.
+	 *
+	 * With no feature filter, the default "All glyphs" view lists the font's
+	 * encoded characters first, then every feature's variants appended after.
+	 * This surfaces OpenType-only glyphs (e.g. an alternate 'g') that would
+	 * otherwise be reachable only via the feature dropdown or the alternates
+	 * box. Variants render as their base character with font-feature-settings,
+	 * so only feature-reachable glyphs appear — glyphs with no codepoint and no
+	 * feature path remain unrenderable as text.
 	 *
 	 * @param {Object} meta        Font metadata (see metadata.js)
 	 * @param {string|null} featureTag Feature tag to filter by, or null for all glyphs
@@ -179,9 +223,18 @@
 		}
 
 		if (!featureTag) {
-			return (meta.codepoints || []).map(function(cp) {
+			var items = (meta.codepoints || []).map(function(cp) {
 				return { type: 'char', cp: cp };
 			});
+			// Push variants into the existing array rather than reallocating a
+			// growing array with concat() on each feature (matters for large fonts)
+			var features = meta.features || {};
+			Object.keys(features).sort().forEach(function(tag) {
+				featureItems(features[tag], tag).forEach(function(item) {
+					items.push(item);
+				});
+			});
+			return items;
 		}
 
 		var feature = meta.features && meta.features[featureTag];
@@ -189,31 +242,7 @@
 			return [];
 		}
 
-		// A feature entry may carry any combination of codepoints (single
-		// substitutions), alts (indexed alternate sets), and ligatures —
-		// compose the grid from whatever is present
-		var items = [];
-
-		(feature.codepoints || []).forEach(function(cp) {
-			items.push({ type: 'char', cp: cp, feature: featureTag });
-		});
-
-		// One cell per alternate index — each renders the base character
-		// with e.g. font-feature-settings: "salt" 2
-		Object.keys(feature.alts || {}).map(function(cpKey) {
-			return parseInt(cpKey, 10);
-		}).sort(function(a, b) { return a - b; }).forEach(function(cp) {
-			var count = feature.alts[String(cp)];
-			for (var i = 1; i <= count; i++) {
-				items.push({ type: 'char', cp: cp, feature: featureTag, altIndex: i, altCount: count });
-			}
-		});
-
-		(feature.ligatures || []).forEach(function(lig) {
-			items.push({ type: 'lig', text: lig.text, cps: lig.components, feature: featureTag });
-		});
-
-		return items;
+		return featureItems(feature, featureTag);
 	}
 
 	/**

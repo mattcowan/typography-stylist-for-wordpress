@@ -605,12 +605,12 @@ add_filter('TYPOST_default_presets', function($presets) {
 
 ### REST API Usage
 
-All REST API endpoints are at `/wp-json/typography-stylist/v1/`
+All REST API endpoints are at `/wp-json/typost/v1/`
 
 #### Get All Presets
 
 ```javascript
-fetch('/wp-json/typography-stylist/v1/presets')
+fetch('/wp-json/typost/v1/presets')
     .then(response => response.json())
     .then(data => console.log(data));
 ```
@@ -622,7 +622,7 @@ const formData = new FormData();
 formData.append('name', 'My Font');
 formData.append('file', fileInput.files[0]);
 
-fetch('/wp-json/typography-stylist/v1/fonts', {
+fetch('/wp-json/typost/v1/fonts', {
     method: 'POST',
     headers: {
         'X-WP-Nonce': wpApiSettings.nonce
@@ -636,7 +636,7 @@ fetch('/wp-json/typography-stylist/v1/fonts', {
 #### Add Adobe Fonts Project
 
 ```javascript
-fetch('/wp-json/typography-stylist/v1/adobe-fonts', {
+fetch('/wp-json/typost/v1/adobe-fonts', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
