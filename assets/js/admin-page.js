@@ -980,10 +980,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'uploaded', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'uploaded', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -997,6 +994,32 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    /**
+     * Fire typost:font-saved with a waitUntil(promise) collector, then reload
+     * once every listener-registered promise settles (extensions save their
+     * own per-font data via REST on this event — previously they raced a
+     * blind 1500 ms timeout). Reload waits at least 1200 ms so the success
+     * message stays readable, and at most 5 s so a hung request can't block.
+     */
+    function reloadAfterFontSaved(payload) {
+        var pending = [];
+        payload.waitUntil = function(promise) {
+            if (promise && typeof promise.then === 'function') {
+                pending.push(promise);
+            }
+        };
+        $(document).trigger('typost:font-saved', payload);
+
+        var swallow = function(p) { return Promise.resolve(p).catch(function() {}); };
+        var settled = Promise.all(pending.map(swallow));
+        var cap = new Promise(function(resolve) { setTimeout(resolve, 5000); });
+        var minDelay = new Promise(function(resolve) { setTimeout(resolve, 1200); });
+
+        Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
+            location.reload();
+        });
+    }
 
     // Save Adobe font
     $(document).on('click', '.typost-save-adobe-font-edit', function() {
@@ -1023,10 +1046,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'adobe', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'adobe', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -1080,10 +1100,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fontUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'manual', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'manual', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFontError;

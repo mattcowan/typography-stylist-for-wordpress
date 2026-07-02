@@ -5793,6 +5793,15 @@ function typost_init() {
         Typost_Glyphs_Panel::get_instance();
     }
 
+    // Load the bundled Variable Fonts module (integrated into core in v2.1).
+    // Same guard pattern: a still-active standalone copy of the former
+    // extension wins gracefully; its settings (typost_variable_font_axes)
+    // carry over automatically because the option keys are unchanged.
+    if ( ! class_exists( 'Typost_Variable_Fonts' ) ) {
+        require_once TYPOST_PLUGIN_DIR . 'variable-fonts/variable-fonts.php';
+        Typost_Variable_Fonts::get_instance();
+    }
+
     return $instance;
 }
 

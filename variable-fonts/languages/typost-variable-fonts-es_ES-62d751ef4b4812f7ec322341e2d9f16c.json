@@ -1,0 +1,38 @@
+{
+ "translation-revision-date": "2026-07-02 12:00+0000",
+ "generator": "typography-stylist build",
+ "domain": "typost-variable-fonts",
+ "locale_data": {
+  "typost-variable-fonts": {
+   "": {
+    "domain": "typost-variable-fonts",
+    "lang": "es",
+    "plural-forms": "nplurals=2; plural=(n != 1);"
+   },
+   "Default": [
+    "Predeterminado"
+   ],
+   "Max": [
+    "Máx"
+   ],
+   "Min": [
+    "Mín"
+   ],
+   "Name": [
+    "Nombre"
+   ],
+   "Remove axis": [
+    "Eliminar eje"
+   ],
+   "Reset to defaults": [
+    "Restablecer valores predeterminados"
+   ],
+   "Tag": [
+    "Etiqueta"
+   ],
+   "Variable Font Axes": [
+    "Ejes de fuente variable"
+   ]
+  }
+ }
+}
