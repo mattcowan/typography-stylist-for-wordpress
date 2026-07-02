@@ -386,6 +386,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 resizeDirection: null,
                 // Paragraph style ID (set by extension via event, 0 = no style)
                 paragraphStyleId: 0,
+                // Animation config ID (set by extension via event, 0 = none)
+                animationId: 0,
                 // Font variation settings (set by extension via event, '' = none)
                 fontVariationSettings: this.getActiveFontVariationSettings() || ''
             };
@@ -441,6 +443,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
                         paragraphStyleId: self.state.paragraphStyleId,
+                        animationId: self.state.animationId,
                         fontVariationSettings: self.state.fontVariationSettings
                     };
                 }
@@ -466,6 +469,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
                         selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
                         paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId,
+                        animationId: e.detail.animationId !== undefined ? (e.detail.animationId || 0) : self.state.animationId,
                         fontVariationSettings: props.fontVariationSettings !== undefined ? sanitizeFontVariationSettings(props.fontVariationSettings || '') : self.state.fontVariationSettings
                     }, function() {
                         self._doApplyFeatures();
@@ -997,6 +1001,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Get the animation config ID at the current selection (set by the
+         * Animations extension via data-animation-id).
+         */
+        getActiveAnimationId() {
+            const { value } = this.props;
+
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-animation-id']) {
+                return parseInt(activeFormat.attributes['data-animation-id'], 10) || 0;
+            }
+
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const animationId = styledSpan.getAttribute('data-animation-id');
+                if (animationId) {
+                    return parseInt(animationId, 10) || 0;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Initialize modal position (center in viewport)
          */
         initializeModalPosition() {
@@ -1103,7 +1130,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 isDragging: false,
                 isResizing: false,
                 // Reset paragraph style ID (extension sets via event)
-                paragraphStyleId: !state.isOpen ? (this.getActiveStyleId() || 0) : 0
+                paragraphStyleId: !state.isOpen ? (this.getActiveStyleId() || 0) : 0,
+                animationId: !state.isOpen ? (this.getActiveAnimationId() || 0) : 0
             }), () => {
                 // Fire lifecycle hooks for extensions
                 if (!wasOpen && this.state.isOpen) {
@@ -1627,7 +1655,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -1647,7 +1675,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
             const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings && !rawFeatureSettings) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1665,6 +1693,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 if (hasActiveStyle) {
                     attributes['data-style-id'] = String(paragraphStyleId);
+                }
+
+                // Animation config reference (Animations extension) — the
+                // extension's render_block transform consumes it on the frontend
+                if (animationId) {
+                    attributes['data-animation-id'] = String(animationId);
                 }
 
                 // Add features. Raw feature settings (indexed alternates) take
