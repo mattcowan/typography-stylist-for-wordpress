@@ -154,6 +154,28 @@ class Typost_Font_Library_Bridge {
     }
 
     /**
+     * Whether a font entry's Library registration is live
+     *
+     * True only when the Font Library is available AND the entry's wp_slug
+     * currently exists in the Library snapshot. When this returns true, WP
+     * prints the @font-face rules for the font; when false (never
+     * registered, stale registration, or WP < 6.5), the plugin-managed
+     * path applies.
+     *
+     * @param array $entry Font entry
+     * @return bool
+     */
+    public function entry_has_live_registration(array $entry) {
+        if (empty($entry['wp_slug'])) {
+            return false;
+        }
+        if (!$this->is_available()) {
+            return false;
+        }
+        return $this->library_slug_exists($entry['wp_slug']);
+    }
+
+    /**
      * Whether newly uploaded font kits should auto-register in the Library
      *
      * Governed by the typost_auto_register_wp_fonts option (default on)

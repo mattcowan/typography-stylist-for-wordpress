@@ -915,13 +915,24 @@ class Typost {
             )));
         }
 
+        // Fonts whose WP Font Library registration is live get their
+        // @font-face printed by WordPress (wp_print_font_faces) — skip the
+        // plugin's own output for those to avoid double-loading. Stale
+        // registrations resume the plugin path automatically.
+        $library_printed_ids = array();
+        foreach ($all_fonts as $font) {
+            if (isset($font['font_id']) && $this->font_library_bridge()->entry_has_live_registration($font)) {
+                $library_printed_ids[] = (int) $font['font_id'];
+            }
+        }
+
         // Build cache key including load_on_all_pages settings
         $load_settings = array();
         foreach ($all_fonts as $font) {
             $font_id = isset($font['id']) ? $font['id'] : '';
             $load_settings[$font_id] = !empty($font['load_on_all_pages']);
         }
-        $cache_key = $this->get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings);
+        $cache_key = $this->get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids);
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -929,6 +940,9 @@ class Typost {
 
             // Only include fonts that are actually used OR set to load on all pages
             foreach ($all_fonts as $font) {
+                if (isset($font['font_id']) && in_array((int) $font['font_id'], $library_printed_ids, true)) {
+                    continue;
+                }
                 if (!empty($font['css_content']) && !empty($font['font_faces'])) {
                     $should_load = false;
 
@@ -981,17 +995,20 @@ class Typost {
      * detection order doesn't fragment the cache.
      *
      * @since 2.1.0
-     * @param array $used_font_families Font family names used on the page
-     * @param array $used_font_ids      Numeric font IDs used on the page
-     * @param array $load_settings      Per-font load_on_all_pages flags
+     * @param array $used_font_families   Font family names used on the page
+     * @param array $used_font_ids        Numeric font IDs used on the page
+     * @param array $load_settings        Per-font load_on_all_pages flags
+     * @param array $library_printed_ids  Font IDs whose @font-face WP prints
      * @return string Transient key
      */
-    private function get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings) {
+    private function get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids = array()) {
         $used_font_ids = array_map('intval', (array) $used_font_ids);
         sort($used_font_ids);
         $used_font_families = array_map('strval', (array) $used_font_families);
         sort($used_font_families);
-        return 'typost_font_css_' . md5(serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings));
+        $library_printed_ids = array_map('intval', (array) $library_printed_ids);
+        sort($library_printed_ids);
+        return 'typost_font_css_' . md5(serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings) . serialize($library_printed_ids));
     }
 
     /**
@@ -4736,6 +4753,22 @@ class Typost {
                 // Use first face for main variable - sanitize for CSS context
                 $family = $this->sanitize_css_value($font['font_faces'][0]['family']);
                 $fallback = !empty($font['fallbacks']) ? ', ' . $this->sanitize_css_value($font['fallbacks']) : '';
+
+                // Fonts registered in the WP Font Library alias to the
+                // slug-based preset variable, with the literal family as the
+                // var() fallback so contexts without preset variables (plain
+                // admin pages) and stale registrations still render.
+                if ($this->font_library_bridge()->entry_has_live_registration($font)) {
+                    $css_vars[] = sprintf(
+                        '--font-%d: var(--wp--preset--font-family--%s, "%s"%s)',
+                        $font['font_id'],
+                        sanitize_title($font['wp_slug']),
+                        $family,
+                        $fallback
+                    );
+                    continue;
+                }
+
                 $css_vars[] = sprintf('--font-%d: "%s"%s', $font['font_id'], $family, $fallback);
             }
         }
