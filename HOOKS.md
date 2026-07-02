@@ -489,6 +489,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         // Optional: class-based styling (used by paragraph styles extension)
         paragraphStyleId: 3,       // Integer style ID
         styleClass: 'typost-ps-3', // CSS class for Typography Stylist blocks
+        // Optional (inline source only, since 2.1.0): animation config ID —
+        // written to the span as data-animation-id (Animations extension)
+        animationId: 2,
     },
 }));
 ```
