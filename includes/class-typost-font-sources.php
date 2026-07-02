@@ -22,6 +22,7 @@ class Typost_Font_Sources {
      */
     private $custom_fonts_cache = null;
     private $manual_fonts_cache = null;
+    private $adopted_wp_fonts_cache = null;
     private $replacements_cache = null;
 
     /**
@@ -58,6 +59,56 @@ class Typost_Font_Sources {
             $this->manual_fonts_cache = get_option('typost_manual_fonts', array());
         }
         return $this->manual_fonts_cache;
+    }
+
+    /**
+     * Get adopted WP Font Library fonts
+     *
+     * Library fonts an author picked in the editor. Adoption allocates a
+     * numeric font_id from the shared sequence so the block/inline save
+     * format (fontId / data-font-id / --font-N) is identical to every other
+     * source. Entry shape mirrors manual fonts:
+     * {id: "wpl-{slug}", name, wp_slug, font_id, font_family, fallbacks, added_date}
+     *
+     * @since 2.1.0
+     * @return array
+     */
+    public function get_adopted_wp_fonts() {
+        if (null === $this->adopted_wp_fonts_cache) {
+            $this->adopted_wp_fonts_cache = get_option('typost_adopted_wp_fonts', array());
+        }
+        return $this->adopted_wp_fonts_cache;
+    }
+
+    /**
+     * Find an adopted WP Font Library entry by slug
+     *
+     * @since 2.1.0
+     * @param string $slug
+     * @return array|null
+     */
+    public function find_adopted_wp_font_by_slug($slug) {
+        foreach ($this->get_adopted_wp_fonts() as $font) {
+            if (isset($font['wp_slug']) && $font['wp_slug'] === $slug) {
+                return $font;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Append an adopted WP Font Library entry
+     *
+     * @since 2.1.0
+     * @param array $entry
+     * @return array The stored entry
+     */
+    public function add_adopted_wp_font(array $entry) {
+        $fonts = $this->get_adopted_wp_fonts();
+        $fonts[] = $entry;
+        update_option('typost_adopted_wp_fonts', $fonts);
+        $this->adopted_wp_fonts_cache = $fonts;
+        return $entry;
     }
 
     /**
@@ -170,6 +221,12 @@ class Typost_Font_Sources {
             }
         }
 
+        foreach ($this->get_adopted_wp_fonts() as $font) {
+            if (isset($font['font_id'])) {
+                $ids[] = $font['font_id'];
+            }
+        }
+
         return $ids;
     }
 
@@ -230,6 +287,7 @@ class Typost_Font_Sources {
     public function clear_runtime_cache() {
         $this->custom_fonts_cache = null;
         $this->manual_fonts_cache = null;
+        $this->adopted_wp_fonts_cache = null;
         $this->replacements_cache = null;
     }
 }

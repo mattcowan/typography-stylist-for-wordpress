@@ -351,6 +351,72 @@ class Typost_Font_Library_Bridge {
     }
 
     /**
+     * Adopt a WP Font Library font for editor use
+     *
+     * Idempotent: returns the existing adopted entry when the slug was
+     * already adopted, and when the slug belongs to a font the plugin itself
+     * registered, returns that kit font's identity instead of duplicating it.
+     * Otherwise allocates a font_id from the shared sequence and stores a
+     * manual-fonts-shaped entry, so every downstream system (CSS variables,
+     * detection, extensions' numeric maps) works unchanged.
+     *
+     * @since 2.1.0
+     * @param string $slug Library font slug
+     * @return array|false The adopted entry (or kit-entry equivalent), false when the slug is unknown
+     */
+    public function adopt_library_font($slug) {
+        $slug = sanitize_title($slug);
+        if ('' === $slug) {
+            return false;
+        }
+
+        // Already adopted
+        $existing = $this->sources->find_adopted_wp_font_by_slug($slug);
+        if ($existing) {
+            return $existing;
+        }
+
+        // Slug belongs to a font the plugin registered — reuse its font_id
+        foreach ($this->sources->get_custom_fonts() as $entry) {
+            if (!empty($entry['wp_slug']) && $entry['wp_slug'] === $slug && isset($entry['font_id'])) {
+                $family = !empty($entry['font_faces'][0]['family']) ? $entry['font_faces'][0]['family'] : $entry['name'];
+                return array(
+                    'id'          => 'wpl-' . $slug,
+                    'name'        => $entry['name'],
+                    'wp_slug'     => $slug,
+                    'font_id'     => (int) $entry['font_id'],
+                    'font_family' => $family,
+                    'fallbacks'   => isset($entry['fallbacks']) ? $entry['fallbacks'] : '',
+                );
+            }
+        }
+
+        // Must exist in the Library snapshot
+        $library_font = null;
+        foreach ($this->get_wp_font_library_fonts() as $font) {
+            if ($font['slug'] === $slug) {
+                $library_font = $font;
+                break;
+            }
+        }
+        if (!$library_font) {
+            return false;
+        }
+
+        $entry = array(
+            'id'          => 'wpl-' . $slug,
+            'name'        => sanitize_text_field($library_font['name']),
+            'wp_slug'     => $slug,
+            'font_id'     => $this->sources->generate_font_id(),
+            'font_family' => sanitize_text_field($library_font['font_family']),
+            'fallbacks'   => '',
+            'added_date'  => current_time('mysql'),
+        );
+
+        return $this->sources->add_adopted_wp_font($entry);
+    }
+
+    /**
      * Build the wp_font_family post_content payload for a font entry
      *
      * @param array  $entry Uploaded-kit font entry

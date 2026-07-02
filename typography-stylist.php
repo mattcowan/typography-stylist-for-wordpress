@@ -281,6 +281,8 @@ class Typost {
                 'fontFeatureVisibility' => $this->get_font_feature_visibility(),
                 'fontOrder' => $this->get_font_order(),
                 'wpFontLibraryFonts' => $this->get_wp_font_library_fonts(),
+                'adoptedWpFonts' => $this->get_adopted_wp_fonts_by_slug(),
+                'pluginRegisteredSlugs' => $this->get_plugin_registered_slugs(),
                 'restUrl' => rest_url('typost/v1/'),
                 'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
                 'disableAccessibilityWarning' => get_option('typost_disable_accessibility_warning', false),
@@ -1727,6 +1729,17 @@ class Typost {
             }
         ));
 
+        // Adopt a WP Font Library font for editor use (allocates a font_id).
+        // edit_posts: authors pick fonts, matching the other editor-facing
+        // font endpoints.
+        register_rest_route('typost/v1', '/wp-fonts/adopt', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'adopt_wp_font_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('edit_posts');
+            }
+        ));
+
         register_rest_route('typost/v1', '/fonts/wp-library/dismiss-notice', array(
             'methods' => 'POST',
             'callback' => array($this, 'dismiss_wp_library_notice_endpoint'),
@@ -2644,6 +2657,40 @@ class Typost {
      */
     public function get_wp_font_library_fonts() {
         return $this->font_library_bridge()->get_wp_font_library_fonts();
+    }
+
+    /**
+     * Get adopted WP Font Library fonts keyed by slug (for editor data)
+     *
+     * @since 2.1.0
+     * @return array
+     */
+    public function get_adopted_wp_fonts_by_slug() {
+        $by_slug = array();
+        foreach ($this->font_sources()->get_adopted_wp_fonts() as $font) {
+            if (isset($font['wp_slug'])) {
+                $by_slug[$font['wp_slug']] = $font;
+            }
+        }
+        return $by_slug;
+    }
+
+    /**
+     * Get Library slugs of fonts the plugin itself registered (for editor
+     * data — the picker skips these in the WP Font Library group because
+     * they already appear as uploaded kit fonts)
+     *
+     * @since 2.1.0
+     * @return array
+     */
+    public function get_plugin_registered_slugs() {
+        $slugs = array();
+        foreach ($this->get_custom_fonts() as $font) {
+            if (!empty($font['wp_slug'])) {
+                $slugs[] = $font['wp_slug'];
+            }
+        }
+        return $slugs;
     }
 
     /**
@@ -4372,6 +4419,38 @@ class Typost {
     }
 
     /**
+     * REST endpoint: Adopt a WP Font Library font for editor use
+     *
+     * Idempotent — returns the existing entry (with its font_id) when the
+     * slug was already adopted or belongs to a plugin-registered font.
+     *
+     * @since 2.1.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function adopt_wp_font_endpoint($request) {
+        $params = $request->get_json_params();
+        $slug = isset($params['slug']) ? sanitize_title($params['slug']) : '';
+
+        if ('' === $slug) {
+            return new WP_Error('missing_parameter', esc_html__('slug parameter is required', 'typography-stylist'), array('status' => 400));
+        }
+
+        $entry = $this->font_library_bridge()->adopt_library_font($slug);
+
+        if (!is_array($entry)) {
+            return new WP_Error('font_not_found', esc_html__('Font not found in the WordPress Font Library.', 'typography-stylist'), array('status' => 404));
+        }
+
+        $this->clear_cache();
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'font'    => $entry,
+        ));
+    }
+
+    /**
      * REST endpoint: Dismiss the Font Library migration admin notice
      *
      * @since 2.1.0
@@ -5026,6 +5105,22 @@ class Typost {
                 }
 
                 $css_vars[] = sprintf('--font-%d: %s', $font['font_id'], $family);
+            }
+        }
+
+        // Process adopted WP Font Library fonts: alias to the slug-based
+        // preset variable with the literal family as fallback (covers plain
+        // admin pages and fonts later removed from the Library)
+        $adopted_fonts = $this->font_sources()->get_adopted_wp_fonts();
+        foreach ($adopted_fonts as $font) {
+            if (isset($font['font_id']) && !empty($font['wp_slug']) && !empty($font['font_family'])) {
+                $family = $this->sanitize_css_value($font['font_family']);
+                $css_vars[] = sprintf(
+                    '--font-%d: var(--wp--preset--font-family--%s, %s)',
+                    $font['font_id'],
+                    sanitize_title($font['wp_slug']),
+                    $family
+                );
             }
         }
 

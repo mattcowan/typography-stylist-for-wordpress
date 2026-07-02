@@ -6,6 +6,9 @@
 // Import drag/resize utilities (CommonJS for browserify)
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
+// Shared font picker option builder + WP Font Library adoption helpers
+const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } = require('./font-options.js');
+
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
@@ -361,6 +364,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 blockInheritedFont: '',
                 // Flag to track if font detection failed (no text element found)
                 fontDetectionFailed: false,
+                wpAdoptError: false,
                 // Saved selection bounds (survive modal focus changes)
                 savedSelectionStart: null,
                 savedSelectionEnd: null,
@@ -1121,6 +1125,27 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     selectedFontId: 0
                 }, () => {
                     this.debouncedApplyDropdown();
+                });
+            } else if (isWpLibraryValue(value)) {
+                // Unadopted WP Font Library font — adopt it (idempotently
+                // allocates a numeric font_id), then apply like any other font
+                const slug = wpSlugFromValue(value);
+                const self = this;
+                this.setState({ wpAdoptError: false });
+                adoptWpFont(slug).then(font => {
+                    self.fontIdMap[font.font_id] = {
+                        family: font.font_family,
+                        fallbacks: font.fallbacks || '',
+                        availableWeights: []
+                    };
+                    self.setState({
+                        selectedFont: font.font_family,
+                        selectedFontId: font.font_id
+                    }, () => {
+                        self.debouncedApplyDropdown();
+                    });
+                }).catch(() => {
+                    self.setState({ wpAdoptError: true });
                 });
             } else {
                 // Try to parse as ID (new system)
@@ -1888,101 +1913,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Get font options for select control
          */
         getFontOptions() {
-            const fonts = typostData.fonts || [];
-            const adobeFonts = typostData.adobeFonts || [];
-            const manualFonts = typostData.manualFonts || [];
-            const options = [];
-
-            // Build font ID map for quick lookup (clear before repopulating)
-            this.fontIdMap = {};
-
-            // Uploaded fonts (MyFonts, etc.)
-            if (fonts.length > 0) {
-                fonts.forEach(font => {
-                    if (font.font_faces && font.font_faces.length > 0 && font.font_id) {
-                        // Get unique font families from this kit
-                        const families = [...new Set(font.font_faces.map(face => face.family))];
-                        families.forEach(family => {
-                            options.push({
-                                label: `📁 ${family}`,
-                                value: String(font.font_id),
-                                fontFamily: family,
-                                fontId: font.font_id
-                            });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                        });
-                    }
-                });
-            }
-
-            // Adobe Fonts
-            if (adobeFonts.length > 0) {
-                adobeFonts.forEach(font => {
-                    // Handle new structure: font_family (singular string - one entry per family)
-                    if (font.font_family && font.font_id) {
-                        options.push({
-                            label: `🅰️ ${font.font_family}`,
-                            value: String(font.font_id),
-                            fontFamily: font.font_family,
-                            fontId: font.font_id
-                        });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                    }
-                    // Handle legacy structure: font_families (plural array - multiple families per entry)
-                    else if (font.font_families && font.font_families.length > 0 && font.font_id) {
-                        font.font_families.forEach(family => {
-                            options.push({
-                                label: `🅰️ ${family}`,
-                                value: String(font.font_id),
-                                fontFamily: family,
-                                fontId: font.font_id
-                            });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                        });
-                    }
-                });
-            }
-
-            // Manual fonts
-            if (manualFonts.length > 0) {
-                manualFonts.forEach(font => {
-                    if (font.font_family && font.font_id) {
-                        options.push({
-                            label: `⚙️ ${font.name}`,
-                            value: String(font.font_id),
-                            fontFamily: font.font_family,
-                            fontId: font.font_id
-                        });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                    }
-                });
-            }
-
-            // Sort by saved font display order
-            const fontOrder = typostData.fontOrder || [];
-            if (fontOrder.length > 0) {
-                options.sort((a, b) => {
-                    const keyVariants = (opt) => [
-                        'font-' + opt.fontId,
-                        'adobe-' + opt.fontId,
-                        'manual-' + opt.fontId,
-                    ];
-                    const posA = keyVariants(a).reduce((best, key) => {
-                        const idx = fontOrder.indexOf(key);
-                        return idx !== -1 ? Math.min(best, idx) : best;
-                    }, Infinity);
-                    const posB = keyVariants(b).reduce((best, key) => {
-                        const idx = fontOrder.indexOf(key);
-                        return idx !== -1 ? Math.min(best, idx) : best;
-                    }, Infinity);
-                    if (posA === Infinity && posB === Infinity) return 0;
-                    if (posA === Infinity) return 1;
-                    if (posB === Infinity) return -1;
-                    return posA - posB;
-                });
-            }
-
-            return options;
+            // Shared builder (assets/js/font-options.js) — includes the
+            // WP Font Library group with wp:{slug} values for unadopted fonts
+            const built = buildFontOptions(typostData);
+            this.fontIdMap = built.fontIdMap;
+            return built.options;
         }
 
         /**
@@ -2440,6 +2375,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             ]}
                                             onChange={this.setFont}
                                         />
+                                        {this.state.wpAdoptError && (
+                                            wp.element.createElement(Notice, {
+                                                status: 'error',
+                                                isDismissible: true,
+                                                onRemove: () => this.setState({ wpAdoptError: false })
+                                            },
+                                                __('This WordPress Font Library font could not be added. Please try again.', 'typography-stylist')
+                                            )
+                                        )}
                                     </div>
                                 )}
 
