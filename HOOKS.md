@@ -253,6 +253,25 @@ add_filter('typost_presets', function($presets) {
 });
 ```
 
+#### `typost_force_enqueue_font_ids`
+
+*Since 2.1.0.* Force specific fonts (by numeric font ID) to load on every frontend page, even when the post-content scan finds no styled content. Use this when your theme or extension references a font's `--font-N` CSS variable from its own stylesheets — the content scan can't see those references, so without this filter neither the variable definitions nor the @font-face rules would be output.
+
+```php
+add_filter('typost_force_enqueue_font_ids', function($ids) {
+    // e.g. fonts assigned to theme color schemes
+    $ids[] = 12;
+    $ids[] = 27;
+    return $ids;
+});
+```
+
+**Details:**
+- Return an array of positive integer font IDs; invalid entries are discarded.
+- Forced IDs are resolved through the font-replacement chain, so referencing a deleted font's ID loads its replacement (and keeps the alias variable).
+- Forcing any ID causes the `--font-N` variables `<style>` block and the frontend stylesheet handle to be output on all pages.
+- The result is memoized per request and feeds transient cache keys — callbacks must return stable output for a given request.
+
 ---
 
 ## JavaScript Hooks

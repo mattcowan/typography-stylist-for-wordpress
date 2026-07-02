@@ -62,6 +62,13 @@ class Typost {
     private $fonts_detected = false;
 
     /**
+     * Font IDs forced to load via the typost_force_enqueue_font_ids filter
+     * (memoized per request)
+     * @since 2.1.0
+     */
+    private $forced_font_ids = null;
+
+    /**
      * Get instance
      */
     public static function get_instance() {
@@ -671,8 +678,11 @@ class Typost {
             }
         }
 
-        // Only detect fonts if we have styled content or always-load fonts
-        if ($this->has_styled_content || $has_always_load_fonts) {
+        // Fonts forced by themes/extensions (typost_force_enqueue_font_ids)
+        $forced_font_ids = $this->get_forced_font_ids();
+
+        // Only detect fonts if we have styled content, always-load fonts, or forced fonts
+        if ($this->has_styled_content || $has_always_load_fonts || !empty($forced_font_ids)) {
             // Get fonts used in content
             $used_fonts_raw = $this->get_used_fonts_in_content();
 
@@ -690,6 +700,14 @@ class Typost {
 
             // Resolve font replacements
             $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
+
+            // Merge forced fonts (resolved through the replacement chain too)
+            if (!empty($forced_font_ids)) {
+                $used_font_ids = array_values(array_unique(array_merge(
+                    $used_font_ids,
+                    $this->resolve_used_font_replacements($forced_font_ids)
+                )));
+            }
 
             // Parse font families
             if (!empty($used_font_families)) {
@@ -746,8 +764,9 @@ class Typost {
             }
         }
 
-        // Only return early if NO styled content AND NO always-load fonts
-        if (!$has_styled && !$has_always_load_fonts) {
+        // Only return early if NO styled content, NO always-load fonts,
+        // and NO fonts forced by the typost_force_enqueue_font_ids filter
+        if (!$has_styled && !$has_always_load_fonts && empty($this->get_forced_font_ids())) {
             return;
         }
 
@@ -848,13 +867,23 @@ class Typost {
             }
         }
 
+        // Merge fonts forced by the typost_force_enqueue_font_ids filter
+        // (resolved through the replacement chain like content-detected IDs)
+        $forced_font_ids = $this->get_forced_font_ids();
+        if (!empty($forced_font_ids)) {
+            $used_font_ids = array_values(array_unique(array_merge(
+                $used_font_ids,
+                $this->resolve_used_font_replacements($forced_font_ids)
+            )));
+        }
+
         // Build cache key including load_on_all_pages settings
         $load_settings = array();
         foreach ($all_fonts as $font) {
             $font_id = isset($font['id']) ? $font['id'] : '';
             $load_settings[$font_id] = !empty($font['load_on_all_pages']);
         }
-        $cache_key = 'typost_font_css_' . md5(serialize($used_font_families) . serialize($load_settings));
+        $cache_key = $this->get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings);
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
@@ -904,6 +933,27 @@ class Typost {
         if (!empty($combined_css)) {
             wp_add_inline_style('typost-frontend', $combined_css);
         }
+    }
+
+    /**
+     * Build the transient cache key for the combined per-page font CSS
+     *
+     * Includes the used font IDs (not just family names) so pages using
+     * different fonts by ID never share cached CSS, and sorts inputs so
+     * detection order doesn't fragment the cache.
+     *
+     * @since 2.1.0
+     * @param array $used_font_families Font family names used on the page
+     * @param array $used_font_ids      Numeric font IDs used on the page
+     * @param array $load_settings      Per-font load_on_all_pages flags
+     * @return string Transient key
+     */
+    private function get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings) {
+        $used_font_ids = array_map('intval', (array) $used_font_ids);
+        sort($used_font_ids);
+        $used_font_families = array_map('strval', (array) $used_font_families);
+        sort($used_font_families);
+        return 'typost_font_css_' . md5(serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings));
     }
 
     /**
@@ -4278,6 +4328,16 @@ class Typost {
                     $used_font_families = array_unique($individual_font_families);
                 }
             }
+
+            // Merge fonts forced by the typost_force_enqueue_font_ids filter
+            // (theme CSS may reference an Adobe font's --font-N variable)
+            $forced_font_ids = $this->get_forced_font_ids();
+            if (!empty($forced_font_ids)) {
+                $used_font_ids = array_values(array_unique(array_merge(
+                    $used_font_ids,
+                    $this->resolve_used_font_replacements($forced_font_ids)
+                )));
+            }
         }
 
         // Track which CSS URLs should be loaded (to avoid duplicates when fonts are from same kit)
@@ -4554,6 +4614,35 @@ class Typost {
      * @param array $used_font_ids Array of font IDs found in content (e.g., [16, 32])
      * @return array Expanded array including replacement targets (e.g., [16, 29, 32])
      */
+    /**
+     * Get font IDs that must always be loaded on the frontend
+     *
+     * Applies the typost_force_enqueue_font_ids filter, which lets themes and
+     * extensions force @font-face and --font-N variable loading for fonts that
+     * are referenced only from theme/extension CSS and are therefore invisible
+     * to the post-content scan (e.g. a theme assigning fonts per color scheme).
+     *
+     * The result is memoized for the request because it feeds transient cache
+     * keys — filter callbacks must return stable output within a request.
+     *
+     * @since 2.1.0
+     * @return array Unique positive integer font IDs
+     */
+    public function get_forced_font_ids() {
+        if (null === $this->forced_font_ids) {
+            $ids = apply_filters('typost_force_enqueue_font_ids', array());
+            if (!is_array($ids)) {
+                $ids = array();
+            }
+            $ids = array_map('intval', $ids);
+            $ids = array_filter($ids, function ($id) {
+                return $id > 0;
+            });
+            $this->forced_font_ids = array_values(array_unique($ids));
+        }
+        return $this->forced_font_ids;
+    }
+
     private function resolve_used_font_replacements($used_font_ids) {
         $replacements = $this->get_font_replacements();
 
@@ -4768,8 +4857,10 @@ class Typost {
         // Only output in appropriate contexts
         if (!is_admin() && !$this->has_styled_content()) {
             $replacements = $this->get_font_replacements();
-            // Check if any replacements are set to global load
-            if (empty($replacements['global_load'])) {
+            // Check if any replacements are set to global load, or any fonts
+            // are forced by the typost_force_enqueue_font_ids filter (theme
+            // CSS needs the --font-N definitions even without styled content)
+            if (empty($replacements['global_load']) && empty($this->get_forced_font_ids())) {
                 return;
             }
         }
