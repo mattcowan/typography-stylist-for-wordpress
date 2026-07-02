@@ -139,6 +139,10 @@ class Typost {
         add_action('save_post', array($this, 'on_post_save'), 10, 3);
         add_action('before_delete_post', array($this, 'on_post_delete'));
 
+        // Silent rollback when a plugin-registered wp_font_family post is
+        // deleted (e.g. through the Appearance > Font Library UI)
+        add_action('deleted_post', array($this, 'on_wp_font_family_deleted'), 10, 2);
+
         // Output CSS variables for fonts
         add_action('wp_head', array($this, 'output_font_css_variables'), 5);
         add_action('admin_head', array($this, 'output_font_css_variables'), 5);
@@ -1519,6 +1523,12 @@ class Typost {
             'sanitize_callback' => array($this, 'sanitize_manual_fonts')
         ));
 
+        register_setting('typost_settings', 'typost_auto_register_wp_fonts', array(
+            'type' => 'boolean',
+            'default' => true,
+            'sanitize_callback' => 'rest_sanitize_boolean'
+        ));
+
         register_setting('typost_settings', 'typost_font_replacements', array(
             'type' => 'array',
             'default' => array(
@@ -2688,6 +2698,22 @@ class Typost {
     }
 
     /**
+     * deleted_post handler: roll back Font Library registration fields when a
+     * plugin-registered wp_font_family post is deleted (e.g. via the
+     * Appearance > Font Library UI). CSS emission falls back to the
+     * plugin-managed path on the next request.
+     *
+     * @since 2.1.0
+     * @param int          $post_id Deleted post ID
+     * @param WP_Post|null $post    Deleted post object
+     */
+    public function on_wp_font_family_deleted($post_id, $post = null) {
+        if ($this->font_library_bridge()->handle_deleted_post($post_id, $post)) {
+            $this->clear_cache();
+        }
+    }
+
+    /**
      * Clear font detection caches related to a specific post.
      *
      * Removes per-post transients for styled content detection and used fonts,
@@ -2870,6 +2896,28 @@ class Typost {
                     $sanitized_font['file_count'] = absint($font['file_count']);
                 }
 
+                // Kit grouping fields (present on all kit uploads)
+                if (isset($font['kit_id'])) {
+                    $sanitized_font['kit_id'] = sanitize_key($font['kit_id']);
+                }
+                if (isset($font['kit_name'])) {
+                    $sanitized_font['kit_name'] = sanitize_text_field($font['kit_name']);
+                }
+                if (isset($font['available_weights']) && is_array($font['available_weights'])) {
+                    $sanitized_font['available_weights'] = array_map('sanitize_text_field', $font['available_weights']);
+                }
+
+                // WP Font Library registration fields (@since 2.1.0)
+                if (!empty($font['wp_slug'])) {
+                    $sanitized_font['wp_slug'] = sanitize_title($font['wp_slug']);
+                }
+                if (!empty($font['wp_post_id'])) {
+                    $sanitized_font['wp_post_id'] = absint($font['wp_post_id']);
+                }
+                if (!empty($font['wp_registered_date'])) {
+                    $sanitized_font['wp_registered_date'] = sanitize_text_field($font['wp_registered_date']);
+                }
+
                 // Auto-generate font_id if missing
                 if ($sanitized_font['font_id'] === 0) {
                     $sanitized_font['font_id'] = $this->generate_font_id();
@@ -3031,6 +3079,33 @@ class Typost {
 
             // Clear cache
             $this->clear_cache();
+
+            // Auto-register new fonts in the WP Font Library (WP 6.5+).
+            // Runs before typost_font_uploaded fires so extension hooks see
+            // entries that already carry their wp_slug/wp_post_id fields.
+            if ($this->font_library_bridge()->auto_register_enabled()) {
+                $registered_any = false;
+                $updated_entries = array();
+                foreach ($font_entries as $font_entry) {
+                    $registered = $this->font_library_bridge()->register_font($font_entry);
+                    if (is_array($registered)) {
+                        $updated = $this->font_sources()->update_custom_font_entry($font_entry['id'], array(
+                            'wp_slug'            => $registered['slug'],
+                            'wp_post_id'         => $registered['post_id'],
+                            'wp_registered_date' => current_time('mysql'),
+                        ));
+                        $updated_entries[] = $updated ? $updated : $font_entry;
+                        $registered_any = true;
+                    } else {
+                        // Registration failed — entry simply stays plugin-managed
+                        $updated_entries[] = $font_entry;
+                    }
+                }
+                $font_entries = $updated_entries;
+                if ($registered_any) {
+                    $this->clear_cache();
+                }
+            }
 
             /**
              * Fires after a font kit is successfully uploaded and processed.

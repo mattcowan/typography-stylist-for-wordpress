@@ -152,4 +152,270 @@ class Typost_Font_Library_Bridge {
     public function clear_snapshot_cache() {
         $this->library_snapshot = null;
     }
+
+    /**
+     * Whether newly uploaded font kits should auto-register in the Library
+     *
+     * Governed by the typost_auto_register_wp_fonts option (default on)
+     * and gated on Font Library availability (WP 6.5+).
+     *
+     * @return bool
+     */
+    public function auto_register_enabled() {
+        return $this->is_available() && (bool) get_option('typost_auto_register_wp_fonts', true);
+    }
+
+    /**
+     * Register an uploaded-kit font entry in the WP Font Library
+     *
+     * Creates one wp_font_family post plus one wp_font_face child per font
+     * face. Font binaries are NOT copied — faces reference the files already
+     * stored in the plugin's upload directory, which keeps registration
+     * cheap, idempotent, and trivially reversible (unregistering never has
+     * to restore files). The created family post is stamped with a
+     * _typost_font_id meta as an ownership marker so rollback can never
+     * delete a user-created family.
+     *
+     * @param array $entry Uploaded-kit font entry (see typost_custom_fonts)
+     * @return array|false {slug, post_id} on success (or when already
+     *                     registered), false on failure/unavailability
+     */
+    public function register_font(array $entry) {
+        if (!$this->is_available()) {
+            return false;
+        }
+        if (empty($entry['name']) || empty($entry['font_faces']) || !is_array($entry['font_faces'])) {
+            return false;
+        }
+
+        // Idempotent: already registered and the family post still exists
+        if (!empty($entry['wp_post_id'])) {
+            $existing = get_post((int) $entry['wp_post_id']);
+            if ($existing && 'wp_font_family' === $existing->post_type) {
+                return array(
+                    'slug'    => $existing->post_name,
+                    'post_id' => (int) $existing->ID,
+                );
+            }
+        }
+
+        $slug = sanitize_title($entry['name']);
+        if ('' === $slug) {
+            $slug = sanitize_title('typost-font-' . (isset($entry['font_id']) ? (int) $entry['font_id'] : 0));
+        }
+        $slug = wp_unique_post_slug($slug, 0, 'publish', 'wp_font_family', 0);
+
+        $content = $this->build_font_family_post_content($entry, $slug);
+
+        $post_id = wp_insert_post(array(
+            'post_type'    => 'wp_font_family',
+            'post_status'  => 'publish',
+            'post_title'   => sanitize_text_field($entry['name']),
+            'post_name'    => $slug,
+            'post_content' => wp_json_encode($content),
+        ), true);
+
+        if (is_wp_error($post_id) || !$post_id) {
+            return false;
+        }
+
+        // Ownership marker: rollback only ever deletes posts carrying this meta
+        update_post_meta($post_id, '_typost_font_id', isset($entry['font_id']) ? (int) $entry['font_id'] : 0);
+
+        $base_url = isset($entry['upload_url']) ? $entry['upload_url'] : '';
+        foreach ($entry['font_faces'] as $face) {
+            if (!is_array($face)) {
+                continue;
+            }
+            $face_content = $this->build_font_face_post_content($face, $base_url);
+            if (empty($face_content['src'])) {
+                // No resolvable font files for this face — skip it rather
+                // than registering a face WP cannot print
+                continue;
+            }
+            wp_insert_post(array(
+                'post_type'    => 'wp_font_face',
+                'post_status'  => 'publish',
+                'post_parent'  => (int) $post_id,
+                'post_title'   => trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight']),
+                'post_content' => wp_json_encode($face_content),
+            ));
+        }
+
+        $this->clear_snapshot_cache();
+
+        return array(
+            'slug'    => $slug,
+            'post_id' => (int) $post_id,
+        );
+    }
+
+    /**
+     * Remove a previously registered font from the WP Font Library
+     *
+     * Deletes the wp_font_family post and its wp_font_face children, but
+     * ONLY when the post carries a matching _typost_font_id ownership meta —
+     * user-created families are never touched.
+     *
+     * @param array $entry Uploaded-kit font entry with wp_post_id set
+     * @return bool Whether the family post was deleted
+     */
+    public function unregister_font(array $entry) {
+        if (empty($entry['wp_post_id'])) {
+            return false;
+        }
+
+        $post = get_post((int) $entry['wp_post_id']);
+        if (!$post || 'wp_font_family' !== $post->post_type) {
+            return false;
+        }
+
+        $owner_font_id = (int) get_post_meta($post->ID, '_typost_font_id', true);
+        $entry_font_id = isset($entry['font_id']) ? (int) $entry['font_id'] : 0;
+        if (!$owner_font_id || $owner_font_id !== $entry_font_id) {
+            return false;
+        }
+
+        $children = get_posts(array(
+            'post_type'      => 'wp_font_face',
+            'post_parent'    => $post->ID,
+            'posts_per_page' => -1,
+            'post_status'    => 'any',
+            'fields'         => 'ids',
+        ));
+        foreach ($children as $child_id) {
+            wp_delete_post($child_id, true);
+        }
+        wp_delete_post($post->ID, true);
+
+        $this->clear_snapshot_cache();
+
+        return true;
+    }
+
+    /**
+     * deleted_post watcher: silent rollback when a plugin-registered family
+     * is deleted through the Font Library UI (or anywhere else)
+     *
+     * Clears the wp_slug/wp_post_id fields on the matching entry so CSS
+     * emission falls back to the plugin-managed path on the next request.
+     *
+     * @param int          $post_id Deleted post ID
+     * @param WP_Post|null $post    Deleted post object
+     * @return bool Whether any entry was updated
+     */
+    public function handle_deleted_post($post_id, $post = null) {
+        if (!$post || !isset($post->post_type) || 'wp_font_family' !== $post->post_type) {
+            return false;
+        }
+
+        $changed = false;
+        foreach ($this->sources->get_custom_fonts() as $entry) {
+            if (!empty($entry['wp_post_id']) && (int) $entry['wp_post_id'] === (int) $post_id && isset($entry['id'])) {
+                $this->sources->update_custom_font_entry($entry['id'], array(
+                    'wp_slug'            => null,
+                    'wp_post_id'         => null,
+                    'wp_registered_date' => null,
+                ));
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $this->clear_snapshot_cache();
+        }
+
+        return $changed;
+    }
+
+    /**
+     * Build the wp_font_family post_content payload for a font entry
+     *
+     * @param array  $entry Uploaded-kit font entry
+     * @param string $slug  Chosen family slug
+     * @return array {name, slug, fontFamily, preview}
+     */
+    public function build_font_family_post_content(array $entry, $slug) {
+        $family = '';
+        if (!empty($entry['font_faces'][0]['family'])) {
+            $family = $entry['font_faces'][0]['family'];
+        } elseif (!empty($entry['name'])) {
+            $family = $entry['name'];
+        }
+
+        $font_family_value = (false !== strpos($family, ' ')) ? '"' . $family . '"' : $family;
+        if (!empty($entry['fallbacks'])) {
+            $font_family_value .= ', ' . $entry['fallbacks'];
+        }
+
+        return array(
+            'name'       => isset($entry['name']) ? $entry['name'] : $family,
+            'slug'       => $slug,
+            'fontFamily' => $font_family_value,
+            'preview'    => '',
+        );
+    }
+
+    /**
+     * Build the wp_font_face post_content payload for a single face
+     *
+     * @param array  $face     Face data {family, weight, style, src}
+     * @param string $base_url Kit upload URL for resolving relative src paths
+     * @return array {fontFamily, fontStyle, fontWeight, src[]}
+     */
+    public function build_font_face_post_content(array $face, $base_url) {
+        return array(
+            'fontFamily' => isset($face['family']) ? $face['family'] : '',
+            'fontStyle'  => !empty($face['style']) ? $face['style'] : 'normal',
+            'fontWeight' => !empty($face['weight']) ? (string) $face['weight'] : '400',
+            'src'        => $this->extract_face_src_urls(isset($face['src']) ? $face['src'] : '', $base_url),
+        );
+    }
+
+    /**
+     * Extract font file URLs from a CSS src value
+     *
+     * Handles the three URL shapes produced by the kit upload pipeline:
+     * absolute URLs (kept), site-relative paths like
+     * /wp-content/uploads/... (resolved via site_url()), and kit-relative
+     * filenames (resolved against the kit's upload URL). Data URIs are
+     * skipped — WP Font Library faces reference files.
+     *
+     * @param string $src      CSS src value, e.g. "url('a.woff2') format('woff2'), url('a.woff')"
+     * @param string $base_url Kit upload URL
+     * @return array Ordered unique URLs
+     */
+    public function extract_face_src_urls($src, $base_url) {
+        $urls = array();
+
+        if (!is_string($src) || '' === $src) {
+            return $urls;
+        }
+
+        if (!preg_match_all("/url\s*\(\s*['\"]?([^)'\"\s]+)['\"]?\s*\)/i", $src, $matches)) {
+            return $urls;
+        }
+
+        foreach ($matches[1] as $url) {
+            if (0 === strpos($url, 'data:')) {
+                continue;
+            }
+
+            if (preg_match('/^https?:\/\//i', $url)) {
+                // Absolute URL — keep as-is
+                $urls[] = $url;
+            } elseif (0 === strpos($url, '//')) {
+                // Protocol-relative — keep as-is
+                $urls[] = $url;
+            } elseif (0 === strpos($url, '/')) {
+                // Site-relative path (produced by rewrite_css_urls at upload time)
+                $urls[] = site_url($url);
+            } elseif ('' !== $base_url) {
+                // Kit-relative filename
+                $urls[] = rtrim($base_url, '/') . '/' . ltrim($url, './');
+            }
+        }
+
+        return array_values(array_unique($urls));
+    }
 }
