@@ -367,6 +367,15 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Unreleased
+
+**WordPress Font Library integration (WP 6.5+)**
+
+- **Register uploaded fonts in the WordPress Font Library** (Appearance → Editor). New uploads register automatically (toggle in Options); existing fonts register per font or in bulk from the Custom Fonts tab — opt-in and fully reversible. Registered fonts keep their numeric IDs: `--font-N` variables alias to `--wp--preset--font-family--{slug}` presets with a literal fallback, so existing content and extension integrations keep rendering forever. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom definitions stay plugin-managed by design.
+- **Library fonts in the editor pickers** - both editors now offer WordPress Font Library fonts in a dedicated group; picking one adopts it with a numeric font ID, leaving the save format and extensions unchanged.
+- **Variable Fonts built into core** - the standalone "Typography Stylist - Variable Fonts" extension is now bundled (deactivate the standalone plugin after updating; settings carry over automatically).
+- **`typost_force_enqueue_font_ids` filter** for theme-driven font loading, `waitUntil()` on `typost:font-saved`, a font-CSS cache-key fix, and `animationConfigId`/`data-animation-id` integration points for the upcoming Animations extension.
+
 ### Version 2.0.0
 
 **Flagship feature: the Glyphs Panel (built into core)**

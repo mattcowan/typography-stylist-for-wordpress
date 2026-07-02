@@ -1490,3 +1490,118 @@ msgstr ""
 #: typography-stylist.php
 msgid "Failed to save font order."
 msgstr ""
+
+# ── WordPress Font Library integration (v2.1.0) ──
+
+#: includes/admin-page.php
+msgid "WordPress Font Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Automatically register newly uploaded fonts in the WordPress Font Library (recommended)"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "When enabled, fonts from newly uploaded webfont kits are also registered in the WordPress Font Library (Appearance → Editor), so they can be used site-wide and share WordPress's font system. The plugin's --font-N variables keep working either way, so existing content is never affected. Previously uploaded fonts can be registered individually or in bulk from the Custom Fonts tab."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "WordPress Font Library integration available."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Register all in Font Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Registered in the WordPress Font Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "In WP Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "WordPress Font Library:"
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "Registered as %s"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Plugin-managed"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Remove from Font Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Register in Font Library"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Registered fonts appear in the WordPress Font Library (Appearance → Editor) and WordPress serves their font files. Either way the plugin's --font-N variables keep working, so existing content is never affected."
+msgstr ""
+
+#: typography-stylist.php
+msgid "The WordPress Font Library requires WordPress 6.5 or later."
+msgstr ""
+
+#: typography-stylist.php
+msgid "The font could not be registered in the Font Library. It remains fully functional as a plugin-managed font."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Font not found in the WordPress Font Library."
+msgstr ""
+
+#: typography-stylist.php
+msgid "slug parameter is required"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Registering..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Font registered in the Font Library! Reloading page..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to register the font in the Font Library."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Removing..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Font removed from the Font Library! Reloading page..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to remove the font from the Font Library."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself."
+msgstr ""
+
+#: typography-stylist.php
+#, php-format
+msgid "Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page..."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "This WordPress Font Library font could not be added. Please try again."
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "%d uploaded font is not yet registered in the WordPress Font Library. Registering makes it available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
+msgid_plural "%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
+msgstr[0] ""
+msgstr[1] ""

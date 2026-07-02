@@ -275,6 +275,15 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
+= Unreleased =
+* **NEW: WordPress Font Library integration (WP 6.5+).** Uploaded webfont kits can now be registered in the WordPress Font Library (Appearance → Editor): newly uploaded fonts register automatically (toggle in Options), and existing fonts can be registered per font or in bulk from the Custom Fonts tab — registration is opt-in and fully reversible. Registered fonts keep their numeric IDs: the plugin's `--font-N` CSS variables alias to WordPress's `--wp--preset--font-family--{slug}` presets with a literal fallback, so all existing content, inline spans, and extension integrations keep rendering forever, even if a font is later removed from the Library. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom font definitions remain plugin-managed by design (Adobe fonts load from Adobe's servers and may not be self-hosted).
+* **NEW: WordPress Font Library fonts in the editor font pickers.** Both the inline editor and the Typography Stylist block now offer Library fonts (theme fonts and fonts installed via Appearance → Editor) in a dedicated picker group. Picking one adopts it seamlessly — it gets a numeric font ID like every other source, so the save format and all extensions work unchanged.
+* **NEW: Variable Fonts built into core.** The "Typography Stylist - Variable Fonts" extension is now bundled (like the Glyphs Panel in 2.0): automatic axis detection on upload, per-axis admin configuration, and axis sliders in the editor. If you were using the standalone extension plugin, deactivate it after updating — your settings carry over automatically.
+* **NEW: `typost_force_enqueue_font_ids` filter** — themes and extensions can force specific fonts to load on every page (for fonts referenced only from theme CSS, invisible to the content scan).
+* Improved: extension data saves on the font edit form no longer race the page reload (`typost:font-saved` now provides a `waitUntil()` collector).
+* Fixed: the per-page font CSS cache key now includes the used font IDs, so pages using different fonts can no longer share stale cached CSS.
+* Developer: new block attribute `animationConfigId` + inline `data-animation-id` attribute as integration points for the upcoming Animations extension; font subsystem partially extracted into `includes/` modules (public extension API unchanged).
+
 = 2.0.1 =
 * Fixed: Mixed-content blocking of locally-hosted fonts in the Glyphs Panel — same-host `http://` font file URLs are now upgraded to `https://` before fetching, so fonts whose stored kit CSS contains absolute insecure URLs load correctly on HTTPS sites (cross-origin URLs are left untouched)
 
