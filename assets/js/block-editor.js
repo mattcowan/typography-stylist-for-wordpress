@@ -2761,6 +2761,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // that the comma-tag data-features format cannot express
             // (set by extensions such as the Glyphs Panel)
             'data-feature-settings': 'data-feature-settings',
+            // Animation config reference on inline spans (set by the
+            // Animations extension; rendered via its render_block transform)
+            'data-animation-id': 'data-animation-id',
             'style': 'style',
             'aria-label': 'aria-label'
         },

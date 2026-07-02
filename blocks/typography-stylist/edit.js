@@ -352,6 +352,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (props.layeredConfigId !== undefined) {
 					newAttrs.layeredConfigId = props.layeredConfigId;
 				}
+				// Animation configuration ID support (animations extension)
+				if (props.animationConfigId !== undefined) {
+					newAttrs.animationConfigId = props.animationConfigId;
+				}
 				setAttributes(newAttrs);
 
 				// Sync QFT inline state so controls reflect the applied style
@@ -458,6 +462,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
+		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
 		// clientId of the block holding the active selection — used so only the
 		// selected block answers the shared typost_current_editor_state filter.
@@ -496,6 +501,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
 					fontVariationSettings: s.fontVariationSettings || '',
 					layeredConfigId: s.layeredConfigId || 0,
+					animationConfigId: s.animationConfigId || 0,
 					content: s.content || '',
 					tagName: s.tagName || 'h2'
 				};
