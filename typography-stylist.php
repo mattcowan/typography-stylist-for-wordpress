@@ -33,6 +33,11 @@ if (!defined('TYPOST_PLUGIN_BASENAME')) {
     define('TYPOST_PLUGIN_BASENAME', plugin_basename(__FILE__));
 }
 
+// Font subsystem modules (__DIR__ so test bootstraps that define
+// TYPOST_PLUGIN_DIR without a trailing slash still resolve correctly)
+require_once __DIR__ . '/includes/class-typost-font-sources.php';
+require_once __DIR__ . '/includes/class-typost-font-library-bridge.php';
+
 /**
  * Main plugin class
  */
@@ -47,11 +52,14 @@ class Typost {
      * Object cache for database queries
      */
     private $presets_cache = null;
-    private $fonts_cache = null;
     private $features_cache = null;
-    private $manual_fonts_cache = null;
-    private $font_replacements_cache = null;
-    private $wp_font_library_cache = null;
+
+    /**
+     * Font subsystem modules (lazily instantiated)
+     * @since 2.1.0
+     */
+    private $font_sources = null;
+    private $font_library_bridge = null;
 
     /**
      * Frontend font detection state (for archive pages)
@@ -83,6 +91,32 @@ class Typost {
      */
     private function __construct() {
         $this->init_hooks();
+    }
+
+    /**
+     * Get the font sources module (option-backed font storage + ID sequence)
+     *
+     * @since 2.1.0
+     * @return Typost_Font_Sources
+     */
+    public function font_sources() {
+        if (null === $this->font_sources) {
+            $this->font_sources = new Typost_Font_Sources();
+        }
+        return $this->font_sources;
+    }
+
+    /**
+     * Get the WP Font Library bridge module
+     *
+     * @since 2.1.0
+     * @return Typost_Font_Library_Bridge
+     */
+    public function font_library_bridge() {
+        if (null === $this->font_library_bridge) {
+            $this->font_library_bridge = new Typost_Font_Library_Bridge($this->font_sources());
+        }
+        return $this->font_library_bridge;
     }
 
     /**
@@ -2389,20 +2423,14 @@ class Typost {
      * Get custom fonts with object caching
      */
     public function get_custom_fonts() {
-        if (null === $this->fonts_cache) {
-            $this->fonts_cache = get_option('typost_custom_fonts', array());
-        }
-        return $this->fonts_cache;
+        return $this->font_sources()->get_custom_fonts();
     }
 
     /**
      * Get manual fonts with object caching
      */
     public function get_manual_fonts() {
-        if (null === $this->manual_fonts_cache) {
-            $this->manual_fonts_cache = get_option('typost_manual_fonts', array());
-        }
-        return $this->manual_fonts_cache;
+        return $this->font_sources()->get_manual_fonts();
     }
 
     /**
@@ -2544,83 +2572,7 @@ class Typost {
      * @return array Normalized font entries with keys: post_id, name, font_family, slug.
      */
     public function get_wp_font_library_fonts() {
-        if ($this->wp_font_library_cache !== null) {
-            return $this->wp_font_library_cache;
-        }
-
-        $result = array();
-
-        // Source 1: Fonts registered in theme.json (theme, parent-theme, and user/custom keys).
-        // This covers fonts bundled with the active theme AND fonts installed via the
-        // Appearance > Font Library UI (WP 6.5+), which land in the 'custom' key.
-        if (class_exists('WP_Theme_JSON_Resolver')) {
-            $theme_json = WP_Theme_JSON_Resolver::get_merged_data();
-            $settings   = $theme_json->get_settings();
-            $all_groups = isset($settings['typography']['fontFamilies'])
-                ? $settings['typography']['fontFamilies']
-                : array();
-
-            // Iterate all source groups (theme, custom, etc.)
-            foreach ($all_groups as $group_key => $families) {
-                if (!is_array($families)) {
-                    continue;
-                }
-                foreach ($families as $family) {
-                    if (empty($family['name']) || empty($family['slug'])) {
-                        continue;
-                    }
-                    $font_family = isset($family['fontFamily']) ? $family['fontFamily'] : $family['name'];
-                    $result[]    = array(
-                        'post_id'     => 0,
-                        'name'        => $family['name'],
-                        'font_family' => $font_family,
-                        'slug'        => $family['slug'],
-                        'source'      => $group_key, // 'theme', 'custom', etc.
-                    );
-                }
-            }
-        }
-
-        // Source 2: wp_font_family posts (fonts installed via Font Library when theme.json
-        // integration isn't the storage mechanism — rare but possible on some setups).
-        if (post_type_exists('wp_font_family')) {
-            $existing_slugs = wp_list_pluck($result, 'slug');
-            $posts = get_posts(array(
-                'post_type'      => 'wp_font_family',
-                'posts_per_page' => -1,
-                'post_status'    => 'publish',
-                'orderby'        => 'title',
-                'order'          => 'ASC',
-            ));
-            foreach ($posts as $post) {
-                // Skip if already captured via theme.json
-                if (in_array($post->post_name, $existing_slugs, true)) {
-                    continue;
-                }
-                $font_family = $post->post_title;
-                if (!empty($post->post_content)) {
-                    $data = json_decode($post->post_content, true);
-                    if (is_array($data) && !empty($data['fontFamily'])) {
-                        $font_family = $data['fontFamily'];
-                    }
-                }
-                $result[] = array(
-                    'post_id'     => $post->ID,
-                    'name'        => $post->post_title,
-                    'font_family' => $font_family,
-                    'slug'        => $post->post_name,
-                    'source'      => 'installed',
-                );
-            }
-        }
-
-        // Sort alphabetically by name
-        usort($result, function($a, $b) {
-            return strcmp($a['name'], $b['name']);
-        });
-
-        $this->wp_font_library_cache = $result;
-        return $this->wp_font_library_cache;
+        return $this->font_library_bridge()->get_wp_font_library_fonts();
     }
 
     /**
@@ -2628,9 +2580,8 @@ class Typost {
      */
     private function clear_cache() {
         $this->presets_cache = null;
-        $this->fonts_cache = null;
-        $this->manual_fonts_cache = null;
-        $this->wp_font_library_cache = null;
+        $this->font_sources()->clear_runtime_cache();
+        $this->font_library_bridge()->clear_snapshot_cache();
 
         // Clear all font CSS caches
         delete_transient('typost_combined_font_css');
@@ -3687,7 +3638,7 @@ class Typost {
      * Get Adobe Fonts scripts
      */
     public function get_adobe_fonts() {
-        return get_option('typost_adobe_fonts', array());
+        return $this->font_sources()->get_adobe_fonts();
     }
 
     /**
@@ -4498,14 +4449,7 @@ class Typost {
      * @return array Font replacement mappings and settings
      */
     private function get_font_replacements() {
-        if (null === $this->font_replacements_cache) {
-            $this->font_replacements_cache = get_option('typost_font_replacements', array(
-                'mappings' => array(),
-                'global_load' => array(),
-                'next_id' => 1
-            ));
-        }
-        return $this->font_replacements_cache;
+        return $this->font_sources()->get_font_replacements();
     }
 
     /**
@@ -4517,18 +4461,7 @@ class Typost {
      * @return int Next available ID
      */
     private function generate_font_id() {
-        $replacements = $this->get_font_replacements();
-
-        // Get next ID (starts at 1)
-        $next_id = isset($replacements['next_id']) ? $replacements['next_id'] : 1;
-        $current_id = $next_id;
-
-        // Increment for next time
-        $replacements['next_id'] = $next_id + 1;
-        update_option('typost_font_replacements', $replacements);
-        $this->font_replacements_cache = $replacements;
-
-        return $current_id;
+        return $this->font_sources()->generate_font_id();
     }
 
     /**
@@ -4537,33 +4470,7 @@ class Typost {
      * @return array Array of all active font IDs
      */
     private function get_all_active_font_ids() {
-        $ids = array();
-
-        // Get custom fonts
-        $custom_fonts = $this->get_custom_fonts();
-        foreach ($custom_fonts as $font) {
-            if (isset($font['font_id'])) {
-                $ids[] = $font['font_id'];
-            }
-        }
-
-        // Get Adobe fonts
-        $adobe_fonts = $this->get_adobe_fonts();
-        foreach ($adobe_fonts as $font) {
-            if (isset($font['font_id'])) {
-                $ids[] = $font['font_id'];
-            }
-        }
-
-        // Get manual fonts
-        $manual_fonts = $this->get_manual_fonts();
-        foreach ($manual_fonts as $font) {
-            if (isset($font['font_id'])) {
-                $ids[] = $font['font_id'];
-            }
-        }
-
-        return $ids;
+        return $this->font_sources()->get_all_active_font_ids();
     }
 
     /**
@@ -4644,26 +4551,7 @@ class Typost {
     }
 
     private function resolve_used_font_replacements($used_font_ids) {
-        $replacements = $this->get_font_replacements();
-
-        if (empty($replacements['mappings'])) {
-            return $used_font_ids;
-        }
-
-        $resolved_ids = array();
-
-        foreach ($used_font_ids as $font_id) {
-            // Always include the original ID (for the CSS variable alias)
-            $resolved_ids[] = $font_id;
-
-            // If this font has been replaced, also include the replacement target
-            if (isset($replacements['mappings'][$font_id])) {
-                $replacement_id = $replacements['mappings'][$font_id];
-                $resolved_ids[] = $replacement_id;
-            }
-        }
-
-        return array_unique($resolved_ids);
+        return $this->font_sources()->resolve_used_font_replacements($used_font_ids);
     }
 
     /**
@@ -4697,8 +4585,7 @@ class Typost {
             $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
         }
 
-        update_option('typost_font_replacements', $replacements);
-        $this->font_replacements_cache = $replacements;
+        $this->font_sources()->save_font_replacements($replacements);
         $this->clear_cache();
 
         return true;
@@ -4716,8 +4603,7 @@ class Typost {
         unset($replacements['mappings'][$deleted_id]);
         $replacements['global_load'] = array_diff($replacements['global_load'], array($deleted_id));
 
-        update_option('typost_font_replacements', $replacements);
-        $this->font_replacements_cache = $replacements;
+        $this->font_sources()->save_font_replacements($replacements);
         $this->clear_cache();
 
         return true;
