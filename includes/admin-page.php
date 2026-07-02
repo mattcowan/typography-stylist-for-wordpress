@@ -560,6 +560,44 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <p><?php esc_html_e('Manage all fonts available in the block editor. Drag items to reorder them — the order here determines the order in the editor font selector.', 'typography-stylist'); ?></p>
 
             <?php
+            // ── WP Font Library migration notice (opt-in, dismissible) ───────────────
+            $wpl_bridge_available = $instance->font_library_bridge()->is_available();
+            $wpl_unregistered_count = 0;
+            if ($wpl_bridge_available) {
+                foreach ($custom_fonts as $wpl_check_font) {
+                    if (!$instance->font_library_bridge()->entry_has_live_registration($wpl_check_font)) {
+                        $wpl_unregistered_count++;
+                    }
+                }
+            }
+            $wpl_notice_dismissed = (bool) get_option('typost_wp_library_notice_dismissed', false);
+            ?>
+            <?php if ($wpl_bridge_available && $wpl_unregistered_count > 0 && !$wpl_notice_dismissed) : ?>
+            <div class="notice notice-info inline is-dismissible" id="typost-wpl-migration-notice">
+                <p>
+                    <strong><?php esc_html_e('WordPress Font Library integration available.', 'typography-stylist'); ?></strong>
+                    <?php
+                    printf(
+                        /* translators: %d: number of uploaded fonts not yet registered */
+                        esc_html(_n(
+                            '%d uploaded font is not yet registered in the WordPress Font Library. Registering makes it available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time.',
+                            '%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time.',
+                            $wpl_unregistered_count,
+                            'typography-stylist'
+                        )),
+                        (int) $wpl_unregistered_count
+                    );
+                    ?>
+                </p>
+                <p>
+                    <button type="button" class="button button-primary" id="typost-wpl-bulk-register">
+                        <?php esc_html_e('Register all in Font Library', 'typography-stylist'); ?>
+                    </button>
+                </p>
+            </div>
+            <?php endif; ?>
+
+            <?php
             // ── Build $all_fonts normalized array ─────────────────────────────────────
             $all_fonts_list     = array();
             $font_order_saved   = $instance->get_font_order();
@@ -660,6 +698,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
                             </button>
                             <span class="typost-font-type-badge typost-badge-uploaded"><?php echo esc_html($badge_labels['uploaded']); ?></span>
+                            <?php if ($instance->font_library_bridge()->entry_has_live_registration($font)) : ?>
+                            <span class="typost-font-type-badge typost-badge-wplibrary" title="<?php esc_attr_e('Registered in the WordPress Font Library', 'typography-stylist'); ?>"><?php esc_html_e('In WP Library', 'typography-stylist'); ?></span>
+                            <?php endif; ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <?php if ($families_list): ?>
@@ -689,6 +730,33 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
                                 </p>
                             </div>
+                            <?php if ($instance->font_library_bridge()->is_available()) : ?>
+                            <div class="typost-font-library-registration">
+                                <strong><?php esc_html_e('WordPress Font Library:', 'typography-stylist'); ?></strong>
+                                <?php if ($instance->font_library_bridge()->entry_has_live_registration($font)) : ?>
+                                    <span class="typost-wpl-status">
+                                        <?php
+                                        printf(
+                                            /* translators: %s: font family slug in the WP Font Library */
+                                            esc_html__('Registered as %s', 'typography-stylist'),
+                                            '<code>' . esc_html($font['wp_slug']) . '</code>'
+                                        );
+                                        ?>
+                                    </span>
+                                    <button type="button" class="button typost-wpl-unregister" data-font-id="<?php echo esc_attr($font['id']); ?>">
+                                        <?php esc_html_e('Remove from Font Library', 'typography-stylist'); ?>
+                                    </button>
+                                <?php else : ?>
+                                    <span class="typost-wpl-status"><?php esc_html_e('Plugin-managed', 'typography-stylist'); ?></span>
+                                    <button type="button" class="button typost-wpl-register" data-font-id="<?php echo esc_attr($font['id']); ?>">
+                                        <?php esc_html_e('Register in Font Library', 'typography-stylist'); ?>
+                                    </button>
+                                <?php endif; ?>
+                                <p class="description">
+                                    <?php esc_html_e('Registered fonts appear in the WordPress Font Library (Appearance → Editor) and WordPress serves their font files. Either way the plugin\'s --font-N variables keep working, so existing content is never affected.', 'typography-stylist'); ?>
+                                </p>
+                            </div>
+                            <?php endif; ?>
                             <?php typost_render_weight_checkboxes($font, 'font', true); ?>
                             <?php typost_render_feature_visibility_checkboxes($font, $instance); ?>
                             <div class="typost-form-actions">
@@ -1150,6 +1218,28 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 </p>
                             </td>
                         </tr>
+                        <?php if ($instance->font_library_bridge()->is_available()) : ?>
+                        <tr>
+                            <th scope="row">
+                                <?php esc_html_e('WordPress Font Library', 'typography-stylist'); ?>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="typost_auto_register_wp_fonts"
+                                    name="typost_auto_register_wp_fonts"
+                                    value="1"
+                                    <?php checked(get_option('typost_auto_register_wp_fonts', true)); ?>
+                                />
+                                <label for="typost_auto_register_wp_fonts">
+                                    <?php esc_html_e('Automatically register newly uploaded fonts in the WordPress Font Library (recommended)', 'typography-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled, fonts from newly uploaded webfont kits are also registered in the WordPress Font Library (Appearance → Editor), so they can be used site-wide and share WordPress\'s font system. The plugin\'s --font-N variables keep working either way, so existing content is never affected. Previously uploaded fonts can be registered individually or in bulk from the Custom Fonts tab.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <?php endif; ?>
                         <?php
                         /*
                          * Variable Font Weights option - commented out for future version

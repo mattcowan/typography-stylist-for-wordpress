@@ -1142,7 +1142,17 @@ class Typost {
                 'orderSaveError' => esc_html__('Failed to save font order.', 'typography-stylist'),
                 // WP Font Library strings
                 'wpLibraryBadge' => esc_html__('WP Library', 'typography-stylist'),
-                'manageInEditor' => esc_html__('Manage in Appearance → Editor', 'typography-stylist')
+                'manageInEditor' => esc_html__('Manage in Appearance → Editor', 'typography-stylist'),
+                // WP Font Library registration strings
+                'wplRegistering' => esc_html__('Registering...', 'typography-stylist'),
+                'wplRegisterSuccess' => esc_html__('Font registered in the Font Library! Reloading page...', 'typography-stylist'),
+                'wplRegisterError' => esc_html__('Failed to register the font in the Font Library.', 'typography-stylist'),
+                'wplRemoving' => esc_html__('Removing...', 'typography-stylist'),
+                'wplRemoveSuccess' => esc_html__('Font removed from the Font Library! Reloading page...', 'typography-stylist'),
+                'wplRemoveError' => esc_html__('Failed to remove the font from the Font Library.', 'typography-stylist'),
+                'wplConfirmRemove' => esc_html__('Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself.', 'typography-stylist'),
+                /* translators: 1: number of registered fonts, 2: number of failed fonts */
+                'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page...', 'typography-stylist')
             )
         );
 
@@ -1704,6 +1714,40 @@ class Typost {
             'callback' => array($this, 'update_font_load_on_all_pages_endpoint'),
             'permission_callback' => function() {
                 return current_user_can('upload_files');
+            }
+        ));
+
+        // WP Font Library registration endpoints (site-wide configuration,
+        // hence manage_options rather than the edit_posts used for font CRUD)
+        register_rest_route('typost/v1', '/fonts/wp-library/bulk', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'bulk_register_fonts_in_library_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            }
+        ));
+
+        register_rest_route('typost/v1', '/fonts/wp-library/dismiss-notice', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'dismiss_wp_library_notice_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            }
+        ));
+
+        register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/wp-library', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'register_font_in_library_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            }
+        ));
+
+        register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/wp-library', array(
+            'methods' => 'DELETE',
+            'callback' => array($this, 'unregister_font_from_library_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
             }
         ));
 
@@ -4174,6 +4218,171 @@ class Typost {
     }
 
     /**
+     * Find an uploaded-kit font entry by its string entry ID
+     *
+     * @since 2.1.0
+     * @param string $entry_id
+     * @return array|null
+     */
+    private function find_custom_font_entry($entry_id) {
+        foreach ($this->get_custom_fonts() as $font) {
+            if (isset($font['id']) && $font['id'] === $entry_id) {
+                return $font;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * REST endpoint: Register an uploaded font in the WP Font Library
+     *
+     * @since 2.1.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function register_font_in_library_endpoint($request) {
+        if (!$this->font_library_bridge()->is_available()) {
+            return new WP_Error(
+                'font_library_unavailable',
+                esc_html__('The WordPress Font Library requires WordPress 6.5 or later.', 'typography-stylist'),
+                array('status' => 400)
+            );
+        }
+
+        $id = sanitize_key($request->get_param('id'));
+        $entry = $this->find_custom_font_entry($id);
+
+        if (!$entry) {
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+        }
+
+        $registered = $this->font_library_bridge()->register_font($entry);
+
+        if (!is_array($registered)) {
+            return new WP_Error(
+                'registration_failed',
+                esc_html__('The font could not be registered in the Font Library. It remains fully functional as a plugin-managed font.', 'typography-stylist'),
+                array('status' => 500)
+            );
+        }
+
+        $updated = $this->font_sources()->update_custom_font_entry($id, array(
+            'wp_slug'            => $registered['slug'],
+            'wp_post_id'         => $registered['post_id'],
+            'wp_registered_date' => current_time('mysql'),
+        ));
+        $this->clear_cache();
+
+        do_action('typost_font_saved', $id, $updated ? $updated : $entry, 'uploaded');
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'slug'    => $registered['slug'],
+            'font'    => $updated ? $updated : $entry,
+        ));
+    }
+
+    /**
+     * REST endpoint: Remove an uploaded font from the WP Font Library
+     *
+     * Deletes the plugin-owned wp_font_family post (ownership-guarded) and
+     * clears the registration fields; the plugin-managed @font-face path
+     * resumes on the next request. Safe to call on stale registrations.
+     *
+     * @since 2.1.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function unregister_font_from_library_endpoint($request) {
+        $id = sanitize_key($request->get_param('id'));
+        $entry = $this->find_custom_font_entry($id);
+
+        if (!$entry) {
+            return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+        }
+
+        // Deleting the post fires the deleted_post watcher, which clears the
+        // entry fields. If the post was already gone (stale registration),
+        // clear the fields directly.
+        $removed = $this->font_library_bridge()->unregister_font($entry);
+        if (!$removed) {
+            $this->font_sources()->update_custom_font_entry($id, array(
+                'wp_slug'            => null,
+                'wp_post_id'         => null,
+                'wp_registered_date' => null,
+            ));
+        }
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true, 'removed_post' => (bool) $removed));
+    }
+
+    /**
+     * REST endpoint: Register all unregistered uploaded fonts in the Library
+     *
+     * Failures are per-font and non-fatal — a font that cannot be registered
+     * simply stays plugin-managed and is reported in the response.
+     *
+     * @since 2.1.0
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function bulk_register_fonts_in_library_endpoint($request) {
+        if (!$this->font_library_bridge()->is_available()) {
+            return new WP_Error(
+                'font_library_unavailable',
+                esc_html__('The WordPress Font Library requires WordPress 6.5 or later.', 'typography-stylist'),
+                array('status' => 400)
+            );
+        }
+
+        $results = array(
+            'registered' => array(),
+            'skipped'    => array(),
+            'failed'     => array(),
+        );
+
+        foreach ($this->get_custom_fonts() as $entry) {
+            if (!isset($entry['id'])) {
+                continue;
+            }
+            if ($this->font_library_bridge()->entry_has_live_registration($entry)) {
+                $results['skipped'][] = $entry['id'];
+                continue;
+            }
+
+            $registered = $this->font_library_bridge()->register_font($entry);
+            if (is_array($registered)) {
+                $this->font_sources()->update_custom_font_entry($entry['id'], array(
+                    'wp_slug'            => $registered['slug'],
+                    'wp_post_id'         => $registered['post_id'],
+                    'wp_registered_date' => current_time('mysql'),
+                ));
+                $results['registered'][] = $entry['id'];
+            } else {
+                $results['failed'][] = $entry['id'];
+            }
+        }
+
+        if (!empty($results['registered'])) {
+            $this->clear_cache();
+        }
+
+        return rest_ensure_response(array_merge(array('success' => true), $results));
+    }
+
+    /**
+     * REST endpoint: Dismiss the Font Library migration admin notice
+     *
+     * @since 2.1.0
+     * @return WP_REST_Response
+     */
+    public function dismiss_wp_library_notice_endpoint() {
+        update_option('typost_wp_library_notice_dismissed', '1', false);
+        return rest_ensure_response(array('success' => true));
+    }
+
+    /**
      * REST endpoint: Get manual fonts
      *
      * Returns all manually configured custom fonts (non-uploaded, non-Adobe).
@@ -5404,6 +5613,13 @@ class Typost {
             // Save archive full content check setting
             $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';
             update_option('typost_archive_full_content_check', $archive_check);
+
+            // Save WP Font Library auto-register setting (checkbox rendered
+            // only when the Font Library is available)
+            if ($this->font_library_bridge()->is_available()) {
+                $auto_register = isset($_POST['typost_auto_register_wp_fonts']) ? '1' : '0';
+                update_option('typost_auto_register_wp_fonts', $auto_register);
+            }
 
             // Save color scheme setting
             $color_scheme = isset($_POST['typost_admin_color_scheme'])
