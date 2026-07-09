@@ -1,6 +1,6 @@
 # Typography Stylist - User Documentation
 
-**Version 1.0.6**
+**Version 2.1.0**
 
 Welcome to Typography Stylist\! This plugin brings advanced typography features to WordPress, allowing you to apply professional OpenType features like ligatures, stylistic sets, and swashes to your headlines with just a few clicks.
 

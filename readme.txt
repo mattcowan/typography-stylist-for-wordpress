@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9.4
-Stable tag: 2.0.1
+Stable tag: 2.1.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -275,7 +275,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 
 == Changelog ==
 
-= Unreleased =
+= 2.1.0 =
 * **NEW: WordPress Font Library integration (WP 6.5+).** Uploaded webfont kits can now be registered in the WordPress Font Library (Appearance → Editor): newly uploaded fonts register automatically (toggle in Options), and existing fonts can be registered per font or in bulk from the Custom Fonts tab — registration is opt-in and fully reversible. Registered fonts keep their numeric IDs: the plugin's `--font-N` CSS variables alias to WordPress's `--wp--preset--font-family--{slug}` presets with a literal fallback, so all existing content, inline spans, and extension integrations keep rendering forever, even if a font is later removed from the Library. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom font definitions remain plugin-managed by design (Adobe fonts load from Adobe's servers and may not be self-hosted).
 * **NEW: WordPress Font Library fonts in the editor font pickers.** Both the inline editor and the Typography Stylist block now offer Library fonts (theme fonts and fonts installed via Appearance → Editor) in a dedicated picker group. Picking one adopts it seamlessly — it gets a numeric font ID like every other source, so the save format and all extensions work unchanged.
 * **NEW: Variable Fonts built into core.** The "Typography Stylist - Variable Fonts" extension is now bundled (like the Glyphs Panel in 2.0): automatic axis detection on upload, per-axis admin configuration, and axis sliders in the editor. If you were using the standalone extension plugin, deactivate it after updating — your settings carry over automatically.
@@ -480,6 +480,9 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Rate-limited REST API endpoints (50 requests/minute per user)
 
 == Upgrade Notice ==
+
+= 2.1.0 =
+Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
 
 = 2.0.1 =
 Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.

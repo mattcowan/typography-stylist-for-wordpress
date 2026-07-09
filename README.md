@@ -367,7 +367,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
-### Unreleased
+### Version 2.1.0
 
 **WordPress Font Library integration (WP 6.5+)**
 
