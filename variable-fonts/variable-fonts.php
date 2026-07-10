@@ -590,7 +590,10 @@ final class Typost_Variable_Fonts {
 			}
 		}
 
-		$this->save_axes_for_font( $id, $sanitized_axes );
+		// When a font is explicitly marked non-variable, don't persist axes — stored
+		// axes would make is_font_variable() re-infer it as variable on the next read,
+		// silently undoing the disable (mirrors rest_delete_axes()).
+		$this->save_axes_for_font( $id, $is_variable ? $sanitized_axes : array() );
 		$this->set_font_variable( $id, $is_variable, $hide_weights );
 
 		return rest_ensure_response( array(
