@@ -14,8 +14,9 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 - Singleton class `Typost` handles all WordPress integration
 - Enqueues block editor and frontend assets
 - Registers REST API endpoints at `/wp-json/typost/v1/`
-- Manages presets stored in `wp_options` table (`TYPOST_presets`)
+- Manages presets stored in `wp_options` table (`typost_presets` — note: all option keys are lowercase `typost_*`; PHP constants are the uppercase ones)
 - Constants: `TYPOST_VERSION`, `TYPOST_PLUGIN_DIR`, `TYPOST_PLUGIN_URL`, `TYPOST_PLUGIN_BASENAME`
+- Font subsystem modules in `includes/`: `Typost_Font_Sources` (option-backed font storage, shared font ID sequence, replacements) and `Typost_Font_Library_Bridge` (WP Font Library read/registration/adoption, WP 6.5+ feature-gated). `Typost` keeps delegating wrappers, so the public extension API (`get_custom_fonts()` etc.) is unchanged.
 
 **Block Editor Integration:**
 
@@ -164,7 +165,18 @@ The Glyphs Panel (an Illustrator-style full-font glyph browser) was originally a
 - **No plugin header:** `glyphs-panel/glyphs-panel.php` is the former standalone main file with the `Plugin Name:` header and `plugins_loaded` bootstrap stripped. `TYPOST_GP_PLUGIN_DIR/URL` resolve to the subdirectory automatically via `plugin_dir_path/url(__FILE__)`.
 - **Integration points (unchanged from the extension):** `typost_editor_data` (injects `glyphsPanel` data), `typost_editor_assets` (enqueues the lib chain + modal + `editor.js`), `typost_admin_tabs` / `typost_admin_tab_content_glyphs` / `typost_admin_assets` (the Glyphs admin tab). The editor button is injected at the `typost_inline_before_features` and `typost_qft_before_features` JS hook points; insertion uses the `typost-insert-content` CustomEvent (handlers already live in core `assets/js/block-editor.js` and `blocks/typography-stylist/edit.js`).
 - **Separate concerns kept separate:** its JS is hand-written ES5 (no build step), its Jest tests live in `glyphs-panel/__tests__/` (picked up automatically by core's `npm test`), and it keeps its own `typost-glyphs-panel` text domain + bundled `glyphs-panel/languages/`. EULA constraint preserved: metadata-only parsing, IndexedDB-only caching, text-rendered glyph cells. See `glyphs-panel/CLAUDE.md` for module internals.
-- Other extensions (Paragraph Styles, Variable Fonts, Layered Fonts) **remain separate plugins**; only the Glyphs Panel was merged.
+- Other extensions (Paragraph Styles, Layered Fonts) **remain separate plugins**.
+
+### Bundled Variable Fonts Module (v2.1+)
+
+The Variable Fonts extension was bundled into core in v2.1, following the same template as the Glyphs Panel. It lives in [variable-fonts/](variable-fonts/) — loaded from `typost_init()` behind a `! class_exists('Typost_Variable_Fonts')` guard (a still-active standalone copy wins), constants guarded by `! defined('TYPOST_VF_VERSION')`, own `typost-variable-fonts` text domain + bundled `variable-fonts/languages/`, and Jest tests in `variable-fonts/__tests__/` (auto-collected by core `npm test`). Its option keys are unchanged from the standalone plugin, so settings carry over with zero migration. See `variable-fonts/CLAUDE.md` for module internals.
+
+### WP Font Library Integration (v2.1+, WP 6.5+)
+
+- **Identity:** the numeric `font_id` stays canonical forever. Registration adds `wp_slug`/`wp_post_id`/`wp_registered_date` fields to the font entry and stamps `_typost_font_id` post meta on the created `wp_font_family` post (ownership marker — rollback never deletes user-created families). Font binaries are NOT copied; `wp_font_face` posts reference the plugin's existing upload URLs.
+- **CSS:** entries with a live registration emit `--font-N: var(--wp--preset--font-family--{slug}, "Family", fallbacks)` — the literal `var()` fallback covers plain admin pages (no preset vars) and stale registrations, so content can never break. The frontend `@font-face` path skips live-registered fonts (WordPress prints those); editor-iframe/admin-preview paths intentionally keep the plugin CSS.
+- **Lifecycle:** new uploads auto-register when `typost_auto_register_wp_fonts` is on (default) and WP ≥ 6.5; existing fonts are opt-in (per-font/bulk buttons + dismissible notice on the Custom Fonts tab). A `deleted_post` watcher rolls back registration fields if the family is deleted via the Library UI. Registration REST endpoints require `manage_options`; the editor's adopt endpoint (`POST /typost/v1/wp-fonts/adopt`) requires `edit_posts`.
+- **Adoption:** picking an unadopted Library font in the editor allocates a `font_id` and stores a manual-fonts-shaped entry in `typost_adopted_wp_fonts` — the block save format never changes. Adobe Fonts (remote Typekit CSS, EULA) and manual definitions stay plugin-managed by design.
 
 ### REST API Endpoints
 
@@ -189,6 +201,15 @@ The Glyphs Panel (an Illustrator-style full-font glyph browser) was originally a
 - `GET /wp-json/typost/v1/manual-fonts` - Get custom font definitions
 - `POST /wp-json/typost/v1/manual-fonts` - Add custom font definition (requires `edit_posts`)
 - `DELETE /wp-json/typost/v1/manual-fonts/{id}` - Delete custom font (requires `edit_posts`)
+
+**WP Font Library (v2.1+, WP 6.5+):**
+- `POST /wp-json/typost/v1/fonts/{id}/wp-library` - Register an uploaded font in the Font Library (requires `manage_options` — site-wide configuration)
+- `DELETE /wp-json/typost/v1/fonts/{id}/wp-library` - Remove from the Font Library (requires `manage_options`)
+- `POST /wp-json/typost/v1/fonts/wp-library/bulk` - Register all unregistered uploaded fonts (requires `manage_options`)
+- `POST /wp-json/typost/v1/wp-fonts/adopt` - Adopt a Library font for editor use, allocating a numeric font_id; idempotent (requires `edit_posts` — authors pick fonts)
+
+**Variable Fonts (bundled module):**
+- `GET|POST|DELETE /wp-json/typost/v1/variable-font-axes[/{id}]` - Axis definitions per font string ID (requires `manage_options` — site-wide configuration)
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)
@@ -311,8 +332,9 @@ npm test -- --coverage    # See test coverage report
 **To add default presets:** Edit `get_default_presets()` in [typography-stylist.php](typography-stylist.php:209-242)
 
 **Filter hooks for extensibility:**
-- `TYPOST_available_features` - Filter available features
+- `typost_available_features` - Filter available features
 - `typost_presets` - Filter presets list (renamed from `TYPOST_default_presets`; update any custom integrations using the old hook name)
+- `typost_force_enqueue_font_ids` - Force fonts (by numeric ID) to load on every page — for fonts referenced only from theme/extension CSS (v2.1+; see HOOKS.md)
 ### Code Patterns
 
 **Sanitization:** All user input is sanitized using `sanitize_key()` for IDs, `sanitize_text_field()` for text, and `array_map()` for arrays
@@ -380,10 +402,12 @@ npm test -- --coverage    # See test coverage report
 - **Inline styling uses CSS variables (v1.1.6+):** Both block-level and inline fonts use `var(--font-ID)` format for consistent PHP detection and @font-face loading
 - **Data attribute naming (v1.1.6+):** Standardized to `data-font-id` (inline) matching `fontId` (block-level) for consistency
 - No database migrations needed - uses existing `wp_options` for:
-  - `TYPOST_presets` - User-created presets
-  - `TYPOST_custom_fonts` - Uploaded webfont kits metadata
-  - `TYPOST_adobe_fonts` - Adobe Fonts project configurations
-  - `TYPOST_manual_fonts` - Custom font definitions
+  - `typost_presets` - User-created presets
+  - `typost_custom_fonts` - Uploaded webfont kits metadata
+  - `typost_adobe_fonts` - Adobe Fonts project configurations
+  - `typost_manual_fonts` - Custom font definitions
+  - `typost_adopted_wp_fonts` - WP Font Library fonts adopted from the editor picker (v2.1+)
+  - `typost_font_replacements` - Replacement mappings + the shared numeric font ID sequence (`next_id`)
 - Uploaded font files stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 - Frontend has zero JavaScript - purely CSS-based rendering
 - Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)

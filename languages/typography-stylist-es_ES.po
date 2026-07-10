@@ -1871,3 +1871,118 @@ msgstr "Añadir fuente"
 #: typography-stylist.php
 msgid "Failed to save font order."
 msgstr "Error al guardar el orden de las fuentes."
+
+# ── WordPress Font Library integration (v2.1.0) ──
+
+#: includes/admin-page.php
+msgid "WordPress Font Library"
+msgstr "Biblioteca de fuentes de WordPress"
+
+#: includes/admin-page.php
+msgid "Automatically register newly uploaded fonts in the WordPress Font Library (recommended)"
+msgstr "Registrar automáticamente las fuentes recién subidas en la biblioteca de fuentes de WordPress (recomendado)"
+
+#: includes/admin-page.php
+msgid "When enabled, fonts from newly uploaded webfont kits are also registered in the WordPress Font Library (Appearance → Editor), so they can be used site-wide and share WordPress's font system. The plugin's --font-N variables keep working either way, so existing content is never affected. Previously uploaded fonts can be registered individually or in bulk from the Custom Fonts tab."
+msgstr "Cuando está activado, las fuentes de los kits recién subidos también se registran en la biblioteca de fuentes de WordPress (Apariencia → Editor), para usarse en todo el sitio con el sistema de fuentes de WordPress. Las variables --font-N del plugin siguen funcionando en cualquier caso: el contenido existente nunca se ve afectado. Las fuentes ya subidas pueden registrarse individualmente o en bloque desde la pestaña Fuentes personalizadas."
+
+#: includes/admin-page.php
+msgid "WordPress Font Library integration available."
+msgstr "Integración con la biblioteca de fuentes de WordPress disponible."
+
+#: includes/admin-page.php
+msgid "Register all in Font Library"
+msgstr "Registrar todo en la biblioteca de fuentes"
+
+#: includes/admin-page.php
+msgid "Registered in the WordPress Font Library"
+msgstr "Registrada en la biblioteca de fuentes de WordPress"
+
+#: includes/admin-page.php
+msgid "In WP Library"
+msgstr "En la biblioteca de WP"
+
+#: includes/admin-page.php
+msgid "WordPress Font Library:"
+msgstr "Biblioteca de fuentes de WordPress:"
+
+#: includes/admin-page.php
+#, php-format
+msgid "Registered as %s"
+msgstr "Registrada como %s"
+
+#: includes/admin-page.php
+msgid "Plugin-managed"
+msgstr "Gestionada por el plugin"
+
+#: includes/admin-page.php
+msgid "Remove from Font Library"
+msgstr "Quitar de la biblioteca de fuentes"
+
+#: includes/admin-page.php
+msgid "Register in Font Library"
+msgstr "Registrar en la biblioteca de fuentes"
+
+#: includes/admin-page.php
+msgid "Registered fonts appear in the WordPress Font Library (Appearance → Editor) and WordPress serves their font files. Either way the plugin's --font-N variables keep working, so existing content is never affected."
+msgstr "Las fuentes registradas aparecen en la biblioteca de fuentes de WordPress (Apariencia → Editor) y WordPress sirve sus archivos. En cualquier caso, las variables --font-N del plugin siguen funcionando: el contenido existente nunca se ve afectado."
+
+#: typography-stylist.php
+msgid "The WordPress Font Library requires WordPress 6.5 or later."
+msgstr "La biblioteca de fuentes de WordPress requiere WordPress 6.5 o posterior."
+
+#: typography-stylist.php
+msgid "The font could not be registered in the Font Library. It remains fully functional as a plugin-managed font."
+msgstr "La fuente no se pudo registrar en la biblioteca de fuentes. Sigue siendo totalmente funcional como fuente gestionada por el plugin."
+
+#: typography-stylist.php
+msgid "Font not found in the WordPress Font Library."
+msgstr "Fuente no encontrada en la biblioteca de fuentes de WordPress."
+
+#: typography-stylist.php
+msgid "slug parameter is required"
+msgstr "El parámetro slug es obligatorio"
+
+#: typography-stylist.php
+msgid "Registering..."
+msgstr "Registrando…"
+
+#: typography-stylist.php
+msgid "Font registered in the Font Library! Reloading page..."
+msgstr "¡Fuente registrada en la biblioteca de fuentes! Recargando página…"
+
+#: typography-stylist.php
+msgid "Failed to register the font in the Font Library."
+msgstr "No se pudo registrar la fuente en la biblioteca de fuentes."
+
+#: typography-stylist.php
+msgid "Removing..."
+msgstr "Quitando…"
+
+#: typography-stylist.php
+msgid "Font removed from the Font Library! Reloading page..."
+msgstr "¡Fuente quitada de la biblioteca de fuentes! Recargando página…"
+
+#: typography-stylist.php
+msgid "Failed to remove the font from the Font Library."
+msgstr "No se pudo quitar la fuente de la biblioteca de fuentes."
+
+#: typography-stylist.php
+msgid "Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself."
+msgstr "¿Quitar esta fuente de la biblioteca de fuentes de WordPress? El contenido existente sigue mostrándose: el plugin vuelve a servir los archivos de la fuente por sí mismo."
+
+#: typography-stylist.php
+#, php-format
+msgid "Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page..."
+msgstr "%1$s fuente(s) registrada(s) en la biblioteca de fuentes (%2$s con errores). Recargando página…"
+
+#: assets/js/block-editor.js
+msgid "This WordPress Font Library font could not be added. Please try again."
+msgstr "No se pudo añadir esta fuente de la biblioteca de WordPress. Inténtalo de nuevo."
+
+#: includes/admin-page.php
+#, php-format
+msgid "%d uploaded font is not yet registered in the WordPress Font Library. Registering makes it available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
+msgid_plural "%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
+msgstr[0] "%d fuente subida aún no está registrada en la biblioteca de fuentes de WordPress. Registrarla la hace disponible en todo el sitio (Apariencia → Editor) y todo sigue funcionando exactamente igual: el contenido existente nunca se ve afectado, y puede deshacerse fuente por fuente."
+msgstr[1] "%d fuentes subidas aún no están registradas en la biblioteca de fuentes de WordPress. Registrarlas las hace disponibles en todo el sitio (Apariencia → Editor) y todo sigue funcionando exactamente igual: el contenido existente nunca se ve afectado, y puede deshacerse fuente por fuente."

@@ -45,7 +45,8 @@ export default function save({ attributes }) {
 		textAlign,
 		styleClass,
 		fontVariationSettings,
-		layeredConfigId
+		layeredConfigId,
+		animationConfigId
 	} = attributes;
 
 	// Build inline style — skipped when styleClass is set (CSS class provides styling)
@@ -150,6 +151,7 @@ export default function save({ attributes }) {
 				data-font-id={fontId || undefined}
 				data-style-id={styleId}
 				data-layered-config-id={layeredConfigId || undefined}
+				data-animation-config-id={animationConfigId || undefined}
 			/>
 		</div>
 	);

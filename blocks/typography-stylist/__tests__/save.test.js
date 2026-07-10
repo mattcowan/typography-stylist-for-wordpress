@@ -352,6 +352,47 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 
 			expect(tree.children[1].props['data-font']).toBeUndefined();
 		});
+
+		it('should add data-animation-config-id to the visual version only when set', () => {
+			const attributes = {
+				content: 'Typography',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0,
+				animationConfigId: 3
+			};
+
+			const component = create(save({ attributes }));
+			const tree = component.toJSON();
+
+			// Visual (aria-hidden) heading carries the animation reference
+			expect(tree.children[1].props['data-animation-config-id']).toBe(3);
+			// Screen reader heading must stay clean
+			expect(tree.children[0].props['data-animation-config-id']).toBeUndefined();
+		});
+
+		it('should not emit data-animation-config-id when unset or zero', () => {
+			const base = {
+				content: 'Typography',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: 'inherit',
+				fontWeight: '400',
+				letterSpacing: 0
+			};
+
+			// Unset (legacy blocks) — save output must be unchanged
+			let tree = create(save({ attributes: base })).toJSON();
+			expect(tree.children[1].props['data-animation-config-id']).toBeUndefined();
+
+			// Explicit default 0
+			tree = create(save({ attributes: { ...base, animationConfigId: 0 } })).toJSON();
+			expect(tree.children[1].props['data-animation-config-id']).toBeUndefined();
+		});
 	});
 
 	describe('Accessibility Regression Prevention', () => {

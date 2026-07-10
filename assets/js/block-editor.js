@@ -6,6 +6,9 @@
 // Import drag/resize utilities (CommonJS for browserify)
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
+// Shared font picker option builder + WP Font Library adoption helpers
+const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } = require('./font-options.js');
+
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
@@ -361,6 +364,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 blockInheritedFont: '',
                 // Flag to track if font detection failed (no text element found)
                 fontDetectionFailed: false,
+                wpAdoptError: false,
                 // Saved selection bounds (survive modal focus changes)
                 savedSelectionStart: null,
                 savedSelectionEnd: null,
@@ -382,6 +386,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 resizeDirection: null,
                 // Paragraph style ID (set by extension via event, 0 = no style)
                 paragraphStyleId: 0,
+                // Animation config ID (set by extension via event, 0 = none)
+                animationId: 0,
                 // Font variation settings (set by extension via event, '' = none)
                 fontVariationSettings: this.getActiveFontVariationSettings() || ''
             };
@@ -437,6 +443,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
                         paragraphStyleId: self.state.paragraphStyleId,
+                        animationId: self.state.animationId,
                         fontVariationSettings: self.state.fontVariationSettings
                     };
                 }
@@ -462,6 +469,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: props.lineHeight !== undefined ? (props.lineHeight || 0) : self.state.lineHeight,
                         selectedFeatures: props.features !== undefined ? (props.features || []) : self.state.selectedFeatures,
                         paragraphStyleId: e.detail.paragraphStyleId !== undefined ? (e.detail.paragraphStyleId || 0) : self.state.paragraphStyleId,
+                        animationId: e.detail.animationId !== undefined ? (e.detail.animationId || 0) : self.state.animationId,
                         fontVariationSettings: props.fontVariationSettings !== undefined ? sanitizeFontVariationSettings(props.fontVariationSettings || '') : self.state.fontVariationSettings
                     }, function() {
                         self._doApplyFeatures();
@@ -993,6 +1001,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Get the animation config ID at the current selection (set by the
+         * Animations extension via data-animation-id).
+         */
+        getActiveAnimationId() {
+            const { value } = this.props;
+
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-animation-id']) {
+                return parseInt(activeFormat.attributes['data-animation-id'], 10) || 0;
+            }
+
+            const styledSpan = this.getStyledSpanAtSelection();
+            if (styledSpan) {
+                const animationId = styledSpan.getAttribute('data-animation-id');
+                if (animationId) {
+                    return parseInt(animationId, 10) || 0;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * Initialize modal position (center in viewport)
          */
         initializeModalPosition() {
@@ -1099,7 +1130,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 isDragging: false,
                 isResizing: false,
                 // Reset paragraph style ID (extension sets via event)
-                paragraphStyleId: !state.isOpen ? (this.getActiveStyleId() || 0) : 0
+                paragraphStyleId: !state.isOpen ? (this.getActiveStyleId() || 0) : 0,
+                animationId: !state.isOpen ? (this.getActiveAnimationId() || 0) : 0
             }), () => {
                 // Fire lifecycle hooks for extensions
                 if (!wasOpen && this.state.isOpen) {
@@ -1121,6 +1153,27 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     selectedFontId: 0
                 }, () => {
                     this.debouncedApplyDropdown();
+                });
+            } else if (isWpLibraryValue(value)) {
+                // Unadopted WP Font Library font — adopt it (idempotently
+                // allocates a numeric font_id), then apply like any other font
+                const slug = wpSlugFromValue(value);
+                const self = this;
+                this.setState({ wpAdoptError: false });
+                adoptWpFont(slug).then(font => {
+                    self.fontIdMap[font.font_id] = {
+                        family: font.font_family,
+                        fallbacks: font.fallbacks || '',
+                        availableWeights: []
+                    };
+                    self.setState({
+                        selectedFont: font.font_family,
+                        selectedFontId: font.font_id
+                    }, () => {
+                        self.debouncedApplyDropdown();
+                    });
+                }).catch(() => {
+                    self.setState({ wpAdoptError: true });
                 });
             } else {
                 // Try to parse as ID (new system)
@@ -1602,7 +1655,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -1622,7 +1675,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
             const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !fontVariationSettings && !rawFeatureSettings) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1640,6 +1693,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 if (hasActiveStyle) {
                     attributes['data-style-id'] = String(paragraphStyleId);
+                }
+
+                // Animation config reference (Animations extension) — the
+                // extension's render_block transform consumes it on the frontend
+                if (animationId) {
+                    attributes['data-animation-id'] = String(animationId);
                 }
 
                 // Add features. Raw feature settings (indexed alternates) take
@@ -1888,101 +1947,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Get font options for select control
          */
         getFontOptions() {
-            const fonts = typostData.fonts || [];
-            const adobeFonts = typostData.adobeFonts || [];
-            const manualFonts = typostData.manualFonts || [];
-            const options = [];
-
-            // Build font ID map for quick lookup (clear before repopulating)
-            this.fontIdMap = {};
-
-            // Uploaded fonts (MyFonts, etc.)
-            if (fonts.length > 0) {
-                fonts.forEach(font => {
-                    if (font.font_faces && font.font_faces.length > 0 && font.font_id) {
-                        // Get unique font families from this kit
-                        const families = [...new Set(font.font_faces.map(face => face.family))];
-                        families.forEach(family => {
-                            options.push({
-                                label: `📁 ${family}`,
-                                value: String(font.font_id),
-                                fontFamily: family,
-                                fontId: font.font_id
-                            });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                        });
-                    }
-                });
-            }
-
-            // Adobe Fonts
-            if (adobeFonts.length > 0) {
-                adobeFonts.forEach(font => {
-                    // Handle new structure: font_family (singular string - one entry per family)
-                    if (font.font_family && font.font_id) {
-                        options.push({
-                            label: `🅰️ ${font.font_family}`,
-                            value: String(font.font_id),
-                            fontFamily: font.font_family,
-                            fontId: font.font_id
-                        });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                    }
-                    // Handle legacy structure: font_families (plural array - multiple families per entry)
-                    else if (font.font_families && font.font_families.length > 0 && font.font_id) {
-                        font.font_families.forEach(family => {
-                            options.push({
-                                label: `🅰️ ${family}`,
-                                value: String(font.font_id),
-                                fontFamily: family,
-                                fontId: font.font_id
-                            });
-                            this.fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                        });
-                    }
-                });
-            }
-
-            // Manual fonts
-            if (manualFonts.length > 0) {
-                manualFonts.forEach(font => {
-                    if (font.font_family && font.font_id) {
-                        options.push({
-                            label: `⚙️ ${font.name}`,
-                            value: String(font.font_id),
-                            fontFamily: font.font_family,
-                            fontId: font.font_id
-                        });
-                        this.fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-                    }
-                });
-            }
-
-            // Sort by saved font display order
-            const fontOrder = typostData.fontOrder || [];
-            if (fontOrder.length > 0) {
-                options.sort((a, b) => {
-                    const keyVariants = (opt) => [
-                        'font-' + opt.fontId,
-                        'adobe-' + opt.fontId,
-                        'manual-' + opt.fontId,
-                    ];
-                    const posA = keyVariants(a).reduce((best, key) => {
-                        const idx = fontOrder.indexOf(key);
-                        return idx !== -1 ? Math.min(best, idx) : best;
-                    }, Infinity);
-                    const posB = keyVariants(b).reduce((best, key) => {
-                        const idx = fontOrder.indexOf(key);
-                        return idx !== -1 ? Math.min(best, idx) : best;
-                    }, Infinity);
-                    if (posA === Infinity && posB === Infinity) return 0;
-                    if (posA === Infinity) return 1;
-                    if (posB === Infinity) return -1;
-                    return posA - posB;
-                });
-            }
-
-            return options;
+            // Shared builder (assets/js/font-options.js) — includes the
+            // WP Font Library group with wp:{slug} values for unadopted fonts
+            const built = buildFontOptions(typostData);
+            this.fontIdMap = built.fontIdMap;
+            return built.options;
         }
 
         /**
@@ -2440,6 +2409,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             ]}
                                             onChange={this.setFont}
                                         />
+                                        {this.state.wpAdoptError && (
+                                            wp.element.createElement(Notice, {
+                                                status: 'error',
+                                                isDismissible: true,
+                                                onRemove: () => this.setState({ wpAdoptError: false })
+                                            },
+                                                __('This WordPress Font Library font could not be added. Please try again.', 'typography-stylist')
+                                            )
+                                        )}
                                     </div>
                                 )}
 
@@ -2817,6 +2795,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // that the comma-tag data-features format cannot express
             // (set by extensions such as the Glyphs Panel)
             'data-feature-settings': 'data-feature-settings',
+            // Animation config reference on inline spans (set by the
+            // Animations extension; rendered via its render_block transform)
+            'data-animation-id': 'data-animation-id',
             'style': 'style',
             'aria-label': 'aria-label'
         },

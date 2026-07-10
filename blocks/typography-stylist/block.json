@@ -96,6 +96,10 @@
 		"layeredConfigId": {
 			"type": "number",
 			"default": 0
+		},
+		"animationConfigId": {
+			"type": "number",
+			"default": 0
 		}
 	},
 	"editorScript": "file:./build/index.js",

@@ -253,6 +253,25 @@ add_filter('typost_presets', function($presets) {
 });
 ```
 
+#### `typost_force_enqueue_font_ids`
+
+*Since 2.1.0.* Force specific fonts (by numeric font ID) to load on every frontend page, even when the post-content scan finds no styled content. Use this when your theme or extension references a font's `--font-N` CSS variable from its own stylesheets — the content scan can't see those references, so without this filter neither the variable definitions nor the @font-face rules would be output.
+
+```php
+add_filter('typost_force_enqueue_font_ids', function($ids) {
+    // e.g. fonts assigned to theme color schemes
+    $ids[] = 12;
+    $ids[] = 27;
+    return $ids;
+});
+```
+
+**Details:**
+- Return an array of positive integer font IDs; invalid entries are discarded.
+- Forced IDs are resolved through the font-replacement chain, so referencing a deleted font's ID loads its replacement (and keeps the alias variable).
+- Forcing any ID causes the `--font-N` variables `<style>` block and the frontend stylesheet handle to be output on all pages.
+- The result is memoized per request and feeds transient cache keys — callbacks must return stable output for a given request.
+
 ---
 
 ## JavaScript Hooks
@@ -393,12 +412,18 @@ jQuery event triggered on `$(document)` after a font's settings are saved in the
 
 ```javascript
 $(document).on('typost:font-saved', function(e, data) {
-    // data.fontId — Font string ID (e.g., 'kit-123-inter')
-    // data.type   — Font type: 'uploaded', 'adobe', or 'manual'
-    // data.$card  — jQuery element of the font card
-    saveMyExtensionData(data.fontId, data.type);
+    // data.fontId    — Font string ID (e.g., 'kit-123-inter')
+    // data.type      — Font type: 'uploaded', 'adobe', or 'manual'
+    // data.$card     — jQuery element of the font card
+    // data.waitUntil — Since 2.1.0: register a promise the page reload waits on
+    var request = saveMyExtensionData(data.fontId, data.type); // e.g. $.ajax(...)
+    if (typeof data.waitUntil === 'function') {
+        data.waitUntil(Promise.resolve(request));
+    }
 });
 ```
+
+**`waitUntil` (since 2.1.0):** core reloads the page after a font save. If your extension saves its own data asynchronously on this event, register the request via `data.waitUntil(promise)` — core waits for all registered promises to settle (with a 5-second cap) before reloading, instead of the old fixed 1500 ms timeout your request had to race.
 
 ### Lifecycle Hooks
 
@@ -444,6 +469,8 @@ The `paragraphStyleId` field contains the active paragraph style ID (integer), o
 
 The `layeredConfigId` field contains the active layered font configuration ID (integer), or `0` if no layered font is applied. The `content` and `tagName` fields provide the block's current text content (HTML) and heading tag (e.g., `h2`) for use by extensions that need to render previews.
 
+*Since 2.1.0* the QFT/inspector state also includes `animationConfigId` (integer, `0` when unset) — the active animation configuration ID used by the Animations extension.
+
 #### Writing Editor State
 
 Dispatch a `typost-apply-block-properties` CustomEvent to programmatically apply properties to the editor. This is a generic mechanism — any extension can use it to set block attributes and inline editor state.
@@ -462,6 +489,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         // Optional: class-based styling (used by paragraph styles extension)
         paragraphStyleId: 3,       // Integer style ID
         styleClass: 'typost-ps-3', // CSS class for Typography Stylist blocks
+        // Optional (inline source only, since 2.1.0): animation config ID —
+        // written to the span as data-animation-id (Animations extension)
+        animationId: 2,
     },
 }));
 ```
@@ -473,6 +503,10 @@ Each editor listens for this event and applies properties matching its `source`.
 **Class-based styling fields:**
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.
 - `styleClass` — When set, the Typography Stylist block stores this as a block attribute. The `save()` function outputs the class on the element and skips inline styles. The editor always renders inline styles for visual preview regardless of `styleClass`.
+
+**Extension config references (numeric block attributes):**
+- `properties.layeredConfigId` — Layered Fonts extension. Saved as `data-layered-config-id` on the visual heading.
+- `properties.animationConfigId` — *Since 2.1.0.* Animations extension. Saved as `data-animation-config-id` on the visual (aria-hidden) heading only; the screen-reader heading is never touched. The inline format additionally allows a `data-animation-id` attribute on `typost-styled` spans. Extensions consume these via a `render_block` filter on the frontend.
 
 #### Inserting Content
 

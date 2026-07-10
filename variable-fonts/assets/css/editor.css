@@ -1,0 +1,71 @@
+/**
+ * Typography Stylist - Variable Fonts: Editor Styles
+ *
+ * Styles for axis slider controls in the block editor.
+ * Complements the inline styles injected by editor.js.
+ */
+
+/* Axis panel layout */
+.typost-vf-axes-panel {
+	margin: 8px 0;
+}
+
+.typost-vf-axis {
+	margin-bottom: 12px;
+}
+
+.typost-vf-axis:last-child {
+	margin-bottom: 4px;
+}
+
+/* Tighten the range control within axis panel */
+.typost-vf-axis .components-range-control__root {
+	margin-bottom: 4px;
+}
+
+/* Quick buttons row */
+.typost-vf-quick-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 4px;
+}
+
+.typost-vf-quick-btn.components-button {
+	min-width: 36px;
+	padding: 2px 6px;
+	font-size: 11px;
+	height: 24px;
+	line-height: 1;
+}
+
+/* Reset button row */
+.typost-vf-reset-row {
+	margin-top: 8px;
+	text-align: right;
+}
+
+/* Non-wght axes section */
+.typost-vf-other-axes {
+	border-top: 1px solid #e0e0e0;
+	padding-top: 12px;
+	margin-top: 4px;
+}
+
+.typost-vf-other-axes-label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	color: #757575;
+	margin-bottom: 8px;
+}
+
+/* Hook container overrides */
+[data-hook="typost_weight_control"] .typost-vf-axes-panel {
+	margin: 0;
+}
+
+[data-hook="typost_inspector_after_font_weight"] .typost-vf-other-axes {
+	border-top: none;
+	padding-top: 0;
+}

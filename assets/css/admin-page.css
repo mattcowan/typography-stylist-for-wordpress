@@ -1944,3 +1944,21 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 [data-color-scheme="dark"] .description {
     color: var(--typost-text-secondary);
 }
+
+/* WP Font Library registration section (font cards) */
+.typost-font-library-registration {
+    margin: 12px 0;
+    padding: 10px 12px;
+    background: var(--typost-bg-section, #f6f7f7);
+    border: 1px solid var(--typost-border-subtle, #dcdcde);
+    border-radius: 4px;
+}
+
+.typost-font-library-registration .typost-wpl-status {
+    margin: 0 8px;
+}
+
+.typost-font-library-registration .description {
+    margin-top: 8px;
+    margin-bottom: 0;
+}

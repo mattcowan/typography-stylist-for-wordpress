@@ -31,6 +31,7 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
 import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange } from './utils';
+import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -351,6 +352,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (props.layeredConfigId !== undefined) {
 					newAttrs.layeredConfigId = props.layeredConfigId;
 				}
+				// Animation configuration ID support (animations extension)
+				if (props.animationConfigId !== undefined) {
+					newAttrs.animationConfigId = props.animationConfigId;
+				}
 				setAttributes(newAttrs);
 
 				// Sync QFT inline state so controls reflect the applied style
@@ -457,6 +462,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
+		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
 		// clientId of the block holding the active selection — used so only the
 		// selected block answers the shared typost_current_editor_state filter.
@@ -495,6 +501,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
 					fontVariationSettings: s.fontVariationSettings || '',
 					layeredConfigId: s.layeredConfigId || 0,
+					animationConfigId: s.animationConfigId || 0,
 					content: s.content || '',
 					tagName: s.tagName || 'h2'
 				};
@@ -1292,91 +1299,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		groupedFeatures[category].push(feature);
 	});
 
-	// Get font options
-	const fontOptions = [];
-	const fontIdMap = {}; // Map font ID to font object
-	const fonts = window.typostData?.fonts || [];
-	const adobeFonts = window.typostData?.adobeFonts || [];
-	const manualFonts = window.typostData?.manualFonts || [];
-
-	// Add uploaded fonts
-	fonts.forEach(font => {
-		if (font.font_faces && font.font_faces.length > 0 && font.font_id) {
-			const families = [...new Set(font.font_faces.map(face => face.family))];
-			families.forEach(family => {
-				fontOptions.push({
-					label: `📁 ${family}`,
-					value: String(font.font_id),
-					fontFamily: family,
-					fontId: font.font_id
-				});
-				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-			});
-		}
-	});
-
-	// Add Adobe fonts
-	adobeFonts.forEach(font => {
-		// Handle new structure: font_family (singular string - one entry per family)
-		if (font.font_family && font.font_id) {
-			fontOptions.push({
-				label: `🅰️ ${font.font_family}`,
-				value: String(font.font_id),
-				fontFamily: font.font_family,
-				fontId: font.font_id
-			});
-			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-		}
-		// Handle legacy structure: font_families (plural array - multiple families per entry)
-		else if (font.font_families && font.font_families.length > 0 && font.font_id) {
-			font.font_families.forEach(family => {
-				fontOptions.push({
-					label: `🅰️ ${family}`,
-					value: String(font.font_id),
-					fontFamily: family,
-					fontId: font.font_id
-				});
-				fontIdMap[font.font_id] = { family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-			});
-		}
-	});
-
-	// Add manual fonts
-	manualFonts.forEach(font => {
-		if (font.font_family && font.font_id) {
-			fontOptions.push({
-				label: `⚙️ ${font.name}`,
-				value: String(font.font_id),
-				fontFamily: font.font_family,
-				fontId: font.font_id
-			});
-			fontIdMap[font.font_id] = { family: font.font_family, fallbacks: font.fallbacks, availableWeights: font.available_weights || [] };
-		}
-	});
-
-	// Sort fontOptions by the saved font display order
-	const fontOrder = window.typostData?.fontOrder || [];
-	if (fontOrder.length > 0) {
-		fontOptions.sort((a, b) => {
-			const keyVariants = (opt) => [
-				'font-' + opt.fontId,
-				'adobe-' + opt.fontId,
-				'manual-' + opt.fontId,
-			];
-			const posA = keyVariants(a).reduce((best, key) => {
-				const idx = fontOrder.indexOf(key);
-				return idx !== -1 ? Math.min(best, idx) : best;
-			}, Infinity);
-			const posB = keyVariants(b).reduce((best, key) => {
-				const idx = fontOrder.indexOf(key);
-				return idx !== -1 ? Math.min(best, idx) : best;
-			}, Infinity);
-			if (posA === Infinity && posB === Infinity) return 0;
-			if (posA === Infinity) return 1;
-			if (posB === Infinity) return -1;
-			return posA - posB;
-		});
-	}
+	// Get font options via the shared builder (assets/js/font-options.js) —
+	// includes the WP Font Library group with wp:{slug} values for
+	// unadopted fonts
+	const { options: fontOptions, fontIdMap } = buildFontOptions(window.typostData || {});
 
 	// Wrappers around utils.js helpers, binding to local fontIdMap
 	const getFilteredWeightOptions = (targetFontId, includeInherit = false) =>
@@ -2668,6 +2594,20 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										label={__('Font Family (for selected text)', 'typography-stylist')}
 										value={inlineFontFamily}
 										onChange={(value) => {
+											if (isWpLibraryValue(value)) {
+												// Unadopted WP Font Library font — adopt first
+												// (idempotently allocates a font_id), then apply
+												adoptWpFont(wpSlugFromValue(value)).then((font) => {
+													fontIdMap[font.font_id] = {
+														family: font.font_family,
+														fallbacks: font.fallbacks || '',
+														availableWeights: []
+													};
+													setInlineFontFamily(String(font.font_id));
+													debouncedApplyFontFamily();
+												}).catch(() => {});
+												return;
+											}
 											setInlineFontFamily(value);
 											if (value) {
 												debouncedApplyFontFamily();
@@ -3120,6 +3060,21 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							onChange={(value) => {
 								if (value === '') {
 									setAttributes({ fontFamily: '', fontId: 0 });
+								} else if (isWpLibraryValue(value)) {
+									// Unadopted WP Font Library font — adopt first
+									// (idempotently allocates a font_id), then store
+									// fontId exactly like any other source
+									adoptWpFont(wpSlugFromValue(value)).then((font) => {
+										fontIdMap[font.font_id] = {
+											family: font.font_family,
+											fallbacks: font.fallbacks || '',
+											availableWeights: []
+										};
+										setAttributes({
+											fontFamily: font.font_family,
+											fontId: font.font_id
+										});
+									}).catch(() => {});
 								} else {
 									// Try to parse as ID (new system)
 									const selectedFontId = parseInt(value, 10);

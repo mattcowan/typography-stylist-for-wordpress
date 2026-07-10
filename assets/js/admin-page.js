@@ -980,10 +980,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'uploaded', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'uploaded', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -997,6 +994,32 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    /**
+     * Fire typost:font-saved with a waitUntil(promise) collector, then reload
+     * once every listener-registered promise settles (extensions save their
+     * own per-font data via REST on this event — previously they raced a
+     * blind 1500 ms timeout). Reload waits at least 1200 ms so the success
+     * message stays readable, and at most 5 s so a hung request can't block.
+     */
+    function reloadAfterFontSaved(payload) {
+        var pending = [];
+        payload.waitUntil = function(promise) {
+            if (promise && typeof promise.then === 'function') {
+                pending.push(promise);
+            }
+        };
+        $(document).trigger('typost:font-saved', payload);
+
+        var swallow = function(p) { return Promise.resolve(p).catch(function() {}); };
+        var settled = Promise.all(pending.map(swallow));
+        var cap = new Promise(function(resolve) { setTimeout(resolve, 5000); });
+        var minDelay = new Promise(function(resolve) { setTimeout(resolve, 1200); });
+
+        Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
+            location.reload();
+        });
+    }
 
     // Save Adobe font
     $(document).on('click', '.typost-save-adobe-font-edit', function() {
@@ -1023,10 +1046,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'adobe', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'adobe', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -1080,10 +1100,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fontUpdated + '</p></div>');
-                $(document).trigger('typost:font-saved', { fontId: fontId, type: 'manual', $card: $card });
-                setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                reloadAfterFontSaved({ fontId: fontId, type: 'manual', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFontError;
@@ -1595,5 +1612,95 @@ jQuery(document).ready(function($) {
                 $btn.prop('disabled', false).text('Add Replacement');
             }
         });
+    });
+
+    /* ─────────────────────────────────────────────────────────────────────
+     * WP Font Library registration (register / unregister / bulk / notice)
+     * ──────────────────────────────────────────────────────────────────── */
+
+    function wplRestCall(path, method, onSuccess, onError) {
+        $.ajax({
+            url: typostAdmin.restUrl + path,
+            method: method,
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            success: onSuccess,
+            error: onError
+        });
+    }
+
+    function wplErrorMessage(xhr, fallback) {
+        if (xhr && xhr.responseJSON && xhr.responseJSON.message) {
+            return xhr.responseJSON.message;
+        }
+        return fallback;
+    }
+
+    // Register a single font in the WP Font Library
+    $(document).on('click', '.typost-wpl-register', function() {
+        var $btn = $(this);
+        var fontId = $btn.data('font-id');
+        var originalText = $btn.text();
+        var $message = $btn.closest('.typost-font-details').find('.typost-font-edit-message');
+
+        $btn.prop('disabled', true).text(typostAdmin.strings.wplRegistering);
+
+        wplRestCall('fonts/' + fontId + '/wp-library', 'POST', function() {
+            $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRegisterSuccess + '</p></div>');
+            setTimeout(function() { location.reload(); }, 1200);
+        }, function(xhr) {
+            $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError) + '</p></div>');
+            $btn.prop('disabled', false).text(originalText);
+        });
+    });
+
+    // Remove a single font from the WP Font Library
+    $(document).on('click', '.typost-wpl-unregister', function() {
+        if (!window.confirm(typostAdmin.strings.wplConfirmRemove)) {
+            return;
+        }
+
+        var $btn = $(this);
+        var fontId = $btn.data('font-id');
+        var originalText = $btn.text();
+        var $message = $btn.closest('.typost-font-details').find('.typost-font-edit-message');
+
+        $btn.prop('disabled', true).text(typostAdmin.strings.wplRemoving);
+
+        wplRestCall('fonts/' + fontId + '/wp-library', 'DELETE', function() {
+            $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRemoveSuccess + '</p></div>');
+            setTimeout(function() { location.reload(); }, 1200);
+        }, function(xhr) {
+            $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRemoveError) + '</p></div>');
+            $btn.prop('disabled', false).text(originalText);
+        });
+    });
+
+    // Bulk register all unregistered uploaded fonts
+    $(document).on('click', '#typost-wpl-bulk-register', function() {
+        var $btn = $(this);
+        var originalText = $btn.text();
+
+        $btn.prop('disabled', true).text(typostAdmin.strings.wplRegistering);
+
+        wplRestCall('fonts/wp-library/bulk', 'POST', function(response) {
+            var registered = (response.registered || []).length;
+            var failed = (response.failed || []).length;
+            var msg = typostAdmin.strings.wplBulkDone
+                .replace('%1$s', String(registered))
+                .replace('%2$s', String(failed));
+            $btn.after($('<p role="status"></p>').text(msg));
+            setTimeout(function() { location.reload(); }, 1500);
+        }, function(xhr) {
+            alert(wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError));
+            $btn.prop('disabled', false).text(originalText);
+        });
+    });
+
+    // Persist dismissal of the migration notice
+    $(document).on('click', '#typost-wpl-migration-notice .notice-dismiss', function() {
+        wplRestCall('fonts/wp-library/dismiss-notice', 'POST', function() {}, function() {});
     });
 });

@@ -1,6 +1,6 @@
 # Typography Stylist - User Documentation
 
-**Version 1.0.6**
+**Version 2.1.0**
 
 Welcome to Typography Stylist\! This plugin brings advanced typography features to WordPress, allowing you to apply professional OpenType features like ligatures, stylistic sets, and swashes to your headlines with just a few clicks.
 
@@ -220,6 +220,16 @@ This helps you:
 - Verify fonts loaded correctly
 - Discover which OpenType features are supported
 - Test feature combinations before using them in content
+
+### WordPress Font Library Integration (WordPress 6.5+)
+
+On WordPress 6.5 or later, uploaded webfont kits can also be registered in the **WordPress Font Library** (Appearance → Editor), making them available to the whole site through WordPress's own font system.
+
+- **New uploads register automatically** — controlled by the "WordPress Font Library" toggle in the Options tab (on by default).
+- **Existing fonts are opt-in** — each uploaded font card on the Custom Fonts tab shows its status ("Registered as *slug*" or "Plugin-managed") with a **Register in Font Library** / **Remove from Font Library** button, and a notice offers one-click bulk registration.
+- **Nothing breaks either way.** Your content keeps using the same font references; the plugin simply points them at WordPress's font definitions when a registration is active, and falls back automatically if you remove the font from the Library. Registration is fully reversible.
+- **Library fonts in the editor** — fonts installed in the Font Library (or bundled with your theme) also appear in the editor font pickers with a 🌐 icon. Pick one and it just works, like any other font.
+- **Adobe Fonts and custom font definitions stay plugin-managed** — Adobe fonts load from Adobe's servers and may not be self-hosted; custom definitions reference fonts your theme or CDN already loads.
 
 ---
 
