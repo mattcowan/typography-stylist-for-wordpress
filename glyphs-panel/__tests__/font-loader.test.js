@@ -175,3 +175,68 @@ describe('sniffFormat', () => {
 		expect(sniffFormat(null)).toBe('unknown');
 	});
 });
+
+describe('failure classification (tagError / errorReason / errorDetail)', () => {
+	const { tagError, errorReason, errorDetail } = require('../assets/js/lib/font-loader.js');
+
+	test('tagError attaches a reason and returns the same error', () => {
+		const err = new Error('Failed to load http://x/vendor/opentype.min.js');
+		expect(tagError(err, 'vendor-load-failed')).toBe(err);
+		expect(err.typostReason).toBe('vendor-load-failed');
+	});
+
+	test('tagError does not overwrite an existing reason (innermost tag wins)', () => {
+		const err = tagError(new Error('boom'), 'decompress-failed');
+		tagError(err, 'vendor-load-failed');
+		expect(err.typostReason).toBe('decompress-failed');
+	});
+
+	test('tagError tolerates null/undefined errors', () => {
+		expect(tagError(null, 'vendor-load-failed')).toBe(null);
+		expect(tagError(undefined, 'vendor-load-failed')).toBe(undefined);
+	});
+
+	test('errorReason reads the tag and defaults untagged errors to parse-failed', () => {
+		expect(errorReason(tagError(new Error('x'), 'vendor-load-failed'))).toBe('vendor-load-failed');
+		expect(errorReason(tagError(new Error('x'), 'decompress-failed'))).toBe('decompress-failed');
+		expect(errorReason(new Error('opentype threw'))).toBe('parse-failed');
+		expect(errorReason(null)).toBe('parse-failed');
+	});
+
+	test('errorDetail returns the message or an empty string', () => {
+		expect(errorDetail(new Error('Failed to load x'))).toBe('Failed to load x');
+		expect(errorDetail(null)).toBe('');
+		expect(errorDetail({})).toBe('');
+	});
+});
+
+describe('shouldFallBackToMainThread', () => {
+	const { shouldFallBackToMainThread } = require('../assets/js/lib/font-loader.js');
+
+	test('falls back when the worker was unavailable or timed out (null result)', () => {
+		expect(shouldFallBackToMainThread(null)).toBe(true);
+		expect(shouldFallBackToMainThread(undefined)).toBe(true);
+	});
+
+	test('falls back on worker-internal vendor load failures (may be worker-specific, e.g. CSP)', () => {
+		expect(shouldFallBackToMainThread({ ok: false, reason: 'vendor-load-failed' })).toBe(true);
+	});
+
+	test('treats genuine parse and decompress failures as definitive (main thread would just repeat them)', () => {
+		expect(shouldFallBackToMainThread({ ok: false, reason: 'parse-failed' })).toBe(false);
+		expect(shouldFallBackToMainThread({ ok: false, reason: 'decompress-failed' })).toBe(false);
+	});
+
+	test('does not fall back on success', () => {
+		expect(shouldFallBackToMainThread({ ok: true, meta: {} })).toBe(false);
+	});
+});
+
+describe('resetLoaderState', () => {
+	const { resetLoaderState } = require('../assets/js/lib/font-loader.js');
+
+	test('is exported and safe to call outside a browser (no worker state)', () => {
+		expect(typeof resetLoaderState).toBe('function');
+		expect(() => resetLoaderState()).not.toThrow();
+	});
+});

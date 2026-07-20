@@ -47,6 +47,14 @@
 	color: #6a6a6a;
 }
 
+/* Technical detail line under an error notice (debugging aid) */
+.typost-glyphs-error-detail {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #6a6a6a;
+	word-break: break-word;
+}
+
 /* Toolbar: search + filters. Controls carry visible labels (stacked above each
    field), so bottom-align them with the altchar group's inline button. */
 .typost-glyphs-toolbar {

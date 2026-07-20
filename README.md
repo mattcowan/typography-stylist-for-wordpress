@@ -376,6 +376,13 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 - **Variable Fonts built into core** - the standalone "Typography Stylist - Variable Fonts" extension is now bundled (deactivate the standalone plugin after updating; settings carry over automatically).
 - **`typost_force_enqueue_font_ids` filter** for theme-driven font loading, `waitUntil()` on `typost:font-saved`, a font-CSS cache-key fix, and `animationConfigId`/`data-animation-id` integration points for the upcoming Animations extension.
 
+**Editor and Glyphs Panel fixes**
+
+- **Fixed: fonts not rendering in the iframed editor canvas.** The `--font-N` CSS variables now load inside the block editor canvas iframe (WP 6.3+) even when no uploaded webfont kits exist. Previously the variables were only attached alongside uploaded-kit `@font-face` CSS, so sites using only Adobe Fonts, custom font definitions, or Font Library fonts saw the system font in the editor while the frontend rendered correctly.
+- **Fixed: Glyphs Panel vendor libraries missing from git deploys.** `glyphs-panel/assets/js/vendor/` (opentype.js, wawoff2 — both MIT, bundled unmodified) was accidentally excluded from the repository by an unanchored `vendor/` ignore meant for Composer, breaking the Glyphs Panel on git-based deploys with a misleading "font could not be read" error. The libraries are now committed, the ignore is anchored to `/vendor/`, and `npm run package` fails hard if they are ever missing. Release ZIPs built from a complete tree were never affected.
+- **Improved: honest Glyphs Panel error reporting.** Vendor-library load failures and WOFF2 decompression failures now surface as their own error messages (with technical detail) instead of the generic "font could not be read", a server-side precheck flags missing vendor files up front (editor data + a notice on the Glyphs settings tab), and every error state offers a "Try again" button that resets failed loader state and retries without a page reload. Worker-internal vendor failures now also fall back to main-thread parsing instead of being reported as font defects.
+- **Fixed: `npm run package` now ships the bundled Variable Fonts module.** The packaging script did not copy `variable-fonts/`, which core loads unconditionally — a ZIP built from it would have fataled on activation. The module is now packaged like the Glyphs Panel, with a preflight check for both bundled modules' main files.
+
 ### Version 2.0.0
 
 **Flagship feature: the Glyphs Panel (built into core)**

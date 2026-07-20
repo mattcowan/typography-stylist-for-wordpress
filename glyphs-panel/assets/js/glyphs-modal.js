@@ -186,6 +186,8 @@
 			'cors': __('The font file could not be fetched (cross-origin restriction). Glyph browsing is unavailable for this font.', 'typost-glyphs-panel'),
 			'fetch-failed': __('The font file could not be downloaded. Please try again.', 'typost-glyphs-panel'),
 			'unsupported-format': __('This font kit only contains formats that cannot be read for glyph browsing (e.g. EOT).', 'typost-glyphs-panel'),
+			'vendor-load-failed': __('The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font — the plugin\'s vendor files may be missing. Try reinstalling the plugin.', 'typost-glyphs-panel'),
+			'decompress-failed': __('The font file could not be decompressed. The file may be damaged.', 'typost-glyphs-panel'),
 			'parse-failed': __('The font file could not be read. It may be malformed or use unsupported features.', 'typost-glyphs-panel')
 		};
 		return messages[reason] || messages['parse-failed'];
@@ -285,6 +287,19 @@
 			if (!selectedFont) {
 				return;
 			}
+			// Server-side precheck: when the vendor files are missing on disk,
+			// report that honestly instead of a generic parse failure. A
+			// user-initiated retry (forceRefresh) still attempts the real load
+			// in case the files were restored since the page rendered.
+			var data = (window.typostData || {}).glyphsPanel || {};
+			if (!forceRefresh && data.vendorMissing && data.vendorMissing.length) {
+				setStatus({
+					state: 'error',
+					reason: 'vendor-load-failed',
+					detail: sprintf(/* translators: %s: comma-separated file paths */ __('Missing files: %s', 'typost-glyphs-panel'), data.vendorMissing.join(', '))
+				});
+				return;
+			}
 			var seq = ++loadSeq.current;
 			setStatus({ state: 'loading' });
 			loadMetadata(selectedFont, context.fontWeight || '400', forceRefresh).then(function(result) {
@@ -294,13 +309,22 @@
 				if (result.ok) {
 					setStatus({ state: 'ready', meta: result.meta });
 				} else {
-					setStatus({ state: 'error', reason: result.reason });
+					setStatus({ state: 'error', reason: result.reason, detail: result.detail || '' });
 				}
 			}).catch(function() {
 				if (seq === loadSeq.current) {
 					setStatus({ state: 'error', reason: 'parse-failed' });
 				}
 			});
+		}
+
+		// Retry after an error: forget failed loader state (vendor scripts,
+		// worker) and re-run the load bypassing the metadata cache
+		function handleRetry() {
+			if (lib.resetLoaderState) {
+				lib.resetLoaderState();
+			}
+			startLoad(true);
 		}
 
 		useEffect(function() {
@@ -641,8 +665,17 @@
 				__('No fonts are configured in Typography Stylist. Upload a webfont kit to browse glyphs.', 'typost-glyphs-panel')),
 			status.state === 'loading' && el('div', { className: 'typost-glyphs-loading' },
 				el(Spinner), ' ', __('Reading font data…', 'typost-glyphs-panel')),
-			status.state === 'error' && el(Notice, { status: 'warning', isDismissible: false },
-				reasonMessage(status.reason)),
+			status.state === 'error' && el(Notice, {
+				status: 'warning',
+				isDismissible: false,
+				actions: [{
+					label: __('Try again', 'typost-glyphs-panel'),
+					onClick: handleRetry,
+					variant: 'secondary'
+				}]
+			},
+				reasonMessage(status.reason),
+				status.detail && el('div', { className: 'typost-glyphs-error-detail' }, status.detail)),
 			meta && meta.partialCoverage && el(Notice, { status: 'info', isDismissible: false },
 				__('Adobe Fonts serves dynamically subset files — this glyph list may be incomplete.', 'typost-glyphs-panel')),
 			insertedMsg && el(Notice, {

@@ -22,11 +22,47 @@ const includeList = [
   'glyphs-panel/assets/**',        // (excludes __tests__, jest.config.js, package.json)
   'glyphs-panel/includes/**',
   'glyphs-panel/languages/**',
+  'variable-fonts/variable-fonts.php', // Bundled Variable Fonts module (production only)
+  'variable-fonts/assets/**',
+  'variable-fonts/includes/**',
+  'variable-fonts/languages/**',
   'package.json',         // For developers
   'README.txt',           // WordPress.org readme if exists
   'readme.txt',           // lowercase variant
   'LICENSE'               // if exists
 ];
+
+// Preflight: the Glyphs Panel cannot work without its bundled vendor
+// libraries, and a checkout without them must never produce a ZIP that
+// silently ships broken (the browser would report every font as unreadable).
+const requiredVendorFiles = [
+  'glyphs-panel/assets/js/vendor/opentype.min.js',
+  'glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js'
+];
+const missingVendor = requiredVendorFiles.filter(
+  rel => !fs.existsSync(path.join(__dirname, '..', rel))
+);
+if (missingVendor.length > 0) {
+  console.error('Cannot package: required vendor libraries are missing:');
+  missingVendor.forEach(rel => console.error(`  - ${rel}`));
+  console.error('Restore them from the upstream releases listed in BUILD.txt.');
+  process.exit(1);
+}
+
+// Preflight: core does an unconditional require_once on each bundled module's
+// main file — a ZIP without one of these fatals on activation.
+const requiredModuleFiles = [
+  'glyphs-panel/glyphs-panel.php',
+  'variable-fonts/variable-fonts.php'
+];
+const missingModules = requiredModuleFiles.filter(
+  rel => !fs.existsSync(path.join(__dirname, '..', rel))
+);
+if (missingModules.length > 0) {
+  console.error('Cannot package: bundled module files are missing:');
+  missingModules.forEach(rel => console.error(`  - ${rel}`));
+  process.exit(1);
+}
 
 // Clean previous build
 console.log('Cleaning previous build...');
@@ -134,6 +170,26 @@ if (fs.existsSync(glyphsDir)) {
   });
   console.log('✓ Copied Glyphs Panel module (production files only)');
 }
+
+// Copy bundled Variable Fonts module (production files only) — bundled into
+// core in v2.1; core fatals without it (unconditional require_once in
+// typost_init), so this copy is mandatory and preflight-checked above.
+const variableFontsDir = path.join(__dirname, '..', 'variable-fonts');
+const distVariableFontsDir = path.join(distDir, 'variable-fonts');
+fs.mkdirSync(distVariableFontsDir, { recursive: true });
+
+fs.copyFileSync(
+  path.join(variableFontsDir, 'variable-fonts.php'),
+  path.join(distVariableFontsDir, 'variable-fonts.php')
+);
+
+['assets', 'includes', 'languages'].forEach(sub => {
+  const subSrc = path.join(variableFontsDir, sub);
+  if (fs.existsSync(subSrc)) {
+    copyDirectory(subSrc, path.join(distVariableFontsDir, sub));
+  }
+});
+console.log('✓ Copied Variable Fonts module (production files only)');
 
 // Copy optional files if they exist
 const optionalFiles = [

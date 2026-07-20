@@ -282,6 +282,8 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * **NEW: `typost_force_enqueue_font_ids` filter** — themes and extensions can force specific fonts to load on every page (for fonts referenced only from theme CSS, invisible to the content scan).
 * Improved: extension data saves on the font edit form no longer race the page reload (`typost:font-saved` now provides a `waitUntil()` collector).
 * Fixed: the per-page font CSS cache key now includes the used font IDs, so pages using different fonts can no longer share stale cached CSS.
+* Fixed: font CSS variables now load inside the iframed block editor canvas (WP 6.3+) even when no uploaded webfont kits exist — Adobe Fonts, custom font definitions, and Font Library fonts previously fell back to the system font in the editor while rendering correctly on the frontend.
+* Improved: the Glyphs Panel now distinguishes missing or failed parsing-library loads from genuinely unreadable fonts, shows honest error messages with technical detail, and offers a "Try again" button that retries without reloading the page.
 * Developer: new block attribute `animationConfigId` + inline `data-animation-id` attribute as integration points for the upcoming Animations extension; font subsystem partially extracted into `includes/` modules (public extension API unchanged).
 
 = 2.0.1 =
@@ -482,7 +484,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Upgrade Notice ==
 
 = 2.1.0 =
-Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
+Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
 
 = 2.0.1 =
 Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.

@@ -61,6 +61,28 @@ msgstr ""
 msgid "The font file could not be read. It may be malformed or use unsupported features."
 msgstr ""
 
+#: glyphs-panel/assets/js/glyphs-modal.js:189
+msgid "The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font — the plugin's vendor files may be missing. Try reinstalling the plugin."
+msgstr ""
+
+#: glyphs-panel/assets/js/glyphs-modal.js:190
+msgid "The font file could not be decompressed. The file may be damaged."
+msgstr ""
+
+#. translators: %s: comma-separated file paths
+#: glyphs-panel/assets/js/glyphs-modal.js:299
+#, javascript-format
+msgid "Missing files: %s"
+msgstr ""
+
+#: glyphs-panel/assets/js/glyphs-modal.js:672
+msgid "Try again"
+msgstr ""
+
+#: glyphs-panel/glyphs-panel.php:277
+msgid "The Glyph Browser cannot work on this installation: the bundled font-parsing libraries are missing. Reinstall the plugin to restore them."
+msgstr ""
+
 #: glyphs-panel/assets/js/glyphs-modal.js:106
 msgid "WP Font Library"
 msgstr ""

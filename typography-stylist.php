@@ -1433,6 +1433,19 @@ class Typost {
      * This is called by enqueue_block_assets hook
      */
     public function enqueue_custom_fonts_for_blocks() {
+        // Register/enqueue the handle and attach the --font-N CSS variables
+        // unconditionally: the iframed editor canvas (WP 6.3+) only receives
+        // styles enqueued on this hook, and Adobe/manual/Library fonts need the
+        // variables even when no uploaded webfont kits exist.
+        wp_register_style('typost-block-fonts', false, array(), TYPOST_VERSION);
+        wp_enqueue_style('typost-block-fonts');
+
+        // CSS variables must be added as raw CSS (not wrapped in <style> tags)
+        $css_vars = $this->get_font_css_variables();
+        if (!empty($css_vars)) {
+            wp_add_inline_style('typost-block-fonts', $css_vars);
+        }
+
         $fonts = $this->get_custom_fonts();
 
         if (empty($fonts)) {
@@ -1461,20 +1474,8 @@ class Typost {
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
         }
 
-        // Always register/enqueue handle even if no custom fonts, so we can attach CSS variables
-        wp_register_style('typost-block-fonts', false, array(), TYPOST_VERSION);
-        wp_enqueue_style('typost-block-fonts');
-
         if (!empty($combined_css)) {
             wp_add_inline_style('typost-block-fonts', $combined_css);
-        }
-
-        // Add CSS variables for font replacements to work in editor iframe
-        $css_vars = $this->get_font_css_variables();
-        if (!empty($css_vars)) {
-            // CSS variables must be added as proper CSS (not wrapped in <style> tags)
-            // wp_add_inline_style expects raw CSS content
-            wp_add_inline_style('typost-block-fonts', $css_vars);
         }
     }
 
@@ -5147,9 +5148,11 @@ class Typost {
      * Generates :root { --font-ID: "Family Name", fallback; } declarations
      * Includes aliases for deleted fonts with replacements
      *
-     * Note: Uses direct style element output rather than wp_add_inline_style()
-     * because CSS custom properties must be available globally across admin contexts
-     * (block editor, settings page) where stylesheets may not be uniformly enqueued.
+     * Note: Serves the frontend (wp_head) and plain admin pages / editor
+     * parent document (admin_head) via a directly echoed style element. The
+     * iframed editor canvas is served separately by the typost-block-fonts
+     * handle in enqueue_custom_fonts_for_blocks() — admin_head output never
+     * reaches the iframe document.
      */
     public function output_font_css_variables() {
         // Only output in appropriate contexts
@@ -5176,16 +5179,16 @@ class Typost {
                     'type' => array()
                 )
             );
-            // Direct style output required (not wp_add_inline_style) because:
-            // 1. Must be available globally across all admin contexts (block editor, settings, iframe)
-            // 2. Conditional logic requires early wp_head hook (priority 5) - stylesheets not enqueued yet
-            // 3. Stylesheet handles aren't uniformly enqueued across contexts (esp. block editor iframe)
-            // 4. wp_add_inline_style() on dummy handles is unreliable in iframe context
-            // 5. CSS variables must be in DOM before any blocks render to prevent FOUC
-            // Alternative approaches tested:
-            // - Dummy handle + wp_add_inline_style: Failed in iframe, timing issues in editor
-            // - Per-context enqueue: Caused duplication and cache invalidation problems
-            // - admin_print_styles hook: Too late for some editor initialization contexts
+            // Direct style output covers the frontend (wp_head p5, before
+            // stylesheets are printed) and plain admin pages / the editor
+            // PARENT document (admin_head). It never reaches the iframed
+            // editor canvas (WP 6.3+): admin_head does not fire inside the
+            // iframe. The canvas gets the same variables via the
+            // typost-block-fonts handle enqueued on enqueue_block_assets
+            // (see enqueue_custom_fonts_for_blocks()), which WordPress
+            // mirrors into the iframe. In legacy non-iframed editors both
+            // land in one document; the duplicate identical :root block is
+            // harmless.
             // Output is sanitized via sanitize_output_css() and wp_kses()
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
             echo wp_kses("<style id=\"typost-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);
