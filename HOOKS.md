@@ -313,6 +313,8 @@ window.typostHooks.addFilter('typost_current_editor_state', myFilter, 10);
 window.typostHooks.removeFilter('typost_current_editor_state', myFilter);
 ```
 
+**Container lifecycle:** Each hook point renders a `<div class="typost-hook-point" data-hook="...">` and fires its action **once per container mount** — actions do not re-fire on ordinary editor re-renders, so render your UI once and manage its own state from there. The **font-dependent hook points** (`typost_weight_control`, `typost_inline_after_font_controls`, `typost_qft_after_font_controls`, `typost_inspector_after_font_weight`) are keyed to the active font: when the font changes, the old container (and everything you rendered into it) is destroyed, a fresh container mounts, and the action fires again with the new state. Don't cache references to these containers across font changes.
+
 ### Inline Editor Hook Points
 
 These hooks fire inside the inline editor modal (the "T" toolbar button popover). Each receives a container DOM element and the editor's current state.
@@ -351,6 +353,8 @@ window.typostHooks.addAction('typost_qft_modal_top', function(containerEl, state
 }, 10);
 ```
 
+The `typost_qft_after_font_controls` state also includes `inlineFontFamilyAtSelection` (the numeric font ID of an inline font at the current selection, if any) so extensions can prefer the inline font over the block-level `fontId`.
+
 ### Inspector Controls Hook Points
 
 These hooks fire inside the Typography Stylist block's sidebar Inspector Controls.
@@ -372,13 +376,17 @@ window.typostHooks.addAction('typost_inspector_after_font_weight', function(cont
 
 #### `typost_weight_control` (Filter)
 
-Filter that determines whether the standard weight dropdown should be replaced by a custom control. Return `'default'` for the normal dropdown, or any other value (e.g., `'variable'`) to replace it with a hook container.
+Filter that determines whether the standard weight dropdown should be replaced by a custom control. Return `'default'` for the normal dropdown, `'hidden'` to suppress the weight control entirely (no wrapper section, no hook container — used e.g. for variable fonts without a `wght` axis), or any other value (e.g., `'variable'`) to replace it with a hook container.
 
 ```javascript
 window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
     // Return 'variable' to replace the dropdown with a custom control
     if (fontHasVariableWeightAxis(fontId)) {
         return 'variable';
+    }
+    // Return 'hidden' to render no weight control at all
+    if (fontShouldHideWeights(fontId)) {
+        return 'hidden';
     }
     return type; // 'default' = normal dropdown
 }, 10);
@@ -387,6 +395,8 @@ window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
 **Parameters:**
 - `type` (string) — Current control type (`'default'` initially)
 - `fontId` (number) — The active font's numeric ID
+
+**Recognized return values:** `'default'` (normal dropdown), `'hidden'` (no control rendered), anything else (hook container fired via the action below).
 
 **Checked in three locations:** inline editor, Quick Feature Toggle, Inspector Controls.
 

@@ -2652,10 +2652,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										? window.typostHooks.applyFilters('typost_weight_control', 'default', activeFontId)
 										: 'default';
 
+									// 'hidden': suppress the weight control entirely (no wrapper, no hook)
+									if (weightControlType === 'hidden') return null;
+
 									if (weightControlType !== 'default') {
 										return (
 											<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-												<div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+												{/* key: remount (and re-fire the action) when the active font changes */}
+												<div key={`typost-weight-${activeFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
 													if (el && !el._hooked) {
 														el._hooked = true;
 														window.typostHooks.doAction('typost_weight_control', el, {
@@ -2699,12 +2703,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									);
 								})()}
 
-								{/* Extension hook point: after font controls (e.g., Variable Font axes) */}
-								<div className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
+								{/* Extension hook point: after font controls (e.g., Variable Font axes).
+								    key: remount (and re-fire the action) when any active font changes */}
+								<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
 									if (el && !el._hooked) {
 										el._hooked = true;
 										window.typostHooks.doAction('typost_qft_after_font_controls', el, {
-											fontId, fontWeight, inlineFontFamily, inlineFontWeight
+											fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
 										});
 									}
 								}} />
@@ -3117,10 +3122,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						? window.typostHooks.applyFilters('typost_weight_control', 'default', fontId)
 						: 'default';
 
+					// 'hidden': suppress the weight control entirely (no wrapper, no hook)
+					if (weightControlType === 'hidden') return null;
+
 					if (weightControlType !== 'default') {
 						return (
 							<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
-								<div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+								{/* key: remount (and re-fire the action) when the font changes */}
+								<div key={`typost-weight-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
 									if (el && !el._hooked) {
 										el._hooked = true;
 										window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight });
@@ -3143,8 +3152,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					);
 				})()}
 
-				{/* Extension hook point: after font weight (e.g., Variable Font axes) */}
-				<div className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={(el) => {
+				{/* Extension hook point: after font weight (e.g., Variable Font axes).
+				    key: remount (and re-fire the action) when the font changes */}
+				<div key={`typost-afw-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={(el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight });

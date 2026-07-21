@@ -88,36 +88,176 @@
 			// Italic: binary
 			buttons = [0, 1];
 		} else {
-			// Custom axes: divide range into ~8 steps, include min, default, max
+			// Custom axes: min, max, and default plus interior stops snapped
+			// to round multiples of a 1-2-5 step (200, 400, … — never offsets
+			// of min like 201, 401), capped at 7 buttons so the row doesn't wrap.
 			var range = max - min;
 			if (range <= 0) return [min];
-			var step = range / 8;
-			// Round step to a nice number
-			var magnitude = Math.pow(10, Math.floor(Math.log10(step)));
-			step = Math.round(step / magnitude) * magnitude;
-			if (step === 0) step = 1;
 
-			for (var v = min; v <= max; v += step) {
-				buttons.push(Math.round(v * 100) / 100);
+			var MAX_BUTTONS = 7;
+
+			// Multiples of step inside (min, max), skipping any that crowd
+			// min, max, or the default (closer than half a step).
+			var interiorStops = function (step) {
+				var stops = [];
+				var k = Math.ceil(min / step - 1e-9);
+				for (; k * step <= max + 1e-9; k++) {
+					var val = Math.round(k * step * 100) / 100;
+					var crowd = step / 2 - 1e-9;
+					if (val - min < crowd || max - val < crowd || Math.abs(val - def) < crowd) {
+						continue;
+					}
+					stops.push(val);
+				}
+				return stops;
+			};
+
+			// Ascend a 1-2-5 ladder of round steps until everything fits the cap
+			var ladder = [1, 2, 5];
+			var exp = Math.floor(Math.log10(range)) - 1;
+			var mandatory = (def !== min && def !== max) ? 3 : 2;
+			var stops = [];
+			for (var guard = 0; guard < 12; guard++, exp++) {
+				var found = false;
+				for (i = 0; i < ladder.length; i++) {
+					var candidate = interiorStops(ladder[i] * Math.pow(10, exp));
+					if (candidate.length + mandatory <= MAX_BUTTONS) {
+						stops = candidate;
+						found = true;
+						break;
+					}
+				}
+				if (found) break;
 			}
-			// Ensure max is included
-			if (buttons[buttons.length - 1] !== max) {
-				buttons.push(max);
-			}
-			// Ensure default is included
+
+			buttons = stops.concat([min, max]);
 			if (buttons.indexOf(def) === -1) {
 				buttons.push(def);
-				buttons.sort(function (a, b) { return a - b; });
 			}
+			buttons.sort(function (a, b) { return a - b; });
 		}
 
 		return buttons;
 	}
 
+	/**
+	 * Decide how the standard weight control should render for a font.
+	 *
+	 * @param {string} currentType Incoming filter value ('default' or another
+	 *                             extension's override — passed through).
+	 * @param {Array|null} axes    The font's axis definitions, or null.
+	 * @param {Object|null} flags  The font's {isVariable, hideWeights} flags.
+	 * @return {string} 'variable' (wght slider replaces the dropdown),
+	 *                  'hidden' (no weight control at all), or currentType.
+	 */
+	function resolveWeightControlType(currentType, axes, flags) {
+		var hasWght = false;
+		if (axes) {
+			for (var i = 0; i < axes.length; i++) {
+				if (axes[i] && axes[i].tag === 'wght') {
+					hasWght = true;
+					break;
+				}
+			}
+		}
+		if (hasWght) return 'variable';
+		// isVariable without hideWeights deliberately keeps the dropdown —
+		// the user explicitly unchecked "Hide weight selection" in admin.
+		if (flags && flags.hideWeights) return 'hidden';
+		return currentType;
+	}
+
+	/**
+	 * Resolve the font id the weight control refers to, mirroring how core
+	 * calls the typost_weight_control filter (inline: selectedFontId,
+	 * QFT: inlineFontFamilyAtSelection || fontId, inspector: fontId) so the
+	 * action-side render agrees with the filter decision.
+	 */
+	function resolveWeightControlFontId(state) {
+		if (!state) return undefined;
+		return state.selectedFontId || state.inlineFontFamilyAtSelection || state.fontId;
+	}
+
+	/**
+	 * Resolve the font id for the non-wght axes panel, preferring an inline
+	 * font at the selection over the block-level font.
+	 */
+	function resolveAxesFontId(state) {
+		if (!state) return undefined;
+		return state.selectedFontId || state.inlineFontFamilyAtSelection ||
+			state.inlineFontFamily || state.fontId;
+	}
+
+	/**
+	 * Map opentype.js fvar axis records to the plugin's axis definition shape,
+	 * matching the server-side parser's conventions (Typost_Font_Parser).
+	 *
+	 * @param {Array}  fvarAxes       font.tables.fvar.axes records
+	 *                                ({tag, minValue, defaultValue, maxValue, name}).
+	 * @param {Object} registeredAxes Map of registered tag -> display name.
+	 * @return {Array} [{tag, name, min, max, default}] — deduped by tag,
+	 *                 malformed records skipped.
+	 */
+	function mapFvarAxes(fvarAxes, registeredAxes) {
+		var result = [];
+		var seen = {};
+		if (!fvarAxes || !fvarAxes.length) return result;
+		registeredAxes = registeredAxes || {};
+
+		function round2(n) {
+			return Math.round(n * 100) / 100;
+		}
+
+		for (var i = 0; i < fvarAxes.length; i++) {
+			var axis = fvarAxes[i];
+			if (!axis || typeof axis.tag !== 'string') continue;
+			var tag = axis.tag.trim();
+			if (!tag || seen[tag]) continue;
+			var min = parseFloat(axis.minValue);
+			var max = parseFloat(axis.maxValue);
+			var def = parseFloat(axis.defaultValue);
+			if (isNaN(min) || isNaN(max)) continue;
+			if (min > max) {
+				var swap = min;
+				min = max;
+				max = swap;
+			}
+			min = round2(min);
+			max = round2(max);
+			if (isNaN(def)) def = min;
+			def = Math.min(Math.max(round2(def), min), max);
+
+			var name = registeredAxes[tag];
+			if (!name && axis.name) {
+				if (typeof axis.name === 'string') {
+					name = axis.name;
+				} else if (axis.name.en) {
+					name = axis.name.en;
+				} else {
+					for (var key in axis.name) {
+						if (axis.name.hasOwnProperty(key) && axis.name[key]) {
+							name = axis.name[key];
+							break;
+						}
+					}
+				}
+			}
+			if (!name) name = tag.toUpperCase();
+
+			seen[tag] = true;
+			result.push({ tag: tag, name: name, min: min, max: max, 'default': def });
+		}
+		return result;
+	}
+
 	var api = {
 		parseVariationSettings: parseVariationSettings,
 		buildVariationSettings: buildVariationSettings,
-		getQuickButtons: getQuickButtons
+		getQuickButtons: getQuickButtons,
+		resolveWeightControlType: resolveWeightControlType,
+		resolveWeightControlFontId: resolveWeightControlFontId,
+		resolveAxesFontId: resolveAxesFontId,
+		mapFvarAxes: mapFvarAxes
 	};
 
 	if (typeof window !== 'undefined') {

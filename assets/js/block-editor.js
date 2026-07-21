@@ -2427,10 +2427,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         ? window.typostHooks.applyFilters('typost_weight_control', 'default', this.state.selectedFontId)
                                         : 'default';
 
+                                    // 'hidden': suppress the weight control entirely (no wrapper, no hook)
+                                    if (weightControlType === 'hidden') return null;
+
                                     if (weightControlType !== 'default') {
                                         return (
                                             <div className="typost-fontweight-section">
-                                                <div className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+                                                {/* key: remount (and re-fire the action) when the font changes */}
+                                                <div key={`typost-weight-${this.state.selectedFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
                                                     if (el && !el._hooked) {
                                                         el._hooked = true;
                                                         window.typostHooks.doAction('typost_weight_control', el, this.state);
@@ -2454,8 +2458,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     );
                                 })()}
 
-                                {/* Extension hook point: after font controls (e.g., Variable Font axes) */}
-                                <div className="typost-hook-point" data-hook="typost_inline_after_font_controls" ref={(el) => {
+                                {/* Extension hook point: after font controls (e.g., Variable Font axes).
+                                    key: remount (and re-fire the action) when the font changes */}
+                                <div key={`typost-afc-${this.state.selectedFontId || 'none'}`} className="typost-hook-point" data-hook="typost_inline_after_font_controls" ref={(el) => {
                                     if (el && !el._hooked) {
                                         el._hooked = true;
                                         window.typostHooks.doAction('typost_inline_after_font_controls', el, this.state);

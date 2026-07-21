@@ -57,6 +57,10 @@ msgstr ""
 msgid "+ Add Axis"
 msgstr ""
 
+#: variable-fonts.php
+msgid "Detect Axes from Font File"
+msgstr ""
+
 #: variable-fonts.php:435
 msgid "Hide weight selection"
 msgstr ""
@@ -100,4 +104,46 @@ msgstr ""
 
 #: assets/js/editor.js
 msgid "Reset to defaults"
+msgstr ""
+
+#: assets/js/admin.js
+msgid "Detecting axes…"
+msgstr ""
+
+#. translators: %d: number of detected variable font axes.
+#: assets/js/admin.js
+#, javascript-format
+msgid "Detected %d axes. Review below, then Save Changes to store them."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "No variable axes found in the resolved font file (no fvar table)."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "Font data not found on this page."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "No font file could be found for this font."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "The font file download was blocked by the remote server (CORS)."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "The font file could not be downloaded."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "The font file format is not supported."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "The font-parsing libraries could not be loaded."
+msgstr ""
+
+#: assets/js/admin.js
+msgid "The font file could not be read."
 msgstr ""

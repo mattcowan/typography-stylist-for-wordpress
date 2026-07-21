@@ -102,3 +102,49 @@ msgstr "Ejes de fuente variable"
 #: assets/js/editor.js
 msgid "Reset to defaults"
 msgstr "Restablecer valores predeterminados"
+
+#: variable-fonts.php
+msgid "Detect Axes from Font File"
+msgstr "Detectar ejes desde el archivo de fuente"
+
+#: assets/js/admin.js
+msgid "Detecting axes…"
+msgstr "Detectando ejes…"
+
+#. translators: %d: number of detected variable font axes.
+#: assets/js/admin.js
+#, javascript-format
+msgid "Detected %d axes. Review below, then Save Changes to store them."
+msgstr "Se detectaron %d ejes. Revísalos abajo y luego pulsa Guardar cambios para almacenarlos."
+
+#: assets/js/admin.js
+msgid "No variable axes found in the resolved font file (no fvar table)."
+msgstr "No se encontraron ejes variables en el archivo de fuente resuelto (sin tabla fvar)."
+
+#: assets/js/admin.js
+msgid "Font data not found on this page."
+msgstr "No se encontraron datos de la fuente en esta página."
+
+#: assets/js/admin.js
+msgid "No font file could be found for this font."
+msgstr "No se pudo encontrar ningún archivo para esta fuente."
+
+#: assets/js/admin.js
+msgid "The font file download was blocked by the remote server (CORS)."
+msgstr "La descarga del archivo de fuente fue bloqueada por el servidor remoto (CORS)."
+
+#: assets/js/admin.js
+msgid "The font file could not be downloaded."
+msgstr "No se pudo descargar el archivo de fuente."
+
+#: assets/js/admin.js
+msgid "The font file format is not supported."
+msgstr "El formato del archivo de fuente no es compatible."
+
+#: assets/js/admin.js
+msgid "The font-parsing libraries could not be loaded."
+msgstr "No se pudieron cargar las bibliotecas de análisis de fuentes."
+
+#: assets/js/admin.js
+msgid "The font file could not be read."
+msgstr "No se pudo leer el archivo de fuente."

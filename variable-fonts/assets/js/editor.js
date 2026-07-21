@@ -37,6 +37,17 @@
 		return (axes && axes.length > 0) ? axes : null;
 	}
 
+	/**
+	 * Get {isVariable, hideWeights} flags for a given numeric font ID.
+	 * Returns null when the font is not flagged variable.
+	 */
+	function getFlagsForFont(fontId) {
+		if (!fontId) return null;
+		var data = window.typostData && window.typostData.variableFontFlags;
+		if (!data) return null;
+		return data[String(fontId)] || null;
+	}
+
 	// Pure parsing/building utilities live in lib/variation-utils.js
 	// (enqueued as a dependency; shared with Jest tests).
 	var parseVariationSettings = window.typostVFUtils.parseVariationSettings;
@@ -274,6 +285,8 @@
 			// Hook container overrides
 			'[data-hook="typost_weight_control"] .typost-vf-axes-panel { margin: 0; }',
 			'[data-hook="typost_inspector_after_font_weight"] .typost-vf-other-axes { border-top: none; padding-top: 0; }',
+			// Inline format modal: bare hook container — match native section metrics
+			'[data-hook="typost_inline_after_font_controls"] .typost-vf-other-axes { margin: 0 1rem; padding: 16px 20px; border-top: none; border-bottom: 1px solid #ddd; }',
 		].join('\n');
 
 		var styleEl = document.createElement('style');
@@ -286,7 +299,7 @@
 	// -------------------------------------------------------------------------
 
 	function renderWeightControl(containerEl, state) {
-		var fontId = state.selectedFontId || state.fontId;
+		var fontId = window.typostVFUtils.resolveWeightControlFontId(state);
 		var axes = getAxesForFont(fontId);
 		if (!axes) return;
 
@@ -333,8 +346,7 @@
 	}
 
 	function renderOtherAxes(containerEl, state, editorType) {
-		var fontId = state.selectedFontId || state.fontId ||
-			state.inlineFontFamily || state.inlineFontFamilyAtSelection;
+		var fontId = window.typostVFUtils.resolveAxesFontId(state);
 		var axes = getAxesForFont(fontId);
 		if (!axes) return;
 
@@ -385,13 +397,15 @@
 	}
 
 	waitForHooks(function() {
-		// Filter: Replace weight dropdown with slider when font has wght axis
+		// Filter: replace the weight dropdown with a slider when the font has a
+		// wght axis, or hide it entirely when the font's flags say hideWeights
+		// (variable font with no wght axis, or explicit admin choice).
 		window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
-			var axes = getAxesForFont(fontId);
-			if (axes && axes.some(function(a) { return a.tag === 'wght'; })) {
-				return 'variable';
-			}
-			return type;
+			return window.typostVFUtils.resolveWeightControlType(
+				type,
+				getAxesForFont(fontId),
+				getFlagsForFont(fontId)
+			);
 		}, 10);
 
 		// Action: Render wght slider into weight control hook container

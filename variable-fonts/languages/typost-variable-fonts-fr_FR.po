@@ -102,3 +102,49 @@ msgstr "Axes de police variable"
 #: assets/js/editor.js
 msgid "Reset to defaults"
 msgstr "Réinitialiser aux valeurs par défaut"
+
+#: variable-fonts.php
+msgid "Detect Axes from Font File"
+msgstr "Détecter les axes depuis le fichier de police"
+
+#: assets/js/admin.js
+msgid "Detecting axes…"
+msgstr "Détection des axes…"
+
+#. translators: %d: number of detected variable font axes.
+#: assets/js/admin.js
+#, javascript-format
+msgid "Detected %d axes. Review below, then Save Changes to store them."
+msgstr "%d axes détectés. Vérifiez ci-dessous, puis cliquez sur Enregistrer les modifications pour les sauvegarder."
+
+#: assets/js/admin.js
+msgid "No variable axes found in the resolved font file (no fvar table)."
+msgstr "Aucun axe variable trouvé dans le fichier de police résolu (pas de table fvar)."
+
+#: assets/js/admin.js
+msgid "Font data not found on this page."
+msgstr "Données de police introuvables sur cette page."
+
+#: assets/js/admin.js
+msgid "No font file could be found for this font."
+msgstr "Aucun fichier de police n'a pu être trouvé pour cette police."
+
+#: assets/js/admin.js
+msgid "The font file download was blocked by the remote server (CORS)."
+msgstr "Le téléchargement du fichier de police a été bloqué par le serveur distant (CORS)."
+
+#: assets/js/admin.js
+msgid "The font file could not be downloaded."
+msgstr "Le fichier de police n'a pas pu être téléchargé."
+
+#: assets/js/admin.js
+msgid "The font file format is not supported."
+msgstr "Le format du fichier de police n'est pas pris en charge."
+
+#: assets/js/admin.js
+msgid "The font-parsing libraries could not be loaded."
+msgstr "Les bibliothèques d'analyse de polices n'ont pas pu être chargées."
+
+#: assets/js/admin.js
+msgid "The font file could not be read."
+msgstr "Le fichier de police n'a pas pu être lu."
