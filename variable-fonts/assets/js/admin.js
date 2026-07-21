@@ -20,8 +20,8 @@
      */
     function createAxisRowHtml() {
         return '<div class="typost-vf-axis-row">' +
-            '<input type="text" class="typost-vf-axis-tag" value="" placeholder="' + __( 'Tag', 'typost-variable-fonts' ) + '" maxlength="4" size="5" />' +
-            '<input type="text" class="typost-vf-axis-name" value="" placeholder="' + __( 'Name', 'typost-variable-fonts' ) + '" size="12" />' +
+            '<input type="text" class="typost-vf-axis-tag" value="" placeholder="' + __( 'Tag', 'typost-variable-fonts' ) + '" aria-label="' + __( 'Axis tag', 'typost-variable-fonts' ) + '" maxlength="4" size="5" />' +
+            '<input type="text" class="typost-vf-axis-name" value="" placeholder="' + __( 'Name', 'typost-variable-fonts' ) + '" aria-label="' + __( 'Axis name', 'typost-variable-fonts' ) + '" size="12" />' +
             '<label class="typost-vf-axis-num-label">' + __( 'Min', 'typost-variable-fonts' ) + ' ' +
                 '<input type="number" class="typost-vf-axis-min" value="0" step="any" size="6" />' +
             '</label>' +
@@ -118,7 +118,9 @@
     }
 
     /**
-     * Auto-update the hide-weights checkbox based on whether a wght axis exists.
+     * Auto-update the hide-weights checkbox: a variable font hides the
+     * discrete weight checkboxes by default — with a wght axis the slider
+     * replaces them, and without one the weight is fixed by the binary.
      * Only auto-updates if the user hasn't manually toggled the checkbox.
      *
      * @param {jQuery} $container The .typost-vf-settings element.
@@ -128,7 +130,7 @@
         // Only auto-update if not manually overridden.
         if ($checkbox.data('manual')) return;
 
-        var shouldHide = !hasWghtAxis($container);
+        var shouldHide = $container.find('.typost-vf-is-variable-checkbox').is(':checked');
         $checkbox.prop('checked', shouldHide);
         applyWeightVisibility($container, true);
     }
@@ -203,6 +205,63 @@
             'parse-failed': __( 'The font file could not be read.', 'typost-variable-fonts' )
         };
         return messages[reason] || messages['parse-failed'];
+    }
+
+    // All axes saves funnel through one chain: the REST endpoint does a
+    // read-modify-write on shared options, so concurrent saves (e.g. the
+    // fonts-added sweep detecting several kit families at once) can silently
+    // lose the earliest write. Serializing the requests removes the race.
+    var saveChain = Promise.resolve();
+
+    /**
+     * POST axes data for a font (string id) to the module's REST endpoint.
+     * Requests are serialized — each save starts after the previous settles.
+     *
+     * @param {string} fontStringId String font id (e.g. "kit-…", "adobe-…").
+     * @param {Object} payload      {axes, isVariable, hideWeights?}.
+     * @return {Promise}
+     */
+    function saveAxesRequest(fontStringId, payload) {
+        var run = saveChain.then(function() {
+            return Promise.resolve($.ajax({
+                url: typostVFAdmin.restUrl + fontStringId,
+                method: 'POST',
+                data: JSON.stringify(payload),
+                contentType: 'application/json',
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('X-WP-Nonce', typostVFAdmin.nonce);
+                }
+            }));
+        });
+        // Keep the chain alive whether or not this save succeeds.
+        saveChain = run.then(function() {}, function() {});
+        return run;
+    }
+
+    /**
+     * Detect axes for one newly added font entry and save them if found.
+     *
+     * @param {string} source REST-returned entry source: 'uploaded'|'adobe'.
+     * @param {Object} entry  Font entry as returned by the add/upload REST call.
+     * @return {Promise<boolean>} Whether axes were detected and saved.
+     */
+    function detectAndSaveAxes(source, entry) {
+        if (!entry || !entry.id) return Promise.resolve(false);
+        return window.typostGlyphs.loadAndParseFont({
+            source: source,
+            entry: entry,
+            fontId: entry.font_id,
+            weight: '400'
+        }).then(function(result) {
+            if (!result || !result.ok) return false;
+            // Metadata-only: read the fvar axis records, then drop the font.
+            var fvar = result.font && result.font.tables && result.font.tables.fvar;
+            var axes = window.typostVFUtils.mapFvarAxes(fvar && fvar.axes, registeredAxes);
+            if (!axes.length) return false;
+            // Omit hideWeights: the backend auto-derives it from the axes.
+            return saveAxesRequest(entry.id, { axes: axes, isVariable: true })
+                .then(function() { return true; }, function() { return false; });
+        }, function() { return false; });
     }
 
     /**
@@ -399,19 +458,46 @@
                 if ($hideWeightsCheckbox.data('manual')) {
                     payload.hideWeights = $hideWeightsCheckbox.is(':checked');
                 }
-                var saveRequest = $.ajax({
-                    url: typostVFAdmin.restUrl + fontId,
-                    method: 'POST',
-                    data: JSON.stringify(payload),
-                    contentType: 'application/json',
-                    beforeSend: function(xhr) {
-                        xhr.setRequestHeader('X-WP-Nonce', typostVFAdmin.nonce);
-                    }
-                });
+                var saveRequest = saveAxesRequest(fontId, payload);
                 if (data && typeof data.waitUntil === 'function') {
-                    data.waitUntil(Promise.resolve(saveRequest));
+                    data.waitUntil(saveRequest);
                 }
             });
+        });
+
+        // Auto-detect axes for newly added fonts (ZIP upload or Adobe kit):
+        // run the same metadata-only fvar detection as the Detect button for
+        // each new entry, persist axes where found, and let core hold its
+        // reload until the sweep settles. Static fonts and fetch failures
+        // are skipped silently — they simply stay non-variable.
+        $(document).on('typost:fonts-added', function(e, data) {
+            if (!data || typeof data.waitUntil !== 'function') return;
+            var sources = { uploaded: 'uploaded', adobe: 'adobe' };
+            var source = sources[data.type];
+            var fonts = data.fonts || [];
+            if (!source || !fonts.length || !canDetect()) return;
+
+            bootstrapGlyphsData();
+
+            var sweep = Promise.all(fonts.map(function(entry) {
+                return detectAndSaveAxes(source, entry);
+            })).then(function(results) {
+                var detected = results.filter(Boolean).length;
+                if (detected && data.$message && data.$message.length) {
+                    data.$message.append(
+                        $('<div class="notice notice-success inline"></div>').append(
+                            $('<p></p>').text(sprintf(
+                                /* translators: 1: number of variable fonts detected, 2: total number of new fonts. */
+                                __( 'Variable font axes detected and saved for %1$d of %2$d new fonts.', 'typost-variable-fonts' ),
+                                detected,
+                                results.length
+                            ))
+                        )
+                    );
+                }
+            });
+
+            data.waitUntil(sweep);
         });
     });
 })(jQuery);

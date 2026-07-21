@@ -195,6 +195,14 @@
 	margin: 8px 0;
 }
 
+/* Inline format modal: the hook container is bare, so match the horizontal
+   inset of the native sections (margin 0 1rem + padding 16px 20px in core
+   block-editor.css) so the button aligns with the section headings */
+[data-hook="typost_inline_before_features"] .typost-glyphs-button-wrap {
+	margin: 8px 1rem;
+	padding: 0 20px;
+}
+
 /* Admin tab */
 .typost-glyphs-admin-tab {
 	max-width: 720px;

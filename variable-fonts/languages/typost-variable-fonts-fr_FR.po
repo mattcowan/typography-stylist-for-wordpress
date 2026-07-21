@@ -74,14 +74,6 @@ msgstr "Le tableau d'axes est requis"
 msgid "Settings saved successfully! Reloading page..."
 msgstr "Réglages enregistrés ! Rechargement de la page…"
 
-#: includes/admin-tab.php:43
-msgid "Fonts configured as variable fonts. Axes can be managed in each font's edit form under Custom Fonts, Adobe Fonts, or Custom Font Definitions."
-msgstr "Polices configurées comme polices variables. Les axes se gèrent dans le formulaire de modification de chaque police, sous Polices personnalisées, Adobe Fonts ou Définitions de polices personnalisées."
-
-#: includes/admin-tab.php
-msgid "No fonts have been configured as variable fonts yet."
-msgstr "Aucune police n'a encore été configurée comme police variable."
-
 #: includes/admin-tab.php
 msgid "Font"
 msgstr "Police"
@@ -148,3 +140,29 @@ msgstr "Les bibliothèques d'analyse de polices n'ont pas pu être chargées."
 #: assets/js/admin.js
 msgid "The font file could not be read."
 msgstr "Le fichier de police n'a pas pu être lu."
+
+#: assets/js/admin.js
+#, javascript-format
+msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
+msgstr "Axes de police variable détectés et enregistrés pour %1$d des %2$d nouvelles polices."
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis tag"
+msgstr "Balise de l'axe"
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis name"
+msgstr "Nom de l'axe"
+
+
+#: variable-fonts.php
+msgid "Variable"
+msgstr "Variable"
+
+#: variable-fonts.php
+msgid "Variable font — axes: %s"
+msgstr "Police variable — axes : %s"
+
+#: variable-fonts.php
+msgid "Configured as a variable font"
+msgstr "Configurée comme police variable"

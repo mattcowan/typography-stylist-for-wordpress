@@ -74,14 +74,6 @@ msgstr "Se requiere el array de ejes"
 msgid "Settings saved successfully! Reloading page..."
 msgstr "¡Ajustes guardados! Recargando página…"
 
-#: includes/admin-tab.php:43
-msgid "Fonts configured as variable fonts. Axes can be managed in each font's edit form under Custom Fonts, Adobe Fonts, or Custom Font Definitions."
-msgstr "Fuentes configuradas como fuentes variables. Los ejes se gestionan en el formulario de edición de cada fuente, en Fuentes personalizadas, Adobe Fonts o Definiciones de fuentes personalizadas."
-
-#: includes/admin-tab.php
-msgid "No fonts have been configured as variable fonts yet."
-msgstr "Todavía no se ha configurado ninguna fuente como fuente variable."
-
 #: includes/admin-tab.php
 msgid "Font"
 msgstr "Fuente"
@@ -148,3 +140,29 @@ msgstr "No se pudieron cargar las bibliotecas de análisis de fuentes."
 #: assets/js/admin.js
 msgid "The font file could not be read."
 msgstr "No se pudo leer el archivo de fuente."
+
+#: assets/js/admin.js
+#, javascript-format
+msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
+msgstr "Se detectaron y guardaron ejes de fuente variable para %1$d de %2$d fuentes nuevas."
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis tag"
+msgstr "Etiqueta del eje"
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis name"
+msgstr "Nombre del eje"
+
+
+#: variable-fonts.php
+msgid "Variable"
+msgstr "Variable"
+
+#: variable-fonts.php
+msgid "Variable font — axes: %s"
+msgstr "Fuente variable — ejes: %s"
+
+#: variable-fonts.php
+msgid "Configured as a variable font"
+msgstr "Configurada como fuente variable"

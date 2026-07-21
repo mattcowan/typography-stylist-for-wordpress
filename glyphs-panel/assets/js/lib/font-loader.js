@@ -396,8 +396,12 @@
 				}
 				return response.text().then(function(cssText) {
 					var faces = parseSrcUrls(cssText);
-					// Match one of the kit's family names when possible
-					var families = (entry.font_families || []).map(function(f) {
+					// Match one of the kit's family names when possible.
+					// Modern per-family entries carry font_family (singular);
+					// legacy whole-kit entries carry a font_families array.
+					var familyList = entry.font_families ||
+						(entry.font_family ? [ entry.font_family ] : []);
+					var families = familyList.map(function(f) {
 						return String(f).toLowerCase();
 					});
 					var face = faces.filter(function(f) {

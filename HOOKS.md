@@ -221,6 +221,24 @@ add_filter('typost_admin_tabs', function($tabs) {
 - `label` (string) — Display text for the tab button
 - `priority` (int) — Sort order (lower = further left). Built-in tabs: Fonts=10, Features=20, Options=30, Accessibility=40, Replacements=50, Help=100
 
+#### `typost_font_card_badges`
+
+Filter the extension badge HTML appended after the source badge in each font card header on the Custom Fonts tab. Return accumulated HTML — always append to (never replace) the incoming value, since multiple extensions may add badges. Output is passed through `wp_kses_post()`.
+
+```php
+add_filter('typost_font_card_badges', function($badges, $font, $type) {
+    // $type is 'uploaded', 'adobe', 'manual', or 'wplibrary'
+    // $font is the entry being rendered (wplibrary entries have slug, not id)
+    if (my_extension_applies_to($font)) {
+        $badges .= '<span class="typost-font-type-badge my-badge">' .
+            esc_html__('My Badge', 'my-text-domain') . '</span>';
+    }
+    return $badges;
+}, 10, 3);
+```
+
+The bundled Variable Fonts module uses this to show a "Variable" pill (with the configured axis tags in its tooltip) on variable fonts.
+
 #### `typost_available_features`
 
 Filter the list of available OpenType features.
@@ -434,6 +452,27 @@ $(document).on('typost:font-saved', function(e, data) {
 ```
 
 **`waitUntil` (since 2.1.0):** core reloads the page after a font save. If your extension saves its own data asynchronously on this event, register the request via `data.waitUntil(promise)` — core waits for all registered promises to settle (with a 5-second cap) before reloading, instead of the old fixed 1500 ms timeout your request had to race.
+
+#### `typost:fonts-added`
+
+jQuery event triggered on `$(document)` after new fonts are successfully added in the admin — a webfont kit ZIP upload or an Adobe Fonts kit. Use this to post-process brand-new entries before the page reloads (e.g. the bundled Variable Fonts module auto-detects fvar axes here).
+
+```javascript
+$(document).on('typost:fonts-added', function(e, data) {
+    // data.type      — How the fonts were added: 'uploaded' or 'adobe'
+    // data.fonts     — Array of the new font entries as returned by the REST endpoint
+    //                  (each has id, font_id, and source-specific fields like
+    //                  css_content for uploads or css_url/font_family for Adobe)
+    // data.$message  — jQuery element of the form's message area (append notices here)
+    // data.waitUntil — Register a promise the page reload waits on
+    var work = processNewFonts(data.fonts); // e.g. detection + $.ajax saves
+    if (typeof data.waitUntil === 'function') {
+        data.waitUntil(work);
+    }
+});
+```
+
+**`waitUntil`:** same contract as `typost:font-saved`, but with a 15-second cap — listeners here may download and parse font binaries, which takes longer than a settings save. The reload also waits a minimum delay so the success notice stays readable.
 
 ### Lifecycle Hooks
 

@@ -77,14 +77,6 @@ msgstr ""
 msgid "Settings saved successfully! Reloading page..."
 msgstr ""
 
-#: includes/admin-tab.php:43
-msgid "Fonts configured as variable fonts. Axes can be managed in each font's edit form under Custom Fonts, Adobe Fonts, or Custom Font Definitions."
-msgstr ""
-
-#: includes/admin-tab.php
-msgid "No fonts have been configured as variable fonts yet."
-msgstr ""
-
 #: includes/admin-tab.php
 msgid "Font"
 msgstr ""
@@ -146,4 +138,30 @@ msgstr ""
 
 #: assets/js/admin.js
 msgid "The font file could not be read."
+msgstr ""
+
+#: assets/js/admin.js
+#, javascript-format
+msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
+msgstr ""
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis tag"
+msgstr ""
+
+#: variable-fonts.php assets/js/admin.js
+msgid "Axis name"
+msgstr ""
+
+
+#: variable-fonts.php
+msgid "Variable"
+msgstr ""
+
+#: variable-fonts.php
+msgid "Variable font — axes: %s"
+msgstr ""
+
+#: variable-fonts.php
+msgid "Configured as a variable font"
 msgstr ""

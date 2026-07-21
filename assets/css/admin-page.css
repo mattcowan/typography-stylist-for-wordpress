@@ -792,7 +792,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 /* .typost-font-header styles are defined in the unified font list section */
 
-.typost-font-header h4 {
+.typost-font-header h3 {
     margin: 0;
     font-size: var(--typost-font-size-xl);
 }
@@ -1595,7 +1595,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     color: var(--typost-color-primary);
 }
 
-.typost-font-expand-toggle h4 {
+.typost-font-expand-toggle h3 {
     margin: 0;
     font-size: 22px;
     font-weight: 400;
@@ -1635,12 +1635,13 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-wpl-family {
     font-size: var(--typost-font-size-xs);
-    color: #666;
-    background: #f0f0f1;
-    border: 1px solid #ddd;
+    color: var(--typost-text-secondary);
+    background: var(--typost-bg-code);
+    border: 1px solid var(--typost-border-default);
     border-radius: 3px;
     padding: 2px 8px;
     margin-left: 10px;
+    margin-right: 10px;
     flex-shrink: 0;
     font-family: monospace;
 }
@@ -1694,8 +1695,8 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     margin-right: 10px;
 }
 
-/* WP Library read-only card — h4 sits directly in header without a toggle button */
-.typost-wpl-card h4 {
+/* WP Library read-only card — h3 sits directly in header without a toggle button */
+.typost-wpl-card h3 {
     font-size: 22px;
     font-weight: 400;
     margin: 0;
@@ -1853,6 +1854,20 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     background: var(--typost-color-primary-dark);
     color: #0f1729;
     border-color: var(--typost-color-primary-dark);
+}
+
+/* Alice blue: default WP button text (#007cba) drops below 4.5:1 on the
+   tinted panel backgrounds — give buttons an explicit surface background
+   and the darker scheme primary */
+[data-color-scheme="alice-blue"] .button:not(.button-primary) {
+    background: var(--typost-bg-surface);
+    color: var(--typost-color-primary-dark);
+    border-color: var(--typost-color-primary-dark);
+}
+
+[data-color-scheme="alice-blue"] .button:not(.button-primary):hover {
+    background: var(--typost-bg-surface-alt);
+    color: var(--typost-color-primary-dark);
 }
 
 /* High contrast: override WP default #2271b1 buttons (~4.6:1) with #0050a0 (~7.85:1 AAA) */

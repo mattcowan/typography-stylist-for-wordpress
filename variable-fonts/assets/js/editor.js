@@ -397,9 +397,10 @@
 	}
 
 	waitForHooks(function() {
-		// Filter: replace the weight dropdown with a slider when the font has a
-		// wght axis, or hide it entirely when the font's flags say hideWeights
-		// (variable font with no wght axis, or explicit admin choice).
+		// Filter: hideWeights gates everything — when set, a wght axis renders
+		// the slider (no wght axis hides the weight control entirely); when
+		// unchecked in admin, the standard dropdown is kept even for wght
+		// fonts (non-wght axes still render in their own panel).
 		window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
 			return window.typostVFUtils.resolveWeightControlType(
 				type,

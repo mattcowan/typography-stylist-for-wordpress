@@ -81,10 +81,6 @@ msgstr "Procesando..."
 msgid "Upload Font Kit"
 msgstr "Cargar Kit de Fuentes"
 
-#: typography-stylist.php:404
-msgid "Please enter a project name."
-msgstr "Por favor, introduce un nombre de proyecto."
-
 #: typography-stylist.php:405
 msgid "Please paste the Adobe Fonts embed code."
 msgstr "Por favor, pega el código de inserción de Adobe Fonts."
@@ -755,10 +751,6 @@ msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages wh
 msgstr "Consejo: Las fuentes agregadas en Ajustes → Typography Stylist solo se cargan en las páginas donde se usan, manteniendo tu sitio rápido."
 
 #: blocks/typography-stylist/edit.js
-msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
-msgstr "Elige una fuente personalizada. Las fuentes solo se cargan en las páginas donde se usan."
-
-#: blocks/typography-stylist/edit.js
 msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
 msgstr "El modo responsivo usa CSS clamp() con tamaños separados para móvil, tableta y escritorio."
 
@@ -767,32 +759,8 @@ msgid "OpenType features are advanced typographic capabilities built into font f
 msgstr "Las características OpenType son capacidades tipográficas avanzadas integradas en los archivos de fuentes, como ligaduras y alternativas estilísticas. No todas las fuentes admiten todas las características."
 
 #: assets/js/block-editor.js
-msgid "Choose a custom font. Fonts only load on pages where used."
-msgstr "Elige una fuente personalizada. Las fuentes solo se cargan en las páginas usadas."
-
-#: assets/js/block-editor.js
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr "El modo responsivo usa CSS clamp() para un dimensionamiento fluido entre pantallas."
-
-#: assets/js/block-editor.js
-msgid "Tips"
-msgstr "Consejos"
-
-#: assets/js/block-editor.js
-msgid "Changes apply instantly to your selected text as live preview."
-msgstr "Los cambios se aplican instantáneamente al texto seleccionado como vista previa en vivo."
-
-#: assets/js/block-editor.js
-msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
-msgstr "Usa Ctrl+Z (Cmd+Z en Mac) para deshacer cambios individuales."
-
-#: assets/js/block-editor.js
-msgid "Fonts only load on pages where they are used, keeping your site fast."
-msgstr "Las fuentes solo se cargan en las páginas donde se usan, manteniendo tu sitio rápido."
-
-#: assets/js/block-editor.js
-msgid "For more control over accessibility, use the Typography Stylist block instead."
-msgstr "Para más control sobre la accesibilidad, usa el bloque Typography Stylist en su lugar."
 
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
@@ -1986,3 +1954,11 @@ msgid "%d uploaded font is not yet registered in the WordPress Font Library. Reg
 msgid_plural "%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
 msgstr[0] "%d fuente subida aún no está registrada en la biblioteca de fuentes de WordPress. Registrarla la hace disponible en todo el sitio (Apariencia → Editor) y todo sigue funcionando exactamente igual: el contenido existente nunca se ve afectado, y puede deshacerse fuente por fuente."
 msgstr[1] "%d fuentes subidas aún no están registradas en la biblioteca de fuentes de WordPress. Registrarlas las hace disponibles en todo el sitio (Apariencia → Editor) y todo sigue funcionando exactamente igual: el contenido existente nunca se ve afectado, y puede deshacerse fuente por fuente."
+
+#: assets/js/block-editor.js
+msgid "Tip: Drag the title bar to reposition this panel."
+msgstr "Consejo: arrastra la barra de título para reposicionar este panel."
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
+msgstr "Los cambios se aplican al instante, pulsa Ctrl+Z (Cmd+Z en Mac) para deshacer."

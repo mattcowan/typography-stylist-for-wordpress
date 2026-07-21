@@ -18,7 +18,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
     const { Component, Fragment } = wp.element;
-    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice, Tooltip } = wp.components;
+    const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
     const { compose, debounce } = wp.compose;
 
@@ -339,6 +339,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Session storage might not be available
             }
 
+            // Check if user has dismissed the modal tips notice (persists per browser)
+            let tipsDismissed = false;
+            try {
+                tipsDismissed = localStorage.getItem('typography_stylist_hide_modal_tips') === 'true';
+            } catch (e) {
+                // Local storage might not be available
+            }
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -357,6 +365,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 canConvert: true,
                 showClearConfirmation: false,
                 dontShowClearWarning: hideWarning,
+                tipsDismissed: tipsDismissed,
                 // Inline features cached when popover opens (for inline editor toolbar)
                 // Note: Typographic Stylist block sidebar (edit.js) uses useMemo for similar optimization
                 inlineFeatures: [],
@@ -411,6 +420,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.convertToBlock = this.convertToBlock.bind(this);
 
             this.applyFeatureFromPreview = this.applyFeatureFromPreview.bind(this);
+            this.dismissTips = this.dismissTips.bind(this);
             // Modal drag/resize handlers
             this.initializeModalPosition = this.initializeModalPosition.bind(this);
             this.handleDragStart = this.handleDragStart.bind(this);
@@ -572,33 +582,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 });
             };
             window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
-        }
-
-        /**
-         * Render WCAG-compliant info tooltip.
-         * Uses Button for keyboard focusability, Tooltip for hover/focus display.
-         * @param {string} text - Plain text tooltip content
-         * @returns {JSX.Element}
-         */
-        renderInfoTip(text) {
-            return (
-                <Tooltip text={text}>
-                    <Button
-                        icon="info-outline"
-                        label={text}
-                        className="typost-info-tooltip-trigger"
-                        isSmall
-                        style={{
-                            minWidth: '20px',
-                            height: '20px',
-                            padding: 0,
-                            opacity: 0.5,
-                            marginLeft: '4px',
-                            verticalAlign: 'middle',
-                        }}
-                    />
-                </Tooltip>
-            );
         }
 
         /**
@@ -1140,6 +1123,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     window.typostHooks.doAction('typost_inline_modal_closed');
                 }
             });
+        }
+
+        /**
+         * Dismiss the usage tips notice and remember the choice per browser.
+         */
+        dismissTips() {
+            this.setState({ tipsDismissed: true });
+            try {
+                localStorage.setItem('typography_stylist_hide_modal_tips', 'true');
+            } catch (e) {
+                // Local storage might not be available
+            }
         }
 
         /**
@@ -2357,18 +2352,24 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             }}>
                                 <div className="typost-popover-content">
 
-                                {/* Drag instruction notice - always visible */}
-                                <div className="typost-sticky-notice-wrapper">
-                                    {wp.element.createElement(Notice, {
-                                        status: 'info',
-                                        isDismissible: false,
-                                        className: 'typost-drag-notice'
-                                    },
-                                        wp.element.createElement('p', { style: { margin: 0 } },
-                                            '💡 ' + __('Tip: Drag the title bar to reposition this panel', 'typography-stylist')
-                                        )
-                                    )}
-                                </div>
+                                {/* Usage tips notice - dismissible, dismissal remembered per browser */}
+                                {!this.state.tipsDismissed && (
+                                    <div className="typost-sticky-notice-wrapper">
+                                        {wp.element.createElement(Notice, {
+                                            status: 'info',
+                                            isDismissible: true,
+                                            onRemove: this.dismissTips,
+                                            className: 'typost-drag-notice'
+                                        },
+                                            wp.element.createElement('p', { style: { margin: 0 } },
+                                                '💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')
+                                            ),
+                                            wp.element.createElement('p', { style: { margin: '4px 0 0' } },
+                                                __('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')
+                                            )
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">
@@ -2400,7 +2401,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 {/* Font Selector */}
                                 {hasFonts && (
                                     <div className="typost-font-section">
-                                        <h4>{__('Font Family', 'typography-stylist')} {this.renderInfoTip(__('Choose a custom font. Fonts only load on pages where used.', 'typography-stylist'))}</h4>
+                                        <h4>{__('Font Family', 'typography-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
                                             options={[
@@ -2469,7 +2470,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Font Size Controls */}
                                 <div className="typost-fontsize-section">
-                                    <h4>{__('Font Size', 'typography-stylist')} {this.renderInfoTip(__('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist'))}</h4>
+                                    <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
                                         options={[
@@ -2477,6 +2478,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             { label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
                                         ]}
                                         onChange={this.setFontSize}
+                                        help={fontSize === 'responsive' ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist') : undefined}
                                     />
 
                                     {fontSize === 'responsive' && (
@@ -2646,19 +2648,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         window.typostHooks.doAction('typost_inline_modal_bottom', el, this.state);
                                     }
                                 }} />
-
-                                {/* Collapsible Tips Section */}
-                                <details style={{ marginTop: '12px', fontSize: '12px', color: '#757575', borderTop: '1px solid #ddd', paddingTop: '8px' }}>
-                                    <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#2271b1', fontSize: '13px' }}>
-                                        {__('Tips', 'typography-stylist')}
-                                    </summary>
-                                    <ul style={{ marginTop: '8px', marginLeft: '16px', lineHeight: '1.6', listStyleType: 'disc' }}>
-                                        <li>{__('Changes apply instantly to your selected text as live preview.', 'typography-stylist')}</li>
-                                        <li>{__('Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes.', 'typography-stylist')}</li>
-                                        <li>{__('Fonts only load on pages where they are used, keeping your site fast.', 'typography-stylist')}</li>
-                                        <li>{__('For more control over accessibility, use the Typography Stylist block instead.', 'typography-stylist')}</li>
-                                    </ul>
-                                </details>
 
                                 {/* Action Buttons (v2.0.0 - live preview, no Apply button) */}
                                 {!showClearConfirmation && (

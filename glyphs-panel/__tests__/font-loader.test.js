@@ -240,3 +240,50 @@ describe('resetLoaderState', () => {
 		expect(() => resetLoaderState()).not.toThrow();
 	});
 });
+
+describe('resolveFontFile (adobe): family matching', () => {
+	const { resolveFontFile } = require('../assets/js/lib/font-loader.js');
+
+	const kitCss = [
+		'@font-face { font-family: "alpha-vf"; font-weight: 400; src: url(https://use.typekit.net/af/alpha.woff2) format("woff2"); }',
+		'@font-face { font-family: "beta-vf"; font-weight: 400; src: url(https://use.typekit.net/af/beta.woff2) format("woff2"); }'
+	].join('\n');
+
+	beforeEach(() => {
+		global.fetch = jest.fn().mockResolvedValue({
+			ok: true,
+			text: () => Promise.resolve(kitCss)
+		});
+	});
+
+	afterEach(() => {
+		delete global.fetch;
+	});
+
+	test('matches the entry font_family (singular, per-family entries)', async () => {
+		const result = await resolveFontFile({
+			source: 'adobe',
+			entry: { css_url: 'https://use.typekit.net/kit.css', font_family: 'beta-vf' }
+		});
+		expect(result.ok).toBe(true);
+		expect(result.url).toBe('https://use.typekit.net/af/beta.woff2');
+	});
+
+	test('still honors legacy font_families arrays', async () => {
+		const result = await resolveFontFile({
+			source: 'adobe',
+			entry: { css_url: 'https://use.typekit.net/kit.css', font_families: ['beta-vf'] }
+		});
+		expect(result.ok).toBe(true);
+		expect(result.url).toBe('https://use.typekit.net/af/beta.woff2');
+	});
+
+	test('falls back to the first face when the entry names no family', async () => {
+		const result = await resolveFontFile({
+			source: 'adobe',
+			entry: { css_url: 'https://use.typekit.net/kit.css' }
+		});
+		expect(result.ok).toBe(true);
+		expect(result.url).toBe('https://use.typekit.net/af/alpha.woff2');
+	});
+});

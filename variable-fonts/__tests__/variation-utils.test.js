@@ -119,8 +119,9 @@ describe('resolveWeightControlType', () => {
 		{ tag: 'CONX', name: 'Counter X', min: 1, max: 1000, default: 400 },
 	];
 
-	test('wght axis → variable (slider replaces dropdown)', () => {
-		expect(resolveWeightControlType('default', wghtAxes, null)).toBe('variable');
+	test('wght axis + hideWeights → variable (slider replaces dropdown)', () => {
+		expect(resolveWeightControlType('default', wghtAxes, { isVariable: true, hideWeights: true }))
+			.toBe('variable');
 	});
 
 	test('no wght axis + hideWeights flag → hidden', () => {
@@ -130,9 +131,13 @@ describe('resolveWeightControlType', () => {
 			.toBe('hidden');
 	});
 
-	test('wght axis wins over hideWeights', () => {
-		expect(resolveWeightControlType('default', wghtAxes, { isVariable: true, hideWeights: true }))
-			.toBe('variable');
+	test('wght axis with hideWeights unchecked → dropdown kept (no slider)', () => {
+		expect(resolveWeightControlType('default', wghtAxes, { isVariable: true, hideWeights: false }))
+			.toBe('default');
+	});
+
+	test('wght axis with no flags at all → dropdown kept', () => {
+		expect(resolveWeightControlType('default', wghtAxes, null)).toBe('default');
 	});
 
 	test('isVariable without hideWeights → passthrough (dropdown kept)', () => {

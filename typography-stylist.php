@@ -1109,7 +1109,6 @@ class Typost {
                 'processing' => esc_html__('Processing...', 'typography-stylist'),
                 'uploadButton' => esc_html__('Upload Font Kit', 'typography-stylist'),
                 // Adobe Fonts strings
-                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'typography-stylist'),
                 'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
                 'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
                 'adding' => esc_html__('Adding...', 'typography-stylist'),
@@ -1229,10 +1228,13 @@ class Typost {
                 break;
 
             case 'alice-blue':
+                // Primary + muted text darkened for WCAG AA: primary must hold
+                // 4.5:1 both as text on the darkest alice tint (#dce9f5) and
+                // as the white-text badge background.
                 $css = '.typost-admin-wrap {
-                    --typost-color-primary: #4a90c4;
-                    --typost-color-primary-dark: #2e6da4;
-                    --typost-color-primary-focus: rgba(74, 144, 196, 0.3);
+                    --typost-color-primary: #2a689e;
+                    --typost-color-primary-dark: #235a8c;
+                    --typost-color-primary-focus: rgba(42, 104, 158, 0.3);
                     --typost-bg-page: #f0f8ff;
                     --typost-bg-surface: #ffffff;
                     --typost-bg-surface-alt: #f7fbff;
@@ -1250,7 +1252,7 @@ class Typost {
                     --typost-border-input: #7ea5c3;
                     --typost-text-primary: #1a2a3a;
                     --typost-text-secondary: #4a6580;
-                    --typost-text-muted: #5a7a94;
+                    --typost-text-muted: #44647c;
                     --typost-color-support-bg: #f0f8ff;
                 }';
                 break;
@@ -1278,10 +1280,10 @@ class Typost {
                     --typost-text-primary: #f0f4f8;
                     --typost-text-secondary: #c4d0dc;
                     --typost-text-muted: #8fa4b8;
-                    --typost-text-on-primary: #ffffff;
-                    --typost-color-danger: #f06060;
-                    --typost-color-danger-hover: #f57575;
-                    --typost-color-danger-bright: #ff8888;
+                    --typost-text-on-primary: #0f1729;
+                    --typost-color-danger: #f58080;
+                    --typost-color-danger-hover: #f89090;
+                    --typost-color-danger-bright: #ff9999;
                     --typost-color-support-bg: #1a2510;
                     --typost-color-warning-bg: #2a2510;
                     --typost-color-warning-text: #e8b830;
@@ -1312,9 +1314,9 @@ class Typost {
                     --typost-text-primary: #000000;
                     --typost-text-secondary: #333333;
                     --typost-text-muted: #444444;
-                    --typost-color-danger: #cc0000;
-                    --typost-color-danger-hover: #ee0000;
-                    --typost-color-danger-bright: #ff0000;
+                    --typost-color-danger: #b00000;
+                    --typost-color-danger-hover: #990000;
+                    --typost-color-danger-bright: #b00000;
                 }';
                 break;
         }
@@ -1347,9 +1349,13 @@ class Typost {
         $notify  = isset($colors[2]) ? $colors[2] : '#0073aa';
         $action  = isset($colors[3]) ? $colors[3] : '#00a0d2';
 
-        // Use action color as primary, accent as primary-dark
-        $primary      = $action;
-        $primary_dark = $accent;
+        // Use action color as primary, accent as primary-dark. WP admin
+        // scheme action colors are often too light for AA text/badge use
+        // (e.g. default's #00a0d2 is 2.5:1 against white), so darken until
+        // the color holds 4.5:1 against white — which also guarantees it as
+        // readable text on the scheme's light tinted backgrounds below.
+        $primary      = $this->darken_to_contrast($action, 4.5);
+        $primary_dark = $this->darken_to_contrast($accent, 4.5);
 
         // Derive lighter variants by mixing with white
         $info_bg   = $this->mix_hex_color($primary, '#ffffff', 0.9);
@@ -1389,6 +1395,42 @@ class Typost {
         $b = round($c1[2] * (1 - $ratio) + $c2[2] * $ratio);
 
         return sprintf('#%02x%02x%02x', min(255, $r), min(255, $g), min(255, $b));
+    }
+
+    /**
+     * WCAG relative luminance of a hex color.
+     *
+     * @param string $color Hex color (e.g., '#2271b1').
+     * @return float Relative luminance (0-1).
+     */
+    private function relative_luminance($color) {
+        $rgb = array_map('hexdec', str_split(ltrim($color, '#'), 2));
+        $channels = array_map(function ($v) {
+            $v /= 255;
+            return $v <= 0.03928 ? $v / 12.92 : pow(($v + 0.055) / 1.055, 2.4);
+        }, $rgb);
+        return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+    }
+
+    /**
+     * Darken a color (by mixing toward black) until it reaches the target
+     * WCAG contrast ratio against white. Colors already meeting the target
+     * are returned unchanged.
+     *
+     * @param string $color  Hex color to adjust.
+     * @param float  $target Minimum contrast ratio against white (e.g., 4.5).
+     * @return string Adjusted hex color.
+     */
+    private function darken_to_contrast($color, $target) {
+        $adjusted = $color;
+        for ($i = 0; $i < 20; $i++) {
+            $ratio = 1.05 / ($this->relative_luminance($adjusted) + 0.05);
+            if ($ratio >= $target) {
+                return $adjusted;
+            }
+            $adjusted = $this->mix_hex_color($adjusted, '#000000', 0.08);
+        }
+        return $adjusted;
     }
 
     /**

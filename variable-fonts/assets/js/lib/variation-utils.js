@@ -143,6 +143,13 @@
 	/**
 	 * Decide how the standard weight control should render for a font.
 	 *
+	 * The hideWeights flag gates everything: without it (explicit admin
+	 * uncheck of "Hide weight selection", or no flag data at all) the
+	 * standard dropdown is kept even when a wght axis exists — the wght
+	 * slider is skipped, though non-wght axes still render in their own
+	 * panel. With hideWeights set, a wght axis renders the slider and its
+	 * absence hides the weight control entirely.
+	 *
 	 * @param {string} currentType Incoming filter value ('default' or another
 	 *                             extension's override — passed through).
 	 * @param {Array|null} axes    The font's axis definitions, or null.
@@ -151,6 +158,9 @@
 	 *                  'hidden' (no weight control at all), or currentType.
 	 */
 	function resolveWeightControlType(currentType, axes, flags) {
+		if (!flags || !flags.hideWeights) {
+			return currentType;
+		}
 		var hasWght = false;
 		if (axes) {
 			for (var i = 0; i < axes.length; i++) {
@@ -160,11 +170,7 @@
 				}
 			}
 		}
-		if (hasWght) return 'variable';
-		// isVariable without hideWeights deliberately keeps the dropdown —
-		// the user explicitly unchecked "Hide weight selection" in admin.
-		if (flags && flags.hideWeights) return 'hidden';
-		return currentType;
+		return hasWght ? 'variable' : 'hidden';
 	}
 
 	/**

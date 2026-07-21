@@ -24,8 +24,7 @@ import {
 	Popover,
 	Modal,
 	Button,
-	Notice,
-	Tooltip
+	Notice
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
@@ -119,32 +118,6 @@ const TSIcon = () => (
 	</svg>
 );
 
-/**
- * Inline info tooltip — WCAG 2.1 compliant.
- * Renders as a focusable Button with Tooltip on hover/focus.
- * Tooltip content is plain text only (no interactive elements).
- */
-function InfoTip({ text }) {
-	return (
-		<Tooltip text={text}>
-			<Button
-				icon="info-outline"
-				label={text}
-				className="typost-info-tooltip-trigger"
-				isSmall
-				style={{
-					minWidth: '20px',
-					height: '20px',
-					padding: 0,
-					opacity: 0.5,
-					marginLeft: '4px',
-					verticalAlign: 'middle',
-				}}
-			/>
-		</Tooltip>
-	);
-}
-
 export default function Edit({ attributes, setAttributes, clientId }) {
 	const {
 		content,
@@ -166,6 +139,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	} = attributes;
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+	// Usage tips notice dismissal — shares the same localStorage key as the
+	// inline format modal, so dismissing either hides both.
+	const [tipsDismissed, setTipsDismissed] = useState(() => {
+		try {
+			return localStorage.getItem('typography_stylist_hide_modal_tips') === 'true';
+		} catch (e) {
+			return false;
+		}
+	});
+	const dismissTips = () => {
+		setTipsDismissed(true);
+		try {
+			localStorage.setItem('typography_stylist_hide_modal_tips', 'true');
+		} catch (e) {
+			// Local storage might not be available
+		}
+	};
 	const [previewText, setPreviewText] = useState('');
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
@@ -2562,17 +2552,24 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								height: `calc(${modalHeight}px - 60px)`,
 								overflowY: 'auto'
 							}}>
-								{/* Drag instruction notice */}
-								<Notice
-									status="info"
-									isDismissible={false}
-									className="typost-drag-notice"
-									style={{ margin: '0 0 16px 0' }}
-								>
-									<p style={{ margin: 0 }}>
-										{'💡 ' + __('Tip: Drag the title bar to reposition this panel', 'typography-stylist')}
-									</p>
-								</Notice>
+								{/* Usage tips notice — same strings and dismissal flag as the
+								    inline format modal's notice */}
+								{!tipsDismissed && (
+									<Notice
+										status="info"
+										isDismissible={true}
+										onRemove={dismissTips}
+										className="typost-drag-notice"
+										style={{ margin: '0 0 16px 0' }}
+									>
+										<p style={{ margin: 0 }}>
+											{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
+										</p>
+										<p style={{ margin: '4px 0 0' }}>
+											{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
+										</p>
+									</Notice>
+								)}
 
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
@@ -3055,7 +3052,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 				{fontOptions.length > 0 && (
 					<PanelBody title={__('Font Family', 'typography-stylist')} initialOpen={false}>
-						<InfoTip text={__('Choose a custom font. Fonts only load on pages where they are used, keeping your site fast.', 'typography-stylist')} />
 						<SelectControl
 							value={fontId ? String(fontId) : (fontFamily || '')}
 							options={[
@@ -3162,7 +3158,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}} />
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
-					<InfoTip text={__('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')} />
 					<SelectControl
 						value={fontSize}
 						options={[
@@ -3170,6 +3165,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							{ label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
 						]}
 						onChange={(value) => setAttributes({ fontSize: value })}
+						help={fontSize === 'responsive' ? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist') : undefined}
 					/>
 
 					{fontSize === 'responsive' && (
@@ -3255,7 +3251,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				}} />
 
 				<PanelBody title={__('OpenType Features', 'typography-stylist')} initialOpen={true}>
-					<InfoTip text={__('OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features.', 'typography-stylist')} />
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '8px' }}>
+						{__('OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features.', 'typography-stylist')}
+					</p>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
 						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
 					</p>
