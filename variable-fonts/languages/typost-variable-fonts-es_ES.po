@@ -12,80 +12,63 @@ msgstr ""
 "Language: es\n"
 "X-Domain: typost-variable-fonts\n"
 
-#: variable-fonts.php:352
-msgid "Variable Fonts"
-msgstr "Fuentes variables"
-
-#: variable-fonts.php:399
+#: variable-fonts.php:385
 msgid "Variable Font"
 msgstr "Fuente variable"
 
-#: variable-fonts.php:401
+#: variable-fonts.php:387
 msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
 msgstr "Activa para definir ejes de fuente variable (peso, anchura, inclinación, etc.) con rangos personalizados."
 
-#: variable-fonts.php:409
+#: variable-fonts.php:395
 #: assets/js/editor.js
 msgid "Tag"
 msgstr "Etiqueta"
 
-#: variable-fonts.php:410
+#: variable-fonts.php:396
 #: assets/js/editor.js
 msgid "Name"
 msgstr "Nombre"
 
-#: variable-fonts.php:411
+#: variable-fonts.php:397
 #: assets/js/editor.js
 msgid "Min"
 msgstr "Mín"
 
-#: variable-fonts.php:414
+#: variable-fonts.php:400
 #: assets/js/editor.js
 msgid "Max"
 msgstr "Máx"
 
-#: variable-fonts.php:417
+#: variable-fonts.php:403
 #: assets/js/editor.js
 msgid "Default"
 msgstr "Predeterminado"
 
-#: variable-fonts.php:420
+#: variable-fonts.php:406
 #: assets/js/editor.js
 msgid "Remove axis"
 msgstr "Eliminar eje"
 
-#: variable-fonts.php:425
+#: variable-fonts.php:412
 msgid "+ Add Axis"
 msgstr "+ Añadir eje"
 
-#: variable-fonts.php:435
+#: variable-fonts.php:427
 msgid "Hide weight selection"
 msgstr "Ocultar la selección de peso"
 
-#: variable-fonts.php:437
+#: variable-fonts.php:429
 msgid "Hide the standard weight checkboxes above. Auto-enabled when no wght axis is defined."
 msgstr "Oculta las casillas de peso estándar de arriba. Se activa automáticamente cuando no hay eje wght definido."
 
-#: variable-fonts.php:590
+#: variable-fonts.php:599
 msgid "Axes array is required"
 msgstr "Se requiere el array de ejes"
 
-#: variable-fonts.php:706
+#: variable-fonts.php:733
 msgid "Settings saved successfully! Reloading page..."
 msgstr "¡Ajustes guardados! Recargando página…"
-
-#: includes/admin-tab.php
-msgid "Font"
-msgstr "Fuente"
-
-#: includes/admin-tab.php
-msgid "Axes"
-msgstr "Ejes"
-
-#: includes/admin-tab.php:71
-#, php-format
-msgid "default: %s"
-msgstr "predeterminado: %s"
 
 #: assets/js/editor.js
 msgid "Variable Font Axes"
@@ -95,7 +78,7 @@ msgstr "Ejes de fuente variable"
 msgid "Reset to defaults"
 msgstr "Restablecer valores predeterminados"
 
-#: variable-fonts.php
+#: variable-fonts.php:416
 msgid "Detect Axes from Font File"
 msgstr "Detectar ejes desde el archivo de fuente"
 
@@ -146,23 +129,26 @@ msgstr "No se pudo leer el archivo de fuente."
 msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
 msgstr "Se detectaron y guardaron ejes de fuente variable para %1$d de %2$d fuentes nuevas."
 
-#: variable-fonts.php assets/js/admin.js
+#: variable-fonts.php:395
+#: assets/js/admin.js
 msgid "Axis tag"
 msgstr "Etiqueta del eje"
 
-#: variable-fonts.php assets/js/admin.js
+#: variable-fonts.php:396
+#: assets/js/admin.js
 msgid "Axis name"
 msgstr "Nombre del eje"
 
-
-#: variable-fonts.php
+#: variable-fonts.php:353
 msgid "Variable"
 msgstr "Variable"
 
-#: variable-fonts.php
+#. translators: %s: comma-separated list of variable font axis tags.
+#: variable-fonts.php:347
+#, php-format
 msgid "Variable font — axes: %s"
 msgstr "Fuente variable — ejes: %s"
 
-#: variable-fonts.php
+#: variable-fonts.php:348
 msgid "Configured as a variable font"
 msgstr "Configurada como fuente variable"

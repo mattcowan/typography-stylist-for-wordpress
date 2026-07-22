@@ -11,83 +11,66 @@ msgstr ""
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Domain: typost-variable-fonts\n"
 
-#: variable-fonts.php:352
-msgid "Variable Fonts"
-msgstr ""
-
-#: variable-fonts.php:399
+#: variable-fonts.php:385
 msgid "Variable Font"
 msgstr ""
 
-#: variable-fonts.php:401
+#: variable-fonts.php:387
 msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
 msgstr ""
 
-#: variable-fonts.php:409
+#: variable-fonts.php:395
 #: assets/js/editor.js
 msgid "Tag"
 msgstr ""
 
-#: variable-fonts.php:410
+#: variable-fonts.php:396
 #: assets/js/editor.js
 msgid "Name"
 msgstr ""
 
-#: variable-fonts.php:411
+#: variable-fonts.php:397
 #: assets/js/editor.js
 msgid "Min"
 msgstr ""
 
-#: variable-fonts.php:414
+#: variable-fonts.php:400
 #: assets/js/editor.js
 msgid "Max"
 msgstr ""
 
-#: variable-fonts.php:417
+#: variable-fonts.php:403
 #: assets/js/editor.js
 msgid "Default"
 msgstr ""
 
-#: variable-fonts.php:420
+#: variable-fonts.php:406
 #: assets/js/editor.js
 msgid "Remove axis"
 msgstr ""
 
-#: variable-fonts.php:425
+#: variable-fonts.php:412
 msgid "+ Add Axis"
 msgstr ""
 
-#: variable-fonts.php
+#: variable-fonts.php:416
 msgid "Detect Axes from Font File"
 msgstr ""
 
-#: variable-fonts.php:435
+#: variable-fonts.php:427
 msgid "Hide weight selection"
 msgstr ""
 
-#: variable-fonts.php:437
+#: variable-fonts.php:429
 msgid "Hide the standard weight checkboxes above. Auto-enabled when no wght axis is defined."
 msgstr ""
 
-#: variable-fonts.php:590
+#: variable-fonts.php:599
 msgid "Axes array is required"
 msgstr ""
 
-#: variable-fonts.php:706
+#: variable-fonts.php:733
 msgid "Settings saved successfully! Reloading page..."
-msgstr ""
-
-#: includes/admin-tab.php
-msgid "Font"
-msgstr ""
-
-#: includes/admin-tab.php
-msgid "Axes"
-msgstr ""
-
-#: includes/admin-tab.php:71
-#, php-format
-msgid "default: %s"
 msgstr ""
 
 #: assets/js/editor.js
@@ -145,23 +128,26 @@ msgstr ""
 msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
 msgstr ""
 
-#: variable-fonts.php assets/js/admin.js
+#: variable-fonts.php:395
+#: assets/js/admin.js
 msgid "Axis tag"
 msgstr ""
 
-#: variable-fonts.php assets/js/admin.js
+#: variable-fonts.php:396
+#: assets/js/admin.js
 msgid "Axis name"
 msgstr ""
 
-
-#: variable-fonts.php
+#: variable-fonts.php:353
 msgid "Variable"
 msgstr ""
 
-#: variable-fonts.php
+#. translators: %s: comma-separated list of variable font axis tags.
+#: variable-fonts.php:347
+#, php-format
 msgid "Variable font — axes: %s"
 msgstr ""
 
-#: variable-fonts.php
+#: variable-fonts.php:348
 msgid "Configured as a variable font"
 msgstr ""

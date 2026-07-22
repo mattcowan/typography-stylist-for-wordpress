@@ -258,7 +258,8 @@
             var fvar = result.font && result.font.tables && result.font.tables.fvar;
             var axes = window.typostVFUtils.mapFvarAxes(fvar && fvar.axes, registeredAxes);
             if (!axes.length) return false;
-            // Omit hideWeights: the backend auto-derives it from the axes.
+            // Omit hideWeights: without a stored flag the backend defaults to
+            // hiding the discrete weight UI for variable fonts.
             return saveAxesRequest(entry.id, { axes: axes, isVariable: true })
                 .then(function() { return true; }, function() { return false; });
         }, function() { return false; });
@@ -454,7 +455,8 @@
                 var axes = collectAxesFromContainer($container);
                 var $hideWeightsCheckbox = $container.find('.typost-vf-hide-weights-checkbox');
                 var payload = { axes: axes, isVariable: true };
-                // Only send hideWeights when manually toggled; omitting it lets the backend auto-detect.
+                // Only send hideWeights when manually toggled; omitted, the backend
+                // falls back to its default (hidden for variable fonts).
                 if ($hideWeightsCheckbox.data('manual')) {
                     payload.hideWeights = $hideWeightsCheckbox.is(':checked');
                 }
