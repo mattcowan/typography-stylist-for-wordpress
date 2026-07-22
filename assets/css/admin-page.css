@@ -1642,8 +1642,26 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     padding: 2px 8px;
     margin-left: 10px;
     margin-right: 10px;
-    flex-shrink: 0;
     font-family: monospace;
+    /* Long fallback stacks (e.g. the System font) must never overlap the
+       font name, the Manage button, or the type pills: the chip shrinks
+       first, truncating with an ellipsis, and is capped so the name always
+       keeps room. */
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* On small screens the fallback stack is decoration we can't afford —
+   hide it so the name, Manage button, and pills stay readable.
+   782px is WordPress's own admin mobile breakpoint. */
+@media screen and (max-width: 782px) {
+    .typost-wpl-family {
+        display: none;
+    }
 }
 
 /* ── Type badges ─────────────────────────────────────────────────────── */
@@ -1690,9 +1708,11 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 /* .typost-font-kit-label removed — kit name is no longer shown in the unified list */
 
-/* Type badge right padding */
+/* Type badge right padding; pills never shrink or get overlapped in the
+   header flex row — the name and fallback chip give way first */
 .typost-font-header .typost-font-type-badge {
     margin-right: 10px;
+    flex-shrink: 0;
 }
 
 /* WP Library read-only card — h3 sits directly in header without a toggle button */
@@ -1967,6 +1987,11 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     background: var(--typost-bg-section, #f6f7f7);
     border: 1px solid var(--typost-border-subtle, #dcdcde);
     border-radius: 4px;
+    /* Label, status, and the Register/Remove button share a row,
+       vertically centered on each other */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .typost-font-library-registration .typost-wpl-status {
@@ -1974,6 +1999,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-font-library-registration .description {
+    flex-basis: 100%;
     margin-top: 8px;
     margin-bottom: 0;
 }

@@ -37,6 +37,7 @@ if (!defined('TYPOST_PLUGIN_BASENAME')) {
 // TYPOST_PLUGIN_DIR without a trailing slash still resolve correctly)
 require_once __DIR__ . '/includes/class-typost-font-sources.php';
 require_once __DIR__ . '/includes/class-typost-font-library-bridge.php';
+require_once __DIR__ . '/includes/class-typost-font-metadata.php';
 
 /**
  * Main plugin class
@@ -53,6 +54,17 @@ class Typost {
      */
     private $presets_cache = null;
     private $features_cache = null;
+
+    /**
+     * Non-fatal warnings produced by the most recent process_font_kit_zip()
+     * run (e.g. "@font-face CSS was generated from filename guesses").
+     * Kept out of the method's return value so its array-of-entries|WP_Error
+     * contract — and the typost_font_uploaded payload — stay unchanged.
+     *
+     * @since 2.1.0
+     * @var string[]
+     */
+    private $font_kit_warnings = array();
 
     /**
      * Font subsystem modules (lazily instantiated)
@@ -1097,7 +1109,6 @@ class Typost {
                 'confirmDelete' => esc_html__('Are you sure you want to delete this font kit?', 'typography-stylist'),
                 'uploadError' => esc_html__('Failed to upload font kit.', 'typography-stylist'),
                 'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'typography-stylist'),
-                'enterName' => esc_html__('Please enter a font kit name.', 'typography-stylist'),
                 'selectFile' => esc_html__('Please select a ZIP file.', 'typography-stylist'),
                 'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'typography-stylist'),
                 'deleteError' => esc_html__('Failed to delete font kit.', 'typography-stylist'),
@@ -2703,6 +2714,19 @@ class Typost {
     }
 
     /**
+     * Get WP Font Library fonts for display surfaces (admin list, pickers)
+     *
+     * Excludes families the plugin itself registered — those are already
+     * represented by their uploaded font card / picker entry.
+     *
+     * @since 2.1.0
+     * @return array Same shape as get_wp_font_library_fonts().
+     */
+    public function get_wp_font_library_fonts_for_display() {
+        return $this->font_library_bridge()->get_wp_font_library_fonts_for_display();
+    }
+
+    /**
      * Get adopted WP Font Library fonts keyed by slug (for editor data)
      *
      * @since 2.1.0
@@ -3183,11 +3207,18 @@ class Typost {
             $files = $request->get_file_params();
             $params = $request->get_params();
 
-            if (empty($files['zip_file']) || empty($params['name'])) {
+            if (empty($files['zip_file'])) {
                 return new WP_Error('missing_data', esc_html__('Missing required font data', 'typography-stylist'), array('status' => 400));
             }
 
             $uploaded_file = $files['zip_file'];
+
+            // Kit name is optional (2.1.0): it is stored on entries for
+            // back-compat but never displayed anywhere — font cards show the
+            // family names parsed from the kit. Default to the ZIP filename.
+            $kit_name = !empty($params['name'])
+                ? sanitize_text_field($params['name'])
+                : preg_replace('/\.zip$/i', '', sanitize_file_name($uploaded_file['name']));
 
             // Validate file type and extension more securely
             $file_info = wp_check_filetype_and_ext($uploaded_file['tmp_name'], $uploaded_file['name']);
@@ -3215,7 +3246,7 @@ class Typost {
             }
 
             // Process the ZIP file - returns array of font entries
-            $font_entries = $this->process_font_kit_zip($uploaded_file, sanitize_text_field($params['name']));
+            $font_entries = $this->process_font_kit_zip($uploaded_file, $kit_name);
 
             if (is_wp_error($font_entries)) {
                 return $font_entries;
@@ -3272,7 +3303,8 @@ class Typost {
             return rest_ensure_response(array(
                 'success' => true,
                 'fonts' => $font_entries,
-                'count' => count($font_entries)
+                'count' => count($font_entries),
+                'warnings' => $this->get_font_kit_warnings()
             ));
         } catch (Exception $e) {
             // Return generic message to users
@@ -3302,6 +3334,18 @@ class Typost {
 
         if (!$font_to_delete) {
             return new WP_Error('font_not_found', esc_html__('Font not found', 'typography-stylist'), array('status' => 404));
+        }
+
+        // Remove the font's WP Font Library registration first, so no orphaned
+        // wp_font_family post is left pointing at deleted font files (WP would
+        // keep printing its @font-face site-wide). unregister_font() is
+        // ownership-guarded via _typost_font_id meta — user-created families
+        // are never touched. Running this while the entry still exists in the
+        // option keeps the deleted_post watcher's read-modify-write from
+        // resurrecting the entry via a stale cache.
+        if (!empty($font_to_delete['wp_post_id'])) {
+            $this->font_library_bridge()->unregister_font($font_to_delete);
+            $fonts = $this->get_custom_fonts(); // re-read: the watcher may have cleared wp_* fields
         }
 
         // Check if this is the last font in the kit
@@ -3358,8 +3402,21 @@ class Typost {
 
     /**
      * Process uploaded font kit ZIP file
+     *
+     * Kits normally contain a stylesheet with @font-face rules. Since 2.1.0,
+     * kits with no usable CSS (e.g. bare Google Fonts downloads) are also
+     * accepted: a stylesheet is generated from the font binaries' metadata
+     * (see generate_css_from_fonts()) and the normal pipeline runs on it.
+     * Non-fatal warnings from that path are exposed via
+     * get_font_kit_warnings(); the return contract is unchanged.
+     *
+     * @param array  $uploaded_file The $_FILES-style upload array.
+     * @param string $kit_name      User-provided kit name.
+     * @return array|WP_Error Array of per-family font entries, or WP_Error.
      */
     public function process_font_kit_zip($uploaded_file, $kit_name) {
+        $this->font_kit_warnings = array();
+
         // Create unique kit ID and directory
         $kit_id = 'kit-' . time() . '-' . wp_generate_password(8, false);
         $upload_dir = wp_upload_dir();
@@ -3442,16 +3499,38 @@ class Typost {
         }
 
         if (empty($css_files)) {
-            $wp_filesystem->rmdir($kit_base_path, true);
-            return new WP_Error('no_css', esc_html__('No CSS file found in the font kit', 'typography-stylist'));
+            // Bare-font kit (e.g. a Google Fonts download): generate the
+            // stylesheet from the font binaries' metadata, then let the
+            // normal CSS pipeline below run unchanged.
+            $generated = $this->generate_css_from_fonts($kit_base_path, $wp_filesystem);
+            if (is_wp_error($generated)) {
+                $wp_filesystem->rmdir($kit_base_path, true);
+                return $generated;
+            }
+            $css_files[] = $generated['path'];
+            $this->font_kit_warnings = $generated['warnings'];
         }
 
         // Select the best CSS file (prioritizes actual font CSS over specimen/demo files)
         $css_file_path = $this->select_font_css_file($css_files, $kit_base_path, $wp_filesystem);
 
         if (is_wp_error($css_file_path)) {
-            $wp_filesystem->rmdir($kit_base_path, true);
-            return $css_file_path;
+            // CSS files exist but none contains @font-face (e.g. a stray
+            // specimen/demo stylesheet): fall back to generating one from the
+            // font binaries before giving up. A different filename is used in
+            // case a non-font-face stylesheet.css is already present.
+            if ($css_file_path->get_error_code() === 'no_font_face_css') {
+                $filename = $wp_filesystem->exists($kit_base_path . '/stylesheet.css') ? 'typost-generated.css' : 'stylesheet.css';
+                $generated = $this->generate_css_from_fonts($kit_base_path, $wp_filesystem, $filename);
+                if (!is_wp_error($generated)) {
+                    $css_file_path = $generated['path'];
+                    $this->font_kit_warnings = $generated['warnings'];
+                }
+            }
+            if (is_wp_error($css_file_path)) {
+                $wp_filesystem->rmdir($kit_base_path, true);
+                return $css_file_path;
+            }
         }
 
         // Validate it's a real file, not a symlink
@@ -3667,6 +3746,96 @@ class Typost {
                 'css_files_found' => $file_list
             )
         );
+    }
+
+    /**
+     * Generate a stylesheet from the font binaries in a kit directory
+     *
+     * Used when an uploaded kit contains no usable CSS (e.g. a Google Fonts
+     * download of bare font files). Reads family/weight/style metadata from
+     * the binaries via Typost_Font_Metadata, writes the generated stylesheet
+     * into the kit directory, and returns translated non-fatal warnings for
+     * any file whose metadata had to be guessed from its filename.
+     *
+     * @since 2.1.0
+     * @param string $kit_base_path Absolute path to the kit directory.
+     * @param object $wp_filesystem WP_Filesystem instance.
+     * @param string $filename      Stylesheet filename to write.
+     * @return array|WP_Error array('path' => string, 'warnings' => string[]) on success.
+     */
+    private function generate_css_from_fonts($kit_base_path, $wp_filesystem, $filename = 'stylesheet.css') {
+        $font_files = array();
+        $font_extensions = array('woff', 'woff2', 'ttf', 'otf', 'eot');
+
+        try {
+            $iterator = new RecursiveDirectoryIterator($kit_base_path, RecursiveDirectoryIterator::SKIP_DOTS);
+            foreach (new RecursiveIteratorIterator($iterator) as $file) {
+                if ($file->isFile() && !$file->isLink() && in_array(strtolower($file->getExtension()), $font_extensions, true)) {
+                    $font_files[] = $file->getPathname();
+                }
+            }
+        } catch (Exception $e) {
+            return new WP_Error(
+                'iterator_failed',
+                esc_html__('Failed to process font kit. The archive may be corrupted.', 'typography-stylist')
+            );
+        }
+
+        sort($font_files); // Deterministic @font-face order regardless of filesystem order
+
+        $result = Typost_Font_Metadata::generate_stylesheet($font_files, $kit_base_path);
+
+        if (empty($result['css'])) {
+            return new WP_Error(
+                'no_css',
+                esc_html__('No CSS file was found in the font kit, and no usable font files were found to generate one from.', 'typography-stylist'),
+                array('status' => 400)
+            );
+        }
+
+        $css_path = $kit_base_path . '/' . $filename;
+        if (!$wp_filesystem->put_contents($css_path, $result['css'], FS_CHMOD_FILE)) {
+            return new WP_Error(
+                'css_write_failed',
+                esc_html__('Could not write the generated stylesheet to the font kit directory.', 'typography-stylist')
+            );
+        }
+
+        $warnings = array();
+        foreach ($result['warnings'] as $warning) {
+            // ZIP entries can carry hostile filenames (HTML, control chars);
+            // these strings also leave through the REST response, where other
+            // clients may not render them as safely as the admin UI does.
+            $file = isset($warning['file']) ? sanitize_text_field($warning['file']) : '';
+            if (isset($warning['code']) && $warning['code'] === 'woff2_filename_guess') {
+                $warnings[] = sprintf(
+                    /* translators: %s: font file name */
+                    esc_html__('%s is a WOFF2 file, whose metadata cannot be read on the server — its font family and weight were guessed from the filename. Please review the generated font styles.', 'typography-stylist'),
+                    $file
+                );
+            } else {
+                $warnings[] = sprintf(
+                    /* translators: %s: font file name */
+                    esc_html__('Could not read font metadata from %s — its font family and weight were guessed from the filename. Please review the generated font styles.', 'typography-stylist'),
+                    $file
+                );
+            }
+        }
+
+        return array(
+            'path'     => $css_path,
+            'warnings' => $warnings,
+        );
+    }
+
+    /**
+     * Get non-fatal warnings from the most recent font kit upload
+     *
+     * @since 2.1.0
+     * @return string[] Translated warning messages (empty when none).
+     */
+    public function get_font_kit_warnings() {
+        return $this->font_kit_warnings;
     }
 
     /**

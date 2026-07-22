@@ -63,15 +63,14 @@ Typography Stylist gives you three ways to add custom fonts to WordPress:
 
 ### Method 1: Upload Webfont Kits
 
-Upload complete webfont kits from MyFonts, Fontspring, or other font vendors.
+Upload complete webfont kits from MyFonts, Fontspring, or other font vendors — or font-only ZIPs such as Google Fonts downloads.
 
 **Step-by-Step:**
 
 1. **Purchase and download** a webfont kit from your font vendor
 2. **Go to** Settings → Typography Stylist → Custom Fonts tab
-3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
-4. **Click "Choose ZIP File"** and select your downloaded kit
-5. **Click "Upload Font Kit"**
+3. **Click "Choose ZIP File"** and select your downloaded kit
+4. **Click "Upload Font Kit"** — font names are read from the kit itself
 
 The plugin will:
 - Extract the ZIP file
@@ -80,9 +79,9 @@ The plugin will:
 - Store files securely in `wp-content/uploads/typography-stylist/fonts/`
 
 **What should the ZIP contain:**
-- A CSS file with @font-face declarations (e.g., `MyWebfontsKit.css`)
-- Font files: WOFF, WOFF2, TTF, OTF, EOT, or SVG
-- Directory structure matching the paths in the CSS file
+- Font files: WOFF, WOFF2, TTF, OTF, or EOT (SVG fonts are not accepted for security reasons)
+- Ideally a CSS file with @font-face declarations (e.g., `MyWebfontsKit.css`), with the directory structure matching the paths in the CSS file
+- **A CSS file is optional (v2.1.0+):** if the ZIP contains only font files, the plugin reads each font's built-in metadata (name, OS/2, and fvar tables for TTF/OTF/WOFF) and generates the stylesheet automatically — family names, weights, italics, and the weight range of variable fonts. WOFF2 metadata cannot be read on the server, so WOFF2-only ZIPs fall back to filename-based detection (Google Fonts naming conventions) and the upload shows a warning asking you to review the generated font styles.
 
 **Security:**
 - Maximum ZIP size: 10MB
@@ -530,12 +529,15 @@ The plugin helps maintain WCAG 2.1 Level AA compliance by:
 2. **Invalid file types** - Must contain CSS and font files only
 3. **Corrupted ZIP** - Try re-downloading from font vendor
 4. **Server upload limits** - Check PHP upload_max_filesize
+5. **No usable fonts** - "No CSS file was found in the font kit, and no usable font files were found to generate one from" means the ZIP contained neither a stylesheet nor any valid font binaries (a CSS file is optional since v2.1.0 — bare-font ZIPs normally work)
 
 **Solution:**
 - Reduce ZIP size by removing unnecessary files
 - Ensure ZIP contains only CSS and font files
 - Get a fresh download from vendor
 - Contact hosting provider to increase upload limits
+
+**"Review the generated font styles" warning:** shown when the stylesheet had to be generated from filename guesses (WOFF2 files, or binaries that could not be parsed). Check the family names and weights on the new font cards; if something is wrong, delete the kit and re-upload with TTF/OTF files (whose metadata can be read directly) or include your own CSS file in the ZIP.
 
 ### Features Applied But Not Visible
 

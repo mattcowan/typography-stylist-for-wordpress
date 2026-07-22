@@ -129,6 +129,45 @@ class Typost_Font_Library_Bridge {
     }
 
     /**
+     * Library fonts for display surfaces (admin list, editor picker groups)
+     *
+     * Same as get_wp_font_library_fonts() minus families the plugin itself
+     * registered (slug matches a live wp_slug on an uploaded-kit entry) —
+     * those fonts are already represented by their uploaded card / picker
+     * entry, so listing them again reads as a duplicate. Orphaned
+     * registrations (family post exists but the plugin entry is gone) stay
+     * visible so they can be found and removed via the Library UI.
+     *
+     * Validity checks (library_slug_exists / entry_has_live_registration)
+     * intentionally keep using the unfiltered snapshot.
+     *
+     * @since 2.1.0
+     * @return array[] Same shape as get_wp_font_library_fonts()
+     */
+    public function get_wp_font_library_fonts_for_display() {
+        $registered_slugs = array();
+        foreach ($this->sources->get_custom_fonts() as $entry) {
+            if (!empty($entry['wp_slug'])) {
+                $registered_slugs[$entry['wp_slug']] = true;
+            }
+        }
+
+        $fonts = $this->get_wp_font_library_fonts();
+        if (empty($registered_slugs)) {
+            return $fonts;
+        }
+
+        $filtered = array();
+        foreach ($fonts as $font) {
+            if (isset($registered_slugs[$font['slug']])) {
+                continue;
+            }
+            $filtered[] = $font;
+        }
+        return $filtered;
+    }
+
+    /**
      * Whether a slug currently exists in the Library snapshot
      *
      * @param string $slug

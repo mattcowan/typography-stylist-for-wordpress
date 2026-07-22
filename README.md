@@ -70,23 +70,22 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ### Adding Custom Fonts
 
-#### Option 1: Upload Webfont Kits (MyFonts, Fontspring, etc.)
+#### Option 1: Upload Webfont Kits (MyFonts, Fontspring, Google Fonts, etc.)
 
-1. **Purchase and download** your webfont kit from MyFonts, Fontspring, or another provider
-2. **Go to** Settings → Typography Symtylist → Custom Fonts tab
-3. **Enter a name** for your font kit (e.g., "Calgary Script 2024")
-4. **Click "Choose ZIP File"** and select your webfont kit ZIP file
-5. **Click "Upload Font Kit"**
-6. The plugin will:
+1. **Purchase and download** your webfont kit from MyFonts, Fontspring, or another provider — or download a family from Google Fonts
+2. **Go to** Settings → Typography Stylist → Custom Fonts tab
+3. **Click "Choose ZIP File"** and select your webfont kit ZIP file
+4. **Click "Upload Font Kit"** — font names are read from the kit itself
+5. The plugin will:
    - Extract the ZIP file
    - Process the CSS and font files
    - Make fonts available in the editor and preview selector
    - Store files securely in your WordPress uploads directory
 
 **What should the ZIP contain:**
-- A CSS file with @font-face declarations (e.g., MyWebfontsKit.css)
-- Font files (WOFF, WOFF2, TTF, OTF, EOT) in their subdirectories
-- The directory structure must match the paths in the CSS file
+- Font files (WOFF, WOFF2, TTF, OTF, EOT)
+- Ideally a CSS file with @font-face declarations (e.g., MyWebfontsKit.css), with the directory structure matching the paths in the CSS file
+- **A CSS file is not required (v2.1.0+):** ZIPs containing only font files — like a Google Fonts download — are accepted. The stylesheet is generated automatically from the fonts' built-in metadata (family name, weight, italic, and the weight range of variable fonts). For WOFF2-only ZIPs the server cannot read the font metadata, so family and weight are detected from the filenames and a warning asks you to review the result
 
 #### Option 2: Add Adobe Fonts (Typekit)
 
@@ -369,6 +368,13 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ### Version 2.1.0
 
+**Font kit uploads**
+
+- **Fixed: deleting an uploaded font now unregisters it from the WordPress Font Library.** Previously `delete_font_endpoint` removed the plugin entry and font files but left the plugin-created `wp_font_family` post behind — WordPress kept printing @font-face rules pointing at deleted files, and the orphaned Library row made the font look like it survived the delete. The removal is ownership-guarded (`_typost_font_id` meta), so user-created Library families are never touched.
+- **Fixed: no more double listing of registered fonts on the Custom Fonts tab.** Fonts the plugin registered in the Font Library appeared twice — as their uploaded card (with the "In WP Library" badge) and again as a read-only "WP Library" row. The Library rows now exclude plugin-registered families via a new `get_wp_font_library_fonts_for_display()` bridge method; validity checks and the editor picker (which already deduped client-side via `pluginRegisteredSlugs`) are unchanged, and orphaned registrations stay visible so they can be cleaned up.
+- **Removed: the "Font Kit Name" field from the upload form.** The name was required, auto-filled from the ZIP filename, stored as `kit_name` — and never displayed anywhere (font cards show family names read from the kit). Mirrors the Adobe "Project Name" removal: the REST `name` param is now optional and defaults to the ZIP filename, and `kit_name` is still stored on entries for back-compat.
+- **New: font-only ZIPs (no CSS) are now accepted.** Uploading a ZIP that contains just font files — e.g. a Google Fonts download like `SpaceGrotesk[wght].ttf` — no longer fails with "No CSS file found in the font kit". The plugin reads each font's binary metadata (`name`, `OS/2`, `head`, and `fvar` tables, for TTF/OTF and WOFF) and generates the @font-face stylesheet automatically: correct family names, weights, italics, `font-display: swap`, and for variable fonts a `font-weight: min max` range with the matching `format('…-variations')`. Generated kits flow through the existing pipeline unchanged, including variable-font axis auto-detection, the Variable card badge, and the editor weight slider. WOFF2 metadata cannot be read server-side (no Brotli in PHP), so WOFF2-only ZIPs fall back to Google Fonts filename conventions and the upload response carries a "review the generated CSS" warning shown in the admin. Kits whose CSS files contain no @font-face rules (e.g. only a specimen/demo stylesheet) get the same fallback.
+
 **WordPress Font Library integration (WP 6.5+)**
 
 - **Register uploaded fonts in the WordPress Font Library** (Appearance → Editor). New uploads register automatically (toggle in Options); existing fonts register per font or in bulk from the Custom Fonts tab — opt-in and fully reversible. Registered fonts keep their numeric IDs: `--font-N` variables alias to `--wp--preset--font-family--{slug}` presets with a literal fallback, so existing content and extension integrations keep rendering forever. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom definitions stay plugin-managed by design.
@@ -392,7 +398,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 - **Added: automatic variable-font detection on add.** When fonts are added — a webfont kit ZIP upload or an Adobe Fonts kit — the Variable Fonts module now runs its metadata-only fvar detection on each new entry in the browser (the same pipeline as the Detect Axes button), saves axes where found, and marks those fonts variable before the page reloads. Each family in a kit is checked individually, so mixed variable/static kits work correctly, and the client-side pipeline covers woff2 (which the server-side upload parser skips). A notice reports how many of the new fonts were detected as variable. Built on a new `typost:fonts-added` jQuery admin event (documented in HOOKS.md) that carries the new entries and a `waitUntil()` collector — core holds its reload (15 s cap) until listeners finish.
 - **Fixed: inconsistent weight control for wght fonts with "Hide weight selection" unchecked.** `resolveWeightControlType()` previously returned `'variable'` whenever a wght axis existed, so the slider appeared on open — but editor state churn during edits re-evaluated the filter and flipped it to the dropdown. The `hideWeights` flag now gates everything: checked → wght slider (or fully hidden without a wght axis); unchecked (explicit admin choice, or missing flag data) → the standard weight dropdown, consistently, with non-wght axes still rendering in their own panel.
 - **Changed: variable fonts hide the discrete weight UI by default.** "Hide weight selection" now auto-checks for every variable font (admin checkbox, weight checkboxes visibility, and the server-resolved `hideWeights` flag the editor receives). Rationale: with a wght axis the slider replaces the weight dropdown; without one the weight is fixed by the binary — the discrete weight controls are redundant in both cases. An explicit admin toggle always wins over the auto rule. Previously the auto rule was inverted (hide only when *no* wght axis existed).
-- **Changed: module version constants bumped** — Variable Fonts 1.2.0, Glyphs Panel 1.1.2 — so browsers cache-bust the updated module scripts (these ship unminified; the constants are their only cache-buster).
+- **Changed: module version constants bumped** — Variable Fonts 1.2.1, Glyphs Panel 1.1.2 — so browsers cache-bust the updated module scripts (these ship unminified; the constants are their only cache-buster).
 - **Changed: Variable Fonts admin tab replaced by a card badge.** The read-only overview tab (a font → axes table duplicating information available on each card) is gone; `variable-fonts/includes/admin-tab.php` was deleted. Variable fonts now get a "Variable" pill next to their source badge on the Custom Fonts tab, with the configured axis tags in the tooltip. Built on a new core `typost_font_card_badges` PHP filter (documented in HOOKS.md) that any extension can use to append card badges — the VF module hooks it exactly as an external extension would.
 - **Accessibility: settings-page audit fixes.** (1) The Variable Fonts axis Tag/Name inputs gained `aria-label`s (they were placeholder-only — 10 WAVE "missing form label" errors). (2) Full contrast audit of the admin color-scheme system, verified programmatically per scheme: Alice Blue's `--typost-color-primary` (#4a90c4 → #2a689e) and `--typost-text-muted` (#5a7a94 → #44647c) now hold ≥4.5:1 on every panel tint, including white badge text on primary; Dark's `--typost-text-on-primary` became #0f1729 (white on #6db3e8 was 2.27:1) and its danger red lightened to #f58080; High Contrast's danger darkened to #b00000; the derived Admin Colors scheme now runs its WP-palette colors through a new `darken_to_contrast()` helper until they meet 4.5:1 vs white. Alice Blue also gained secondary-button overrides (WP's default #007cba button text fell below 4.5:1 on tinted panels). (3) Heading hierarchy: font cards h4 → h3 (h2 → h4 skip). (4) WP Library card titles render in their own font-family with `wp_print_font_faces()` printed on the tab (progressive enhancement — theme.json-only families without registered files fall back to the name in the stack), and `.typost-wpl-family` gained right margin plus scheme-variable colors.
 - **Changed: QFT popover tips notice unified with the inline modal's.** The Quick Feature Toggles notice now renders the same two msgids as the inline modal (single source in the translation catalog) and is dismissible via the same `typography_stylist_hide_modal_tips` localStorage key — dismissing either notice hides both, persisted per browser. Previously it showed only the drag tip, with a stale untranslated msgid, and could not be dismissed.

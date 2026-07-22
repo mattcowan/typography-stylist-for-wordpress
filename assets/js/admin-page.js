@@ -115,12 +115,6 @@ jQuery(document).ready(function($) {
 
         // Enable upload button
         $('#typost-upload-font-btn').prop('disabled', false);
-
-        // Auto-fill kit name from filename if empty
-        if (!$('#typost-font-name').val()) {
-            var kitName = file.name.replace(/\.(zip)$/i, '');
-            $('#typost-font-name').val(kitName);
-        }
     });
 
     // Clear file selection
@@ -139,30 +133,20 @@ jQuery(document).ready(function($) {
         var $progressFill = $('.typost-progress-fill');
         var $progressText = $('.typost-progress-text');
         var $progressBar = $('.typost-progress-bar');
-        var fontName = $('#typost-font-name').val().trim();
 
         // Clear previous message
         $message.html('');
 
         // Validate
-        if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterName + '</p></div>');
-            $('#typost-font-name').focus().attr('aria-invalid', 'true');
-            return;
-        }
-
         if (!selectedFile) {
             $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.selectFile + '</p></div>');
             return;
         }
 
-        // Clear aria-invalid on success
-        $('#typost-font-name').attr('aria-invalid', 'false');
-
-        // Prepare FormData
+        // Prepare FormData. No kit name — the server derives it from the
+        // ZIP filename (font cards display parsed family names instead).
         var formData = new FormData();
         formData.append('zip_file', selectedFile);
-        formData.append('name', fontName);
 
         // Disable button, show progress, and add aria-busy
         $('.typost-upload-form').attr('aria-busy', 'true');
@@ -202,18 +186,29 @@ jQuery(document).ready(function($) {
 
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.uploadSuccess + '</p></div>');
 
+                // Surface non-fatal server warnings (e.g. the stylesheet was
+                // generated from filename guesses for WOFF2-only kits).
+                var warnings = response.warnings || [];
+                if (warnings.length) {
+                    var $warningNotice = $('<div>').addClass('notice notice-warning inline');
+                    warnings.forEach(function(warning) {
+                        $warningNotice.append($('<p>').text(warning));
+                    });
+                    $message.append($warningNotice);
+                }
+
                 // Reset form
                 selectedFile = null;
-                $('#typost-font-name').val('');
                 $('#typost-font-file').val('');
                 $('#typost-selected-file').hide();
 
-                // Reload after extensions post-process the new entries
+                // Reload after extensions post-process the new entries.
+                // Warnings get a longer window so they can be read first.
                 reloadAfterFontsAdded({
                     type: 'uploaded',
                     fonts: response.fonts || [],
                     $message: $message
-                }, 2000);
+                }, warnings.length ? 8000 : 2000);
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.uploadError;

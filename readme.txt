@@ -174,11 +174,12 @@ Beyond these, the plugin can apply OpenType features to any font already loaded 
 = How do I upload custom fonts? =
 
 1. Go to Settings → Typography Stylist → Custom Fonts tab
-2. Enter a name for your font kit
-3. Click "Choose ZIP File" and select your webfont kit ZIP
-4. Click "Upload Font Kit"
+2. Click "Choose ZIP File" and select your webfont kit ZIP
+3. Click "Upload Font Kit" — font names are read from the kit itself
 
-The plugin will extract the fonts and make them available in the editor and preview selector. This has been tested with kits from MyFonts and Font Squirrel.
+The plugin will extract the fonts and make them available in the editor and preview selector. This has been tested with kits from MyFonts and Font Squirrel, and with bare-font downloads from Google Fonts.
+
+A stylesheet inside the ZIP is not required: if the kit contains only font files, the plugin reads each font's built-in metadata and generates the @font-face CSS automatically — including the weight range of variable fonts. For WOFF2-only ZIPs the family and weight are detected from the filenames (WOFF2 metadata cannot be read on the server), and a warning asks you to review the result.
 
 = How do I add Adobe Fonts? =
 
@@ -240,8 +241,10 @@ The plugin will warn you if an inline selection might cause accessibility issues
 = What file formats are supported for font uploads? =
 
 The plugin accepts ZIP files containing:
-- CSS files with @font-face declarations
-- Font files: WOFF, WOFF2, TTF, OTF
+- CSS files with @font-face declarations (recommended, used as-is)
+- Font files: WOFF, WOFF2, TTF, OTF, EOT
+
+A CSS file is optional — ZIPs with only font files work too; the stylesheet is generated from the fonts' metadata.
 
 = Is font upload secure? =
 
@@ -276,6 +279,10 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Changelog ==
 
 = 2.1.0 =
+* Fixed: deleting an uploaded font now also removes its WordPress Font Library registration — previously the wp_font_family post survived the delete, kept printing @font-face rules for font files that no longer existed, and made the font appear to still be installed. Removal is ownership-guarded: only families the plugin itself registered are ever touched.
+* Fixed: fonts registered in the WordPress Font Library no longer appear twice on the Custom Fonts tab (once as an uploaded font card and again in the read-only WP Library rows). The uploaded card with its "In WP Library" badge is now the single listing; genuine Library fonts — including orphaned registrations from older versions — remain visible.
+* Removed: the required "Font Kit Name" field from the Upload Font Kit form. The name was stored but never displayed anywhere — font cards show the family names read from the kit. The REST endpoint still accepts an optional `name` and defaults to the ZIP filename, so API callers keep working.
+* **NEW: font-only ZIPs (no CSS) are now accepted by Upload Font Kit.** Uploading a ZIP that contains just font files — e.g. a Google Fonts download — no longer fails with "No CSS file found in the font kit". The plugin reads each font's built-in metadata (name, OS/2, and fvar tables for TTF, OTF, and WOFF files) and generates the @font-face stylesheet automatically: correct family names, weights, italics, and for variable fonts a font-weight range with the matching format('…-variations'). Generated kits flow through the existing pipeline unchanged, including variable-font axis detection, the Variable card badge, and the editor weight slider. WOFF2 metadata cannot be read server-side, so WOFF2-only ZIPs fall back to filename-based detection and the upload shows a "review the generated font styles" warning. Kits whose CSS files contain no @font-face rules get the same fallback.
 * **NEW: WordPress Font Library integration (WP 6.5+).** Uploaded webfont kits can now be registered in the WordPress Font Library (Appearance → Editor): newly uploaded fonts register automatically (toggle in Options), and existing fonts can be registered per font or in bulk from the Custom Fonts tab — registration is opt-in and fully reversible. Registered fonts keep their numeric IDs: the plugin's `--font-N` CSS variables alias to WordPress's `--wp--preset--font-family--{slug}` presets with a literal fallback, so all existing content, inline spans, and extension integrations keep rendering forever, even if a font is later removed from the Library. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom font definitions remain plugin-managed by design (Adobe fonts load from Adobe's servers and may not be self-hosted).
 * **NEW: WordPress Font Library fonts in the editor font pickers.** Both the inline editor and the Typography Stylist block now offer Library fonts (theme fonts and fonts installed via Appearance → Editor) in a dedicated picker group. Picking one adopts it seamlessly — it gets a numeric font ID like every other source, so the save format and all extensions work unchanged.
 * **NEW: Variable Fonts built into core.** The "Typography Stylist - Variable Fonts" extension is now bundled (like the Glyphs Panel in 2.0): automatic axis detection on upload, per-axis admin configuration, and axis sliders in the editor. If you were using the standalone extension plugin, deactivate it after updating — your settings carry over automatically.
@@ -295,7 +302,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 * Developer: new `typost:fonts-added` jQuery admin event fires after a kit upload or Adobe Fonts add, with the new entries and a `waitUntil()` collector so extensions can post-process fonts before the page reloads — see HOOKS.md.
 * Fixed: a variable font with a weight (wght) axis but "Hide weight selection" unchecked showed the weight slider until the first edit, then inconsistently swapped to the weight dropdown. The unchecked setting now consistently keeps the standard weight dropdown (the wght slider is skipped); other variable axes still show in their own panel.
 * Changed: "Hide weight selection" now defaults to checked for every variable font — when a weight (wght) axis exists the slider replaces the weight dropdown, and without one the weight is fixed by the font file, so the discrete weight UI is hidden either way. An explicit admin toggle still wins. Previously the auto rule only hid weights for variable fonts without a wght axis, leaving the redundant weight controls visible for exactly the fonts that least need them.
-* Changed: bumped the Variable Fonts (1.2.0) and Glyphs Panel (1.1.2) module version constants so browsers pick up the updated module scripts (these files ship unminified and are cache-busted only by those constants).
+* Changed: bumped the Variable Fonts (1.2.1) and Glyphs Panel (1.1.2) module version constants so browsers pick up the updated module scripts (these files ship unminified and are cache-busted only by those constants).
 * Accessibility: the Variable Fonts axis Tag and Name inputs on the settings page now have accessible labels (fixes 10 "missing form label" WAVE errors).
 * Accessibility: color-contrast audit of all admin color schemes. Alice Blue's primary and muted-text colors were darkened to meet WCAG AA 4.5:1 on every panel background (feature code badges, size values, descriptions, visibility labels); the Dark scheme's badge text and danger color were corrected; High Contrast's danger red was darkened; and the Admin Colors scheme now automatically darkens colors derived from the WordPress admin palette until they meet 4.5:1.
 * Accessibility: fixed heading hierarchy on the settings page — font card names are now h3 (previously h4 directly under the tab's h2).
@@ -508,7 +515,7 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 == Upgrade Notice ==
 
 = 2.1.0 =
-Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
+Font kit uploads now accept ZIPs containing only font files (e.g. Google Fonts downloads) — the @font-face stylesheet is generated automatically from the fonts' metadata. Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
 
 = 2.0.1 =
 Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.

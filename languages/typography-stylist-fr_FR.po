@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the Headline Ligatures and Styles package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 1.1.4\n"
+"Project-Id-Version: Typography Stylist 2.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Typography Stylist\n"
 "POT-Creation-Date: 2026-01-26 23:36+0000\n"
 "PO-Revision-Date: 2026-01-26 23:36+0000\n"
@@ -40,10 +40,6 @@ msgstr "Échec du téléversement du kit de polices."
 #: headline-ligatures-styles.php:391
 msgid "Please select a ZIP file (.zip)"
 msgstr "Veuillez sélectionner un fichier ZIP (.zip)"
-
-#: headline-ligatures-styles.php:392
-msgid "Please enter a font kit name."
-msgstr "Veuillez saisir un nom pour le kit de polices."
 
 #: headline-ligatures-styles.php:393
 msgid "Please select a ZIP file."
@@ -489,9 +485,23 @@ msgstr "Échec de la création du répertoire de téléversement"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Échec de l'extraction du fichier ZIP. Veuillez vous assurer que le fichier est une archive ZIP valide."
 
-#: typography-stylist.php:2159
-msgid "No CSS file found in the font kit"
-msgstr "Aucun fichier CSS trouvé dans le kit de polices"
+#: typography-stylist.php:3763
+msgid "No CSS file was found in the font kit, and no usable font files were found to generate one from."
+msgstr "Aucun fichier CSS n'a été trouvé dans le kit de polices, et aucun fichier de police utilisable n'a été trouvé pour en générer un."
+
+#: typography-stylist.php:3772
+msgid "Could not write the generated stylesheet to the font kit directory."
+msgstr "Impossible d'écrire la feuille de style générée dans le répertoire du kit de polices."
+
+#: typography-stylist.php:3782
+#, php-format
+msgid "%s is a WOFF2 file, whose metadata cannot be read on the server — its font family and weight were guessed from the filename. Please review the generated font styles."
+msgstr "%s est un fichier WOFF2, dont les métadonnées ne peuvent pas être lues sur le serveur — sa famille de police et sa graisse ont été devinées à partir du nom de fichier. Veuillez vérifier les styles de police générés."
+
+#: typography-stylist.php:3789
+#, php-format
+msgid "Could not read font metadata from %s — its font family and weight were guessed from the filename. Please review the generated font styles."
+msgstr "Impossible de lire les métadonnées de la police %s — sa famille de police et sa graisse ont été devinées à partir du nom de fichier. Veuillez vérifier les styles de police générés."
 
 #: typography-stylist.php:2393
 #, php-format
@@ -643,8 +653,8 @@ msgid "Upload Font Kit"
 msgstr "Télécharger un kit de polices"
 
 #: includes/admin-page.php
-msgid "Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded."
-msgstr "Téléchargez un fichier ZIP de fournisseurs de polices comme MyFonts ou Fontspring. Idéal pour les polices que vous avez achetées et téléchargées."
+msgid "Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded."
+msgstr "Téléchargez un fichier ZIP de fournisseurs de polices comme MyFonts, Fontspring ou Google Fonts. Idéal pour les polices que vous avez achetées et téléchargées."
 
 #: includes/admin-page.php
 msgid "Adobe Fonts"
@@ -852,21 +862,9 @@ msgid_plural "%d font files"
 msgstr[0] "%d fichier de police"
 msgstr[1] "%d fichiers de polices"
 
-#: includes/admin-page.php:303
-msgid "Font Kit Name:"
-msgstr "Nom du Kit de Polices :"
-
 #: includes/admin-page.php:304
 msgid "required"
 msgstr "obligatoire"
-
-#: includes/admin-page.php:311
-msgid "e.g., MyFonts Kit 2024"
-msgstr "par ex., Kit MyFonts 2024"
-
-#: includes/admin-page.php:316
-msgid "Enter a descriptive name for this font kit"
-msgstr "Saisissez un nom descriptif pour ce kit de polices"
 
 #: includes/admin-page.php:322
 msgid "ZIP File:"
@@ -881,8 +879,12 @@ msgid "Choose ZIP File"
 msgstr "Choisir un Fichier ZIP"
 
 #: includes/admin-page.php:341
-msgid "Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files."
-msgstr "Téléversez un kit de polices web sous forme de fichier ZIP. Le ZIP doit contenir le fichier CSS et les fichiers de polices."
+msgid "Upload a webfont kit as a ZIP file. The ZIP can contain a CSS file and font files, or only font files."
+msgstr "Téléversez un kit de polices web sous forme de fichier ZIP. Le ZIP peut contenir un fichier CSS et des fichiers de polices, ou uniquement des fichiers de polices."
+
+#: includes/admin-page.php:942
+msgid "Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP can contain a CSS file and font files, or just the font files themselves (such as a Google Fonts download) — if no stylesheet is included, one is generated automatically from the fonts' built-in metadata."
+msgstr "Téléversez un kit de polices web complet sous forme de fichier ZIP (par ex. MyWebfontsKit.zip). Le ZIP peut contenir un fichier CSS et des fichiers de polices, ou uniquement les fichiers de polices (comme un téléchargement Google Fonts) — si aucune feuille de style n'est incluse, une feuille est générée automatiquement à partir des métadonnées intégrées des polices."
 
 #: includes/admin-page.php:347
 msgid "Clear selected file"
@@ -901,16 +903,16 @@ msgid "Download your webfont kit from your font provider"
 msgstr "Téléchargez votre kit de polices web depuis votre fournisseur de polices"
 
 #: includes/admin-page.php:736
-msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
-msgstr "Si le kit n'est pas déjà compressé, créez un fichier ZIP contenant l'ensemble du dossier du kit (y compris le fichier CSS et tous les fichiers de polices dans leurs répertoires)"
+msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder. A CSS file is recommended but not required — a ZIP of bare font files also works"
+msgstr "Si le kit n'est pas déjà compressé, créez un fichier ZIP contenant l'ensemble du dossier du kit. Un fichier CSS est recommandé mais pas obligatoire — un ZIP ne contenant que des fichiers de polices fonctionne aussi"
 
 #: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr "Cliquez sur « Choisir un Fichier ZIP » et sélectionnez votre fichier ZIP du kit de polices web"
 
 #: includes/admin-page.php:738
-msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
-msgstr "Donnez à votre kit un nom descriptif et cliquez sur « Téléverser un Kit de Polices »"
+msgid "Click \"Upload Font Kit\" — the font names are read from the kit itself"
+msgstr "Cliquez sur « Téléverser un Kit de Polices » — les noms des polices sont lus depuis le kit lui-même"
 
 #: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
@@ -937,8 +939,8 @@ msgid "Compatibility Note:"
 msgstr "Note de Compatibilité :"
 
 #: includes/admin-page.php:747
-msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
-msgstr "Ce plugin a été testé avec des kits de polices web de MyFonts. D'autres fournisseurs devraient fonctionner s'ils suivent une structure similaire (fichier CSS avec déclarations @font-face et fichiers de polices dans des sous-répertoires)."
+msgid "This plugin has been tested with webfont kits from MyFonts and with bare-font downloads from Google Fonts. Other providers should work too: kits with a CSS file are used as-is, and font-only ZIPs get a generated stylesheet. For WOFF2-only ZIPs the family and weight are detected from the filenames (the server cannot read WOFF2 metadata), so review the result and re-upload as TTF if something looks wrong."
+msgstr "Ce plugin a été testé avec des kits de polices web de MyFonts et avec des téléchargements de polices seules de Google Fonts. D'autres fournisseurs devraient également fonctionner : les kits avec un fichier CSS sont utilisés tels quels, et les ZIP ne contenant que des polices reçoivent une feuille de style générée. Pour les ZIP ne contenant que du WOFF2, la famille et la graisse sont détectées à partir des noms de fichiers (le serveur ne peut pas lire les métadonnées WOFF2) ; vérifiez donc le résultat et téléversez de nouveau en TTF si quelque chose semble incorrect."
 
 #: includes/admin-page.php:748
 msgid "Note:"
