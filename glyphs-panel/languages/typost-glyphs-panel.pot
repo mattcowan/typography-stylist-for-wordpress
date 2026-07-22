@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist - Glyphs Panel 1.1.0\n"
+"Project-Id-Version: Typography Stylist - Glyphs Panel 1.1.2\n"
 "Report-Msgid-Bugs-To: https://developer.suspended.suspended/typography-stylist\n"
 "POT-Creation-Date: 2026-06-10 12:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"

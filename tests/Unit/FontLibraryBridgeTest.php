@@ -316,4 +316,47 @@ class FontLibraryBridgeTest extends TestCase {
         Functions\when('post_type_exists')->justReturn(false);
         $this->assertFalse($this->bridge()->register_font($this->sampleEntry()));
     }
+
+    public function test_display_list_excludes_plugin_registered_families() {
+        // Register a plugin-owned family, and add a user-created one
+        $entry = $this->sampleEntry();
+        $result = $this->bridge()->register_font($entry);
+        $entry['wp_slug'] = $result['slug'];
+        $entry['wp_post_id'] = $result['post_id'];
+        $this->options['typost_custom_fonts'] = [$entry];
+
+        $this->posts[50] = (object) [
+            'ID' => 50,
+            'post_type' => 'wp_font_family',
+            'post_name' => 'user-font',
+            'post_title' => 'User Font',
+            'post_content' => '',
+            'post_parent' => 0,
+            'post_status' => 'publish',
+        ];
+
+        $bridge = $this->bridge();
+
+        // Raw snapshot contains both (validity checks depend on this)
+        $all_slugs = wp_list_pluck($bridge->get_wp_font_library_fonts(), 'slug');
+        $this->assertContains('playfair-display', $all_slugs);
+        $this->assertContains('user-font', $all_slugs);
+        $this->assertTrue($bridge->entry_has_live_registration($entry));
+
+        // Display list hides the plugin-registered family, keeps the user's
+        $display_slugs = wp_list_pluck($bridge->get_wp_font_library_fonts_for_display(), 'slug');
+        $this->assertNotContains('playfair-display', $display_slugs);
+        $this->assertContains('user-font', $display_slugs);
+    }
+
+    public function test_display_list_keeps_orphaned_registrations_visible() {
+        // A family the plugin registered, whose plugin entry was later deleted
+        // WITHOUT unregistering (legacy orphan) — it must stay visible so the
+        // user can find and remove it via the Library UI.
+        $result = $this->bridge()->register_font($this->sampleEntry());
+        $this->options['typost_custom_fonts'] = []; // entry gone, post remains
+
+        $display_slugs = wp_list_pluck($this->bridge()->get_wp_font_library_fonts_for_display(), 'slug');
+        $this->assertContains($result['slug'], $display_slugs);
+    }
 }

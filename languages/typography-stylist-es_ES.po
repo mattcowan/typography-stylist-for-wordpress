@@ -3,7 +3,7 @@
 # This file is distributed under the same license as the Headline Ligatures and Styles package.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 1.1.4\n"
+"Project-Id-Version: Typography Stylist 2.1.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/Typography Stylist\n"
 "POT-Creation-Date: 2026-01-26 23:36+0000\n"
 "PO-Revision-Date: 2026-01-26 23:36+0000\n"
@@ -40,10 +40,6 @@ msgstr "Error al cargar el kit de fuentes."
 #: headline-ligatures-styles.php:391
 msgid "Please select a ZIP file (.zip)"
 msgstr "Por favor, selecciona un archivo ZIP (.zip)"
-
-#: headline-ligatures-styles.php:392
-msgid "Please enter a font kit name."
-msgstr "Por favor, introduce un nombre para el kit de fuentes."
 
 #: headline-ligatures-styles.php:393
 msgid "Please select a ZIP file."
@@ -489,9 +485,23 @@ msgstr "Error al crear el directorio de carga"
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Error al extraer el archivo ZIP. Por favor, asegúrate de que el archivo es un archivo ZIP válido."
 
-#: typography-stylist.php:2159
-msgid "No CSS file found in the font kit"
-msgstr "No se encontró ningún archivo CSS en el kit de fuentes"
+#: typography-stylist.php:3763
+msgid "No CSS file was found in the font kit, and no usable font files were found to generate one from."
+msgstr "No se encontró ningún archivo CSS en el kit de fuentes, y no se encontraron archivos de fuente utilizables para generar uno."
+
+#: typography-stylist.php:3772
+msgid "Could not write the generated stylesheet to the font kit directory."
+msgstr "No se pudo escribir la hoja de estilos generada en el directorio del kit de fuentes."
+
+#: typography-stylist.php:3782
+#, php-format
+msgid "%s is a WOFF2 file, whose metadata cannot be read on the server — its font family and weight were guessed from the filename. Please review the generated font styles."
+msgstr "%s es un archivo WOFF2, cuyos metadatos no se pueden leer en el servidor — su familia tipográfica y su peso se dedujeron del nombre del archivo. Por favor, revisa los estilos de fuente generados."
+
+#: typography-stylist.php:3789
+#, php-format
+msgid "Could not read font metadata from %s — its font family and weight were guessed from the filename. Please review the generated font styles."
+msgstr "No se pudieron leer los metadatos de la fuente %s — su familia tipográfica y su peso se dedujeron del nombre del archivo. Por favor, revisa los estilos de fuente generados."
 
 #: typography-stylist.php:2393
 #, php-format
@@ -643,8 +653,8 @@ msgid "Upload Font Kit"
 msgstr "Subir kit de fuentes"
 
 #: includes/admin-page.php
-msgid "Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded."
-msgstr "Sube un archivo ZIP de proveedores de fuentes como MyFonts o Fontspring. Ideal para fuentes que has comprado y descargado."
+msgid "Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded."
+msgstr "Sube un archivo ZIP de proveedores de fuentes como MyFonts, Fontspring o Google Fonts. Ideal para fuentes que has comprado y descargado."
 
 #: includes/admin-page.php
 msgid "Adobe Fonts"
@@ -852,21 +862,9 @@ msgid_plural "%d font files"
 msgstr[0] "%d archivo de fuente"
 msgstr[1] "%d archivos de fuentes"
 
-#: includes/admin-page.php:303
-msgid "Font Kit Name:"
-msgstr "Nombre del Kit de Fuentes:"
-
 #: includes/admin-page.php:304
 msgid "required"
 msgstr "requerido"
-
-#: includes/admin-page.php:311
-msgid "e.g., MyFonts Kit 2024"
-msgstr "ej., Kit de MyFonts 2024"
-
-#: includes/admin-page.php:316
-msgid "Enter a descriptive name for this font kit"
-msgstr "Introduce un nombre descriptivo para este kit de fuentes"
 
 #: includes/admin-page.php:322
 msgid "ZIP File:"
@@ -881,8 +879,12 @@ msgid "Choose ZIP File"
 msgstr "Elegir Archivo ZIP"
 
 #: includes/admin-page.php:341
-msgid "Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files."
-msgstr "Carga un kit de fuentes web como archivo ZIP. El ZIP debe contener el archivo CSS y los archivos de fuentes."
+msgid "Upload a webfont kit as a ZIP file. The ZIP can contain a CSS file and font files, or only font files."
+msgstr "Carga un kit de fuentes web como archivo ZIP. El ZIP puede contener un archivo CSS y archivos de fuentes, o solo archivos de fuentes."
+
+#: includes/admin-page.php:942
+msgid "Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP can contain a CSS file and font files, or just the font files themselves (such as a Google Fonts download) — if no stylesheet is included, one is generated automatically from the fonts' built-in metadata."
+msgstr "Sube un kit de fuentes web completo como archivo ZIP (ej., MyWebfontsKit.zip). El ZIP puede contener un archivo CSS y archivos de fuentes, o solo los archivos de fuentes (como una descarga de Google Fonts) — si no se incluye una hoja de estilos, se genera una automáticamente a partir de los metadatos integrados de las fuentes."
 
 #: includes/admin-page.php:347
 msgid "Clear selected file"
@@ -901,16 +903,16 @@ msgid "Download your webfont kit from your font provider"
 msgstr "Descarga tu kit de fuentes web desde tu proveedor de fuentes"
 
 #: includes/admin-page.php:736
-msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)"
-msgstr "Si el kit no está comprimido, crea un archivo ZIP que contenga toda la carpeta del kit (incluyendo el archivo CSS y todos los archivos de fuentes en sus directorios)"
+msgid "If the kit is not already zipped, create a ZIP file containing the entire kit folder. A CSS file is recommended but not required — a ZIP of bare font files also works"
+msgstr "Si el kit no está comprimido, crea un archivo ZIP que contenga toda la carpeta del kit. Un archivo CSS es recomendable pero no obligatorio — un ZIP con solo archivos de fuentes también funciona"
 
 #: includes/admin-page.php:737
 msgid "Click \"Choose ZIP File\" and select your webfont kit ZIP file"
 msgstr "Haz clic en \"Elegir Archivo ZIP\" y selecciona tu archivo ZIP del kit de fuentes web"
 
 #: includes/admin-page.php:738
-msgid "Give your kit a descriptive name and click \"Upload Font Kit\""
-msgstr "Dale a tu kit un nombre descriptivo y haz clic en \"Cargar Kit de Fuentes\""
+msgid "Click \"Upload Font Kit\" — the font names are read from the kit itself"
+msgstr "Haz clic en \"Cargar Kit de Fuentes\" — los nombres de las fuentes se leen del propio kit"
 
 #: includes/admin-page.php:739
 msgid "The plugin will extract the ZIP, process the fonts, and make them available in the block editor"
@@ -937,8 +939,8 @@ msgid "Compatibility Note:"
 msgstr "Nota de Compatibilidad:"
 
 #: includes/admin-page.php:747
-msgid "This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories)."
-msgstr "Este plugin ha sido probado con kits de fuentes web de MyFonts. Otros proveedores deberían funcionar si siguen una estructura similar (archivo CSS con declaraciones @font-face y archivos de fuentes en subdirectorios)."
+msgid "This plugin has been tested with webfont kits from MyFonts and with bare-font downloads from Google Fonts. Other providers should work too: kits with a CSS file are used as-is, and font-only ZIPs get a generated stylesheet. For WOFF2-only ZIPs the family and weight are detected from the filenames (the server cannot read WOFF2 metadata), so review the result and re-upload as TTF if something looks wrong."
+msgstr "Este plugin ha sido probado con kits de fuentes web de MyFonts y con descargas de solo fuentes de Google Fonts. Otros proveedores también deberían funcionar: los kits con un archivo CSS se usan tal cual, y los ZIP con solo fuentes reciben una hoja de estilos generada. Para los ZIP con solo WOFF2, la familia y el peso se detectan a partir de los nombres de archivo (el servidor no puede leer los metadatos WOFF2), así que revisa el resultado y vuelve a subir en TTF si algo no se ve bien."
 
 #: includes/admin-page.php:748
 msgid "Note:"

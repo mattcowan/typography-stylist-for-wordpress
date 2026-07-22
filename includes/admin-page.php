@@ -318,8 +318,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             echo '</optgroup>';
                         }
 
-                        // WP Font Library fonts (read-only source, WP 6.5+)
-                        $wpl_preview = $instance->get_wp_font_library_fonts();
+                        // WP Font Library fonts (read-only source, WP 6.5+).
+                        // Display variant: families the plugin registered are
+                        // already listed as uploaded fonts above.
+                        $wpl_preview = $instance->get_wp_font_library_fonts_for_display();
                         if (!empty($wpl_preview)) {
                             echo '<optgroup label="' . esc_attr__('WP Library', 'typography-stylist') . '">';
                             foreach ($wpl_preview as $wpl) {
@@ -558,7 +560,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <p><strong><?php esc_html_e('Performance benefit:', 'typography-stylist'); ?></strong> <?php esc_html_e('Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site.', 'typography-stylist'); ?></p>
                     <p><strong><?php esc_html_e('Three ways to add fonts:', 'typography-stylist'); ?></strong></p>
                     <ol>
-                        <li><strong><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></strong> — <?php esc_html_e('Upload a ZIP file from font providers like MyFonts or Fontspring. Best for fonts you have purchased and downloaded.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></strong> — <?php esc_html_e('Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded.', 'typography-stylist'); ?></li>
                         <li><strong><?php esc_html_e('Adobe Fonts', 'typography-stylist'); ?></strong> — <?php esc_html_e('Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers.', 'typography-stylist'); ?></li>
                         <li><strong><?php esc_html_e('Custom Font Definition', 'typography-stylist'); ?></strong> — <?php esc_html_e('Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it.', 'typography-stylist'); ?></li>
                     </ol>
@@ -609,7 +611,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             // ── Build $all_fonts normalized array ─────────────────────────────────────
             $all_fonts_list     = array();
             $font_order_saved   = $instance->get_font_order();
-            $wp_library_fonts   = $instance->get_wp_font_library_fonts();
+            // Display variant: excludes families the plugin itself registered —
+            // those already appear above as uploaded cards with the
+            // "In WP Library" badge, so listing them again reads as duplicates.
+            $wp_library_fonts   = $instance->get_wp_font_library_fonts_for_display();
 
             foreach ($custom_fonts as $font) {
                 $fid = isset($font['font_id']) ? (int) $font['font_id'] : 0;
@@ -939,21 +944,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <details class="typost-add-font-subsection">
                         <summary><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></summary>
                         <div class="typost-add-font-subsection-body">
-                        <p><?php esc_html_e('Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP should contain the CSS file and all font files.', 'typography-stylist'); ?></p>
+                        <p><?php esc_html_e('Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP can contain a CSS file and font files, or just the font files themselves (such as a Google Fonts download) — if no stylesheet is included, one is generated automatically from the fonts\' built-in metadata.', 'typography-stylist'); ?></p>
                         <div class="typost-upload-font-section" id="typost-upload-font-section">
                         <div class="typost-upload-form">
-                            <div class="typost-form-field">
-                                <label for="typost-font-name">
-                                    <?php esc_html_e('Font Kit Name:', 'typography-stylist'); ?>
-                                    <span class="required" aria-label="<?php esc_attr_e('required', 'typography-stylist'); ?>">*</span>
-                                </label>
-                                <input type="text" id="typost-font-name" name="typost-font-name" class="regular-text"
-                                    placeholder="<?php esc_attr_e('e.g., MyFonts Kit 2024', 'typography-stylist'); ?>"
-                                    aria-required="true" aria-describedby="typost-font-name-desc" required />
-                                <p id="typost-font-name-desc" class="description">
-                                    <?php esc_html_e('Enter a descriptive name for this font kit', 'typography-stylist'); ?>
-                                </p>
-                            </div>
                             <div class="typost-form-field">
                                 <span class="typost-field-label"><?php esc_html_e('ZIP File:', 'typography-stylist'); ?></span>
                                 <label for="typost-font-file" class="screen-reader-text">
@@ -968,7 +961,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <input type="file" id="typost-font-file" name="typost-font-file" accept=".zip"
                                     aria-describedby="typost-file-instructions" style="display: none;" />
                                 <span id="typost-file-instructions" class="screen-reader-text">
-                                    <?php esc_html_e('Upload a webfont kit as a ZIP file. The ZIP should contain CSS file and font files.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Upload a webfont kit as a ZIP file. The ZIP can contain a CSS file and font files, or only font files.', 'typography-stylist'); ?>
                                 </span>
                                 <div id="typost-selected-file" class="typost-selected-file" style="display: none;">
                                     <span class="dashicons dashicons-media-archive" aria-hidden="true"></span>
@@ -996,12 +989,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <h4><?php esc_html_e('How to use:', 'typography-stylist'); ?></h4>
                             <ol>
                                 <li><?php esc_html_e('Download your webfont kit from your font provider', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder (including CSS file and all font files in their directories)', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder. A CSS file is recommended but not required — a ZIP of bare font files also works', 'typography-stylist'); ?></li>
                                 <li><?php esc_html_e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Give your kit a descriptive name and click "Upload Font Kit"', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Click "Upload Font Kit" — the font names are read from the kit itself', 'typography-stylist'); ?></li>
                                 <li><?php esc_html_e('The plugin will extract the ZIP, process the fonts, and make them available in the block editor', 'typography-stylist'); ?></li>
                             </ol>
-                            <p><strong><?php esc_html_e('Compatibility Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin has been tested with webfont kits from MyFonts. Other providers should work if they follow a similar structure (CSS file with @font-face declarations and font files in subdirectories).', 'typography-stylist'); ?></p>
+                            <p><strong><?php esc_html_e('Compatibility Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin has been tested with webfont kits from MyFonts and with bare-font downloads from Google Fonts. Other providers should work too: kits with a CSS file are used as-is, and font-only ZIPs get a generated stylesheet. For WOFF2-only ZIPs the family and weight are detected from the filenames (the server cannot read WOFF2 metadata), so review the result and re-upload as TTF if something looks wrong.', 'typography-stylist'); ?></p>
                         </div>
                         </div><!-- .typost-upload-font-section -->
                         </div>
