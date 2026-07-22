@@ -709,11 +709,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
                                 <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'uploaded')); // Extension badges (e.g. Variable) lead, before the source pills ?>
                             <span class="typost-font-type-badge typost-badge-uploaded"><?php echo esc_html($badge_labels['uploaded']); ?></span>
                             <?php if ($instance->font_library_bridge()->entry_has_live_registration($font)) : ?>
                             <span class="typost-font-type-badge typost-badge-wplibrary" title="<?php esc_attr_e('Registered in the WordPress Font Library', 'typography-stylist'); ?>"><?php esc_html_e('In WP Library', 'typography-stylist'); ?></span>
                             <?php endif; ?>
-                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'uploaded')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <?php if ($families_list): ?>
@@ -803,8 +803,8 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
                                 <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'adobe')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-adobe"><?php echo esc_html($badge_labels['adobe']); ?></span>
-                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'adobe')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <?php if ($adobe_family): ?>
@@ -865,8 +865,8 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
                                 <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'manual')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-manual"><?php echo esc_html($badge_labels['manual']); ?></span>
-                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'manual')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <div class="typost-form-field">
@@ -914,8 +914,8 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <span aria-hidden="true" class="dashicons dashicons-external"></span>
                                 <?php esc_html_e('Manage in Editor', 'typography-stylist'); ?>
                             </a>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $wpl, 'wplibrary')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-wplibrary"><?php echo esc_html($badge_labels['wplibrary']); ?></span>
-                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $wpl, 'wplibrary')); ?>
                         </div>
                     </div>
                 <?php endif; ?>

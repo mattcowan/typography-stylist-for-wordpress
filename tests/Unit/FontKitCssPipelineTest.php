@@ -2,6 +2,7 @@
 namespace TypographyStylist\Tests\Unit;
 
 use TypographyStylist\Tests\TestCase;
+use Brain\Monkey\Functions;
 
 /**
  * Round-trip tests: CSS produced by Typost_Font_Metadata::build_css() must
@@ -78,6 +79,48 @@ class FontKitCssPipelineTest extends TestCase {
         $this->assertStringContainsString('@font-face', $sanitized);
         $this->assertStringContainsString('font-weight: 300 700;', $sanitized);
         $this->assertStringContainsString('SpaceGrotesk%5Bwght%5D.ttf', $sanitized);
+    }
+
+    public function test_generated_warning_filenames_are_sanitized() {
+        // ZIP entries can carry hostile filenames; the warning strings travel
+        // through the REST response, so the filename must pass through
+        // sanitize_text_field() before interpolation. Tag the sanitizer's
+        // output to prove the value was routed through it.
+        Functions\when('sanitize_text_field')->alias(function ($value) {
+            return '[SANITIZED]' . $value;
+        });
+
+        $kit = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'typost-warn-' . uniqid();
+        mkdir($kit, 0777, true);
+        file_put_contents($kit . DIRECTORY_SEPARATOR . 'broken.woff2', 'wOF2' . str_repeat("\0", 32));
+
+        $wp_filesystem = new class {
+            public function put_contents($path, $contents, $mode = null) {
+                return file_put_contents($path, $contents) !== false;
+            }
+            public function exists($path) {
+                return file_exists($path);
+            }
+        };
+
+        try {
+            $plugin = $this->getPluginInstance();
+            $result = $this->invokePrivate($plugin, 'generate_css_from_fonts', $kit, $wp_filesystem);
+
+            $this->assertIsArray($result);
+            $this->assertCount(1, $result['warnings']);
+            $this->assertStringContainsString('[SANITIZED]broken.woff2', $result['warnings'][0]);
+        } finally {
+            if (is_file($kit . DIRECTORY_SEPARATOR . 'broken.woff2')) {
+                unlink($kit . DIRECTORY_SEPARATOR . 'broken.woff2');
+            }
+            if (is_file($kit . DIRECTORY_SEPARATOR . 'stylesheet.css')) {
+                unlink($kit . DIRECTORY_SEPARATOR . 'stylesheet.css');
+            }
+            if (is_dir($kit)) {
+                rmdir($kit);
+            }
+        }
     }
 
     public function test_static_multi_face_css_round_trip() {

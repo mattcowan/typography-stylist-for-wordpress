@@ -223,7 +223,7 @@ add_filter('typost_admin_tabs', function($tabs) {
 
 #### `typost_font_card_badges`
 
-Filter the extension badge HTML appended after the source badge in each font card header on the Custom Fonts tab. Return accumulated HTML — always append to (never replace) the incoming value, since multiple extensions may add badges. Output is passed through `wp_kses_post()`.
+Filter the extension badge HTML rendered in each font card header on the Custom Fonts tab. Extension badges render **before** the source pills (Uploaded, Adobe Fonts, WP Library, …) so state badges like the Variable Fonts module's "Variable" pill lead the row. Return accumulated HTML — always append to (never replace) the incoming value, since multiple extensions may add badges. Output is passed through `wp_kses_post()`.
 
 ```php
 add_filter('typost_font_card_badges', function($badges, $font, $type) {

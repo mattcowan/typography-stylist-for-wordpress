@@ -3803,7 +3803,10 @@ class Typost {
 
         $warnings = array();
         foreach ($result['warnings'] as $warning) {
-            $file = isset($warning['file']) ? $warning['file'] : '';
+            // ZIP entries can carry hostile filenames (HTML, control chars);
+            // these strings also leave through the REST response, where other
+            // clients may not render them as safely as the admin UI does.
+            $file = isset($warning['file']) ? sanitize_text_field($warning['file']) : '';
             if (isset($warning['code']) && $warning['code'] === 'woff2_filename_guess') {
                 $warnings[] = sprintf(
                     /* translators: %s: font file name */
