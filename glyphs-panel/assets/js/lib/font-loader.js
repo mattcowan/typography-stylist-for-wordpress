@@ -8,13 +8,19 @@
  * The parsed binary is used for METADATA extraction only (see metadata.js)
  * and discarded immediately — no outline data is retained.
  *
- * Every failure is returned as a value ({ok: false, reason}) so the UI can
- * show a notice instead of breaking:
+ * Every failure is returned as a value ({ok: false, reason, detail}) so the
+ * UI can show a notice instead of breaking:
  *   'no-file'            — no fetchable file URL for this font source
  *   'cors'               — cross-origin fetch blocked
  *   'fetch-failed'       — network/HTTP error
  *   'unsupported-format' — not WOFF2/WOFF/TTF/OTF (e.g. EOT-only kit)
+ *   'vendor-load-failed' — a bundled vendor library (opentype.js/wawoff2)
+ *                          failed to load — an environment problem (missing
+ *                          files, CSP), never the font's fault
+ *   'decompress-failed'  — wawoff2 could not decompress the WOFF2 data
  *   'parse-failed'       — binary could not be parsed
+ * `detail` (when present) carries the underlying error message for display
+ * in the UI — debugging aid only, not translated.
  *
  * Pure helpers (parseSrcUrls, pickBestUrl, pickFaceForWeight, sniffFormat)
  * are unit-tested; the fetch/vendor orchestration is browser-only.
@@ -197,6 +203,66 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Failure classification (pure)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Tag an error with a pipeline failure reason so catch handlers can
+	 * classify it without string matching. (Mirrored in parse-worker.js,
+	 * which cannot import this file.)
+	 *
+	 * @param {Error} err     Error to tag
+	 * @param {string} reason Failure reason code
+	 * @return {Error} The same error
+	 */
+	function tagError(err, reason) {
+		if (err && !err.typostReason) {
+			err.typostReason = reason;
+		}
+		return err;
+	}
+
+	/**
+	 * Failure reason for a caught pipeline error.
+	 *
+	 * @param {Error} err Caught error (possibly tagged via tagError)
+	 * @return {string} Tagged reason, or 'parse-failed' for untagged errors
+	 */
+	function errorReason(err) {
+		return (err && err.typostReason) || 'parse-failed';
+	}
+
+	/**
+	 * Human-readable detail for a caught error (shown in the UI as a
+	 * debugging aid).
+	 *
+	 * @param {Error} err Caught error
+	 * @return {string} Error message, or '' when unavailable
+	 */
+	function errorDetail(err) {
+		return err && err.message ? String(err.message) : '';
+	}
+
+	/**
+	 * Whether a worker parse result warrants retrying on the main thread.
+	 * No result means the worker was unavailable, errored, or timed out. A
+	 * worker-internal vendor load failure may be worker-specific (e.g. CSP
+	 * blocking importScripts) while the page context can still load vendor
+	 * scripts — so it is not treated as definitive. Genuine parse failures
+	 * ARE definitive: the main thread runs the identical libraries and
+	 * would only repeat the same failure.
+	 *
+	 * @param {Object|null} workerResult Result posted by parse-worker.js, or null
+	 * @return {boolean} True when the main-thread fallback should run
+	 */
+	function shouldFallBackToMainThread(workerResult) {
+		if (!workerResult) {
+			return true;
+		}
+		return workerResult.ok === false && workerResult.reason === 'vendor-load-failed';
+	}
+
+	// -------------------------------------------------------------------------
 	// Browser-only: lazy vendor loading
 	// -------------------------------------------------------------------------
 
@@ -214,7 +280,7 @@
 			script.src = url;
 			script.onload = resolve;
 			script.onerror = function() {
-				reject(new Error('Failed to load ' + url));
+				reject(tagError(new Error('Failed to load ' + url), 'vendor-load-failed'));
 			};
 			document.head.appendChild(script);
 		});
@@ -226,7 +292,15 @@
 		}
 		if (!opentypePromise) {
 			opentypePromise = loadScript(vendorUrls().opentype).then(function() {
+				if (typeof window.opentype === 'undefined') {
+					throw tagError(new Error('opentype.js did not initialize'), 'vendor-load-failed');
+				}
 				return window.opentype;
+			});
+			// Failed loads are not memoized — a user-initiated retry must be
+			// able to re-attempt the script load
+			opentypePromise.catch(function() {
+				opentypePromise = null;
 			});
 		}
 		return opentypePromise;
@@ -249,19 +323,40 @@
 				window.Module = mod;
 				loadScript(vendorUrls().wawoff2).catch(reject);
 			});
+			// Failed loads are not memoized — see ensureOpentypeLoaded()
+			wawoff2Promise.catch(function() {
+				wawoff2Promise = null;
+			});
 		}
 		return wawoff2Promise;
 	}
 
 	function decompressWoff2(buffer) {
 		return ensureWawoff2Loaded().then(function(mod) {
-			var result = mod.decompress(new Uint8Array(buffer));
+			var result;
+			try {
+				result = mod.decompress(new Uint8Array(buffer));
+			} catch (e) {
+				throw tagError(e, 'decompress-failed');
+			}
 			if (!result) {
-				throw new Error('WOFF2 decompression failed');
+				throw tagError(new Error('WOFF2 decompression returned no data'), 'decompress-failed');
 			}
 			// Copy into a standalone ArrayBuffer for opentype.parse
 			return result.buffer.slice(result.byteOffset, result.byteOffset + result.byteLength);
 		});
+	}
+
+	/**
+	 * Forget failed worker state so a user-initiated retry can re-attempt
+	 * worker creation. Vendor script loads self-heal on failure (see
+	 * ensureOpentypeLoaded / ensureWawoff2Loaded), and the worker re-attempts
+	 * its own importScripts on the next parse, so those need no reset here.
+	 */
+	function resetLoaderState() {
+		if (workerInstance === null) {
+			workerInstance = undefined;
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -301,8 +396,12 @@
 				}
 				return response.text().then(function(cssText) {
 					var faces = parseSrcUrls(cssText);
-					// Match one of the kit's family names when possible
-					var families = (entry.font_families || []).map(function(f) {
+					// Match one of the kit's family names when possible.
+					// Modern per-family entries carry font_family (singular);
+					// legacy whole-kit entries carry a font_families array.
+					var familyList = entry.font_families ||
+						(entry.font_family ? [ entry.font_family ] : []);
+					var families = familyList.map(function(f) {
 						return String(f).toLowerCase();
 					});
 					var face = faces.filter(function(f) {
@@ -523,10 +622,12 @@
 						if (workerResult && workerResult.ok && workerResult.meta) {
 							return { ok: true, meta: workerResult.meta };
 						}
-						if (workerResult && workerResult.ok === false) {
+						if (workerResult && workerResult.ok === false && !shouldFallBackToMainThread(workerResult)) {
 							return workerResult; // definitive parse failure
 						}
-						// Worker unavailable — parse on the main thread
+						// Worker unavailable, or its vendor libraries failed to
+						// load — parse on the main thread
+						var workerDetail = (workerResult && workerResult.detail) || '';
 						var bufferPromise = (format === 'woff2')
 							? decompressWoff2(buffer)
 							: Promise.resolve(buffer);
@@ -535,12 +636,12 @@
 								var font = opentype.parse(parseBuffer);
 								var meta = window.typostGlyphs.buildFontMetadata(font, fullInfo);
 								if (!meta) {
-									return { ok: false, reason: 'parse-failed' };
+									return { ok: false, reason: 'parse-failed', detail: 'No character map (cmap) found in font' };
 								}
 								return { ok: true, meta: meta };
 							});
-						}).catch(function() {
-							return { ok: false, reason: 'parse-failed' };
+						}).catch(function(err) {
+							return { ok: false, reason: errorReason(err), detail: errorDetail(err) || workerDetail };
 						});
 					});
 				});
@@ -590,8 +691,8 @@
 								partialCoverage: !!resolved.partialCoverage
 							};
 						});
-					}).catch(function() {
-						return { ok: false, reason: 'parse-failed' };
+					}).catch(function(err) {
+						return { ok: false, reason: errorReason(err), detail: errorDetail(err) };
 					});
 				});
 			}).catch(function() {
@@ -607,6 +708,11 @@
 		pickBestUrl: pickBestUrl,
 		pickFaceForWeight: pickFaceForWeight,
 		sniffFormat: sniffFormat,
+		tagError: tagError,
+		errorReason: errorReason,
+		errorDetail: errorDetail,
+		shouldFallBackToMainThread: shouldFallBackToMainThread,
+		resetLoaderState: resetLoaderState,
 		resolveFontFile: resolveFontFile,
 		findFontFaceUrlInDocument: findFontFaceUrlInDocument,
 		loadAndParseFont: loadAndParseFont,

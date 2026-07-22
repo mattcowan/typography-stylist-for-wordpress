@@ -221,6 +221,24 @@ add_filter('typost_admin_tabs', function($tabs) {
 - `label` (string) — Display text for the tab button
 - `priority` (int) — Sort order (lower = further left). Built-in tabs: Fonts=10, Features=20, Options=30, Accessibility=40, Replacements=50, Help=100
 
+#### `typost_font_card_badges`
+
+Filter the extension badge HTML appended after the source badge in each font card header on the Custom Fonts tab. Return accumulated HTML — always append to (never replace) the incoming value, since multiple extensions may add badges. Output is passed through `wp_kses_post()`.
+
+```php
+add_filter('typost_font_card_badges', function($badges, $font, $type) {
+    // $type is 'uploaded', 'adobe', 'manual', or 'wplibrary'
+    // $font is the entry being rendered (wplibrary entries have slug, not id)
+    if (my_extension_applies_to($font)) {
+        $badges .= '<span class="typost-font-type-badge my-badge">' .
+            esc_html__('My Badge', 'my-text-domain') . '</span>';
+    }
+    return $badges;
+}, 10, 3);
+```
+
+The bundled Variable Fonts module uses this to show a "Variable" pill (with the configured axis tags in its tooltip) on variable fonts.
+
 #### `typost_available_features`
 
 Filter the list of available OpenType features.
@@ -313,6 +331,8 @@ window.typostHooks.addFilter('typost_current_editor_state', myFilter, 10);
 window.typostHooks.removeFilter('typost_current_editor_state', myFilter);
 ```
 
+**Container lifecycle:** Each hook point renders a `<div class="typost-hook-point" data-hook="...">` and fires its action **once per container mount** — actions do not re-fire on ordinary editor re-renders, so render your UI once and manage its own state from there. The **font-dependent hook points** (`typost_weight_control`, `typost_inline_after_font_controls`, `typost_qft_after_font_controls`, `typost_inspector_after_font_weight`) are keyed to the active font: when the font changes, the old container (and everything you rendered into it) is destroyed, a fresh container mounts, and the action fires again with the new state. Don't cache references to these containers across font changes.
+
 ### Inline Editor Hook Points
 
 These hooks fire inside the inline editor modal (the "T" toolbar button popover). Each receives a container DOM element and the editor's current state.
@@ -351,6 +371,8 @@ window.typostHooks.addAction('typost_qft_modal_top', function(containerEl, state
 }, 10);
 ```
 
+The `typost_qft_after_font_controls` state also includes `inlineFontFamilyAtSelection` (the numeric font ID of an inline font at the current selection, if any) so extensions can prefer the inline font over the block-level `fontId`.
+
 ### Inspector Controls Hook Points
 
 These hooks fire inside the Typography Stylist block's sidebar Inspector Controls.
@@ -372,13 +394,17 @@ window.typostHooks.addAction('typost_inspector_after_font_weight', function(cont
 
 #### `typost_weight_control` (Filter)
 
-Filter that determines whether the standard weight dropdown should be replaced by a custom control. Return `'default'` for the normal dropdown, or any other value (e.g., `'variable'`) to replace it with a hook container.
+Filter that determines whether the standard weight dropdown should be replaced by a custom control. Return `'default'` for the normal dropdown, `'hidden'` to suppress the weight control entirely (no wrapper section, no hook container — used e.g. for variable fonts without a `wght` axis), or any other value (e.g., `'variable'`) to replace it with a hook container.
 
 ```javascript
 window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
     // Return 'variable' to replace the dropdown with a custom control
     if (fontHasVariableWeightAxis(fontId)) {
         return 'variable';
+    }
+    // Return 'hidden' to render no weight control at all
+    if (fontShouldHideWeights(fontId)) {
+        return 'hidden';
     }
     return type; // 'default' = normal dropdown
 }, 10);
@@ -387,6 +413,8 @@ window.typostHooks.addFilter('typost_weight_control', function(type, fontId) {
 **Parameters:**
 - `type` (string) — Current control type (`'default'` initially)
 - `fontId` (number) — The active font's numeric ID
+
+**Recognized return values:** `'default'` (normal dropdown), `'hidden'` (no control rendered), anything else (hook container fired via the action below).
 
 **Checked in three locations:** inline editor, Quick Feature Toggle, Inspector Controls.
 
@@ -424,6 +452,27 @@ $(document).on('typost:font-saved', function(e, data) {
 ```
 
 **`waitUntil` (since 2.1.0):** core reloads the page after a font save. If your extension saves its own data asynchronously on this event, register the request via `data.waitUntil(promise)` — core waits for all registered promises to settle (with a 5-second cap) before reloading, instead of the old fixed 1500 ms timeout your request had to race.
+
+#### `typost:fonts-added`
+
+jQuery event triggered on `$(document)` after new fonts are successfully added in the admin — a webfont kit ZIP upload or an Adobe Fonts kit. Use this to post-process brand-new entries before the page reloads (e.g. the bundled Variable Fonts module auto-detects fvar axes here).
+
+```javascript
+$(document).on('typost:fonts-added', function(e, data) {
+    // data.type      — How the fonts were added: 'uploaded' or 'adobe'
+    // data.fonts     — Array of the new font entries as returned by the REST endpoint
+    //                  (each has id, font_id, and source-specific fields like
+    //                  css_content for uploads or css_url/font_family for Adobe)
+    // data.$message  — jQuery element of the form's message area (append notices here)
+    // data.waitUntil — Register a promise the page reload waits on
+    var work = processNewFonts(data.fonts); // e.g. detection + $.ajax saves
+    if (typeof data.waitUntil === 'function') {
+        data.waitUntil(work);
+    }
+});
+```
+
+**`waitUntil`:** same contract as `typost:font-saved`, but with a 15-second cap — listeners here may download and parse font binaries, which takes longer than a settings save. The reload also waits a minimum delay so the success notice stays readable.
 
 ### Lifecycle Hooks
 

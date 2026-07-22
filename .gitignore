@@ -13,9 +13,13 @@ coverage/
 blocks/*/build/
 blueprints/
 
-# PHP dependencies
-vendor/
+# PHP dependencies (Composer) — anchored to the plugin root so it does not
+# swallow glyphs-panel/assets/js/vendor/ (bundled JS libraries, committed)
+/vendor/
 composer.phar
+
+# Bundled third-party JS libraries must be committed despite *.min.js above
+!glyphs-panel/assets/js/vendor/**
 
 # Testing and cache files
 .phpunit.result.cache

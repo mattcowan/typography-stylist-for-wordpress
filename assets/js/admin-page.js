@@ -208,9 +208,11 @@ jQuery(document).ready(function($) {
                 $('#typost-font-file').val('');
                 $('#typost-selected-file').hide();
 
-                // Refresh page after 2 seconds
-                setTimeout(function() {
-                    location.reload();
+                // Reload after extensions post-process the new entries
+                reloadAfterFontsAdded({
+                    type: 'uploaded',
+                    fonts: response.fonts || [],
+                    $message: $message
                 }, 2000);
             },
             error: function(xhr) {
@@ -634,7 +636,6 @@ jQuery(document).ready(function($) {
     $('#typost-add-adobe-font-btn').on('click', function() {
         var $btn = $(this);
         var $message = $('#typost-adobe-font-message');
-        var fontName = $('#typost-adobe-font-name').val().trim();
         var embedCode = $('#typost-adobe-embed-code').val().trim();
         var fontFamiliesInput = $('#typost-adobe-font-families').val().trim();
 
@@ -642,12 +643,6 @@ jQuery(document).ready(function($) {
         $message.html('');
 
         // Validate
-        if (!fontName) {
-            $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterAdobeProjectName + '</p></div>');
-            $('#typost-adobe-font-name').focus().attr('aria-invalid', 'true');
-            return;
-        }
-
         if (!embedCode) {
             $message.html('<div class="notice notice-error inline"><p>' + typostAdmin.strings.enterAdobeEmbedCode + '</p></div>');
             $('#typost-adobe-embed-code').focus().attr('aria-invalid', 'true');
@@ -671,13 +666,12 @@ jQuery(document).ready(function($) {
         }
 
         // Clear aria-invalid on success
-        $('#typost-adobe-font-name').attr('aria-invalid', 'false');
         $('#typost-adobe-embed-code').attr('aria-invalid', 'false');
         $('#typost-adobe-font-families').attr('aria-invalid', 'false');
 
-        // Prepare data
+        // Prepare data (no name field — the endpoint derives a kit name;
+        // per-family entries are named by their family)
         var data = {
-            name: fontName,
             embed_code: embedCode,
             font_families: fontFamilies
         };
@@ -708,9 +702,11 @@ jQuery(document).ready(function($) {
                 $('#typost-adobe-embed-code').val('');
                 $('#typost-adobe-font-families').val('');
 
-                // Refresh page after 1.5 seconds
-                setTimeout(function() {
-                    location.reload();
+                // Reload after extensions post-process the new entries
+                reloadAfterFontsAdded({
+                    type: 'adobe',
+                    fonts: response.fonts || [],
+                    $message: $message
                 }, 1500);
             },
             error: function(xhr) {
@@ -1015,6 +1011,35 @@ jQuery(document).ready(function($) {
         var settled = Promise.all(pending.map(swallow));
         var cap = new Promise(function(resolve) { setTimeout(resolve, 5000); });
         var minDelay = new Promise(function(resolve) { setTimeout(resolve, 1200); });
+
+        Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
+            location.reload();
+        });
+    }
+
+    /**
+     * Fire typost:fonts-added with a waitUntil(promise) collector, then reload
+     * once every listener-registered promise settles. Same contract as
+     * typost:font-saved, but for the add/upload flows where extensions
+     * post-process brand-new entries (e.g. variable font axis auto-detection,
+     * which downloads and parses font binaries — hence the longer 15 s cap).
+     *
+     * @param {Object} payload   {type: 'uploaded'|'adobe', fonts: Array, $message: jQuery}
+     * @param {number} minDelayMs Minimum delay so the success notice stays readable.
+     */
+    function reloadAfterFontsAdded(payload, minDelayMs) {
+        var pending = [];
+        payload.waitUntil = function(promise) {
+            if (promise && typeof promise.then === 'function') {
+                pending.push(promise);
+            }
+        };
+        $(document).trigger('typost:fonts-added', payload);
+
+        var swallow = function(p) { return Promise.resolve(p).catch(function() {}); };
+        var settled = Promise.all(pending.map(swallow));
+        var cap = new Promise(function(resolve) { setTimeout(resolve, 15000); });
+        var minDelay = new Promise(function(resolve) { setTimeout(resolve, minDelayMs); });
 
         Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
             location.reload();

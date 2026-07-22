@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Guard the constants so a still-active standalone copy (deactivated but left
 // on disk) cannot trigger a duplicate define() or a fatal class redeclare.
 if ( ! defined( 'TYPOST_GP_VERSION' ) ) {
-	define( 'TYPOST_GP_VERSION', '1.1.1' );
+	define( 'TYPOST_GP_VERSION', '1.1.2' );
 	define( 'TYPOST_GP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_GP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -99,20 +99,52 @@ final class Typost_Glyphs_Panel {
 	// -------------------------------------------------------------------------
 
 	/**
+	 * Relative paths (from the module root) of the bundled vendor libraries
+	 * the glyph browser cannot work without.
+	 *
+	 * @return string[]
+	 */
+	private function get_vendor_files() {
+		return array(
+			'assets/js/vendor/opentype.min.js',
+			'assets/js/vendor/wawoff2/decompress_binding.js',
+		);
+	}
+
+	/**
+	 * Vendor library files missing from disk. Non-empty means the install is
+	 * incomplete (e.g. deployed from a checkout without the bundled vendor
+	 * files) and every font would fail to parse with a misleading error —
+	 * the UI uses this to report the real problem instead.
+	 *
+	 * @return string[] Relative paths of missing files (empty when healthy).
+	 */
+	private function get_missing_vendor_files() {
+		$missing = array();
+		foreach ( $this->get_vendor_files() as $relative_path ) {
+			if ( ! file_exists( TYPOST_GP_PLUGIN_DIR . $relative_path ) ) {
+				$missing[] = $relative_path;
+			}
+		}
+		return $missing;
+	}
+
+	/**
 	 * Build the glyphsPanel data block shared by the editor and admin contexts.
 	 *
 	 * @return array
 	 */
 	private function get_glyphs_panel_data() {
 		return array(
-			'vendorUrls'  => array(
+			'vendorUrls'    => array(
 				'opentype' => TYPOST_GP_PLUGIN_URL . 'assets/js/vendor/opentype.min.js',
 				'wawoff2'  => TYPOST_GP_PLUGIN_URL . 'assets/js/vendor/wawoff2/decompress_binding.js',
 			),
-			'workerUrl'   => TYPOST_GP_PLUGIN_URL . 'assets/js/lib/parse-worker.js',
-			'metadataUrl' => TYPOST_GP_PLUGIN_URL . 'assets/js/lib/metadata.js',
-			'wpFontFiles' => typost_gp_get_wp_font_files(),
-			'version'     => TYPOST_GP_VERSION,
+			'workerUrl'     => TYPOST_GP_PLUGIN_URL . 'assets/js/lib/parse-worker.js',
+			'metadataUrl'   => TYPOST_GP_PLUGIN_URL . 'assets/js/lib/metadata.js',
+			'wpFontFiles'   => typost_gp_get_wp_font_files(),
+			'vendorMissing' => $this->get_missing_vendor_files(),
+			'version'       => TYPOST_GP_VERSION,
 		);
 	}
 
@@ -235,9 +267,19 @@ final class Typost_Glyphs_Panel {
 	 * admin-glyphs.js into the container below.
 	 */
 	public function render_admin_tab() {
+		$missing_vendor = $this->get_missing_vendor_files();
 		?>
 		<div class="typost-glyphs-admin-tab">
 			<h2><?php esc_html_e( 'Glyph Browser', 'typost-glyphs-panel' ); ?></h2>
+			<?php if ( ! empty( $missing_vendor ) ) : ?>
+				<div class="notice notice-warning inline">
+					<p>
+						<?php esc_html_e( 'The Glyph Browser cannot work on this installation: the bundled font-parsing libraries are missing. Reinstall the plugin to restore them.', 'typost-glyphs-panel' ); ?>
+						<br />
+						<code><?php echo esc_html( implode( ', ', $missing_vendor ) ); ?></code>
+					</p>
+				</div>
+			<?php endif; ?>
 			<p><?php esc_html_e( 'Explore every character and OpenType feature in your fonts. Click a glyph to copy it to the clipboard. To insert glyphs into content, use the Glyphs button inside the editor.', 'typost-glyphs-panel' ); ?></p>
 			<p>
 				<button type="button" class="button button-primary" id="typost-glyphs-admin-open">

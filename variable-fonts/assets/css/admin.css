@@ -8,3 +8,18 @@
 	padding-top: 12px;
 	border-top: 1px solid #dcdcde;
 }
+
+/* "Variable" pill on font cards (replaced the read-only Variable Fonts tab).
+   Base pill shape comes from core's .typost-font-type-badge; colors follow
+   the same pastel + dark-variant pattern as the core source badges. */
+.typost-badge-variable {
+	background: #d0ecea;
+	color: #0f4d47;
+}
+
+@media (prefers-color-scheme: dark) {
+	.typost-badge-variable {
+		background: #0f3d38;
+		color: #8fd9d0;
+	}
+}

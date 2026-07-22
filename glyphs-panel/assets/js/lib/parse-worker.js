@@ -7,16 +7,39 @@
  *
  * Message in:  { type: 'parse', id, buffer: ArrayBuffer,
  *                vendorUrls: {opentype, wawoff2}, metadataUrl, info }
- * Message out: { id, ok: true, meta } | { id, ok: false, reason }
+ * Message out: { id, ok: true, meta } | { id, ok: false, reason, detail }
+ *
+ * Failure reasons distinguish environment problems from font problems:
+ *   'vendor-load-failed' — importScripts of a vendor library failed (404,
+ *                          CSP, worker restrictions); never the font's fault
+ *   'decompress-failed'  — wawoff2 could not decompress the WOFF2 data
+ *   'parse-failed'       — opentype.js could not parse, or no usable cmap
  *
  * Vendor libraries and metadata.js are importScripts'd lazily on first parse.
  * The main thread (font-loader.js) falls back to main-thread parsing when
- * worker creation fails or a parse times out.
+ * worker creation fails, a parse times out, or this worker reports
+ * 'vendor-load-failed' (the page context may still be able to load vendors).
  */
 'use strict';
 
 var wawoff2Ready = null;
 var scriptsLoaded = false;
+
+// Error tagging (mirrors font-loader.js, which this worker cannot import)
+function tagError(err, reason) {
+	if (err && !err.typostReason) {
+		err.typostReason = reason;
+	}
+	return err;
+}
+
+function errorReason(err) {
+	return (err && err.typostReason) || 'parse-failed';
+}
+
+function errorDetail(err) {
+	return err && err.message ? String(err.message) : '';
+}
 
 function ensureWawoff2(url) {
 	if (!wawoff2Ready) {
@@ -30,8 +53,13 @@ function ensureWawoff2(url) {
 			try {
 				importScripts(url);
 			} catch (e) {
-				reject(e);
+				reject(tagError(e, 'vendor-load-failed'));
 			}
+		});
+		// Failed loads must not stick for the worker's lifetime — clearing the
+		// memo lets a later retry re-attempt the importScripts
+		wawoff2Ready.catch(function() {
+			wawoff2Ready = null;
 		});
 	}
 	return wawoff2Ready;
@@ -50,7 +78,12 @@ self.onmessage = function(e) {
 
 	try {
 		if (!scriptsLoaded) {
-			importScripts(msg.vendorUrls.opentype, msg.metadataUrl);
+			try {
+				importScripts(msg.vendorUrls.opentype, msg.metadataUrl);
+			} catch (loadErr) {
+				done({ ok: false, reason: 'vendor-load-failed', detail: errorDetail(loadErr) });
+				return;
+			}
 			scriptsLoaded = true;
 		}
 
@@ -59,9 +92,14 @@ self.onmessage = function(e) {
 		var bufferPromise;
 		if (tag === 0x774F4632) { // 'wOF2'
 			bufferPromise = ensureWawoff2(msg.vendorUrls.wawoff2).then(function(mod) {
-				var out = mod.decompress(new Uint8Array(msg.buffer));
+				var out;
+				try {
+					out = mod.decompress(new Uint8Array(msg.buffer));
+				} catch (decompressErr) {
+					throw tagError(decompressErr, 'decompress-failed');
+				}
 				if (!out) {
-					throw new Error('WOFF2 decompression failed');
+					throw tagError(new Error('WOFF2 decompression returned no data'), 'decompress-failed');
 				}
 				return out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
 			});
@@ -73,14 +111,14 @@ self.onmessage = function(e) {
 			var font = self.opentype.parse(parseBuffer);
 			var meta = self.typostGlyphs.buildFontMetadata(font, msg.info);
 			if (!meta) {
-				done({ ok: false, reason: 'parse-failed' });
+				done({ ok: false, reason: 'parse-failed', detail: 'No character map (cmap) found in font' });
 				return;
 			}
 			done({ ok: true, meta: meta });
-		}).catch(function() {
-			done({ ok: false, reason: 'parse-failed' });
+		}).catch(function(err) {
+			done({ ok: false, reason: errorReason(err), detail: errorDetail(err) });
 		});
 	} catch (err) {
-		done({ ok: false, reason: 'parse-failed' });
+		done({ ok: false, reason: errorReason(err), detail: errorDetail(err) });
 	}
 };

@@ -69,3 +69,12 @@
 	border-top: none;
 	padding-top: 0;
 }
+
+/* Inline format modal: the hook container is bare, so match the native
+   section metrics (.typost-font-section etc. in core block-editor.css) */
+[data-hook="typost_inline_after_font_controls"] .typost-vf-other-axes {
+	margin: 0 1rem;
+	padding: 16px 20px;
+	border-top: none;
+	border-bottom: 1px solid #ddd;
+}

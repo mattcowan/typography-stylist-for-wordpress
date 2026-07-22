@@ -1109,7 +1109,6 @@ class Typost {
                 'processing' => esc_html__('Processing...', 'typography-stylist'),
                 'uploadButton' => esc_html__('Upload Font Kit', 'typography-stylist'),
                 // Adobe Fonts strings
-                'enterAdobeProjectName' => esc_html__('Please enter a project name.', 'typography-stylist'),
                 'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
                 'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
                 'adding' => esc_html__('Adding...', 'typography-stylist'),
@@ -1229,10 +1228,13 @@ class Typost {
                 break;
 
             case 'alice-blue':
+                // Primary + muted text darkened for WCAG AA: primary must hold
+                // 4.5:1 both as text on the darkest alice tint (#dce9f5) and
+                // as the white-text badge background.
                 $css = '.typost-admin-wrap {
-                    --typost-color-primary: #4a90c4;
-                    --typost-color-primary-dark: #2e6da4;
-                    --typost-color-primary-focus: rgba(74, 144, 196, 0.3);
+                    --typost-color-primary: #2a689e;
+                    --typost-color-primary-dark: #235a8c;
+                    --typost-color-primary-focus: rgba(42, 104, 158, 0.3);
                     --typost-bg-page: #f0f8ff;
                     --typost-bg-surface: #ffffff;
                     --typost-bg-surface-alt: #f7fbff;
@@ -1250,7 +1252,7 @@ class Typost {
                     --typost-border-input: #7ea5c3;
                     --typost-text-primary: #1a2a3a;
                     --typost-text-secondary: #4a6580;
-                    --typost-text-muted: #5a7a94;
+                    --typost-text-muted: #44647c;
                     --typost-color-support-bg: #f0f8ff;
                 }';
                 break;
@@ -1278,10 +1280,10 @@ class Typost {
                     --typost-text-primary: #f0f4f8;
                     --typost-text-secondary: #c4d0dc;
                     --typost-text-muted: #8fa4b8;
-                    --typost-text-on-primary: #ffffff;
-                    --typost-color-danger: #f06060;
-                    --typost-color-danger-hover: #f57575;
-                    --typost-color-danger-bright: #ff8888;
+                    --typost-text-on-primary: #0f1729;
+                    --typost-color-danger: #f58080;
+                    --typost-color-danger-hover: #f89090;
+                    --typost-color-danger-bright: #ff9999;
                     --typost-color-support-bg: #1a2510;
                     --typost-color-warning-bg: #2a2510;
                     --typost-color-warning-text: #e8b830;
@@ -1312,9 +1314,9 @@ class Typost {
                     --typost-text-primary: #000000;
                     --typost-text-secondary: #333333;
                     --typost-text-muted: #444444;
-                    --typost-color-danger: #cc0000;
-                    --typost-color-danger-hover: #ee0000;
-                    --typost-color-danger-bright: #ff0000;
+                    --typost-color-danger: #b00000;
+                    --typost-color-danger-hover: #990000;
+                    --typost-color-danger-bright: #b00000;
                 }';
                 break;
         }
@@ -1347,9 +1349,13 @@ class Typost {
         $notify  = isset($colors[2]) ? $colors[2] : '#0073aa';
         $action  = isset($colors[3]) ? $colors[3] : '#00a0d2';
 
-        // Use action color as primary, accent as primary-dark
-        $primary      = $action;
-        $primary_dark = $accent;
+        // Use action color as primary, accent as primary-dark. WP admin
+        // scheme action colors are often too light for AA text/badge use
+        // (e.g. default's #00a0d2 is 2.5:1 against white), so darken until
+        // the color holds 4.5:1 against white — which also guarantees it as
+        // readable text on the scheme's light tinted backgrounds below.
+        $primary      = $this->darken_to_contrast($action, 4.5);
+        $primary_dark = $this->darken_to_contrast($accent, 4.5);
 
         // Derive lighter variants by mixing with white
         $info_bg   = $this->mix_hex_color($primary, '#ffffff', 0.9);
@@ -1389,6 +1395,42 @@ class Typost {
         $b = round($c1[2] * (1 - $ratio) + $c2[2] * $ratio);
 
         return sprintf('#%02x%02x%02x', min(255, $r), min(255, $g), min(255, $b));
+    }
+
+    /**
+     * WCAG relative luminance of a hex color.
+     *
+     * @param string $color Hex color (e.g., '#2271b1').
+     * @return float Relative luminance (0-1).
+     */
+    private function relative_luminance($color) {
+        $rgb = array_map('hexdec', str_split(ltrim($color, '#'), 2));
+        $channels = array_map(function ($v) {
+            $v /= 255;
+            return $v <= 0.03928 ? $v / 12.92 : pow(($v + 0.055) / 1.055, 2.4);
+        }, $rgb);
+        return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
+    }
+
+    /**
+     * Darken a color (by mixing toward black) until it reaches the target
+     * WCAG contrast ratio against white. Colors already meeting the target
+     * are returned unchanged.
+     *
+     * @param string $color  Hex color to adjust.
+     * @param float  $target Minimum contrast ratio against white (e.g., 4.5).
+     * @return string Adjusted hex color.
+     */
+    private function darken_to_contrast($color, $target) {
+        $adjusted = $color;
+        for ($i = 0; $i < 20; $i++) {
+            $ratio = 1.05 / ($this->relative_luminance($adjusted) + 0.05);
+            if ($ratio >= $target) {
+                return $adjusted;
+            }
+            $adjusted = $this->mix_hex_color($adjusted, '#000000', 0.08);
+        }
+        return $adjusted;
     }
 
     /**
@@ -1433,6 +1475,19 @@ class Typost {
      * This is called by enqueue_block_assets hook
      */
     public function enqueue_custom_fonts_for_blocks() {
+        // Register/enqueue the handle and attach the --font-N CSS variables
+        // unconditionally: the iframed editor canvas (WP 6.3+) only receives
+        // styles enqueued on this hook, and Adobe/manual/Library fonts need the
+        // variables even when no uploaded webfont kits exist.
+        wp_register_style('typost-block-fonts', false, array(), TYPOST_VERSION);
+        wp_enqueue_style('typost-block-fonts');
+
+        // CSS variables must be added as raw CSS (not wrapped in <style> tags)
+        $css_vars = $this->get_font_css_variables();
+        if (!empty($css_vars)) {
+            wp_add_inline_style('typost-block-fonts', $css_vars);
+        }
+
         $fonts = $this->get_custom_fonts();
 
         if (empty($fonts)) {
@@ -1461,20 +1516,8 @@ class Typost {
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
         }
 
-        // Always register/enqueue handle even if no custom fonts, so we can attach CSS variables
-        wp_register_style('typost-block-fonts', false, array(), TYPOST_VERSION);
-        wp_enqueue_style('typost-block-fonts');
-
         if (!empty($combined_css)) {
             wp_add_inline_style('typost-block-fonts', $combined_css);
-        }
-
-        // Add CSS variables for font replacements to work in editor iframe
-        $css_vars = $this->get_font_css_variables();
-        if (!empty($css_vars)) {
-            // CSS variables must be added as proper CSS (not wrapped in <style> tags)
-            // wp_add_inline_style expects raw CSS content
-            wp_add_inline_style('typost-block-fonts', $css_vars);
         }
     }
 
@@ -5147,9 +5190,11 @@ class Typost {
      * Generates :root { --font-ID: "Family Name", fallback; } declarations
      * Includes aliases for deleted fonts with replacements
      *
-     * Note: Uses direct style element output rather than wp_add_inline_style()
-     * because CSS custom properties must be available globally across admin contexts
-     * (block editor, settings page) where stylesheets may not be uniformly enqueued.
+     * Note: Serves the frontend (wp_head) and plain admin pages / editor
+     * parent document (admin_head) via a directly echoed style element. The
+     * iframed editor canvas is served separately by the typost-block-fonts
+     * handle in enqueue_custom_fonts_for_blocks() — admin_head output never
+     * reaches the iframe document.
      */
     public function output_font_css_variables() {
         // Only output in appropriate contexts
@@ -5176,16 +5221,16 @@ class Typost {
                     'type' => array()
                 )
             );
-            // Direct style output required (not wp_add_inline_style) because:
-            // 1. Must be available globally across all admin contexts (block editor, settings, iframe)
-            // 2. Conditional logic requires early wp_head hook (priority 5) - stylesheets not enqueued yet
-            // 3. Stylesheet handles aren't uniformly enqueued across contexts (esp. block editor iframe)
-            // 4. wp_add_inline_style() on dummy handles is unreliable in iframe context
-            // 5. CSS variables must be in DOM before any blocks render to prevent FOUC
-            // Alternative approaches tested:
-            // - Dummy handle + wp_add_inline_style: Failed in iframe, timing issues in editor
-            // - Per-context enqueue: Caused duplication and cache invalidation problems
-            // - admin_print_styles hook: Too late for some editor initialization contexts
+            // Direct style output covers the frontend (wp_head p5, before
+            // stylesheets are printed) and plain admin pages / the editor
+            // PARENT document (admin_head). It never reaches the iframed
+            // editor canvas (WP 6.3+): admin_head does not fire inside the
+            // iframe. The canvas gets the same variables via the
+            // typost-block-fonts handle enqueued on enqueue_block_assets
+            // (see enqueue_custom_fonts_for_blocks()), which WordPress
+            // mirrors into the iframe. In legacy non-iframed editors both
+            // land in one document; the duplicate identical :root block is
+            // harmless.
             // Output is sanitized via sanitize_output_css() and wp_kses()
             // phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedStylesheet
             echo wp_kses("<style id=\"typost-font-variables\">\n" . $css . "\n</style>\n", $allowed_css);

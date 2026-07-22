@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Guarded like glyphs-panel: a leftover standalone copy may have defined these.
 if ( ! defined( 'TYPOST_VF_VERSION' ) ) {
-	define( 'TYPOST_VF_VERSION', '1.1.0' );
+	define( 'TYPOST_VF_VERSION', '1.2.1' );
 	define( 'TYPOST_VF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_VF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -86,8 +86,7 @@ final class Typost_Variable_Fonts {
 		add_action( 'init', array( $this, 'load_textdomain' ) );
 
 		// Admin tab.
-		add_filter( 'typost_admin_tabs', array( $this, 'register_admin_tab' ) );
-		add_action( 'typost_admin_tab_content_variable-fonts', array( $this, 'render_admin_tab' ) );
+		add_filter( 'typost_font_card_badges', array( $this, 'render_font_card_badge' ), 10, 3 );
 
 		// Admin form injection — per-font variable font settings.
 		add_action( 'typost_after_weight_checkboxes', array( $this, 'render_variable_font_admin_ui' ), 10, 2 );
@@ -224,8 +223,10 @@ final class Typost_Variable_Fonts {
 	/**
 	 * Check if weight selection should be hidden for a font.
 	 *
-	 * When hideWeights is not explicitly set, auto-determines based on
-	 * whether the font has a wght axis: no wght axis = hide weights.
+	 * When hideWeights is not explicitly set, a variable font hides the
+	 * discrete weight UI by default: with a wght axis the slider replaces
+	 * it, and without one the weight is fixed by the binary. An explicit
+	 * admin toggle (stored flag) always wins.
 	 *
 	 * @param string $font_id The font's string ID.
 	 * @return bool
@@ -240,16 +241,7 @@ final class Typost_Variable_Fonts {
 			return (bool) $flags[ $font_id ]['hideWeights'];
 		}
 
-		// Auto-detect: hide weights if there's no wght axis.
-		$axes = $this->get_axes_for_font( $font_id );
-		$has_wght = false;
-		foreach ( $axes as $axis ) {
-			if ( isset( $axis['tag'] ) && 'wght' === $axis['tag'] ) {
-				$has_wght = true;
-				break;
-			}
-		}
-		return ! $has_wght;
+		return true;
 	}
 
 	/**
@@ -298,15 +290,8 @@ final class Typost_Variable_Fonts {
 			$axes = Typost_Font_Parser::find_and_parse_axes( $entry );
 			if ( ! empty( $axes ) ) {
 				$this->save_axes_for_font( $entry['id'], $axes );
-				// Auto-hide weights if font has no wght axis.
-				$has_wght = false;
-				foreach ( $axes as $axis ) {
-					if ( isset( $axis['tag'] ) && 'wght' === $axis['tag'] ) {
-						$has_wght = true;
-						break;
-					}
-				}
-				$this->set_font_variable( $entry['id'], true, ! $has_wght );
+				// Null = auto: variable fonts hide the discrete weight UI.
+				$this->set_font_variable( $entry['id'], true, null );
 			}
 		}
 	}
@@ -328,31 +313,46 @@ final class Typost_Variable_Fonts {
 	}
 
 	// -------------------------------------------------------------------------
-	// Admin Tab
+	// Admin Font Card Badge
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Register the Variable Fonts tab in the admin page.
+	 * Append a "Variable" pill to the font card badges for variable fonts.
 	 *
-	 * @param array $tabs Existing admin tabs.
-	 * @return array Modified tabs array.
+	 * Replaced the former read-only Variable Fonts admin tab: the same
+	 * information now shows in context on each font's card, next to the
+	 * source badge. Axes are managed in the font's edit form as before.
+	 *
+	 * @param string $badges HTML of extension badges accumulated so far.
+	 * @param array  $font   The font entry being rendered.
+	 * @param string $type   Card type: 'uploaded', 'adobe', 'manual', 'wplibrary'.
+	 * @return string Badge HTML.
 	 */
-	public function register_admin_tab( $tabs ) {
-		$tabs[] = array(
-			'id'       => 'variable-fonts',
-			'label'    => __( 'Variable Fonts', 'typost-variable-fonts' ),
-			'priority' => 12,
-		);
-		return $tabs;
-	}
+	public function render_font_card_badge( $badges, $font, $type ) {
+		$string_id = '';
+		if ( 'wplibrary' === $type ) {
+			$string_id = isset( $font['slug'] ) ? 'wpl-' . $font['slug'] : '';
+		} elseif ( isset( $font['id'] ) ) {
+			$string_id = $font['id'];
+		}
 
-	/**
-	 * Render the Variable Fonts admin tab content.
-	 *
-	 * @param object $instance The core Typost plugin instance.
-	 */
-	public function render_admin_tab( $instance ) {
-		include TYPOST_VF_PLUGIN_DIR . 'includes/admin-tab.php';
+		if ( '' === $string_id || ! $this->is_font_variable( $string_id ) ) {
+			return $badges;
+		}
+
+		$axes   = $this->get_axes_for_font( $string_id );
+		$tags   = implode( ', ', array_filter( wp_list_pluck( $axes, 'tag' ) ) );
+		$title  = $tags
+			/* translators: %s: comma-separated list of variable font axis tags. */
+			? sprintf( __( 'Variable font — axes: %s', 'typost-variable-fonts' ), $tags )
+			: __( 'Configured as a variable font', 'typost-variable-fonts' );
+
+		$badges .= sprintf(
+			'<span class="typost-font-type-badge typost-badge-variable" title="%s">%s</span>',
+			esc_attr( $title ),
+			esc_html__( 'Variable', 'typost-variable-fonts' )
+		);
+		return $badges;
 	}
 
 	// -------------------------------------------------------------------------
@@ -392,8 +392,8 @@ final class Typost_Variable_Fonts {
 					<?php if ( ! empty( $axes ) ) : ?>
 						<?php foreach ( $axes as $axis ) : ?>
 							<div class="typost-vf-axis-row">
-								<input type="text" class="typost-vf-axis-tag" value="<?php echo esc_attr( $axis['tag'] ); ?>" placeholder="<?php esc_attr_e( 'Tag', 'typost-variable-fonts' ); ?>" maxlength="4" size="5" />
-								<input type="text" class="typost-vf-axis-name" value="<?php echo esc_attr( $axis['name'] ); ?>" placeholder="<?php esc_attr_e( 'Name', 'typost-variable-fonts' ); ?>" size="12" />
+								<input type="text" class="typost-vf-axis-tag" value="<?php echo esc_attr( $axis['tag'] ); ?>" placeholder="<?php esc_attr_e( 'Tag', 'typost-variable-fonts' ); ?>" aria-label="<?php esc_attr_e( 'Axis tag', 'typost-variable-fonts' ); ?>" maxlength="4" size="5" />
+								<input type="text" class="typost-vf-axis-name" value="<?php echo esc_attr( $axis['name'] ); ?>" placeholder="<?php esc_attr_e( 'Name', 'typost-variable-fonts' ); ?>" aria-label="<?php esc_attr_e( 'Axis name', 'typost-variable-fonts' ); ?>" size="12" />
 								<label class="typost-vf-axis-num-label"><?php esc_html_e( 'Min', 'typost-variable-fonts' ); ?>
 									<input type="number" class="typost-vf-axis-min" value="<?php echo esc_attr( $axis['min'] ); ?>" step="any" size="6" />
 								</label>
@@ -411,6 +411,12 @@ final class Typost_Variable_Fonts {
 				<button type="button" class="button typost-vf-add-axis">
 					<?php esc_html_e( '+ Add Axis', 'typost-variable-fonts' ); ?>
 				</button>
+				<?php if ( class_exists( 'Typost_Glyphs_Panel' ) ) : ?>
+					<button type="button" class="button typost-vf-detect-axes">
+						<?php esc_html_e( 'Detect Axes from Font File', 'typost-variable-fonts' ); ?>
+					</button>
+					<span class="typost-vf-detect-status" role="status" aria-live="polite"></span>
+				<?php endif; ?>
 				<div class="typost-vf-hide-weights-field">
 					<label class="typost-vf-toggle-label">
 						<input
@@ -432,10 +438,12 @@ final class Typost_Variable_Fonts {
 	// -------------------------------------------------------------------------
 
 	/**
-	 * Add variable font axes data to the editor data object.
+	 * Add variable font axes and flags data to the editor data object.
 	 *
-	 * Builds a variableFontAxes map keyed by numeric font_id (matching
-	 * how editors reference fonts via CSS variables).
+	 * Builds variableFontAxes and variableFontFlags maps keyed by numeric
+	 * font_id (matching how editors reference fonts via CSS variables).
+	 * Flags carry isVariable plus a server-resolved hideWeights so the editor
+	 * can hide the standard weight control for wght-less variable fonts.
 	 *
 	 * @param array $data The editor data array.
 	 * @return array Modified data array.
@@ -479,7 +487,21 @@ final class Typost_Variable_Fonts {
 			}
 		}
 
-		$data['variableFontAxes'] = $axes_by_numeric_id;
+		// Per-font variable flags with hideWeights resolved server-side, so the
+		// editor can suppress the standard weight control even when the font has
+		// no wght axis (e.g. variable fonts exposing only custom axes).
+		$flags_by_numeric_id = array();
+		foreach ( $fonts_map as $string_id => $numeric_id ) {
+			if ( $this->is_font_variable( $string_id ) ) {
+				$flags_by_numeric_id[ (string) $numeric_id ] = array(
+					'isVariable'  => true,
+					'hideWeights' => $this->should_hide_weights( $string_id ),
+				);
+			}
+		}
+
+		$data['variableFontAxes']  = $axes_by_numeric_id;
+		$data['variableFontFlags'] = $flags_by_numeric_id;
 		return $data;
 	}
 
@@ -718,9 +740,26 @@ final class Typost_Variable_Fonts {
 	 */
 	public function enqueue_admin_assets() {
 		wp_enqueue_script(
+			'typost-variable-fonts-utils',
+			TYPOST_VF_PLUGIN_URL . 'assets/js/lib/variation-utils.js',
+			array(),
+			TYPOST_VF_VERSION,
+			true
+		);
+
+		$admin_deps = array( 'jquery', 'wp-i18n', 'typost-variable-fonts-utils' );
+
+		// Axis auto-detection reuses the Glyphs Panel's font loader (vendored
+		// opentype.js + wawoff2). The module enqueues its lib chain on the same
+		// typost_admin_assets hook, so the handle resolves at print time.
+		if ( class_exists( 'Typost_Glyphs_Panel' ) ) {
+			$admin_deps[] = 'typost-glyphs-font-loader';
+		}
+
+		wp_enqueue_script(
 			'typost-variable-fonts-admin',
 			TYPOST_VF_PLUGIN_URL . 'assets/js/admin.js',
-			array( 'jquery', 'wp-i18n' ),
+			$admin_deps,
 			TYPOST_VF_VERSION,
 			true
 		);

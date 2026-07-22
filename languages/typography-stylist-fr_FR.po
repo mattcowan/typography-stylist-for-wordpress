@@ -81,10 +81,6 @@ msgstr "Traitement en cours..."
 msgid "Upload Font Kit"
 msgstr "Téléverser un Kit de Polices"
 
-#: typography-stylist.php:404
-msgid "Please enter a project name."
-msgstr "Veuillez saisir un nom de projet."
-
 #: typography-stylist.php:405
 msgid "Please paste the Adobe Fonts embed code."
 msgstr "Veuillez coller le code d'intégration Adobe Fonts."
@@ -755,10 +751,6 @@ msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages wh
 msgstr "Conseil : Les polices ajoutées dans Réglages → Typography Stylist ne se chargent que sur les pages où elles sont utilisées, gardant votre site rapide."
 
 #: blocks/typography-stylist/edit.js
-msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
-msgstr "Choisissez une police personnalisée. Les polices ne se chargent que sur les pages où elles sont utilisées."
-
-#: blocks/typography-stylist/edit.js
 msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
 msgstr "Le mode responsive utilise CSS clamp() avec des tailles distinctes pour les écrans mobiles, tablettes et ordinateurs."
 
@@ -767,32 +759,8 @@ msgid "OpenType features are advanced typographic capabilities built into font f
 msgstr "Les fonctionnalités OpenType sont des capacités typographiques avancées intégrées dans les fichiers de polices, comme les ligatures et les alternances stylistiques. Toutes les polices ne prennent pas en charge toutes les fonctionnalités."
 
 #: assets/js/block-editor.js
-msgid "Choose a custom font. Fonts only load on pages where used."
-msgstr "Choisissez une police personnalisée. Les polices ne se chargent que sur les pages utilisées."
-
-#: assets/js/block-editor.js
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr "Le mode responsive utilise CSS clamp() pour un dimensionnement fluide entre les écrans."
-
-#: assets/js/block-editor.js
-msgid "Tips"
-msgstr "Conseils"
-
-#: assets/js/block-editor.js
-msgid "Changes apply instantly to your selected text as live preview."
-msgstr "Les modifications s'appliquent instantanément à votre texte sélectionné en aperçu direct."
-
-#: assets/js/block-editor.js
-msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
-msgstr "Utilisez Ctrl+Z (Cmd+Z sur Mac) pour annuler les modifications individuelles."
-
-#: assets/js/block-editor.js
-msgid "Fonts only load on pages where they are used, keeping your site fast."
-msgstr "Les polices ne se chargent que sur les pages où elles sont utilisées, gardant votre site rapide."
-
-#: assets/js/block-editor.js
-msgid "For more control over accessibility, use the Typography Stylist block instead."
-msgstr "Pour plus de contrôle sur l'accessibilité, utilisez le bloc Typography Stylist à la place."
 
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
@@ -1986,3 +1954,11 @@ msgid "%d uploaded font is not yet registered in the WordPress Font Library. Reg
 msgid_plural "%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
 msgstr[0] "%d police téléversée n'est pas encore enregistrée dans la bibliothèque de polices WordPress. L'enregistrement la rend disponible sur tout le site (Apparence → Éditeur) et tout continue de fonctionner exactement comme avant — le contenu existant n'est jamais affecté, et l'action est annulable police par police."
 msgstr[1] "%d polices téléversées ne sont pas encore enregistrées dans la bibliothèque de polices WordPress. L'enregistrement les rend disponibles sur tout le site (Apparence → Éditeur) et tout continue de fonctionner exactement comme avant — le contenu existant n'est jamais affecté, et l'action est annulable police par police."
+
+#: assets/js/block-editor.js
+msgid "Tip: Drag the title bar to reposition this panel."
+msgstr "Astuce : faites glisser la barre de titre pour repositionner ce panneau."
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
+msgstr "Les modifications s'appliquent instantanément, appuyez sur Ctrl+Z (Cmd+Z sur Mac) pour annuler."

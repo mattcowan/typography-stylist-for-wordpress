@@ -542,6 +542,14 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <?php echo 'fonts' !== $active_tab ? 'hidden="hidden"' : ''; ?>
             tabindex="0">
             <h2><?php esc_html_e('Custom Fonts', 'typography-stylist'); ?></h2>
+            <?php
+            // Print WP Font Library @font-face CSS (WP 6.4+) so the Library
+            // font card titles below can render in their own typeface. Cheap:
+            // browsers only download binaries for families actually rendered.
+            if (function_exists('wp_print_font_faces')) {
+                wp_print_font_faces();
+            }
+            ?>
 
             <details class="typost-tab-help">
                 <summary><?php esc_html_e('Why & How to Use Custom Fonts', 'typography-stylist'); ?></summary>
@@ -683,7 +691,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         $fams = array_unique(array_map(function($f) { return $f['family']; }, $font['font_faces']));
                         $families_list = implode(', ', $fams);
                     }
-                    $kit_label = !empty($font['kit_name']) ? $font['kit_name'] : (!empty($font['kit_id']) ? $font['kit_id'] : '');
                     $details_id = 'typost-font-details-' . esc_attr($font['id']);
                     ?>
                     <div class="typost-font-card" id="typost-font-card-<?php echo esc_attr($font['id']); ?>"
@@ -695,12 +702,13 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <span class="typost-font-type-badge typost-badge-uploaded"><?php echo esc_html($badge_labels['uploaded']); ?></span>
                             <?php if ($instance->font_library_bridge()->entry_has_live_registration($font)) : ?>
                             <span class="typost-font-type-badge typost-badge-wplibrary" title="<?php esc_attr_e('Registered in the WordPress Font Library', 'typography-stylist'); ?>"><?php esc_html_e('In WP Library', 'typography-stylist'); ?></span>
                             <?php endif; ?>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'uploaded')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <?php if ($families_list): ?>
@@ -788,9 +796,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <span class="typost-font-type-badge typost-badge-adobe"><?php echo esc_html($badge_labels['adobe']); ?></span>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'adobe')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <?php if ($adobe_family): ?>
@@ -849,9 +858,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h4 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h4>
+                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <span class="typost-font-type-badge typost-badge-manual"><?php echo esc_html($badge_labels['manual']); ?></span>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'manual')); ?>
                         </div>
                         <div class="typost-font-details" id="<?php echo esc_attr($details_id); ?>" hidden>
                             <div class="typost-form-field">
@@ -889,7 +899,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <div class="typost-font-card typost-wpl-card">
                         <div class="typost-font-header">
                             <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
-                            <h4><?php echo esc_html($wpl['name']); ?></h4>
+                            <h3 <?php echo !empty($wpl['font_family']) ? 'style="font-family: ' . esc_attr($wpl['font_family']) . '"' : ''; ?>><?php echo esc_html($wpl['name']); ?></h3>
                             <?php if (!empty($wpl['font_family'])): ?>
                             <code class="typost-wpl-family"><?php echo esc_html($wpl['font_family']); ?></code>
                             <?php endif; ?>
@@ -900,6 +910,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 <?php esc_html_e('Manage in Editor', 'typography-stylist'); ?>
                             </a>
                             <span class="typost-font-type-badge typost-badge-wplibrary"><?php echo esc_html($badge_labels['wplibrary']); ?></span>
+                            <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $wpl, 'wplibrary')); ?>
                         </div>
                     </div>
                 <?php endif; ?>
@@ -1001,18 +1012,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <summary><?php esc_html_e('Add Adobe Fonts Project', 'typography-stylist'); ?></summary>
                         <div class="typost-add-font-subsection-body">
                         <div class="typost-add-adobe-font-form">
-                            <div class="typost-form-field">
-                                <label for="typost-adobe-font-name">
-                                    <?php esc_html_e('Project Name:', 'typography-stylist'); ?>
-                                    <span class="required" aria-label="<?php esc_attr_e('required', 'typography-stylist'); ?>">*</span>
-                                </label>
-                                <input type="text" id="typost-adobe-font-name" name="typost-adobe-font-name" class="regular-text"
-                                    placeholder="<?php esc_attr_e('e.g., My Adobe Fonts Project', 'typography-stylist'); ?>"
-                                    aria-required="true" aria-describedby="typost-adobe-font-name-desc" />
-                                <p id="typost-adobe-font-name-desc" class="description">
-                                    <?php esc_html_e('Enter a descriptive name for this Adobe Fonts project', 'typography-stylist'); ?>
-                                </p>
-                            </div>
                             <div class="typost-form-field">
                                 <label for="typost-adobe-embed-code">
                                     <?php esc_html_e('Adobe Fonts Embed Code:', 'typography-stylist'); ?>

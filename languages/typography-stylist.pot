@@ -79,10 +79,6 @@ msgstr ""
 msgid "Upload Font Kit"
 msgstr ""
 
-#: opentype-stylist.php:573
-msgid "Please enter a project name."
-msgstr ""
-
 #: opentype-stylist.php:574
 msgid "Please paste the Adobe Fonts embed code."
 msgstr ""
@@ -756,10 +752,6 @@ msgid "Tip: Fonts added in Settings → Typography Stylist only load on pages wh
 msgstr ""
 
 #: blocks/typography-stylist/edit.js
-msgid "Choose a custom font. Fonts only load on pages where they are used, keeping your site fast."
-msgstr ""
-
-#: blocks/typography-stylist/edit.js
 msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
 msgstr ""
 
@@ -768,31 +760,7 @@ msgid "OpenType features are advanced typographic capabilities built into font f
 msgstr ""
 
 #: assets/js/block-editor.js
-msgid "Choose a custom font. Fonts only load on pages where used."
-msgstr ""
-
-#: assets/js/block-editor.js
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
-msgstr ""
-
-#: assets/js/block-editor.js
-msgid "Tips"
-msgstr ""
-
-#: assets/js/block-editor.js
-msgid "Changes apply instantly to your selected text as live preview."
-msgstr ""
-
-#: assets/js/block-editor.js
-msgid "Use Ctrl+Z (Cmd+Z on Mac) to undo individual changes."
-msgstr ""
-
-#: assets/js/block-editor.js
-msgid "Fonts only load on pages where they are used, keeping your site fast."
-msgstr ""
-
-#: assets/js/block-editor.js
-msgid "For more control over accessibility, use the Typography Stylist block instead."
 msgstr ""
 
 #: includes/admin-page.php:164
@@ -1605,3 +1573,11 @@ msgid "%d uploaded font is not yet registered in the WordPress Font Library. Reg
 msgid_plural "%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time."
 msgstr[0] ""
 msgstr[1] ""
+
+#: assets/js/block-editor.js
+msgid "Tip: Drag the title bar to reposition this panel."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
+msgstr ""

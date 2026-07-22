@@ -47,6 +47,14 @@
 	color: #6a6a6a;
 }
 
+/* Technical detail line under an error notice (debugging aid) */
+.typost-glyphs-error-detail {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #6a6a6a;
+	word-break: break-word;
+}
+
 /* Toolbar: search + filters. Controls carry visible labels (stacked above each
    field), so bottom-align them with the altchar group's inline button. */
 .typost-glyphs-toolbar {
@@ -185,6 +193,14 @@
 /* Button inside the editor popovers */
 .typost-glyphs-button-wrap {
 	margin: 8px 0;
+}
+
+/* Inline format modal: the hook container is bare, so match the horizontal
+   inset of the native sections (margin 0 1rem + padding 16px 20px in core
+   block-editor.css) so the button aligns with the section headings */
+[data-hook="typost_inline_before_features"] .typost-glyphs-button-wrap {
+	margin: 8px 1rem;
+	padding: 0 20px;
 }
 
 /* Admin tab */
