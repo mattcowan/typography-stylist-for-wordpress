@@ -7,6 +7,9 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 
 == Changelog ==
 
+= 2.1.2 =
+* Fixed: the Glyphs Panel reported "No readable font file is available" for variable fonts uploaded as font-only ZIPs — the generated @font-face CSS declares `format('truetype-variations')`, which the panel's file picker didn't recognize. Variable-font format hints now normalize to their base format, so variable fonts glyph-browse like any other uploaded font.
+
 = 2.1.1 =
 * Packaging: re-release of the 2.1.0 feature set under a fresh version number. The 2.1.0 tag's downloadable ZIP was cached against stale contents and never delivered the new files (Variable Fonts core integration, font metadata/sources modules, WordPress Font Library integration); 2.1.1 ships them correctly. See the 2.1.0 entry below for the full list of changes included in this release.
 

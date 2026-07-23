@@ -143,6 +143,23 @@ captions come from the numbered list in readme.txt's `== Screenshots ==`
 section (caption N ↔ screenshot-N). Banners: `banner-772x250.png` +
 `banner-1544x500.png` (2x). Icons: `icon-128x128.png` + `icon-256x256.png`.
 
+**Live Preview blueprint:** `.wordpress-org/blueprints/blueprint.json` powers
+the "Live Preview" button on the wp.org plugin page. It boots the plugin in
+WordPress Playground, downloads three OFL demo fonts from the google/fonts
+GitHub repo (Style Script for swashes/stylistic sets, EB Garamond for swash
+italic caps + a weight axis, Fraunces for custom SOFT/WONK variable axes),
+installs them through the plugin's own font-kit pipeline via a `runPHP` step,
+and lands in the editor on a demo post whose headline is pre-set in Style
+Script with swashes enabled. It syncs to SVN `assets/blueprints/` like any
+other asset. If the demo ever stops installing fonts, check that the
+raw.githubusercontent.com font URLs inside the blueprint still resolve. To
+test blueprint changes before pushing: paste the JSON after
+`https://playground.wordpress.net/?storage=none#` (URL-encoded) in a browser
+(`storage=none` forces a fresh boot instead of restoring your last
+playground). After the first sync that includes it, a committer must flip
+the "Live Preview" toggle on the plugin page once to enable the button for
+visitors.
+
 The workflow runs the 10up asset-update action with `IGNORE_OTHER_FILES:
 true`, meaning it commits ONLY readme.txt and the assets — every other
 difference between the repo and SVN trunk is deliberately ignored. This is

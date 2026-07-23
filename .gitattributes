@@ -1,0 +1,27 @@
+# Normalize all text files to LF in the repository AND the working tree.
+#
+# Why: WordPress.org SVN stores LF, and the deploy workflows mirror the git
+# checkout into SVN trunk. Before this file existed, blobs were committed
+# with CRLF, so every text file "differed" from trunk by line endings alone,
+# drowning real diffs. After adding/changing this file, renormalize once:
+#
+#   git add --renormalize .
+#   git commit -m "Normalize line endings to LF"
+#
+* text=auto eol=lf
+
+# Binary files — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mo binary
+*.zip binary
+*.webm binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.wasm binary
