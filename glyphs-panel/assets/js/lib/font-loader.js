@@ -63,9 +63,13 @@
 				if (url.indexOf('data:') === 0) {
 					continue;
 				}
+				// Variable-font format hints ("truetype-variations",
+				// "woff2-variations", CSS4 "woff2 variations") normalize to
+				// their base format — the container is identical, and leaving
+				// the suffix would make pickBestUrl() discard the file.
 				urls.push({
 					url: url,
-					format: (srcMatch[2] || formatFromUrl(url)).toLowerCase()
+					format: (srcMatch[2] || formatFromUrl(url)).toLowerCase().replace(/[\s-]+variations$/, '')
 				});
 			}
 

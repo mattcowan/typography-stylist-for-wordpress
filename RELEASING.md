@@ -89,7 +89,11 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    - `readme.txt` — `Stable tag:`
    - `package.json` — `version`
 2. Add a changelog entry in `readme.txt` (recent releases) and move older
-   entries to `changelog.txt` if the readme section is growing.
+   entries to `changelog.txt` if the readme section is growing. Entries for
+   not-yet-released fixes are parked in `changelog.txt` only (the wp.org
+   listing renders readme.txt's whole Changelog section immediately via the
+   assets sync, but changelog.txt never reaches the listing) — copy them
+   into readme.txt now, under this release's heading.
 3. Push to `main`; wait for **CI** to go green (it runs the version
    consistency check, both test suites, and a production build).
 4. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
@@ -142,6 +146,23 @@ Screenshot conventions: `screenshot-N.png` (or .jpg) in `.wordpress-org/`,
 captions come from the numbered list in readme.txt's `== Screenshots ==`
 section (caption N ↔ screenshot-N). Banners: `banner-772x250.png` +
 `banner-1544x500.png` (2x). Icons: `icon-128x128.png` + `icon-256x256.png`.
+
+**Live Preview blueprint:** `.wordpress-org/blueprints/blueprint.json` powers
+the "Live Preview" button on the wp.org plugin page. It boots the plugin in
+WordPress Playground, downloads three OFL demo fonts from the google/fonts
+GitHub repo (Style Script for swashes/stylistic sets, EB Garamond for swash
+italic caps + a weight axis, Fraunces for custom SOFT/WONK variable axes),
+installs them through the plugin's own font-kit pipeline via a `runPHP` step,
+and lands in the editor on a demo post whose headline is pre-set in Style
+Script with swashes enabled. It syncs to SVN `assets/blueprints/` like any
+other asset. If the demo ever stops installing fonts, check that the
+raw.githubusercontent.com font URLs inside the blueprint still resolve. To
+test blueprint changes before pushing: paste the JSON after
+`https://playground.wordpress.net/?storage=none#` (URL-encoded) in a browser
+(`storage=none` forces a fresh boot instead of restoring your last
+playground). After the first sync that includes it, a committer must flip
+the "Live Preview" toggle on the plugin page once to enable the button for
+visitors.
 
 The workflow runs the 10up asset-update action with `IGNORE_OTHER_FILES:
 true`, meaning it commits ONLY readme.txt and the assets — every other

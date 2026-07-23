@@ -93,6 +93,46 @@ describe('parseSrcUrls', () => {
 		expect(parseSrcUrls('')).toEqual([]);
 		expect(parseSrcUrls(null)).toEqual([]);
 	});
+
+	// Variable fonts: the plugin's generated @font-face CSS (font-only ZIP
+	// uploads) emits format('truetype-variations') / format('woff2-variations')
+	// and a font-weight range. These must normalize to the base format so
+	// pickBestUrl() doesn't discard the only available file (the "No readable
+	// font file" bug for variable fonts).
+	test('normalizes -variations format hints to the base format', () => {
+		const css = `
+			@font-face {
+				font-family: 'Fraunces';
+				src: url('fonts/fraunces.ttf') format('truetype-variations');
+				font-weight: 100 900;
+				font-style: normal;
+			}
+		`;
+		const faces = parseSrcUrls(css);
+		expect(faces).toHaveLength(1);
+		expect(faces[0].weight).toBe('100 900');
+		expect(faces[0].urls).toEqual([
+			{ url: 'fonts/fraunces.ttf', format: 'truetype' }
+		]);
+	});
+
+	test('normalizes woff2-variations and CSS4 space syntax', () => {
+		const faces = parseSrcUrls(
+			"@font-face { font-family: A; src: url(a.woff2) format('woff2-variations'); }" +
+			"@font-face { font-family: B; src: url(b.woff2) format('woff2 variations'); }"
+		);
+		expect(faces[0].urls[0].format).toBe('woff2');
+		expect(faces[1].urls[0].format).toBe('woff2');
+	});
+
+	test('variable font face survives pickBestUrl (regression: no-file error)', () => {
+		const faces = parseSrcUrls(
+			"@font-face { font-family: 'EB Garamond'; src: url('fonts/eb-garamond.ttf') format('truetype-variations'); font-weight: 400 800; }"
+		);
+		const best = pickBestUrl(faces[0].urls);
+		expect(best).not.toBeNull();
+		expect(best.url).toBe('fonts/eb-garamond.ttf');
+	});
 });
 
 describe('formatFromUrl', () => {
