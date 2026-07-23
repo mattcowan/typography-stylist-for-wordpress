@@ -52,7 +52,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Supports modern browsers with OpenType feature support
 
 ### Accessibility Features
-- Smart selection warnings for partial word selections that can cause screen readers to stumble, with options to convert to an accessible Typography Stylist block or apply anyway. The warning detects when conversion is not possible (e.g., inside a locked pattern) and adjusts accordingly. The warning can be disabled entirely in Settings → Accessibility.
+- Smart selection notices for partial word selections that can cause screen readers to stumble, with a one-click conversion to an accessible Typography Stylist block. The notice is non-blocking (changes apply via live preview regardless), hides the conversion option when conversion is not possible (e.g., inside a locked pattern), and can be disabled entirely in Settings → Accessibility.
 - Typography Stylist block maintains proper heading semantics for both screen reader and visual views.
 - ARIA markup ensures screen reader compatibility
 - Optional aria-label attributes for inline formatted text
@@ -165,15 +165,11 @@ font-family: 'Playfair Display', Georgia, serif;
 3. **Select the text** you want to style (complete words or phrases)
 4. **Click the Typography Stylist button** in the toolbar (swashy "T" icon)
 5. **Choose a preset** or toggle individual features
-6. **Preview** your changes in real-time
-7. **Click Apply** to save
+6. **Changes apply instantly** with live preview — use Ctrl+Z (Cmd+Z on Mac) to undo
 
-**Note:** If you select partial words, you'll see an accessibility warning with options to:
-- Convert to an accessible Typography Stylist block (recommended)
-- Apply anyway (proceeds with the features despite potential screen reader fragmentation)
-- Discard changes
+**Note:** If you select partial words, a non-blocking accessibility notice appears explaining that fragmented spans can affect screen readers, with a one-click option to convert to an accessible Typography Stylist block (recommended). Your changes still apply either way.
 
-When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. The warning includes a "Manage this setting" link to the admin accessibility settings. You can disable this warning entirely via "Disable Word Boundary Warning" in Settings → Typography Stylist → Accessibility.
+When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. The notice includes a "Manage this setting" link to the admin accessibility settings. You can disable it entirely via "Disable Word Boundary Warning" in Settings → Typography Stylist → Accessibility.
 
 #### Method 2: Typography Stylist Block (for complex typography)
 
@@ -316,7 +312,7 @@ Yes, this plugin requires fonts that support OpenType features. Most premium scr
 The plugin includes accessibility features for screen reader compatibility:
 
 **For Inline Formats:**
-- Warns when partial word selections could fragment text, with options to convert to an accessible block, apply anyway, or discard changes
+- Non-blocking notice when partial word selections could fragment text, with a one-click conversion to an accessible block
 - Smart conversion detection hides the convert option when conversion is not possible (e.g., locked patterns), with a safety fallback that applies features directly if conversion fails
 - "Disable Word Boundary Warning" option in Settings → Accessibility to skip the warning entirely
 - Optional aria-label support (configurable in Settings → Accessibility)
