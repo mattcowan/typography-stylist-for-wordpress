@@ -29,3 +29,11 @@ jobs:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
           SLUG: typography-stylist
+          # Commit ONLY readme.txt + .wordpress-org assets, ignoring every
+          # other difference between the repo and SVN trunk. Without this the
+          # action aborts ("Other files have been modified; changes not
+          # deployed") because trunk always drifts from a plain checkout:
+          # built assets (.min.js, blocks/*/build/) are gitignored and this
+          # workflow doesn't run a build. Trunk code is only ever updated by
+          # the release deploy workflow.
+          IGNORE_OTHER_FILES: true

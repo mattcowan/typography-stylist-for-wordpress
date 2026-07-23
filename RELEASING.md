@@ -143,6 +143,15 @@ captions come from the numbered list in readme.txt's `== Screenshots ==`
 section (caption N ↔ screenshot-N). Banners: `banner-772x250.png` +
 `banner-1544x500.png` (2x). Icons: `icon-128x128.png` + `icon-256x256.png`.
 
+The workflow runs the 10up asset-update action with `IGNORE_OTHER_FILES:
+true`, meaning it commits ONLY readme.txt and the assets — every other
+difference between the repo and SVN trunk is deliberately ignored. This is
+required, not optional: built files (`.min.js`, `blocks/*/build/`) are
+gitignored, so from this workflow's plain checkout the trunk always looks
+"modified", and without the flag the action refuses to deploy anything.
+Trunk code is only ever updated by the release deploy workflow, which does
+run the build.
+
 ## 8. Manual SVN fallback (emergency only)
 
 If GitHub Actions is down or the pipeline is broken and a release can't
