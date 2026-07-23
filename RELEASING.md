@@ -1,0 +1,202 @@
+# Releasing Typography Stylist
+
+How this plugin gets from a git commit to users' WordPress dashboards — and
+why each piece exists. GitHub is the source of truth; WordPress.org is a
+deploy target. This doc is GitHub-only (excluded from the distributed zip by
+`.distignore`).
+
+## 1. The mental model
+
+```
+main branch (git)
+   │  you publish a GitHub Release with tag vX.Y.Z
+   ▼
+GitHub Actions (release-deploy.yml)
+   │  npm ci → version guard → npm run build
+   ▼
+WordPress.org SVN  (https://plugins.svn.wordpress.org/typography-stylist)
+   ├─ trunk/        ← rsync of the repo minus .distignore
+   ├─ tags/X.Y.Z/   ← snapshot copied from trunk
+   └─ assets/       ← synced from .wordpress-org/ (banners, icons, screenshots)
+   ▼
+wp.org serves the version named by readme.txt's `Stable tag`
+```
+
+Things that follow from this model:
+
+- **`Stable tag` in readme.txt is the actual "go live" switch.** wp.org
+  serves whatever version `Stable tag` names, from `tags/X.Y.Z/`. Committing
+  to trunk does nothing user-visible until the Stable tag points at a tag
+  that exists. This is also the #1 way releases go wrong (tag pushed, Stable
+  tag forgotten, or vice versa) — which is why CI runs
+  `scripts/check-versions.js` before every deploy.
+- **SVN here is not version control — it's a delivery mechanism.** Never
+  hand-edit SVN trunk anymore; the next CI deploy rsyncs over it (with
+  deletion). History lives in git.
+- **`.distignore` decides what ships.** Both the CI deploy and
+  `npm run package` read it. Dev files (tests, configs, GitHub docs) never
+  reach users; new production modules ship automatically.
+- **The build happens in CI.** Minified JS/CSS and
+  `blocks/typography-stylist/build/` are gitignored, so a plain checkout is
+  not installable — `npm run build` in the workflow produces them before the
+  rsync. (This is also why the GitHub repo zip download is NOT an installable
+  plugin — point people at Releases instead.)
+
+## 2. Why GitHub Releases, not GitHub Packages
+
+GitHub **Packages** is a set of package registries — npm, Docker/OCI
+containers, Maven, NuGet, RubyGems. A WordPress plugin zip is none of those;
+it's a downloadable artifact tied to a version, which is exactly what a
+GitHub **Release asset** is. So "Packages" on the repo page stays empty
+forever, by design, and "Releases" fills up — one entry per version, with
+human-written notes and an installable `typography-stylist.zip` attached.
+
+## 3. One-time setup
+
+### 3a. WordPress.org SVN credentials → GitHub secrets
+
+The deploy workflows authenticate to wp.org SVN with two repository secrets.
+Add them in the GitHub web UI (no CLI needed):
+
+**Repo → Settings → Secrets and variables → Actions → New repository secret**
+
+| Secret | Value |
+|---|---|
+| `SVN_USERNAME` | `matthewneilcowan` |
+| `SVN_PASSWORD` | your wp.org **SVN password** — see below |
+
+**SVN password gotcha:** wordpress.org supports a separate SVN-specific
+password so your main login never lives in CI (and it's *required* if the
+account has 2FA enabled). Generate it at **profiles.wordpress.org → Edit
+Profile → Account & Security → SVN password** *(verify the exact menu — this
+UI has moved before)*. Use that value, not your login password.
+
+> Timing note: add the secrets only **after** any in-flight manual SVN work
+> is committed, so the first automated run starts from a clean SVN state.
+
+### 3b. GitHub Actions settings
+
+Repo → Settings → Actions → General: "Allow all actions and reusable
+workflows" (or allowlist `10up/*` and `shivammathur/*`). The default
+workflow permissions can stay **read-only** — `release-deploy.yml` requests
+`contents: write` for itself to attach the zip.
+
+## 4. Standard release checklist (stable)
+
+1. **Bump the version in all four places** (check-versions.js enforces this):
+   - `typography-stylist.php` — plugin header `Version:`
+   - `typography-stylist.php` — `define('TYPOST_VERSION', ...)`
+   - `readme.txt` — `Stable tag:`
+   - `package.json` — `version`
+2. Add a changelog entry in `readme.txt` (recent releases) and move older
+   entries to `changelog.txt` if the readme section is growing.
+3. Push to `main`; wait for **CI** to go green (it runs the version
+   consistency check, both test suites, and a production build).
+4. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
+   `main`, title it, write the release notes (users see these — the
+   changelog entry is a good start). Leave "Set as a pre-release" UNCHECKED.
+5. **Publish.** Watch the **Release Deploy** run in the Actions tab.
+6. Verify: wp.org listing shows the new version; `typography-stylist.zip` is
+   attached to the GitHub Release; install/update on a test site works.
+
+Tag format is always `vX.Y.Z` (the workflow strips the `v` when comparing
+against the plugin's version strings).
+
+## 5. Beta releases
+
+Betas live on GitHub only — wp.org has no beta channel and the deploy
+workflow never touches SVN for a pre-release.
+
+1. Bump plugin header, `TYPOST_VERSION`, and `package.json` to the **next**
+   version (e.g. `2.2.0`). **Leave `Stable tag` at the current stable
+   release** — the version guard fails the build if a beta tries to move it.
+2. Draft a release with tag `vX.Y.Z-beta.N` (e.g. `v2.2.0-beta.1`) and
+   **check "Set as a pre-release"**.
+3. Publish. CI attaches an installable `typography-stylist.zip` to the
+   pre-release; testers download and install it manually (Plugins → Add New
+   → Upload Plugin). wp.org users are unaffected.
+
+## 6. Hotfixes
+
+If `main` has moved past the release you need to patch: branch from the
+release tag (`git switch -c hotfix/2.1.2 v2.1.1`), cherry-pick or apply the
+fix, bump to `X.Y.Z+1` in all four places, merge back to `main`, and release
+as normal. If `main` hasn't diverged, a hotfix is just a small stable
+release.
+
+## 7. Readme / assets updates without a release
+
+Edit `readme.txt` or files in `.wordpress-org/` (banners, icons,
+screenshots) and push to `main` — the **WP.org Readme/Assets Sync** workflow
+updates wp.org directly, no version bump needed. Use it for:
+
+- Bumping `Tested up to:` after a new WordPress release (keeps the "Tested
+  with your version of WordPress" badge accurate — do this at least each WP
+  release; the directory derates listings that look stale).
+- Readme typos or FAQ additions.
+- Swapping screenshots. Files deleted from `.wordpress-org/` are deleted
+  from wp.org `assets/` too (the sync is destructive by design — that's how
+  stale junk gets cleaned out).
+
+Screenshot conventions: `screenshot-N.png` (or .jpg) in `.wordpress-org/`,
+captions come from the numbered list in readme.txt's `== Screenshots ==`
+section (caption N ↔ screenshot-N). Banners: `banner-772x250.png` +
+`banner-1544x500.png` (2x). Icons: `icon-128x128.png` + `icon-256x256.png`.
+
+## 8. Manual SVN fallback (emergency only)
+
+If GitHub Actions is down or the pipeline is broken and a release can't
+wait, deploy by hand. The old checkout lives at
+`C:\wamp64\www\wordpress-plugins\typography-stylist` — treat it as
+fallback-only; **never** edit trunk there day-to-day (the next CI deploy
+rsyncs over trunk with deletion, discarding anything local).
+
+```bash
+cd C:\wamp64\www\wordpress-plugins\typography-stylist
+svn update                       # sync the working copy first
+# Build the exact file set locally:
+cd <repo> && npm run build && node scripts/package.js --keep
+# Mirror build/typography-stylist/* into the SVN trunk/ directory
+# (copy over, then delete any trunk files not present in the staging dir)
+svn status                       # review; svn add / svn rm as needed
+svn commit -m "Release X.Y.Z"
+svn copy https://plugins.svn.wordpress.org/typography-stylist/trunk \
+         https://plugins.svn.wordpress.org/typography-stylist/tags/X.Y.Z \
+         -m "Tagging version X.Y.Z"
+```
+
+Afterwards, create the matching GitHub Release (tag `vX.Y.Z`) anyway so
+history stays consistent — but only after temporarily disabling the deploy
+workflow or being comfortable with it re-deploying the same version
+(re-deploying the same content is harmless; SVN just sees no changes, though
+the tag copy will fail if the tag already exists — that's fine, the release
+is already out).
+
+## 9. On-demand builds (and why there's no nightly)
+
+Need an installable zip from any branch without cutting a release?
+**Actions → CI → Run workflow** (pick the branch) → download the
+`typography-stylist-<sha>` artifact. Locally, `npm run package` produces the
+same zip (add `--keep` to inspect the staged files in
+`build/typography-stylist/`).
+
+There is deliberately no scheduled nightly build: a nightly with no
+consumers is CI noise, and the on-demand button plus `-beta.N` pre-releases
+cover every real "give someone a build" case with better traceability.
+
+## 10. Zip parity note
+
+The zip attached to a GitHub Release and the zip wp.org serves are
+**content-identical but not byte-identical**: wp.org builds its own archive
+server-side from `tags/X.Y.Z` (different timestamps/ordering/compression).
+If you ever need to compare them, unzip both and diff the trees — don't diff
+the archives.
+
+## Future work
+
+- **E2E in CI**: the Playwright suite (`npm run test:e2e`) needs a live
+  WordPress install; a `wp-env`-based job could run it in CI. Skipped for
+  now to keep the pipeline simple.
+- **Real 2x banner**: `.wordpress-org/banner-1544x500.png` is currently a
+  copy of the 772×250 file, not a true retina banner — regenerate from
+  source art when convenient.

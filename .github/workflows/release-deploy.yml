@@ -1,0 +1,81 @@
+# Release deploy: runs when a GitHub Release is PUBLISHED (not on tag push —
+# publishing through the Releases UI forces human-written release notes, and
+# a stray `git push --tags` can never deploy to WordPress.org by accident).
+#
+#   Stable release (tag vX.Y.Z, "pre-release" unchecked):
+#     build → deploy to wp.org SVN (trunk + tags/X.Y.Z + assets) → attach the
+#     deployed zip to the GitHub Release.
+#
+#   Pre-release / beta (tag vX.Y.Z-beta.N, "pre-release" CHECKED):
+#     build → attach an installable zip to the GitHub Release only.
+#     WordPress.org is never touched — betas live on GitHub by design.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   SVN_USERNAME — wordpress.org username (matthewneilcowan)
+#   SVN_PASSWORD — wp.org SVN password (see RELEASING.md § One-time setup)
+name: Release Deploy
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  # Needed to upload the zip asset to the GitHub Release.
+  contents: write
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      # Fail BEFORE touching SVN if the plugin header, TYPOST_VERSION,
+      # readme Stable tag, and package.json don't match the release tag.
+      - name: Version guard (stable)
+        if: ${{ !github.event.release.prerelease }}
+        run: node scripts/check-versions.js "${{ github.event.release.tag_name }}"
+      - name: Version guard (pre-release)
+        if: ${{ github.event.release.prerelease }}
+        run: node scripts/check-versions.js "${{ github.event.release.tag_name }}" --prerelease
+
+      # Minified assets and the block build are gitignored — build them here.
+      - run: npm run build
+
+      # ----- Stable releases: deploy to WordPress.org -----
+      # SLUG is explicit and critical: the action defaults to the GitHub repo
+      # name (typography-stylist-for-wordpress), which is NOT the wp.org slug.
+      # The action rsyncs the checkout minus .distignore into SVN trunk,
+      # copies trunk to tags/X.Y.Z, and syncs .wordpress-org/ into assets/.
+      - name: Deploy to WordPress.org
+        if: ${{ !github.event.release.prerelease }}
+        id: wporg
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          generate-zip: true
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: typography-stylist
+
+      - name: Attach deployed zip to the GitHub Release
+        if: ${{ !github.event.release.prerelease }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.wporg.outputs.zip-path }}" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # ----- Pre-releases (beta): zip only, wp.org untouched -----
+      - name: Package beta zip
+        if: ${{ github.event.release.prerelease }}
+        run: node scripts/package.js
+
+      - name: Attach beta zip to the GitHub Release
+        if: ${{ github.event.release.prerelease }}
+        run: gh release upload "${{ github.event.release.tag_name }}" typography-stylist.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

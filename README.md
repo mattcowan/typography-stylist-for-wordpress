@@ -1,6 +1,14 @@
 # Typography Stylist
 
-A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview in the Gutenberg block editor.
+[![CI](https://github.com/mattcowan/typography-stylist-for-wordpress/actions/workflows/ci.yml/badge.svg)](https://github.com/mattcowan/typography-stylist-for-wordpress/actions/workflows/ci.yml)
+
+A WordPress plugin that adds advanced OpenType typography features to headlines with inline text selection and live preview in the Gutenberg block editor — including an Illustrator-style Glyphs Panel and variable font axis controls.
+
+- **Install it:** [WordPress.org plugin directory](https://wordpress.org/plugins/typography-stylist/)
+- **Stable & beta downloads:** [GitHub Releases](https://github.com/mattcowan/typography-stylist-for-wordpress/releases) — installable zips are attached to every release; betas are marked as pre-releases and never ship to WordPress.org
+- **Extending the plugin:** [HOOKS.md](HOOKS.md) · **Release process:** [RELEASING.md](RELEASING.md)
+
+> Note: the GitHub "Download ZIP" of this repository is **not** an installable plugin — minified assets and the block build are generated at release time. Use a Release zip or WordPress.org, or build from source (see [BUILD.md](BUILD.md)).
 
 ## Features
 
@@ -26,6 +34,17 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Search by character, `U+` codepoint, or glyph name; filter by Unicode block or stylistic set
 - Insert glyphs directly into the inline or block editor via the "Glyphs…" button, or browse and copy from the dedicated Glyphs admin tab
 - Font data is read in the browser, on demand, for metadata only — no glyph outlines are ever extracted or stored
+
+### Variable Fonts (built in, v2.1+)
+- Automatic axis detection on upload (fvar table, TTF/OTF), plus an in-browser "Detect Axes from Font File" button that also handles WOFF2
+- Named axes (wght, wdth, slnt, opsz, ital) and arbitrary custom axes with per-font min/max/default ranges
+- Per-axis sliders in both the inline editor and the Typography Stylist block, emitting `font-variation-settings`
+- When a weight axis exists, the slider replaces the discrete font-weight dropdown
+
+### WordPress Font Library Integration (WP 6.5+)
+- Register uploaded font kits into the Font Library per font or in bulk — opt-in, reversible, and existing content never breaks (the plugin's `--font-N` variables alias to WordPress presets with a literal fallback)
+- Library fonts appear in the editor font pickers and are adopted seamlessly with a numeric font ID
+- WordPress serves the files for registered fonts; no double-loading
 
 ### Technical Implementation
 - Native CSS font-feature-settings
@@ -365,6 +384,10 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
+
+### Version 2.1.1
+
+- **Packaging: re-release of the 2.1.0 feature set under a fresh version number.** The 2.1.0 tag's downloadable ZIP on WordPress.org was cached against stale contents and never delivered the new files (Variable Fonts core integration, font metadata/sources modules, WordPress Font Library integration); 2.1.1 ships them correctly. All 2.1.0 changes below are included.
 
 ### Version 2.1.0
 

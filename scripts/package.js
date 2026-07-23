@@ -1,36 +1,39 @@
+/**
+ * Build the distributable plugin zip: typography-stylist.zip
+ *
+ * The file set is driven ENTIRELY by .distignore (gitignore syntax): every
+ * file not excluded there is shipped. The WordPress.org release workflow
+ * (10up/action-wordpress-plugin-deploy) reads the same .distignore, so the
+ * zip built here matches what CI deploys to SVN trunk. To change what ships,
+ * edit .distignore — never this script.
+ *
+ * Usage:
+ *   node scripts/package.js          # build zip, clean up staging dir
+ *   node scripts/package.js --keep   # build zip, keep build/typography-stylist/ for inspection
+ *
+ * Run the production build first (`npm run package` does both) — minified
+ * assets and blocks/typography-stylist/build/ are gitignored and must exist
+ * in the working tree to be packaged.
+ */
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
+const ignore = require('ignore');
 
 const pluginSlug = 'typography-stylist';
-const buildDir = path.join(__dirname, '..', 'build');
+const rootDir = path.join(__dirname, '..');
+const buildDir = path.join(rootDir, 'build');
 const distDir = path.join(buildDir, pluginSlug);
-const zipFile = path.join(__dirname, '..', `${pluginSlug}.zip`);
+const zipFile = path.join(rootDir, `${pluginSlug}.zip`);
+const keepStaging = process.argv.includes('--keep');
 
-// Files and directories to include in the package
-// Includes only essential runtime files and WordPress.org requirements
-const includeList = [
-  'typography-stylist.php',
-  'uninstall.php',
-  'includes/',
-  'assets/css/*.css',     // Include both source and minified
-  'assets/js/*.js',       // Include both source and minified
-  'assets/fonts/',        // if you have any fonts
-  'languages/',           // if you have translations
-  'blocks/typography-stylist/**',  // All block files (source + build)
-  'glyphs-panel/glyphs-panel.php', // Bundled Glyphs Panel module (production only)
-  'glyphs-panel/assets/**',        // (excludes __tests__, jest.config.js, package.json)
-  'glyphs-panel/includes/**',
-  'glyphs-panel/languages/**',
-  'variable-fonts/variable-fonts.php', // Bundled Variable Fonts module (production only)
-  'variable-fonts/assets/**',
-  'variable-fonts/includes/**',
-  'variable-fonts/languages/**',
-  'package.json',         // For developers
-  'README.txt',           // WordPress.org readme if exists
-  'readme.txt',           // lowercase variant
-  'LICENSE'               // if exists
-];
+// --- Load .distignore ---
+const distignorePath = path.join(rootDir, '.distignore');
+if (!fs.existsSync(distignorePath)) {
+  console.error('Cannot package: .distignore not found at repo root.');
+  process.exit(1);
+}
+const ig = ignore().add(fs.readFileSync(distignorePath, 'utf8'));
 
 // Preflight: the Glyphs Panel cannot work without its bundled vendor
 // libraries, and a checkout without them must never produce a ZIP that
@@ -40,7 +43,7 @@ const requiredVendorFiles = [
   'glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js'
 ];
 const missingVendor = requiredVendorFiles.filter(
-  rel => !fs.existsSync(path.join(__dirname, '..', rel))
+  rel => !fs.existsSync(path.join(rootDir, rel))
 );
 if (missingVendor.length > 0) {
   console.error('Cannot package: required vendor libraries are missing:');
@@ -56,11 +59,26 @@ const requiredModuleFiles = [
   'variable-fonts/variable-fonts.php'
 ];
 const missingModules = requiredModuleFiles.filter(
-  rel => !fs.existsSync(path.join(__dirname, '..', rel))
+  rel => !fs.existsSync(path.join(rootDir, rel))
 );
 if (missingModules.length > 0) {
   console.error('Cannot package: bundled module files are missing:');
   missingModules.forEach(rel => console.error(`  - ${rel}`));
+  process.exit(1);
+}
+
+// Preflight: built assets must exist (they are gitignored — a fresh checkout
+// without `npm run build` must not produce a zip missing the block build).
+const requiredBuiltFiles = [
+  'blocks/typography-stylist/build/index.js',
+  'assets/js/block-editor.min.js'
+];
+const missingBuilt = requiredBuiltFiles.filter(
+  rel => !fs.existsSync(path.join(rootDir, rel))
+);
+if (missingBuilt.length > 0) {
+  console.error('Cannot package: built assets are missing. Run `npm run build` first:');
+  missingBuilt.forEach(rel => console.error(`  - ${rel}`));
   process.exit(1);
 }
 
@@ -73,150 +91,11 @@ if (fs.existsSync(zipFile)) {
   fs.unlinkSync(zipFile);
 }
 
-// Create build directory structure
-console.log('Creating build directory...');
-fs.mkdirSync(distDir, { recursive: true });
-
-// Copy files
-console.log('Copying production files...');
-
-// Copy main PHP file
-fs.copyFileSync(
-  path.join(__dirname, '..', 'typography-stylist.php'),
-  path.join(distDir, 'typography-stylist.php')
-);
-
-// Copy uninstall.php
-const uninstallPath = path.join(__dirname, '..', 'uninstall.php');
-if (fs.existsSync(uninstallPath)) {
-  fs.copyFileSync(uninstallPath, path.join(distDir, 'uninstall.php'));
-  console.log('✓ Copied uninstall.php');
-}
-
-// Copy includes directory
-const includesDir = path.join(__dirname, '..', 'includes');
-const distIncludesDir = path.join(distDir, 'includes');
-if (fs.existsSync(includesDir)) {
-  fs.mkdirSync(distIncludesDir, { recursive: true });
-  copyDirectory(includesDir, distIncludesDir);
-}
-
-// Copy ALL CSS files (both source and minified)
-const cssDir = path.join(__dirname, '..', 'assets', 'css');
-const distCssDir = path.join(distDir, 'assets', 'css');
-if (fs.existsSync(cssDir)) {
-  const cssFiles = fs.readdirSync(cssDir).filter(file => file.endsWith('.css'));
-  if (cssFiles.length > 0) {
-    fs.mkdirSync(distCssDir, { recursive: true });
-    cssFiles.forEach(file => {
-      fs.copyFileSync(
-        path.join(cssDir, file),
-        path.join(distCssDir, file)
-      );
-    });
-    console.log(`✓ Copied ${cssFiles.length} CSS files (source + minified)`);
-  }
-}
-
-// Copy ALL JS files (both source and minified)
-const jsDir = path.join(__dirname, '..', 'assets', 'js');
-const distJsDir = path.join(distDir, 'assets', 'js');
-if (fs.existsSync(jsDir)) {
-  const jsFiles = fs.readdirSync(jsDir).filter(file => file.endsWith('.js'));
-  if (jsFiles.length > 0) {
-    fs.mkdirSync(distJsDir, { recursive: true });
-    jsFiles.forEach(file => {
-      const srcPath = path.join(jsDir, file);
-      // Validate JavaScript files for minification
-      validateJavaScriptFile(srcPath);
-      fs.copyFileSync(
-        srcPath,
-        path.join(distJsDir, file)
-      );
-    });
-    console.log(`✓ Copied ${jsFiles.length} JS files (source + minified)`);
-  }
-}
-
-// Copy block build directory
-const blockBuildDir = path.join(__dirname, '..', 'blocks', 'typography-stylist');
-const distBlockBuildDir = path.join(distDir, 'blocks', 'typography-stylist');
-if (fs.existsSync(blockBuildDir)) {
-  fs.mkdirSync(distBlockBuildDir, { recursive: true });
-  copyDirectory(blockBuildDir, distBlockBuildDir);
-  console.log('✓ Copied block build files');
-}
-
-// Copy bundled Glyphs Panel module (production files only). The module's own
-// dev files — __tests__/ (skipped by copyDirectory), jest.config.js, and
-// package.json — are intentionally NOT copied; only the runtime files ship.
-const glyphsDir = path.join(__dirname, '..', 'glyphs-panel');
-if (fs.existsSync(glyphsDir)) {
-  const distGlyphsDir = path.join(distDir, 'glyphs-panel');
-  fs.mkdirSync(distGlyphsDir, { recursive: true });
-
-  // Main module file
-  fs.copyFileSync(
-    path.join(glyphsDir, 'glyphs-panel.php'),
-    path.join(distGlyphsDir, 'glyphs-panel.php')
-  );
-
-  // Production subdirectories (copyDirectory skips __tests__/node_modules/.git)
-  ['assets', 'includes', 'languages'].forEach(sub => {
-    const subSrc = path.join(glyphsDir, sub);
-    if (fs.existsSync(subSrc)) {
-      copyDirectory(subSrc, path.join(distGlyphsDir, sub));
-    }
-  });
-  console.log('✓ Copied Glyphs Panel module (production files only)');
-}
-
-// Copy bundled Variable Fonts module (production files only) — bundled into
-// core in v2.1; core fatals without it (unconditional require_once in
-// typost_init), so this copy is mandatory and preflight-checked above.
-const variableFontsDir = path.join(__dirname, '..', 'variable-fonts');
-const distVariableFontsDir = path.join(distDir, 'variable-fonts');
-fs.mkdirSync(distVariableFontsDir, { recursive: true });
-
-fs.copyFileSync(
-  path.join(variableFontsDir, 'variable-fonts.php'),
-  path.join(distVariableFontsDir, 'variable-fonts.php')
-);
-
-['assets', 'includes', 'languages'].forEach(sub => {
-  const subSrc = path.join(variableFontsDir, sub);
-  if (fs.existsSync(subSrc)) {
-    copyDirectory(subSrc, path.join(distVariableFontsDir, sub));
-  }
-});
-console.log('✓ Copied Variable Fonts module (production files only)');
-
-// Copy optional files if they exist
-const optionalFiles = [
-  'README.txt',
-  'readme.txt',
-  'BUILD.txt',     // Build instructions for developers (WordPress.org requirement)
-  'LICENSE',
-  'package.json'  // For developers
-];
-optionalFiles.forEach(file => {
-  const filePath = path.join(__dirname, '..', file);
-  if (fs.existsSync(filePath)) {
-    fs.copyFileSync(filePath, path.join(distDir, file));
-    console.log(`✓ Copied ${file}`);
-  }
-});
-
-// Copy optional directories if they exist and have content
-const optionalDirs = ['languages', 'assets/fonts'];
-optionalDirs.forEach(dir => {
-  const dirPath = path.join(__dirname, '..', dir);
-  if (fs.existsSync(dirPath) && fs.readdirSync(dirPath).length > 0) {
-    const distDirPath = path.join(distDir, dir);
-    fs.mkdirSync(distDirPath, { recursive: true });
-    copyDirectory(dirPath, distDirPath);
-  }
-});
+// Stage every non-excluded file into build/typography-stylist/
+console.log('Staging production files (.distignore-driven)...');
+let fileCount = 0;
+copyTree(rootDir, '');
+console.log(`✓ Staged ${fileCount} files`);
 
 // Create ZIP file
 console.log('Creating ZIP file...');
@@ -225,9 +104,12 @@ const archive = archiver('zip', { zlib: { level: 9 } });
 
 output.on('close', function() {
   console.log(`✓ Package created: ${pluginSlug}.zip (${archive.pointer()} bytes)`);
-  // Clean up build directory
-  console.log('Cleaning up...');
-  fs.rmSync(buildDir, { recursive: true, force: true });
+  if (keepStaging) {
+    console.log(`✓ Staging dir kept for inspection: ${distDir}`);
+  } else {
+    console.log('Cleaning up...');
+    fs.rmSync(buildDir, { recursive: true, force: true });
+  }
   console.log('✓ Packaging complete!');
 });
 
@@ -247,32 +129,32 @@ archive.directory(distDir, pluginSlug, {
 
 archive.finalize();
 
-// Helper function to copy directory recursively
-function copyDirectory(src, dest) {
-  fs.mkdirSync(dest, { recursive: true });
-  const entries = fs.readdirSync(src, { withFileTypes: true });
-
-  // Directories to exclude from the package
-  const excludeDirs = ['__tests__', '__mocks__', 'node_modules', '.git'];
-
+/**
+ * Recursively copy everything under rootDir/relBase not excluded by
+ * .distignore into the staging dir, validating JS files on the way.
+ */
+function copyTree(absDir, relBase) {
+  const entries = fs.readdirSync(absDir, { withFileTypes: true });
   for (const entry of entries) {
-    // Skip excluded directories
-    if (excludeDirs.includes(entry.name)) {
-      console.log(`⊘ Skipped: ${entry.name}/`);
-      continue;
-    }
-
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-
+    const rel = relBase ? `${relBase}/${entry.name}` : entry.name;
     if (entry.isDirectory()) {
-      copyDirectory(srcPath, destPath);
+      // A directory is pruned if the path itself or the dir-form matches.
+      if (ig.ignores(rel) || ig.ignores(`${rel}/`)) {
+        continue;
+      }
+      copyTree(path.join(absDir, entry.name), rel);
     } else {
-      // Validate JavaScript files for minification warnings
+      if (ig.ignores(rel)) {
+        continue;
+      }
+      const srcPath = path.join(absDir, entry.name);
       if (entry.name.endsWith('.js')) {
         validateJavaScriptFile(srcPath);
       }
+      const destPath = path.join(distDir, ...rel.split('/'));
+      fs.mkdirSync(path.dirname(destPath), { recursive: true });
       fs.copyFileSync(srcPath, destPath);
+      fileCount++;
     }
   }
 }
@@ -312,10 +194,8 @@ function validateJavaScriptFile(filePath) {
                      avgLineLength > 1000 ||
                      (hasMinExtension && firstLineLength > 300);
 
-  if (isMinified && !isExpectedMinified) {
+  if (isMinified && !isExpectedMinified && !hasMinExtension) {
     console.warn(`⚠️  Warning: ${fileName} appears to be minified but is not in the expected list`);
     console.warn(`   Path: ${filePath}`);
-  } else if (isMinified && isExpectedMinified) {
-    console.log(`✓ ${fileName} is a legitimate production build (minified)`);
   }
 }

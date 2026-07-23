@@ -1,0 +1,66 @@
+# .distignore — the single source of truth for what does NOT ship to users.
+#
+# Everything not excluded here IS distributed: to WordPress.org SVN trunk by
+# the release workflow (10up/action-wordpress-plugin-deploy), and into the
+# local/beta zip by `npm run package` (scripts/package.js reads this file).
+# Gitignore-style syntax. When you add a new dev-only file or folder, add it
+# here; new production modules ship automatically without touching anything.
+
+# --- VCS / CI / tooling directories ---
+/.git
+/.github
+/.wordpress-org
+/.claude
+/.playwright-mcp
+/playwright-profile
+/node_modules
+/vendor
+/build
+/coverage
+/scripts
+/tests
+/todo
+/docs
+
+# --- module-level dev files ---
+__tests__
+__mocks__
+/glyphs-panel/jest.config.js
+/glyphs-panel/package.json
+/glyphs-panel/CLAUDE.md
+/variable-fonts/CLAUDE.md
+
+# --- root config / dev files ---
+/.babelrc
+/.distignore
+/.env
+/.env.example
+/.gitignore
+/.npmignore
+/.phpunit.result.cache
+/composer.json
+/composer.lock
+/jest.config.js
+/jest.setup.js
+/package-lock.json
+/phpunit.xml
+/phpunit.xml.dist
+/playwright.config.js
+
+# --- docs that live on GitHub, not in the distributed plugin ---
+# (readme.txt, changelog.txt, BUILD.txt, and SOURCE.md DO ship: readme.txt is
+# the WordPress.org listing, and BUILD.txt + SOURCE.md + package.json satisfy
+# the directory's build-instructions / minified-source-mapping requirements.)
+/BUILD.md
+/CLAUDE.md
+/DOCUMENTATION.md
+/HOOKS.md
+/README.md
+/RELEASING.md
+/ROADMAP.md
+/TESTING.md
+
+# --- misc ---
+*.zip
+.DS_Store
+Thumbs.db

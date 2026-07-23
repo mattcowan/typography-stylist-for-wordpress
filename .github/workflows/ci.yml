@@ -1,0 +1,68 @@
+# CI: tests + build verification on every push and pull request.
+#
+# The "build" job also proves that the gitignored production artifacts
+# (minified JS/CSS, blocks/typography-stylist/build/) can be produced from a
+# clean checkout — the release workflow depends on that.
+#
+# Run this workflow manually (Actions → CI → Run workflow) to get an
+# installable plugin zip as a build artifact — the on-demand substitute for
+# nightly builds. See RELEASING.md § On-demand builds.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  js-tests:
+    name: JavaScript tests (Jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  php-tests:
+    name: PHP tests (PHPUnit / Brain Monkey)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+      - run: composer install --no-interaction --prefer-dist
+      - run: vendor/bin/phpunit
+
+  build:
+    name: Version check + production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # The four version sources (plugin header, TYPOST_VERSION, readme
+      # Stable tag, package.json) must always agree — fail fast if not.
+      - run: node scripts/check-versions.js
+      - run: npm run build
+      # On manual runs, also package an installable zip and attach it as an
+      # artifact (kept 7 days) — grab a test build from any branch on demand.
+      - name: Package on-demand zip
+        if: github.event_name == 'workflow_dispatch'
+        run: node scripts/package.js
+      - name: Upload zip artifact
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: typography-stylist-${{ github.sha }}
+          path: typography-stylist.zip
+          retention-days: 7
