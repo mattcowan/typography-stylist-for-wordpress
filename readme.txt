@@ -1,25 +1,49 @@
 === Typography Stylist ===
 Contributors: matthewneilcowan
-Tags: typography, opentype, fonts, ligatures, glyphs
+Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
-Tested up to: 6.9.4
-Stable tag: 2.1.0
+Tested up to: 6.9
+Stable tag: 2.1.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Unlock OpenType features like ligatures, swashes, and stylistic sets in the WordPress block editor with a glyphs panel and typography controls.
+An Illustrator-style Glyphs Panel, OpenType features, and variable font controls in the block editor. Expressive typography that stays accessible.
 
 == Description ==
 
-Typography Stylist provides advanced typography controls for WordPress, including a glyphs panel! This plugin allows you to apply OpenType features directly in the block editor, and access glyphs and ligatures hidden within fonts. Additionally, set properties like letter spacing, line-height, responsive sizing, font-weight, and more in the editor, so you can get exactly the look you want from your typefaces. 
+Your fonts are hiding their best work. Swashes, stylistic sets, discretionary ligatures, alternate characters — the features a type designer spent months drawing are locked away where WordPress never shows them. Typography Stylist opens the full glyph cabinet, right inside the block editor, without giving up accessibility or SEO.
 
-Manage fonts from the settings page, either by uploading webfont kits or adding Adobe Typekit embeds. Fonts load intelligently only when they are used.  With support for ligatures, stylistic sets, swashes, and alternates, you can create elegant headlines and premium typography effects with ease. 
+Typography Stylist is not a font-loading plugin — it sits a layer above. Font managers and the WordPress Font Library get font files onto your site; Typography Stylist is about what you do with them once they are there: browsing every glyph a face contains, turning on the OpenType features that make it sing, tuning variable font axes, and doing it all with live preview on your actual content.
 
-Accessibility features ensure that your styled text remains readable by screen readers and assistive technologies: breaking up strings of text with the inline span elements necessary to apply complex features can cause screen readers to read words in fragments or skip them entirely. The plugin includes a custom Typography Stylist block that provides a clean, unbroken set of text to maintain screen reader compatibility while allowing for complex typography to be presented visually. When applying features to partial words in standard heading blocks, the plugin detects potential accessibility issues and provides a warning with options to convert to the Typography Stylist block for maximum accessibility, or to apply the features anyway. When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden and the warning adjusts accordingly. The warning can be disabled entirely in Settings → Typography Stylist → Accessibility.
+= The Glyphs Panel =
+
+An Illustrator-style glyph browser, built in. Explore every character and OpenType feature a font contains; search by character, codepoint, or glyph name; filter by stylistic set, OpenType feature, or Unicode block; and insert any glyph — including feature alternates — directly into your content with a click. The grid is fully keyboard-navigable and screen-reader announced, and fonts are parsed in your browser for metadata only, so font EULAs stay respected: no outlines are extracted, nothing font-derived is stored on your server.
+
+= Variable Fonts =
+
+Full control over variable font axes (v2.1+):
+
+* **Automatic axis detection** — upload a variable font and its axes (tag, name, min/max/default ranges) are read straight from the font file. A "Detect Axes from Font File" button re-reads them any time, right in your browser, and works for uploaded kits, Adobe Fonts, and custom font definitions.
+* **Named and custom axes** — Weight (wght), Width (wdth), Slant (slnt), Optical Size (opsz), and Italic (ital) are recognized by name, and any custom axis a font defines gets its own control.
+* **Axis sliders in the editor** — smooth per-axis sliders in both the inline editor and the Typography Stylist block output clean `font-variation-settings` CSS. When a font has a weight axis, the slider replaces the discrete weight dropdown, so you pick 435, not "400 or 700."
+* **Per-font configuration** — review and adjust each font's axes and ranges from the Custom Fonts tab; variable fonts are badged in the font list with their axes.
+
+If you previously used the standalone "Typography Stylist – Variable Fonts" extension plugin, it is now bundled into core: deactivate the standalone copy after updating, and your settings carry over automatically.
+
+= Font management & WordPress Font Library =
+
+Manage every font source from one screen: upload webfont kits (MyFonts, Font Squirrel, or bare font-file ZIPs — the stylesheet is generated for you), connect Adobe Fonts projects, define fonts your theme or CDN already loads, and use WordPress Font Library fonts directly from the editor's font picker. Uploaded fonts can be registered into the WordPress Font Library (WP 6.5+) with one click — reversibly, and without ever breaking existing content. Fonts load intelligently, only on pages that use them.
+
+= Expressive type that stays accessible =
+
+Complex inline typography usually comes at a cost: the span elements needed to style individual characters can make screen readers read words in fragments or skip them entirely. Typography Stylist is built around not paying that cost. The custom Typography Stylist block uses a dual-heading pattern — a clean semantic heading for assistive technology, a styled version for visual display — so the document outline and screen-reader experience stay intact no matter how elaborate the visual type gets. When you style partial words in standard heading blocks, the plugin detects the risk and offers a one-click conversion to the accessible block (the warning adapts when conversion isn't possible, and can be disabled in Settings → Typography Stylist → Accessibility).
 
 = Key Features =
 
+* **Glyphs Panel**: Browse a font's complete character set Illustrator-style — search, filter by feature or stylistic set, and insert any glyph or alternate straight into your content.
+* **Variable Font Axis Controls**: Automatic axis detection plus per-axis sliders in the editor, producing clean font-variation-settings CSS.
+* **WordPress Font Library Integration** (WP 6.5+): Register uploaded fonts into the Font Library with one click, and use Library fonts from the editor's font picker.
 * **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
 * **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply basic typography features quickly. A warning will pop up if your selection breaks words and causes accessibility issues, with options to convert to the Custom Typography Stylist Block for maximum accessibility or apply anyway. The warning can be disabled in Settings → Accessibility.
 * **Live Preview**: Preview changes in real-time before applying.
@@ -116,7 +140,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 1. Create or edit a heading block (H1-H6)
 2. Type your headline text
 3. Select the text you want to style
-4. Click the "Typography Features" button in the toolbar (a swashy "T" icon)
+4. Click the "Typography Stylist" button in the toolbar (a swashy "T" icon)
 5. Select individual features
 6. See the live preview at the bottom of the popover
 7. If using partial word selections, you'll see an accessibility warning with options to convert to the Typography Stylist Block for maximum accessibility, or apply the features anyway. If the block cannot be converted (e.g., inside a locked pattern), only the "Apply Anyway" option is shown. This warning can be disabled in Settings → Typography Stylist → Accessibility.
@@ -128,7 +152,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 2. Type your text
 3. Apply any global block settings in the sidebar
 4. Select any text you want to style
-5. Click the "Typography Features" button in the toolbar (a swashy "T" icon)
+5. Click the "Typography Stylist" button in the toolbar (a swashy "T" icon)
 6. Select individual features and see the live preview
 
 = Bundled Third-Party Libraries =
@@ -139,6 +163,15 @@ The Glyphs Panel reads font files in the browser using two open-source libraries
 * **wawoff2** — decompresses WOFF2 font files (Emscripten/WebAssembly build of Google's woff2). MIT License. Source: https://github.com/fontello/wawoff2
 
 See BUILD.txt for build and source details.
+
+= Source, Docs & Support =
+
+* **Source code & issue tracker:** [github.com/mattcowan/typography-stylist-for-wordpress](https://github.com/mattcowan/typography-stylist-for-wordpress)
+* **Developer documentation:** the full extension/hooks reference ([HOOKS.md](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md)) lives on GitHub
+* **Beta builds:** pre-release versions are published on the GitHub Releases page before they reach WordPress.org
+* **Support:** the [WordPress.org support forum](https://wordpress.org/support/plugin/typography-stylist/), or GitHub issues for bugs
+
+Enjoying the plugin? [A short review](https://wordpress.org/support/plugin/typography-stylist/reviews/#new-post) helps other type lovers find it.
 
 == Installation ==
 
@@ -266,17 +299,39 @@ The plugin uses CSS font-feature-settings which is hardware-accelerated in moder
 
 = How do I know which features my font supports? =
 
-Check your font's documentation, or use the plugin to experiment. Features that aren't supported simply won't affect the text.
+Check your font's documentation, or use the plugin to experiment. Features that aren't supported simply won't affect the text. The Glyphs Panel shows exactly which OpenType features a font contains — and every glyph behind them.
+
+= Do variable fonts work? =
+
+Yes. When you upload a variable font, its axes (weight, width, slant, optical size, or any custom axis) are detected automatically from the font file. Each axis gets a slider in the editor — in both the inline editor and the Typography Stylist block — and the output is standard `font-variation-settings` CSS. Axis detection reads TTF/OTF files at upload time; for WOFF2-only kits, use the "Detect Axes from Font File" button in the font's settings (which handles WOFF2 in the browser) or define axes manually.
+
+= I was using the standalone Variable Fonts extension — what now? =
+
+As of 2.1 it's bundled into the core plugin. Deactivate (and optionally delete) the standalone "Typography Stylist – Variable Fonts" plugin after updating; every setting carries over automatically, and your content is untouched.
+
+= What does registering a font in the WordPress Font Library do? =
+
+On WordPress 6.5+, uploaded font kits can be registered into the WordPress Font Library (Appearance → Editor), individually or in bulk, from the Custom Fonts tab. Registered fonts become available to the site editor like any Library font, WordPress serves their files (no double-loading), and the plugin's font variables keep pointing at them — so existing content never breaks. Registration is optional and fully reversible. Adobe Fonts and custom font definitions stay plugin-managed by design (Adobe fonts load from Adobe's servers and may not be self-hosted).
+
+= Where can I get beta versions or report bugs? =
+
+Beta builds are published as pre-releases on the plugin's [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases) — download the attached zip and install it via Plugins → Add New → Upload. Bugs are welcome on the [GitHub issue tracker](https://github.com/mattcowan/typography-stylist-for-wordpress/issues) or the WordPress.org support forum.
 
 == Screenshots ==
 
-1. Custom Fonts Control Panel (Admin Settings Page)
-2. Font Feature Preview (Admin Settings Page)
-3. Typography Stylist panel, available on headings and other rich text blocks by clicking the swashy "T" icon in the toolbar
-4. Typography Stylist Block with global controls in the sidebar
-5. Typography Stylist Block with Quick Feature Toggle open to apply stylistic sets and other features
+1. The Glyphs Panel — browse a font's full character set, filtered here to a stylistic set's script alternates, and insert any glyph with a click
+2. Inline editor on a heading block — toggling Swashes (swsh) with live preview, applied instantly to the selected text
+3. Quick Feature Toggles inside the Typography Stylist block — per-selection controls, here setting a different variable-font weight for one word
+4. Typography Stylist block with sidebar controls — a variable font's Weight axis slider replaces the discrete weight dropdown
+5. Per-font variable axis configuration — axes detected from the font file, with ranges and WordPress Font Library registration
+6. Font Features preview in the admin — every OpenType feature previewed with your own text in the selected font
+7. The unified font list — uploaded kits, Adobe Fonts, and WordPress Font Library fonts with Variable and registration badges
+8. The block's Accessibility panel — the screen-reader class behind the dual-heading pattern that keeps styled text accessible
 
 == Changelog ==
+
+= 2.1.1 =
+* Packaging: re-release of the 2.1.0 feature set under a fresh version number. The 2.1.0 tag's downloadable ZIP was cached against stale contents and never delivered the new files (Variable Fonts core integration, font metadata/sources modules, WordPress Font Library integration); 2.1.1 ships them correctly. See the 2.1.0 entry below for the full list of changes included in this release.
 
 = 2.1.0 =
 * Fixed: deleting an uploaded font now also removes its WordPress Font Library registration — previously the wp_font_family post survived the delete, kept printing @font-face rules for font files that no longer existed, and made the font appear to still be installed. Removal is ownership-guarded: only families the plugin itself registered are ever touched.
@@ -320,214 +375,18 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 = 2.0.1 =
 * Fixed: Mixed-content blocking of locally-hosted fonts in the Glyphs Panel — same-host `http://` font file URLs are now upgraded to `https://` before fetching, so fonts whose stored kit CSS contains absolute insecure URLs load correctly on HTTPS sites (cross-origin URLs are left untouched)
 
-= 2.0.0 =
-* **NEW: Glyphs Panel (built into core) — the flagship feature of 2.0.** An Illustrator-style full-font glyph browser. Explore every character and OpenType feature in a font; search by character, U+ codepoint, or glyph name; filter by Unicode block, stylistic set, or OpenType feature; and view all alternates for a single character. Click or press Enter to insert any glyph (including indexed feature alternates) directly into your content via a "Glyphs…" button in the inline rich-text toolbar (any heading or paragraph), in the Typography Stylist block's Quick Feature Toggles, or from a dedicated "Glyphs" admin tab (browse + copy to clipboard); closing the panel returns you to the editor popover you launched it from. Accessible by design: the glyph grid is a fully keyboard-navigable ARIA grid (arrow keys, Home/End, Page Up/Down, Enter to insert) with row/column semantics, and insertions and result counts are announced to screen readers — inserted glyphs use the real Unicode character plus CSS font-feature-settings, so assistive technology always reads the underlying text. Works with uploaded webfont kits, Adobe Fonts, custom font definitions, and WordPress Font Library fonts; font files are read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored, and nothing font-derived is written to your server, making sure you respect font EULAs.
-* **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
-* **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
-* **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
-* **NEW: JavaScript hook system** (`window.typostHooks`) - Lightweight action/filter system for both the inline editor and Typography Stylist block, with container-based hook points for rendering extension UI
-* **NEW: Per-font OpenType feature visibility** - Configure which of the 51 OpenType features appear in the editor on a per-font basis; defaults to all features visible for full backward compatibility
-* **NEW: Unified font list** - All font sources (uploaded kits, Adobe Fonts, custom definitions, WP Font Library) now appear in a single organized list with color-coded type badges instead of three separate sections
-* **NEW: Drag-to-reorder fonts** - Drag fonts up and down the list to control the order they appear in editor dropdowns; order is persisted via the REST API
-* **NEW: WordPress Font Library integration** - Fonts registered through the WordPress Font Library (WP 6.5+) now appear in the Custom Fonts admin list as read-only entries with a link to manage them in the Appearance Editor; gracefully absent on older WordPress versions
-* **NEW: Font name preview** - Font names in the Custom Fonts admin list now render in their actual typeface using CSS variables, making it easy to identify fonts at a glance
-* **NEW: Card width slider** - Adjustable preview card width (280–800px) in the Font Features tab, persisted per-browser via localStorage
-* **NEW: Contextual help panels** - Collapsible help panels added to each admin tab (Custom Fonts, Font Features, Options, Accessibility, Replacement Fonts) explaining what each section does and how to use it
-* **NEW: Block editor Help & Tips panel** - A collapsible "Help & Tips" inspector panel in the Typography Stylist block explains when to use block vs. inline styling, accessibility features, and font selection guidance
-* **NEW: Contextual tooltips** - Info tooltips on key block editor controls (font family, font weight, font size, letter spacing, line height, OpenType features) using WCAG-compliant `<Tooltip>` + `<Button>` pattern; keyboard focusable with screen reader support
-* Added: `typost_editor_data` filter for extensions to add data to the block editor
-* Added: `typost_editor_assets` action for extensions to enqueue editor scripts
-* Added: `typost_admin_tabs` filter for registering custom admin settings tabs
-* Added: `typost_admin_localize_data` filter for extensions to add admin page data
-* Added: `typost_admin_assets` action for extensions to enqueue admin scripts/styles
-* Added: `typost_register_rest_routes` action for extensions to register REST API endpoints
-* Added: `typost_available_features` filter for modifying the available OpenType features list
-* Added: `typost_presets` filter (replacing legacy `typost_default_presets`) for modifying the combined presets list
-* Added: `typost_cache_clear` action for extensions to clear their caches when core clears
-* Added: `typost_font_uploaded` and `typost_font_deleted` actions for font lifecycle events
-* Added: `typost_admin_tab_content_{id}` and `typost_admin_tab_after_{id}` actions for admin tab content
-* Added: 5 inline editor hook points, 4 Quick Feature Toggle hook points, 3 Inspector Controls hook points
-* Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
-* Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
-* Added: Blueprint specification for the Variable Font Axes extension
-* Added: REST endpoints for font feature visibility (`GET/POST /typost/v1/font-feature-visibility/{font_id}`) and font order (`GET/POST /typost/v1/font-order`)
-* Added: `filterFeaturesByVisibility()` utility function (exported from utils.js and exposed via `window.typostSharedUtils`) for filtering features based on per-font visibility settings
-* Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
-* Fixed: Help tab section headers now use the primary text color instead of the accent color, fixing low contrast in the Alice Blue admin color scheme (WCAG-compliant across all schemes)
-* Fixed: REST API namespace in bundled documentation corrected to the canonical `/wp-json/typost/v1/`
-* Removed: Apply button from inline editor toolbar
-* Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
-* Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
-* Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
-* Removed: Separate Uploaded Fonts, Adobe Fonts, and Custom Font Definitions sections — replaced by unified font list
-* Changed: Word boundary accessibility warning is now a persistent, non-blocking informational notice at top of modal instead of blocking application; it remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block
-* Changed: Users can still choose to convert to a Typography Stylist block for improved accessibility when needed, but this is now an optional follow-up action rather than a requirement to proceed
-* Changed: Admin settings tabs are now data-driven with priority-based ordering (supports URL deep-linking via `?tab=` parameter)
-* Changed: Add Font forms (upload kit, Adobe Fonts, custom definition) are now grouped in a collapsible accordion section beneath the font list
-* Changed: Feature visibility is editor-UI-only — already-applied features in saved content continue to render correctly regardless of visibility settings
-* Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
-* Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
-* Improved: Font Features tab preview selector now includes WP Font Library fonts (when available) alongside uploaded, Adobe, and custom fonts
-* Improved: Feature visibility changes auto-save on toggle with a brief "Saved" confirmation — no Save button needed
-* Improved: Per-font feature visibility includes master "Enable All" / "Disable All" controls both on the Font Features tab and inside each font's edit form
-* Improved: Glyphs Panel toolbar controls (Alternates, Search, OpenType feature, Unicode block) now show visible labels
-* Improved: Glyphs Panel default "All glyphs" view also lists OpenType feature variants (e.g. stylistic alternates) previously reachable only by filtering or typing a character
-* Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
-* Note: WP Font Library fonts appear in the admin list as read-only; font order and feature visibility settings for WP Library fonts are not yet supported in this release
-
-= 1.2.2 =
-* Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation
-* Added: Smart conversion detection - the "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., inside a locked pattern), with an adjusted warning message
-* Added: Safety fallback - if block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user
-* Added: "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility to skip the partial word warning entirely
-* Added: "Manage this setting" link in the warning message that deep-links to the admin accessibility settings page, auto-switching to the Accessibility tab and highlighting the relevant setting
-* Fixed: Nonce mismatch in Accessibility and Options settings forms caused "The link you followed has expired" error when saving - the nonce names in wp_nonce_field() and check_admin_referer() did not match
-
-= 1.2.1 =
-* Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
-* Added: Single-weight auto-apply - when a font has only one available weight, the weight selector is hidden and the weight is automatically applied
-* Added: Weight validation on font change - switching fonts automatically adjusts the weight to the closest available option
-* Fixed: CSS variable trailing comma caused fonts without fallbacks to fail loading on both frontend and block editor (e.g. `--font-20: "EsmeraldaPro", ;` produced invalid CSS)
-* Fixed: Line breaks (Shift+Enter) in Typography Stylist blocks caused words to run together in screen reader text (e.g. "MILANOCORTINA" instead of "MILANO CORTINA")
-* Fixed: Inline editor modal lost font selection state on close/reopen - selecting a font, closing the modal without applying, then reopening and clicking Apply would silently fail because stale state caused the apply logic to enter the wrong code path
-* Fixed: Missing data-lineheight attribute in format type registration - line-height values were silently dropped when reading back existing formatted content
-* Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
-* Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
-* Changed: "Edit Fallbacks" button renamed to "Edit Settings" in admin font management to reflect expanded functionality
-* Improved: OpenType feature previews now show cumulative checked features - toggling a stylistic set updates ALL preview windows to include that feature, accurately showing how features combine (essential for fonts like Bookmania where stylistic sets interact to produce different glyphs)
-
-= 1.2.0 =
-* Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
-* Fixed: TreeWalker document context bug - TreeWalkers are now created from the correct document object (DOMParser), preventing cross-context errors
-* Fixed: Responsive font-size Reset button now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
-* Fixed: Memory leak in debounced auto-apply functions - cleanup handlers now properly cancel pending debounced calls on component unmount
-* Fixed: Preview span removal now preserves nested elements instead of flattening to text, maintaining complex formatting structure
-* Fixed: Stale closure bug in auto-apply functions - debounced wrappers now call latest version of apply functions via refs, resolving issue where controls wouldn't work when styles were already applied
-* Improved: Quick Features Toggle auto-apply - letter spacing, line height, font family, font weight, and font size now apply automatically with debouncing (400ms for sliders, 300ms for dropdowns, 600ms for responsive font-size)
-* Improved: Consistent UX across all Quick Features controls - all controls now auto-apply like OpenType features, no more confusion about which controls need Apply buttons
-* Improved: Clear/Reset buttons now actually remove properties from content instead of just resetting state - clicking Reset removes the data attribute and CSS property from spans
-* Improved: UI reorganization - Active Features section moved above feature panels for better visibility
-* Added: Individual Reset buttons for font family, font weight, and font size with undo icons for clear visual feedback
-* Added: `buildTextOffsetMap()` utility that accounts for `<br>` elements in character offset calculations, matching WordPress RichText's offset system
-* Added: `getEffectiveTextLength()` utility for accurate text length measurement including line breaks
-* Added: `debounce()` utility function with cancel method for performance optimization during rapid slider adjustments
-* Added: `removePropertyFromSpan()` utility to remove specific properties and unwrap empty spans
-* Added: `removePropertyFromSelection()` utility to find and remove properties from all spans in selection
-* Added: Comprehensive test suite with 24 tests for property removal utilities, including edge cases for responsive font-size
-* Improved: All 12 TreeWalker-based offset calculations across the inline editor, Typography Stylist block, and shared utilities now correctly handle multi-line content
-* Technical: Extracted `classifyAtomicNode()` helper within `splitSpanAndApply` to reduce code duplication in segment classification logic
-* Technical: Debounced functions use refs to avoid stale closures and maintain access to current state across renders
-
-= 1.1.9 =
-* Fixed: Archive page font loading - fonts now load correctly and more consistently on blog home, category pages, tag pages, and all archive types
-* Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
-* Added: Manual cache clear button in Settings → Typography Stylist → Options tab for troubleshooting font loading issues
-* Added: Admin setting to control archive page full content checking (enabled by default)
-* Improved: Singular pages (posts, pages) continue using optimized detection path without changes
-* Improved: Cache clearing when options are changed to ensure settings take effect immediately
-* Improved: Font detection caches now automatically clear when posts or pages are saved, so typography changes appear on the frontend immediately
-* Updated: Filter `typost_check_full_content_on_archives` now defaults to true (was false)
-* Technical: Font detection results cached in instance variables to avoid redundant queries
-* Note: Existing sites will automatically benefit from improved archive page font loading
-
-= 1.1.8 =
-* Improved: Windows Narrator focus enhancement - screen reader accessible headings now display a visible focus outline that corresponds to the full styled headline area, making it easier to identify which heading is being read
-
-= 1.1.7 =
-* Improved: Screen reader elements maintain full-size dimensions while remaining invisible, using modern clip-path technique with backwards compatibility for legacy browsers
-* Added: High contrast mode support for Windows users with enhanced outline visibility (4px outline with system Highlight color)
-* Added: Dark mode support with adjusted outline colors for better visibility on dark backgrounds
-* Added: pointer-events management to prevent invisible overlay from blocking interactions with styled text when not focused
-
-
-= 1.1.6 =
-* Improved: Standardized control order across all interfaces for better consistency. Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features.
-* Fixed: Font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
-* Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block (sporadic errors before)
-* Fixed: Sequential feature application bug where applying multiple inline features would incorrectly affect entire block
-* Fixed: State management issue where inline control values wouldn't reset after successful apply
-* Fixed: Inline fonts (applied via Quick Feature Toggles) now load correctly on frontend
-* Fixed: Font detection now properly extracts inline fonts from Typography Stylist block content HTML
-* Fixed: Quick Feature Toggle preview now displays in correct inline font instead of block-level font
-* Fixed: OpenType features now apply only to selected text, not entire span when selecting partial text within existing styled spans
-* Fixed: Font-feature-settings CSS now preserved when applying other inline styles (line-height, letter-spacing) to text with existing OpenType features
-* Fixed: Nested span handling - applying features to partial selections within styled text now creates proper nested or split spans instead of merging incorrectly
-* Fixed: Block-level fonts no longer incorrectly included in unrelated inline operations
-* Fixed: Line-height and letter-spacing controls no longer pass incorrect empty data-features attributes that interfered with attribute preservation
-* Improved: Inline fonts now use CSS variable system (var(--font-ID)) matching block-level architecture for consistent font loading and replacement
-* Improved: Enhanced attribute preservation system to prevent style conflicts during sequential inline edits while properly handling font-family overrides
-* Improved: Added comprehensive validation and fallback mechanisms for all inline text styling functions
-* Improved: Inline state variables now reset after successful apply to prevent UI/content desync
-* Improved: Font override logic - applying new inline font to text with existing font now properly replaces old font instead of preserving it
-* Added: parseInlineFontFamilyAtCursor() utility for detecting inline fonts at cursor position
-* Added: Memoized inline font detection for improved preview performance
-* Developer: extract_fonts_from_blocks() enhanced to parse inline HTML content for data-font-id attributes
-
-= 1.1.5 =
-* Added: Line-height controls for block-level and inline text styling
-* Added: Line-height control in Typography Stylist block inspector panel
-* Added: Line-height control in Quick Features Toggle popover for inline selections
-* Added: Line-height control in inline editor toolbar for standard heading/paragraph blocks
-* Improved: Line-height can be adjusted from 0.5 to 3.0 with 0.1 step increments
-* Improved: Responsive font size controls now operate independently without auto-adjusting other values
-* Improved: Responsive font size labels now clearly indicate screen sizes (Mobile, Intermediate, Large)
-* Improved: Visual warning displayed when responsive font sizes are out of logical order
-* Improved: Default responsive font sizes for new blocks changed to 16/32/64 for more dramatic scaling
-* Fixed: Confusing slider behavior where adjusting one size would move other sliders
-* Developer: Breakpoint values (320px, 1920px) extracted to named constants (RESPONSIVE_FONT_MIN_VIEWPORT, RESPONSIVE_FONT_MAX_VIEWPORT) for future configurability across Typography Stylist block and inline editor
-
-= 1.1.4 =
-* Fixed: Mixed content warnings on HTTPS sites when loading custom fonts
-* Improved: Font URLs now use relative paths for protocol-agnostic loading
-* Improved: Legacy fonts with absolute URLs are automatically converted at render time
-
-= 1.1.3 =
-* Initial release approved for public distribution.
-* Typography Stylist Block with ARIA markup and semantic HTML
-* Smart selection validation warns when partial word selections could fragment text
-* Conversion tool from inline formats to accessible block structure
-* Configurable aria-label support for inline formatted text
-* Screen reader class options (visually-hidden, sr-only, or custom classes)
-* Accessibility documentation
-* Upload custom font kits from MyFonts, Fontspring, and other webfont providers
-* Adobe Fonts (Typekit) integration via embed code
-* Define fonts loaded through themes, plugins, or CDN services
-* Font fallback system
-* Secure font file storage with .htaccess protection
-* Font preview system with size controls
-* OpenType feature support: ligatures (liga, dlig, calt)
-* Stylistic sets (ss01-ss20)
-* Swashes (swsh, cswh) and alternates (salt, titl, ornm)
-* Quick-apply presets for common typography styles
-* Custom preset creation and saving
-* Inline text selection in the block editor
-* Live preview before applying changes
-* Popover interface with features organized by category
-* Spanish (es_ES) and French (fr_FR) translations
-* Native CSS font-feature-settings
-* WordPress block editor (Gutenberg) API integration
-* REST API for plugin features
-* JSX/React architecture for the custom block
-* WordPress @wordpress/scripts build toolchain
-* Transient caching
-* Rate-limited REST API endpoints (50 requests/minute per user)
+Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.1.1 =
+Re-release of the 2.1.0 feature set with corrected packaging — the 2.1.0 download never contained the new files. Update to get variable fonts, font-only ZIP uploads, and WordPress Font Library integration.
 
 = 2.1.0 =
 Font kit uploads now accept ZIPs containing only font files (e.g. Google Fonts downloads) — the @font-face stylesheet is generated automatically from the fonts' metadata. Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
 
 = 2.0.1 =
 Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.
-
-= 2.0.0 =
-Major release: the Glyphs Panel — a full-font glyph browser — is now built into the core plugin, available in both editors and a new Glyphs admin tab. Also adds an extensibility hook system, live preview in the inline editor, and unified font management. Existing content and settings are preserved.
-
-= 1.1.4 =
-Fixes mixed content warnings on HTTPS sites. Custom fonts now load securely using protocol-agnostic URLs.
-
-= 1.1.3 =
-Initial release of Typography Stylist with accessibility features, font management, and OpenType typography controls.
 
 == Technical Details ==
 
@@ -537,7 +396,7 @@ Typography features are stored as inline styles and data attributes within post 
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters (see HOOKS.md). REST API endpoints are available at `/wp-json/typost/v1/`.
+Developers can extend the plugin using WordPress hooks and filters — see [HOOKS.md on GitHub](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md) for the full reference with examples. REST API endpoints are available at `/wp-json/typost/v1/`.
 
 = Source Code =
 

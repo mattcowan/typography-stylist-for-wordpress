@@ -38,3 +38,5 @@ tests/e2e/auth.json
 test-results/
 playwright-report/
 playwright/.cache/
+# Demo videos (recorded locally, hosted elsewhere)
+docs/media/

@@ -1,0 +1,245 @@
+== Typography Stylist — Full Changelog ==
+
+The complete version history of Typography Stylist. Recent releases are also
+summarized in readme.txt; release notes with downloads live on GitHub:
+https://github.com/mattcowan/typography-stylist-for-wordpress/releases
+
+
+== Changelog ==
+
+= 2.1.1 =
+* Packaging: re-release of the 2.1.0 feature set under a fresh version number. The 2.1.0 tag's downloadable ZIP was cached against stale contents and never delivered the new files (Variable Fonts core integration, font metadata/sources modules, WordPress Font Library integration); 2.1.1 ships them correctly. See the 2.1.0 entry below for the full list of changes included in this release.
+
+= 2.1.0 =
+* Fixed: deleting an uploaded font now also removes its WordPress Font Library registration — previously the wp_font_family post survived the delete, kept printing @font-face rules for font files that no longer existed, and made the font appear to still be installed. Removal is ownership-guarded: only families the plugin itself registered are ever touched.
+* Fixed: fonts registered in the WordPress Font Library no longer appear twice on the Custom Fonts tab (once as an uploaded font card and again in the read-only WP Library rows). The uploaded card with its "In WP Library" badge is now the single listing; genuine Library fonts — including orphaned registrations from older versions — remain visible.
+* Removed: the required "Font Kit Name" field from the Upload Font Kit form. The name was stored but never displayed anywhere — font cards show the family names read from the kit. The REST endpoint still accepts an optional `name` and defaults to the ZIP filename, so API callers keep working.
+* **NEW: font-only ZIPs (no CSS) are now accepted by Upload Font Kit.** Uploading a ZIP that contains just font files — e.g. a Google Fonts download — no longer fails with "No CSS file found in the font kit". The plugin reads each font's built-in metadata (name, OS/2, and fvar tables for TTF, OTF, and WOFF files) and generates the @font-face stylesheet automatically: correct family names, weights, italics, and for variable fonts a font-weight range with the matching format('…-variations'). Generated kits flow through the existing pipeline unchanged, including variable-font axis detection, the Variable card badge, and the editor weight slider. WOFF2 metadata cannot be read server-side, so WOFF2-only ZIPs fall back to filename-based detection and the upload shows a "review the generated font styles" warning. Kits whose CSS files contain no @font-face rules get the same fallback.
+* **NEW: WordPress Font Library integration (WP 6.5+).** Uploaded webfont kits can now be registered in the WordPress Font Library (Appearance → Editor): newly uploaded fonts register automatically (toggle in Options), and existing fonts can be registered per font or in bulk from the Custom Fonts tab — registration is opt-in and fully reversible. Registered fonts keep their numeric IDs: the plugin's `--font-N` CSS variables alias to WordPress's `--wp--preset--font-family--{slug}` presets with a literal fallback, so all existing content, inline spans, and extension integrations keep rendering forever, even if a font is later removed from the Library. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom font definitions remain plugin-managed by design (Adobe fonts load from Adobe's servers and may not be self-hosted).
+* **NEW: WordPress Font Library fonts in the editor font pickers.** Both the inline editor and the Typography Stylist block now offer Library fonts (theme fonts and fonts installed via Appearance → Editor) in a dedicated picker group. Picking one adopts it seamlessly — it gets a numeric font ID like every other source, so the save format and all extensions work unchanged.
+* **NEW: Variable Fonts built into core.** The "Typography Stylist - Variable Fonts" extension is now bundled (like the Glyphs Panel in 2.0): automatic axis detection on upload, per-axis admin configuration, and axis sliders in the editor. If you were using the standalone extension plugin, deactivate it after updating — your settings carry over automatically.
+* **NEW: `typost_force_enqueue_font_ids` filter** — themes and extensions can force specific fonts to load on every page (for fonts referenced only from theme CSS, invisible to the content scan).
+* Improved: extension data saves on the font edit form no longer race the page reload (`typost:font-saved` now provides a `waitUntil()` collector).
+* Fixed: the per-page font CSS cache key now includes the used font IDs, so pages using different fonts can no longer share stale cached CSS.
+* Fixed: font CSS variables now load inside the iframed block editor canvas (WP 6.3+) even when no uploaded webfont kits exist — Adobe Fonts, custom font definitions, and Font Library fonts previously fell back to the system font in the editor while rendering correctly on the frontend.
+* Improved: the Glyphs Panel now distinguishes missing or failed parsing-library loads from genuinely unreadable fonts, shows honest error messages with technical detail, and offers a "Try again" button that retries without reloading the page.
+* **NEW: "Detect Axes from Font File" button** — each font's Variable Font settings can now read the axis definitions (tag, name, min/max/default) straight from the font binary in your browser, instead of typing them by hand. Works for uploaded kits, Adobe Fonts, and custom font definitions, including WOFF2 files that upload-time detection can't parse. Detected axes fill the form for review; nothing is stored until you save.
+* Improved: variable fonts without a weight (`wght`) axis no longer show the standard Font Weight dropdown in the editors — the variable axis sliders take its place (matching the per-font "Hide weight selection" admin setting, which previously only affected the admin form).
+* Fixed: the "Variable Font Axes" section in the inline editor pop-up now has the same left/right padding as the other sections.
+* Developer: the `typost_weight_control` JS filter recognizes a new `'hidden'` return value (suppress the weight control entirely), and the `typost_qft_after_font_controls` hook state now includes `inlineFontFamilyAtSelection` — see HOOKS.md.
+* Fixed: extension panels rendered into font-dependent hook points (e.g. the Variable Font axis sliders) no longer go stale when the font is changed — the hook containers now remount with fresh state on font switch instead of keeping the previous font's controls.
+* Improved: Variable Font quick-select buttons for custom axes now snap to round values (200, 400, 600 instead of 201, 401, 601) and are capped at 7 buttons so they fit on a single row; near-duplicate values next to the axis default are no longer generated.
+* Added: variable font axes are now detected automatically when fonts are added — both webfont kit ZIP uploads and Adobe Fonts kits. Each family in a kit is checked individually, so kits mixing variable and static fonts work correctly; static families are simply left untouched.
+* Fixed: axis detection (and glyph loading) for Adobe Fonts kits containing multiple families could resolve the wrong family's font file — per-family entries store a single family name, which the font loader now honors.
+* Developer: new `typost:fonts-added` jQuery admin event fires after a kit upload or Adobe Fonts add, with the new entries and a `waitUntil()` collector so extensions can post-process fonts before the page reloads — see HOOKS.md.
+* Fixed: a variable font with a weight (wght) axis but "Hide weight selection" unchecked showed the weight slider until the first edit, then inconsistently swapped to the weight dropdown. The unchecked setting now consistently keeps the standard weight dropdown (the wght slider is skipped); other variable axes still show in their own panel.
+* Changed: "Hide weight selection" now defaults to checked for every variable font — when a weight (wght) axis exists the slider replaces the weight dropdown, and without one the weight is fixed by the font file, so the discrete weight UI is hidden either way. An explicit admin toggle still wins. Previously the auto rule only hid weights for variable fonts without a wght axis, leaving the redundant weight controls visible for exactly the fonts that least need them.
+* Changed: bumped the Variable Fonts (1.2.1) and Glyphs Panel (1.1.2) module version constants so browsers pick up the updated module scripts (these files ship unminified and are cache-busted only by those constants).
+* Accessibility: the Variable Fonts axis Tag and Name inputs on the settings page now have accessible labels (fixes 10 "missing form label" WAVE errors).
+* Accessibility: color-contrast audit of all admin color schemes. Alice Blue's primary and muted-text colors were darkened to meet WCAG AA 4.5:1 on every panel background (feature code badges, size values, descriptions, visibility labels); the Dark scheme's badge text and danger color were corrected; High Contrast's danger red was darkened; and the Admin Colors scheme now automatically darkens colors derived from the WordPress admin palette until they meet 4.5:1.
+* Accessibility: fixed heading hierarchy on the settings page — font card names are now h3 (previously h4 directly under the tab's h2).
+* Changed: the read-only Variable Fonts admin tab was removed. Variable fonts are now marked with a "Variable" pill on their font cards (hover it to see the configured axis tags), alongside the existing source badges — the same information, in context. Axes are still managed in each font's edit form.
+* Developer: new `typost_font_card_badges` PHP filter lets extensions append badges to font card headers on the Custom Fonts tab — see HOOKS.md.
+* Improved: WP Font Library cards now render the font name in its own typeface (when font files are registered; @font-face CSS is printed via wp_print_font_faces on WP 6.4+), and the font-family code chip no longer touches the "Manage in Editor" button. The chip also follows the admin color scheme instead of hardcoded grays.
+* Changed: the Quick Feature Toggles popover now shows the same two-line usage tips notice as the inline popover (drag-to-reposition + instant-apply/undo) and shares its dismissal — closing the notice in either popover hides it in both, remembered per browser.
+* Changed: the "i" icon tooltips in the block sidebar and inline popover were replaced with plain help text (matching the line-height controls) or removed. The Font Family tip claiming "fonts only load on pages where they are used" was removed as inaccurate for WordPress Font Library fonts, which WordPress loads site-wide; the Font Size clamp() explanation now appears as help text when Responsive mode is selected; the OpenType overview is now a regular note at the top of the features panel.
+* Removed: the required "Project Name" field from the Add Adobe Fonts Project form — since kits create one entry per family (named by the family), the project name was stored but never displayed anywhere.
+* Fixed: the Glyphs button in the inline Typography Stylist popover now aligns with the section headings instead of sitting flush against the popover edge.
+* Changed: the collapsible Tips list at the bottom of the inline popover was removed; its one non-obvious tip ("Changes apply instantly, press Ctrl+Z to undo") joined the drag-to-reposition tip in the notice at the top of the panel. The notice is now dismissible, and the dismissal is remembered per browser. The other tips duplicated information available elsewhere.
+* Fixed: when a kit contains several variable fonts, the automatic axis detection could silently lose the first font's result — the per-font saves ran concurrently against a REST endpoint that does a read-modify-write on a shared option, so the earliest write was overwritten by the others. Axis saves are now serialized, so every detected font's axes persist.
+* Developer: new block attribute `animationConfigId` + inline `data-animation-id` attribute as integration points for the upcoming Animations extension; font subsystem partially extracted into `includes/` modules (public extension API unchanged).
+
+= 2.0.1 =
+* Fixed: Mixed-content blocking of locally-hosted fonts in the Glyphs Panel — same-host `http://` font file URLs are now upgraded to `https://` before fetching, so fonts whose stored kit CSS contains absolute insecure URLs load correctly on HTTPS sites (cross-origin URLs are left untouched)
+
+= 2.0.0 =
+* **NEW: Glyphs Panel (built into core) — the flagship feature of 2.0.** An Illustrator-style full-font glyph browser. Explore every character and OpenType feature in a font; search by character, U+ codepoint, or glyph name; filter by Unicode block, stylistic set, or OpenType feature; and view all alternates for a single character. Click or press Enter to insert any glyph (including indexed feature alternates) directly into your content via a "Glyphs…" button in the inline rich-text toolbar (any heading or paragraph), in the Typography Stylist block's Quick Feature Toggles, or from a dedicated "Glyphs" admin tab (browse + copy to clipboard); closing the panel returns you to the editor popover you launched it from. Accessible by design: the glyph grid is a fully keyboard-navigable ARIA grid (arrow keys, Home/End, Page Up/Down, Enter to insert) with row/column semantics, and insertions and result counts are announced to screen readers — inserted glyphs use the real Unicode character plus CSS font-feature-settings, so assistive technology always reads the underlying text. Works with uploaded webfont kits, Adobe Fonts, custom font definitions, and WordPress Font Library fonts; font files are read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored, and nothing font-derived is written to your server, making sure you respect font EULAs.
+* **MAJOR CHANGE:** Inline text editor (richtext toolbar button) now uses live preview instead of Apply button paradigm - changes are auto-applied immediately with debouncing (matching the Typography Stylist block UX)
+* **NEW: Extensibility hook system** - Comprehensive PHP and JavaScript hooks enabling third-party extensions via standalone WordPress plugins
+* **NEW: Admin tab extensibility** - Data-driven admin settings tabs with filter-based registration for extensions to add their own configuration tabs
+* **NEW: JavaScript hook system** (`window.typostHooks`) - Lightweight action/filter system for both the inline editor and Typography Stylist block, with container-based hook points for rendering extension UI
+* **NEW: Per-font OpenType feature visibility** - Configure which of the 51 OpenType features appear in the editor on a per-font basis; defaults to all features visible for full backward compatibility
+* **NEW: Unified font list** - All font sources (uploaded kits, Adobe Fonts, custom definitions, WP Font Library) now appear in a single organized list with color-coded type badges instead of three separate sections
+* **NEW: Drag-to-reorder fonts** - Drag fonts up and down the list to control the order they appear in editor dropdowns; order is persisted via the REST API
+* **NEW: WordPress Font Library integration** - Fonts registered through the WordPress Font Library (WP 6.5+) now appear in the Custom Fonts admin list as read-only entries with a link to manage them in the Appearance Editor; gracefully absent on older WordPress versions
+* **NEW: Font name preview** - Font names in the Custom Fonts admin list now render in their actual typeface using CSS variables, making it easy to identify fonts at a glance
+* **NEW: Card width slider** - Adjustable preview card width (280–800px) in the Font Features tab, persisted per-browser via localStorage
+* **NEW: Contextual help panels** - Collapsible help panels added to each admin tab (Custom Fonts, Font Features, Options, Accessibility, Replacement Fonts) explaining what each section does and how to use it
+* **NEW: Block editor Help & Tips panel** - A collapsible "Help & Tips" inspector panel in the Typography Stylist block explains when to use block vs. inline styling, accessibility features, and font selection guidance
+* **NEW: Contextual tooltips** - Info tooltips on key block editor controls (font family, font weight, font size, letter spacing, line height, OpenType features) using WCAG-compliant `<Tooltip>` + `<Button>` pattern; keyboard focusable with screen reader support
+* Added: `typost_editor_data` filter for extensions to add data to the block editor
+* Added: `typost_editor_assets` action for extensions to enqueue editor scripts
+* Added: `typost_admin_tabs` filter for registering custom admin settings tabs
+* Added: `typost_admin_localize_data` filter for extensions to add admin page data
+* Added: `typost_admin_assets` action for extensions to enqueue admin scripts/styles
+* Added: `typost_register_rest_routes` action for extensions to register REST API endpoints
+* Added: `typost_available_features` filter for modifying the available OpenType features list
+* Added: `typost_presets` filter (replacing legacy `typost_default_presets`) for modifying the combined presets list
+* Added: `typost_cache_clear` action for extensions to clear their caches when core clears
+* Added: `typost_font_uploaded` and `typost_font_deleted` actions for font lifecycle events
+* Added: `typost_admin_tab_content_{id}` and `typost_admin_tab_after_{id}` actions for admin tab content
+* Added: 5 inline editor hook points, 4 Quick Feature Toggle hook points, 3 Inspector Controls hook points
+* Added: State communication pattern via `typost_current_editor_state` filter and `typost-apply-block-properties` CustomEvent
+* Added: HOOKS.md developer documentation with vanilla DOM and React extension examples
+* Added: Blueprint specification for the Variable Font Axes extension
+* Added: REST endpoints for font feature visibility (`GET/POST /typost/v1/font-feature-visibility/{font_id}`) and font order (`GET/POST /typost/v1/font-order`)
+* Added: `filterFeaturesByVisibility()` utility function (exported from utils.js and exposed via `window.typostSharedUtils`) for filtering features based on per-font visibility settings
+* Fixed: Editor nonce was incorrectly cached in transient (nonces are session-specific and must always be fresh)
+* Fixed: Help tab section headers now use the primary text color instead of the accent color, fixing low contrast in the Alice Blue admin color scheme (WCAG-compliant across all schemes)
+* Fixed: REST API namespace in bundled documentation corrected to the canonical `/wp-json/typost/v1/`
+* Removed: Apply button from inline editor toolbar
+* Removed: "Apply Anyway" and "Discard Changes" buttons from the word boundary accessibility warning workflow — these warning-specific actions are now obsolete because the warning is non-blocking and changes apply immediately via live preview
+* Removed: Internal undo system (Undo button) - now relies on native WordPress undo (Ctrl+Z)
+* Removed: Redundant preview panel with device toggles - live preview on actual selected text makes it unnecessary
+* Removed: Separate Uploaded Fonts, Adobe Fonts, and Custom Font Definitions sections — replaced by unified font list
+* Changed: Word boundary accessibility warning is now a persistent, non-blocking informational notice at top of modal instead of blocking application; it remains visible while editing but does not prevent changes and can effectively be dismissed by proceeding with edits or converting to a Typography Stylist block
+* Changed: Users can still choose to convert to a Typography Stylist block for improved accessibility when needed, but this is now an optional follow-up action rather than a requirement to proceed
+* Changed: Admin settings tabs are now data-driven with priority-based ordering (supports URL deep-linking via `?tab=` parameter)
+* Changed: Add Font forms (upload kit, Adobe Fonts, custom definition) are now grouped in a collapsible accordion section beneath the font list
+* Changed: Feature visibility is editor-UI-only — already-applied features in saved content continue to render correctly regardless of visibility settings
+* Improved: Inline editor now matches Typography Stylist block UX with consistent debounce timings: Features (instant), Sliders (400ms), Dropdowns (300ms), Responsive Font-Size (600ms)
+* Improved: User can still manage accessibility settings in Settings → Typography Stylist → Accessibility
+* Improved: Font Features tab preview selector now includes WP Font Library fonts (when available) alongside uploaded, Adobe, and custom fonts
+* Improved: Feature visibility changes auto-save on toggle with a brief "Saved" confirmation — no Save button needed
+* Improved: Per-font feature visibility includes master "Enable All" / "Disable All" controls both on the Font Features tab and inside each font's edit form
+* Improved: Glyphs Panel toolbar controls (Alternates, Search, OpenType feature, Unicode block) now show visible labels
+* Improved: Glyphs Panel default "All glyphs" view also lists OpenType feature variants (e.g. stylistic alternates) previously reachable only by filtering or typing a character
+* Note: Each debounced change creates its own undo step in WordPress undo history - use Ctrl+Z to undo individual changes (more granular than previous single Apply button undo)
+* Note: WP Font Library fonts appear in the admin list as read-only; font order and feature visibility settings for WP Library fonts are not yet supported in this release
+
+= 1.2.2 =
+* Added: Re-introduced "Apply Anyway" button in the word boundary accessibility warning when applying features to partial words in core blocks, giving users the choice to proceed despite potential screen reader fragmentation
+* Added: Smart conversion detection - the "Convert to Typography Stylist Block" button is automatically hidden when conversion is not possible (e.g., inside a locked pattern), with an adjusted warning message
+* Added: Safety fallback - if block conversion fails despite the pre-check, features are applied directly with a snackbar notice informing the user
+* Added: "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility to skip the partial word warning entirely
+* Added: "Manage this setting" link in the warning message that deep-links to the admin accessibility settings page, auto-switching to the Accessibility tab and highlighting the relevant setting
+* Fixed: Nonce mismatch in Accessibility and Options settings forms caused "The link you followed has expired" error when saving - the nonce names in wp_nonce_field() and check_admin_referer() did not match
+
+= 1.2.1 =
+* Added: Per-font weight restrictions - configure which font weights are available for each font in the admin panel (Settings → Typography Stylist → Custom Fonts). Fonts default to all weights for variable font compatibility
+* Added: Single-weight auto-apply - when a font has only one available weight, the weight selector is hidden and the weight is automatically applied
+* Added: Weight validation on font change - switching fonts automatically adjusts the weight to the closest available option
+* Fixed: CSS variable trailing comma caused fonts without fallbacks to fail loading on both frontend and block editor (e.g. `--font-20: "EsmeraldaPro", ;` produced invalid CSS)
+* Fixed: Line breaks (Shift+Enter) in Typography Stylist blocks caused words to run together in screen reader text (e.g. "MILANOCORTINA" instead of "MILANO CORTINA")
+* Fixed: Inline editor modal lost font selection state on close/reopen - selecting a font, closing the modal without applying, then reopening and clicking Apply would silently fail because stale state caused the apply logic to enter the wrong code path
+* Fixed: Missing data-lineheight attribute in format type registration - line-height values were silently dropped when reading back existing formatted content
+* Improved: Apply notice in the inline editor now includes a "Convert to a Typography Stylist block" link, guiding users toward the block type that supports real-time preview
+* Changed: "Cancel" button renamed to "Discard Changes" in accessibility warning for clearer intent
+* Changed: "Edit Fallbacks" button renamed to "Edit Settings" in admin font management to reflect expanded functionality
+* Improved: OpenType feature previews now show cumulative checked features - toggling a stylistic set updates ALL preview windows to include that feature, accurately showing how features combine (essential for fonts like Bookmania where stylistic sets interact to produce different glyphs)
+
+= 1.2.0 =
+* Fixed: Inline styles applied to wrong character when content contains line breaks (Shift+Enter) - styling the "M" on a second line would incorrectly style the "I" instead, off by one character per line break
+* Fixed: TreeWalker document context bug - TreeWalkers are now created from the correct document object (DOMParser), preventing cross-context errors
+* Fixed: Responsive font-size Reset button now removes all related attributes (data-fontsize-min, data-fontsize-preferred, data-fontsize-max) instead of leaving orphaned attributes
+* Fixed: Memory leak in debounced auto-apply functions - cleanup handlers now properly cancel pending debounced calls on component unmount
+* Fixed: Preview span removal now preserves nested elements instead of flattening to text, maintaining complex formatting structure
+* Fixed: Stale closure bug in auto-apply functions - debounced wrappers now call latest version of apply functions via refs, resolving issue where controls wouldn't work when styles were already applied
+* Improved: Quick Features Toggle auto-apply - letter spacing, line height, font family, font weight, and font size now apply automatically with debouncing (400ms for sliders, 300ms for dropdowns, 600ms for responsive font-size)
+* Improved: Consistent UX across all Quick Features controls - all controls now auto-apply like OpenType features, no more confusion about which controls need Apply buttons
+* Improved: Clear/Reset buttons now actually remove properties from content instead of just resetting state - clicking Reset removes the data attribute and CSS property from spans
+* Improved: UI reorganization - Active Features section moved above feature panels for better visibility
+* Added: Individual Reset buttons for font family, font weight, and font size with undo icons for clear visual feedback
+* Added: `buildTextOffsetMap()` utility that accounts for `<br>` elements in character offset calculations, matching WordPress RichText's offset system
+* Added: `getEffectiveTextLength()` utility for accurate text length measurement including line breaks
+* Added: `debounce()` utility function with cancel method for performance optimization during rapid slider adjustments
+* Added: `removePropertyFromSpan()` utility to remove specific properties and unwrap empty spans
+* Added: `removePropertyFromSelection()` utility to find and remove properties from all spans in selection
+* Added: Comprehensive test suite with 24 tests for property removal utilities, including edge cases for responsive font-size
+* Improved: All 12 TreeWalker-based offset calculations across the inline editor, Typography Stylist block, and shared utilities now correctly handle multi-line content
+* Technical: Extracted `classifyAtomicNode()` helper within `splitSpanAndApply` to reduce code duplication in segment classification logic
+* Technical: Debounced functions use refs to avoid stale closures and maintain access to current state across renders
+
+= 1.1.9 =
+* Fixed: Archive page font loading - fonts now load correctly and more consistently on blog home, category pages, tag pages, and all archive types
+* Fixed: WordPress hook timing issue - font detection now runs on `template_redirect` hook (after main query) instead of `wp_enqueue_scripts` (before query) for archive pages
+* Added: Manual cache clear button in Settings → Typography Stylist → Options tab for troubleshooting font loading issues
+* Added: Admin setting to control archive page full content checking (enabled by default)
+* Improved: Singular pages (posts, pages) continue using optimized detection path without changes
+* Improved: Cache clearing when options are changed to ensure settings take effect immediately
+* Improved: Font detection caches now automatically clear when posts or pages are saved, so typography changes appear on the frontend immediately
+* Updated: Filter `typost_check_full_content_on_archives` now defaults to true (was false)
+* Technical: Font detection results cached in instance variables to avoid redundant queries
+* Note: Existing sites will automatically benefit from improved archive page font loading
+
+= 1.1.8 =
+* Improved: Windows Narrator focus enhancement - screen reader accessible headings now display a visible focus outline that corresponds to the full styled headline area, making it easier to identify which heading is being read
+
+= 1.1.7 =
+* Improved: Screen reader elements maintain full-size dimensions while remaining invisible, using modern clip-path technique with backwards compatibility for legacy browsers
+* Added: High contrast mode support for Windows users with enhanced outline visibility (4px outline with system Highlight color)
+* Added: Dark mode support with adjusted outline colors for better visibility on dark backgrounds
+* Added: pointer-events management to prevent invisible overlay from blocking interactions with styled text when not focused
+
+
+= 1.1.6 =
+* Improved: Standardized control order across all interfaces for better consistency. Reordered controls to: Font Family → Font Weight → Font Size → Line Height → Letter Spacing → OpenType Features.
+* Fixed: Font size persistence bug where changes wouldn't persist after closing Quick Features Toggle popover
+* Fixed: All inline controls (font weight, font family, font size, letter spacing, line height) now correctly apply only to selected text instead of entire block (sporadic errors before)
+* Fixed: Sequential feature application bug where applying multiple inline features would incorrectly affect entire block
+* Fixed: State management issue where inline control values wouldn't reset after successful apply
+* Fixed: Inline fonts (applied via Quick Feature Toggles) now load correctly on frontend
+* Fixed: Font detection now properly extracts inline fonts from Typography Stylist block content HTML
+* Fixed: Quick Feature Toggle preview now displays in correct inline font instead of block-level font
+* Fixed: OpenType features now apply only to selected text, not entire span when selecting partial text within existing styled spans
+* Fixed: Font-feature-settings CSS now preserved when applying other inline styles (line-height, letter-spacing) to text with existing OpenType features
+* Fixed: Nested span handling - applying features to partial selections within styled text now creates proper nested or split spans instead of merging incorrectly
+* Fixed: Block-level fonts no longer incorrectly included in unrelated inline operations
+* Fixed: Line-height and letter-spacing controls no longer pass incorrect empty data-features attributes that interfered with attribute preservation
+* Improved: Inline fonts now use CSS variable system (var(--font-ID)) matching block-level architecture for consistent font loading and replacement
+* Improved: Enhanced attribute preservation system to prevent style conflicts during sequential inline edits while properly handling font-family overrides
+* Improved: Added comprehensive validation and fallback mechanisms for all inline text styling functions
+* Improved: Inline state variables now reset after successful apply to prevent UI/content desync
+* Improved: Font override logic - applying new inline font to text with existing font now properly replaces old font instead of preserving it
+* Added: parseInlineFontFamilyAtCursor() utility for detecting inline fonts at cursor position
+* Added: Memoized inline font detection for improved preview performance
+* Developer: extract_fonts_from_blocks() enhanced to parse inline HTML content for data-font-id attributes
+
+= 1.1.5 =
+* Added: Line-height controls for block-level and inline text styling
+* Added: Line-height control in Typography Stylist block inspector panel
+* Added: Line-height control in Quick Features Toggle popover for inline selections
+* Added: Line-height control in inline editor toolbar for standard heading/paragraph blocks
+* Improved: Line-height can be adjusted from 0.5 to 3.0 with 0.1 step increments
+* Improved: Responsive font size controls now operate independently without auto-adjusting other values
+* Improved: Responsive font size labels now clearly indicate screen sizes (Mobile, Intermediate, Large)
+* Improved: Visual warning displayed when responsive font sizes are out of logical order
+* Improved: Default responsive font sizes for new blocks changed to 16/32/64 for more dramatic scaling
+* Fixed: Confusing slider behavior where adjusting one size would move other sliders
+* Developer: Breakpoint values (320px, 1920px) extracted to named constants (RESPONSIVE_FONT_MIN_VIEWPORT, RESPONSIVE_FONT_MAX_VIEWPORT) for future configurability across Typography Stylist block and inline editor
+
+= 1.1.4 =
+* Fixed: Mixed content warnings on HTTPS sites when loading custom fonts
+* Improved: Font URLs now use relative paths for protocol-agnostic loading
+* Improved: Legacy fonts with absolute URLs are automatically converted at render time
+
+= 1.1.3 =
+* Initial release approved for public distribution.
+* Typography Stylist Block with ARIA markup and semantic HTML
+* Smart selection validation warns when partial word selections could fragment text
+* Conversion tool from inline formats to accessible block structure
+* Configurable aria-label support for inline formatted text
+* Screen reader class options (visually-hidden, sr-only, or custom classes)
+* Accessibility documentation
+* Upload custom font kits from MyFonts, Fontspring, and other webfont providers
+* Adobe Fonts (Typekit) integration via embed code
+* Define fonts loaded through themes, plugins, or CDN services
+* Font fallback system
+* Secure font file storage with .htaccess protection
+* Font preview system with size controls
+* OpenType feature support: ligatures (liga, dlig, calt)
+* Stylistic sets (ss01-ss20)
+* Swashes (swsh, cswh) and alternates (salt, titl, ornm)
+* Quick-apply presets for common typography styles
+* Custom preset creation and saving
+* Inline text selection in the block editor
+* Live preview before applying changes
+* Popover interface with features organized by category
+* Spanish (es_ES) and French (fr_FR) translations
+* Native CSS font-feature-settings
+* WordPress block editor (Gutenberg) API integration
+* REST API for plugin features
+* JSX/React architecture for the custom block
+* WordPress @wordpress/scripts build toolchain
+* Transient caching
+* Rate-limited REST API endpoints (50 requests/minute per user)

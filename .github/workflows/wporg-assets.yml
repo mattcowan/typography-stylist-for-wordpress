@@ -1,0 +1,31 @@
+# Sync readme.txt and .wordpress-org/ assets to WordPress.org WITHOUT a
+# release. Use for: bumping "Tested up to" after a WordPress core release,
+# fixing readme typos, or swapping screenshots/banners/icons.
+#
+# The 10up asset-update action updates trunk's readme.txt, the current stable
+# tag's readme.txt, and syncs .wordpress-org/ → SVN assets/ WITH deletion —
+# files removed from .wordpress-org/ disappear from wp.org too.
+#
+# Runs automatically when readme.txt or .wordpress-org/** change on main, or
+# manually via Actions → "WP.org Readme/Assets Sync" → Run workflow.
+name: WP.org Readme/Assets Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'readme.txt'
+      - '.wordpress-org/**'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Sync readme and assets to wp.org
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: 10up/action-wordpress-plugin-asset-update@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: typography-stylist
