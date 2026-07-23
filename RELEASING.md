@@ -89,7 +89,11 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    - `readme.txt` — `Stable tag:`
    - `package.json` — `version`
 2. Add a changelog entry in `readme.txt` (recent releases) and move older
-   entries to `changelog.txt` if the readme section is growing.
+   entries to `changelog.txt` if the readme section is growing. Entries for
+   not-yet-released fixes are parked in `changelog.txt` only (the wp.org
+   listing renders readme.txt's whole Changelog section immediately via the
+   assets sync, but changelog.txt never reaches the listing) — copy them
+   into readme.txt now, under this release's heading.
 3. Push to `main`; wait for **CI** to go green (it runs the version
    consistency check, both test suites, and a production build).
 4. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
