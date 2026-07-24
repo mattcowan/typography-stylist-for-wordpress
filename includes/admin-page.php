@@ -25,7 +25,9 @@ if (!defined('ABSPATH')) {
  *
  * @param array  $font       Font data array containing 'id' and optionally 'available_weights'.
  * @param string $prefix     CSS class/ID prefix for the font type (e.g., 'font', 'adobe', 'manual').
- * @param bool   $show_auto  Whether to show "Auto-detected from font files" note.
+ * @param bool   $show_auto  Whether to show the auto-detected source note. The wording matches
+ *                           the detection source per prefix: font files for uploaded kits,
+ *                           the Adobe Fonts stylesheet for 'adobe'.
  */
 function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
     $weights = array(
@@ -47,7 +49,13 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
         <p class="description" id="typost-<?php echo esc_attr($prefix); ?>-weights-desc-<?php echo esc_attr($font['id']); ?>">
             <?php esc_html_e('Uncheck weights this font doesn\'t include to exclude them from being selected. You can leave all checked for variable fonts.', 'typography-stylist'); ?>
             <?php if ($show_auto && !empty($font['available_weights'])): ?>
-                <br><em><?php esc_html_e('Auto-detected from font files.', 'typography-stylist'); ?></em>
+                <br><em><?php
+                if ('adobe' === $prefix) {
+                    esc_html_e('Auto-detected from the Adobe Fonts stylesheet.', 'typography-stylist');
+                } else {
+                    esc_html_e('Auto-detected from font files.', 'typography-stylist');
+                }
+                ?></em>
             <?php endif; ?>
         </p>
         <div class="typost-weight-checkboxes"

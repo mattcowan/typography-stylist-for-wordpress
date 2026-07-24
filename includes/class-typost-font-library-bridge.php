@@ -422,7 +422,9 @@ class Typost_Font_Library_Bridge {
                     continue;
                 }
                 foreach ($families as $family) {
-                    if (empty($family['slug']) || $family['slug'] !== $slug || empty($family['fontFace'])) {
+                    // theme.json slugs aren't guaranteed to be normalized;
+                    // sanitize before comparing against the sanitized input
+                    if (empty($family['slug']) || sanitize_title($family['slug']) !== $slug || empty($family['fontFace'])) {
                         continue;
                     }
                     foreach ((array) $family['fontFace'] as $face) {

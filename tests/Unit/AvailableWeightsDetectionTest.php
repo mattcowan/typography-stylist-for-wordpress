@@ -298,6 +298,34 @@ class AvailableWeightsDetectionTest extends TestCase {
         $this->assertSame(['400', '700'], $adobe[0]['available_weights']);
     }
 
+    public function test_bulk_detect_reports_unnarrowed_uploaded_fonts_as_defaulted() {
+        $this->mockRemoteGet($this->typekitCss());
+        $plugin = $this->getPluginInstance();
+
+        $this->options['typost_custom_fonts'] = [
+            [
+                'id' => 'kit-no-faces', 'name' => 'Faceless Font', 'font_id' => 5,
+                'font_faces' => [],
+            ],
+            [
+                'id' => 'kit-full-range', 'name' => 'Full Range VF', 'font_id' => 6,
+                'font_faces' => $this->faces('100 900'),
+            ],
+        ];
+
+        $response = $plugin->bulk_detect_weights_endpoint(null);
+
+        // Nothing narrowed for either font: both defaulted, none "updated"
+        $this->assertSame([], $response['updated']);
+        $this->assertCount(2, $response['defaulted']);
+        $this->assertSame([], $response['failed']);
+
+        // Key set (= all weights) so they are not re-offered by the notice
+        $custom = $this->options['typost_custom_fonts'];
+        $this->assertSame([], $custom[0]['available_weights']);
+        $this->assertSame([], $custom[1]['available_weights']);
+    }
+
     public function test_bulk_detect_leaves_key_absent_when_stylesheet_unreachable() {
         $this->mockRemoteGet('', 0, true);
         $plugin = $this->getPluginInstance();

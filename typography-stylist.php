@@ -4244,8 +4244,8 @@ class Typost {
      *
      * @param WP_REST_Request $request The REST request object.
      * @return WP_REST_Response Summary: updated (weights narrowed), defaulted
-     *                          (family not found in stylesheet, all weights
-     *                          kept), failed (stylesheet unreachable).
+     *                          (nothing narrowed — all weights kept), failed
+     *                          (stylesheet unreachable).
      */
     public function bulk_detect_weights_endpoint($request) {
         $updated = array();
@@ -4263,11 +4263,15 @@ class Typost {
             $weights = $this->derive_available_weights_from_faces($faces);
             $custom_fonts[$key]['available_weights'] = $weights;
             $custom_changed = true;
-            $updated[] = array(
-                'id' => $font['id'],
-                'name' => isset($font['name']) ? $font['name'] : $font['id'],
-                'weights' => $weights
-            );
+
+            $name = isset($font['name']) ? $font['name'] : $font['id'];
+            if ($weights !== array()) {
+                $updated[] = array('id' => $font['id'], 'name' => $name, 'weights' => $weights);
+            } else {
+                // Nothing narrowed (no faces, or the font covers all 9 weights):
+                // all weights stay enabled, key now present
+                $defaulted[] = array('id' => $font['id'], 'name' => $name);
+            }
         }
         if ($custom_changed) {
             update_option('typost_custom_fonts', $custom_fonts);

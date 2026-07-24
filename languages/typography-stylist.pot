@@ -1615,3 +1615,7 @@ msgstr ""
 #: typography-stylist.php
 msgid "Weight detection failed. Please try again."
 msgstr ""
+
+#: includes/admin-page.php
+msgid "Auto-detected from the Adobe Fonts stylesheet."
+msgstr ""
