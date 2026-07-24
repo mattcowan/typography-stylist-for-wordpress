@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.1.1
+Stable tag: 2.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -343,6 +343,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.1.2 =
+Newly added fonts now enable only the weights they actually ship, with a one-click auto-detect for existing fonts; also fixes Glyphs Panel browsing for variable fonts from font-only ZIPs.
 
 = 2.1.1 =
 Re-release of the 2.1.0 feature set with corrected packaging — the 2.1.0 download never contained the new files. Update to get variable fonts, font-only ZIP uploads, and WordPress Font Library integration.
