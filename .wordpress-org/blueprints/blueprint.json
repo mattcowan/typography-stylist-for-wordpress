@@ -1,0 +1,54 @@
+{
+    "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+    "meta": {
+        "title": "Typography Stylist",
+        "description": "Try OpenType features, the Glyphs Panel, and variable font controls in the block editor.",
+        "author": "matthewneilcowan",
+        "categories": [
+            "typography",
+            "editor"
+        ]
+    },
+    "preferredVersions": {
+        "php": "8.2",
+        "wp": "latest"
+    },
+    "phpExtensionBundles": [
+        "kitchen-sink"
+    ],
+    "features": {
+        "networking": true
+    },
+    "steps": [
+        {
+            "step": "login",
+            "username": "admin",
+            "password": "password"
+        },
+        {
+            "step": "installPlugin",
+            "pluginData": {
+                "resource": "wordpress.org/plugins",
+                "slug": "typography-stylist"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "runPHP",
+            "code": "<?php require_once '/wordpress/wp-load.php'; $sources = array('style-script.ttf' => 'https://raw.githubusercontent.com/google/fonts/main/ofl/stylescript/StyleScript-Regular.ttf', 'eb-garamond.ttf' => 'https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/EBGaramond%5Bwght%5D.ttf', 'eb-garamond-italic.ttf' => 'https://raw.githubusercontent.com/google/fonts/main/ofl/ebgaramond/EBGaramond-Italic%5Bwght%5D.ttf', 'fraunces.ttf' => 'https://raw.githubusercontent.com/google/fonts/main/ofl/fraunces/Fraunces%5BSOFT%2CWONK%2Copsz%2Cwght%5D.ttf'); $zip_path = get_temp_dir() . 'typost-demo-fonts.zip'; $zip = new ZipArchive(); if (true === $zip->open($zip_path, ZipArchive::CREATE | ZipArchive::OVERWRITE)) { foreach ($sources as $fname => $url) { $resp = wp_remote_get($url, array('timeout' => 120)); if (!is_wp_error($resp) && 200 === (int) wp_remote_retrieve_response_code($resp)) { $zip->addFromString($fname, wp_remote_retrieve_body($resp)); } } $zip->close(); $typost = Typost::get_instance(); $entries = $typost->process_font_kit_zip(array('tmp_name' => $zip_path, 'name' => 'demo-fonts.zip', 'size' => filesize($zip_path), 'error' => 0, 'type' => 'application/zip'), 'demo-fonts'); if (!is_wp_error($entries) && !empty($entries)) { $fonts = $typost->get_custom_fonts(); foreach ($entries as $entry) { $fonts[] = $entry; } update_option('typost_custom_fonts', $fonts); do_action('typost_font_uploaded', $entries); } }"
+        },
+        {
+            "step": "runPHP",
+            "code": "<?php require_once '/wordpress/wp-load.php'; update_user_meta(1, 'wp_persisted_preferences', array('core/edit-post' => array('welcomeGuide' => false), 'core' => array('welcomeGuide' => false), '_modified' => gmdate('c'))); $style_id = 0; foreach ((array) get_option('typost_custom_fonts', array()) as $font) { if (isset($font['name'], $font['font_id']) && 'Style Script' === $font['name']) { $style_id = (int) $font['font_id']; break; } } $headline = 'Elegant Swashes &amp; Hidden Glyphs'; if ($style_id > 0) { $headline = '<span class=\"typost-styled\" data-features=\"swsh\" data-font-id=\"' . $style_id . '\" style=\"font-feature-settings: \\'swsh\\' 1; font-family: var(--font-' . $style_id . ')\">' . $headline . '</span>'; } wp_insert_post(array( 'import_id' => 1000, 'post_title' => 'Typography Stylist Demo', 'post_status' => 'publish', 'post_content' => '<!-- wp:heading {\"level\":2} --><h2 class=\"wp-block-heading\">' . $headline . '</h2><!-- /wp:heading -->' . '<!-- wp:paragraph --><p>The headline above is set in Style Script with its swash feature already on. Select it and click the swashy \"T\" button in the toolbar to toggle swashes, stylistic sets, and ligatures with live preview - or hit the Glyphs button to browse every alternate the font contains.</p><!-- /wp:paragraph -->' . '<!-- wp:paragraph --><p>Three open-source faces are pre-installed: Style Script (12 stylistic sets + swashes), EB Garamond (swash italic capitals, small caps, a weight axis), and Fraunces (custom SOFT and WONK variable axes - try the sliders). Visit Settings &rarr; Typography Stylist to explore the control panel.</p><!-- /wp:paragraph -->', ));"
+        },
+        {
+            "step": "setSiteOptions",
+            "options": {
+                "blogname": "Typography Stylist Demo"
+            }
+        }
+    ],
+    "landingPage": "/wp-admin/post.php?post=1000&action=edit"
+}
