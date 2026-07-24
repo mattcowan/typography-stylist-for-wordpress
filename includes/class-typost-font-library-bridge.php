@@ -390,6 +390,80 @@ class Typost_Font_Library_Bridge {
     }
 
     /**
+     * Collect the font-face weight declarations for a Library font
+     *
+     * Looks in the merged theme.json data first (fontFace arrays cover theme
+     * fonts and Font Library installs on most setups), then falls back to
+     * wp_font_face child posts. Returns a faces-shaped array so the result
+     * can feed Typost_Font_Sources::derive_available_weights_from_faces().
+     *
+     * @since 2.1.2
+     * @param string $slug Library font slug
+     * @return array[] Each entry: {weight: string}; empty when nothing found
+     */
+    public function get_library_font_face_weights($slug) {
+        $slug = sanitize_title($slug);
+        if ('' === $slug) {
+            return array();
+        }
+
+        $faces = array();
+
+        // Source 1: merged theme.json fontFace declarations
+        if (class_exists('WP_Theme_JSON_Resolver')) {
+            $theme_json = WP_Theme_JSON_Resolver::get_merged_data();
+            $settings   = $theme_json->get_settings();
+            $all_groups = isset($settings['typography']['fontFamilies'])
+                ? $settings['typography']['fontFamilies']
+                : array();
+
+            foreach ($all_groups as $families) {
+                if (!is_array($families)) {
+                    continue;
+                }
+                foreach ($families as $family) {
+                    // theme.json slugs aren't guaranteed to be normalized;
+                    // sanitize before comparing against the sanitized input
+                    if (empty($family['slug']) || sanitize_title($family['slug']) !== $slug || empty($family['fontFace'])) {
+                        continue;
+                    }
+                    foreach ((array) $family['fontFace'] as $face) {
+                        if (isset($face['fontWeight'])) {
+                            $faces[] = array('weight' => (string) $face['fontWeight']);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Source 2: wp_font_face child posts of the matching wp_font_family post
+        if (empty($faces) && post_type_exists('wp_font_family')) {
+            $family_posts = get_posts(array(
+                'post_type'      => 'wp_font_family',
+                'name'           => $slug,
+                'posts_per_page' => 1,
+                'post_status'    => 'publish',
+            ));
+            if (!empty($family_posts)) {
+                $face_posts = get_posts(array(
+                    'post_type'      => 'wp_font_face',
+                    'post_parent'    => $family_posts[0]->ID,
+                    'posts_per_page' => -1,
+                    'post_status'    => 'publish',
+                ));
+                foreach ($face_posts as $face_post) {
+                    $data = json_decode($face_post->post_content, true);
+                    if (is_array($data) && isset($data['fontWeight'])) {
+                        $faces[] = array('weight' => (string) $data['fontWeight']);
+                    }
+                }
+            }
+        }
+
+        return $faces;
+    }
+
+    /**
      * Adopt a WP Font Library font for editor use
      *
      * Idempotent: returns the existing adopted entry when the slug was
@@ -451,6 +525,13 @@ class Typost_Font_Library_Bridge {
             'fallbacks'   => '',
             'added_date'  => current_time('mysql'),
         );
+
+        // Detect available weights from the family's font-face declarations.
+        // No declarations found → omit the key (= all weights enabled).
+        $faces = $this->get_library_font_face_weights($slug);
+        if (!empty($faces)) {
+            $entry['available_weights'] = $this->sources->derive_available_weights_from_faces($faces);
+        }
 
         return $this->sources->add_adopted_wp_font($entry);
     }

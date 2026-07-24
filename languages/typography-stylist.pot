@@ -1587,3 +1587,35 @@ msgstr ""
 #: assets/js/block-editor.js
 msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr ""
+
+#: includes/admin-page.php
+msgid "Font weight auto-detection available."
+msgstr ""
+
+#: includes/admin-page.php
+#, php-format
+msgid "%d font was added before weight detection existed, so all nine weights are enabled for it. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time."
+msgid_plural "%d fonts were added before weight detection existed, so all nine weights are enabled for them. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time."
+msgstr[0] ""
+msgstr[1] ""
+
+#: includes/admin-page.php
+msgid "Auto-detect weights for existing fonts"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Detecting weights..."
+msgstr ""
+
+#: typography-stylist.php
+#, php-format
+msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Weight detection failed. Please try again."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Auto-detected from the Adobe Fonts stylesheet."
+msgstr ""

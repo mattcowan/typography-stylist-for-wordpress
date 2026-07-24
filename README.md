@@ -105,6 +105,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Font files (WOFF, WOFF2, TTF, OTF, EOT)
 - Ideally a CSS file with @font-face declarations (e.g., MyWebfontsKit.css), with the directory structure matching the paths in the CSS file
 - **A CSS file is not required (v2.1.0+):** ZIPs containing only font files — like a Google Fonts download — are accepted. The stylesheet is generated automatically from the fonts' built-in metadata (family name, weight, italic, and the weight range of variable fonts). For WOFF2-only ZIPs the server cannot read the font metadata, so family and weight are detected from the filenames and a warning asks you to review the result
+- **Available weights are detected automatically (v2.1.2+):** each font's "Available Font Weights" checkboxes are pre-set to only the weights its @font-face rules declare, so the editor weight dropdown offers real options from the start. Adjust the checkboxes at any time; fonts added before v2.1.2 can be covered with the "Auto-detect weights for existing fonts" button on the Custom Fonts tab
 
 #### Option 2: Add Adobe Fonts (Typekit)
 
@@ -380,6 +381,12 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
+
+### Version 2.1.2
+
+- **New: automatic font-weight detection.** Newly uploaded font kits and newly added Adobe Fonts get their "Available Font Weights" checkboxes pre-set to only the weights the font actually ships, instead of all nine weights enabled by default. Uploaded kits derive the weights from their parsed (or generated) @font-face rules; Adobe Fonts from the kit stylesheet, fetched server-side at add time and matched per family; WordPress Font Library fonts adopted from the editor picker derive theirs from the family's font-face declarations. Variable fonts covering the full 100–900 range keep all weights enabled (the weight slider replaces the dropdown anyway). Detection only narrows when confident — a failed stylesheet fetch or unreadable kit leaves all weights enabled — and the checkboxes remain fully editable.
+- **New: one-click "Auto-detect weights for existing fonts"** on the Custom Fonts tab. Shown only when fonts predate weight detection and were never manually configured (their entries lack the `available_weights` key); processes uploaded and Adobe fonts in one pass (one stylesheet fetch per Adobe kit) and disappears once every font is covered. Fonts whose stylesheet can't be fetched stay eligible for retry; manual font definitions are skipped — there is no font file to read.
+- **Fixed: Glyphs Panel support for variable fonts from font-only ZIPs.** The generated `format('truetype-variations')` hint was not recognized by the panel's file picker; variable-font format hints now normalize to their base format.
 
 ### Version 2.1.1
 

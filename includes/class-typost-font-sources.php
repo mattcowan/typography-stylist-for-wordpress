@@ -26,6 +26,74 @@ class Typost_Font_Sources {
     private $replacements_cache = null;
 
     /**
+     * Derive the available weights for a font from its parsed @font-face data
+     *
+     * Maps each face's raw CSS font-weight value onto the canonical 100-900
+     * scale: keywords resolve to their numeric equivalents, single numbers are
+     * clamped and snapped to the nearest hundred, and variable-font ranges
+     * ("min max") enable every canonical weight inside the range. The result
+     * feeds the per-font weight checkboxes, so detection must only ever narrow
+     * when confident: an unparseable value counts as 400 rather than being
+     * dropped, and an empty face list yields an empty array (= all weights).
+     *
+     * @since 2.1.2
+     *
+     * @param array $font_faces Parsed font faces, each optionally carrying a 'weight' key.
+     * @return array Sorted array of weight strings, or empty array for "all weights".
+     */
+    public function derive_available_weights_from_faces(array $font_faces) {
+        $weights = array();
+
+        foreach ($font_faces as $face) {
+            $raw = isset($face['weight']) ? strtolower(trim((string) $face['weight'])) : 'normal';
+
+            if ($raw === 'normal' || $raw === '') {
+                $weights['400'] = true;
+                continue;
+            }
+            if ($raw === 'bold') {
+                $weights['700'] = true;
+                continue;
+            }
+
+            // Variable-font range: "min max" (two numeric tokens)
+            if (preg_match('/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)$/', $raw, $range)) {
+                $min = (float) $range[1];
+                $max = (float) $range[2];
+                if ($min > $max) {
+                    list($min, $max) = array($max, $min);
+                }
+                for ($w = 100; $w <= 900; $w += 100) {
+                    if ($w >= $min && $w <= $max) {
+                        $weights[(string) $w] = true;
+                    }
+                }
+                continue;
+            }
+
+            if (is_numeric($raw)) {
+                $number = min(1000, max(1, (float) $raw));
+                $snapped = (int) min(900, max(100, round($number / 100) * 100));
+                $weights[(string) $snapped] = true;
+                continue;
+            }
+
+            // Unparseable value: treat as 400, matching browser fallback behavior
+            $weights['400'] = true;
+        }
+
+        $weights = array_keys($weights);
+
+        // All 9 weights = "all weights available", stored as empty array
+        if (count($weights) === 9) {
+            return array();
+        }
+
+        sort($weights, SORT_NUMERIC);
+        return array_map('strval', $weights);
+    }
+
+    /**
      * Get uploaded webfont kit fonts
      *
      * @return array

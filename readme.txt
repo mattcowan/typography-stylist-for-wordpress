@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.1.1
+Stable tag: 2.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -209,6 +209,8 @@ The plugin will extract the fonts and make them available in the editor and prev
 
 A stylesheet inside the ZIP is not required: if the kit contains only font files, the plugin reads each font's built-in metadata and generates the @font-face CSS automatically — including the weight range of variable fonts. For WOFF2-only ZIPs the family and weight are detected from the filenames (WOFF2 metadata cannot be read on the server), and a warning asks you to review the result.
 
+The available font weights are detected automatically when a font is added (v2.1.2+): only the weights the font actually ships are pre-checked in its "Available Font Weights" settings, so the editor's weight dropdown offers real options from the start. You can adjust the checkboxes at any time.
+
 = How do I add Adobe Fonts? =
 
 1. Go to Settings → Typography Stylist → Custom Fonts tab
@@ -321,6 +323,10 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 == Changelog ==
 
+= 2.1.2 =
+* **Automatic font-weight detection** — newly added fonts (uploaded kits, Adobe Fonts, and Library fonts adopted in the editor) get their "Available Font Weights" pre-set to only the weights they actually ship, instead of all nine being enabled by default. A one-click "Auto-detect weights for existing fonts" button on the Custom Fonts tab covers fonts added before this release. Detection never narrows unless it is confident, and the checkboxes stay fully editable.
+* Fixed: variable fonts uploaded as font-only ZIPs now glyph-browse correctly in the Glyphs Panel (the generated `format('truetype-variations')` hint was not recognized by the panel's file picker).
+
 = 2.1.1 =
 * Packaging: re-release of the 2.1.0 feature set under a fresh version number. The 2.1.0 tag's downloadable ZIP was cached against stale contents and never delivered the new files (Variable Fonts core integration, font metadata/sources modules, WordPress Font Library integration); 2.1.1 ships them correctly. See the 2.1.0 entry below for the full list of changes included in this release.
 
@@ -337,6 +343,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.1.2 =
+Newly added fonts now enable only the weights they actually ship, with a one-click auto-detect for existing fonts; also fixes Glyphs Panel browsing for variable fonts from font-only ZIPs.
 
 = 2.1.1 =
 Re-release of the 2.1.0 feature set with corrected packaging — the 2.1.0 download never contained the new files. Update to get variable fonts, font-only ZIP uploads, and WordPress Font Library integration.
