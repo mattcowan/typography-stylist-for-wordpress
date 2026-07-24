@@ -72,6 +72,38 @@ describe('buildFontOptions', () => {
 		expect(fontIdMap[21].family).toBe('Inter, sans-serif');
 	});
 
+	test('adopted WP Library fonts carry detected available_weights', () => {
+		const { fontIdMap } = buildFontOptions({
+			wpFontLibraryFonts: [
+				{ slug: 'inter', name: 'Inter', font_family: 'Inter, sans-serif' },
+			],
+			adoptedWpFonts: {
+				inter: {
+					id: 'wpl-inter',
+					font_id: 21,
+					font_family: 'Inter, sans-serif',
+					fallbacks: '',
+					available_weights: ['400', '600'],
+				},
+			},
+		});
+
+		expect(fontIdMap[21].availableWeights).toEqual(['400', '600']);
+	});
+
+	test('adopted WP Library fonts without detected weights default to all', () => {
+		const { fontIdMap } = buildFontOptions({
+			wpFontLibraryFonts: [
+				{ slug: 'inter', name: 'Inter', font_family: 'Inter, sans-serif' },
+			],
+			adoptedWpFonts: {
+				inter: { id: 'wpl-inter', font_id: 21, font_family: 'Inter, sans-serif', fallbacks: '' },
+			},
+		});
+
+		expect(fontIdMap[21].availableWeights).toEqual([]);
+	});
+
 	test('library fonts registered by the plugin itself are not duplicated', () => {
 		const { options } = buildFontOptions({
 			fonts: [{ ...uploadedFont, wp_slug: 'playfair-display' }],

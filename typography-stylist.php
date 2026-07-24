@@ -1164,7 +1164,12 @@ class Typost {
                 'wplRemoveError' => esc_html__('Failed to remove the font from the Font Library.', 'typography-stylist'),
                 'wplConfirmRemove' => esc_html__('Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself.', 'typography-stylist'),
                 /* translators: 1: number of registered fonts, 2: number of failed fonts */
-                'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page...', 'typography-stylist')
+                'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page...', 'typography-stylist'),
+                // Weight auto-detection strings
+                'detectWeightsRunning' => esc_html__('Detecting weights...', 'typography-stylist'),
+                /* translators: 1: fonts with detected weights, 2: fonts left with all weights, 3: fonts that could not be checked */
+                'detectWeightsDone' => esc_html__('Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page...', 'typography-stylist'),
+                'detectWeightsError' => esc_html__('Weight detection failed. Please try again.', 'typography-stylist')
             )
         );
 
@@ -1768,6 +1773,17 @@ class Typost {
         register_rest_route('typost/v1', '/fonts/(?P<id>[a-zA-Z0-9_-]+)/load-on-all-pages', array(
             'methods' => 'PATCH',
             'callback' => array($this, 'update_font_load_on_all_pages_endpoint'),
+            'permission_callback' => function() {
+                return current_user_can('upload_files');
+            }
+        ));
+
+        // Bulk auto-detect available weights for fonts that predate weight
+        // detection (entries without the available_weights key). upload_files
+        // matches the per-font weight-save (fallback) endpoints.
+        register_rest_route('typost/v1', '/fonts/detect-weights/bulk', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'bulk_detect_weights_endpoint'),
             'permission_callback' => function() {
                 return current_user_can('upload_files');
             }
@@ -3633,6 +3649,7 @@ class Typost {
                 'kit_name' => sanitize_text_field($kit_name), // For display/grouping
                 'css_content' => $family_css,
                 'font_faces' => $faces,                  // Only this family's faces
+                'available_weights' => $this->derive_available_weights_from_faces($faces),
                 'upload_path' => $kit_base_path,         // Shared directory
                 'upload_url' => $kit_base_url,
                 'uploaded_date' => current_time('mysql')
@@ -4060,6 +4077,12 @@ class Typost {
                     'load_on_all_pages' => isset($font['load_on_all_pages']) ? (bool) $font['load_on_all_pages'] : false
                 );
 
+                // Preserve key absence: entries without available_weights predate
+                // weight detection and are candidates for the bulk detect action
+                if (isset($font['available_weights']) && is_array($font['available_weights'])) {
+                    $sanitized_font['available_weights'] = $this->sanitize_available_weights($font['available_weights']);
+                }
+
                 // Auto-generate font_id if missing
                 if ($sanitized_font['font_id'] === 0) {
                     $sanitized_font['font_id'] = $this->generate_font_id();
@@ -4094,6 +4117,11 @@ class Typost {
                     'fallbacks' => isset($font['fallbacks']) ? sanitize_text_field($font['fallbacks']) : '',
                     'added_date' => isset($font['added_date']) ? sanitize_text_field($font['added_date']) : current_time('mysql')
                 );
+
+                // Preserve user-saved weight selections (key absence preserved too)
+                if (isset($font['available_weights']) && is_array($font['available_weights'])) {
+                    $sanitized_font['available_weights'] = $this->sanitize_available_weights($font['available_weights']);
+                }
 
                 // Auto-generate font_id if missing
                 if ($sanitized_font['font_id'] === 0) {
@@ -4155,6 +4183,162 @@ class Typost {
             'css_url' => $css_url,
             'kit_id' => $kit_id
         );
+    }
+
+    /**
+     * Detect available weights per family from an Adobe Fonts stylesheet
+     *
+     * Fetches the Typekit CSS server-side and reads the font-weight declared
+     * by each @font-face block. Typekit family names are slugs (e.g.
+     * "proxima-nova") while users enter display names ("Proxima Nova"), so
+     * both sides are normalized with sanitize_title() before matching.
+     *
+     * @since 2.1.2
+     *
+     * @param string $css_url  Typekit stylesheet URL.
+     * @param array  $families User-entered family display names.
+     * @return array|false Map of family slug => weights array (possibly empty
+     *                     = all weights) for every requested family, or false
+     *                     when the stylesheet could not be fetched.
+     */
+    private function detect_adobe_available_weights($css_url, array $families) {
+        $response = wp_remote_get($css_url, array('timeout' => 5));
+        if (is_wp_error($response) || (int) wp_remote_retrieve_response_code($response) !== 200) {
+            return false;
+        }
+
+        $css_faces = $this->parse_webfont_kit(wp_remote_retrieve_body($response));
+
+        $faces_by_slug = array();
+        foreach ($css_faces as $face) {
+            $slug = sanitize_title($face['family']);
+            if ($slug === '') {
+                continue;
+            }
+            $faces_by_slug[$slug][] = $face;
+        }
+
+        $weights_by_slug = array();
+        foreach ($families as $family) {
+            $family_slug = sanitize_title($family);
+            $weights_by_slug[$family_slug] = isset($faces_by_slug[$family_slug])
+                ? $this->derive_available_weights_from_faces($faces_by_slug[$family_slug])
+                : array();
+        }
+
+        return $weights_by_slug;
+    }
+
+    /**
+     * REST endpoint: Bulk auto-detect available weights
+     *
+     * Processes uploaded and Adobe fonts whose entries lack the
+     * available_weights key (fonts added before weight detection existed, or
+     * whose Adobe stylesheet fetch failed at add time). Uploaded fonts derive
+     * weights from their stored font faces; Adobe fonts from their kit
+     * stylesheet, fetched once per distinct URL. Fonts whose stylesheet cannot
+     * be fetched keep the key absent so the action stays available for retry.
+     * Manual fonts are skipped — there is no source of truth for their weights.
+     *
+     * @since 2.1.2
+     *
+     * @param WP_REST_Request $request The REST request object.
+     * @return WP_REST_Response Summary: updated (weights narrowed), defaulted
+     *                          (family not found in stylesheet, all weights
+     *                          kept), failed (stylesheet unreachable).
+     */
+    public function bulk_detect_weights_endpoint($request) {
+        $updated = array();
+        $defaulted = array();
+        $failed = array();
+
+        // Uploaded fonts: derive from the stored parsed @font-face data
+        $custom_fonts = $this->get_custom_fonts();
+        $custom_changed = false;
+        foreach ($custom_fonts as $key => $font) {
+            if (array_key_exists('available_weights', $font)) {
+                continue;
+            }
+            $faces = isset($font['font_faces']) && is_array($font['font_faces']) ? $font['font_faces'] : array();
+            $weights = $this->derive_available_weights_from_faces($faces);
+            $custom_fonts[$key]['available_weights'] = $weights;
+            $custom_changed = true;
+            $updated[] = array(
+                'id' => $font['id'],
+                'name' => isset($font['name']) ? $font['name'] : $font['id'],
+                'weights' => $weights
+            );
+        }
+        if ($custom_changed) {
+            update_option('typost_custom_fonts', $custom_fonts);
+        }
+
+        // Adobe fonts: group candidates by stylesheet URL, fetch each once
+        $adobe_fonts = $this->get_adobe_fonts();
+        $adobe_changed = false;
+        $candidates_by_url = array();
+        foreach ($adobe_fonts as $key => $font) {
+            if (array_key_exists('available_weights', $font)) {
+                continue;
+            }
+            $css_url = isset($font['css_url']) ? $font['css_url'] : '';
+            $family = isset($font['font_family']) ? $font['font_family'] : '';
+            if ($family === '' && isset($font['name'])) {
+                $family = $font['name'];
+            }
+            if ($css_url === '' || $family === '') {
+                $failed[] = array(
+                    'id' => $font['id'],
+                    'name' => isset($font['name']) ? $font['name'] : $font['id']
+                );
+                continue;
+            }
+            $candidates_by_url[$css_url][] = array('key' => $key, 'family' => $family);
+        }
+
+        foreach ($candidates_by_url as $css_url => $candidates) {
+            $detected = $this->detect_adobe_available_weights($css_url, wp_list_pluck($candidates, 'family'));
+
+            foreach ($candidates as $candidate) {
+                $key = $candidate['key'];
+                $font = $adobe_fonts[$key];
+                $name = isset($font['name']) ? $font['name'] : $font['id'];
+
+                if ($detected === false) {
+                    // Stylesheet unreachable: key stays absent so a retry is possible
+                    $failed[] = array('id' => $font['id'], 'name' => $name);
+                    continue;
+                }
+
+                $family_slug = sanitize_title($candidate['family']);
+                $weights = isset($detected[$family_slug]) ? $detected[$family_slug] : array();
+                $adobe_fonts[$key]['available_weights'] = $weights;
+                $adobe_changed = true;
+
+                $found_in_css = $weights !== array();
+                if ($found_in_css) {
+                    $updated[] = array('id' => $font['id'], 'name' => $name, 'weights' => $weights);
+                } else {
+                    // Family absent from the stylesheet (or it genuinely serves
+                    // all 9): all weights stay enabled, key now present
+                    $defaulted[] = array('id' => $font['id'], 'name' => $name);
+                }
+            }
+        }
+        if ($adobe_changed) {
+            update_option('typost_adobe_fonts', $adobe_fonts);
+        }
+
+        if ($custom_changed || $adobe_changed) {
+            $this->clear_cache();
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'updated' => $updated,
+            'defaulted' => $defaulted,
+            'failed' => $failed
+        ));
     }
 
     /**
@@ -4220,13 +4404,17 @@ class Typost {
         }
         $kit_name = !empty($params['name']) ? sanitize_text_field($params['name']) : 'Adobe Fonts ' . $parsed['kit_id'];
 
+        // Detect available weights from the kit stylesheet. On fetch failure the
+        // entries simply omit available_weights (= all weights enabled).
+        $detected_weights = $this->detect_adobe_available_weights($parsed['css_url'], $font_families_input);
+
         // Create individual font entries for each family (similar to MyFonts kits)
         $font_entries = array();
         foreach ($font_families_input as $family) {
             $family_slug = sanitize_title($family);
             $composite_font_id = $kit_id . '-' . $family_slug;
 
-            $font_entries[] = array(
+            $font_entry = array(
                 'id' => sanitize_key($composite_font_id),
                 'name' => sanitize_text_field($family), // Use family name as font name
                 'font_id' => $this->generate_font_id(),
@@ -4236,6 +4424,12 @@ class Typost {
                 'css_url' => $parsed['css_url'],         // Same CSS URL for all fonts in kit
                 'added_date' => current_time('mysql')
             );
+
+            if ($detected_weights !== false && isset($detected_weights[$family_slug])) {
+                $font_entry['available_weights'] = $detected_weights[$family_slug];
+            }
+
+            $font_entries[] = $font_entry;
         }
 
         // Add all font entries from the kit
@@ -5806,6 +6000,21 @@ class Typost {
 
         sort($sanitized);
         return $sanitized;
+    }
+
+    /**
+     * Derive the available weights for a font from its parsed @font-face data
+     *
+     * Thin delegating wrapper — the logic lives in Typost_Font_Sources so the
+     * Font Library bridge can share it at adoption time.
+     *
+     * @since 2.1.2
+     *
+     * @param array $font_faces Parsed font faces, each optionally carrying a 'weight' key.
+     * @return array Sorted array of weight strings, or empty array for "all weights".
+     */
+    private function derive_available_weights_from_faces(array $font_faces) {
+        return $this->font_sources()->derive_available_weights_from_faces($font_faces);
     }
 
     /**

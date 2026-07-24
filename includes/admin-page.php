@@ -608,6 +608,49 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <?php endif; ?>
 
             <?php
+            // ── Weight auto-detection notice for pre-existing fonts ──────────────────
+            // Entries without the available_weights key predate weight detection
+            // (or their Adobe stylesheet fetch failed) and were never manually
+            // configured. Once every entry has the key, the notice disappears.
+            $weight_detect_candidates = 0;
+            foreach ($custom_fonts as $wd_font) {
+                if (!array_key_exists('available_weights', $wd_font)) {
+                    $weight_detect_candidates++;
+                }
+            }
+            foreach ($adobe_fonts as $wd_font) {
+                if (!array_key_exists('available_weights', $wd_font)) {
+                    $weight_detect_candidates++;
+                }
+            }
+            ?>
+            <?php if ($weight_detect_candidates > 0) : ?>
+            <div class="notice notice-info inline" id="typost-detect-weights-notice">
+                <p>
+                    <strong><?php esc_html_e('Font weight auto-detection available.', 'typography-stylist'); ?></strong>
+                    <?php
+                    printf(
+                        /* translators: %d: number of fonts without detected weights */
+                        esc_html(_n(
+                            '%d font was added before weight detection existed, so all nine weights are enabled for it. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time.',
+                            '%d fonts were added before weight detection existed, so all nine weights are enabled for them. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time.',
+                            $weight_detect_candidates,
+                            'typography-stylist'
+                        )),
+                        (int) $weight_detect_candidates
+                    );
+                    ?>
+                </p>
+                <p>
+                    <button type="button" class="button button-primary" id="typost-detect-weights-bulk">
+                        <?php esc_html_e('Auto-detect weights for existing fonts', 'typography-stylist'); ?>
+                    </button>
+                </p>
+                <div id="typost-detect-weights-message" role="status" aria-live="polite" aria-atomic="true"></div>
+            </div>
+            <?php endif; ?>
+
+            <?php
             // ── Build $all_fonts normalized array ─────────────────────────────────────
             $all_fonts_list     = array();
             $font_order_saved   = $instance->get_font_order();
@@ -834,7 +877,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('When unchecked, this font will only load on pages where it is actually used. This improves performance.', 'typography-stylist'); ?>
                                 </p>
                             </div>
-                            <?php typost_render_weight_checkboxes($font, 'adobe', false); ?>
+                            <?php typost_render_weight_checkboxes($font, 'adobe', true); ?>
                             <?php typost_render_feature_visibility_checkboxes($font, $instance); ?>
                             <div class="typost-form-actions">
                                 <button type="button" class="button button-primary typost-save-adobe-font-edit"><?php esc_html_e('Save Changes', 'typography-stylist'); ?></button>

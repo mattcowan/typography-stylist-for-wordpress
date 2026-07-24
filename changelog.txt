@@ -8,6 +8,8 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 == Changelog ==
 
 = 2.1.2 =
+* **NEW: automatic font-weight detection.** Newly uploaded font kits and newly added Adobe Fonts get their "Available Font Weights" checkboxes pre-set to only the weights the font actually ships, instead of all nine weights being enabled by default. Uploaded kits read the weights from their parsed (or generated) @font-face rules; Adobe Fonts read them from the kit stylesheet, fetched server-side when the project is added. WordPress Font Library fonts adopted from the editor picker carry their real weights too. Variable fonts covering the full 100–900 range keep all weights enabled (the weight slider replaces the dropdown anyway). Detection only ever narrows when it is confident — if the stylesheet can't be fetched or a kit can't be read, all weights stay enabled — and the checkboxes remain fully editable.
+* New: one-click "Auto-detect weights for existing fonts" button on the Custom Fonts tab. Shown only for fonts added before weight detection existed that were never manually configured; it processes uploaded and Adobe fonts in one pass and disappears once every font is covered. Manual font definitions are skipped — there is no font file to read.
 * Fixed: the Glyphs Panel reported "No readable font file is available" for variable fonts uploaded as font-only ZIPs — the generated @font-face CSS declares `format('truetype-variations')`, which the panel's file picker didn't recognize. Variable-font format hints now normalize to their base format, so variable fonts glyph-browse like any other uploaded font.
 
 = 2.1.1 =

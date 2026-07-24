@@ -3,6 +3,29 @@
  * Headline Ligatures & Styles Plugin
  */
 
+/**
+ * Build the status message for a bulk weight-detection response.
+ *
+ * @param {object} response REST response with updated/defaulted/failed arrays.
+ * @param {string} template Localized template with %1$s (updated), %2$s (defaulted), %3$s (failed) placeholders.
+ * @return {string} Formatted message.
+ */
+function typostFormatDetectWeightsSummary(response, template) {
+    var updated = ((response && response.updated) || []).length;
+    var defaulted = ((response && response.defaulted) || []).length;
+    var failed = ((response && response.failed) || []).length;
+    return String(template)
+        .replace('%1$s', String(updated))
+        .replace('%2$s', String(defaulted))
+        .replace('%3$s', String(failed));
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        formatDetectWeightsSummary: typostFormatDetectWeightsSummary
+    };
+}
+
 jQuery(document).ready(function($) {
     'use strict';
 
@@ -1722,5 +1745,23 @@ jQuery(document).ready(function($) {
     // Persist dismissal of the migration notice
     $(document).on('click', '#typost-wpl-migration-notice .notice-dismiss', function() {
         wplRestCall('fonts/wp-library/dismiss-notice', 'POST', function() {}, function() {});
+    });
+
+    // Bulk auto-detect available weights for fonts predating weight detection
+    $(document).on('click', '#typost-detect-weights-bulk', function() {
+        var $btn = $(this);
+        var originalText = $btn.text();
+        var $message = $('#typost-detect-weights-message');
+
+        $btn.prop('disabled', true).text(typostAdmin.strings.detectWeightsRunning);
+
+        wplRestCall('fonts/detect-weights/bulk', 'POST', function(response) {
+            var msg = typostFormatDetectWeightsSummary(response, typostAdmin.strings.detectWeightsDone);
+            $message.html($('<p></p>').text(msg));
+            setTimeout(function() { location.reload(); }, 1500);
+        }, function(xhr) {
+            $message.html($('<p></p>').text(wplErrorMessage(xhr, typostAdmin.strings.detectWeightsError)));
+            $btn.prop('disabled', false).text(originalText);
+        });
     });
 });

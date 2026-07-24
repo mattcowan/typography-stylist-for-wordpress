@@ -1964,3 +1964,31 @@ msgstr "Astuce : faites glisser la barre de titre pour repositionner ce panneau.
 #: assets/js/block-editor.js
 msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr "Les modifications s'appliquent instantanément, appuyez sur Ctrl+Z (Cmd+Z sur Mac) pour annuler."
+
+#: includes/admin-page.php
+msgid "Font weight auto-detection available."
+msgstr "Détection automatique des graisses de police disponible."
+
+#: includes/admin-page.php
+#, php-format
+msgid "%d font was added before weight detection existed, so all nine weights are enabled for it. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time."
+msgid_plural "%d fonts were added before weight detection existed, so all nine weights are enabled for them. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time."
+msgstr[0] "%d police a été ajoutée avant l'existence de la détection des graisses, les neuf graisses sont donc activées pour elle. La détection automatique ne coche que les graisses réellement incluses dans chaque police — les polices téléversées sont lues depuis leurs fichiers, les polices Adobe depuis la feuille de style de leur kit. Vous pouvez ajuster les cases à cocher à tout moment par la suite."
+msgstr[1] "%d polices ont été ajoutées avant l'existence de la détection des graisses, les neuf graisses sont donc activées pour elles. La détection automatique ne coche que les graisses réellement incluses dans chaque police — les polices téléversées sont lues depuis leurs fichiers, les polices Adobe depuis la feuille de style de leur kit. Vous pouvez ajuster les cases à cocher à tout moment par la suite."
+
+#: includes/admin-page.php
+msgid "Auto-detect weights for existing fonts"
+msgstr "Détecter automatiquement les graisses des polices existantes"
+
+#: typography-stylist.php
+msgid "Detecting weights..."
+msgstr "Détection des graisses…"
+
+#: typography-stylist.php
+#, php-format
+msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page..."
+msgstr "Graisses détectées pour %1$s police(s) ; %2$s ont conservé toutes les graisses ; %3$s n'ont pas pu être vérifiées. Rechargement de la page…"
+
+#: typography-stylist.php
+msgid "Weight detection failed. Please try again."
+msgstr "La détection des graisses a échoué. Veuillez réessayer."

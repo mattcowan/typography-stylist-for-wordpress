@@ -134,7 +134,7 @@ function buildFontOptions(data) {
 			fontIdMap[adopted.font_id] = {
 				family: adopted.font_family || wpl.font_family,
 				fallbacks: adopted.fallbacks || '',
-				availableWeights: []
+				availableWeights: adopted.available_weights || []
 			};
 		} else {
 			options.push({
