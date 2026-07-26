@@ -586,14 +586,9 @@ export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDat
 		spanWithProperty.setAttribute(propertyDataAttr, newValue);
 
 		// Update style attribute
-		const existingStyle = spanWithProperty.getAttribute('style') || '';
-		const styleObj = {};
-		existingStyle.split(';').forEach(rule => {
-			const [prop, val] = rule.split(':').map(s => s.trim());
-			if (prop && val) styleObj[prop] = val;
-		});
+		const styleObj = parseStyleString(spanWithProperty.getAttribute('style'));
 		styleObj[styleProperty] = styleValue;
-		spanWithProperty.setAttribute('style', Object.entries(styleObj).map(([p, v]) => `${p}: ${v}`).join('; '));
+		spanWithProperty.setAttribute('style', buildStyleString(styleObj));
 
 		return { success: true, content: container.innerHTML };
 	} catch (error) {
@@ -686,23 +681,21 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			parentAttrs[attr.name] = attr.value;
 		}
 
-		// Parse parent styles into object
-		const parentStyleObj = {};
-		if (parentAttrs.style) {
-			parentAttrs.style.split(';').forEach(rule => {
-				const [prop, val] = rule.split(':').map(s => s.trim());
-				if (prop && val) parentStyleObj[prop] = val;
-			});
-		}
-
-		// Parse new styles and merge with parent styles
-		const newStyleObj = {};
-		newStyleString.split(';').forEach(rule => {
-			const [prop, val] = rule.split(':').map(s => s.trim());
-			if (prop && val) newStyleObj[prop] = val;
-		});
+		// Parse parent + new styles and merge (new wins per property)
+		const parentStyleObj = parseStyleString(parentAttrs.style);
+		const newStyleObj = parseStyleString(newStyleString);
 		const mergedStyleObj = { ...parentStyleObj, ...newStyleObj };
-		const mergedStyleString = Object.entries(mergedStyleObj).map(([p, v]) => `${p}: ${v}`).join('; ');
+		const mergedAttrs = { ...parentAttrs, ...newAttributes };
+
+		// Variation-axis values are font-specific: when this apply CHANGES the
+		// font, the parent's axis settings must not carry into the new-font
+		// segment (the before/after segments keep the old font and keep theirs)
+		if (newAttributes['data-font-id'] !== undefined &&
+			String(newAttributes['data-font-id']) !== String(parentAttrs['data-font-id'] || '')) {
+			delete mergedAttrs['data-font-variation-settings'];
+			delete mergedStyleObj['font-variation-settings'];
+		}
+		const mergedStyleString = buildStyleString(mergedStyleObj);
 
 		// Split by iterating through parent's childNodes and tracking text offsets
 		const selStart = startOffset - parentStart;
@@ -761,29 +754,29 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 
 		Array.from(parentSpan.childNodes).forEach(processNode);
 
-		// Build replacement HTML
+		// Build replacement HTML. Attribute values MUST be escaped — variation
+		// and feature settings contain double quotes ('"wght" 628') that would
+		// otherwise terminate the attribute and corrupt the span.
+		const escapeAttr = (value) => String(value)
+			.replace(/&/g, '&amp;')
+			.replace(/"/g, '&quot;');
+		const spanOpen = (attrs, styleValue) => {
+			let open = `<span class="typost-styled"`;
+			for (let key in attrs) {
+				if (key !== 'class' && key !== 'style') open += ` ${key}="${escapeAttr(attrs[key])}"`;
+			}
+			return open + ` style="${escapeAttr(styleValue || '')}">`;
+		};
+
 		let html = '';
 		if (segments.before.length > 0) {
-			html += `<span class="typost-styled"`;
-			for (let key in parentAttrs) {
-				if (key !== 'class' && key !== 'style') html += ` ${key}="${parentAttrs[key]}"`;
-			}
-			html += ` style="${parentAttrs.style || ''}">${segments.before.join('')}</span>`;
+			html += spanOpen(parentAttrs, parentAttrs.style) + `${segments.before.join('')}</span>`;
 		}
 
-		html += `<span class="typost-styled"`;
-		const mergedAttrs = { ...parentAttrs, ...newAttributes };
-		for (let key in mergedAttrs) {
-			if (key !== 'class' && key !== 'style') html += ` ${key}="${mergedAttrs[key]}"`;
-		}
-		html += ` style="${mergedStyleString}">${segments.selection.join('')}</span>`;
+		html += spanOpen(mergedAttrs, mergedStyleString) + `${segments.selection.join('')}</span>`;
 
 		if (segments.after.length > 0) {
-			html += `<span class="typost-styled"`;
-			for (let key in parentAttrs) {
-				if (key !== 'class' && key !== 'style') html += ` ${key}="${parentAttrs[key]}"`;
-			}
-			html += ` style="${parentAttrs.style || ''}">${segments.after.join('')}</span>`;
+			html += spanOpen(parentAttrs, parentAttrs.style) + `${segments.after.join('')}</span>`;
 		}
 
 		// Replace parent span
@@ -795,6 +788,54 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 	} catch (error) {
 		return { success: false, content: htmlContent };
 	}
+}
+
+/**
+ * Parse a CSS style string into a property→value object.
+ *
+ * The canonical style parser for the plugin (see
+ * todo/refactor-style-string-helpers.md). Splits declarations on ';' and each
+ * declaration on the FIRST ':' only — values containing colons survive intact.
+ * Property names are trimmed and lowercased; malformed declarations are
+ * skipped. Duplicate properties collapse to the last value at the first
+ * position (plugin-generated styles never contain duplicates).
+ *
+ * NOTE: save.js keeps its own inline parse on purpose — save output must stay
+ * byte-stable for block validation.
+ *
+ * @since 2.1.3
+ * @param {string} styleString CSS style string (e.g. "font-size: 20px; font-weight: 700")
+ * @return {Object} Property→value map (insertion order preserved)
+ */
+export function parseStyleString(styleString) {
+	const styleObj = {};
+	String(styleString || '').split(';').forEach((decl) => {
+		const colon = decl.indexOf(':');
+		if (colon <= 0) {
+			return;
+		}
+		const prop = decl.slice(0, colon).trim().toLowerCase();
+		const value = decl.slice(colon + 1).trim();
+		if (prop && value) {
+			styleObj[prop] = value;
+		}
+	});
+	return styleObj;
+}
+
+/**
+ * Build a CSS style string from a property→value object.
+ *
+ * Inverse of parseStyleString(): "prop: value" pairs joined with "; ".
+ *
+ * @since 2.1.3
+ * @param {Object} styleObj Property→value map
+ * @return {string} CSS style string ('' for an empty object)
+ */
+export function buildStyleString(styleObj) {
+	return Object.entries(styleObj || {})
+		.map(([prop, value]) => `${prop}: ${value}`)
+		.join('; ');
 }
 
 /**
@@ -825,6 +866,149 @@ export function validateNestingDepth(element) {
 }
 
 /**
+ * Whether a NEW nested typost-styled span may be created under this element.
+ *
+ * validateNestingDepth() validates an existing chain (depth 3 passes); this
+ * asks the forward-looking question — creating a child span adds a level, so
+ * an element already at depth 3 must refuse. Used by every wrap/nest path so
+ * the max-3 rule holds regardless of which application strategy runs.
+ *
+ * @since 2.1.3
+ * @param {Element} element Element the new span would be created under
+ * @return {boolean}
+ */
+export function canCreateNestedSpan(element) {
+	const check = validateNestingDepth(element);
+	return check.valid && check.depth < 3;
+}
+
+/**
+ * Merge new styling into an existing typost-styled span (entire-span apply).
+ *
+ * The single home for the merge rules previously duplicated between
+ * applyOrMergeStyling() and applyStylingSafeStringMethod():
+ * - attributes the caller doesn't set are preserved (font, sizes, weight,
+ *   spacing, line-height), including their style declarations;
+ * - data-features merge and deduplicate; font-feature-settings rebuilds from
+ *   the merged set, honoring raw indexed alternates in data-feature-settings
+ *   (e.g. '"salt" 2' — plain '"tag" 1' entries are added only for tags the
+ *   raw value doesn't already cover);
+ * - a font CHANGE (explicit data-font-id differing from the span's) removes
+ *   font-variation-settings — axis values are font-specific.
+ *
+ * Mutates both the span and the passed attributes object (preservation writes
+ * into it — callers construct fresh attribute literals per call).
+ *
+ * @since 2.1.3
+ * @param {Element} span        Existing typost-styled span (entire text selected)
+ * @param {Object}  attributes  Attributes to apply
+ * @param {string}  styleString CSS style string to apply
+ * @return {boolean} Always true (kept for caller return-contract symmetry)
+ */
+export function mergeTypostSpanStyling(span, attributes, styleString) {
+	// Font change detection must precede preservation (preservation may copy
+	// the span's own font id into attributes, which is not a "change")
+	const fontChanging = Object.prototype.hasOwnProperty.call(attributes, 'data-font-id') &&
+		attributes['data-font-id'] !== null && attributes['data-font-id'] !== undefined &&
+		String(attributes['data-font-id']) !== String(span.getAttribute('data-font-id') || '');
+
+	// PRESERVE existing inline attributes that caller isn't explicitly setting
+	// This prevents losing inline font-family when applying line-height, etc.
+	const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
+	const preservedAttributes = {};
+	attributesToPreserve.forEach(attr => {
+		if (!Object.prototype.hasOwnProperty.call(attributes, attr) && span.hasAttribute(attr)) {
+			attributes[attr] = span.getAttribute(attr);
+			preservedAttributes[attr] = true;
+		}
+	});
+
+	// ALWAYS preserve existing features and merge with new ones
+	const existingFeatures = span.getAttribute('data-features') || '';
+	const existingFeaturesArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()).filter(f => f) : [];
+	let mergedFeatures = [];
+
+	Object.keys(attributes).forEach(key => {
+		if (key === 'data-features') {
+			// Merge features (combine existing + new, deduplicate)
+			const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
+			const combined = [...new Set([...existingFeaturesArray, ...newFeatures])].filter(f => f);
+			if (combined.length > 0) {
+				span.setAttribute('data-features', combined.join(','));
+				mergedFeatures = combined;
+			}
+		} else {
+			// For other attributes, new value overwrites old (or preserved value)
+			if (attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '') {
+				span.setAttribute(key, String(attributes[key]));
+			}
+		}
+	});
+
+	// If we didn't merge features but there are existing features, keep them for the style rebuild
+	if (mergedFeatures.length === 0 && existingFeaturesArray.length > 0) {
+		mergedFeatures = existingFeaturesArray;
+	}
+
+	if (fontChanging) {
+		span.removeAttribute('data-font-variation-settings');
+	}
+
+	// Style merge — also runs on feature-only merges so font-feature-settings
+	// rebuilds even without a style string
+	if (styleString || mergedFeatures.length > 0 || fontChanging) {
+		const newStyleObj = parseStyleString(span.getAttribute('style'));
+
+		// Map of data attributes to their corresponding style properties
+		// Used to prevent overwriting styles for preserved attributes
+		const stylePropertyMap = {
+			'data-font-id': 'font-family',
+			'data-fontweight': 'font-weight',
+			'data-fontsize': 'font-size',
+			'data-letterspacing': 'letter-spacing',
+			'data-lineheight': 'line-height'
+		};
+
+		Object.entries(parseStyleString(styleString)).forEach(([prop, value]) => {
+			// Special case: always override font-family when setting new font
+			if (prop === 'font-family' && Object.prototype.hasOwnProperty.call(attributes, 'data-font-id')) {
+				newStyleObj[prop] = value;
+				return;
+			}
+			let shouldPreserveExisting = false;
+			for (const [dataAttr, styleProp] of Object.entries(stylePropertyMap)) {
+				if (preservedAttributes[dataAttr] && prop === styleProp) {
+					shouldPreserveExisting = true;
+					break;
+				}
+			}
+			if (!shouldPreserveExisting) {
+				newStyleObj[prop] = value;
+			}
+		});
+
+		// Rebuild font-feature-settings from the merged feature set, honoring
+		// raw indexed alternates (data-feature-settings)
+		if (mergedFeatures.length > 0) {
+			const raw = (attributes['data-feature-settings'] || span.getAttribute('data-feature-settings') || '');
+			const plain = mergedFeatures
+				.filter(f => raw.indexOf(`"${f}"`) === -1)
+				.map(f => `"${f}" 1`)
+				.join(', ');
+			newStyleObj['font-feature-settings'] = raw ? (plain ? `${raw}, ${plain}` : raw) : plain;
+		}
+
+		if (fontChanging) {
+			delete newStyleObj['font-variation-settings'];
+		}
+
+		span.setAttribute('style', buildStyleString(newStyleObj));
+	}
+
+	return true;
+}
+
+/**
  * Apply or merge styling to a selection, avoiding nested typost-styled spans
  *
  * This function checks if the selected range is already inside an typost-styled span.
@@ -839,9 +1023,6 @@ export function validateNestingDepth(element) {
  */
 export function applyOrMergeStyling(range, attributes, styleString, doc) {
 	try {
-		let mergedFeatures = [];
-		let preservedAttributes = {};
-
 		// Check if the range is entirely within a single typost-styled span
 		let commonAncestor = range.commonAncestorContainer;
 
@@ -851,16 +1032,7 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 		}
 
 		// Find the closest typost-styled span (if any)
-		let existingSpan = commonAncestor.closest('span.typost-styled');
-
-		// Validate nesting depth before creating nested spans
-		if (commonAncestor) {
-			const depthCheck = validateNestingDepth(commonAncestor);
-			if (!depthCheck.valid) {
-				// Don't create deeply nested spans
-				return false;
-			}
-		}
+		const existingSpan = commonAncestor.closest('span.typost-styled');
 
 		if (existingSpan) {
 			// Check if the entire selection is within this span
@@ -868,125 +1040,20 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 			                        existingSpan.contains(range.endContainer);
 
 			if (isEntirelyWithin) {
-				// Check if selection covers ENTIRE span text (not just within it)
+				// Merge only when the selection covers the ENTIRE span text;
+				// a partial selection falls through to create a nested span
 				const spanText = existingSpan.textContent || '';
 				const selectedText = range.toString();
-				const isSelectingEntireSpan = (spanText === selectedText);
-
-				// If NOT selecting entire span, DON'T merge - fall through to create nested span
-				if (!isSelectingEntireSpan) {
-					// Selection is partial - should create nested span or split
-					// Fall through to default behavior (range.surroundContents)
-					existingSpan = null; // Force creation of new span
-				} else {
-					// Selection covers entire span - safe to merge
-
-					// PRESERVE existing inline attributes that caller isn't explicitly setting
-					// This prevents losing inline font-family when applying line-height, etc.
-					const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
-					preservedAttributes = {};  // Reset for this merge operation
-					attributesToPreserve.forEach(attr => {
-						if (!attributes.hasOwnProperty(attr) && existingSpan.hasAttribute(attr)) {
-							// Copy existing attribute value so it won't be lost during merge
-							attributes[attr] = existingSpan.getAttribute(attr);
-							preservedAttributes[attr] = true;
-						}
-					});
-
-					// ALWAYS preserve existing features and merge with new ones
-					const existingFeatures = existingSpan.getAttribute('data-features') || '';
-					const existingFeaturesArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()).filter(f => f) : [];
-
-					// Merge attributes into existing span
-					Object.keys(attributes).forEach(key => {
-						if (key === 'data-features') {
-							// Merge features (combine existing + new, deduplicate)
-							const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
-							const combined = [...new Set([...existingFeaturesArray, ...newFeatures])].filter(f => f);
-							if (combined.length > 0) {
-								existingSpan.setAttribute('data-features', combined.join(','));
-								mergedFeatures = combined;
-							}
-						} else {
-							// For other attributes, new value overwrites old (or preserved value)
-							if (attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '') {
-								existingSpan.setAttribute(key, attributes[key]);
-							}
-						}
-					});
-
-					// If we didn't merge features but there are existing features, preserve them in mergedFeatures
-					if (mergedFeatures.length === 0 && existingFeaturesArray.length > 0) {
-						mergedFeatures = existingFeaturesArray;
-					}
+				if (spanText === selectedText) {
+					return mergeTypostSpanStyling(existingSpan, attributes, styleString);
 				}
 			}
+		}
 
-			if (existingSpan && isEntirelyWithin) {
-
-				// Merge styles
-				const existingStyle = existingSpan.getAttribute('style') || '';
-				const newStyleObj = {};
-
-				// Parse existing styles
-				existingStyle.split(';').forEach(rule => {
-					const [prop, value] = rule.split(':').map(s => s.trim());
-					if (prop && value) {
-						newStyleObj[prop] = value;
-					}
-				});
-
-				// Map of data attributes to their corresponding style properties
-				// Used to prevent overwriting styles for preserved attributes
-				const stylePropertyMap = {
-					'data-font-id': 'font-family',
-					'data-fontweight': 'font-weight',
-					'data-fontsize': 'font-size',
-					'data-letterspacing': 'letter-spacing',
-					'data-lineheight': 'line-height'
-				};
-
-				// Parse new styles (overwrite existing, EXCEPT for preserved attributes)
-				styleString.split(';').forEach(rule => {
-					const [prop, value] = rule.split(':').map(s => s.trim());
-					if (prop && value) {
-						// Special case: always override font-family when setting new font
-						if (prop === 'font-family' && attributes.hasOwnProperty('data-font-id')) {
-							newStyleObj[prop] = value;
-							return;
-						}
-
-						// Check if this style property corresponds to a preserved attribute
-						let shouldPreserveExisting = false;
-						for (const [dataAttr, styleProp] of Object.entries(stylePropertyMap)) {
-							if (preservedAttributes[dataAttr] && prop === styleProp) {
-								shouldPreserveExisting = true;
-								break;
-							}
-						}
-
-						// Only overwrite if not preserved
-						if (!shouldPreserveExisting) {
-							newStyleObj[prop] = value;
-						}
-					}
-				});
-
-				// CRITICAL FIX: If we merged features, rebuild font-feature-settings with ALL features
-			if (mergedFeatures.length > 0) {
-				const featureSettings = mergedFeatures.map(f => `"${f}" 1`).join(', ');
-				newStyleObj['font-feature-settings'] = featureSettings;
-			}
-
-						// Rebuild style string
-				const mergedStyle = Object.entries(newStyleObj)
-					.map(([prop, value]) => `${prop}: ${value}`)
-					.join('; ');
-
-				existingSpan.setAttribute('style', mergedStyle);
-
-				return true; // Successfully merged
-			}
+		// No merge target — a new wrapper span will be created. Refuse when
+		// that would exceed the nesting limit (merges above are always fine)
+		if (commonAncestor && !canCreateNestedSpan(commonAncestor)) {
+			return false;
 		}
 
 		// No existing span found or selection spans multiple elements - create new wrapper
@@ -1002,6 +1069,9 @@ export function applyOrMergeStyling(range, attributes, styleString, doc) {
 		}
 
 		range.surroundContents(span);
+		// Make the applied properties win inside any wrapped styled spans
+		// (their own declarations would otherwise override the wrapper's)
+		overrideStylingInDescendantSpans(span, attributes, styleString);
 		return true;
 
 	} catch (error) {
@@ -1104,116 +1174,24 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 			const after = nodeInfo.text.substring(nodeRelativeEnd);
 
 			// Check if parent is already a typost-styled span AND we're selecting the entire text
-			// Only merge if the entire span's text is being selected, otherwise create nested span
+			// Only merge if the entire SPAN's text is selected — the textContent
+			// comparison guards spans with element children, where before/after
+			// being empty for this text node doesn't mean the whole span is selected
 			const isInTypostSpan = parent.classList && parent.classList.contains('typost-styled');
-			const isSelectingEntireSpanText = isInTypostSpan && before === '' && after === '';
+			const isSelectingEntireSpanText = isInTypostSpan && before === '' && after === '' &&
+				parent.textContent === selected;
 			let span;
 
 			if (isSelectingEntireSpanText) {
-				// Preserve existing span and merge attributes (entire text is selected)
-				span = parent;
-
-				// PRESERVE existing inline attributes that caller isn't explicitly setting
-				const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
-				const preservedAttributes = {};
-				attributesToPreserve.forEach(attr => {
-					if (!attributes.hasOwnProperty(attr) && span.hasAttribute(attr)) {
-						attributes[attr] = span.getAttribute(attr);
-						preservedAttributes[attr] = true;
-					}
-				});
-
-				// ALWAYS preserve existing features and merge with new ones
-				const existingFeatures = span.getAttribute('data-features') || '';
-				const existingFeaturesArray = existingFeatures ? existingFeatures.split(',').map(f => f.trim()).filter(f => f) : [];
-				let mergedFeatures = [];
-
-				// Merge new attributes
-				Object.keys(attributes).forEach(key => {
-					if (key === 'data-features') {
-						// Merge features (combine existing + new, deduplicate)
-						const newFeatures = attributes[key] ? attributes[key].split(',').map(f => f.trim()) : [];
-						const combined = [...new Set([...existingFeaturesArray, ...newFeatures])].filter(f => f);
-						if (combined.length > 0) {
-							span.setAttribute('data-features', combined.join(','));
-							mergedFeatures = combined;
-						}
-					} else {
-						const value = attributes[key];
-						if (value !== null && value !== undefined && value !== '') {
-							span.setAttribute(key, String(value));
-						}
-					}
-				});
-
-				// If we didn't merge features but there are existing features, preserve them
-				if (mergedFeatures.length === 0 && existingFeaturesArray.length > 0) {
-					mergedFeatures = existingFeaturesArray;
-				}
-
-				// Merge styles (preserve existing + add new)
-				if (styleString) {
-					const existingStyle = span.getAttribute('style') || '';
-					const newStyleObj = {};
-
-					// Parse existing styles
-					existingStyle.split(';').forEach(rule => {
-						const [prop, value] = rule.split(':').map(s => s.trim());
-						if (prop && value) {
-							newStyleObj[prop] = value;
-						}
-					});
-
-					// Map of data attributes to their corresponding style properties
-					const stylePropertyMap = {
-						'data-font-id': 'font-family',
-						'data-fontweight': 'font-weight',
-						'data-fontsize': 'font-size',
-						'data-letterspacing': 'letter-spacing',
-						'data-lineheight': 'line-height'
-					};
-
-					// Parse new styles (don't overwrite preserved attributes)
-					styleString.split(';').forEach(rule => {
-						const [prop, value] = rule.split(':').map(s => s.trim());
-						if (prop && value) {
-							// Special case: always override font-family when setting new font
-							if (prop === 'font-family' && attributes.hasOwnProperty('data-font-id')) {
-								newStyleObj[prop] = value;
-								return;
-							}
-
-							// Check if this style property corresponds to a preserved attribute
-							let shouldPreserveExisting = false;
-							for (const [dataAttr, styleProp] of Object.entries(stylePropertyMap)) {
-								if (preservedAttributes[dataAttr] && prop === styleProp) {
-									shouldPreserveExisting = true;
-									break;
-								}
-							}
-
-							// Only overwrite if not preserved
-							if (!shouldPreserveExisting) {
-								newStyleObj[prop] = value;
-							}
-						}
-					});
-
-					// CRITICAL: Rebuild font-feature-settings with ALL features (existing + new)
-					if (mergedFeatures.length > 0) {
-						const featureSettings = mergedFeatures.map(f => `"${f}" 1`).join(', ');
-						newStyleObj['font-feature-settings'] = featureSettings;
-					}
-
-					const mergedStyle = Object.entries(newStyleObj)
-						.map(([prop, value]) => `${prop}: ${value}`)
-						.join('; ');
-					span.setAttribute('style', mergedStyle);
-				}
-
-				// Text stays the same, we're just updating attributes
+				// Entire span selected — shared merge (same rules as the Range method)
+				mergeTypostSpanStyling(parent, attributes, styleString);
 				return { success: true, content: container.innerHTML, error: null };
 			} else {
+				// A new nested span would be created — honor the nesting limit
+				if (!canCreateNestedSpan(parent)) {
+					return { success: false, content: htmlContent, error: 'Maximum nesting depth exceeded' };
+				}
+
 				// Build new span
 				span = doc.createElement('span');
 				span.className = 'typost-styled';
@@ -1265,6 +1243,11 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 				return { success: false, content: htmlContent, error: 'No common parent found' };
 			}
 
+			// The wrapper is a new span under commonParent — honor the nesting limit
+			if (!canCreateNestedSpan(commonParent)) {
+				return { success: false, content: htmlContent, error: 'Maximum nesting depth exceeded' };
+			}
+
 			// Create range that encompasses all affected content
 			const multiRange = doc.createRange();
 			multiRange.setStart(firstNode, Math.max(0, startOffset - affectedNodes[0].start));
@@ -1292,6 +1275,10 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 
 			wrapper.appendChild(fragment);
 			multiRange.insertNode(wrapper);
+
+			// Make the applied properties win inside any wrapped styled spans
+			// (their own declarations would otherwise override the wrapper's)
+			overrideStylingInDescendantSpans(wrapper, attributes, styleString);
 
 			// Clean up any empty spans left behind by extractContents()
 			const allSpans = container.querySelectorAll('span.typost-styled');
@@ -1582,6 +1569,59 @@ export function resolveQftInsertionRange(capturedSelection, selectionStart, sele
 }
 
 /**
+ * Resolve the target text range for APPLYING styling in the Typography
+ * Stylist block's Quick Feature Toggles.
+ *
+ * Deliberately a sibling of resolveQftInsertionRange, not a generalization:
+ * insertion prefers the captured selection and degrades to append; applying
+ * prefers the LIVE selection (the author may have re-selected while the
+ * popover is open) and degrades to null (block-level/no-op is then the
+ * caller's explicit decision, never an accident of lost focus).
+ *
+ * Priority order:
+ * 1. Live block-editor selection in this block with an expanded range
+ * 2. capturedSelection — offsets captured when the QFT popover opened,
+ *    surviving the focus loss that collapses the live selection
+ * 3. Live collapsed selection (caret) in this block — preserves the
+ *    caret-based update-in-place behaviors
+ * 4. null — no usable selection information
+ *
+ * @since 2.1.3
+ * @param {Object|null} selectionStart - Block editor selection start {clientId, offset}
+ * @param {Object|null} selectionEnd - Block editor selection end {clientId, offset}
+ * @param {string} clientId - This block's client ID
+ * @param {Object|null} capturedSelection - {start, end} captured at popover open, or null
+ * @return {{start: number, end: number}|null} Apply range, or null
+ */
+export function resolveQftApplyRange(selectionStart, selectionEnd, clientId, capturedSelection) {
+	const liveInBlock = selectionStart && selectionEnd &&
+		selectionStart.clientId === clientId &&
+		selectionEnd.clientId === clientId;
+	const liveStart = liveInBlock ? (selectionStart.offset || 0) : null;
+	const liveEnd = liveInBlock ? (selectionEnd.offset || 0) : null;
+
+	if (liveInBlock && liveStart !== liveEnd) {
+		return liveStart <= liveEnd
+			? { start: liveStart, end: liveEnd }
+			: { start: liveEnd, end: liveStart };
+	}
+
+	if (capturedSelection &&
+		Number.isFinite(capturedSelection.start) && Number.isFinite(capturedSelection.end) &&
+		capturedSelection.start !== capturedSelection.end) {
+		return capturedSelection.start <= capturedSelection.end
+			? { start: capturedSelection.start, end: capturedSelection.end }
+			: { start: capturedSelection.end, end: capturedSelection.start };
+	}
+
+	if (liveInBlock) {
+		return { start: liveStart, end: liveEnd };
+	}
+
+	return null;
+}
+
+/**
  * Checks if font size values are in valid order
  * Does not adjust values - only returns true/false
  *
@@ -1639,23 +1679,12 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 		span.removeAttribute('data-fontsize-max');
 	}
 
-	// Parse and update style attribute
-	const currentStyle = span.getAttribute('style') || '';
-	const styleObj = {};
+	// Parse the style, drop the removed property, rebuild (or remove when empty)
+	const styleObj = parseStyleString(span.getAttribute('style'));
+	delete styleObj[styleProperty];
 
-	currentStyle.split(';').forEach(rule => {
-		const [prop, value] = rule.split(':').map(s => s.trim());
-		if (prop && value && prop !== styleProperty) {
-			styleObj[prop] = value;
-		}
-	});
-
-	// Rebuild style string if there are remaining styles, otherwise remove style attribute
 	if (Object.keys(styleObj).length > 0) {
-		const newStyle = Object.entries(styleObj)
-			.map(([prop, value]) => `${prop}: ${value}`)
-			.join('; ');
-		span.setAttribute('style', newStyle);
+		span.setAttribute('style', buildStyleString(styleObj));
 	} else {
 		span.removeAttribute('style');
 	}
@@ -1866,19 +1895,6 @@ export function mergeInsertionFormatAttributes(incoming, inherited) {
 	});
 
 	// Style declarations: incoming first, then inherited properties it doesn't set
-	const parseDeclarations = (styleString) =>
-		String(styleString || '')
-			.split(';')
-			.map((decl) => decl.trim())
-			.filter(Boolean)
-			.map((decl) => {
-				const colon = decl.indexOf(':');
-				return colon > 0
-					? [decl.slice(0, colon).trim().toLowerCase(), decl.slice(colon + 1).trim()]
-					: null;
-			})
-			.filter(Boolean);
-
 	const sameFont =
 		String(incoming['data-font-id'] || '') !== '' &&
 		String(incoming['data-font-id']) === String(inherited['data-font-id'] || '');
@@ -1888,25 +1904,252 @@ export function mergeInsertionFormatAttributes(incoming, inherited) {
 		ownedProps.push('font-variation-settings');
 	}
 
-	const incomingDecls = parseDeclarations(incoming.style);
-	const present = {};
-	incomingDecls.forEach(([prop]) => {
-		present[prop] = true;
-	});
-	const declarations = incomingDecls.map(([prop, val]) => `${prop}: ${val}`);
-	parseDeclarations(inherited.style).forEach(([prop, val]) => {
-		if (!present[prop] && !ownedProps.includes(prop)) {
-			declarations.push(`${prop}: ${val}`);
+	const mergedStyle = parseStyleString(incoming.style);
+	Object.entries(parseStyleString(inherited.style)).forEach(([prop, value]) => {
+		if (!(prop in mergedStyle) && !ownedProps.includes(prop)) {
+			mergedStyle[prop] = value;
 		}
 	});
 
-	if (declarations.length > 0) {
-		merged.style = declarations.join('; ');
+	const styleOut = buildStyleString(mergedStyle);
+	if (styleOut) {
+		merged.style = styleOut;
 	} else {
 		delete merged.style;
 	}
 
 	return merged;
+}
+
+/**
+ * Split a rich-text range into runs of identical typost formatting.
+ *
+ * Each run is a maximal span of consecutive characters whose typost format
+ * attributes are identical (including "no typost format" runs, attributes:
+ * null). Used to apply a single property change per-run across a mixed
+ * selection instead of stamping one uniform format over everything.
+ *
+ * @since 2.1.3
+ * @param {Array}  formats    value.formats from @wordpress/rich-text (per-char format arrays)
+ * @param {number} start      Range start offset
+ * @param {number} end        Range end offset (exclusive)
+ * @param {string} formatType Format type name (e.g. 'typost/features')
+ * @returns {Array} [{ start, end, attributes|null }]
+ */
+export function computeTypostFormatRuns(formats, start, end, formatType) {
+	const runs = [];
+	if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+		return runs;
+	}
+	const attrsAt = (i) => {
+		const list = formats && formats[i];
+		if (!list || !list.find) {
+			return null;
+		}
+		const format = list.find((f) => f && f.type === formatType);
+		return format ? (format.attributes || {}) : null;
+	};
+	let runStart = start;
+	let runAttrs = attrsAt(start);
+	let runKey = runAttrs === null ? null : JSON.stringify(runAttrs);
+	for (let i = start + 1; i < end; i++) {
+		const attrs = attrsAt(i);
+		const key = attrs === null ? null : JSON.stringify(attrs);
+		if (key !== runKey) {
+			runs.push({ start: runStart, end: i, attributes: runAttrs });
+			runStart = i;
+			runAttrs = attrs;
+			runKey = key;
+		}
+	}
+	runs.push({ start: runStart, end: end, attributes: runAttrs });
+	return runs;
+}
+
+/**
+ * Whether a range covers more than one distinct typost formatting run.
+ *
+ * A mixed selection is one where a wholesale format apply would destroy
+ * per-run differences (the "select all + change font wipes my settings" bug).
+ *
+ * @since 2.1.3
+ * @param {Array}  formats    value.formats from @wordpress/rich-text
+ * @param {number} start      Range start offset
+ * @param {number} end        Range end offset (exclusive)
+ * @param {string} formatType Format type name
+ * @returns {boolean}
+ */
+export function isMixedFormatSelection(formats, start, end, formatType) {
+	return computeTypostFormatRuns(formats, start, end, formatType).length > 1;
+}
+
+/**
+ * Patch a typost format's attributes with a single property change,
+ * preserving everything the change doesn't touch.
+ *
+ * @since 2.1.3
+ * @param {Object|null} existingAttrs Format attributes of the run (null = unformatted)
+ * @param {Object} patch { dataAttrs: {name: value|null}, styleDecls: {prop: value|null},
+ *                         featureToggles: [{tag, enabled}] } — null values remove
+ * @returns {Object|null} New attributes, or null when nothing meaningful remains
+ *                        (caller should remove the format from the run)
+ */
+export function patchTypostFormatAttributes(existingAttrs, patch) {
+	const attrs = { ...(existingAttrs || {}) };
+	const styleDecls = { ...((patch && patch.styleDecls) || {}) };
+
+	// Feature toggles edit the run's own feature set (add/remove one tag),
+	// then rebuild the font-feature-settings declaration — honoring any raw
+	// indexed alternates stored in data-feature-settings
+	const toggles = (patch && patch.featureToggles) || [];
+	if (toggles.length > 0) {
+		const features = (attrs['data-features'] || '')
+			.split(',')
+			.map((t) => t.trim())
+			.filter(Boolean);
+		toggles.forEach((toggle) => {
+			const index = features.indexOf(toggle.tag);
+			if (toggle.enabled && index === -1) {
+				features.push(toggle.tag);
+			}
+			if (!toggle.enabled && index > -1) {
+				features.splice(index, 1);
+			}
+		});
+		if (features.length > 0) {
+			attrs['data-features'] = features.join(',');
+		} else {
+			delete attrs['data-features'];
+		}
+		const raw = attrs['data-feature-settings'] || '';
+		const plain = features
+			.filter((tag) => raw.indexOf(`"${tag}"`) === -1)
+			.map((tag) => `"${tag}" 1`)
+			.join(', ');
+		const combined = raw ? (plain ? `${raw}, ${plain}` : raw) : plain;
+		styleDecls['font-feature-settings'] = combined || null;
+	}
+
+	// Data attributes: set, or remove when null/empty
+	const dataAttrs = (patch && patch.dataAttrs) || {};
+	Object.keys(dataAttrs).forEach((name) => {
+		const value = dataAttrs[name];
+		if (value === null || value === undefined || value === '') {
+			delete attrs[name];
+		} else {
+			attrs[name] = String(value);
+		}
+	});
+
+	// Style: replace/remove patched declarations, keep the rest verbatim
+	const styleObj = parseStyleString(attrs.style);
+	Object.keys(styleDecls).forEach((prop) => {
+		if (styleDecls[prop]) {
+			styleObj[prop] = styleDecls[prop];
+		} else {
+			delete styleObj[prop];
+		}
+	});
+	const styleOut = buildStyleString(styleObj);
+	if (styleOut) {
+		attrs.style = styleOut;
+	} else {
+		delete attrs.style;
+	}
+
+	const hasData = Object.keys(attrs).some((key) => key.indexOf('data-') === 0);
+	return hasData ? attrs : null;
+}
+
+/**
+ * After wrapping a multi-span selection in a new typost-styled span, make the
+ * wrapped property actually take effect inside descendant spans.
+ *
+ * Without this, applying e.g. a font over a selection containing styled spans
+ * produces an outer span whose font-family is overridden by every inner span's
+ * own font-family — the change looks like it did nothing. For each single-value
+ * property the wrapper applies, the same property is removed from descendant
+ * spans (so the wrapper cascades); feature settings instead MERGE into
+ * descendants that declare their own (an inner font-feature-settings
+ * declaration replaces the outer one wholesale in CSS, so the wrapper's tags
+ * must be added to it). Descendants left with no attributes are unwrapped.
+ *
+ * @since 2.1.3
+ * @param {Element} wrapper     The newly created wrapping span
+ * @param {Object}  attributes  The attributes applied to the wrapper
+ * @param {string}  styleString The style string applied to the wrapper
+ */
+export function overrideStylingInDescendantSpans(wrapper, attributes, styleString) {
+	const appliedDecls = parseStyleString(styleString);
+
+	// Single-value properties cascade from the wrapper once descendants stop
+	// declaring them; map each to the data attributes that must go with it
+	const cascadeProps = {
+		'font-family': ['data-font-id', 'data-font'],
+		'font-weight': ['data-fontweight'],
+		'font-size': ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'],
+		'letter-spacing': ['data-letterspacing'],
+		'line-height': ['data-lineheight'],
+		'font-variation-settings': ['data-font-variation-settings']
+	};
+	const strippedProps = Object.keys(cascadeProps).filter((prop) => prop in appliedDecls);
+	// Axis values are font-specific: a font change also invalidates them
+	if ('font-family' in appliedDecls && strippedProps.indexOf('font-variation-settings') === -1) {
+		strippedProps.push('font-variation-settings');
+	}
+
+	const appliedFeatures = (attributes && attributes['data-features'] ? String(attributes['data-features']) : '')
+		.split(',')
+		.map((t) => t.trim())
+		.filter(Boolean);
+
+	Array.prototype.slice.call(wrapper.querySelectorAll('span.typost-styled')).forEach((span) => {
+		strippedProps.forEach((prop) => {
+			cascadeProps[prop].forEach((attr) => span.removeAttribute(attr));
+		});
+
+		const kept = [];
+		Object.entries(parseStyleString(span.getAttribute('style'))).forEach(([prop, valueIn]) => {
+			let value = valueIn;
+			if (strippedProps.indexOf(prop) !== -1) {
+				return; // wrapper provides it now
+			}
+			if (prop === 'font-feature-settings' && appliedFeatures.length > 0) {
+				// Inner declaration replaces the outer one in CSS — merge the
+				// wrapper's tags in so they apply here too
+				const missing = appliedFeatures.filter((tag) => value.indexOf(`"${tag}"`) === -1);
+				if (missing.length > 0) {
+					value += ', ' + missing.map((tag) => `"${tag}" 1`).join(', ');
+					const own = (span.getAttribute('data-features') || '')
+						.split(',')
+						.map((t) => t.trim())
+						.filter(Boolean);
+					appliedFeatures.forEach((tag) => {
+						if (own.indexOf(tag) === -1) {
+							own.push(tag);
+						}
+					});
+					span.setAttribute('data-features', own.join(','));
+				}
+			}
+			kept.push(`${prop}: ${value}`);
+		});
+		if (kept.length > 0) {
+			span.setAttribute('style', kept.join('; '));
+		} else {
+			span.removeAttribute('style');
+		}
+
+		// Nothing left on this span? Unwrap it to keep nesting flat
+		const hasData = Array.prototype.some.call(span.attributes, (a) => a.name.indexOf('data-') === 0);
+		if (!hasData && !span.getAttribute('style')) {
+			const parent = span.parentNode;
+			while (span.firstChild) {
+				parent.insertBefore(span.firstChild, span);
+			}
+			parent.removeChild(span);
+		}
+	});
 }
 
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
@@ -1917,6 +2160,11 @@ if (typeof window !== 'undefined') {
 		parseInlineFeaturesAtCursor,
 		parseInlineFontFamilyAtCursor,
 		filterFeaturesByVisibility,
-		mergeInsertionFormatAttributes
+		mergeInsertionFormatAttributes,
+		computeTypostFormatRuns,
+		isMixedFormatSelection,
+		patchTypostFormatAttributes,
+		parseStyleString,
+		buildStyleString
 	};
 }

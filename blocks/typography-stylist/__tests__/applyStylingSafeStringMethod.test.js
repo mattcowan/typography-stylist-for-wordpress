@@ -258,3 +258,53 @@ describe('Typography Stylist - validateNestingDepth', () => {
 		expect(result.depth).toBe(0);
 	});
 });
+
+describe('nesting depth guard (canCreateNestedSpan integration)', () => {
+	const { applyStylingSafeStringMethod: apply } = require('../utils');
+
+	const tripleNested =
+		'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">' +
+		'<span class="typost-styled" data-fontweight="700" style="font-weight: 700">' +
+		'<span class="typost-styled" data-features="liga" style=\'font-feature-settings: "liga" 1\'>Elegant</span>' +
+		'</span></span>';
+
+	test('partial selection inside a 3-deep chain refuses a 4th level, content unchanged', () => {
+		const result = apply(tripleNested, 1, 3, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(false);
+		expect(result.content).toBe(tripleNested);
+		expect(result.error).toContain('nesting depth');
+	});
+
+	test('entire-span selection at depth 3 still merges (no new level created)', () => {
+		const result = apply(tripleNested, 0, 7, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('letter-spacing');
+	});
+
+	test('depth-2 partial selection still nests successfully', () => {
+		const doubleNested =
+			'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">' +
+			'<span class="typost-styled" data-fontweight="700" style="font-weight: 700">Elegant</span>' +
+			'</span>';
+		const result = apply(doubleNested, 1, 3, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(true);
+	});
+
+	test('entire-span detection does not merge when the span has element children (D3)', () => {
+		const withChild =
+			'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">AB' +
+			'<span class="typost-styled" data-features="liga" style=\'font-feature-settings: "liga" 1\'>C</span>' +
+			'</span>';
+		// Selecting "AB" — before/after are empty for that text node, but the
+		// span's full text is "ABC"; merging would style "C" too
+		const result = apply(withChild, 0, 2, { 'data-fontweight': '700' }, 'font-weight: 700');
+		expect(result.success).toBe(true);
+		const doc = new DOMParser().parseFromString('<div>' + result.content + '</div>', 'text/html');
+		const outer = doc.querySelector('[data-fontsize]');
+		// The outer span itself must NOT have gained the weight
+		expect(outer.getAttribute('data-fontweight')).toBeNull();
+		// The new weight span wraps only "AB"
+		const weightSpan = doc.querySelector('[data-fontweight]');
+		expect(weightSpan.textContent).toBe('AB');
+	});
+});

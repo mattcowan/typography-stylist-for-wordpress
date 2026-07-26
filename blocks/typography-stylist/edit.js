@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, mergeInsertionFormatAttributes } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -545,21 +545,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	}, [fontFamily, clientId]); // Re-run when fontFamily or clientId changes
 
+	// The range QFT property applies operate on: the LIVE selection when it's
+	// expanded and in this block, else the selection captured when the popover
+	// opened (focus moving into the popover collapses the live one), else a
+	// live caret, else null. Every applier and the detection below share this
+	// so "what the controls show" and "where changes land" can't disagree.
+	const resolvedApplyRange = useMemo(
+		() => resolveQftApplyRange(selectionStart, selectionEnd, clientId, capturedSelection),
+		[selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, selectionEnd?.clientId, clientId, capturedSelection] // eslint-disable-line react-hooks/exhaustive-deps -- object identities intentionally reduced to offsets
+	);
+
 	// Unified inline styles detection at current cursor/selection position
 	// Detects ALL properties: features, fontId, fontWeight, fontSize, letterSpacing, lineHeight
 	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
-	// Uses selectionStart/End offset only (not full object) to avoid re-computation on every selection change
 	const inlineStylesAtSelection = useMemo(() => {
-		if (!content) return null;
-		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
-			return null;
-		}
-
-		const start = selectionStart.offset || 0;
-		const end = selectionEnd.offset || 0;
-
-		return parseInlineStylesAtCursor(content, start, end);
-	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+		if (!content || !resolvedApplyRange) return null;
+		return parseInlineStylesAtCursor(content, resolvedApplyRange.start, resolvedApplyRange.end);
+	}, [content, resolvedApplyRange]);
 
 	// Derive individual properties from unified detection for backward compatibility
 	const inlineFeaturesAtSelection = inlineStylesAtSelection?.features || [];
@@ -981,11 +983,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-letterspacing',
 				'letter-spacing'
 			);
@@ -1034,11 +1036,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineLineHeight(0);
 		setPreviewLineHeight(0);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-lineheight',
 				'line-height'
 			);
@@ -1054,11 +1056,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		setInlineFontFamily('');
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-font-id',
 				'font-family'
 			);
@@ -1074,11 +1076,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		setInlineFontWeight('inherit');
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-fontweight',
 				'font-weight'
 			);
@@ -1097,11 +1099,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineFontSizePreferred(32);
 		setInlineFontSizeMax(64);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-fontsize',
 				'font-size'
 			);
@@ -1116,12 +1118,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content || inlineLineHeight === 0) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1316,12 +1316,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// If there's a selection, toggle inline feature
 			if (start !== end) {
@@ -1366,12 +1364,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content || inlineLetterSpacing === 0) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1514,12 +1510,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Parse the current content as HTML
@@ -1574,12 +1568,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyInlineFontSize = () => {
 		if (!content || inlineFontSize === 'inherit') return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// Prepare attributes and style for both collapsed and selection cases
 			const attributes = {
@@ -1732,12 +1724,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyInlineFontWeight = () => {
 		if (!content || inlineFontWeight === 'inherit') return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1872,12 +1862,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyInlineFontFamily = () => {
 		if (!content || !inlineFontFamily) return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -2021,12 +2009,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Build the styled span with feature and letter spacing
@@ -2139,12 +2125,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Parse the current content as HTML
@@ -2191,39 +2175,36 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							// Split features (comma-separated) and remove the target feature
 							const featureList = dataFeatures.split(',').map(f => f.trim()).filter(f => f && f !== featureId);
 
+							// Raw indexed alternates (data-feature-settings, e.g. '"salt" 2')
+							// are independent of the toggled tags and must survive removal
+							const rawSettings = span.getAttribute('data-feature-settings') || '';
+
 							if (featureList.length === 0) {
-								// No features left - remove data-features attribute
+								// No toggled features left - remove data-features attribute
 								span.removeAttribute('data-features');
 
-								// Remove font-feature-settings from style, keep other styles
-								const currentStyleForRemoval = span.getAttribute('style') || '';
-								const remainingStyleObj = {};
-								currentStyleForRemoval.split(';').forEach(rule => {
-									const [prop, value] = rule.split(':').map(s => s.trim());
-									if (prop && value && prop !== 'font-feature-settings') {
-										remainingStyleObj[prop] = value;
-									}
-								});
+								const remainingStyleObj = parseStyleString(span.getAttribute('style'));
+								if (rawSettings) {
+									// Keep the raw alternates rendering
+									remainingStyleObj['font-feature-settings'] = rawSettings;
+								} else {
+									delete remainingStyleObj['font-feature-settings'];
+								}
 
 								// Rebuild style or remove it entirely
 								if (Object.keys(remainingStyleObj).length > 0) {
-									const newStyle = Object.entries(remainingStyleObj)
-										.map(([prop, value]) => `${prop}: ${value}`)
-										.join('; ');
-									span.setAttribute('style', newStyle);
+									span.setAttribute('style', buildStyleString(remainingStyleObj));
 								} else {
 									span.removeAttribute('style');
 								}
 
 								// Check if any other typost attributes remain before unwrapping
-								const hasFontId = span.getAttribute('data-font-id');
-								const hasFontSize = span.getAttribute('data-fontsize');
-								const hasFontWeight = span.getAttribute('data-fontweight');
-								const hasLetterSpacing = span.getAttribute('data-letterspacing');
-								const hasLineHeight = span.getAttribute('data-lineheight');
-
-								const hasAnyAttributes = hasFontId || hasFontSize ||
-								                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+								const hasAnyAttributes = span.getAttribute('data-font-id') ||
+								                         span.getAttribute('data-fontsize') ||
+								                         span.getAttribute('data-fontweight') ||
+								                         span.getAttribute('data-letterspacing') ||
+								                         span.getAttribute('data-lineheight') ||
+								                         span.getAttribute('data-feature-settings');
 
 								if (!hasAnyAttributes && Object.keys(remainingStyleObj).length === 0) {
 									// No attributes or styles remain - safe to unwrap the span
@@ -2238,29 +2219,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								// Update the span with remaining features (comma-separated)
 								span.setAttribute('data-features', featureList.join(','));
 
-								// Rebuild font-feature-settings CSS with all remaining features
-								const featureSettings = featureList.map(f => `"${f}" 1`).join(', ');
-								const currentStyle = span.getAttribute('style') || '';
+								// Rebuild font-feature-settings: raw indexed alternates first,
+								// then remaining plain tags not already covered by the raw value
+								const plainTags = featureList
+									.filter(f => rawSettings.indexOf(`"${f}"`) === -1)
+									.map(f => `"${f}" 1`)
+									.join(', ');
+								const featureSettings = rawSettings
+									? (plainTags ? `${rawSettings}, ${plainTags}` : rawSettings)
+									: plainTags;
 
-								// Parse existing styles
-								const styleObj = {};
-								currentStyle.split(';').forEach(rule => {
-									const [prop, value] = rule.split(':').map(s => s.trim());
-									if (prop && value) {
-										styleObj[prop] = value;
-									}
-								});
-
-								// Update font-feature-settings
-								styleObj['font-feature-settings'] = featureSettings;
-
-								// Rebuild style string
-								const newStyle = Object.entries(styleObj)
-									.filter(([prop, value]) => prop && value)
-									.map(([prop, value]) => `${prop}: ${value}`)
-									.join('; ');
-
-								span.setAttribute('style', newStyle);
+								const styleObj = parseStyleString(span.getAttribute('style'));
+								if (featureSettings) {
+									styleObj['font-feature-settings'] = featureSettings;
+								} else {
+									delete styleObj['font-feature-settings'];
+								}
+								span.setAttribute('style', buildStyleString(styleObj));
 							}
 						}
 					});

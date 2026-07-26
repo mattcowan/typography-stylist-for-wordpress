@@ -232,3 +232,60 @@ describe('mapFvarAxes', () => {
 		expect(mapFvarAxes(undefined, undefined)).toEqual([]);
 	});
 });
+
+describe('axis sessions (touched-only emission)', () => {
+	const { mergeAxisSession, pickTouchedSettings } = require('../assets/js/lib/variation-utils.js');
+	const FRAUNCES_AXES = [
+		{ tag: 'opsz', min: 9, max: 144, default: 9 },
+		{ tag: 'wght', min: 100, max: 900, default: 900 },
+		{ tag: 'SOFT', min: 0, max: 100, default: 0 },
+		{ tag: 'WONK', min: 0, max: 1, default: 1 },
+	];
+
+	test('fresh session emits NOTHING until an axis is touched (the Fraunces wght-900 bug)', () => {
+		const session = mergeAxisSession({ values: {}, touched: {} }, FRAUNCES_AXES, {});
+		expect(pickTouchedSettings(session)).toEqual({});
+		// values still initialize for slider display
+		expect(session.values.wght).toBe(900);
+	});
+
+	test('touching one axis emits only that axis', () => {
+		const session = mergeAxisSession({ values: {}, touched: {} }, FRAUNCES_AXES, {});
+		session.values.WONK = 0;
+		session.touched.WONK = true;
+		expect(pickTouchedSettings(session)).toEqual({ WONK: 0 });
+	});
+
+	test('settings already on the span count as touched and are preserved', () => {
+		const session = mergeAxisSession({ values: {}, touched: {} }, FRAUNCES_AXES, { SOFT: 40 });
+		expect(pickTouchedSettings(session)).toEqual({ SOFT: 40 });
+		session.values.WONK = 0;
+		session.touched.WONK = true;
+		expect(pickTouchedSettings(session)).toEqual({ SOFT: 40, WONK: 0 });
+	});
+
+	test('two panels sharing one session compose weight + custom axes', () => {
+		const session = { values: {}, touched: {} };
+		mergeAxisSession(session, FRAUNCES_AXES, {}); // weight panel mount
+		mergeAxisSession(session, FRAUNCES_AXES, {}); // other-axes panel mount
+		session.values.wght = 500;
+		session.touched.wght = true;
+		session.values.WONK = 0;
+		session.touched.WONK = true;
+		expect(pickTouchedSettings(session)).toEqual({ wght: 500, WONK: 0 });
+	});
+
+	test('explicitly setting an axis TO its default still emits it', () => {
+		const session = mergeAxisSession({ values: {}, touched: {} }, FRAUNCES_AXES, {});
+		session.values.wght = 900;
+		session.touched.wght = true;
+		expect(pickTouchedSettings(session)).toEqual({ wght: 900 });
+	});
+
+	test('reset semantics: untouching an axis stops emitting it', () => {
+		const session = mergeAxisSession({ values: {}, touched: {} }, FRAUNCES_AXES, { WONK: 0 });
+		session.values.WONK = 1;
+		delete session.touched.WONK;
+		expect(pickTouchedSettings(session)).toEqual({});
+	});
+});

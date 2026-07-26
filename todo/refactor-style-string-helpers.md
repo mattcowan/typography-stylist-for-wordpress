@@ -1,5 +1,24 @@
 # Refactor: Extract `parseStyleString` / `buildStyleString` Helpers
 
+> **STATUS: DONE (2026-07-26), expanded beyond this doc's scope.** The
+> canonical helpers exist in `blocks/typography-stylist/utils.js` and every
+> live parse/build site is migrated EXCEPT save.js (deliberately kept inline —
+> save output must stay byte-stable for block validation; see the comment
+> there). The real payoff went further than this doc anticipated: the two
+> duplicated entire-span merge blocks were unified into
+> `mergeTypostSpanStyling()` (fixing raw-indexed-alternate wipes and stale
+> variation settings once, in one place), QFT appliers gained a shared
+> selection resolver (`resolveQftApplyRange`), and the max-3 nesting rule is
+> now enforced by `canCreateNestedSpan()` on every wrap path. Coverage:
+> styleString.test.js, mergeTypostSpanStyling.test.js,
+> resolveQftApplyRange.test.js.
+>
+> Remaining follow-up parked here: the inline editor's font apply sets only
+> `data-font-id`, leaving any legacy `data-font` family-name attribute stale
+> on the span (cosmetic metadata inconsistency; display is unaffected).
+
+
+
 ## Problem
 
 The pattern for parsing CSS style strings into objects and building them back appears 7+ times across `blocks/typography-stylist/utils.js`:

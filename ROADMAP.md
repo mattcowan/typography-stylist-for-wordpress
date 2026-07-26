@@ -1,251 +1,105 @@
-# Typography Stylist - Roadmap
+# Typography Stylist — Roadmap
 
-This document outlines potential future enhancements for the Typography Stylist plugin. These are ideas under consideration and are not committed features.
+Consolidated 2026-07-26 (plugin at 2.1.2 released, 2.1.3 in progress). This
+replaces the previous roadmap (last touched Dec 2025 at v1.0.6), whose items
+are all accounted for below — shipped, still planned, or explicitly parked.
+Items here are ideas and intentions, not committed features.
 
-## Table of Contents
-
-- [Font Management Enhancements](#font-management-enhancements)
-- [Typography Features](#typography-features)
-- [User Experience](#user-experience)
-- [Performance & Optimization](#performance--optimization)
-- [Integration & Compatibility](#integration--compatibility)
+Related planning docs: `todo/` holds per-item working docs; deferred infra
+work also lives in RELEASING.md § Future work.
 
 ---
 
-## Font Management Enhancements
+## Shipped (from the old roadmap and since)
 
-### Per-Font-Family Fallbacks
-**Priority**: High
-**Status**: Planned
+| Item | Shipped in |
+|---|---|
+| Live preview in the block editor (was "Planned/High") | 2.0.0 — inline editor is live-preview; Apply button removed |
+| Variable font support (was "Under Consideration") | 2.1.0 — Variable Fonts module bundled into core: axis auto-detection, admin config, editor sliders, "Detect Axes from Font File" |
+| Extended OpenType features — frac, lnum/onum/pnum/tnum, smcp/c2sc, sups/subs, ordn, case (was "Planned") | Shipped — the feature list now covers 51 features including every proposed addition |
+| Variable Font Axes extension blueprint (2.0.0 spec) | Superseded — built and bundled in 2.1.0 |
+| Feature presets (core part of the old "Presets Library" idea) | Shipped early — user presets + defaults; see Open below for the rest |
+| Glyphs Panel (never on the old roadmap, became the 2.0.0 flagship) | 2.0.0, bundled into core |
+| WordPress Font Library integration | 2.1.0 (WP 6.5+): registration, editor pickers, adoption |
+| Font-only ZIP uploads (Google Fonts downloads) | 2.1.0 |
+| Automatic font-weight detection (uploads, Adobe, WP Library) + retrofit button | 2.1.2 |
+| wp.org Live Preview (Playground blueprint) | 2.1.2 asset cycle |
 
-**Current Behavior:**
-- Fallbacks are configured at the kit/project level
-- One fallback string applies to all font families in an uploaded kit or Adobe Fonts project
-- Example: A kit with "Playfair Display" and "Playfair Display SC" uses the same fallbacks for both
+## In progress
 
-**Proposed Enhancement:**
-- Allow configuring fallbacks per font family within a kit
-- UI shows one fallback input field for each unique font family
-- Data structure: `fallbacks: { "Playfair Display": "Georgia, serif", "Playfair Display SC": "Georgia, serif" }`
+- **Playground demo upgrade** — wedding-invitation showcase content for the
+  wp.org Live Preview blueprint (design in progress; blueprint templatizes
+  font IDs at runtime).
+- **2.1.3 editor-robustness batch** — mixed-selection per-run property
+  application, glyph-insertion styling preservation, Glyphs Panel
+  auto-alternates, QFT descendant-span override. Parked in changelog.txt.
 
-**Benefits:**
-- More granular control over font stacks
-- Better fallback matching (serif fonts with serif fallbacks, sans-serif with sans-serif, etc.)
-- Improved typography precision for multi-family kits
+## Planned (next up)
 
-**Implementation Complexity:** High
-- Requires data structure migration
-- Complex UI changes for editing
-- Updates needed across REST API, sanitization, and CSS generation
-- Need to handle backward compatibility
+- **Fit-to-width font sizing** — per-line "scale text to fill 100% of the
+  row" block sizing mode. Starter prompt with full design notes:
+  [todo/feature-fit-to-width-sizing.md](todo/feature-fit-to-width-sizing.md).
+- **Per-font-family fallbacks** (High on the old roadmap; still open) —
+  fallbacks per family instead of per kit/project. Cross-referenced from
+  DOCUMENTATION.md. High complexity: data migration, UI, REST, CSS gen.
+- **Style-string helper refactor** — extract shared `parseStyleString` /
+  `buildStyleString` utils (7+ duplicated parse sites; the 2.1.3 work added
+  more parsers that should fold in). Working doc:
+  [todo/refactor-style-string-helpers.md](todo/refactor-style-string-helpers.md).
+- **Automatic per-font feature detection** — the Glyphs Panel already parses
+  GSUB and knows which features a font really has; surface that to
+  auto-configure the per-font feature-visibility settings (manual visibility
+  shipped in 2.0.0). Natural follow-up to 2.1.2's weight auto-detection.
+- **Animations extension** — core integration hooks shipped in 2.1.0
+  (`animationConfigId`, `data-animation-id`, HOOKS.md); the extension plugin
+  itself is unbuilt.
+- **WP Font Library parity follow-ups** — 2.0.0 known limitation partially
+  stands: font ordering and feature-visibility settings for WP Library fonts
+  are still unsupported (weights were handled in 2.1.2 for adopted fonts).
 
-**Estimated Effort:** 2-3 weeks
+## Infrastructure (from RELEASING.md § Future work)
 
----
+- **E2E in CI** — Playwright suite needs a live WP install; a `wp-env` job
+  could run it. Deliberately skipped so far to keep the pipeline simple.
+- **Real 2× banner** — `.wordpress-org/banner-1544x500.png` is an upscaled
+  copy, not true retina; regenerate from source art.
+- **Editor-iframe QA checklist** — [todo/editor-iframe-testing.md](todo/editor-iframe-testing.md)
+  (verified March 2026 against WP 7.0-beta2; re-run on major WP releases).
+- **Branch hygiene** — many merged issue branches were never pruned
+  (`bugfix/#81…`, `feature/#76…`, `feature/#41-variable-fonts`, etc.).
+  Housekeeping, not work.
 
-### Variable Font Support
-**Priority**: Medium
-**Status**: Under Consideration
+## Ideas (under consideration, unchanged priority)
 
-**Description:**
-- Support for variable fonts with OpenType features
-- UI controls for font-variation-settings alongside font-feature-settings
-- Integration with WordPress' existing variable font support
+- **Font subsetting & optimization** — auto-subsetting, unused-glyph
+  removal, unicode-range optimization.
+- **Advanced caching strategies** — smarter loading, preload/prefetch
+  hints, caching-plugin integration (transient caching + manual clear
+  already exist).
+- **Critical CSS integration** — @font-face extraction for above-the-fold.
+- **Presets library extras** — community presets, import/export (core
+  presets shipped long ago).
+- **Bulk feature application** — apply features across many headings,
+  site-wide defaults.
+- **Theme builder integration** — Elementor, Beaver Builder, Divi controls.
+- **Full Site Editing support** — global styles/theme.json typography
+  controls (the font side largely arrived with 2.1.0's Font Library
+  integration; the controls side has not).
 
-**Benefits:**
-- Access to modern variable font technology
-- More typographic control with fewer font files
-- Better performance (one file instead of multiple weights)
+## Parked / not pursuing now
 
----
-
-### Font Subsetting & Optimization
-**Priority**: Medium
-**Status**: Under Consideration
-
-**Description:**
-- Automatic font subsetting for uploaded kits
-- Remove unused glyphs to reduce file size
-- Unicode range optimization
-
-**Benefits:**
-- Faster page loads
-- Reduced bandwidth usage
-- Better Core Web Vitals scores
-
----
-
-## Typography Features
-
-### Extended OpenType Feature Support
-**Priority**: Medium
-**Status**: Planned
-
-**Current Features:**
-- Ligatures (liga, dlig, calt)
-- Stylistic Sets (ss01-ss20)
-- Alternates (swsh, cswh, salt, titl, ornm)
-
-**Proposed Additions:**
-- Fractions (frac, afrc)
-- Numerals (lnum, onum, pnum, tnum)
-- Small Caps (smcp, c2sc)
-- Superscript/Subscript (sups, subs)
-- Ordinals (ordn)
-- Case-sensitive forms (case)
-
-**Implementation:** Extend `get_available_features()` method
-
----
-
-### Feature Presets Library
-**Priority**: Low
-**Status**: Idea Stage
-
-**Description:**
-- Pre-built feature combinations for common use cases
-- Community-contributed presets
-- Import/export preset functionality
-
-**Examples:**
-- "Elegant Headlines" - dlig + ss01 + swsh
-- "Clean Body Text" - liga + calt
-- "Old Style Numbers" - onum + pnum
+- **Platform port evaluation** — an 8-platform port assessment
+  (Sanity.io and Payload CMS rated strong fits; Squarespace/Contentful not
+  viable) lives only on the `claude/shopify-app-port-evaluation-GwFCZ`
+  branch as `SHOPIFY-PORT-EVALUATION.md` (2026-02-06). Strategic reference,
+  no active work; merge the doc somewhere permanent if a port is ever
+  seriously considered.
+- **WooCommerce integration** — remains an idea; no demand signal since it
+  was first listed.
 
 ---
 
-## User Experience
+## How to request features
 
-### Live Preview in Block Editor
-**Priority**: High
-**Status**: Planned
-
-**Description:**
-- Real-time preview of OpenType features as you toggle them
-- No need to apply settings to see the result
-- Visual feedback for feature availability
-
-**Benefits:**
-- Better user experience
-- Faster workflow
-- Easier to experiment with features
-
----
-
-### Font Feature Detection
-**Priority**: Medium
-**Status**: Under Consideration
-
-**Description:**
-- Automatically detect which features are available in each font
-- Show only supported features in the UI
-- Indicate when a feature has no effect
-
-**Benefits:**
-- Less confusion for users
-- Cleaner interface
-- Better guidance
-
----
-
-### Bulk Feature Application
-**Priority**: Low
-**Status**: Idea Stage
-
-**Description:**
-- Apply the same OpenType features to multiple headings at once
-- Site-wide feature defaults
-- Template-based feature application
-
----
-
-## Performance & Optimization
-
-### Advanced Caching Strategies
-**Priority**: Medium
-**Status**: Under Consideration
-
-**Description:**
-- More intelligent font loading
-- Browser caching hints
-- Preload/prefetch optimization
-- Integration with WordPress caching plugins
-
----
-
-### Critical CSS Integration
-**Priority**: Low
-**Status**: Idea Stage
-
-**Description:**
-- Extract font-face declarations for critical CSS
-- Above-the-fold font loading
-- Integration with performance plugins
-
----
-
-## Integration & Compatibility
-
-### Theme Builder Integration
-**Priority**: Medium
-**Status**: Under Consideration
-
-**Description:**
-- Direct integration with popular page builders
-  - Elementor
-  - Beaver Builder
-  - Divi
-- Custom controls in builder interfaces
-
----
-
-### Full Site Editing (FSE) Support
-**Priority**: High
-**Status**: Planned
-
-**Description:**
-- Deep integration with WordPress Full Site Editing
-- Global styles support
-- Theme.json integration
-- Template part typography controls
-
----
-
-### WooCommerce Integration
-**Priority**: Low
-**Status**: Idea Stage
-
-**Description:**
-- Typography controls for product titles
-- Category headings
-- Shop page optimization
-
----
-
-## How to Request Features
-
-Have an idea for a new feature? We'd love to hear from you!
-
-1. **Check this roadmap** to see if it's already planned
-2. **Open a GitHub issue** with the "enhancement" label
-3. **Describe your use case** - help us understand why you need it
-4. **Provide examples** if possible
-
-**Note:** Features on this roadmap are not guaranteed and timelines are estimates. Priorities may change based on user feedback and technical considerations.
-
----
-
-## Contributing
-
-Interested in helping implement these features?
-
-- Check out [CLAUDE.md](CLAUDE.md) for development guidelines
-- Review [TESTING.md](TESTING.md) for testing practices
-- Read [DOCUMENTATION.md](DOCUMENTATION.md) for architecture overview
-
-We welcome pull requests for any roadmap items!
-
----
-
-**Last Updated:** December 31, 2025
-**Plugin Version:** 1.0.6
+Open a GitHub issue with the enhancement label. See CLAUDE.md, TESTING.md,
+and DOCUMENTATION.md for contribution guidelines.

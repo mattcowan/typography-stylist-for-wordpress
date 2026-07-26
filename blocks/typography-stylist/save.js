@@ -111,7 +111,12 @@ export default function save({ attributes }) {
 		.replace(/<br\b[^>]*>/gi, ' ')
 		.replace(/<[^>]*>/g, '');
 
-	// Parse style string into object
+	// Parse style string into object.
+	// Intentionally NOT migrated to utils.js parseStyleString(): this parse
+	// feeds the serialized save output, which must stay byte-stable for block
+	// validation of already-published posts — a future change to the shared
+	// parser must never be able to shift save markup. See
+	// todo/refactor-style-string-helpers.md.
 	const styleObj = {};
 	if (styleString) {
 		styleString.split(';').forEach(rule => {

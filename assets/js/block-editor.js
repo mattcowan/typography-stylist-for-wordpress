@@ -347,6 +347,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Local storage might not be available
             }
 
+            // Property changes recorded since the last apply. When the selection
+            // is mixed (multiple distinct typost formats), only these changes are
+            // applied per-run — the rest of each run's formatting is preserved.
+            this._pendingChanges = { keys: new Set(), featureToggles: [] };
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -467,6 +472,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._handleApplyBlockProperties = function(e) {
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
+                    // Record which properties this event changes so mixed
+                    // selections only get those patched per-run. Style/animation
+                    // ids reset to wholesale (extensions own the full format).
+                    if (e.detail.paragraphStyleId !== undefined || e.detail.animationId !== undefined || props.features !== undefined) {
+                        self._resetPendingChanges();
+                    } else {
+                        if (props.fontId !== undefined) { self._recordChange('font'); }
+                        if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
+                        if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
+                        if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
+                        if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
+                        if (props.fontVariationSettings !== undefined) { self._recordChange('fontVariationSettings'); }
+                    }
                     self.setState({
                         selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
                         selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
@@ -1096,6 +1114,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             const wasOpen = this.state.isOpen;
 
+            // Fresh popover session: no property changes recorded yet
+            this._resetPendingChanges();
+
             this.setState(state => ({
                 isOpen: !state.isOpen,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -1151,6 +1172,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font family (value can be font ID or font family string)
          */
         setFont(value) {
+            this._recordChange('font');
             if (value === '') {
                 // Reset to default
                 this.setState({
@@ -1200,6 +1222,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         // Auto-apply single weight (if not default 400)
                         if (available.length === 1 && this.state.fontWeight !== available[0]) {
                             newState.fontWeight = available[0];
+                        }
+                        if (newState.fontWeight !== undefined) {
+                            this._recordChange('fontWeight');
                         }
                     }
 
@@ -1254,9 +1279,26 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Record a property change for the next apply. On mixed selections the
+         * apply patches only the recorded properties per formatting run.
+         */
+        _recordChange(key) {
+            this._pendingChanges.keys.add(key);
+        }
+
+        _recordFeatureToggle(tag, enabled) {
+            this._pendingChanges.featureToggles.push({ tag: tag, enabled: enabled });
+        }
+
+        _resetPendingChanges() {
+            this._pendingChanges = { keys: new Set(), featureToggles: [] };
+        }
+
+        /**
          * Set font size mode
          */
         setFontSize(mode) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSize: mode
             }, () => {
@@ -1268,6 +1310,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size min
          */
         setFontSizeMin(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizeMin: value
             }, () => {
@@ -1279,6 +1322,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size preferred
          */
         setFontSizePreferred(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizePreferred: value
             }, () => {
@@ -1290,6 +1334,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size max
          */
         setFontSizeMax(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizeMax: value
             }, () => {
@@ -1301,6 +1346,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font weight
          */
         setFontWeight(value) {
+            this._recordChange('fontWeight');
             this.setState({
                 fontWeight: value
             }, () => {
@@ -1312,6 +1358,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set letter spacing
          */
         setLetterSpacing(value) {
+            this._recordChange('letterSpacing');
             this.setState({
                 letterSpacing: value
             }, () => {
@@ -1323,6 +1370,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set line height
          */
         setLineHeight(value) {
+            this._recordChange('lineHeight');
             this.setState({
                 lineHeight: value
             }, () => {
@@ -1340,8 +1388,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 if (index > -1) {
                     features.splice(index, 1);
+                    this._recordFeatureToggle(featureId, false);
                 } else {
                     features.push(featureId);
+                    this._recordFeatureToggle(featureId, true);
                 }
 
                 return {
@@ -1679,6 +1729,74 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Translate the pending property changes into a per-run patch for
+         * patchTypostFormatAttributes(): data attributes + style declarations
+         * to set (or null to remove), plus feature add/remove toggles.
+         */
+        _buildPatchFromPending(pending) {
+            const { selectedFont, selectedFontId, fontWeight, letterSpacing, lineHeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontVariationSettings } = this.state;
+            const dataAttrs = {};
+            const styleDecls = {};
+
+            if (pending.keys.has('font')) {
+                if (selectedFontId) {
+                    dataAttrs['data-font'] = selectedFont;
+                    dataAttrs['data-font-id'] = String(selectedFontId);
+                    styleDecls['font-family'] = `var(--font-${selectedFontId})`;
+                } else if (selectedFont) {
+                    dataAttrs['data-font'] = selectedFont;
+                    dataAttrs['data-font-id'] = null;
+                    styleDecls['font-family'] = selectedFont;
+                } else {
+                    dataAttrs['data-font'] = null;
+                    dataAttrs['data-font-id'] = null;
+                    styleDecls['font-family'] = null;
+                }
+                // Axis values are font-specific — a font change invalidates them
+                dataAttrs['data-font-variation-settings'] = null;
+                styleDecls['font-variation-settings'] = null;
+            }
+            if (pending.keys.has('fontWeight')) {
+                dataAttrs['data-fontweight'] = fontWeight;
+                styleDecls['font-weight'] = fontWeight;
+            }
+            if (pending.keys.has('letterSpacing')) {
+                dataAttrs['data-letterspacing'] = letterSpacing !== 0 ? String(letterSpacing) : null;
+                styleDecls['letter-spacing'] = letterSpacing !== 0 ? `${letterSpacing / 1000}em` : null;
+            }
+            if (pending.keys.has('lineHeight')) {
+                dataAttrs['data-lineheight'] = lineHeight !== 0 ? String(lineHeight) : null;
+                styleDecls['line-height'] = lineHeight !== 0 ? String(lineHeight) : null;
+            }
+            if (pending.keys.has('fontSize')) {
+                if (fontSize !== 'inherit') {
+                    dataAttrs['data-fontsize'] = fontSize;
+                    dataAttrs['data-fontsize-min'] = String(fontSizeMin);
+                    dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
+                    dataAttrs['data-fontsize-max'] = String(fontSizeMax);
+                    styleDecls['font-size'] = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                } else {
+                    dataAttrs['data-fontsize'] = null;
+                    dataAttrs['data-fontsize-min'] = null;
+                    dataAttrs['data-fontsize-preferred'] = null;
+                    dataAttrs['data-fontsize-max'] = null;
+                    styleDecls['font-size'] = null;
+                }
+            }
+            if (pending.keys.has('fontVariationSettings')) {
+                const safeSettings = sanitizeFontVariationSettings(fontVariationSettings || '');
+                dataAttrs['data-font-variation-settings'] = safeSettings || null;
+                styleDecls['font-variation-settings'] = safeSettings || null;
+            }
+
+            return {
+                dataAttrs: dataAttrs,
+                styleDecls: styleDecls,
+                featureToggles: pending.featureToggles.slice()
+            };
+        }
+
+        /**
          * Core feature application logic (live preview auto-apply)
          */
         _doApplyFeatures() {
@@ -1702,6 +1820,45 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 activeFormatForRaw = getActiveFormat(value, FORMAT_TYPE);
             }
             const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
+
+            // MIXED SELECTIONS: when the range spans multiple distinct typost
+            // formats (or formatted + plain text), stamping the full popover
+            // state over it would wipe every per-run difference — the popover
+            // state can't represent heterogeneity. Instead, patch ONLY the
+            // properties changed since the last apply into each formatting run,
+            // leaving everything else about each run untouched.
+            const effectiveStart = selectionLost ? savedSelectionStart : value.start;
+            const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
+            const pending = this._pendingChanges;
+            const hasPending = pending && (pending.keys.size > 0 || pending.featureToggles.length > 0);
+            const shared = window.typostSharedUtils || {};
+
+            if (hasPending && shared.isMixedFormatSelection && shared.patchTypostFormatAttributes &&
+                Number.isFinite(effectiveStart) && Number.isFinite(effectiveEnd) && effectiveStart !== effectiveEnd &&
+                shared.isMixedFormatSelection(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE)) {
+
+                const patch = this._buildPatchFromPending(pending);
+                this._resetPendingChanges();
+
+                const runs = shared.computeTypostFormatRuns(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE);
+                let newValue = value;
+                runs.forEach((run) => {
+                    const patchedAttrs = shared.patchTypostFormatAttributes(run.attributes, patch);
+                    if (patchedAttrs) {
+                        newValue = applyFormat(newValue, {
+                            type: FORMAT_TYPE,
+                            attributes: patchedAttrs
+                        }, run.start, run.end);
+                    } else if (run.attributes) {
+                        newValue = removeFormat(newValue, FORMAT_TYPE, run.start, run.end);
+                    }
+                });
+                onChange(newValue);
+                return;
+            }
+            if (pending) {
+                this._resetPendingChanges();
+            }
 
             if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
@@ -1852,6 +2009,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Apply preset
          */
         applyPreset(preset) {
+            // Presets define a complete look — wholesale apply is intended
+            this._resetPendingChanges();
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
@@ -1917,6 +2076,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         clearFeatures() {
             const { value, onChange } = this.props;
             const { savedSelectionStart, savedSelectionEnd } = this.state;
+            // Clearing removes the format wholesale by design — drop any
+            // recorded property changes so a later apply doesn't resurrect them
+            this._resetPendingChanges();
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
             if (selectionLost) {
@@ -2041,6 +2203,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Add feature if not already active (idempotent operation)
             if (!selectedFeatures.includes(featureId)) {
+                this._recordFeatureToggle(featureId, true);
                 this.setState({
                     selectedFeatures: [...selectedFeatures, featureId]
                 }, () => {
