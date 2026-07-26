@@ -7,7 +7,9 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 
 == Changelog ==
 
-= 2.1.3 =
+= 2.2.0 =
+* **NEW: Font Style (visual italic) controls.** The Typography Stylist block gains a Font Style setting — block-level in the sidebar and per-selection in the Quick Feature Toggles — that selects the font's italic (or upright) face. This is deliberately style-only: it never adds emphasis semantics, and the control says so — for semantic emphasis that screen readers announce, use the editor's own Italic button, which continues to work as before. Ideal for display typography where italic is a design choice, not emphasis.
+* Fixed: feature previews now render with the italic face when the selection is italic — whether via the editor's Italic button (em), the new Font Style setting, or an italic styled span. Previously previews always showed the roman face, hiding italic-only glyphs like EB Garamond's swash italic capitals.
 * Fixed: moving one variable-font axis slider no longer changes other axes. The axis panels emitted every axis on any change — including untouched axes pinned to the font file's built-in defaults, which differ from normal rendering (Fraunces' built-in weight default is 900, so nudging its WONK slider turned text bold). Only axes the author has actually adjusted (or that were already applied to the text) are written into font-variation-settings; "Reset to defaults" now returns axes to natural rendering instead of pinning them.
 * Fixed: the variable-font Weight slider in the Quick Feature Toggles now works — it identified its context with a selector that matched nothing, dispatched to the wrong editor, and was silently dropped. The weight slider and the custom-axes panel also now share one axis session, so weight and custom-axis adjustments combine instead of overwriting each other.
 * Changed: bumped the Variable Fonts module version constant (1.3.0) so browsers pick up the updated module scripts.

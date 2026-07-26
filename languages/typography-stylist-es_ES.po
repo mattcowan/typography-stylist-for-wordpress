@@ -1996,3 +1996,27 @@ msgstr "Falló la detección de pesos. Inténtalo de nuevo."
 #: includes/admin-page.php
 msgid "Auto-detected from the Adobe Fonts stylesheet."
 msgstr "Detectados automáticamente desde la hoja de estilos de Adobe Fonts."
+
+#: blocks/typography-stylist/edit.js
+msgid "Font Style"
+msgstr "Estilo de fuente"
+
+#: blocks/typography-stylist/edit.js
+msgid "Font Style (for selected text)"
+msgstr "Estilo de fuente (para el texto seleccionado)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Normal (upright)"
+msgstr "Normal (recto)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Italic"
+msgstr "Cursiva"
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Font Style"
+msgstr "Restablecer el estilo de fuente"
+
+#: blocks/typography-stylist/edit.js
+msgid "Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead."
+msgstr "Solo estilo visual — la variante cursiva de la fuente, sin añadir énfasis. Para enfatizar texto semánticamente (los lectores de pantalla lo anuncian), usa el botón Cursiva del editor."

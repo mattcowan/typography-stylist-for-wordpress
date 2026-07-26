@@ -2233,6 +2233,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 previewStyle.fontFamily = fontToUse;
             }
 
+            // Render the italic face when the selection is italic (the editor's
+            // own Italic <em> format, or a data-fontstyle styled span) — italic
+            // faces carry their own glyphs and feature sets
+            const { value } = this.props;
+            const typostFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+            const spanFontStyle = typostFormat && typostFormat.attributes && typostFormat.attributes['data-fontstyle'];
+            if (spanFontStyle) {
+                previewStyle.fontStyle = spanFontStyle;
+            } else if (value && getActiveFormat(value, 'core/italic')) {
+                previewStyle.fontStyle = 'italic';
+            }
+
             return (
                 <div key={feature.id} className="typost-feature-toggle">
                     <ToggleControl

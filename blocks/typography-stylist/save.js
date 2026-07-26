@@ -39,6 +39,7 @@ export default function save({ attributes }) {
 		fontSizePreferred,
 		fontSizeMax,
 		fontWeight,
+		fontStyle,
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
@@ -74,6 +75,13 @@ export default function save({ attributes }) {
 
 		if (fontWeight) {
 			styleArray.push(`font-weight: ${fontWeight}`);
+		}
+
+		// Visual italic only (font-style) — semantic emphasis stays <em>, added
+		// via the editor's own Italic button. Empty default keeps existing
+		// blocks' save output byte-identical (block validation).
+		if (fontStyle) {
+			styleArray.push(`font-style: ${fontStyle}`);
 		}
 
 		if (letterSpacing !== 0) {

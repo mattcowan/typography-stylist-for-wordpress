@@ -231,3 +231,27 @@ describe('Typography Stylist - parseInlineStylesAtCursor', () => {
 		expect(result.spanEnd).toBe(11);
 	});
 });
+
+describe('fontStyle detection (visual italic)', () => {
+	const { parseInlineStylesAtCursor } = require('../utils');
+
+	test('detects data-fontstyle on the span at the cursor', () => {
+		const html = '<span class="typost-styled" data-fontstyle="italic" style="font-style: italic">Elegant</span>';
+		expect(parseInlineStylesAtCursor(html, 2, 2).fontStyle).toBe('italic');
+	});
+
+	test('inherits data-fontstyle from an ancestor span', () => {
+		const html = '<span class="typost-styled" data-fontstyle="italic" style="font-style: italic"><span class="typost-styled" data-features="swsh" style=\'font-feature-settings: "swsh" 1\'>El</span>egant</span>';
+		expect(parseInlineStylesAtCursor(html, 1, 1).fontStyle).toBe('italic');
+	});
+
+	test('falls back to semantic <em> around the styled span', () => {
+		const html = '<em><span class="typost-styled" data-features="swsh" style=\'font-feature-settings: "swsh" 1\'>Elegant</span></em>';
+		expect(parseInlineStylesAtCursor(html, 2, 2).fontStyle).toBe('italic');
+	});
+
+	test('null when nothing italic is present', () => {
+		const html = '<span class="typost-styled" data-fontsize="20px" style="font-size: 20px">Elegant</span>';
+		expect(parseInlineStylesAtCursor(html, 2, 2).fontStyle).toBeNull();
+	});
+});

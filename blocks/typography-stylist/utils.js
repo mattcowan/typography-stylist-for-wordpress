@@ -406,6 +406,7 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			features: [],
 			fontId: null,
 			fontWeight: null,
+			fontStyle: null,
 			fontSize: null,
 			fontSizeMin: null,
 			fontSizePreferred: null,
@@ -455,6 +456,14 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontWeight = currentSpan.getAttribute('data-fontweight');
 				if (fontWeight) {
 					result.fontWeight = fontWeight;
+				}
+			}
+
+			// FontStyle - inherited from first ancestor that has it
+			if (result.fontStyle === null) {
+				const fontStyle = currentSpan.getAttribute('data-fontstyle');
+				if (fontStyle) {
+					result.fontStyle = fontStyle;
 				}
 			}
 
@@ -512,6 +521,12 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			} else {
 				currentSpan = null;
 			}
+		}
+
+		// FontStyle fallback: semantic italic (<em>/<i>) around the selection
+		// still renders the italic face — previews must know about it
+		if (result.fontStyle === null && smallestMatchingSpan.closest('em, i')) {
+			result.fontStyle = 'italic';
 		}
 
 		return result;
@@ -803,7 +818,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
  * NOTE: save.js keeps its own inline parse on purpose — save output must stay
  * byte-stable for block validation.
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {string} styleString CSS style string (e.g. "font-size: 20px; font-weight: 700")
  * @return {Object} Property→value map (insertion order preserved)
  */
@@ -828,7 +843,7 @@ export function parseStyleString(styleString) {
  *
  * Inverse of parseStyleString(): "prop: value" pairs joined with "; ".
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Object} styleObj Property→value map
  * @return {string} CSS style string ('' for an empty object)
  */
@@ -873,7 +888,7 @@ export function validateNestingDepth(element) {
  * an element already at depth 3 must refuse. Used by every wrap/nest path so
  * the max-3 rule holds regardless of which application strategy runs.
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Element} element Element the new span would be created under
  * @return {boolean}
  */
@@ -899,7 +914,7 @@ export function canCreateNestedSpan(element) {
  * Mutates both the span and the passed attributes object (preservation writes
  * into it — callers construct fresh attribute literals per call).
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Element} span        Existing typost-styled span (entire text selected)
  * @param {Object}  attributes  Attributes to apply
  * @param {string}  styleString CSS style string to apply
@@ -914,7 +929,7 @@ export function mergeTypostSpanStyling(span, attributes, styleString) {
 
 	// PRESERVE existing inline attributes that caller isn't explicitly setting
 	// This prevents losing inline font-family when applying line-height, etc.
-	const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-letterspacing', 'data-lineheight'];
+	const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-fontstyle', 'data-letterspacing', 'data-lineheight'];
 	const preservedAttributes = {};
 	attributesToPreserve.forEach(attr => {
 		if (!Object.prototype.hasOwnProperty.call(attributes, attr) && span.hasAttribute(attr)) {
@@ -964,6 +979,7 @@ export function mergeTypostSpanStyling(span, attributes, styleString) {
 		const stylePropertyMap = {
 			'data-font-id': 'font-family',
 			'data-fontweight': 'font-weight',
+			'data-fontstyle': 'font-style',
 			'data-fontsize': 'font-size',
 			'data-letterspacing': 'letter-spacing',
 			'data-lineheight': 'line-height'
@@ -1586,7 +1602,7 @@ export function resolveQftInsertionRange(capturedSelection, selectionStart, sele
  *    caret-based update-in-place behaviors
  * 4. null — no usable selection information
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Object|null} selectionStart - Block editor selection start {clientId, offset}
  * @param {Object|null} selectionEnd - Block editor selection end {clientId, offset}
  * @param {string} clientId - This block's client ID
@@ -1869,7 +1885,7 @@ export function filterFeaturesByVisibility(allFeatures, fontId, visibilityMap) {
  *   font-feature-settings are owned by the payload. font-variation-settings
  *   is inherited only when the font is unchanged (axes are font-specific).
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Object|null} incoming  Attributes from the insertion payload
  * @param {Object|null} inherited Attributes of the typost format being replaced
  * @returns {Object|null} Merged attributes (incoming unchanged when nothing to merge)
@@ -1929,7 +1945,7 @@ export function mergeInsertionFormatAttributes(incoming, inherited) {
  * null). Used to apply a single property change per-run across a mixed
  * selection instead of stamping one uniform format over everything.
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Array}  formats    value.formats from @wordpress/rich-text (per-char format arrays)
  * @param {number} start      Range start offset
  * @param {number} end        Range end offset (exclusive)
@@ -1972,7 +1988,7 @@ export function computeTypostFormatRuns(formats, start, end, formatType) {
  * A mixed selection is one where a wholesale format apply would destroy
  * per-run differences (the "select all + change font wipes my settings" bug).
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Array}  formats    value.formats from @wordpress/rich-text
  * @param {number} start      Range start offset
  * @param {number} end        Range end offset (exclusive)
@@ -1987,7 +2003,7 @@ export function isMixedFormatSelection(formats, start, end, formatType) {
  * Patch a typost format's attributes with a single property change,
  * preserving everything the change doesn't touch.
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Object|null} existingAttrs Format attributes of the run (null = unformatted)
  * @param {Object} patch { dataAttrs: {name: value|null}, styleDecls: {prop: value|null},
  *                         featureToggles: [{tag, enabled}] } — null values remove
@@ -2074,7 +2090,7 @@ export function patchTypostFormatAttributes(existingAttrs, patch) {
  * declaration replaces the outer one wholesale in CSS, so the wrapper's tags
  * must be added to it). Descendants left with no attributes are unwrapped.
  *
- * @since 2.1.3
+ * @since 2.2.0
  * @param {Element} wrapper     The newly created wrapping span
  * @param {Object}  attributes  The attributes applied to the wrapper
  * @param {string}  styleString The style string applied to the wrapper
@@ -2087,6 +2103,7 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
 	const cascadeProps = {
 		'font-family': ['data-font-id', 'data-font'],
 		'font-weight': ['data-fontweight'],
+		'font-style': ['data-fontstyle'],
 		'font-size': ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'],
 		'letter-spacing': ['data-letterspacing'],
 		'line-height': ['data-lineheight'],

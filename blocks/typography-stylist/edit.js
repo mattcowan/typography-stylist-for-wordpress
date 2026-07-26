@@ -130,6 +130,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontSizePreferred,
 		fontSizeMax,
 		fontWeight,
+		fontStyle,
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
@@ -171,6 +172,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewFontSizePreferred, setPreviewFontSizePreferred] = useState(32);
 	const [previewFontSizeMax, setPreviewFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('inherit');
+	const [inlineFontStyle, setInlineFontStyle] = useState('');
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
@@ -827,6 +829,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			setInlineLetterSpacing(0);
 			setInlineLineHeight(0);
 			setInlineFontWeight('inherit');
+			setInlineFontStyle('');
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
 			setInlineFontSizeMin(16);
@@ -844,6 +847,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 		if (detected.fontWeight) {
 			setInlineFontWeight(detected.fontWeight);
+		}
+		if (detected.fontStyle) {
+			setInlineFontStyle(detected.fontStyle);
 		}
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
@@ -1858,6 +1864,114 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	};
 
+	// Apply font style (visual italic) to selected text only (inline).
+	// Style-only by design: semantic emphasis stays the editor's own Italic
+	// button (<em>), which screen readers announce; this control just selects
+	// the font's italic (or upright) face.
+	const applyInlineFontStyle = (value) => {
+		if (!content || !value) return;
+
+		if (resolvedApplyRange) {
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
+
+			// COLLAPSED CURSOR: Update parent span in-place
+			if (start === end) {
+				const result = updateSpanPropertyInPlace(
+					content,
+					start,
+					'data-fontstyle',
+					value,
+					'font-style',
+					value
+				);
+
+				if (result.success) {
+					setAttributes({ content: result.content });
+					originalContentRef.current = null;
+				}
+				return;
+			}
+
+			// SELECTION: Check if we should split parent span
+			if (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) {
+				const result = splitSpanAndApply(
+					content,
+					start,
+					end,
+					'data-fontstyle',
+					{ 'data-fontstyle': value },
+					`font-style: ${value}`
+				);
+
+				if (result.success) {
+					setAttributes({ content: result.content });
+					originalContentRef.current = null;
+					return;
+				}
+			}
+
+			// STRATEGY: Try Range method first, fallback to string manipulation
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+			const container = doc.body.firstChild;
+			const range = getRangeForOffsets(container, start, end, doc);
+			const validation = validateRangeMatchesSelection(
+				range,
+				capturedSelection?.text || '',
+				capturedSelection?.length || 0
+			);
+
+			let success = false;
+			let newContent = content;
+
+			if (validation.valid) {
+				success = applyOrMergeStyling(range, { 'data-fontstyle': value }, `font-style: ${value}`, doc);
+				if (success) {
+					newContent = container.innerHTML;
+				}
+			}
+
+			if (!success) {
+				const fallbackResult = applyStylingSafeStringMethod(
+					content,
+					start,
+					end,
+					{ 'data-fontstyle': value },
+					`font-style: ${value}`
+				);
+				if (fallbackResult.success) {
+					newContent = fallbackResult.content;
+				} else {
+					return;
+				}
+			}
+
+			setAttributes({ content: newContent });
+			originalContentRef.current = null;
+		}
+	};
+
+	// Reset font style (remove from content)
+	const resetFontStyle = () => {
+		if (!content || !inlineFontStyle) return;
+
+		setInlineFontStyle('');
+
+		if (resolvedApplyRange) {
+			const result = removePropertyFromSelection(
+				content,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
+				'data-fontstyle',
+				'font-style'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
 	// Apply font family to selected text only (inline)
 	const applyInlineFontFamily = () => {
 		if (!content || !inlineFontFamily) return;
@@ -2337,6 +2451,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			styles.fontWeight = fontWeight;
 		}
 
+		if (fontStyle) {
+			styles.fontStyle = fontStyle;
+		}
+
 		if (letterSpacing !== 0) {
 			styles.letterSpacing = `${letterSpacing / 1000}em`;
 		}
@@ -2685,6 +2803,39 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									);
 								})()}
 
+								{/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Font Style (for selected text)', 'typography-stylist')}
+										value={inlineFontStyle}
+										options={[
+											{ label: __('Inherit', 'typography-stylist'), value: '' },
+											{ label: __('Normal (upright)', 'typography-stylist'), value: 'normal' },
+											{ label: __('Italic', 'typography-stylist'), value: 'italic' }
+										]}
+										onChange={(value) => {
+											setInlineFontStyle(value);
+											if (value) {
+												applyInlineFontStyle(value);
+											} else {
+												resetFontStyle();
+											}
+										}}
+										help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+									/>
+									{inlineFontStyle && (
+										<Button
+											variant="secondary"
+											onClick={resetFontStyle}
+											isDestructive
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
+										>
+											{__('Reset Font Style', 'typography-stylist')}
+										</Button>
+									)}
+								</div>
+
 								{/* Extension hook point: after font controls (e.g., Variable Font axes).
 								    key: remount (and re-fire the action) when any active font changes */}
 								<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
@@ -2918,7 +3069,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 																fontFeatureSettings: [...new Set([feature.id, ...features, ...inlineFeaturesAtSelection])].map(f => `"${f}" 1`).join(', '),
 																fontFamily: inlineFontFamilyAtSelection
 																	? `var(--font-${inlineFontFamilyAtSelection})`
-																	: (fontFamily || computedFont || 'inherit')
+																	: (fontFamily || computedFont || 'inherit'),
+																// Render the italic face when the selection is italic
+																// (data-fontstyle span, <em>/<i>, or the block setting) —
+																// italic faces carry their own glyphs and features
+																fontStyle: (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) || inlineFontStyle || fontStyle || undefined
 															}}
 														>
 															{sampleText}
@@ -3141,6 +3296,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight });
 					}
 				}} />
+
+				<PanelBody title={__('Font Style', 'typography-stylist')} initialOpen={false}>
+					<SelectControl
+						value={fontStyle}
+						options={[
+							{ label: __('Inherit', 'typography-stylist'), value: '' },
+							{ label: __('Normal (upright)', 'typography-stylist'), value: 'normal' },
+							{ label: __('Italic', 'typography-stylist'), value: 'italic' }
+						]}
+						onChange={(value) => setAttributes({ fontStyle: value })}
+						help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+					/>
+				</PanelBody>
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl

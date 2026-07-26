@@ -516,3 +516,32 @@ describe('Typography Stylist - Save Component (Frontend Rendering)', () => {
 		});
 	});
 });
+describe('fontStyle attribute (visual italic)', () => {
+	const baseAttributes = {
+		content: 'Headline',
+		tagName: 'h2',
+		features: [],
+		screenReaderClass: 'visually-hidden',
+		fontSize: 'inherit',
+		fontWeight: '400',
+		letterSpacing: 0
+	};
+
+	const visualStyleOf = (attributes) => {
+		const tree = create(save({ attributes })).toJSON();
+		// children[1] is the visual (aria-hidden) heading
+		return tree.children[1].props.style || {};
+	};
+
+	it('adds font-style to the visual heading when set', () => {
+		const style = visualStyleOf({ ...baseAttributes, fontStyle: 'italic' });
+		expect(style.fontStyle).toBe('italic');
+	});
+
+	it('empty/absent fontStyle produces identical output (block validation safety)', () => {
+		const withDefault = create(save({ attributes: { ...baseAttributes, fontStyle: '' } })).toJSON();
+		const without = create(save({ attributes: { ...baseAttributes } })).toJSON();
+		expect(JSON.stringify(withDefault)).toBe(JSON.stringify(without));
+		expect((withDefault.children[1].props.style || {}).fontStyle).toBeUndefined();
+	});
+});

@@ -1996,3 +1996,27 @@ msgstr "La détection des graisses a échoué. Veuillez réessayer."
 #: includes/admin-page.php
 msgid "Auto-detected from the Adobe Fonts stylesheet."
 msgstr "Détectées automatiquement depuis la feuille de style Adobe Fonts."
+
+#: blocks/typography-stylist/edit.js
+msgid "Font Style"
+msgstr "Style de police"
+
+#: blocks/typography-stylist/edit.js
+msgid "Font Style (for selected text)"
+msgstr "Style de police (pour le texte sélectionné)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Normal (upright)"
+msgstr "Normal (droit)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Italic"
+msgstr "Italique"
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Font Style"
+msgstr "Réinitialiser le style de police"
+
+#: blocks/typography-stylist/edit.js
+msgid "Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead."
+msgstr "Style visuel uniquement — la fonte italique de la police, sans ajouter d'emphase. Pour mettre du texte en emphase sémantique (annoncée par les lecteurs d'écran), utilisez plutôt le bouton Italique de l'éditeur."
