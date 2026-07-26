@@ -279,15 +279,31 @@
 	function mergeAxisSession(session, axes, initialSettings) {
 		session.values = session.values || {};
 		session.touched = session.touched || {};
+
+		// Prune tags that don't belong to this font's axes — axis values are
+		// font-specific, so leftovers from a previously-mounted font (or from
+		// stale span settings) must never keep emitting
+		var validTags = {};
 		for (var i = 0; i < axes.length; i++) {
-			var ax = axes[i];
+			validTags[axes[i].tag] = true;
+		}
+		var existing = Object.keys(session.values);
+		for (var k = 0; k < existing.length; k++) {
+			if (!validTags[existing[k]]) {
+				delete session.values[existing[k]];
+				delete session.touched[existing[k]];
+			}
+		}
+
+		for (var j = 0; j < axes.length; j++) {
+			var ax = axes[j];
 			if (session.values[ax.tag] === undefined) {
 				session.values[ax.tag] = ax['default'];
 			}
 		}
 		if (initialSettings) {
 			for (var tag in initialSettings) {
-				if (initialSettings.hasOwnProperty(tag)) {
+				if (initialSettings.hasOwnProperty(tag) && validTags[tag]) {
 					session.values[tag] = initialSettings[tag];
 					session.touched[tag] = true;
 				}

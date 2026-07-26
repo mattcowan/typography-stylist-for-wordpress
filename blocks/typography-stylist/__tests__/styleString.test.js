@@ -39,12 +39,18 @@ describe('parseStyleString', () => {
 	});
 
 	test('splits on the FIRST colon only (multi-colon values intact)', () => {
+		expect(parseStyleString('--x: a:b')).toEqual({ '--x': 'a:b' });
+		expect(parseStyleString('background-image: url(data:image/png)')).toEqual({
+			'background-image': 'url(data:image/png)',
+		});
+	});
+
+	test('semicolons INSIDE values truncate (documented limitation)', () => {
+		// Declarations split on ';' before colon handling — a semicolon inside
+		// a value ends the declaration early. Shared by every prior inline
+		// parser; plugin-generated values never contain semicolons.
 		expect(parseStyleString('background-image: url(data:image/png;base64x)')['background-image'])
 			.toBe('url(data:image/png');
-		// (semicolons inside values are a known limitation shared by every
-		// prior inline parser — plugin-generated values never contain them;
-		// colons after the first are preserved:)
-		expect(parseStyleString('--x: a:b')).toEqual({ '--x': 'a:b' });
 	});
 
 	test('lowercases property names', () => {

@@ -289,3 +289,28 @@ describe('axis sessions (touched-only emission)', () => {
 		expect(pickTouchedSettings(session)).toEqual({});
 	});
 });
+
+describe('axis session pruning (font switch)', () => {
+	const { mergeAxisSession: mergeSession, pickTouchedSettings: pickTouched } = require('../assets/js/lib/variation-utils.js');
+
+	test('tags from a previous font are pruned when a new font\'s axes merge in', () => {
+		const session = { values: {}, touched: {} };
+		// Font A: custom CONY axis, touched
+		mergeSession(session, [{ tag: 'CONY', min: 0, max: 1000, default: 400 }], {});
+		session.values.CONY = 700;
+		session.touched.CONY = true;
+		expect(pickTouched(session)).toEqual({ CONY: 700 });
+		// Font B mounts with different axes — font A's touched axis must not survive
+		mergeSession(session, [{ tag: 'wght', min: 100, max: 900, default: 400 }], {});
+		expect(pickTouched(session)).toEqual({});
+		expect(session.values.CONY).toBeUndefined();
+		expect(session.values.wght).toBe(400);
+	});
+
+	test('span settings for tags the font does not have are ignored', () => {
+		const session = mergeSession({ values: {}, touched: {} },
+			[{ tag: 'wght', min: 100, max: 900, default: 400 }],
+			{ CONY: 700, wght: 550 });
+		expect(pickTouched(session)).toEqual({ wght: 550 });
+	});
+});

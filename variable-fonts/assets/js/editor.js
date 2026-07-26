@@ -166,49 +166,61 @@
 	// Axes Panel Component
 	// -------------------------------------------------------------------------
 
-	// Shared axis-adjustment sessions, one per editor surface. The weight
-	// panel and the custom-axes panel are separate mounts but must compose a
-	// single font-variation-settings value; the session also tracks which
-	// axes were actually touched, because ONLY touched axes may be emitted —
-	// emitting untouched axes pins them to the font file's defaults (for
-	// Fraunces that meant "wght" 900: moving the WONK slider turned the text
-	// Black). Refcounted so the session dies when the popover closes.
+	// Shared axis-adjustment sessions, one per (editor surface, font). The
+	// weight panel and the custom-axes panel are separate mounts but must
+	// compose a single font-variation-settings value; the session also tracks
+	// which axes were actually touched, because ONLY touched axes may be
+	// emitted — emitting untouched axes pins them to the font file's defaults
+	// (for Fraunces that meant "wght" 900: moving the WONK slider turned the
+	// text Black). Keyed by font as well as surface: axis values are
+	// font-specific, and on a font switch React mounts the new panels BEFORE
+	// the old ones clean up, so an editorType-only key would never reset and
+	// the old font's touched axes would keep emitting. Refcounted so a
+	// session dies when its last panel unmounts.
 	var axisSessions = {};
 
-	function acquireAxisSession(editorType, axes, initialSettings) {
-		var session = axisSessions[editorType];
+	function axisSessionKey(editorType, fontId) {
+		return editorType + ':' + (fontId || 0);
+	}
+
+	function acquireAxisSession(sessionKey, axes, initialSettings) {
+		var session = axisSessions[sessionKey];
 		if (!session) {
 			session = { values: {}, touched: {}, refs: 0 };
-			axisSessions[editorType] = session;
+			axisSessions[sessionKey] = session;
 		}
 		window.typostVFUtils.mergeAxisSession(session, axes, initialSettings);
 		session.refs++;
 		return session;
 	}
 
-	function releaseAxisSession(editorType) {
-		var session = axisSessions[editorType];
+	function releaseAxisSession(sessionKey) {
+		var session = axisSessions[sessionKey];
 		if (!session) return;
 		session.refs--;
 		if (session.refs <= 0) {
-			delete axisSessions[editorType];
+			delete axisSessions[sessionKey];
 		}
 	}
 
 	function AxesPanel(props) {
 		var axes = props.axes;
 		var editorType = props.editorType;
+		var fontId = props.fontId;
 		var filterAxes = props.filterAxes; // optional: 'wght' for weight control, 'non-wght' for others
 		var initialSettings = props.initialSettings || {};
 
-		// Join (or start) the shared session for this editor surface
+		// Join (or start) the shared session for this (surface, font)
+		var sessionKeyRef = useRef(null);
 		var sessionRef = useRef(null);
 		if (sessionRef.current === null) {
-			sessionRef.current = acquireAxisSession(editorType, axes, initialSettings);
+			sessionKeyRef.current = axisSessionKey(editorType, fontId);
+			sessionRef.current = acquireAxisSession(sessionKeyRef.current, axes, initialSettings);
 		}
 		useEffect(function() {
+			var key = sessionKeyRef.current;
 			return function() {
-				releaseAxisSession(editorType);
+				releaseAxisSession(key);
 			};
 		}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -373,6 +385,7 @@
 			el(AxesPanel, {
 				axes: axes,
 				editorType: editorType,
+				fontId: fontId,
 				filterAxes: 'wght',
 				initialSettings: currentSettings
 			}),
@@ -402,6 +415,7 @@
 				el(AxesPanel, {
 					axes: axes,
 					editorType: editorType,
+					fontId: fontId,
 					filterAxes: 'non-wght',
 					initialSettings: currentSettings
 				})
