@@ -239,9 +239,32 @@ function adoptWpFont(slug) {
 	});
 }
 
+/**
+ * Resolve the font family for previewing the formatting at the current
+ * selection. Spans written since v1.1.6 carry only data-font-id (the legacy
+ * data-font family name is absent), so the family must be resolved from the
+ * numeric ID via the fontIdMap.
+ *
+ * @param {string} activeFont   Family name from the legacy data-font attribute ('' if absent)
+ * @param {number} activeFontId Numeric ID from data-font-id (0 if absent)
+ * @param {Object} fontIdMap    Map of font_id -> {family, ...} from buildFontOptions()
+ * @return {string} Family name, or '' when unresolvable
+ */
+function resolveActiveFontFamily(activeFont, activeFontId, fontIdMap) {
+	if (activeFont) {
+		return activeFont;
+	}
+	var id = parseInt(activeFontId, 10);
+	if (!isNaN(id) && id > 0 && fontIdMap && fontIdMap[id]) {
+		return fontIdMap[id].family;
+	}
+	return '';
+}
+
 module.exports = {
 	buildFontOptions: buildFontOptions,
 	isWpLibraryValue: isWpLibraryValue,
 	wpSlugFromValue: wpSlugFromValue,
-	adoptWpFont: adoptWpFont
+	adoptWpFont: adoptWpFont,
+	resolveActiveFontFamily: resolveActiveFontFamily
 };

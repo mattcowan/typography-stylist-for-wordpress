@@ -258,6 +258,15 @@
 	 * @return {Array} Grid items (empty when meta is missing or cp not in the font)
 	 */
 	function buildAlternateItems(meta, cp) {
+		// Sequence form: an array of codepoints shows the exact ligature
+		// alternates for that character combination (e.g. "Th")
+		if (Array.isArray(cp)) {
+			if (cp.length === 1) {
+				cp = cp[0];
+			} else {
+				return buildSequenceAlternateItems(meta, cp);
+			}
+		}
 		if (!meta || typeof cp !== 'number') {
 			return [];
 		}
@@ -290,6 +299,62 @@
 	}
 
 	/**
+	 * Alternates for a multi-character sequence: the base sequence (rendered
+	 * without ligature substitution) plus every ligature whose components
+	 * exactly equal the sequence, across all features.
+	 *
+	 * @param {Object} meta Font metadata (see metadata.js)
+	 * @param {number[]} cps Sequence of codepoints
+	 * @return {Array} Grid items (empty when no character is in the font)
+	 */
+	function buildSequenceAlternateItems(meta, cps) {
+		if (!meta || !Array.isArray(cps) || cps.length < 2) {
+			return [];
+		}
+		var codepoints = meta.codepoints || [];
+		var allInFont = cps.every(function(c) {
+			return codepoints.indexOf(c) !== -1;
+		});
+		var ligItems = [];
+		Object.keys(meta.features || {}).sort().forEach(function(tag) {
+			var feature = meta.features[tag];
+			(feature.ligatures || []).forEach(function(lig) {
+				var components = lig.components || [];
+				if (components.length === cps.length && components.every(function(c, i) { return c === cps[i]; })) {
+					ligItems.push({ type: 'lig', text: lig.text, cps: components, feature: tag });
+				}
+			});
+		});
+		if (!allInFont && ligItems.length === 0) {
+			return [];
+		}
+		var text = cps.map(function(c) {
+			return String.fromCodePoint(c);
+		}).join('');
+		// Base cell first (marked so labels/insertion treat it as plain text)
+		return [{ type: 'lig', text: text, cps: cps, base: true }].concat(ligItems);
+	}
+
+	/**
+	 * Alternates input value to pre-fill when the panel opens over an editor
+	 * text selection. Only short, whitespace-free selections qualify — a
+	 * selected phrase means the author wants the full glyph grid, but a
+	 * selected letter (or a short combination like "Th") means they came to
+	 * swap that exact text.
+	 *
+	 * @param {string} selectionText Editor selection captured at launch
+	 * @return {string} Value for the alternates input, or '' to open the full grid
+	 */
+	function initialAltCharFromSelection(selectionText) {
+		var text = String(selectionText || '').trim();
+		if (!text || /\s/.test(text)) {
+			return '';
+		}
+		var chars = Array.from(text);
+		return (chars.length >= 1 && chars.length <= 4) ? text : '';
+	}
+
+	/**
 	 * Count items per Unicode block (for the block filter dropdown).
 	 *
 	 * @param {Array} items Grid items
@@ -316,6 +381,7 @@
 		filterBySearch: filterBySearch,
 		buildGridItems: buildGridItems,
 		buildAlternateItems: buildAlternateItems,
+		initialAltCharFromSelection: initialAltCharFromSelection,
 		countByBlock: countByBlock
 	};
 

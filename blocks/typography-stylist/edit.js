@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, mergeInsertionFormatAttributes } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -417,19 +417,29 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			let newValue = insertRichText(value, text, range.start, range.end);
 			const insertEnd = range.start + text.length;
 
-			// Copy formats from the preceding character so insertion inside
-			// formatted text behaves like typing (continuity)
-			const inherited = (range.start > 0 && value.formats[range.start - 1]) ? value.formats[range.start - 1] : [];
+			// Copy formats so insertion behaves like typing (continuity). When
+			// replacing a selection, inherit from the replaced range's first
+			// character (the glyph being swapped) — the preceding character may
+			// sit outside the styled span when the selection starts a span.
+			const inherited = (range.end > range.start && value.formats[range.start])
+				? value.formats[range.start]
+				: ((range.start > 0 && value.formats[range.start - 1]) ? value.formats[range.start - 1] : []);
 			inherited.forEach((format) => {
 				newValue = applyFormat(newValue, format, range.start, insertEnd);
 			});
 
-			// Wrap inserted text in a typost-styled span when attributes provided
-			// (replaces any inherited typost format on just the inserted range)
+			// Wrap inserted text in a typost-styled span when attributes provided.
+			// applyFormat replaces the inherited typost format on the inserted
+			// range, so merge the replaced format's sizing/spacing into the new
+			// attributes first — a swapped glyph must keep its span's styling.
 			if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+				const inheritedTypost = inherited.find((f) => f && f.type === 'typost/features');
 				newValue = applyFormat(newValue, {
 					type: 'typost/features',
-					attributes: e.detail.attributes
+					attributes: mergeInsertionFormatAttributes(
+						e.detail.attributes,
+						inheritedTypost ? inheritedTypost.attributes : null
+					)
 				}, range.start, insertEnd);
 			}
 

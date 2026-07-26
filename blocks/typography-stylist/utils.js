@@ -1821,6 +1821,94 @@ export function filterFeaturesByVisibility(allFeatures, fontId, visibilityMap) {
 	return allFeatures.filter(f => !entry.disabled_features.includes(f.id));
 }
 
+/**
+ * Merge an extension insertion's format attributes with the typost format the
+ * insertion replaces, so unrelated styling survives.
+ *
+ * When an extension (e.g. the Glyphs Panel) inserts a glyph that needs its own
+ * typost-styled span, applyFormat REPLACES any typost format on the inserted
+ * range. The extension payload only expresses what it owns (features, font,
+ * sometimes weight) — without a merge, the sizing/spacing of the span the
+ * glyph lands in is lost. This carries over every inherited data-* attribute
+ * and style declaration the payload doesn't set itself.
+ *
+ * Rules:
+ * - Incoming attributes always win per-key.
+ * - Identity/feature attributes (data-features, data-feature-settings,
+ *   data-font, data-font-id) are owned by the payload and never inherited.
+ * - Style declarations merge by property name; font-family and
+ *   font-feature-settings are owned by the payload. font-variation-settings
+ *   is inherited only when the font is unchanged (axes are font-specific).
+ *
+ * @since 2.1.3
+ * @param {Object|null} incoming  Attributes from the insertion payload
+ * @param {Object|null} inherited Attributes of the typost format being replaced
+ * @returns {Object|null} Merged attributes (incoming unchanged when nothing to merge)
+ */
+export function mergeInsertionFormatAttributes(incoming, inherited) {
+	if (!incoming || typeof incoming !== 'object') {
+		return incoming;
+	}
+	if (!inherited || typeof inherited !== 'object') {
+		return incoming;
+	}
+
+	const OWNED_ATTRS = ['data-features', 'data-feature-settings', 'data-font', 'data-font-id', 'style'];
+	const merged = { ...incoming };
+
+	Object.keys(inherited).forEach((key) => {
+		if (OWNED_ATTRS.includes(key) || merged[key] !== undefined) {
+			return;
+		}
+		if (key.indexOf('data-') === 0) {
+			merged[key] = inherited[key];
+		}
+	});
+
+	// Style declarations: incoming first, then inherited properties it doesn't set
+	const parseDeclarations = (styleString) =>
+		String(styleString || '')
+			.split(';')
+			.map((decl) => decl.trim())
+			.filter(Boolean)
+			.map((decl) => {
+				const colon = decl.indexOf(':');
+				return colon > 0
+					? [decl.slice(0, colon).trim().toLowerCase(), decl.slice(colon + 1).trim()]
+					: null;
+			})
+			.filter(Boolean);
+
+	const sameFont =
+		String(incoming['data-font-id'] || '') !== '' &&
+		String(incoming['data-font-id']) === String(inherited['data-font-id'] || '');
+	const ownedProps = ['font-family', 'font-feature-settings'];
+	if (!sameFont) {
+		// Variation axes are font-specific — don't carry them to a different font
+		ownedProps.push('font-variation-settings');
+	}
+
+	const incomingDecls = parseDeclarations(incoming.style);
+	const present = {};
+	incomingDecls.forEach(([prop]) => {
+		present[prop] = true;
+	});
+	const declarations = incomingDecls.map(([prop, val]) => `${prop}: ${val}`);
+	parseDeclarations(inherited.style).forEach(([prop, val]) => {
+		if (!present[prop] && !ownedProps.includes(prop)) {
+			declarations.push(`${prop}: ${val}`);
+		}
+	});
+
+	if (declarations.length > 0) {
+		merged.style = declarations.join('; ');
+	} else {
+		delete merged.style;
+	}
+
+	return merged;
+}
+
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {
@@ -1828,6 +1916,7 @@ if (typeof window !== 'undefined') {
 		parseInlineStylesAtCursor,
 		parseInlineFeaturesAtCursor,
 		parseInlineFontFamilyAtCursor,
-		filterFeaturesByVisibility
+		filterFeaturesByVisibility,
+		mergeInsertionFormatAttributes
 	};
 }

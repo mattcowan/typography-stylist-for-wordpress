@@ -7,7 +7,7 @@
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
 // Shared font picker option builder + WP Font Library adoption helpers
-const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } = require('./font-options.js');
+const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily } = require('./font-options.js');
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -350,7 +350,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
-                selectedFont: this.getActiveFont() || '',
+                selectedFont: this.resolveActiveFont(),
                 selectedFontId: this.getActiveFontId() || 0,
                 fontSize: this.getActiveFontSize() || 'inherit',
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
@@ -539,19 +539,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 let newValue = insert(value, text, start, end);
                 const insertEnd = start + text.length;
 
-                // Copy formats from the preceding character so insertion inside
-                // formatted text behaves like typing (continuity)
-                const inherited = (start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : [];
+                // Copy formats so insertion behaves like typing (continuity).
+                // When replacing a selection, inherit from the replaced range's
+                // first character (the glyph being swapped) — the preceding
+                // character may sit outside the styled span.
+                const inherited = (end > start && value.formats[start])
+                    ? value.formats[start]
+                    : ((start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : []);
                 inherited.forEach(function(format) {
                     newValue = applyFormat(newValue, format, start, insertEnd);
                 });
 
-                // Wrap inserted text in a typost-styled span when attributes provided
-                // (replaces any inherited typost format on just the inserted range)
+                // Wrap inserted text in a typost-styled span when attributes provided.
+                // applyFormat replaces the inherited typost format on the inserted
+                // range, so merge the replaced format's sizing/spacing into the new
+                // attributes first — a swapped glyph must keep its span's styling.
                 if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+                    const inheritedTypost = inherited.find(function(f) { return f && f.type === FORMAT_TYPE; });
+                    const mergeAttrs = (window.typostSharedUtils && window.typostSharedUtils.mergeInsertionFormatAttributes)
+                        ? window.typostSharedUtils.mergeInsertionFormatAttributes
+                        : function(incoming) { return incoming; };
                     newValue = applyFormat(newValue, {
                         type: FORMAT_TYPE,
-                        attributes: e.detail.attributes
+                        attributes: mergeAttrs(e.detail.attributes, inheritedTypost ? inheritedTypost.attributes : null)
                     }, start, insertEnd);
                 }
 
@@ -1089,7 +1099,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setState(state => ({
                 isOpen: !state.isOpen,
                 selectedFeatures: this.getActiveFeatures() || [],
-                selectedFont: this.getActiveFont() || '',
+                selectedFont: this.resolveActiveFont(),
                 selectedFontId: this.getActiveFontId() || 0,
                 fontSize: this.getActiveFontSize() || 'inherit',
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
@@ -1214,10 +1224,33 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         resolveFontFamily(fontId) {
             const id = parseInt(fontId, 10);
-            if (!isNaN(id) && this.fontIdMap && this.fontIdMap[id]) {
-                return this.fontIdMap[id].family;
+            if (!isNaN(id) && this.getFontIdMap()[id]) {
+                return this.getFontIdMap()[id].family;
             }
             return '';
+        }
+
+        /**
+         * fontIdMap is normally built lazily by getFontOptions() during modal
+         * render; build it on demand for callers that run before first render.
+         */
+        getFontIdMap() {
+            if (!this.fontIdMap) {
+                this.fontIdMap = buildFontOptions(typostData).fontIdMap;
+            }
+            return this.fontIdMap;
+        }
+
+        /**
+         * Active font family for previews: legacy data-font when present,
+         * otherwise resolved from data-font-id (the v1.1.6+ span format).
+         */
+        resolveActiveFont() {
+            return resolveActiveFontFamily(
+                this.getActiveFont(),
+                this.getActiveFontId(),
+                this.getFontIdMap()
+            );
         }
 
         /**

@@ -150,3 +150,27 @@ describe('wp library value helpers', () => {
 		expect(wpSlugFromValue('12')).toBe('');
 	});
 });
+
+describe('resolveActiveFontFamily', () => {
+	const { resolveActiveFontFamily } = require('../../../assets/js/font-options.js');
+	const fontIdMap = {
+		4: { family: 'Zeplin VF', availableWeights: [] },
+		7: { family: 'Playfair Display', availableWeights: [] },
+	};
+
+	test('legacy data-font family wins when present', () => {
+		expect(resolveActiveFontFamily('Bookmania', 7, fontIdMap)).toBe('Bookmania');
+	});
+
+	test('resolves family from data-font-id when data-font is absent (v1.1.6+ spans)', () => {
+		expect(resolveActiveFontFamily('', 4, fontIdMap)).toBe('Zeplin VF');
+		expect(resolveActiveFontFamily('', '7', fontIdMap)).toBe('Playfair Display');
+	});
+
+	test('returns empty string when nothing resolves', () => {
+		expect(resolveActiveFontFamily('', 0, fontIdMap)).toBe('');
+		expect(resolveActiveFontFamily('', 99, fontIdMap)).toBe('');
+		expect(resolveActiveFontFamily('', 4, null)).toBe('');
+		expect(resolveActiveFontFamily(null, null, fontIdMap)).toBe('');
+	});
+});

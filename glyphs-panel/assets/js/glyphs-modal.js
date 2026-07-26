@@ -246,11 +246,15 @@
 		var insertedMsg = insertedMsgState[0];
 		var setInsertedMsg = insertedMsgState[1];
 
-		// Alternates-for-character view: when a single character is entered,
-		// the grid shows that character once per feature variant
-		var altCharState = useState('');
+		// Alternates-for-character view: when a character (or short sequence)
+		// is entered, the grid shows its feature variants. Pre-filled from the
+		// editor selection so a selected glyph opens straight to its
+		// alternates instead of the full grid.
+		var altCharState = useState(lib.initialAltCharFromSelection(context.selectionText));
 		var altChar = altCharState[0];
 		var setAltChar = altCharState[1];
+		// True until the first metadata load validates the pre-filled value
+		var autoAltPendingRef = useRef(!!lib.initialAltCharFromSelection(context.selectionText));
 
 		var scrollTopState = useState(0);
 		var scrollTop = scrollTopState[0];
@@ -327,14 +331,21 @@
 			startLoad(true);
 		}
 
+		var fontLoadedOnceRef = useRef(false);
 		useEffect(function() {
-			setFeatureFilter('');
-			setBlockFilter('all');
-			setAltChar('');
-			setScrollTop(0);
-			if (gridRef.current) {
-				gridRef.current.scrollTop = 0;
+			// Reset filters only when SWITCHING fonts — on the initial mount the
+			// alternates value may be pre-filled from the editor selection and
+			// must survive until metadata validates it.
+			if (fontLoadedOnceRef.current) {
+				setFeatureFilter('');
+				setBlockFilter('all');
+				setAltChar('');
+				setScrollTop(0);
+				if (gridRef.current) {
+					gridRef.current.scrollTop = 0;
+				}
 			}
+			fontLoadedOnceRef.current = true;
 			startLoad(false);
 		}, [selectedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -355,34 +366,70 @@
 
 		var meta = status.state === 'ready' ? status.meta : null;
 
-		// Alternates view takes over the grid when a single character is set
-		var altCp = useMemo(function() {
+		// Alternates view takes over the grid when a character (single
+		// codepoint) or a short sequence (exact-ligature view) is set
+		var altCps = useMemo(function() {
 			var chars = Array.from((altChar || '').trim());
-			return chars.length === 1 ? chars[0].codePointAt(0) : null;
+			return chars.length >= 1 ? chars.map(function(c) {
+				return c.codePointAt(0);
+			}) : null;
 		}, [altChar]);
+
+		// Validate the selection-pre-filled alternates value once metadata is
+		// ready: a sequence with no exact ligatures falls back to its first
+		// character; a character the font lacks falls back to the full grid.
+		useEffect(function() {
+			if (!meta || !autoAltPendingRef.current) {
+				return;
+			}
+			autoAltPendingRef.current = false;
+			var chars = Array.from((altChar || '').trim());
+			if (!chars.length) {
+				return;
+			}
+			var toCps = function(arr) {
+				return arr.map(function(c) {
+					return c.codePointAt(0);
+				});
+			};
+			var items = lib.buildAlternateItems(meta, toCps(chars));
+			// For a sequence, a lone base cell (no ligature alternates) isn't a
+			// useful landing view — fall back to the first character's alternates
+			var meaningful = chars.length > 1
+				? items.filter(function(item) { return !item.base; }).length
+				: items.length;
+			if (meaningful > 0) {
+				return;
+			}
+			if (chars.length > 1 && lib.buildAlternateItems(meta, toCps([chars[0]])).length > 0) {
+				setAltChar(chars[0]);
+				return;
+			}
+			setAltChar('');
+		}, [meta]); // eslint-disable-line react-hooks/exhaustive-deps -- one-shot validation of the launch value
 
 		// Items: alternates view OR (feature filter → block filter → search)
 		var baseItems = useMemo(function() {
 			if (!meta) {
 				return [];
 			}
-			if (altCp !== null) {
-				return lib.buildAlternateItems(meta, altCp);
+			if (altCps !== null) {
+				return lib.buildAlternateItems(meta, altCps);
 			}
 			return lib.buildGridItems(meta, featureFilter || null);
-		}, [meta, featureFilter, altCp]);
+		}, [meta, featureFilter, altCps]);
 
 		var blockCounts = useMemo(function() {
 			return lib.countByBlock(baseItems);
 		}, [baseItems]);
 
 		var items = useMemo(function() {
-			if (altCp !== null) {
+			if (altCps !== null) {
 				return baseItems; // alternates view: no block/search filtering
 			}
 			var filtered = lib.filterByBlock(baseItems, blockFilter);
 			return lib.filterBySearch(filtered, search, meta && meta.names);
-		}, [baseItems, blockFilter, search, meta, altCp]);
+		}, [baseItems, blockFilter, search, meta, altCps]);
 
 		// Reset keyboard focus to the first cell and scroll to top whenever the
 		// result set changes (font, filter, search, or alternates view).
@@ -392,7 +439,7 @@
 			if (gridRef.current) {
 				gridRef.current.scrollTop = 0;
 			}
-		}, [selectedKey, blockFilter, featureFilter, search, altCp]);
+		}, [selectedKey, blockFilter, featureFilter, search, altCps]);
 
 		// Announce the result count to assistive technology when search/filters
 		// change (skipping the initial load). Debounced so typing isn't chatty.
@@ -422,7 +469,7 @@
 			: 'inherit';
 
 		function cellFeatureSettings(item) {
-			var tag = item.feature || (altCp === null ? featureFilter : null);
+			var tag = item.feature || (altCps === null ? featureFilter : null);
 			if (tag) {
 				// Indexed alternates (salt/aalt) select the Nth variant
 				var index = item.altIndex || 1;
@@ -437,13 +484,15 @@
 		}
 
 		function itemFeatureTag(item) {
-			return item.feature || (altCp === null ? featureFilter : null) || null;
+			return item.feature || (altCps === null ? featureFilter : null) || null;
 		}
 
 		function itemLabel(item) {
 			var parts = [itemText(item)];
-			if (item.type === 'lig') {
+			if (item.type === 'lig' && !item.base) {
 				parts.push(__('ligature', 'typost-glyphs-panel'));
+			} else if (item.type === 'lig') {
+				// Base cell of the sequence-alternates view: plain characters
 			} else {
 				parts.push('U+' + item.cp.toString(16).toUpperCase().padStart(4, '0'));
 			}
@@ -455,7 +504,7 @@
 					tagLabel += ' ' + sprintf(/* translators: 1: alternate number, 2: total alternates */ __('#%1$d of %2$d', 'typost-glyphs-panel'), item.altIndex, item.altCount);
 				}
 				parts.push(tagLabel);
-			} else if (altCp !== null) {
+			} else if (altCps !== null) {
 				parts.push(__('base glyph', 'typost-glyphs-panel'));
 			}
 			return parts.join(' — ');
@@ -695,11 +744,10 @@
 							hideLabelFromVision: false,
 							placeholder: __('Alternates for…', 'typost-glyphs-panel'),
 							value: altChar,
-							maxLength: 2,
+							// A short sequence ("Th") shows its exact ligature alternates
+							maxLength: 8,
 							onChange: function(value) {
-								// Keep only the first character (codepoint-aware)
-								var chars = Array.from(value || '');
-								setAltChar(chars.length > 0 ? chars[chars.length - 1] : '');
+								setAltChar(Array.from(value || '').slice(0, 4).join(''));
 							},
 							__nextHasNoMarginBottom: true
 						}),
@@ -707,9 +755,14 @@
 							variant: 'tertiary',
 							isSmall: true,
 							onClick: function() {
-								setAltChar(Array.from(context.selectionText)[0] || '');
+								setAltChar(
+									lib.initialAltCharFromSelection(context.selectionText) ||
+									Array.from(context.selectionText)[0] || ''
+								);
 							}
-						}, sprintf(/* translators: %s: character */ __('Use "%s"', 'typost-glyphs-panel'), Array.from(context.selectionText)[0] || '')),
+						}, sprintf(/* translators: %s: character(s) */ __('Use "%s"', 'typost-glyphs-panel'),
+							lib.initialAltCharFromSelection(context.selectionText) ||
+							Array.from(context.selectionText)[0] || '')),
 						altChar && el(Button, {
 							variant: 'tertiary',
 							isSmall: true,
@@ -717,7 +770,7 @@
 						}, __('All glyphs', 'typost-glyphs-panel'))
 					),
 					// 2. Search
-					altCp === null && el(TextControl, {
+					altCps === null && el(TextControl, {
 						label: __('Search', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
 						hideLabelFromVision: false,
@@ -727,7 +780,7 @@
 						__nextHasNoMarginBottom: true
 					}),
 					// 3. OpenType feature ("All glyphs")
-					altCp === null && el(SelectControl, {
+					altCps === null && el(SelectControl, {
 						label: __('OpenType feature', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
 						hideLabelFromVision: false,
@@ -744,7 +797,7 @@
 						__nextHasNoMarginBottom: true
 					}),
 					// 4. Unicode block ("All blocks")
-					altCp === null && el(SelectControl, {
+					altCps === null && el(SelectControl, {
 						label: __('Unicode block', 'typost-glyphs-panel'),
 						__next40pxDefaultSize: true,
 						hideLabelFromVision: false,
@@ -818,7 +871,7 @@
 						})
 					),
 					items.length === 0 && el('p', { className: 'typost-glyphs-empty' },
-						altCp !== null
+						altCps !== null
 							? __('This character is not available in the selected font.', 'typost-glyphs-panel')
 							: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
 				),
