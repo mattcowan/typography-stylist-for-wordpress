@@ -9,6 +9,7 @@ const {
 	filterBySearch,
 	buildGridItems,
 	buildAlternateItems,
+	initialAltCharFromSelection,
 	countByBlock
 } = require('../assets/js/lib/search.js');
 
@@ -232,7 +233,6 @@ describe('countByBlock', () => {
 });
 
 describe('buildAlternateItems — sequence form', () => {
-	const { initialAltCharFromSelection } = require('../assets/js/lib/search.js');
 	const T = 'T'.codePointAt(0), h = 'h'.codePointAt(0), f = 'f'.codePointAt(0), i = 'i'.codePointAt(0);
 	const meta = {
 		codepoints: [T, h, f, i],
@@ -267,8 +267,6 @@ describe('buildAlternateItems — sequence form', () => {
 });
 
 describe('initialAltCharFromSelection', () => {
-	const { initialAltCharFromSelection } = require('../assets/js/lib/search.js');
-
 	test('single character auto-populates', () => {
 		expect(initialAltCharFromSelection('S')).toBe('S');
 	});

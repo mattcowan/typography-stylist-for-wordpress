@@ -2640,7 +2640,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Font Selector */}
                                 {hasFonts && (
-                                    <div className="typost-font-section">
+                                    <div className="typost-modal-section typost-font-section">
                                         <h4>{__('Font Family', 'typography-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
@@ -2673,7 +2673,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                     if (weightControlType !== 'default') {
                                         return (
-                                            <div className="typost-fontweight-section">
+                                            <div className="typost-modal-section typost-fontweight-section">
                                                 {/* key: remount (and re-fire the action) when the font changes */}
                                                 <div key={`typost-weight-${this.state.selectedFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
                                                     if (el && !el._hooked) {
@@ -2688,7 +2688,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     const weightOptions = this.getFilteredWeightOptions(this.state.selectedFontId);
                                     if (weightOptions.length <= 1) return null;
                                     return (
-                                        <div className="typost-fontweight-section">
+                                        <div className="typost-modal-section typost-fontweight-section">
                                             <h4>{__('Font Weight', 'typography-stylist')}</h4>
                                             <SelectControl
                                                 value={fontWeight}
@@ -2700,7 +2700,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 })()}
 
                                 {/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
-                                <div className="typost-fontstyle-section">
+                                <div className="typost-modal-section typost-fontstyle-section">
                                     <h4>{__('Font Style', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={this.state.fontStyle}
@@ -2724,7 +2724,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 }} />
 
                                 {/* Font Size Controls */}
-                                <div className="typost-fontsize-section">
+                                <div className="typost-modal-section typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
@@ -2770,7 +2770,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 </div>
 
                                 {/* Line Height Control */}
-                                <div className="typost-lineheight-section">
+                                <div className="typost-modal-section typost-lineheight-section">
                                     <h4>{__('Line Height', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={lineHeight === 0 ? 1.5 : lineHeight}
@@ -2789,7 +2789,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 </div>
 
                                 {/* Letter Spacing Control */}
-                                <div className="typost-letterspacing-section">
+                                <div className="typost-modal-section typost-letterspacing-section">
                                     <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={letterSpacing}

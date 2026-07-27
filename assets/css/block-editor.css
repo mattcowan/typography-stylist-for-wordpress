@@ -444,28 +444,25 @@
     }
 }
 
-/* Font, Font Weight, Letter Spacing, and Font Size Sections */
-.typost-font-section,
-.typost-fontweight-section,
-.typost-letterspacing-section,
-.typost-lineheight-section,
-.typost-fontsize-section {
+/* Modal control sections (font, weight, style, spacing, line height, size).
+   One shared class — every section div carries .typost-modal-section plus its
+   specific .typost-*-section identity class (kept for targeted styling and
+   extension hooks). New sections only need the shared class to match.
+   rem/em units so padding and headings scale with browser zoom and user
+   text-size preferences (px would not). */
+.typost-modal-section {
     margin: 0 1rem;
-    padding: 16px 20px;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #ddd;
 }
 
-.typost-font-section h4,
-.typost-fontweight-section h4,
-.typost-letterspacing-section h4,
-.typost-lineheight-section h4,
-.typost-fontsize-section h4 {
-    margin: 0 0 12px 0;
-    font-size: 13px;
+.typost-modal-section h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.8125rem;
     font-weight: 600;
     color: #1e1e1e;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.04em;
 }
 
 /* Accessibility Warning */
