@@ -70,6 +70,10 @@
 			"type": "string",
 			"default": "400"
 		},
+		"fontStyle": {
+			"type": "string",
+			"default": ""
+		},
 		"letterSpacing": {
 			"type": "number",
 			"default": 0

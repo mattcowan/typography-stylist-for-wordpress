@@ -166,25 +166,63 @@
 	// Axes Panel Component
 	// -------------------------------------------------------------------------
 
+	// Shared axis-adjustment sessions, one per (editor surface, font). The
+	// weight panel and the custom-axes panel are separate mounts but must
+	// compose a single font-variation-settings value; the session also tracks
+	// which axes were actually touched, because ONLY touched axes may be
+	// emitted — emitting untouched axes pins them to the font file's defaults
+	// (for Fraunces that meant "wght" 900: moving the WONK slider turned the
+	// text Black). Keyed by font as well as surface: axis values are
+	// font-specific, and on a font switch React mounts the new panels BEFORE
+	// the old ones clean up, so an editorType-only key would never reset and
+	// the old font's touched axes would keep emitting. Refcounted so a
+	// session dies when its last panel unmounts.
+	var axisSessions = {};
+
+	function axisSessionKey(editorType, fontId) {
+		return editorType + ':' + (fontId || 0);
+	}
+
+	function acquireAxisSession(sessionKey, axes, initialSettings) {
+		var session = axisSessions[sessionKey];
+		if (!session) {
+			session = { values: {}, touched: {}, refs: 0 };
+			axisSessions[sessionKey] = session;
+		}
+		window.typostVFUtils.mergeAxisSession(session, axes, initialSettings);
+		session.refs++;
+		return session;
+	}
+
+	function releaseAxisSession(sessionKey) {
+		var session = axisSessions[sessionKey];
+		if (!session) return;
+		session.refs--;
+		if (session.refs <= 0) {
+			delete axisSessions[sessionKey];
+		}
+	}
+
 	function AxesPanel(props) {
 		var axes = props.axes;
 		var editorType = props.editorType;
+		var fontId = props.fontId;
 		var filterAxes = props.filterAxes; // optional: 'wght' for weight control, 'non-wght' for others
 		var initialSettings = props.initialSettings || {};
 
-		// Track current axis values
-		var valuesRef = useRef(null);
-		if (valuesRef.current === null) {
-			// Initialize from current selection or defaults
-			var initial = {};
-			for (var i = 0; i < axes.length; i++) {
-				var ax = axes[i];
-				initial[ax.tag] = initialSettings[ax.tag] !== undefined
-					? initialSettings[ax.tag]
-					: ax['default'];
-			}
-			valuesRef.current = initial;
+		// Join (or start) the shared session for this (surface, font)
+		var sessionKeyRef = useRef(null);
+		var sessionRef = useRef(null);
+		if (sessionRef.current === null) {
+			sessionKeyRef.current = axisSessionKey(editorType, fontId);
+			sessionRef.current = acquireAxisSession(sessionKeyRef.current, axes, initialSettings);
 		}
+		useEffect(function() {
+			var key = sessionKeyRef.current;
+			return function() {
+				releaseAxisSession(key);
+			};
+		}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
 		var forceUpdateRef = useRef(0);
 		var forceUpdate = useState(0);
@@ -216,28 +254,33 @@
 		if (displayAxes.length === 0) return null;
 
 		function handleSliderChange(tag, newValue) {
-			valuesRef.current[tag] = newValue;
+			sessionRef.current.values[tag] = newValue;
+			sessionRef.current.touched[tag] = true;
 			forceUpdateRef.current++;
 			setForceUpdate(forceUpdateRef.current);
-			// Debounced dispatch for slider drags
-			debouncedRef.current(valuesRef.current, editorType);
+			// Debounced dispatch for slider drags — touched axes only
+			debouncedRef.current(window.typostVFUtils.pickTouchedSettings(sessionRef.current), editorType);
 		}
 
 		function handleQuickButton(tag, newValue) {
-			valuesRef.current[tag] = newValue;
+			sessionRef.current.values[tag] = newValue;
+			sessionRef.current.touched[tag] = true;
 			forceUpdateRef.current++;
 			setForceUpdate(forceUpdateRef.current);
-			// Instant dispatch for button clicks
-			dispatchVariationSettings(valuesRef.current, editorType);
+			// Instant dispatch for button clicks — touched axes only
+			dispatchVariationSettings(window.typostVFUtils.pickTouchedSettings(sessionRef.current), editorType);
 		}
 
 		function handleReset() {
+			// Reset means "back to natural rendering": stop emitting these axes
+			// entirely rather than pinning them to the font file's defaults
 			for (var i = 0; i < displayAxes.length; i++) {
-				valuesRef.current[displayAxes[i].tag] = displayAxes[i]['default'];
+				sessionRef.current.values[displayAxes[i].tag] = displayAxes[i]['default'];
+				delete sessionRef.current.touched[displayAxes[i].tag];
 			}
 			forceUpdateRef.current++;
 			setForceUpdate(forceUpdateRef.current);
-			dispatchVariationSettings(valuesRef.current, editorType);
+			dispatchVariationSettings(window.typostVFUtils.pickTouchedSettings(sessionRef.current), editorType);
 		}
 
 		return el('div', { className: 'typost-vf-axes-panel' },
@@ -245,8 +288,8 @@
 				return el(AxisSlider, {
 					key: axis.tag,
 					axis: axis,
-					value: valuesRef.current[axis.tag] !== undefined
-						? valuesRef.current[axis.tag]
+					value: sessionRef.current.values[axis.tag] !== undefined
+						? sessionRef.current.values[axis.tag]
 						: axis['default'],
 					onChange: function(v) { handleSliderChange(axis.tag, v); },
 					onQuickButton: function(v) { handleQuickButton(axis.tag, v); }
@@ -320,13 +363,17 @@
 		if (hookEl) {
 			var hookName = hookEl.getAttribute('data-hook');
 			if (hookName === 'typost_weight_control') {
-				// Check parent context
-				var inspectorParent = containerEl.closest('.components-panel__body');
-				if (inspectorParent) {
-					editorType = 'inspector';
-				} else if (containerEl.closest('[data-hook="typost_qft_modal_top"]') ||
-						   containerEl.closest('.typost-qft-popover')) {
+				// Check parent context. The QFT check must come first: the QFT
+				// modal contains .components-panel__body sections too, and its
+				// container class is .typost-block-modal (the old
+				// .typost-qft-popover selector matched nothing — the QFT weight
+				// slider silently dispatched as 'inline' and was dropped).
+				if (containerEl.closest('.typost-block-modal') ||
+					containerEl.closest('[data-hook="typost_qft_modal_top"]') ||
+					containerEl.closest('.typost-qft-popover')) {
 					editorType = 'qft';
+				} else if (containerEl.closest('.components-panel__body')) {
+					editorType = 'inspector';
 				}
 			}
 		}
@@ -338,6 +385,7 @@
 			el(AxesPanel, {
 				axes: axes,
 				editorType: editorType,
+				fontId: fontId,
 				filterAxes: 'wght',
 				initialSettings: currentSettings
 			}),
@@ -367,6 +415,7 @@
 				el(AxesPanel, {
 					axes: axes,
 					editorType: editorType,
+					fontId: fontId,
 					filterAxes: 'non-wght',
 					initialSettings: currentSettings
 				})

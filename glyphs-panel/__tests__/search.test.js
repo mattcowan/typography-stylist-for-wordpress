@@ -9,6 +9,7 @@ const {
 	filterBySearch,
 	buildGridItems,
 	buildAlternateItems,
+	initialAltCharFromSelection,
 	countByBlock
 } = require('../assets/js/lib/search.js');
 
@@ -228,5 +229,63 @@ describe('countByBlock', () => {
 		expect(counts['basic-latin']).toBe(2);
 		expect(counts['latin-1']).toBe(1);
 		expect(counts.other).toBe(1);
+	});
+});
+
+describe('buildAlternateItems — sequence form', () => {
+	const T = 'T'.codePointAt(0), h = 'h'.codePointAt(0), f = 'f'.codePointAt(0), i = 'i'.codePointAt(0);
+	const meta = {
+		codepoints: [T, h, f, i],
+		features: {
+			dlig: { ligatures: [ { text: 'Th', components: [T, h] } ] },
+			liga: { ligatures: [ { text: 'fi', components: [f, i] } ] },
+			ss01: { codepoints: [T] }
+		}
+	};
+
+	test('single-element array behaves like the codepoint form', () => {
+		expect(buildAlternateItems(meta, [T])).toEqual(buildAlternateItems(meta, T));
+	});
+
+	test('sequence returns base cell plus exact ligature matches only', () => {
+		const items = buildAlternateItems(meta, [T, h]);
+		expect(items[0]).toEqual({ type: 'lig', text: 'Th', cps: [T, h], base: true });
+		expect(items).toHaveLength(2);
+		expect(items[1]).toEqual({ type: 'lig', text: 'Th', cps: [T, h], feature: 'dlig' });
+	});
+
+	test('sequence with no ligatures and a missing character is empty', () => {
+		const z = 'z'.codePointAt(0);
+		expect(buildAlternateItems(meta, [T, z])).toEqual([]);
+	});
+
+	test('sequence with all characters in font but no ligature still shows base cell', () => {
+		const items = buildAlternateItems(meta, [f, h]);
+		expect(items).toHaveLength(1);
+		expect(items[0].base).toBe(true);
+	});
+});
+
+describe('initialAltCharFromSelection', () => {
+	test('single character auto-populates', () => {
+		expect(initialAltCharFromSelection('S')).toBe('S');
+	});
+
+	test('short combos auto-populate up to 4 characters', () => {
+		expect(initialAltCharFromSelection('Th')).toBe('Th');
+		expect(initialAltCharFromSelection('ffi')).toBe('ffi');
+		expect(initialAltCharFromSelection('ffil')).toBe('ffil');
+	});
+
+	test('long or whitespace selections open the full grid', () => {
+		expect(initialAltCharFromSelection('Elegant')).toBe('');
+		expect(initialAltCharFromSelection('T h')).toBe('');
+		expect(initialAltCharFromSelection('  ')).toBe('');
+		expect(initialAltCharFromSelection('')).toBe('');
+		expect(initialAltCharFromSelection(null)).toBe('');
+	});
+
+	test('surrogate pairs count as one character', () => {
+		expect(initialAltCharFromSelection('𝒜')).toBe('𝒜');
 	});
 });

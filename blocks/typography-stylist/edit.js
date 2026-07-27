@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -130,6 +130,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontSizePreferred,
 		fontSizeMax,
 		fontWeight,
+		fontStyle,
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
@@ -171,6 +172,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [previewFontSizePreferred, setPreviewFontSizePreferred] = useState(32);
 	const [previewFontSizeMax, setPreviewFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('inherit');
+	const [inlineFontStyle, setInlineFontStyle] = useState('');
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
@@ -326,6 +328,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					}
 				}
 				if (props.fontWeight !== undefined) newAttrs.fontWeight = props.fontWeight;
+				if (props.fontStyle !== undefined) newAttrs.fontStyle = props.fontStyle;
 				if (props.fontSize !== undefined) newAttrs.fontSize = props.fontSize;
 				if (props.fontSizeMin !== undefined) newAttrs.fontSizeMin = props.fontSizeMin;
 				if (props.fontSizePreferred !== undefined) newAttrs.fontSizePreferred = props.fontSizePreferred;
@@ -417,19 +420,29 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			let newValue = insertRichText(value, text, range.start, range.end);
 			const insertEnd = range.start + text.length;
 
-			// Copy formats from the preceding character so insertion inside
-			// formatted text behaves like typing (continuity)
-			const inherited = (range.start > 0 && value.formats[range.start - 1]) ? value.formats[range.start - 1] : [];
+			// Copy formats so insertion behaves like typing (continuity). When
+			// replacing a selection, inherit from the replaced range's first
+			// character (the glyph being swapped) — the preceding character may
+			// sit outside the styled span when the selection starts a span.
+			const inherited = (range.end > range.start && value.formats[range.start])
+				? value.formats[range.start]
+				: ((range.start > 0 && value.formats[range.start - 1]) ? value.formats[range.start - 1] : []);
 			inherited.forEach((format) => {
 				newValue = applyFormat(newValue, format, range.start, insertEnd);
 			});
 
-			// Wrap inserted text in a typost-styled span when attributes provided
-			// (replaces any inherited typost format on just the inserted range)
+			// Wrap inserted text in a typost-styled span when attributes provided.
+			// applyFormat replaces the inherited typost format on the inserted
+			// range, so merge the replaced format's sizing/spacing into the new
+			// attributes first — a swapped glyph must keep its span's styling.
 			if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+				const inheritedTypost = inherited.find((f) => f && f.type === 'typost/features');
 				newValue = applyFormat(newValue, {
 					type: 'typost/features',
-					attributes: e.detail.attributes
+					attributes: mergeInsertionFormatAttributes(
+						e.detail.attributes,
+						inheritedTypost ? inheritedTypost.attributes : null
+					)
 				}, range.start, insertEnd);
 			}
 
@@ -449,7 +462,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// reads current values from ref on each call
 	const qftStateRef = useRef({});
 	qftStateRef.current = {
-		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
+		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
@@ -480,6 +493,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				return {
 					editorType: 'qft',
 					fontId: activeFontId,
+					// Effective style at the selection wins over the block attribute
+					fontStyle: s.inlineFontStyle || s.fontStyle || '',
 					fontWeight: s.fontWeight,
 					fontSize: s.fontSize,
 					fontSizeMin: s.fontSizeMin,
@@ -535,21 +550,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	}, [fontFamily, clientId]); // Re-run when fontFamily or clientId changes
 
+	// The range QFT property applies operate on: the LIVE selection when it's
+	// expanded and in this block, else the selection captured when the popover
+	// opened (focus moving into the popover collapses the live one), else a
+	// live caret, else null. Every applier and the detection below share this
+	// so "what the controls show" and "where changes land" can't disagree.
+	const resolvedApplyRange = useMemo(
+		() => resolveQftApplyRange(selectionStart, selectionEnd, clientId, capturedSelection),
+		[selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, selectionEnd?.clientId, clientId, capturedSelection] // eslint-disable-line react-hooks/exhaustive-deps -- object identities intentionally reduced to offsets
+	);
+
 	// Unified inline styles detection at current cursor/selection position
 	// Detects ALL properties: features, fontId, fontWeight, fontSize, letterSpacing, lineHeight
 	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
-	// Uses selectionStart/End offset only (not full object) to avoid re-computation on every selection change
 	const inlineStylesAtSelection = useMemo(() => {
-		if (!content) return null;
-		if (!selectionStart || !selectionEnd || selectionStart.clientId !== clientId) {
-			return null;
-		}
-
-		const start = selectionStart.offset || 0;
-		const end = selectionEnd.offset || 0;
-
-		return parseInlineStylesAtCursor(content, start, end);
-	}, [content, selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, clientId]);
+		if (!content || !resolvedApplyRange) return null;
+		return parseInlineStylesAtCursor(content, resolvedApplyRange.start, resolvedApplyRange.end);
+	}, [content, resolvedApplyRange]);
 
 	// Derive individual properties from unified detection for backward compatibility
 	const inlineFeaturesAtSelection = inlineStylesAtSelection?.features || [];
@@ -560,6 +577,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// block-level font. data-font-id is stored as a string; the consumer side
 	// normalizes type, but qftStateRef carries the raw value.
 	qftStateRef.current.inlineFontId = inlineFontFamilyAtSelection;
+	// Effective font style at the selection (span data-fontstyle, or an
+	// <em>/<i> covering the range even without any typost span) — lets the
+	// Glyphs panel load the face variant actually rendering
+	const emItalicAtSelection = useMemo(() => {
+		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.fontStyle) return null;
+		return detectEmItalicAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
+	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
+	qftStateRef.current.inlineFontStyle = inlineStylesAtSelection?.fontStyle || emItalicAtSelection || null;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations
@@ -815,6 +840,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			setInlineLetterSpacing(0);
 			setInlineLineHeight(0);
 			setInlineFontWeight('inherit');
+			setInlineFontStyle('');
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
 			setInlineFontSizeMin(16);
@@ -832,6 +858,9 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 		if (detected.fontWeight) {
 			setInlineFontWeight(detected.fontWeight);
+		}
+		if (detected.fontStyle) {
+			setInlineFontStyle(detected.fontStyle);
 		}
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
@@ -971,11 +1000,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineLetterSpacing(0);
 		setPreviewLetterSpacing(0);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-letterspacing',
 				'letter-spacing'
 			);
@@ -1024,11 +1053,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineLineHeight(0);
 		setPreviewLineHeight(0);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-lineheight',
 				'line-height'
 			);
@@ -1044,11 +1073,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		setInlineFontFamily('');
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-font-id',
 				'font-family'
 			);
@@ -1064,11 +1093,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		setInlineFontWeight('inherit');
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-fontweight',
 				'font-weight'
 			);
@@ -1087,11 +1116,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		setInlineFontSizePreferred(32);
 		setInlineFontSizeMax(64);
 
-		if (selectionStart && selectionEnd && selectionStart.clientId === clientId) {
+		if (resolvedApplyRange) {
 			const result = removePropertyFromSelection(
 				content,
-				selectionStart.offset || 0,
-				selectionEnd.offset || 0,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
 				'data-fontsize',
 				'font-size'
 			);
@@ -1106,12 +1135,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content || inlineLineHeight === 0) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1306,12 +1333,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// If there's a selection, toggle inline feature
 			if (start !== end) {
@@ -1356,12 +1381,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content || inlineLetterSpacing === 0) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1504,12 +1527,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Parse the current content as HTML
@@ -1564,12 +1585,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyInlineFontSize = () => {
 		if (!content || inlineFontSize === 'inherit') return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// Prepare attributes and style for both collapsed and selection cases
 			const attributes = {
@@ -1722,12 +1741,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyInlineFontWeight = () => {
 		if (!content || inlineFontWeight === 'inherit') return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -1858,16 +1875,122 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		}
 	};
 
+	// Apply font style (visual italic) to selected text only (inline).
+	// Style-only by design: semantic emphasis stays the editor's own Italic
+	// button (<em>), which screen readers announce; this control just selects
+	// the font's italic (or upright) face.
+	const applyInlineFontStyle = (value) => {
+		if (!content || !value) return;
+
+		if (resolvedApplyRange) {
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
+
+			// COLLAPSED CURSOR: Update parent span in-place
+			if (start === end) {
+				const result = updateSpanPropertyInPlace(
+					content,
+					start,
+					'data-fontstyle',
+					value,
+					'font-style',
+					value
+				);
+
+				if (result.success) {
+					setAttributes({ content: result.content });
+					originalContentRef.current = null;
+				}
+				return;
+			}
+
+			// SELECTION: Check if we should split parent span
+			if (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) {
+				const result = splitSpanAndApply(
+					content,
+					start,
+					end,
+					'data-fontstyle',
+					{ 'data-fontstyle': value },
+					`font-style: ${value}`
+				);
+
+				if (result.success) {
+					setAttributes({ content: result.content });
+					originalContentRef.current = null;
+					return;
+				}
+			}
+
+			// STRATEGY: Try Range method first, fallback to string manipulation
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+			const container = doc.body.firstChild;
+			const range = getRangeForOffsets(container, start, end, doc);
+			const validation = validateRangeMatchesSelection(
+				range,
+				capturedSelection?.text || '',
+				capturedSelection?.length || 0
+			);
+
+			let success = false;
+			let newContent = content;
+
+			if (validation.valid) {
+				success = applyOrMergeStyling(range, { 'data-fontstyle': value }, `font-style: ${value}`, doc);
+				if (success) {
+					newContent = container.innerHTML;
+				}
+			}
+
+			if (!success) {
+				const fallbackResult = applyStylingSafeStringMethod(
+					content,
+					start,
+					end,
+					{ 'data-fontstyle': value },
+					`font-style: ${value}`
+				);
+				if (fallbackResult.success) {
+					newContent = fallbackResult.content;
+				} else {
+					return;
+				}
+			}
+
+			setAttributes({ content: newContent });
+			originalContentRef.current = null;
+		}
+	};
+
+	// Reset font style (remove from content)
+	const resetFontStyle = () => {
+		if (!content || !inlineFontStyle) return;
+
+		setInlineFontStyle('');
+
+		if (resolvedApplyRange) {
+			const result = removePropertyFromSelection(
+				content,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
+				'data-fontstyle',
+				'font-style'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
 	// Apply font family to selected text only (inline)
 	const applyInlineFontFamily = () => {
 		if (!content || !inlineFontFamily) return;
 
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -2011,12 +2134,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Build the styled span with feature and letter spacing
@@ -2129,12 +2250,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		if (!content) return;
 
 		// Check if we have a valid selection
-		if (selectionStart && selectionEnd &&
-		    selectionStart.clientId === clientId &&
-		    selectionEnd.clientId === clientId) {
+		if (resolvedApplyRange) {
 
-			const start = selectionStart.offset || 0;
-			const end = selectionEnd.offset || 0;
+			const start = resolvedApplyRange.start;
+			const end = resolvedApplyRange.end;
 
 			if (start !== end) {
 				// Parse the current content as HTML
@@ -2181,39 +2300,36 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 							// Split features (comma-separated) and remove the target feature
 							const featureList = dataFeatures.split(',').map(f => f.trim()).filter(f => f && f !== featureId);
 
+							// Raw indexed alternates (data-feature-settings, e.g. '"salt" 2')
+							// are independent of the toggled tags and must survive removal
+							const rawSettings = span.getAttribute('data-feature-settings') || '';
+
 							if (featureList.length === 0) {
-								// No features left - remove data-features attribute
+								// No toggled features left - remove data-features attribute
 								span.removeAttribute('data-features');
 
-								// Remove font-feature-settings from style, keep other styles
-								const currentStyleForRemoval = span.getAttribute('style') || '';
-								const remainingStyleObj = {};
-								currentStyleForRemoval.split(';').forEach(rule => {
-									const [prop, value] = rule.split(':').map(s => s.trim());
-									if (prop && value && prop !== 'font-feature-settings') {
-										remainingStyleObj[prop] = value;
-									}
-								});
+								const remainingStyleObj = parseStyleString(span.getAttribute('style'));
+								if (rawSettings) {
+									// Keep the raw alternates rendering
+									remainingStyleObj['font-feature-settings'] = rawSettings;
+								} else {
+									delete remainingStyleObj['font-feature-settings'];
+								}
 
 								// Rebuild style or remove it entirely
 								if (Object.keys(remainingStyleObj).length > 0) {
-									const newStyle = Object.entries(remainingStyleObj)
-										.map(([prop, value]) => `${prop}: ${value}`)
-										.join('; ');
-									span.setAttribute('style', newStyle);
+									span.setAttribute('style', buildStyleString(remainingStyleObj));
 								} else {
 									span.removeAttribute('style');
 								}
 
 								// Check if any other typost attributes remain before unwrapping
-								const hasFontId = span.getAttribute('data-font-id');
-								const hasFontSize = span.getAttribute('data-fontsize');
-								const hasFontWeight = span.getAttribute('data-fontweight');
-								const hasLetterSpacing = span.getAttribute('data-letterspacing');
-								const hasLineHeight = span.getAttribute('data-lineheight');
-
-								const hasAnyAttributes = hasFontId || hasFontSize ||
-								                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+								const hasAnyAttributes = span.getAttribute('data-font-id') ||
+								                         span.getAttribute('data-fontsize') ||
+								                         span.getAttribute('data-fontweight') ||
+								                         span.getAttribute('data-letterspacing') ||
+								                         span.getAttribute('data-lineheight') ||
+								                         span.getAttribute('data-feature-settings');
 
 								if (!hasAnyAttributes && Object.keys(remainingStyleObj).length === 0) {
 									// No attributes or styles remain - safe to unwrap the span
@@ -2228,29 +2344,23 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								// Update the span with remaining features (comma-separated)
 								span.setAttribute('data-features', featureList.join(','));
 
-								// Rebuild font-feature-settings CSS with all remaining features
-								const featureSettings = featureList.map(f => `"${f}" 1`).join(', ');
-								const currentStyle = span.getAttribute('style') || '';
+								// Rebuild font-feature-settings: raw indexed alternates first,
+								// then remaining plain tags not already covered by the raw value
+								const plainTags = featureList
+									.filter(f => rawSettings.indexOf(`"${f}"`) === -1)
+									.map(f => `"${f}" 1`)
+									.join(', ');
+								const featureSettings = rawSettings
+									? (plainTags ? `${rawSettings}, ${plainTags}` : rawSettings)
+									: plainTags;
 
-								// Parse existing styles
-								const styleObj = {};
-								currentStyle.split(';').forEach(rule => {
-									const [prop, value] = rule.split(':').map(s => s.trim());
-									if (prop && value) {
-										styleObj[prop] = value;
-									}
-								});
-
-								// Update font-feature-settings
-								styleObj['font-feature-settings'] = featureSettings;
-
-								// Rebuild style string
-								const newStyle = Object.entries(styleObj)
-									.filter(([prop, value]) => prop && value)
-									.map(([prop, value]) => `${prop}: ${value}`)
-									.join('; ');
-
-								span.setAttribute('style', newStyle);
+								const styleObj = parseStyleString(span.getAttribute('style'));
+								if (featureSettings) {
+									styleObj['font-feature-settings'] = featureSettings;
+								} else {
+									delete styleObj['font-feature-settings'];
+								}
+								span.setAttribute('style', buildStyleString(styleObj));
 							}
 						}
 					});
@@ -2350,6 +2460,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 
 		if (fontWeight) {
 			styles.fontWeight = fontWeight;
+		}
+
+		if (fontStyle) {
+			styles.fontStyle = fontStyle;
 		}
 
 		if (letterSpacing !== 0) {
@@ -2700,6 +2814,39 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									);
 								})()}
 
+								{/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Font Style (for selected text)', 'typography-stylist')}
+										value={inlineFontStyle}
+										options={[
+											{ label: __('Inherit', 'typography-stylist'), value: '' },
+											{ label: __('Normal (upright)', 'typography-stylist'), value: 'normal' },
+											{ label: __('Italic', 'typography-stylist'), value: 'italic' }
+										]}
+										onChange={(value) => {
+											setInlineFontStyle(value);
+											if (value) {
+												applyInlineFontStyle(value);
+											} else {
+												resetFontStyle();
+											}
+										}}
+										help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+									/>
+									{inlineFontStyle && (
+										<Button
+											variant="secondary"
+											onClick={resetFontStyle}
+											isDestructive
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
+										>
+											{__('Reset Font Style', 'typography-stylist')}
+										</Button>
+									)}
+								</div>
+
 								{/* Extension hook point: after font controls (e.g., Variable Font axes).
 								    key: remount (and re-fire the action) when any active font changes */}
 								<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
@@ -2933,7 +3080,11 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 																fontFeatureSettings: [...new Set([feature.id, ...features, ...inlineFeaturesAtSelection])].map(f => `"${f}" 1`).join(', '),
 																fontFamily: inlineFontFamilyAtSelection
 																	? `var(--font-${inlineFontFamilyAtSelection})`
-																	: (fontFamily || computedFont || 'inherit')
+																	: (fontFamily || computedFont || 'inherit'),
+																// Render the italic face when the selection is italic
+																// (data-fontstyle span, <em>/<i>, or the block setting) —
+																// italic faces carry their own glyphs and features
+																fontStyle: (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) || inlineFontStyle || fontStyle || undefined
 															}}
 														>
 															{sampleText}
@@ -3156,6 +3307,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight });
 					}
 				}} />
+
+				<PanelBody title={__('Font Style', 'typography-stylist')} initialOpen={false}>
+					<SelectControl
+						value={fontStyle}
+						options={[
+							{ label: __('Inherit', 'typography-stylist'), value: '' },
+							{ label: __('Normal (upright)', 'typography-stylist'), value: 'normal' },
+							{ label: __('Italic', 'typography-stylist'), value: 'italic' }
+						]}
+						onChange={(value) => setAttributes({ fontStyle: value })}
+						help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+					/>
+				</PanelBody>
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>
 					<SelectControl

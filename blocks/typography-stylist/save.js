@@ -39,6 +39,7 @@ export default function save({ attributes }) {
 		fontSizePreferred,
 		fontSizeMax,
 		fontWeight,
+		fontStyle,
 		letterSpacing,
 		lineHeight,
 		screenReaderClass,
@@ -76,6 +77,13 @@ export default function save({ attributes }) {
 			styleArray.push(`font-weight: ${fontWeight}`);
 		}
 
+		// Visual italic only (font-style) — semantic emphasis stays <em>, added
+		// via the editor's own Italic button. Empty default keeps existing
+		// blocks' save output byte-identical (block validation).
+		if (fontStyle) {
+			styleArray.push(`font-style: ${fontStyle}`);
+		}
+
 		if (letterSpacing !== 0) {
 			styleArray.push(`letter-spacing: ${letterSpacing / 1000}em`);
 		}
@@ -111,7 +119,12 @@ export default function save({ attributes }) {
 		.replace(/<br\b[^>]*>/gi, ' ')
 		.replace(/<[^>]*>/g, '');
 
-	// Parse style string into object
+	// Parse style string into object.
+	// Intentionally NOT migrated to utils.js parseStyleString(): this parse
+	// feeds the serialized save output, which must stay byte-stable for block
+	// validation of already-published posts — a future change to the shared
+	// parser must never be able to shift save markup. See
+	// todo/refactor-style-string-helpers.md.
 	const styleObj = {};
 	if (styleString) {
 		styleString.split(';').forEach(rule => {

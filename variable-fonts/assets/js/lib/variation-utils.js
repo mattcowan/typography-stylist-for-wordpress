@@ -256,9 +256,85 @@
 		return result;
 	}
 
+	/**
+	 * Merge a panel mount into a shared axis-adjustment session.
+	 *
+	 * A session tracks slider values AND which axes the author has actually
+	 * touched. Only touched axes are ever emitted into
+	 * font-variation-settings — an untouched axis must keep following the
+	 * high-level font properties (font-weight -> wght etc.), NOT get pinned
+	 * to the font file's default. Fraunces made the old behavior visible:
+	 * its fvar wght default is 900, so emitting every axis on any slider
+	 * move snapped text to Black the moment an unrelated axis (WONK) moved.
+	 *
+	 * Axes already present on the span (initialSettings) count as touched —
+	 * they are applied styling that every dispatch must preserve, and it
+	 * lets the weight panel and the custom-axes panel compose one value.
+	 *
+	 * @param {Object} session  {values:{}, touched:{}} — mutated in place
+	 * @param {Array}  axes     Axis definitions [{tag, min, max, default}]
+	 * @param {Object} initialSettings Parsed settings currently on the span
+	 * @return {Object} The same session
+	 */
+	function mergeAxisSession(session, axes, initialSettings) {
+		session.values = session.values || {};
+		session.touched = session.touched || {};
+
+		// Prune tags that don't belong to this font's axes — axis values are
+		// font-specific, so leftovers from a previously-mounted font (or from
+		// stale span settings) must never keep emitting
+		var validTags = {};
+		for (var i = 0; i < axes.length; i++) {
+			validTags[axes[i].tag] = true;
+		}
+		var existing = Object.keys(session.values);
+		for (var k = 0; k < existing.length; k++) {
+			if (!validTags[existing[k]]) {
+				delete session.values[existing[k]];
+				delete session.touched[existing[k]];
+			}
+		}
+
+		for (var j = 0; j < axes.length; j++) {
+			var ax = axes[j];
+			if (session.values[ax.tag] === undefined) {
+				session.values[ax.tag] = ax['default'];
+			}
+		}
+		if (initialSettings) {
+			for (var tag in initialSettings) {
+				if (initialSettings.hasOwnProperty(tag) && validTags[tag]) {
+					session.values[tag] = initialSettings[tag];
+					session.touched[tag] = true;
+				}
+			}
+		}
+		return session;
+	}
+
+	/**
+	 * The settings object a session should emit: touched axes only.
+	 *
+	 * @param {Object} session {values:{}, touched:{}}
+	 * @return {Object} {tag: value} for every touched axis
+	 */
+	function pickTouchedSettings(session) {
+		var out = {};
+		var touched = (session && session.touched) || {};
+		var values = (session && session.values) || {};
+		for (var tag in touched) {
+			if (touched[tag] && values[tag] !== undefined) {
+				out[tag] = values[tag];
+			}
+		}
+		return out;
+	}
+
 	var api = {
 		parseVariationSettings: parseVariationSettings,
 		buildVariationSettings: buildVariationSettings,
+		mergeAxisSession: mergeAxisSession,
+		pickTouchedSettings: pickTouchedSettings,
 		getQuickButtons: getQuickButtons,
 		resolveWeightControlType: resolveWeightControlType,
 		resolveWeightControlFontId: resolveWeightControlFontId,

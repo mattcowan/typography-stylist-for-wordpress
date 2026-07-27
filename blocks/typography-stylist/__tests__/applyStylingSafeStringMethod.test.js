@@ -258,3 +258,91 @@ describe('Typography Stylist - validateNestingDepth', () => {
 		expect(result.depth).toBe(0);
 	});
 });
+
+describe('nesting depth guard (canCreateNestedSpan integration)', () => {
+	const { applyStylingSafeStringMethod: apply } = require('../utils');
+
+	const tripleNested =
+		'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">' +
+		'<span class="typost-styled" data-fontweight="700" style="font-weight: 700">' +
+		'<span class="typost-styled" data-features="liga" style=\'font-feature-settings: "liga" 1\'>Elegant</span>' +
+		'</span></span>';
+
+	test('partial selection inside a 3-deep chain refuses a 4th level, content unchanged', () => {
+		const result = apply(tripleNested, 1, 3, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(false);
+		expect(result.content).toBe(tripleNested);
+		expect(result.error).toContain('nesting depth');
+	});
+
+	test('entire-span selection at depth 3 still merges (no new level created)', () => {
+		const result = apply(tripleNested, 0, 7, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('letter-spacing');
+	});
+
+	test('depth-2 partial selection still nests successfully', () => {
+		const doubleNested =
+			'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">' +
+			'<span class="typost-styled" data-fontweight="700" style="font-weight: 700">Elegant</span>' +
+			'</span>';
+		const result = apply(doubleNested, 1, 3, { 'data-letterspacing': '2' }, 'letter-spacing: 0.002em');
+		expect(result.success).toBe(true);
+	});
+
+	test('entire-span detection does not merge when the span has element children (D3)', () => {
+		const withChild =
+			'<span class="typost-styled" data-fontsize="40px" style="font-size: 40px">AB' +
+			'<span class="typost-styled" data-features="liga" style=\'font-feature-settings: "liga" 1\'>C</span>' +
+			'</span>';
+		// Selecting "AB" — before/after are empty for that text node, but the
+		// span's full text is "ABC"; merging would style "C" too
+		const result = apply(withChild, 0, 2, { 'data-fontweight': '700' }, 'font-weight: 700');
+		expect(result.success).toBe(true);
+		const doc = new DOMParser().parseFromString('<div>' + result.content + '</div>', 'text/html');
+		const outer = doc.querySelector('[data-fontsize]');
+		// The outer span itself must NOT have gained the weight
+		expect(outer.getAttribute('data-fontweight')).toBeNull();
+		// The new weight span wraps only "AB"
+		const weightSpan = doc.querySelector('[data-fontweight]');
+		expect(weightSpan.textContent).toBe('AB');
+	});
+});
+
+describe('block conversion regression — cross-span selection over per-letter styling', () => {
+	// The exact "Powerful Mechanics" showcase shape: seven adjacent spans with
+	// per-letter glyph alternates, a swash, and mixed weights. Converting via
+	// the inline editor previously rebuilt this from plain text when the
+	// selection crossed span boundaries, destroying every span.
+	const POWERFUL_MECHANICS =
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">Powerful </span>' +
+		'<span data-font-id="1" data-fontweight="700" data-feature-settings=\'"salt" 17\' style=\'font-feature-settings: "salt" 17; font-family: var(--font-1); font-weight: 700\' class="typost-styled">M</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">ec</span>' +
+		'<span data-features="swsh" data-font="bookmania" data-font-id="1" data-fontweight="400" style=\'font-feature-settings: "swsh" 1; font-family: var(--font-1); font-weight: 400\' class="typost-styled">h</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">a</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="900" data-feature-settings=\'"salt" 3\' style=\'font-feature-settings: "salt" 3; font-family: var(--font-1); font-weight: 900\' class="typost-styled">n</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">ics</span>';
+
+	test('applying features over "Powerful Mech" preserves every existing span', () => {
+		// Selection 0..13 = "Powerful Mech" — crosses four span boundaries
+		const result = applyStylingSafeStringMethod(
+			POWERFUL_MECHANICS, 0, 13,
+			{ 'data-features': 'liga' },
+			'font-feature-settings: "liga" 1'
+		);
+
+		expect(result.success).toBe(true);
+		// The glyph alternates survive with their raw indexed values
+		// (attribute serialization entity-encodes the quotes)
+		expect(result.content).toContain('&quot;salt&quot; 17');
+		expect(result.content).toContain('&quot;salt&quot; 3');
+		// The swash span survives
+		expect(result.content).toContain('data-features="swsh');
+		// The per-letter weights survive
+		expect(result.content).toContain('font-weight: 700');
+		expect(result.content).toContain('font-weight: 900');
+		// Text is intact
+		const text = result.content.replace(/<[^>]*>/g, '');
+		expect(text).toBe('Powerful Mechanics');
+	});
+});

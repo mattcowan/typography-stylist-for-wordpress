@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Guarded like glyphs-panel: a leftover standalone copy may have defined these.
 if ( ! defined( 'TYPOST_VF_VERSION' ) ) {
-	define( 'TYPOST_VF_VERSION', '1.2.1' );
+	define( 'TYPOST_VF_VERSION', '1.3.0' );
 	define( 'TYPOST_VF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_VF_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }

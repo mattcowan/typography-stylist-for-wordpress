@@ -7,7 +7,7 @@
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
 // Shared font picker option builder + WP Font Library adoption helpers
-const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } = require('./font-options.js');
+const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily } = require('./font-options.js');
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -347,16 +347,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Local storage might not be available
             }
 
+            // Property changes recorded since the last apply. When the selection
+            // is mixed (multiple distinct typost formats), only these changes are
+            // applied per-run — the rest of each run's formatting is preserved.
+            this._pendingChanges = { keys: new Set(), featureToggles: [] };
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
-                selectedFont: this.getActiveFont() || '',
+                selectedFont: this.resolveActiveFont(),
                 selectedFontId: this.getActiveFontId() || 0,
                 fontSize: this.getActiveFontSize() || 'inherit',
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
+                fontStyle: this.getActiveFontStyle() || '',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 selectedText: '', // Extracted text for feature previews
@@ -414,6 +420,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setFontSizePreferred = this.setFontSizePreferred.bind(this);
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
             this.setFontWeight = this.setFontWeight.bind(this);
+            this.setFontStyle = this.setFontStyle.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
             this.setLineHeight = this.setLineHeight.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
@@ -445,6 +452,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         editorType: 'inline',
                         fontId: self.state.selectedFontId,
                         fontWeight: self.state.fontWeight,
+                        // Rendered style, not just span styling — an <em>-italic
+                        // selection should give consumers (Glyphs panel) the
+                        // italic face even without a data-fontstyle span
+                        fontStyle: self.getRenderedFontStyle(),
                         fontSize: self.state.fontSize,
                         fontSizeMin: self.state.fontSizeMin,
                         fontSizePreferred: self.state.fontSizePreferred,
@@ -467,10 +478,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._handleApplyBlockProperties = function(e) {
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
+                    // Record which properties this event changes so mixed
+                    // selections only get those patched per-run. Style/animation
+                    // ids reset to wholesale (extensions own the full format).
+                    if (e.detail.paragraphStyleId !== undefined || e.detail.animationId !== undefined || props.features !== undefined) {
+                        self._resetPendingChanges();
+                    } else {
+                        if (props.fontId !== undefined) { self._recordChange('font'); }
+                        if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
+                        if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
+                        if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
+                        if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
+                        if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
+                        if (props.fontVariationSettings !== undefined) { self._recordChange('fontVariationSettings'); }
+                    }
                     self.setState({
                         selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
                         selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
                         fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
+                        fontStyle: props.fontStyle !== undefined ? (props.fontStyle || '') : self.state.fontStyle,
                         fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
                         fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
                         fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
@@ -539,19 +565,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 let newValue = insert(value, text, start, end);
                 const insertEnd = start + text.length;
 
-                // Copy formats from the preceding character so insertion inside
-                // formatted text behaves like typing (continuity)
-                const inherited = (start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : [];
+                // Copy formats so insertion behaves like typing (continuity).
+                // When replacing a selection, inherit from the replaced range's
+                // first character (the glyph being swapped) — the preceding
+                // character may sit outside the styled span.
+                const inherited = (end > start && value.formats[start])
+                    ? value.formats[start]
+                    : ((start > 0 && value.formats[start - 1]) ? value.formats[start - 1] : []);
                 inherited.forEach(function(format) {
                     newValue = applyFormat(newValue, format, start, insertEnd);
                 });
 
-                // Wrap inserted text in a typost-styled span when attributes provided
-                // (replaces any inherited typost format on just the inserted range)
+                // Wrap inserted text in a typost-styled span when attributes provided.
+                // applyFormat replaces the inherited typost format on the inserted
+                // range, so merge the replaced format's sizing/spacing into the new
+                // attributes first — a swapped glyph must keep its span's styling.
                 if (e.detail.attributes && typeof e.detail.attributes === 'object') {
+                    const inheritedTypost = inherited.find(function(f) { return f && f.type === FORMAT_TYPE; });
+                    const mergeAttrs = (window.typostSharedUtils && window.typostSharedUtils.mergeInsertionFormatAttributes)
+                        ? window.typostSharedUtils.mergeInsertionFormatAttributes
+                        : function(incoming) { return incoming; };
                     newValue = applyFormat(newValue, {
                         type: FORMAT_TYPE,
-                        attributes: e.detail.attributes
+                        attributes: mergeAttrs(e.detail.attributes, inheritedTypost ? inheritedTypost.attributes : null)
                     }, start, insertEnd);
                 }
 
@@ -862,6 +898,40 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Get currently active font style (visual italic) from the format.
+         * '' means inherit — note the core Italic (<em>) format is deliberately
+         * NOT reported here: it is semantic emphasis, not span styling. It is
+         * still honored for previews and the Glyphs panel face selection.
+         */
+        getActiveFontStyle() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontstyle']) {
+                return activeFormat.attributes['data-fontstyle'];
+            }
+
+            return '';
+        }
+
+        /**
+         * The font style actually RENDERING at the selection — span styling
+         * first, then the core Italic (<em>) format. Drives previews and the
+         * Glyphs panel face variant.
+         */
+        getRenderedFontStyle() {
+            const { value } = this.props;
+            const own = this.state && this.state.fontStyle;
+            if (own) {
+                return own;
+            }
+            if (value && getActiveFormat(value, 'core/italic')) {
+                return 'italic';
+            }
+            return '';
+        }
+
+        /**
          * Get block's inherited font-family from computed styles
          * Detects the current font applied by theme or block settings
          * @return {string} Font family string from computed styles, or empty string if not found
@@ -1086,16 +1156,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             const wasOpen = this.state.isOpen;
 
+            // Fresh popover session: no property changes recorded yet
+            this._resetPendingChanges();
+
             this.setState(state => ({
                 isOpen: !state.isOpen,
                 selectedFeatures: this.getActiveFeatures() || [],
-                selectedFont: this.getActiveFont() || '',
+                selectedFont: this.resolveActiveFont(),
                 selectedFontId: this.getActiveFontId() || 0,
                 fontSize: this.getActiveFontSize() || 'inherit',
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
+                fontStyle: this.getActiveFontStyle() || '',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 fontVariationSettings: this.getActiveFontVariationSettings() || '',
@@ -1141,6 +1215,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font family (value can be font ID or font family string)
          */
         setFont(value) {
+            this._recordChange('font');
             if (value === '') {
                 // Reset to default
                 this.setState({
@@ -1191,6 +1266,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         if (available.length === 1 && this.state.fontWeight !== available[0]) {
                             newState.fontWeight = available[0];
                         }
+                        if (newState.fontWeight !== undefined) {
+                            this._recordChange('fontWeight');
+                        }
                     }
 
                     this.setState(newState, () => {
@@ -1214,16 +1292,56 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         resolveFontFamily(fontId) {
             const id = parseInt(fontId, 10);
-            if (!isNaN(id) && this.fontIdMap && this.fontIdMap[id]) {
-                return this.fontIdMap[id].family;
+            if (!isNaN(id) && this.getFontIdMap()[id]) {
+                return this.getFontIdMap()[id].family;
             }
             return '';
+        }
+
+        /**
+         * fontIdMap is normally built lazily by getFontOptions() during modal
+         * render; build it on demand for callers that run before first render.
+         */
+        getFontIdMap() {
+            if (!this.fontIdMap) {
+                this.fontIdMap = buildFontOptions(typostData).fontIdMap;
+            }
+            return this.fontIdMap;
+        }
+
+        /**
+         * Active font family for previews: legacy data-font when present,
+         * otherwise resolved from data-font-id (the v1.1.6+ span format).
+         */
+        resolveActiveFont() {
+            return resolveActiveFontFamily(
+                this.getActiveFont(),
+                this.getActiveFontId(),
+                this.getFontIdMap()
+            );
+        }
+
+        /**
+         * Record a property change for the next apply. On mixed selections the
+         * apply patches only the recorded properties per formatting run.
+         */
+        _recordChange(key) {
+            this._pendingChanges.keys.add(key);
+        }
+
+        _recordFeatureToggle(tag, enabled) {
+            this._pendingChanges.featureToggles.push({ tag: tag, enabled: enabled });
+        }
+
+        _resetPendingChanges() {
+            this._pendingChanges = { keys: new Set(), featureToggles: [] };
         }
 
         /**
          * Set font size mode
          */
         setFontSize(mode) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSize: mode
             }, () => {
@@ -1235,6 +1353,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size min
          */
         setFontSizeMin(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizeMin: value
             }, () => {
@@ -1246,6 +1365,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size preferred
          */
         setFontSizePreferred(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizePreferred: value
             }, () => {
@@ -1257,6 +1377,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font size max
          */
         setFontSizeMax(value) {
+            this._recordChange('fontSize');
             this.setState({
                 fontSizeMax: value
             }, () => {
@@ -1268,8 +1389,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set font weight
          */
         setFontWeight(value) {
+            this._recordChange('fontWeight');
             this.setState({
                 fontWeight: value
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Set font style (visual italic — semantic emphasis stays <em>)
+         */
+        setFontStyle(value) {
+            this._recordChange('fontStyle');
+            this.setState({
+                fontStyle: value
             }, () => {
                 this.debouncedApplyDropdown();
             });
@@ -1279,6 +1413,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set letter spacing
          */
         setLetterSpacing(value) {
+            this._recordChange('letterSpacing');
             this.setState({
                 letterSpacing: value
             }, () => {
@@ -1290,6 +1425,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Set line height
          */
         setLineHeight(value) {
+            this._recordChange('lineHeight');
             this.setState({
                 lineHeight: value
             }, () => {
@@ -1307,8 +1443,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 if (index > -1) {
                     features.splice(index, 1);
+                    this._recordFeatureToggle(featureId, false);
                 } else {
                     features.push(featureId);
+                    this._recordFeatureToggle(featureId, true);
                 }
 
                 return {
@@ -1409,8 +1547,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Check if there's a selection (partial text selected)
             if (effectiveStart !== effectiveEnd) {
                 // User selected a portion of text - apply styling only to that portion
-                // Use the current block's HTML content to preserve existing spans
-                const existingContent = currentBlock.attributes.content || '';
+                // Use the current block's HTML content to preserve existing spans.
+                // String() matters: content can be a RichTextData object (WP 6.5+)
+                const existingContent = String(currentBlock.attributes.content || '');
                 const fullText = getTextContent(value);
 
                 // Build style string for the selected portion
@@ -1422,7 +1561,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const sanitizedFeatures = selectedFeatures.map(f => sanitizeCSSValue(f));
                     styleArray.push(`font-feature-settings: ${sanitizedFeatures.map(f => `"${f}" 1`).join(', ')}`);
                 }
-                if (selectedFont) {
+                if (this.state.selectedFontId) {
+                    // Modern format: CSS variable keyed by numeric font ID (drives
+                    // frontend @font-face detection like every other span)
+                    styleArray.push(`font-family: var(--font-${parseInt(this.state.selectedFontId, 10)})`);
+                } else if (selectedFont) {
                     const sanitizedFont = sanitizeFontFamily(selectedFont);
                     styleArray.push(`font-family: ${sanitizedFont}`);
                 }
@@ -1452,70 +1595,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 // If we have existing HTML content with spans, we need to preserve it
                 if (hasHTMLTags(existingContent)) {
-                    // Parse the HTML to work with it
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(`<div>${existingContent}</div>`, 'text/html');
-                    const container = doc.body.firstChild;
-
-                    // Create offset map for the selection (accounts for <br> line breaks)
-                    const selTextMap = buildTextOffsetMap(container, doc);
-
-                    // Use offset map's final position for text length (matches BR counting)
-                    const textLength = selTextMap.length > 0 ? selTextMap[selTextMap.length - 1].end : container.textContent.length;
-                    const validationResult = validateSelectionBounds(effectiveStart, effectiveEnd, textLength);
-                    if (!validationResult.valid) {
-                        return;
+                    // Build the new span's attributes in the modern format
+                    const spanAttributes = {};
+                    if (selectedFeatures.length > 0) {
+                        spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
                     }
-                    let startNode = null, startOffset = 0;
-                    let endNode = null, endOffset = 0;
-
-                    for (const entry of selTextMap) {
-                        if (!startNode && entry.end >= effectiveStart) {
-                            startNode = entry.node;
-                            startOffset = effectiveStart - entry.start;
-                        }
-
-                        if (entry.end >= effectiveEnd) {
-                            endNode = entry.node;
-                            endOffset = effectiveEnd - entry.start;
-                            break;
-                        }
+                    if (this.state.selectedFontId) {
+                        spanAttributes['data-font-id'] = String(this.state.selectedFontId);
+                    }
+                    if (fontWeight && fontWeight !== '400') {
+                        spanAttributes['data-fontweight'] = String(fontWeight);
                     }
 
-                    // If we found the nodes, wrap the selection
-                    if (startNode && endNode) {
-                        const range = doc.createRange();
-                        range.setStart(startNode, startOffset);
-                        range.setEnd(endNode, endOffset);
+                    // Apply over the existing HTML with the shared span-preserving
+                    // applier: selections crossing span boundaries are extracted and
+                    // re-wrapped with every surrounding span intact (the old
+                    // surroundContents call threw on ANY cross-span selection and
+                    // fell back to a plain-text rebuild that destroyed all existing
+                    // styling — exactly the selections the convert button exists for)
+                    const applied = (window.typostSharedUtils && window.typostSharedUtils.applyStylingSafeStringMethod)
+                        ? window.typostSharedUtils.applyStylingSafeStringMethod(existingContent, effectiveStart, effectiveEnd, spanAttributes, styleString)
+                        : { success: false };
 
-                        const span = doc.createElement('span');
-                        span.className = 'typost-styled';
-                        // Always set data-features for new content (faster parsing than style attribute)
-                        // Note: getInlineFeaturesForTypostBlock() includes fallback for backward compatibility
-                        span.setAttribute('data-features', selectedFeatures.join(','));
-                        span.setAttribute('style', styleString);
-
-                        try {
-                            range.surroundContents(span);
-                            contentForBlock = container.innerHTML;
-                        } catch (e) {
-                            // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
-                            const beforeText = fullText.substring(0, effectiveStart);
-                            const selectedText = fullText.substring(effectiveStart, effectiveEnd);
-                            const afterText = fullText.substring(effectiveEnd);
-                            contentForBlock = escapeHTML(beforeText) +
-                                `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
-                                escapeHTML(afterText);
-                        }
-                    } else {
-                        // Fall back to simple text replacement
-                        const beforeText = fullText.substring(0, effectiveStart);
-                        const selectedText = fullText.substring(effectiveStart, effectiveEnd);
-                        const afterText = fullText.substring(effectiveEnd);
-                        contentForBlock = escapeHTML(beforeText) +
-                            `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
-                            escapeHTML(afterText);
-                    }
+                    // On failure, convert with the content untouched rather than
+                    // ever rebuilding from plain text — no styling is worth losing
+                    contentForBlock = applied.success ? applied.content : existingContent;
                 } else {
                     // No existing HTML, use simple text replacement
                     const beforeText = fullText.substring(0, effectiveStart);
@@ -1585,8 +1689,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }, 100);
                 }
             } else {
-                // No selection - apply to entire block (original behavior)
-                const textContent = currentBlock.attributes.content || getTextContent(value);
+                // No selection - apply to entire block (original behavior).
+                // String() matters: content can be a RichTextData object (WP 6.5+)
+                const textContent = String(currentBlock.attributes.content || '') || getTextContent(value);
 
                 // If already an Typography Stylist block, just update its attributes
                 if (isAlreadyTypostBlock) {
@@ -1646,11 +1751,83 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Translate the pending property changes into a per-run patch for
+         * patchTypostFormatAttributes(): data attributes + style declarations
+         * to set (or null to remove), plus feature add/remove toggles.
+         */
+        _buildPatchFromPending(pending) {
+            const { selectedFont, selectedFontId, fontWeight, fontStyle, letterSpacing, lineHeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontVariationSettings } = this.state;
+            const dataAttrs = {};
+            const styleDecls = {};
+
+            if (pending.keys.has('font')) {
+                if (selectedFontId) {
+                    dataAttrs['data-font'] = selectedFont;
+                    dataAttrs['data-font-id'] = String(selectedFontId);
+                    styleDecls['font-family'] = `var(--font-${selectedFontId})`;
+                } else if (selectedFont) {
+                    dataAttrs['data-font'] = selectedFont;
+                    dataAttrs['data-font-id'] = null;
+                    styleDecls['font-family'] = selectedFont;
+                } else {
+                    dataAttrs['data-font'] = null;
+                    dataAttrs['data-font-id'] = null;
+                    styleDecls['font-family'] = null;
+                }
+                // Axis values are font-specific — a font change invalidates them
+                dataAttrs['data-font-variation-settings'] = null;
+                styleDecls['font-variation-settings'] = null;
+            }
+            if (pending.keys.has('fontWeight')) {
+                dataAttrs['data-fontweight'] = fontWeight;
+                styleDecls['font-weight'] = fontWeight;
+            }
+            if (pending.keys.has('fontStyle')) {
+                dataAttrs['data-fontstyle'] = fontStyle || null;
+                styleDecls['font-style'] = fontStyle || null;
+            }
+            if (pending.keys.has('letterSpacing')) {
+                dataAttrs['data-letterspacing'] = letterSpacing !== 0 ? String(letterSpacing) : null;
+                styleDecls['letter-spacing'] = letterSpacing !== 0 ? `${letterSpacing / 1000}em` : null;
+            }
+            if (pending.keys.has('lineHeight')) {
+                dataAttrs['data-lineheight'] = lineHeight !== 0 ? String(lineHeight) : null;
+                styleDecls['line-height'] = lineHeight !== 0 ? String(lineHeight) : null;
+            }
+            if (pending.keys.has('fontSize')) {
+                if (fontSize !== 'inherit') {
+                    dataAttrs['data-fontsize'] = fontSize;
+                    dataAttrs['data-fontsize-min'] = String(fontSizeMin);
+                    dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
+                    dataAttrs['data-fontsize-max'] = String(fontSizeMax);
+                    styleDecls['font-size'] = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                } else {
+                    dataAttrs['data-fontsize'] = null;
+                    dataAttrs['data-fontsize-min'] = null;
+                    dataAttrs['data-fontsize-preferred'] = null;
+                    dataAttrs['data-fontsize-max'] = null;
+                    styleDecls['font-size'] = null;
+                }
+            }
+            if (pending.keys.has('fontVariationSettings')) {
+                const safeSettings = sanitizeFontVariationSettings(fontVariationSettings || '');
+                dataAttrs['data-font-variation-settings'] = safeSettings || null;
+                styleDecls['font-variation-settings'] = safeSettings || null;
+            }
+
+            return {
+                dataAttrs: dataAttrs,
+                styleDecls: styleDecls,
+                featureToggles: pending.featureToggles.slice()
+            };
+        }
+
+        /**
          * Core feature application logic (live preview auto-apply)
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -1670,7 +1847,46 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
             const rawFeatureSettings = (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-feature-settings']) || '';
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
+            // MIXED SELECTIONS: when the range spans multiple distinct typost
+            // formats (or formatted + plain text), stamping the full popover
+            // state over it would wipe every per-run difference — the popover
+            // state can't represent heterogeneity. Instead, patch ONLY the
+            // properties changed since the last apply into each formatting run,
+            // leaving everything else about each run untouched.
+            const effectiveStart = selectionLost ? savedSelectionStart : value.start;
+            const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
+            const pending = this._pendingChanges;
+            const hasPending = pending && (pending.keys.size > 0 || pending.featureToggles.length > 0);
+            const shared = window.typostSharedUtils || {};
+
+            if (hasPending && shared.isMixedFormatSelection && shared.patchTypostFormatAttributes &&
+                Number.isFinite(effectiveStart) && Number.isFinite(effectiveEnd) && effectiveStart !== effectiveEnd &&
+                shared.isMixedFormatSelection(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE)) {
+
+                const patch = this._buildPatchFromPending(pending);
+                this._resetPendingChanges();
+
+                const runs = shared.computeTypostFormatRuns(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE);
+                let newValue = value;
+                runs.forEach((run) => {
+                    const patchedAttrs = shared.patchTypostFormatAttributes(run.attributes, patch);
+                    if (patchedAttrs) {
+                        newValue = applyFormat(newValue, {
+                            type: FORMAT_TYPE,
+                            attributes: patchedAttrs
+                        }, run.start, run.end);
+                    } else if (run.attributes) {
+                        newValue = removeFormat(newValue, FORMAT_TYPE, run.start, run.end);
+                    }
+                });
+                onChange(newValue);
+                return;
+            }
+            if (pending) {
+                this._resetPendingChanges();
+            }
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1736,6 +1952,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 if (!hasActiveStyle) {
                     if (styleString) styleString += '; ';
                     styleString += `font-weight: ${fontWeight}`;
+                }
+
+                // Add font style (visual italic — semantic emphasis stays <em>)
+                if (fontStyle) {
+                    attributes['data-fontstyle'] = fontStyle;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-style: ${fontStyle}`;
+                    }
                 }
 
                 // Add letter spacing
@@ -1819,6 +2044,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Apply preset
          */
         applyPreset(preset) {
+            // Presets define a complete look — wholesale apply is intended
+            this._resetPendingChanges();
             this.setState({
                 selectedFeatures: preset.features,
                 selectedFont: preset.fontFamily || '',
@@ -1884,6 +2111,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         clearFeatures() {
             const { value, onChange } = this.props;
             const { savedSelectionStart, savedSelectionEnd } = this.state;
+            // Clearing removes the format wholesale by design — drop any
+            // recorded property changes so a later apply doesn't resurrect them
+            this._resetPendingChanges();
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
 
             if (selectionLost) {
@@ -2008,6 +2238,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Add feature if not already active (idempotent operation)
             if (!selectedFeatures.includes(featureId)) {
+                this._recordFeatureToggle(featureId, true);
                 this.setState({
                     selectedFeatures: [...selectedFeatures, featureId]
                 }, () => {
@@ -2035,6 +2266,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             const fontToUse = selectedFont || blockInheritedFont;
             if (fontToUse) {
                 previewStyle.fontFamily = fontToUse;
+            }
+
+            // Render the italic face when the selection is italic — the live
+            // popover Font Style choice first, then the span's data-fontstyle,
+            // then the editor's own Italic <em> format. Italic faces carry
+            // their own glyphs and feature sets.
+            const renderedStyle = this.getRenderedFontStyle();
+            if (renderedStyle) {
+                previewStyle.fontStyle = renderedStyle;
             }
 
             return (
@@ -2400,7 +2640,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Font Selector */}
                                 {hasFonts && (
-                                    <div className="typost-font-section">
+                                    <div className="typost-modal-section typost-font-section">
                                         <h4>{__('Font Family', 'typography-stylist')}</h4>
                                         <SelectControl
                                             value={selectedFontId ? String(selectedFontId) : ''}
@@ -2433,7 +2673,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                     if (weightControlType !== 'default') {
                                         return (
-                                            <div className="typost-fontweight-section">
+                                            <div className="typost-modal-section typost-fontweight-section">
                                                 {/* key: remount (and re-fire the action) when the font changes */}
                                                 <div key={`typost-weight-${this.state.selectedFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
                                                     if (el && !el._hooked) {
@@ -2448,7 +2688,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     const weightOptions = this.getFilteredWeightOptions(this.state.selectedFontId);
                                     if (weightOptions.length <= 1) return null;
                                     return (
-                                        <div className="typost-fontweight-section">
+                                        <div className="typost-modal-section typost-fontweight-section">
                                             <h4>{__('Font Weight', 'typography-stylist')}</h4>
                                             <SelectControl
                                                 value={fontWeight}
@@ -2458,6 +2698,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         </div>
                                     );
                                 })()}
+
+                                {/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
+                                <div className="typost-modal-section typost-fontstyle-section">
+                                    <h4>{__('Font Style', 'typography-stylist')}</h4>
+                                    <SelectControl
+                                        value={this.state.fontStyle}
+                                        options={[
+                                            { label: __('Inherit', 'typography-stylist'), value: '' },
+                                            { label: __('Normal', 'typography-stylist'), value: 'normal' },
+                                            { label: __('Italic', 'typography-stylist'), value: 'italic' }
+                                        ]}
+                                        onChange={this.setFontStyle}
+                                        help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+                                    />
+                                </div>
 
                                 {/* Extension hook point: after font controls (e.g., Variable Font axes).
                                     key: remount (and re-fire the action) when the font changes */}
@@ -2469,7 +2724,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 }} />
 
                                 {/* Font Size Controls */}
-                                <div className="typost-fontsize-section">
+                                <div className="typost-modal-section typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
                                         value={fontSize}
@@ -2515,7 +2770,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 </div>
 
                                 {/* Line Height Control */}
-                                <div className="typost-lineheight-section">
+                                <div className="typost-modal-section typost-lineheight-section">
                                     <h4>{__('Line Height', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={lineHeight === 0 ? 1.5 : lineHeight}
@@ -2534,7 +2789,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 </div>
 
                                 {/* Letter Spacing Control */}
-                                <div className="typost-letterspacing-section">
+                                <div className="typost-modal-section typost-letterspacing-section">
                                     <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
                                     <RangeControl
                                         value={letterSpacing}
