@@ -1506,6 +1506,57 @@ export function analyzeInlineFeatures(htmlContent) {
 }
 
 /**
+ * Detect whether a text range renders italic via <em>/<i> markup alone.
+ *
+ * parseInlineStylesAtCursor() only reports fontStyle when a typost-styled
+ * span overlaps the selection — plain emphasized text (`<em>word</em>`) has
+ * no such span, but its italic face is still what consumers like the Glyphs
+ * panel should load. Returns 'italic' only when EVERY text node overlapping
+ * the range sits inside an <em>/<i>, so a selection straddling the emphasis
+ * boundary (mixed faces) reports null.
+ *
+ * @since 2.2.0
+ * @param {string} htmlContent Block content HTML
+ * @param {number} start Selection start offset
+ * @param {number} end Selection end offset (may equal start for a caret)
+ * @return {'italic'|null}
+ */
+export function detectEmItalicAtRange(htmlContent, start, end) {
+	if (!htmlContent || typeof start !== 'number' || !isFinite(start)) {
+		return null;
+	}
+	if (typeof end !== 'number' || !isFinite(end)) {
+		end = start;
+	}
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		if (!container.querySelector('em, i')) {
+			return null;
+		}
+		const textNodeMap = buildTextOffsetMap(container, doc);
+		let sawNode = false;
+		for (const entry of textNodeMap) {
+			const overlaps = (start === end)
+				? (start >= entry.start && start < entry.end)
+				: (start < entry.end && end > entry.start);
+			if (!overlaps) {
+				continue;
+			}
+			sawNode = true;
+			const parent = entry.node.parentElement;
+			if (!parent || !parent.closest('em, i')) {
+				return null;
+			}
+		}
+		return sawNode ? 'italic' : null;
+	} catch (error) {
+		return null;
+	}
+}
+
+/**
  * Strip inline OpenType feature spans from HTML content
  *
  * Removes all <span class="typost-styled"> elements while preserving their text content

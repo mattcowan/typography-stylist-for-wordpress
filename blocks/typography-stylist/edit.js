@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -328,6 +328,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					}
 				}
 				if (props.fontWeight !== undefined) newAttrs.fontWeight = props.fontWeight;
+				if (props.fontStyle !== undefined) newAttrs.fontStyle = props.fontStyle;
 				if (props.fontSize !== undefined) newAttrs.fontSize = props.fontSize;
 				if (props.fontSizeMin !== undefined) newAttrs.fontSizeMin = props.fontSizeMin;
 				if (props.fontSizePreferred !== undefined) newAttrs.fontSizePreferred = props.fontSizePreferred;
@@ -461,7 +462,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// reads current values from ref on each call
 	const qftStateRef = useRef({});
 	qftStateRef.current = {
-		fontId, fontWeight, fontSize, fontSizeMin, fontSizePreferred,
+		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
@@ -492,6 +493,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				return {
 					editorType: 'qft',
 					fontId: activeFontId,
+					// Effective style at the selection wins over the block attribute
+					fontStyle: s.inlineFontStyle || s.fontStyle || '',
 					fontWeight: s.fontWeight,
 					fontSize: s.fontSize,
 					fontSizeMin: s.fontSizeMin,
@@ -574,6 +577,14 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	// block-level font. data-font-id is stored as a string; the consumer side
 	// normalizes type, but qftStateRef carries the raw value.
 	qftStateRef.current.inlineFontId = inlineFontFamilyAtSelection;
+	// Effective font style at the selection (span data-fontstyle, or an
+	// <em>/<i> covering the range even without any typost span) — lets the
+	// Glyphs panel load the face variant actually rendering
+	const emItalicAtSelection = useMemo(() => {
+		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.fontStyle) return null;
+		return detectEmItalicAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
+	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
+	qftStateRef.current.inlineFontStyle = inlineStylesAtSelection?.fontStyle || emItalicAtSelection || null;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations

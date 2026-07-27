@@ -255,3 +255,29 @@ describe('fontStyle detection (visual italic)', () => {
 		expect(parseInlineStylesAtCursor(html, 2, 2).fontStyle).toBeNull();
 	});
 });
+
+describe('detectEmItalicAtRange', () => {
+	const { detectEmItalicAtRange } = require('../utils');
+
+	test('selection fully inside <em> reports italic (no typost span needed)', () => {
+		expect(detectEmItalicAtRange('<em>Elegant</em> Caps', 0, 4)).toBe('italic');
+	});
+
+	test('caret inside <i> reports italic', () => {
+		expect(detectEmItalicAtRange('ab<i>cd</i>', 3, 3)).toBe('italic');
+	});
+
+	test('selection straddling the emphasis boundary reports null (mixed faces)', () => {
+		expect(detectEmItalicAtRange('<em>Elegant</em> Caps', 5, 10)).toBeNull();
+	});
+
+	test('plain text and empty input report null', () => {
+		expect(detectEmItalicAtRange('Elegant Caps', 0, 4)).toBeNull();
+		expect(detectEmItalicAtRange('', 0, 0)).toBeNull();
+		expect(detectEmItalicAtRange('<em>x</em>', undefined, undefined)).toBeNull();
+	});
+
+	test('em wrapping a typost span still reports italic', () => {
+		expect(detectEmItalicAtRange('<em><span class="typost-styled" data-font-id="1">A</span></em>', 0, 1)).toBe('italic');
+	});
+});

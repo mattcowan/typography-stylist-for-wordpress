@@ -1,61 +1,42 @@
-# Feature: Glyphs Panel italic-face browsing
+# Glyphs Panel: italic face support
 
-Status: **not started** — starter prompt for the implementing session.
-Written 2026-07-26, alongside the font-style (visual italic) controls that
-shipped in the 2.2.0 batch.
+**STATUS: DONE (2026-07-27), design revised.** The original plan proposed a
+Roman/Italic toggle in the panel toolbar; the shipped design is
+**context-driven with no toggle** (per Matt's direction): the panel loads and
+displays whatever face variant is actually rendering at the editor selection.
 
-## The gap
+## What shipped (2.2.0 batch)
 
-The Glyphs Panel resolves ONE font file per font entry (picked by weight in
-`glyphs-panel/assets/js/lib/font-loader.js` `resolveFontFile()`), which
-lands on the roman face. Kits with a separate italic file — EB Garamond's
-swash italic capitals are the demo's showcase — have an entire glyph/feature
-set the panel cannot browse. Feature previews already render italic (fixed
-in 2.2.0: they respect `data-fontstyle`, `<em>`/`<i>`, and the block
-fontStyle); the panel is the remaining italic-blind surface.
+- `pickFaceForWeight(faces, weight, style)` in
+  `glyphs-panel/assets/js/lib/font-loader.js` gained a style dimension:
+  exact weight + requested style → requested style any weight → exact weight →
+  first face. A wrong-style face is never preferred over a right-style one.
+  Threaded through every source branch of `resolveFontFile()` (uploaded kits,
+  Adobe stylesheet faces, WP Font Library file lists, manual @font-face
+  discovery — the manual path now collects ALL matching rules and picks).
+- Editor context: both state providers (`typost_current_editor_state`) expose
+  `fontStyle` — the effective style at the selection (span `data-fontstyle`,
+  an `<em>`/`<i>` ancestor, or the popover's live Font Style choice). The
+  glyphs `editor.js` passes it as `context.fontStyle`; `glyphs-modal.js`
+  threads it into `loadMetadata()` → `resolveFontFile()`.
+- Grid cells and the detail-bar preview render with the context's
+  `font-style`, so the italic face is what the author actually sees.
+- Cache: face URLs differ per style, so `makeCacheKey(fontId, url)` already
+  keeps per-face metadata entries separate — no cache change needed.
+- Inline editor (core blocks) got the full Font Style control in the same
+  batch (state, `data-fontstyle` in `_doApplyFeatures`, `fontStyle` pending
+  key in `_buildPatchFromPending`, `getActiveFontStyle`/`getRenderedFontStyle`
+  readers), closing the item previously parked here.
+- `TYPOST_GP_VERSION` bumped (script cache-bust); style-picking covered in
+  `glyphs-panel/__tests__/font-loader.test.js`.
 
-## Starter prompt
+## Still open (small follow-ups)
 
-> In the Glyphs Panel (glyphs-panel/ module, hand-written ES5, no build
-> step), add italic-face support:
->
-> 1. Extend the font-file resolution (`resolveFontFile()` in
->    lib/font-loader.js) with a style dimension: for uploaded kits, pick
->    the face whose parsed font_faces entry has style 'italic' when
->    requested (fall back to roman when the kit has none); Adobe kits
->    match `font-style: italic` blocks in the Typekit CSS.
-> 2. Add a Roman/Italic toggle to the modal toolbar
->    (glyphs-panel/assets/js/glyphs-modal.js), shown only when the font
->    actually has an italic face. Auto-default from the launch context:
->    the editor snapshot should carry the selection's font style (the QFT
->    state now exposes fontStyle via inlineStylesAtSelection; wire it into
->    the context object in glyphs-panel/assets/js/editor.js openModal()).
-> 3. Cache metadata per (fontId, fileUrl) as today — the italic face is a
->    different fileUrl, so idb-cache.js needs no changes; verify the
->    cacheKey covers it.
-> 4. Insertion: a glyph picked from the italic face must carry
->    `data-fontstyle="italic"` + `font-style: italic` in the insertion
->    payload (lib/insertion.js buildInsertionPayload gains a styleFace
->    option) so the inserted character renders with the face it was
->    browsed from; the 2.2.0 merge machinery already preserves it.
-> 5. Respect the module constraints (glyphs-panel/CLAUDE.md): metadata
->    only, IndexedDB-only caching, text-rendered cells (cells get
->    font-style: italic so the browser serves the italic face). Bump
->    TYPOST_GP_VERSION (unbuilt scripts cache-bust on it). Jest tests in
->    glyphs-panel/__tests__/ for the payload + resolution logic; strings
->    use the typost-glyphs-panel text domain (own pot/fr/es catalogs, and
->    note the po files are CRLF).
->
-> Verify on mnc4.local with EB Garamond installed as a font-only ZIP
-> (google/fonts ofl/ebgaramond — roman + italic files in one kit): panel
-> toggle appears, italic face shows the swash capitals under 'swsh', and
-> inserting one lands an italic-styled span.
-
-## Also parked here
-
-- Full font-style (italic) control for the INLINE editor popover (core
-  heading/paragraph blocks): the TS block has block-level + QFT controls
-  as of 2.2.0; the inline editor only renders previews italic. Adding the
-  control there follows the 2.2.0 pattern: state + `data-fontstyle` in
-  `_doApplyFeatures` attrs, a 'fontStyle' pending key in
-  `_buildPatchFromPending`, and a reader (`getActiveFontStyle`).
+- Insertion payloads don't stamp `data-fontstyle` on inserted glyph spans —
+  the glyph inherits the italic context it's inserted into, which is correct
+  for same-context insertion; a cross-style insertion option (insert an
+  italic glyph into roman text) would need a `styleFace` payload option and
+  a UI affordance. No demand yet.
+- Admin-tab glyph browser (`source: 'admin'`) has no selection context; it
+  always browses the roman face. A style picker there (admin-only) would be
+  reasonable if requested.

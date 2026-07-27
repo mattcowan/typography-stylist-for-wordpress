@@ -185,6 +185,49 @@ describe('pickFaceForWeight', () => {
 	test('empty faces → null', () => {
 		expect(pickFaceForWeight([], '400')).toBeNull();
 	});
+
+	describe('style dimension (context-driven face — italic selection loads the italic face)', () => {
+		const ebGaramond = [
+			{ family: 'EB Garamond', weight: '400', style: 'normal', urls: [] },
+			{ family: 'EB Garamond', weight: '400', style: 'italic', urls: [] },
+			{ family: 'EB Garamond', weight: '700', style: 'italic', urls: [] }
+		];
+
+		test('italic context picks the italic face at the requested weight', () => {
+			const face = pickFaceForWeight(ebGaramond, '400', 'italic');
+			expect(face.style).toBe('italic');
+			expect(face.weight).toBe('400');
+		});
+
+		test('italic context with unmatched weight still prefers an italic face', () => {
+			const face = pickFaceForWeight(ebGaramond, '900', 'italic');
+			expect(face.style).toBe('italic');
+		});
+
+		test('normal context never picks an italic face when a roman face exists', () => {
+			// Roman request at 700: the only 700 face is italic — the 400 roman
+			// face wins (right style beats right weight)
+			const face = pickFaceForWeight(ebGaramond, '700', 'normal');
+			expect(face.style).toBe('normal');
+		});
+
+		test('italic-only family serves the italic face to a roman request', () => {
+			const italicOnly = [{ family: 'Y', weight: '400', style: 'italic', urls: [] }];
+			expect(pickFaceForWeight(italicOnly, '400', '')).toBe(italicOnly[0]);
+		});
+
+		test('oblique counts as italic', () => {
+			const withOblique = [
+				{ family: 'Z', weight: '400', style: 'normal', urls: [] },
+				{ family: 'Z', weight: '400', style: 'oblique 10deg', urls: [] }
+			];
+			expect(pickFaceForWeight(withOblique, '400', 'italic').style).toBe('oblique 10deg');
+		});
+
+		test('omitted style behaves as normal (back-compat)', () => {
+			expect(pickFaceForWeight(ebGaramond, '400').style).toBe('normal');
+		});
+	});
 });
 
 describe('sniffFormat', () => {

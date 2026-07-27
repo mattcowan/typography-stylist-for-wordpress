@@ -362,6 +362,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
+                fontStyle: this.getActiveFontStyle() || '',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 selectedText: '', // Extracted text for feature previews
@@ -419,6 +420,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setFontSizePreferred = this.setFontSizePreferred.bind(this);
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
             this.setFontWeight = this.setFontWeight.bind(this);
+            this.setFontStyle = this.setFontStyle.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
             this.setLineHeight = this.setLineHeight.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
@@ -450,6 +452,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         editorType: 'inline',
                         fontId: self.state.selectedFontId,
                         fontWeight: self.state.fontWeight,
+                        // Rendered style, not just span styling — an <em>-italic
+                        // selection should give consumers (Glyphs panel) the
+                        // italic face even without a data-fontstyle span
+                        fontStyle: self.getRenderedFontStyle(),
                         fontSize: self.state.fontSize,
                         fontSizeMin: self.state.fontSizeMin,
                         fontSizePreferred: self.state.fontSizePreferred,
@@ -480,6 +486,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     } else {
                         if (props.fontId !== undefined) { self._recordChange('font'); }
                         if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
+                        if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
                         if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
@@ -489,6 +496,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
                         selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
                         fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
+                        fontStyle: props.fontStyle !== undefined ? (props.fontStyle || '') : self.state.fontStyle,
                         fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
                         fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
                         fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
@@ -890,6 +898,40 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         }
 
         /**
+         * Get currently active font style (visual italic) from the format.
+         * '' means inherit — note the core Italic (<em>) format is deliberately
+         * NOT reported here: it is semantic emphasis, not span styling. It is
+         * still honored for previews and the Glyphs panel face selection.
+         */
+        getActiveFontStyle() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+
+            if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontstyle']) {
+                return activeFormat.attributes['data-fontstyle'];
+            }
+
+            return '';
+        }
+
+        /**
+         * The font style actually RENDERING at the selection — span styling
+         * first, then the core Italic (<em>) format. Drives previews and the
+         * Glyphs panel face variant.
+         */
+        getRenderedFontStyle() {
+            const { value } = this.props;
+            const own = this.state && this.state.fontStyle;
+            if (own) {
+                return own;
+            }
+            if (value && getActiveFormat(value, 'core/italic')) {
+                return 'italic';
+            }
+            return '';
+        }
+
+        /**
          * Get block's inherited font-family from computed styles
          * Detects the current font applied by theme or block settings
          * @return {string} Font family string from computed styles, or empty string if not found
@@ -1127,6 +1169,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
+                fontStyle: this.getActiveFontStyle() || '',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 fontVariationSettings: this.getActiveFontVariationSettings() || '',
@@ -1349,6 +1392,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._recordChange('fontWeight');
             this.setState({
                 fontWeight: value
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Set font style (visual italic — semantic emphasis stays <em>)
+         */
+        setFontStyle(value) {
+            this._recordChange('fontStyle');
+            this.setState({
+                fontStyle: value
             }, () => {
                 this.debouncedApplyDropdown();
             });
@@ -1701,7 +1756,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * to set (or null to remove), plus feature add/remove toggles.
          */
         _buildPatchFromPending(pending) {
-            const { selectedFont, selectedFontId, fontWeight, letterSpacing, lineHeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontVariationSettings } = this.state;
+            const { selectedFont, selectedFontId, fontWeight, fontStyle, letterSpacing, lineHeight, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontVariationSettings } = this.state;
             const dataAttrs = {};
             const styleDecls = {};
 
@@ -1726,6 +1781,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (pending.keys.has('fontWeight')) {
                 dataAttrs['data-fontweight'] = fontWeight;
                 styleDecls['font-weight'] = fontWeight;
+            }
+            if (pending.keys.has('fontStyle')) {
+                dataAttrs['data-fontstyle'] = fontStyle || null;
+                styleDecls['font-style'] = fontStyle || null;
             }
             if (pending.keys.has('letterSpacing')) {
                 dataAttrs['data-letterspacing'] = letterSpacing !== 0 ? String(letterSpacing) : null;
@@ -1768,7 +1827,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -1827,7 +1886,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 this._resetPendingChanges();
             }
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -1893,6 +1952,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 if (!hasActiveStyle) {
                     if (styleString) styleString += '; ';
                     styleString += `font-weight: ${fontWeight}`;
+                }
+
+                // Add font style (visual italic — semantic emphasis stays <em>)
+                if (fontStyle) {
+                    attributes['data-fontstyle'] = fontStyle;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-style: ${fontStyle}`;
+                    }
                 }
 
                 // Add letter spacing
@@ -2200,16 +2268,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 previewStyle.fontFamily = fontToUse;
             }
 
-            // Render the italic face when the selection is italic (the editor's
-            // own Italic <em> format, or a data-fontstyle styled span) — italic
-            // faces carry their own glyphs and feature sets
-            const { value } = this.props;
-            const typostFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
-            const spanFontStyle = typostFormat && typostFormat.attributes && typostFormat.attributes['data-fontstyle'];
-            if (spanFontStyle) {
-                previewStyle.fontStyle = spanFontStyle;
-            } else if (value && getActiveFormat(value, 'core/italic')) {
-                previewStyle.fontStyle = 'italic';
+            // Render the italic face when the selection is italic — the live
+            // popover Font Style choice first, then the span's data-fontstyle,
+            // then the editor's own Italic <em> format. Italic faces carry
+            // their own glyphs and feature sets.
+            const renderedStyle = this.getRenderedFontStyle();
+            if (renderedStyle) {
+                previewStyle.fontStyle = renderedStyle;
             }
 
             return (
@@ -2633,6 +2698,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         </div>
                                     );
                                 })()}
+
+                                {/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
+                                <div className="typost-fontstyle-section">
+                                    <h4>{__('Font Style', 'typography-stylist')}</h4>
+                                    <SelectControl
+                                        value={this.state.fontStyle}
+                                        options={[
+                                            { label: __('Inherit', 'typography-stylist'), value: '' },
+                                            { label: __('Normal', 'typography-stylist'), value: 'normal' },
+                                            { label: __('Italic', 'typography-stylist'), value: 'italic' }
+                                        ]}
+                                        onChange={this.setFontStyle}
+                                        help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+                                    />
+                                </div>
 
                                 {/* Extension hook point: after font controls (e.g., Variable Font axes).
                                     key: remount (and re-fire the action) when the font changes */}

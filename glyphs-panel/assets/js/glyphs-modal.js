@@ -130,16 +130,20 @@
 	 *
 	 * @param {Object} fontSource Entry from getFontSources()
 	 * @param {string} weight     Context font weight (face selection)
+	 * @param {string} style      Context font style ('italic' loads the italic
+	 *                            face — the variant actually rendering at the
+	 *                            editor selection)
 	 * @param {boolean} forceRefresh Skip the cache
 	 * @return {Promise<{ok: true, meta: Object}|{ok: false, reason: string}>}
 	 */
-	function loadMetadata(fontSource, weight, forceRefresh) {
+	function loadMetadata(fontSource, weight, style, forceRefresh) {
 		var lib = G();
 		var ref = {
 			source: fontSource.source,
 			entry: fontSource.entry,
 			fontId: fontSource.fontId,
-			weight: weight
+			weight: weight,
+			style: style || ''
 		};
 		var cacheOpts = {
 			schema: lib.METADATA_SCHEMA,
@@ -306,7 +310,7 @@
 			}
 			var seq = ++loadSeq.current;
 			setStatus({ state: 'loading' });
-			loadMetadata(selectedFont, context.fontWeight || '400', forceRefresh).then(function(result) {
+			loadMetadata(selectedFont, context.fontWeight || '400', context.fontStyle || '', forceRefresh).then(function(result) {
 				if (seq !== loadSeq.current) {
 					return; // a newer load superseded this one
 				}
@@ -467,6 +471,9 @@
 		var cellFontFamily = selectedFont
 			? '"' + selectedFont.family + '"' + (selectedFont.fallbacks ? ', ' + selectedFont.fallbacks : '')
 			: 'inherit';
+		// Render cells in the face variant the panel loaded (context-driven:
+		// an italic selection browses — and displays — the italic face)
+		var cellFontStyle = /italic|oblique/i.test(context.fontStyle || '') ? 'italic' : 'normal';
 
 		function cellFeatureSettings(item) {
 			var tag = item.feature || (altCps === null ? featureFilter : null);
@@ -853,6 +860,7 @@
 											height: CELL_SIZE + 'px',
 											fontFamily: cellFontFamily,
 											fontWeight: context.fontWeight || 'normal',
+											fontStyle: cellFontStyle,
 											fontFeatureSettings: cellFeatureSettings(item)
 										},
 										'aria-label': itemLabel(item),
@@ -884,6 +892,7 @@
 							style: {
 								fontFamily: cellFontFamily,
 								fontWeight: context.fontWeight || 'normal',
+								fontStyle: cellFontStyle,
 								fontFeatureSettings: cellFeatureSettings(hovered)
 							},
 							'aria-hidden': 'true'

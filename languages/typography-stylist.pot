@@ -1643,3 +1643,7 @@ msgstr ""
 #: blocks/typography-stylist/edit.js
 msgid "Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead."
 msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Normal"
+msgstr ""

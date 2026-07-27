@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Guard the constants so a still-active standalone copy (deactivated but left
 // on disk) cannot trigger a duplicate define() or a fatal class redeclare.
 if ( ! defined( 'TYPOST_GP_VERSION' ) ) {
-	define( 'TYPOST_GP_VERSION', '1.2.0' );
+	define( 'TYPOST_GP_VERSION', '1.2.1' );
 	define( 'TYPOST_GP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_GP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }

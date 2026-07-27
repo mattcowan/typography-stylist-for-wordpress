@@ -152,32 +152,46 @@
 	}
 
 	/**
-	 * Pick the face best matching a requested weight.
-	 * Prefers exact weight + normal style, then exact weight, then first face.
+	 * Pick the face best matching a requested weight and style.
+	 *
+	 * The style dimension is context-driven: when the editor selection renders
+	 * italic (an <em> or a font-style span), the panel loads the italic face —
+	 * its glyph and feature set differ from the roman face (e.g. EB Garamond's
+	 * swash italic capitals exist only in the italic file).
+	 *
+	 * Priority: exact weight + requested style → requested style (any weight)
+	 * → exact weight (any style) → first face. A face of the wrong style is
+	 * never preferred over one of the right style.
 	 *
 	 * @param {Array} faces  Parsed faces from parseSrcUrls()
 	 * @param {string|number} weight Requested weight ('400', 700, 'normal')
+	 * @param {string} style Requested style ('italic', 'normal', '' = normal)
 	 * @return {Object|null}
 	 */
-	function pickFaceForWeight(faces, weight) {
+	function pickFaceForWeight(faces, weight, style) {
 		if (!faces || faces.length === 0) {
 			return null;
 		}
 		var want = normalizeWeight(weight);
-		var exactNormal = null;
-		var exact = null;
+		var wantItalic = /italic|oblique/i.test(String(style || ''));
+		var exactBoth = null;
+		var styleOnly = null;
+		var weightOnly = null;
 		for (var i = 0; i < faces.length; i++) {
 			var w = normalizeWeight(faces[i].weight);
-			if (w === want) {
-				if (/normal/i.test(faces[i].style || 'normal') && !exactNormal) {
-					exactNormal = faces[i];
-				}
-				if (!exact) {
-					exact = faces[i];
-				}
+			var isItalic = /italic|oblique/i.test(faces[i].style || 'normal');
+			var styleMatch = isItalic === wantItalic;
+			if (w === want && styleMatch && !exactBoth) {
+				exactBoth = faces[i];
+			}
+			if (styleMatch && !styleOnly) {
+				styleOnly = faces[i];
+			}
+			if (w === want && !weightOnly) {
+				weightOnly = faces[i];
 			}
 		}
-		return exactNormal || exact || faces[0];
+		return exactBoth || styleOnly || weightOnly || faces[0];
 	}
 
 	function normalizeWeight(weight) {
@@ -379,7 +393,7 @@
 
 		if (source === 'uploaded') {
 			var faces = parseSrcUrls(entry.css_content || '');
-			var face = pickFaceForWeight(faces, fontRef.weight);
+			var face = pickFaceForWeight(faces, fontRef.weight, fontRef.style);
 			var best = face && pickBestUrl(face.urls);
 			if (!best) {
 				return Promise.resolve({ ok: false, reason: 'no-file' });
@@ -408,9 +422,11 @@
 					var families = familyList.map(function(f) {
 						return String(f).toLowerCase();
 					});
-					var face = faces.filter(function(f) {
+					var familyFaces = faces.filter(function(f) {
 						return families.length === 0 || families.indexOf(f.family.toLowerCase()) !== -1;
-					})[0] || faces[0];
+					});
+					var face = pickFaceForWeight(familyFaces, fontRef.weight, fontRef.style) ||
+						pickFaceForWeight(faces, fontRef.weight, fontRef.style);
 					var best = face && pickBestUrl(face.urls);
 					if (!best) {
 						return { ok: false, reason: 'no-file' };
@@ -426,7 +442,7 @@
 		}
 
 		if (source === 'manual') {
-			var url = findFontFaceUrlInDocument(entry.font_family || '');
+			var url = findFontFaceUrlInDocument(entry.font_family || '', fontRef.weight, fontRef.style);
 			if (!url) {
 				return Promise.resolve({ ok: false, reason: 'no-file' });
 			}
@@ -446,7 +462,7 @@
 					urls: [{ url: face.url, format: formatFromUrl(face.url) }]
 				};
 			});
-			var wpFace = pickFaceForWeight(faceObjs, fontRef.weight);
+			var wpFace = pickFaceForWeight(faceObjs, fontRef.weight, fontRef.style);
 			var wpBest = wpFace && pickBestUrl(wpFace.urls);
 			if (!wpBest) {
 				return Promise.resolve({ ok: false, reason: 'no-file' });
@@ -459,16 +475,20 @@
 
 	/**
 	 * Best-effort @font-face discovery for manual/CDN fonts: walk accessible
-	 * stylesheets looking for a rule matching the family name.
+	 * stylesheets collecting rules matching the family name, then pick the
+	 * face matching the requested weight/style.
 	 *
 	 * @param {string} fontFamily CSS font-family value (may include fallbacks)
+	 * @param {string|number} weight Requested weight
+	 * @param {string} style  Requested style ('italic' loads the italic face)
 	 * @return {string|null} Font file URL
 	 */
-	function findFontFaceUrlInDocument(fontFamily) {
+	function findFontFaceUrlInDocument(fontFamily, weight, style) {
 		var primary = (fontFamily || '').split(',')[0].replace(/['"]/g, '').trim().toLowerCase();
 		if (!primary || typeof document === 'undefined') {
 			return null;
 		}
+		var collected = [];
 		var sheets = document.styleSheets;
 		for (var i = 0; i < sheets.length; i++) {
 			var rules;
@@ -489,16 +509,20 @@
 				if (family !== primary) {
 					continue;
 				}
-				var faces = parseSrcUrls('@font-face {' + rule.style.cssText + '}');
-				var best = faces[0] && pickBestUrl(faces[0].urls);
-				if (best) {
-					// Resolve relative URLs against the stylesheet's href
-					try {
-						return new URL(best.url, sheets[i].href || document.baseURI).href;
-					} catch (e) {
-						return best.url;
-					}
-				}
+				parseSrcUrls('@font-face {' + rule.style.cssText + '}').forEach(function(face) {
+					face._sheetHref = sheets[i].href || null;
+					collected.push(face);
+				});
+			}
+		}
+		var picked = pickFaceForWeight(collected, weight, style);
+		var best = picked && pickBestUrl(picked.urls);
+		if (best) {
+			// Resolve relative URLs against the stylesheet's href
+			try {
+				return new URL(best.url, picked._sheetHref || document.baseURI).href;
+			} catch (e) {
+				return best.url;
 			}
 		}
 		return null;

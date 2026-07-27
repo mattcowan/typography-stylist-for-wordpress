@@ -88,6 +88,9 @@
 		var context = {
 			fontId: state.fontId || 0,
 			fontWeight: state.fontWeight || '',
+			// The face variant rendering at the selection — the panel loads and
+			// displays this variant (no toggle; context decides)
+			fontStyle: state.fontStyle || '',
 			features: state.features || [],
 			selectionText: selectionText,
 			range: range,

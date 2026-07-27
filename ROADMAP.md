@@ -1,9 +1,10 @@
 # Typography Stylist — Roadmap
 
-Consolidated 2026-07-26 (plugin at 2.1.2 released, 2.1.3 in progress). This
-replaces the previous roadmap (last touched Dec 2025 at v1.0.6), whose items
-are all accounted for below — shipped, still planned, or explicitly parked.
-Items here are ideas and intentions, not committed features.
+Consolidated 2026-07-26, updated 2026-07-27 (plugin at 2.1.2 released; the
+next release is numbered 2.2.0 — its entries are parked in changelog.txt).
+This replaces the previous roadmap (last touched Dec 2025 at v1.0.6), whose
+items are all accounted for below — shipped, still planned, or explicitly
+parked. Items here are ideas and intentions, not committed features.
 
 Related planning docs: `todo/` holds per-item working docs; deferred infra
 work also lives in RELEASING.md § Future work.
@@ -30,9 +31,14 @@ work also lives in RELEASING.md § Future work.
 - **Playground demo upgrade** — wedding-invitation showcase content for the
   wp.org Live Preview blueprint (design in progress; blueprint templatizes
   font IDs at runtime).
-- **2.1.3 editor-robustness batch** — mixed-selection per-run property
-  application, glyph-insertion styling preservation, Glyphs Panel
-  auto-alternates, QFT descendant-span override. Parked in changelog.txt.
+- **2.2.0 editor-robustness batch** (unreleased; entries parked in
+  changelog.txt) — mixed-selection per-run property application,
+  glyph-insertion styling preservation, Glyphs Panel auto-alternates and
+  context-driven italic-face browsing, QFT descendant-span override and
+  selection-resolver hardening, Font Style (visual italic) controls across
+  block/QFT/inline editors, variable-font axis-session fixes,
+  conversion-to-block styling preservation, and the style-string helper
+  refactor (see Shipped).
 
 ## Planned (next up)
 
@@ -42,9 +48,10 @@ work also lives in RELEASING.md § Future work.
 - **Per-font-family fallbacks** (High on the old roadmap; still open) —
   fallbacks per family instead of per kit/project. Cross-referenced from
   DOCUMENTATION.md. High complexity: data migration, UI, REST, CSS gen.
-- **Style-string helper refactor** — extract shared `parseStyleString` /
-  `buildStyleString` utils (7+ duplicated parse sites; the 2.1.3 work added
-  more parsers that should fold in). Working doc:
+- ~~**Style-string helper refactor**~~ — **done 2026-07-26** (expanded:
+  canonical `parseStyleString`/`buildStyleString`, unified
+  `mergeTypostSpanStyling`, shared QFT selection resolver, depth-guard
+  enforcement). History:
   [todo/refactor-style-string-helpers.md](todo/refactor-style-string-helpers.md).
 - **Automatic per-font feature detection** — the Glyphs Panel already parses
   GSUB and knows which features a font really has; surface that to
