@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.1.2
+Stable tag: 2.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -323,6 +323,13 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 == Changelog ==
 
+= 2.2.0 =
+* **NEW: Font Style (visual italic) controls** on all three editing surfaces — block-level, Quick Feature Toggles, and the inline editor. Deliberately style-only: it selects the font's italic face without adding emphasis semantics; the editor's own Italic button remains the way to emphasize text for screen readers.
+* **Italic-aware previews and Glyphs Panel** — feature previews render with the italic face when the selection is italic, and the Glyphs Panel now loads and displays the face variant actually rendering at your selection (no toggle; the selection decides). Italic-only glyph sets like EB Garamond's swash italic capitals are finally browsable.
+* **Glyphs Panel opens to your selection** — a selected letter pre-fills the alternates view; short combinations ("Th") show their exact ligature alternates.
+* **A large editor-robustness batch**: Quick Feature Toggle changes always land on the selected text; mixed-selection edits change only the setting you touched; converting a styled heading to a Typography Stylist block preserves every span; glyph alternates survive font and feature changes; variable-font axis sliders no longer alter untouched axes (and the QFT weight slider works); font changes clear stale axis values; multi-span font changes actually take effect; quote-bearing attribute values survive span splits; the span-nesting limit is enforced everywhere.
+* Full details for every fix are in changelog.txt.
+
 = 2.1.2 =
 * **Automatic font-weight detection** — newly added fonts (uploaded kits, Adobe Fonts, and Library fonts adopted in the editor) get their "Available Font Weights" pre-set to only the weights they actually ship, instead of all nine being enabled by default. A one-click "Auto-detect weights for existing fonts" button on the Custom Fonts tab covers fonts added before this release. Detection never narrows unless it is confident, and the checkboxes stay fully editable.
 * Fixed: variable fonts uploaded as font-only ZIPs now glyph-browse correctly in the Glyphs Panel (the generated `format('truetype-variations')` hint was not recognized by the panel's file picker).
@@ -343,6 +350,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Font Style (visual italic) controls, italic-aware previews and glyph browsing, and a major editor-reliability batch — selections, conversions, glyph alternates, and variable-font axes all behave predictably now.
 
 = 2.1.2 =
 Newly added fonts now enable only the weights they actually ship, with a one-click auto-detect for existing fonts; also fixes Glyphs Panel browsing for variable fonts from font-only ZIPs.
