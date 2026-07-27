@@ -1456,11 +1456,31 @@ export function analyzeInlineFeatures(htmlContent) {
 			};
 		}
 
+		// Extraction strips the spans entirely, so it is only safe when the
+		// spans carry NOTHING besides the feature tags being lifted. A span
+		// with a font, weight, size, spacing, or raw feature-settings value
+		// (indexed glyph alternates) must be preserved inline — extraction
+		// would silently destroy that styling. Note: querySelectorAll over
+		// the container also catches styling-only spans that the coverage
+		// scan above ignores (it only counts spans with data-features).
+		const allTypostSpans = Array.from(container.querySelectorAll('span.typost-styled'));
+		const spansCarryOnlyFeatures = allTypostSpans.every((span) => {
+			const extraDataAttr = Array.prototype.some.call(span.attributes, (attr) =>
+				attr.name.indexOf('data-') === 0 && attr.name !== 'data-features');
+			if (extraDataAttr) {
+				return false;
+			}
+			// Any style beyond font-feature-settings is span-only styling too
+			const styleObj = parseStyleString(span.getAttribute('style'));
+			delete styleObj['font-feature-settings'];
+			return Object.keys(styleObj).length === 0;
+		});
+
 		// Full coverage - check if all spans have the same features
 		const uniqueFeatureSets = [...new Set(featureSets)];
 
-		if (uniqueFeatureSets.length === 1) {
-			// All spans have the same features - extract to block level
+		if (uniqueFeatureSets.length === 1 && spansCarryOnlyFeatures) {
+			// All spans have the same features and nothing else - extract to block level
 			const commonFeaturesAttr = styledSpans[0].getAttribute('data-features') || '';
 			const commonFeatures = commonFeaturesAttr.split(',').map(f => f.trim()).filter(f => f);
 
@@ -2182,6 +2202,7 @@ if (typeof window !== 'undefined') {
 		isMixedFormatSelection,
 		patchTypostFormatAttributes,
 		parseStyleString,
-		buildStyleString
+		buildStyleString,
+		applyStylingSafeStringMethod
 	};
 }

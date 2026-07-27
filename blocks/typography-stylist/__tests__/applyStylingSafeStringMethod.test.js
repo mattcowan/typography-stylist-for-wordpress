@@ -308,3 +308,41 @@ describe('nesting depth guard (canCreateNestedSpan integration)', () => {
 		expect(weightSpan.textContent).toBe('AB');
 	});
 });
+
+describe('block conversion regression — cross-span selection over per-letter styling', () => {
+	// The exact "Powerful Mechanics" showcase shape: seven adjacent spans with
+	// per-letter glyph alternates, a swash, and mixed weights. Converting via
+	// the inline editor previously rebuilt this from plain text when the
+	// selection crossed span boundaries, destroying every span.
+	const POWERFUL_MECHANICS =
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">Powerful </span>' +
+		'<span data-font-id="1" data-fontweight="700" data-feature-settings=\'"salt" 17\' style=\'font-feature-settings: "salt" 17; font-family: var(--font-1); font-weight: 700\' class="typost-styled">M</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">ec</span>' +
+		'<span data-features="swsh" data-font="bookmania" data-font-id="1" data-fontweight="400" style=\'font-feature-settings: "swsh" 1; font-family: var(--font-1); font-weight: 400\' class="typost-styled">h</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">a</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="900" data-feature-settings=\'"salt" 3\' style=\'font-feature-settings: "salt" 3; font-family: var(--font-1); font-weight: 900\' class="typost-styled">n</span>' +
+		'<span data-font="bookmania" data-font-id="1" data-fontweight="400" style="font-family: var(--font-1); font-weight: 400" class="typost-styled">ics</span>';
+
+	test('applying features over "Powerful Mech" preserves every existing span', () => {
+		// Selection 0..13 = "Powerful Mech" — crosses four span boundaries
+		const result = applyStylingSafeStringMethod(
+			POWERFUL_MECHANICS, 0, 13,
+			{ 'data-features': 'liga' },
+			'font-feature-settings: "liga" 1'
+		);
+
+		expect(result.success).toBe(true);
+		// The glyph alternates survive with their raw indexed values
+		// (attribute serialization entity-encodes the quotes)
+		expect(result.content).toContain('&quot;salt&quot; 17');
+		expect(result.content).toContain('&quot;salt&quot; 3');
+		// The swash span survives
+		expect(result.content).toContain('data-features="swsh');
+		// The per-letter weights survive
+		expect(result.content).toContain('font-weight: 700');
+		expect(result.content).toContain('font-weight: 900');
+		// Text is intact
+		const text = result.content.replace(/<[^>]*>/g, '');
+		expect(text).toBe('Powerful Mechanics');
+	});
+});

@@ -1492,8 +1492,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Check if there's a selection (partial text selected)
             if (effectiveStart !== effectiveEnd) {
                 // User selected a portion of text - apply styling only to that portion
-                // Use the current block's HTML content to preserve existing spans
-                const existingContent = currentBlock.attributes.content || '';
+                // Use the current block's HTML content to preserve existing spans.
+                // String() matters: content can be a RichTextData object (WP 6.5+)
+                const existingContent = String(currentBlock.attributes.content || '');
                 const fullText = getTextContent(value);
 
                 // Build style string for the selected portion
@@ -1505,7 +1506,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const sanitizedFeatures = selectedFeatures.map(f => sanitizeCSSValue(f));
                     styleArray.push(`font-feature-settings: ${sanitizedFeatures.map(f => `"${f}" 1`).join(', ')}`);
                 }
-                if (selectedFont) {
+                if (this.state.selectedFontId) {
+                    // Modern format: CSS variable keyed by numeric font ID (drives
+                    // frontend @font-face detection like every other span)
+                    styleArray.push(`font-family: var(--font-${parseInt(this.state.selectedFontId, 10)})`);
+                } else if (selectedFont) {
                     const sanitizedFont = sanitizeFontFamily(selectedFont);
                     styleArray.push(`font-family: ${sanitizedFont}`);
                 }
@@ -1535,70 +1540,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 // If we have existing HTML content with spans, we need to preserve it
                 if (hasHTMLTags(existingContent)) {
-                    // Parse the HTML to work with it
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(`<div>${existingContent}</div>`, 'text/html');
-                    const container = doc.body.firstChild;
-
-                    // Create offset map for the selection (accounts for <br> line breaks)
-                    const selTextMap = buildTextOffsetMap(container, doc);
-
-                    // Use offset map's final position for text length (matches BR counting)
-                    const textLength = selTextMap.length > 0 ? selTextMap[selTextMap.length - 1].end : container.textContent.length;
-                    const validationResult = validateSelectionBounds(effectiveStart, effectiveEnd, textLength);
-                    if (!validationResult.valid) {
-                        return;
+                    // Build the new span's attributes in the modern format
+                    const spanAttributes = {};
+                    if (selectedFeatures.length > 0) {
+                        spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
                     }
-                    let startNode = null, startOffset = 0;
-                    let endNode = null, endOffset = 0;
-
-                    for (const entry of selTextMap) {
-                        if (!startNode && entry.end >= effectiveStart) {
-                            startNode = entry.node;
-                            startOffset = effectiveStart - entry.start;
-                        }
-
-                        if (entry.end >= effectiveEnd) {
-                            endNode = entry.node;
-                            endOffset = effectiveEnd - entry.start;
-                            break;
-                        }
+                    if (this.state.selectedFontId) {
+                        spanAttributes['data-font-id'] = String(this.state.selectedFontId);
+                    }
+                    if (fontWeight && fontWeight !== '400') {
+                        spanAttributes['data-fontweight'] = String(fontWeight);
                     }
 
-                    // If we found the nodes, wrap the selection
-                    if (startNode && endNode) {
-                        const range = doc.createRange();
-                        range.setStart(startNode, startOffset);
-                        range.setEnd(endNode, endOffset);
+                    // Apply over the existing HTML with the shared span-preserving
+                    // applier: selections crossing span boundaries are extracted and
+                    // re-wrapped with every surrounding span intact (the old
+                    // surroundContents call threw on ANY cross-span selection and
+                    // fell back to a plain-text rebuild that destroyed all existing
+                    // styling — exactly the selections the convert button exists for)
+                    const applied = (window.typostSharedUtils && window.typostSharedUtils.applyStylingSafeStringMethod)
+                        ? window.typostSharedUtils.applyStylingSafeStringMethod(existingContent, effectiveStart, effectiveEnd, spanAttributes, styleString)
+                        : { success: false };
 
-                        const span = doc.createElement('span');
-                        span.className = 'typost-styled';
-                        // Always set data-features for new content (faster parsing than style attribute)
-                        // Note: getInlineFeaturesForTypostBlock() includes fallback for backward compatibility
-                        span.setAttribute('data-features', selectedFeatures.join(','));
-                        span.setAttribute('style', styleString);
-
-                        try {
-                            range.surroundContents(span);
-                            contentForBlock = container.innerHTML;
-                        } catch (e) {
-                            // If we can't wrap (e.g., crosses element boundaries), fall back to text replacement
-                            const beforeText = fullText.substring(0, effectiveStart);
-                            const selectedText = fullText.substring(effectiveStart, effectiveEnd);
-                            const afterText = fullText.substring(effectiveEnd);
-                            contentForBlock = escapeHTML(beforeText) +
-                                `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
-                                escapeHTML(afterText);
-                        }
-                    } else {
-                        // Fall back to simple text replacement
-                        const beforeText = fullText.substring(0, effectiveStart);
-                        const selectedText = fullText.substring(effectiveStart, effectiveEnd);
-                        const afterText = fullText.substring(effectiveEnd);
-                        contentForBlock = escapeHTML(beforeText) +
-                            `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
-                            escapeHTML(afterText);
-                    }
+                    // On failure, convert with the content untouched rather than
+                    // ever rebuilding from plain text — no styling is worth losing
+                    contentForBlock = applied.success ? applied.content : existingContent;
                 } else {
                     // No existing HTML, use simple text replacement
                     const beforeText = fullText.substring(0, effectiveStart);
@@ -1668,8 +1634,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }, 100);
                 }
             } else {
-                // No selection - apply to entire block (original behavior)
-                const textContent = currentBlock.attributes.content || getTextContent(value);
+                // No selection - apply to entire block (original behavior).
+                // String() matters: content can be a RichTextData object (WP 6.5+)
+                const textContent = String(currentBlock.attributes.content || '') || getTextContent(value);
 
                 // If already an Typography Stylist block, just update its attributes
                 if (isAlreadyTypostBlock) {

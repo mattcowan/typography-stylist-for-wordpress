@@ -1919,6 +1919,25 @@ describe('Block Conversion - Inline Feature Analysis', () => {
 			expect(result.coverage).toBe('none');
 			expect(result.shouldExtractToBlock).toBe(false);
 		});
+
+		it('should NOT extract when the featured span also carries other styling (extraction would destroy it)', () => {
+			const html = '<span class="typost-styled" data-features="ss01" data-font-id="1" data-fontweight="700" style=\'font-feature-settings: "ss01" 1; font-family: var(--font-1); font-weight: 700\'>Moriarty</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.coverage).toBe('full');
+			expect(result.shouldExtractToBlock).toBe(false); // font + weight would be lost by stripping
+		});
+
+		it('should NOT extract when a styling-only span hides among featured spans', () => {
+			// The featured span covers everything the coverage scan counts, but a
+			// sibling styling-only span (glyph alternate) would be destroyed
+			const html = '<span class="typost-styled" data-features="swsh" style=\'font-feature-settings: "swsh" 1\'>Moriart</span><span class="typost-styled" data-feature-settings=\'"salt" 3\' style=\'font-feature-settings: "salt" 3\'>y</span>';
+
+			const result = analyzeInlineFeatures(html);
+
+			expect(result.shouldExtractToBlock).toBe(false);
+		});
 	});
 
 	describe('stripInlineFeatures', () => {
