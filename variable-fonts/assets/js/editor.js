@@ -330,6 +330,10 @@
 			'[data-hook="typost_inspector_after_font_weight"] .typost-vf-other-axes { border-top: none; padding-top: 0; }',
 			// Inline format modal: bare hook container — match native section metrics
 			'[data-hook="typost_inline_after_font_controls"] .typost-vf-other-axes { margin: 0 1rem; padding: 16px 20px; border-top: none; border-bottom: 1px solid #ddd; }',
+			// Quick Feature Toggles: the weight control directly above already
+			// closes with a rule, so trade the top border for the section's own
+			// bottom border and match its 16px rhythm.
+			'[data-hook="typost_qft_after_font_controls"] .typost-vf-other-axes { margin: 0 0 16px; padding: 0 0 16px; border-top: none; border-bottom: 2px solid #ddd; }',
 		].join('\n');
 
 		var styleEl = document.createElement('style');

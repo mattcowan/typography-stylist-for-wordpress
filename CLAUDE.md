@@ -167,9 +167,9 @@ The Glyphs Panel (an Illustrator-style full-font glyph browser) was originally a
 - **Separate concerns kept separate:** its JS is hand-written ES5 (no build step), its Jest tests live in `glyphs-panel/__tests__/` (picked up automatically by core's `npm test`), and it keeps its own `typost-glyphs-panel` text domain + bundled `glyphs-panel/languages/`. EULA constraint preserved: metadata-only parsing, IndexedDB-only caching, text-rendered glyph cells. See `glyphs-panel/CLAUDE.md` for module internals.
 - Other extensions (Paragraph Styles, Layered Fonts) **remain separate plugins**.
 
-### Bundled Variable Fonts Module (v2.1+)
+### Variable Fonts Module (v2.1+)
 
-The Variable Fonts extension was bundled into core in v2.1, following the same template as the Glyphs Panel. It lives in [variable-fonts/](variable-fonts/) — loaded from `typost_init()` behind a `! class_exists('Typost_Variable_Fonts')` guard (a still-active standalone copy wins), constants guarded by `! defined('TYPOST_VF_VERSION')`, own `typost-variable-fonts` text domain + bundled `variable-fonts/languages/`, and Jest tests in `variable-fonts/__tests__/` (auto-collected by core `npm test`). Its option keys are unchanged from the standalone plugin, so settings carry over with zero migration. See `variable-fonts/CLAUDE.md` for module internals.
+Variable font support was added in v2.1 as a self-contained module, structured like the Glyphs Panel so it consumes only core's public extension API. It lives in [variable-fonts/](variable-fonts/) — loaded from `typost_init()` behind a `! class_exists('Typost_Variable_Fonts')` guard (the `final class` must never fatally redeclare), constants guarded by `! defined('TYPOST_VF_VERSION')`, own `typost-variable-fonts` text domain + `variable-fonts/languages/`, and Jest tests in `variable-fonts/__tests__/` (auto-collected by core `npm test`). See `variable-fonts/CLAUDE.md` for module internals.
 
 ### WP Font Library Integration (v2.1+, WP 6.5+)
 
@@ -210,6 +210,7 @@ The Variable Fonts extension was bundled into core in v2.1, following the same t
 
 **Variable Fonts (bundled module):**
 - `GET|POST|DELETE /wp-json/typost/v1/variable-font-axes[/{id}]` - Axis definitions per font string ID (requires `manage_options` — site-wide configuration)
+- `POST /wp-json/typost/v1/variable-font-axes/{id}/redetect` - Re-read axes from an uploaded font's own files and return them **without** writing the option; the admin form repopulates its rows for review and the user still saves (requires `manage_options`). Uploaded kit fonts only — Adobe/manual fonts have no server-side files and fall back to the browser parser.
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)

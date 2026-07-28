@@ -1,26 +1,25 @@
 <?php
 /**
- * Typography Stylist - Variable Fonts (bundled module)
+ * Typography Stylist - Variable Fonts module
  *
  * Variable font axis controls for Typography Stylist. Detects and exposes
  * variable font axes (wght, wdth, slnt, opsz, custom) with per-axis slider
  * controls in the editor.
  *
- * Formerly a standalone extension plugin; bundled into core following the
- * Glyphs Panel template. This file intentionally has NO plugin header and
- * no plugins_loaded bootstrap — it is required from typost_init() in
- * typography-stylist.php, guarded by class_exists() so a still-active
- * standalone copy wins and no fatal redeclare can occur. The module keeps
- * its own text domain and consumes only core's public extension API.
+ * Structured like the Glyphs Panel module. This file intentionally has NO
+ * plugin header and no plugins_loaded bootstrap — it is required from
+ * typost_init() in typography-stylist.php, guarded by class_exists() so the
+ * final class below can never fatally redeclare. The module keeps its own
+ * text domain and consumes only core's public extension API.
  *
- * @since 2.1.0 (bundled; standalone plugin version 1.0.0)
+ * @since 2.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Guarded like glyphs-panel: a leftover standalone copy may have defined these.
+// Guarded like glyphs-panel, so re-entry can never redefine these.
 if ( ! defined( 'TYPOST_VF_VERSION' ) ) {
 	define( 'TYPOST_VF_VERSION', '1.3.0' );
 	define( 'TYPOST_VF_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -411,11 +410,23 @@ final class Typost_Variable_Fonts {
 				<button type="button" class="button typost-vf-add-axis">
 					<?php esc_html_e( '+ Add Axis', 'typost-variable-fonts' ); ?>
 				</button>
-				<?php if ( class_exists( 'Typost_Glyphs_Panel' ) ) : ?>
-					<button type="button" class="button typost-vf-detect-axes">
-						<?php esc_html_e( 'Detect Axes from Font File', 'typost-variable-fonts' ); ?>
-					</button>
-					<span class="typost-vf-detect-status" role="status" aria-live="polite"></span>
+				<?php
+				// Uploaded kits can always be re-read server-side from their
+				// own font files. Adobe projects and manual definitions point
+				// at remote files, so they need the browser-side parser the
+				// Glyphs Panel provides.
+				$can_detect = ( 'font' === $prefix ) || class_exists( 'Typost_Glyphs_Panel' );
+				?>
+				<?php if ( $can_detect ) : ?>
+					<div class="typost-vf-detect-field">
+						<button type="button" class="button typost-vf-detect-axes">
+							<?php esc_html_e( 'Detect Axes from Font File', 'typost-variable-fonts' ); ?>
+						</button>
+						<span class="typost-vf-detect-status" role="status" aria-live="polite"></span>
+						<p class="description">
+							<?php esc_html_e( 'Reads the axes back out of the font file and replaces every axis row above — any axis names, ranges, or defaults you set by hand are discarded. Nothing is stored until you save.', 'typost-variable-fonts' ); ?>
+						</p>
+					</div>
 				<?php endif; ?>
 				<div class="typost-vf-hide-weights-field">
 					<label class="typost-vf-toggle-label">
@@ -536,6 +547,12 @@ final class Typost_Variable_Fonts {
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
+
+		register_rest_route( self::REST_NAMESPACE, '/variable-font-axes/(?P<id>[a-zA-Z0-9_-]+)/redetect', array(
+			'methods'             => 'POST',
+			'callback'            => array( $this, 'rest_redetect_axes' ),
+			'permission_callback' => array( $this, 'check_permissions' ),
+		) );
 	}
 
 	/**
@@ -580,6 +597,50 @@ final class Typost_Variable_Fonts {
 			'isVariable'  => $this->is_font_variable( $id ),
 			'hideWeights' => $this->should_hide_weights( $id ),
 			'axes'        => $axes,
+		) );
+	}
+
+	/**
+	 * REST: Re-read a font's axes from its font binary.
+	 *
+	 * Returns the detected axes without touching the stored option. The admin
+	 * form repopulates its rows for review and the author still has to Save
+	 * Changes, so a mis-click cannot destroy hand-tuned axis definitions.
+	 *
+	 * Only uploaded kit fonts can be re-detected server-side: Adobe projects
+	 * and manual definitions reference remote files the server does not host,
+	 * so those keep using the browser-side parser in admin.js.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function rest_redetect_axes( $request ) {
+		$id = sanitize_key( $request->get_param( 'id' ) );
+
+		$entry = null;
+		if ( class_exists( 'Typost' ) ) {
+			foreach ( Typost::get_instance()->get_custom_fonts() as $font ) {
+				if ( isset( $font['id'] ) && $font['id'] === $id ) {
+					$entry = $font;
+					break;
+				}
+			}
+		}
+
+		if ( null === $entry ) {
+			return new WP_Error(
+				'font_not_found',
+				__( 'Axes can only be re-detected from uploaded font files.', 'typost-variable-fonts' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		require_once TYPOST_VF_PLUGIN_DIR . 'includes/font-parser.php';
+
+		return rest_ensure_response( array(
+			'success' => true,
+			'fontId'  => $id,
+			'axes'    => Typost_Font_Parser::find_and_parse_axes( $entry ),
 		) );
 	}
 

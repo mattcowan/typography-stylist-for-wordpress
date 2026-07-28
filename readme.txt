@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.2.0
+Stable tag: 2.2.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -323,6 +323,12 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 == Changelog ==
 
+= 2.2.1 =
+* **Fixed: fonts uploaded together in one ZIP no longer share each other's variable-font axes.** Axis detection scanned the whole kit directory, so every family in a multi-font ZIP inherited the axes of whichever file parsed first — Fraunces lost its optical size, SOFT, and WONK sliders when uploaded alongside a weight-only font, and non-variable fonts in the same ZIP gained a phantom weight slider. Detection is now scoped to each family's own font files. Fonts uploaded on their own were never affected.
+* **Improved: "Detect Axes from Font File" repairs fonts in place.** Use it on any font whose axes were mis-detected before this fix. It now falls back to reading the font on the server when the browser can't, so it works either way. It also states plainly that it replaces every axis row and discards hand-set values, and asks for confirmation before overwriting axes you have already defined — nothing is stored until you save.
+* Changed: variable-font axis sliders now sit directly beneath the weight control in the inline editor and Quick Feature Toggles, matching the block sidebar.
+* Full details are in changelog.txt.
+
 = 2.2.0 =
 * **NEW: Font Style (visual italic) controls** on all three editing surfaces — block-level, Quick Feature Toggles, and the inline editor. Deliberately style-only: it selects the font's italic face without adding emphasis semantics; the editor's own Italic button remains the way to emphasize text for screen readers.
 * **Italic-aware previews and Glyphs Panel** — feature previews render with the italic face when the selection is italic, and the Glyphs Panel now loads and displays the face variant actually rendering at your selection (no toggle; the selection decides). Italic-only glyph sets like EB Garamond's swash italic capitals are finally browsable.
@@ -339,7 +345,7 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 = 2.1.0 =
 * **WordPress Font Library integration (WP 6.5+)** — register uploaded fonts into the Font Library, per font or in bulk (opt-in and fully reversible), and use Library fonts straight from the editor font pickers. Existing content keeps rendering no matter what.
-* **Variable Fonts built into core** — the standalone extension is now bundled: automatic axis detection on upload, a "Detect Axes from Font File" button, per-font axis configuration, and axis sliders in both editors. If you ran the standalone plugin, deactivate it after updating; settings carry over automatically.
+* **Variable font support** — automatic axis detection on upload, a "Detect Axes from Font File" button, per-font axis configuration, and axis sliders in both editors.
 * **Font-only ZIP uploads** — kits containing just font files (e.g. a Google Fonts download) are now accepted; the @font-face stylesheet is generated automatically from the fonts' metadata.
 * **New `typost_force_enqueue_font_ids` filter** — themes and extensions can force specific fonts to load on every page.
 * Plus many fixes and improvements across the Glyphs Panel, variable fonts, editor font loading, and admin accessibility (including a WCAG color-contrast audit of all admin color schemes) — the complete list is in changelog.txt.
@@ -351,6 +357,9 @@ Older releases are documented in changelog.txt (bundled with the plugin) and on 
 
 == Upgrade Notice ==
 
+= 2.2.1 =
+Fixes variable-font axes being mixed up between fonts uploaded in the same ZIP. If a font is showing the wrong axes, open Settings → Typography Stylist → Custom Fonts and use "Detect Axes from Font File" to repair it.
+
 = 2.2.0 =
 Font Style (visual italic) controls, italic-aware previews and glyph browsing, and a major editor-reliability batch — selections, conversions, glyph alternates, and variable-font axes all behave predictably now.
 
@@ -361,7 +370,7 @@ Newly added fonts now enable only the weights they actually ship, with a one-cli
 Re-release of the 2.1.0 feature set with corrected packaging — the 2.1.0 download never contained the new files. Update to get variable fonts, font-only ZIP uploads, and WordPress Font Library integration.
 
 = 2.1.0 =
-Font kit uploads now accept ZIPs containing only font files (e.g. Google Fonts downloads) — the @font-face stylesheet is generated automatically from the fonts' metadata. Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), bundles the Variable Fonts extension into core, and adds a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved; if you ran the standalone Variable Fonts extension, deactivate it after updating.
+Font kit uploads now accept ZIPs containing only font files (e.g. Google Fonts downloads) — the @font-face stylesheet is generated automatically from the fonts' metadata. Adds WordPress Font Library integration (register uploaded fonts, adopt Library fonts in the editor), variable font support, and a `typost_force_enqueue_font_ids` filter for theme-driven font loading. Also fixes Adobe/custom/Library fonts not rendering inside the iframed block editor canvas. Existing content and settings are preserved.
 
 = 2.0.1 =
 Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTPS sites.

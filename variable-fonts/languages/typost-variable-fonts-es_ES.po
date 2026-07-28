@@ -78,19 +78,31 @@ msgstr "Ejes de fuente variable"
 msgid "Reset to defaults"
 msgstr "Restablecer valores predeterminados"
 
-#: variable-fonts.php:416
+#: variable-fonts.php:424
 msgid "Detect Axes from Font File"
 msgstr "Detectar ejes desde el archivo de fuente"
+
+#: variable-fonts.php:428
+msgid "Reads the axes back out of the font file and replaces every axis row above — any axis names, ranges, or defaults you set by hand are discarded. Nothing is stored until you save."
+msgstr "Vuelve a leer los ejes del archivo de fuente y reemplaza todas las filas de ejes de arriba: se descartan los nombres, rangos o valores predeterminados que hayas ajustado a mano. No se guarda nada hasta que pulses Guardar."
+
+#: variable-fonts.php:634
+msgid "Axes can only be re-detected from uploaded font files."
+msgstr "Los ejes solo se pueden volver a detectar desde archivos de fuente subidos."
 
 #: assets/js/admin.js
 msgid "Detecting axes…"
 msgstr "Detectando ejes…"
 
+#: assets/js/admin.js
+msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
+msgstr "Volver a detectar lee los ejes del archivo de fuente y reemplaza todas las filas de ejes de esta fuente, descartando los valores que hayas ajustado a mano. ¿Continuar?"
+
 #. translators: %d: number of detected variable font axes.
 #: assets/js/admin.js
 #, javascript-format
-msgid "Detected %d axes. Review below, then Save Changes to store them."
-msgstr "Se detectaron %d ejes. Revísalos abajo y luego pulsa Guardar cambios para almacenarlos."
+msgid "Detected %d axes, replacing the rows above. Review them, then Save Changes to store them."
+msgstr "Se detectaron %d ejes y se reemplazaron las filas de arriba. Revísalos y luego pulsa Guardar cambios para almacenarlos."
 
 #: assets/js/admin.js
 msgid "No variable axes found in the resolved font file (no fvar table)."

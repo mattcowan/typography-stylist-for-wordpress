@@ -16,9 +16,9 @@ work also lives in RELEASING.md § Future work.
 | Item | Shipped in |
 |---|---|
 | Live preview in the block editor (was "Planned/High") | 2.0.0 — inline editor is live-preview; Apply button removed |
-| Variable font support (was "Under Consideration") | 2.1.0 — Variable Fonts module bundled into core: axis auto-detection, admin config, editor sliders, "Detect Axes from Font File" |
+| Variable font support (was "Under Consideration") | 2.1.0 — axis auto-detection, admin config, editor sliders, "Detect Axes from Font File" |
 | Extended OpenType features — frac, lnum/onum/pnum/tnum, smcp/c2sc, sups/subs, ordn, case (was "Planned") | Shipped — the feature list now covers 51 features including every proposed addition |
-| Variable Font Axes extension blueprint (2.0.0 spec) | Superseded — built and bundled in 2.1.0 |
+| Variable Font Axes (2.0.0 spec) | Superseded — shipped in 2.1.0 |
 | Feature presets (core part of the old "Presets Library" idea) | Shipped early — user presets + defaults; see Open below for the rest |
 | Glyphs Panel (never on the old roadmap, became the 2.0.0 flagship) | 2.0.0, bundled into core |
 | WordPress Font Library integration | 2.1.0 (WP 6.5+): registration, editor pickers, adoption |

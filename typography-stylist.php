@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 2.2.0
+ * Version: 2.2.1
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '2.2.0');
+    define('TYPOST_VERSION', '2.2.1');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -6220,10 +6220,9 @@ function typost_init() {
         Typost_Glyphs_Panel::get_instance();
     }
 
-    // Load the bundled Variable Fonts module (integrated into core in v2.1).
-    // Same guard pattern: a still-active standalone copy of the former
-    // extension wins gracefully; its settings (typost_variable_font_axes)
-    // carry over automatically because the option keys are unchanged.
+    // Load the Variable Fonts module (added in v2.1).
+    // Same guard pattern: the final class must never fatally redeclare if
+    // this file is reached twice.
     if ( ! class_exists( 'Typost_Variable_Fonts' ) ) {
         require_once TYPOST_PLUGIN_DIR . 'variable-fonts/variable-fonts.php';
         Typost_Variable_Fonts::get_instance();

@@ -78,19 +78,31 @@ msgstr "Axes de police variable"
 msgid "Reset to defaults"
 msgstr "Réinitialiser aux valeurs par défaut"
 
-#: variable-fonts.php:416
+#: variable-fonts.php:424
 msgid "Detect Axes from Font File"
 msgstr "Détecter les axes depuis le fichier de police"
+
+#: variable-fonts.php:428
+msgid "Reads the axes back out of the font file and replaces every axis row above — any axis names, ranges, or defaults you set by hand are discarded. Nothing is stored until you save."
+msgstr "Relit les axes depuis le fichier de police et remplace toutes les lignes d'axes ci-dessus — les noms, plages ou valeurs par défaut que vous avez saisis à la main sont supprimés. Rien n'est enregistré tant que vous n'avez pas sauvegardé."
+
+#: variable-fonts.php:634
+msgid "Axes can only be re-detected from uploaded font files."
+msgstr "Les axes ne peuvent être redétectés qu'à partir de fichiers de police téléversés."
 
 #: assets/js/admin.js
 msgid "Detecting axes…"
 msgstr "Détection des axes…"
 
+#: assets/js/admin.js
+msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
+msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
+
 #. translators: %d: number of detected variable font axes.
 #: assets/js/admin.js
 #, javascript-format
-msgid "Detected %d axes. Review below, then Save Changes to store them."
-msgstr "%d axes détectés. Vérifiez ci-dessous, puis cliquez sur Enregistrer les modifications pour les sauvegarder."
+msgid "Detected %d axes, replacing the rows above. Review them, then Save Changes to store them."
+msgstr "%d axes détectés, remplaçant les lignes ci-dessus. Vérifiez-les, puis cliquez sur Enregistrer les modifications pour les sauvegarder."
 
 #: assets/js/admin.js
 msgid "No variable axes found in the resolved font file (no fvar table)."

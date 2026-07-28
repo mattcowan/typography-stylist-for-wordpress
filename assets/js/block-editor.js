@@ -2699,22 +2699,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     );
                                 })()}
 
-                                {/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
-                                <div className="typost-modal-section typost-fontstyle-section">
-                                    <h4>{__('Font Style', 'typography-stylist')}</h4>
-                                    <SelectControl
-                                        value={this.state.fontStyle}
-                                        options={[
-                                            { label: __('Inherit', 'typography-stylist'), value: '' },
-                                            { label: __('Normal', 'typography-stylist'), value: 'normal' },
-                                            { label: __('Italic', 'typography-stylist'), value: 'italic' }
-                                        ]}
-                                        onChange={this.setFontStyle}
-                                        help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
-                                    />
-                                </div>
-
                                 {/* Extension hook point: after font controls (e.g., Variable Font axes).
+                                    Sits directly below the weight control so a variable font's
+                                    axis sliders stay grouped with the weight they extend.
                                     key: remount (and re-fire the action) when the font changes */}
                                 <div key={`typost-afc-${this.state.selectedFontId || 'none'}`} className="typost-hook-point" data-hook="typost_inline_after_font_controls" ref={(el) => {
                                     if (el && !el._hooked) {
@@ -2722,6 +2709,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         window.typostHooks.doAction('typost_inline_after_font_controls', el, this.state);
                                     }
                                 }} />
+
+                                {/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
+                                <div className="typost-modal-section typost-fontstyle-section">
+                                    <h4>{__('Font Style', 'typography-stylist')}</h4>
+                                    <SelectControl
+                                        value={this.state.fontStyle}
+                                        options={[
+                                            { label: __('Inherit', 'typography-stylist'), value: '' },
+                                            { label: __('Normal (upright)', 'typography-stylist'), value: 'normal' },
+                                            { label: __('Italic', 'typography-stylist'), value: 'italic' }
+                                        ]}
+                                        onChange={this.setFontStyle}
+                                        help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+                                    />
+                                </div>
 
                                 {/* Font Size Controls */}
                                 <div className="typost-modal-section typost-fontsize-section">

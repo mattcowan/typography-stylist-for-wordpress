@@ -196,6 +196,8 @@
      */
     function detectFailureMessage(reason) {
         var messages = {
+            'no-axes': __( 'No variable axes found in the resolved font file (no fvar table).', 'typost-variable-fonts' ),
+            'entry-missing': __( 'Font data not found on this page.', 'typost-variable-fonts' ),
             'no-file': __( 'No font file could be found for this font.', 'typost-variable-fonts' ),
             'cors': __( 'The font file download was blocked by the remote server (CORS).', 'typost-variable-fonts' ),
             'fetch-failed': __( 'The font file could not be downloaded.', 'typost-variable-fonts' ),
@@ -236,6 +238,74 @@
         // Keep the chain alive whether or not this save succeeds.
         saveChain = run.then(function() {}, function() {});
         return run;
+    }
+
+    /**
+     * Ask the server to re-read a font's axes from its own font files.
+     *
+     * Deliberately does NOT join saveChain — re-detection only reads the
+     * binary and returns the axes, leaving the stored option untouched until
+     * the user saves the form.
+     *
+     * @param {string} fontStringId String font id (e.g. "kit-…").
+     * @return {Promise<{axes: Array, reason: string}>}
+     */
+    function detectViaServer(fontStringId) {
+        return Promise.resolve($.ajax({
+            url: typostVFAdmin.restUrl + fontStringId + '/redetect',
+            method: 'POST',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostVFAdmin.nonce);
+            }
+        })).then(function(response) {
+            var axes = (response && response.axes) || [];
+            return { axes: axes, reason: axes.length ? '' : 'no-axes' };
+        }, function() {
+            return { axes: [], reason: 'fetch-failed' };
+        });
+    }
+
+    /**
+     * Parse a font's axes in the browser via the Glyphs Panel font loader.
+     *
+     * @param {string} fontId String font id.
+     * @param {string} prefix Form prefix: 'font', 'adobe', or 'manual'.
+     * @return {Promise<{axes: Array, reason: string, detail: string=}>}
+     */
+    function detectViaBrowser(fontId, prefix) {
+        if (!canDetect()) {
+            return Promise.resolve({ axes: [], reason: 'vendor-load-failed' });
+        }
+
+        var found = getFontEntry(fontId, prefix);
+        if (!found) {
+            return Promise.resolve({ axes: [], reason: 'entry-missing' });
+        }
+
+        bootstrapGlyphsData();
+
+        return window.typostGlyphs.loadAndParseFont({
+            source: found.source,
+            entry: found.entry,
+            fontId: found.entry.font_id,
+            weight: '400'
+        }).then(function(result) {
+            if (!result || !result.ok) {
+                return {
+                    axes: [],
+                    reason: (result && result.reason) || 'parse-failed',
+                    detail: result && result.detail
+                };
+            }
+            // Metadata-only: read the fvar axis records, then drop the font.
+            var fvar = result.font && result.font.tables && result.font.tables.fvar;
+            var axes = window.typostVFUtils.mapFvarAxes(fvar && fvar.axes, registeredAxes);
+            return { axes: axes, reason: axes.length ? '' : 'no-axes' };
+        }, function() {
+            // loadAndParseFont resolves typed failures, so a rejection here
+            // is unexpected — report it as an unreadable file.
+            return { axes: [], reason: 'parse-failed' };
+        });
     }
 
     /**
@@ -317,9 +387,11 @@
             $list.append(createAxisRowHtml());
         });
 
-        // Hide detect buttons when the font-loading pipeline isn't available.
+        // Uploaded kits re-detect server-side and need no browser pipeline;
+        // remote sources (Adobe, manual) can only be parsed in the browser, so
+        // hide their button when that pipeline failed to load.
         if (!canDetect()) {
-            $('.typost-vf-detect-axes').hide();
+            $('.typost-vf-settings').not('[data-font-type="font"]').find('.typost-vf-detect-field').hide();
         }
 
         // Detect axes from the font binary (fvar table). Rows are only
@@ -330,54 +402,62 @@
             var $status = $container.find('.typost-vf-detect-status');
             var fontId = $container.attr('data-font-id');
             var prefix = $container.attr('data-font-type');
+            // Uploaded kits also have their files on this server, so they can
+            // fall back to the PHP parser when the browser pipeline is
+            // unavailable or fails. The browser is tried first because it
+            // reads real axis names out of the font's name table ("Softness"),
+            // where the server parser can only uppercase the tag ("SOFT").
+            var serverEligible = ('font' === prefix);
 
-            if (!canDetect()) return;
+            if (!serverEligible && !canDetect()) return;
 
-            var found = getFontEntry(fontId, prefix);
-            if (!found) {
-                $status.text(__( 'Font data not found on this page.', 'typost-variable-fonts' ));
+            // Detection replaces every row, so confirm before discarding axis
+            // definitions that may have been tuned by hand. A first detect on
+            // an empty list stays a single click.
+            if ($container.find('.typost-vf-axis-row').length &&
+                !window.confirm(__( 'Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?', 'typost-variable-fonts' ))) {
                 return;
             }
 
             $button.prop('disabled', true);
             $status.text(__( 'Detecting axes…', 'typost-variable-fonts' ));
-            bootstrapGlyphsData();
 
-            window.typostGlyphs.loadAndParseFont({
-                source: found.source,
-                entry: found.entry,
-                fontId: found.entry.font_id,
-                weight: '400'
-            }).then(function(result) {
-                if (!result || !result.ok) {
-                    var message = detectFailureMessage(result && result.reason);
-                    if (result && result.detail) {
+            var attempt;
+            if (canDetect()) {
+                attempt = detectViaBrowser(fontId, prefix).then(function(result) {
+                    // Server fallback only helps fonts whose files live here,
+                    // and only when the browser could not read them at all.
+                    if (result.axes.length || !serverEligible) {
+                        return result;
+                    }
+                    return detectViaServer(fontId);
+                });
+            } else {
+                attempt = detectViaServer(fontId);
+            }
+
+            attempt.then(function(result) {
+                if (!result.axes.length) {
+                    var message = detectFailureMessage(result.reason);
+                    if (result.detail) {
                         message += ' (' + result.detail + ')';
                     }
                     $status.text(message);
                     return;
                 }
 
-                // Metadata-only: read the fvar axis records, then drop the font.
-                var fvar = result.font && result.font.tables && result.font.tables.fvar;
-                var axes = window.typostVFUtils.mapFvarAxes(fvar && fvar.axes, registeredAxes);
-                if (!axes.length) {
-                    $status.text(__( 'No variable axes found in the resolved font file (no fvar table).', 'typost-variable-fonts' ));
-                    return;
-                }
-
-                populateAxisRows($container, axes);
+                populateAxisRows($container, result.axes);
                 autoUpdateHideWeights($container);
                 $status.text(sprintf(
                     /* translators: %d: number of detected variable font axes. */
-                    __( 'Detected %d axes. Review below, then Save Changes to store them.', 'typost-variable-fonts' ),
-                    axes.length
+                    __( 'Detected %d axes, replacing the rows above. Review them, then Save Changes to store them.', 'typost-variable-fonts' ),
+                    result.axes.length
                 ));
             }).then(function() {
                 $button.prop('disabled', false);
             }, function() {
-                // loadAndParseFont resolves typed failures, so a rejection here
-                // is unexpected — recover the button and show a generic error.
+                // Both detect paths resolve typed failures, so a rejection
+                // here is unexpected — recover the button and show an error.
                 $button.prop('disabled', false);
                 $status.text(detectFailureMessage('parse-failed'));
             });

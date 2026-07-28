@@ -3,6 +3,18 @@
 	margin-bottom: 10px;
 }
 
+.typost-vf-detect-field {
+	margin-top: 4px;
+}
+
+.typost-vf-detect-field .typost-vf-detect-status {
+	margin-left: 8px;
+}
+
+.typost-vf-detect-field .description {
+	margin-top: 6px;
+}
+
 .typost-vf-hide-weights-field {
 	margin-top: 12px;
 	padding-top: 12px;
