@@ -2814,6 +2814,19 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									);
 								})()}
 
+								{/* Extension hook point: after font controls (e.g., Variable Font axes).
+								    Sits directly below the weight control so a variable font's
+								    axis sliders stay grouped with the weight they extend.
+								    key: remount (and re-fire the action) when any active font changes */}
+								<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
+									if (el && !el._hooked) {
+										el._hooked = true;
+										window.typostHooks.doAction('typost_qft_after_font_controls', el, {
+											fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
+										});
+									}
+								}} />
+
 								{/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
@@ -2846,17 +2859,6 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 										</Button>
 									)}
 								</div>
-
-								{/* Extension hook point: after font controls (e.g., Variable Font axes).
-								    key: remount (and re-fire the action) when any active font changes */}
-								<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
-									if (el && !el._hooked) {
-										el._hooked = true;
-										window.typostHooks.doAction('typost_qft_after_font_controls', el, {
-											fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
-										});
-									}
-								}} />
 
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>

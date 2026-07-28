@@ -78,3 +78,12 @@
 	border-top: none;
 	border-bottom: 1px solid #ddd;
 }
+
+/* Quick Feature Toggles: the weight control directly above already closes with
+   a rule, so trade the top border for the section's own bottom border. */
+[data-hook="typost_qft_after_font_controls"] .typost-vf-other-axes {
+	margin: 0 0 16px;
+	padding: 0 0 16px;
+	border-top: none;
+	border-bottom: 2px solid #ddd;
+}

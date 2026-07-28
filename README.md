@@ -382,6 +382,21 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 ## Changelog
 
+### Version 2.2.1
+
+- **Fixed: fonts uploaded together in one ZIP no longer share each other's variable-font axes.** Every font family extracted from a kit points at the same kit directory, and axis detection scanned that whole directory — so each family was assigned the axes of whichever font file happened to parse first. A ZIP containing EB Garamond (weight axis only) and Fraunces (optical size, SOFT, WONK, weight) gave Fraunces a lone weight slider and hid its custom axes, and gave non-variable fonts in the same ZIP a phantom weight slider in place of their real weight dropdown. Detection is now scoped to the font files each family's own `@font-face` rules reference, with the resolved path confined to the kit directory (kit CSS arrives inside an uploaded ZIP, so it is untrusted input). Fonts uploaded on their own were never affected.
+- **Improved: "Detect Axes from Font File" repairs fonts in place.** It now falls back to a server-side re-read when the browser parsing pipeline is unavailable, so it works either way — use it on any font whose axes were mis-detected before this fix. It states up front that it replaces every axis row and discards hand-set axis names, ranges, and defaults, and asks for confirmation before overwriting axes that are already defined. Detecting axes for the first time is still a single click, and nothing is stored until you save.
+- **Changed: variable-font axis sliders now sit directly beneath the weight control** in the inline editor and the Quick Feature Toggles, matching the block sidebar. Font Style previously came between them, separating the axis sliders from the weight they extend.
+
+### Version 2.2.0
+
+- **New: Font Style (visual italic) controls** on all three editing surfaces — block-level, Quick Feature Toggles, and the inline editor. Deliberately style-only: it selects the font's italic face without adding emphasis semantics; the editor's own Italic button remains the way to emphasize text for screen readers.
+- **Italic-aware previews and Glyphs Panel** — feature previews render with the italic face when the selection is italic, and the Glyphs Panel loads the face variant actually rendering at your selection (no toggle; the selection decides). Italic-only glyph sets like EB Garamond's swash italic capitals are finally browsable.
+- **Glyphs Panel opens to your selection** — a selected letter pre-fills the alternates view; short combinations ("Th") show their exact ligature alternates.
+- **Fixed: converting a styled heading or paragraph to a Typography Stylist block no longer destroys inline styling.** The convert button rebuilt the block from plain text whenever the selection crossed styled-span boundaries — exactly the selections that surface the convert option — wiping per-letter glyph alternates, swashes, fonts, and weights.
+- **A large editor-robustness batch**: Quick Feature Toggle changes always land on the selected text; mixed-selection edits change only the setting you touched; glyph alternates survive font and feature changes; variable-font axis sliders no longer alter untouched axes (and the QFT weight slider works); font changes clear stale axis values; multi-span font changes actually take effect; quote-bearing attribute values survive span splits; the span-nesting limit is enforced everywhere.
+- Full details for every fix are in [changelog.txt](changelog.txt).
+
 ### Version 2.1.2
 
 - **New: automatic font-weight detection.** Newly uploaded font kits and newly added Adobe Fonts get their "Available Font Weights" checkboxes pre-set to only the weights the font actually ships, instead of all nine weights enabled by default. Uploaded kits derive the weights from their parsed (or generated) @font-face rules; Adobe Fonts from the kit stylesheet, fetched server-side at add time and matched per family; WordPress Font Library fonts adopted from the editor picker derive theirs from the family's font-face declarations. Variable fonts covering the full 100–900 range keep all weights enabled (the weight slider replaces the dropdown anyway). Detection only narrows when confident — a failed stylesheet fetch or unreadable kit leaves all weights enabled — and the checkboxes remain fully editable.
@@ -405,7 +420,7 @@ The plugin uses native CSS `font-feature-settings` which is hardware-accelerated
 
 - **Register uploaded fonts in the WordPress Font Library** (Appearance → Editor). New uploads register automatically (toggle in Options); existing fonts register per font or in bulk from the Custom Fonts tab — opt-in and fully reversible. Registered fonts keep their numeric IDs: `--font-N` variables alias to `--wp--preset--font-family--{slug}` presets with a literal fallback, so existing content and extension integrations keep rendering forever. WordPress serves the font files for registered fonts (no double-loading). Adobe Fonts and custom definitions stay plugin-managed by design.
 - **Library fonts in the editor pickers** - both editors now offer WordPress Font Library fonts in a dedicated group; picking one adopts it with a numeric font ID, leaving the save format and extensions unchanged.
-- **Variable Fonts built into core** - the standalone "Typography Stylist - Variable Fonts" extension is now bundled (deactivate the standalone plugin after updating; settings carry over automatically).
+- **Variable font support** - automatic axis detection on upload, per-font axis configuration, and axis sliders in both editors.
 - **`typost_force_enqueue_font_ids` filter** for theme-driven font loading, `waitUntil()` on `typost:font-saved`, a font-CSS cache-key fix, and `animationConfigId`/`data-animation-id` integration points for the upcoming Animations extension.
 
 **Editor and Glyphs Panel fixes**
