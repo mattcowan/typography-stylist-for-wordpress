@@ -248,7 +248,7 @@
      * the user saves the form.
      *
      * @param {string} fontStringId String font id (e.g. "kit-…").
-     * @return {Promise<{axes: Array, reason: string}>}
+     * @return {Promise<{axes: Array, reason: string, detail: string=}>}
      */
     function detectViaServer(fontStringId) {
         return Promise.resolve($.ajax({
@@ -260,8 +260,14 @@
         })).then(function(response) {
             var axes = (response && response.axes) || [];
             return { axes: axes, reason: axes.length ? '' : 'no-axes' };
-        }, function() {
-            return { axes: [], reason: 'fetch-failed' };
+        }, function(jqXHR) {
+            // Surface the WP REST error (bad nonce, missing capability, font
+            // not found) instead of flattening every failure into the generic
+            // "could not be downloaded" message.
+            var body = jqXHR && jqXHR.responseJSON;
+            var detail = (body && body.message) ||
+                (jqXHR && jqXHR.status ? 'HTTP ' + jqXHR.status : '');
+            return { axes: [], reason: 'fetch-failed', detail: detail };
         });
     }
 
