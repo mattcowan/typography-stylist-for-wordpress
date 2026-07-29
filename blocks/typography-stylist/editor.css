@@ -56,11 +56,21 @@
 	}
 }
 
-/* Fit-to-width editing surface: the block wrapper is the inline-size
- * container that the RichText's calc(R * 100cqi) font-size (smallest
- * line ratio — longest line spans the width, nothing wraps) resolves
- * against while the block is selected. The deselected preview brings
- * its own container via .typost-fit (style.css). */
-.wp-block-typost.typost-fit-editing {
-	container-type: inline-size;
+/* Fit-to-width WYSIWYG editing surface. The RichText carries
+ * typost-styled typost-fit, so style.css (loaded in the editor canvas)
+ * already supplies the inline-size container, per-line
+ * font-optical-sizing: none, and the inline data-fontsize
+ * neutralization. Unlike the frontend markup (block-level typost-line
+ * spans, no separators), the EDITING value keeps real <br> separators
+ * between the wrappers so the rich-text record's text offsets stay
+ * byte-identical to the flat stored content. The wrappers therefore
+ * render inline here — the <br>s do the line breaking, and empty lines
+ * (bare consecutive <br>s, never wrapped) stay visible and editable
+ * natively. Specificity beats style.css's display: block line rule. */
+.wp-block-typost .typost-block-content.typost-fit-editing {
+	white-space: nowrap;
+}
+
+.wp-block-typost .typost-block-content.typost-fit-editing .typost-line {
+	display: inline;
 }

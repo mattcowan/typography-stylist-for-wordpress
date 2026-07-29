@@ -1653,7 +1653,7 @@ msgid "Fit to width"
 msgstr ""
 
 #: blocks/typography-stylist/edit.js
-msgid "Each line is sized to span the full block width. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing. The preview updates when the block is deselected."
+msgid "Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing."
 msgstr ""
 
 #: blocks/typography-stylist/edit.js

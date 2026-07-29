@@ -1,9 +1,24 @@
 # Feature: True WYSIWYG editing for Fit-to-Width blocks (single view)
 
-Status: **not started** — this doc is the starter prompt for the implementing
-session. Written 2026-07-29. Target release: **2.2.2** (version bumps and the
-2.2.2 changelog section are already staged in the working tree — extend the
-existing `= 2.2.2 =` entries, do not create a new version).
+Status: **DONE 2026-07-29, shipping in 2.2.2** — implemented via an approach
+none of the candidates below anticipated: the RichText **value transform**.
+The stored `content` stays flat; `wrapFitLines()` feeds RichText a per-line
+`span.typost-line`-wrapped value **with the `<br>` separators kept between
+wrappers**, and `unwrapFitLines()` strips the wrappers in onChange. Keeping
+the `<br>`s makes the rich-text record's text byte-identical to the flat
+model, so every store selection offset and the whole QFT machinery work
+unchanged — and because the editor is still RichText, the native toolbar
+(Bold/Italic/Link), caret, IME, paste, undo, and WritingFlow all survive.
+The wrappers render `display:inline` in the editing view (editor.css) so
+the real `<br>`s do the line breaking; empty lines are never wrapped (a
+zero-length span becomes an object-replacement character in the record).
+The uniform-size editing surface (`computeFitEditingFontSize`) and the
+deselected preview branch were removed. Verified end-to-end with Playwright
+on mnc4 post 367 (typing/caret through re-measure, Enter/Backspace merges,
+QFT line-height + letter-spacing on a line-3 selection, native bold, glyph
+insertion, multi-line paste, undo, save→reload validation, empty-block
+first-keystroke swap, cross-block arrow nav). IME composition was not
+machine-testable — worth a quick manual check.
 
 ## What the user wants
 

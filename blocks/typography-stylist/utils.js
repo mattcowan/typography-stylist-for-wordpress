@@ -2384,10 +2384,12 @@ export function buildFitFontSize(ratio, fitMaxSize) {
 }
 
 /**
- * Compose the per-line wrapper HTML for a fit-to-width block. Shared by
- * save.js (frontend markup) and edit.js (deselected editor preview) so
- * WYSIWYG holds. Lines without a valid ratio get no font-size and inherit
- * the block-level fallback clamp.
+ * Compose the per-line wrapper HTML for a fit-to-width block's FRONTEND
+ * markup (save.js): typost-line wrappers with no separators — display:
+ * block does the line breaking. The editor's fit editing value is built
+ * by wrapFitLines instead, which keeps the <br> separators so rich-text
+ * offsets stay flat-model-identical. Lines without a valid ratio get no
+ * font-size and inherit the block-level fallback clamp.
  *
  * @param {string} content - Serialized RichText content
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
@@ -2407,21 +2409,74 @@ export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize) {
 }
 
 /**
- * Font size for the fit-mode EDITING surface (flat RichText, no per-line
- * wrappers): the smallest measured ratio, so the longest line exactly
- * spans the container and no line wraps or overflows under
- * white-space: nowrap. Lines keep their identity while editing; the
- * exact per-line preview returns on deselect.
+ * Wrap flat br-model content into the fit-mode EDITING value fed to
+ * RichText: each non-empty visual line wrapped in span.typost-line with
+ * its per-line font-size, joined with '<br>'. Unlike buildFitLinesHtml
+ * (frontend/preview markup, no separators, display:block lines), the
+ * <br> separators are KEPT so the rich-text record's text is byte-identical
+ * to the flat model ("line1\nline2") — every stored selection offset and
+ * the whole QFT offset convention carry over unchanged.
  *
- * @param {number[]} fitLineSizes - Per-line ratios
- * @return {string} CSS font-size value, or '' when nothing is measured yet
+ * Empty lines are NOT wrapped: a zero-length span cannot exist as a
+ * format in the rich-text record — create() turns it into an
+ * object-replacement character that would occupy a text position and
+ * shift every following offset by one.
+ *
+ * @param {string} content - Flat serialized RichText content (br-model)
+ * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @return {string} Wrapped editing value for RichText
  */
-export function computeFitEditingFontSize(fitLineSizes) {
-	const valid = Array.isArray(fitLineSizes) ? fitLineSizes.filter(r => r > 0) : [];
-	if (!valid.length) {
+export function wrapFitLines(content, fitLineSizes, fitMaxSize) {
+	if (!content) {
 		return '';
 	}
-	return `calc(${Math.min(...valid)} * 100cqi)`;
+	const lines = splitContentIntoLines(content);
+	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+
+	return lines.map((lineHtml, i) => {
+		if (!lineHtml) {
+			return '';
+		}
+		const size = buildFitFontSize(sizes[i], fitMaxSize);
+		return size
+			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
+			: `<span class="typost-line">${lineHtml}</span>`;
+	}).join('<br>');
+}
+
+/**
+ * Inverse of wrapFitLines: strip the span.typost-line wrappers from a
+ * RichText onChange value, leaving flat br-model content for the stored
+ * attribute. Only the wrappers are removed — inner markup, <br>s (both
+ * the line separators and any the rich-text ops placed inside/around a
+ * wrapper), and everything else pass through verbatim. Adjacent wrappers
+ * with no <br> between them (rich-text's backspace-merge shape)
+ * concatenate naturally into one line.
+ *
+ * @param {string} html - Wrapped editing value from RichText onChange
+ * @return {string} Flat br-model content
+ */
+export function unwrapFitLines(html) {
+	if (!html) {
+		return '';
+	}
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		container.querySelectorAll('span.typost-line').forEach(wrapper => {
+			while (wrapper.firstChild) {
+				wrapper.parentNode.insertBefore(wrapper.firstChild, wrapper);
+			}
+			wrapper.parentNode.removeChild(wrapper);
+		});
+
+		return container.innerHTML;
+	} catch (error) {
+		return html;
+	}
 }
 
 /**

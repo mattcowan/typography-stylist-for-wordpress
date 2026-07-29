@@ -36,12 +36,22 @@
 	 * 3. The span always carries data-font-id when a panel font is known, so
 	 *    frontend @font-face detection loads the font.
 	 * 4. Context font weight is preserved on the span when meaningful.
+	 * 5. isBaseGlyph (the base cell of the alternates view) always builds a
+	 *    span, even when rule 1 would send plain text. A base-cell click
+	 *    means "restore the plain form": a plain insertion would inherit the
+	 *    very alternate being removed (the core editor copies the replaced
+	 *    range's formats onto the insertion), whereas a span payload owns
+	 *    data-features / data-feature-settings in the core merge and so
+	 *    drops the inherited alternate while sizing/spacing survive.
 	 *
 	 * @param {Object} opts
 	 * @param {string} opts.text            Character(s) to insert ('A', 'fi')
 	 * @param {string|null} opts.featureTag Feature required to render this glyph, or null
 	 * @param {number} opts.featureIndex    Alternate index for indexed features
 	 *                                      (salt/aalt); 1 or omitted = plain "tag" 1
+	 * @param {boolean} opts.isBaseGlyph    True for the alternates view's base
+	 *                                      cell — force a span so the inherited
+	 *                                      alternate is cleared (rule 5)
 	 * @param {number} opts.panelFontId     Font selected in the glyphs panel (numeric font_id)
 	 * @param {string} opts.panelFontFamily CSS family for fonts without a numeric id
 	 *                                      (WP Font Library); used only when panelFontId is 0
@@ -55,6 +65,7 @@
 		var text = String(opts.text || '');
 		var featureTag = opts.featureTag || null;
 		var featureIndex = opts.featureIndex || 1;
+		var isBaseGlyph = !!opts.isBaseGlyph;
 		var panelFontId = opts.panelFontId || 0;
 		var panelFontFamily = opts.panelFontFamily || '';
 		var contextFontId = opts.contextFontId || 0;
@@ -63,7 +74,7 @@
 
 		var crossFont = (panelFontId !== 0 && panelFontId !== contextFontId) ||
 			(panelFontId === 0 && !!panelFontFamily);
-		var needsSpan = !!featureTag || crossFont;
+		var needsSpan = !!featureTag || crossFont || isBaseGlyph;
 
 		if (!needsSpan) {
 			return { text: text, attributes: null };
@@ -119,7 +130,12 @@
 			styleParts.push('font-weight: ' + contextFontWeight);
 		}
 
-		attributes.style = styleParts.join('; ');
+		// A base-glyph span with no font/features/weight has nothing to
+		// declare — the (attribute-less) span still replaces the inherited
+		// typost format, which is the whole point of rule 5.
+		if (styleParts.length > 0) {
+			attributes.style = styleParts.join('; ');
+		}
 
 		return { text: text, attributes: attributes };
 	}
@@ -128,7 +144,12 @@
 	 * Dispatch a typost-insert-content event to the core plugin.
 	 *
 	 * @param {string} source 'inline' or 'qft'
-	 * @param {{text: string, attributes: Object|null}} payload From buildInsertionPayload()
+	 * @param {{text: string, attributes: Object|null, swap: boolean=}} payload
+	 *                        From buildInsertionPayload(); a truthy `swap`
+	 *                        marks alternates-view semantics — the host editor
+	 *                        keeps the inserted text selected so the next
+	 *                        alternates click REPLACES it instead of appending
+	 *                        after it.
 	 * @param {Object} target Optional targeting info captured when the panel
 	 *                        launched: {clientId, range: {start, end}}. Keeps
 	 *                        insertion working after the host editor popover
@@ -144,6 +165,7 @@
 				source: source,
 				text: payload.text,
 				attributes: payload.attributes,
+				swap: payload.swap ? true : undefined,
 				clientId: target.clientId || undefined,
 				range: target.range || undefined
 			}

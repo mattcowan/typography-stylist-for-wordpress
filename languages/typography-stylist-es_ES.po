@@ -2026,8 +2026,8 @@ msgid "Fit to width"
 msgstr "Ajustar al ancho"
 
 #: blocks/typography-stylist/edit.js
-msgid "Each line is sized to span the full block width. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing. The preview updates when the block is deselected."
-msgstr "Cada línea se dimensiona para ocupar todo el ancho del bloque. Las líneas nunca se dividen, y los tamaños de fuente en línea de las selecciones se ignoran — el bloque controla el tamaño. La vista previa se actualiza al deseleccionar el bloque."
+msgid "Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing."
+msgstr "Cada línea se dimensiona para ocupar todo el ancho del bloque, en vivo mientras editas. Las líneas nunca se dividen, y los tamaños de fuente en línea de las selecciones se ignoran — el bloque controla el tamaño."
 
 #: blocks/typography-stylist/edit.js
 msgid "Maximum font size"

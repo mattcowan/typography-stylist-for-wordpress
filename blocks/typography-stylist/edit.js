@@ -26,10 +26,10 @@ import {
 	Button,
 	Notice
 } from '@wordpress/components';
-import { useState, useRef, useEffect, useMemo, createElement } from '@wordpress/element';
-import { useSelect } from '@wordpress/data';
+import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
+import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, buildFitLinesHtml, computeFitEditingFontSize, sanitizeFontVariationSettings } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, sanitizeFontVariationSettings } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -475,7 +475,13 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			// Commit: clear preview-restore so popover close doesn't revert the insertion
 			originalContentRef.current = null;
 			setAttributes({ content: toHTMLString({ value: newValue }) });
-			setCapturedSelection({ start: insertEnd, end: insertEnd, text: '', length: 0 });
+			// swap (alternates-view) insertions keep the inserted text SELECTED
+			// so the next alternate/base click replaces the same glyph;
+			// sequence insertions collapse the caret after the text so the
+			// next glyph appends.
+			setCapturedSelection(e.detail.swap
+				? { start: range.start, end: insertEnd, text: text, length: text.length }
+				: { start: insertEnd, end: insertEnd, text: '', length: 0 });
 		};
 		document.addEventListener('typost-insert-content', handleInsertContent);
 		return () => {
@@ -641,6 +647,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			const changed = ratios.length !== current.length ||
 				ratios.some((r, i) => r !== current[i]);
 			if (changed) {
+				// Derived state, not a user edit: without this, the ratio
+				// write forms its own undo step and the first Ctrl+Z after
+				// typing snaps line sizes back instead of undoing the text.
+				// Undone content re-triggers this effect, so ratios always
+				// recompute to match whatever content undo lands on.
+				if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
+					dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
+				}
 				measureFitPropsRef.current.setAttributes({ fitLineSizes: ratios });
 			}
 		} finally {
@@ -695,6 +709,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			}
 		};
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Fit-to-width editing value: the flat content attribute wrapped into
+	// per-line typost-line spans (with <br> separators kept) for the
+	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
+	// the render branch ever sees the wrapped form.
+	const wrappedFitValue = useMemo(
+		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize) : ''),
+		[fontSize, content, fitLineSizes, fitMaxSize]
+	);
 
 	// The range QFT property applies operate on: the LIVE selection when it's
 	// expanded and in this block, else the selection captured when the popover
@@ -1446,10 +1469,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	};
 
 	const blockProps = useBlockProps({
-		// typost-fit-editing establishes the inline-size container (editor.css)
-		// that the editing surface's calc(R * 100cqi) font-size resolves
-		// against while the block is in fit mode.
-		className: fontSize === 'fit' ? 'wp-block-typost typost-fit-editing' : 'wp-block-typost'
+		className: 'wp-block-typost'
 	});
 
 	// Get available features from localized data, filtered by per-font visibility
@@ -2781,20 +2801,13 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
-		// Fit-to-width: per-line cqi sizes only exist in the deselected
-		// preview and on the frontend (typost-line wrappers). While EDITING,
-		// the flat RichText renders at the smallest measured line ratio with
-		// no wrapping — the longest line exactly spans the block width, so
-		// line structure survives selection without wrap/overflow (fallback
-		// clamp until the first measurement lands).
+		// Fit-to-width: the editing surface renders the real per-line
+		// typost-line wrappers (wrapFitLines), each carrying its own cqi
+		// font-size. The block-level size is only the fallback that
+		// unmeasured lines and empty lines inherit — the same clamp the
+		// frontend emits (save.js) for browsers without container queries.
 		if (fontSize === 'fit') {
-			const editingSize = computeFitEditingFontSize(fitLineSizes);
-			if (editingSize) {
-				styles.fontSize = editingSize;
-				styles.whiteSpace = 'nowrap';
-			} else {
-				styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
-			}
+			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
 		if (fontVariationSettings) {
@@ -3660,7 +3673,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							fontSize === 'responsive'
 								? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')
 								: fontSize === 'fit'
-									? __('Each line is sized to span the full block width. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing. The preview updates when the block is deselected.', 'typography-stylist')
+									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing.', 'typography-stylist')
 									: undefined
 						}
 					/>
@@ -3837,18 +3850,27 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			</InspectorControls>
 
 			<div {...blockProps}>
-				{fontSize === 'fit' && !isSelected && content ? (
-					/* Fit-to-width preview: exact frontend markup (per-line
-					   typost-line spans with cqi sizes; typost-fit establishes
-					   the container via style.css, which also loads in the
-					   editor iframe). Shown while the block is deselected;
-					   selecting the block swaps in the editable RichText at a
-					   uniform fitted size (the longest line spans the width). */
-					createElement(tagName || 'h2', {
-						className: 'typost-block-content typost-styled typost-fit',
-						style: buildStyle(),
-						dangerouslySetInnerHTML: { __html: buildFitLinesHtml(content, fitLineSizes, fitMaxSize) }
-					})
+				{fontSize === 'fit' && content ? (
+					/* Fit-to-width WYSIWYG editing (single view): the RichText
+					   is fed a WRAPPED value — per-line typost-line spans, each
+					   with its own calc(R * 100cqi) font-size, joined with <br>
+					   — while the stored content attribute stays flat.
+					   wrapFitLines/unwrapFitLines are the entire boundary. The
+					   kept <br> separators make the rich-text record's text
+					   byte-identical to the flat model, so store selection
+					   offsets and the whole QFT machinery are untouched.
+					   typost-fit brings the inline-size container + line rules
+					   from style.css (loaded in the editor canvas);
+					   typost-fit-editing re-inlines the wrappers (editor.css)
+					   so the real <br>s do the line breaking while editing. */
+					<RichText
+						tagName={tagName}
+						value={wrappedFitValue}
+						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
+						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
+						style={buildStyle()}
+						className="typost-block-content typost-styled typost-fit typost-fit-editing"
+					/>
 				) : (
 					<RichText
 						tagName={tagName}

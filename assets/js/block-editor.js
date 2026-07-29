@@ -591,11 +591,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }, start, insertEnd);
                 }
 
-                // Collapse caret after the inserted text
-                newValue.start = insertEnd;
-                newValue.end = insertEnd;
-                onChange(newValue);
-                self.setState({ savedSelectionStart: insertEnd, savedSelectionEnd: insertEnd });
+                // swap (alternates-view) insertions keep the inserted text
+                // selected so the next alternate/base click replaces the same
+                // glyph; sequence insertions collapse the caret after the text
+                if (e.detail.swap) {
+                    newValue.start = start;
+                    newValue.end = insertEnd;
+                    onChange(newValue);
+                    self.setState({ savedSelectionStart: start, savedSelectionEnd: insertEnd });
+                } else {
+                    newValue.start = insertEnd;
+                    newValue.end = insertEnd;
+                    onChange(newValue);
+                    self.setState({ savedSelectionStart: insertEnd, savedSelectionEnd: insertEnd });
+                }
             };
             document.addEventListener('typost-insert-content', this._handleInsertContent);
 

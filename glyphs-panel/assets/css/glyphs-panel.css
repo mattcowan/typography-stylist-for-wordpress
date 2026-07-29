@@ -8,6 +8,28 @@
 	max-height: 85vh;
 }
 
+/* Drag-to-reposition: the Modal's title bar is the drag handle (see
+   handleModalMouseDown in glyphs-modal.js). The close button keeps its
+   normal pointer. */
+.typost-glyphs-modal .components-modal__header {
+	cursor: grab;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.typost-glyphs-modal .components-modal__header button {
+	cursor: pointer;
+}
+
+.typost-glyphs-modal.is-dragging {
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.typost-glyphs-modal.is-dragging .components-modal__header {
+	cursor: grabbing;
+}
+
 .typost-glyphs-modal .components-modal__content {
 	display: flex;
 	flex-direction: column;
