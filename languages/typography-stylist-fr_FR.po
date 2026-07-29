@@ -2020,3 +2020,31 @@ msgstr "Réinitialiser le style de police"
 #: blocks/typography-stylist/edit.js
 msgid "Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead."
 msgstr "Style visuel uniquement — la fonte italique de la police, sans ajouter d'emphase. Pour mettre du texte en emphase sémantique (annoncée par les lecteurs d'écran), utilisez plutôt le bouton Italique de l'éditeur."
+
+#: blocks/typography-stylist/edit.js
+msgid "Fit to width"
+msgstr "Ajuster à la largeur"
+
+#: blocks/typography-stylist/edit.js
+msgid "Each line is sized to span the full block width. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing. The preview updates when the block is deselected."
+msgstr "Chaque ligne est dimensionnée pour occuper toute la largeur du bloc. Les lignes ne passent jamais à la ligne, et les tailles de police en ligne des sélections sont ignorées — le bloc contrôle la taille. L'aperçu se met à jour lorsque le bloc est désélectionné."
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum font size"
+msgstr "Taille de police maximale"
+
+#: blocks/typography-stylist/edit.js
+msgid "Cap how large short lines can grow on wide screens."
+msgstr "Limite la taille que peuvent atteindre les lignes courtes sur les grands écrans."
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum size (px)"
+msgstr "Taille maximale (px)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Fallback size for browsers without container query support:"
+msgstr "Taille de repli pour les navigateurs sans prise en charge des requêtes de conteneur :"
+
+#: blocks/typography-stylist/edit.js
+msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
+msgstr "Les tailles de police en ligne sont ignorées lorsque ce bloc utilise le dimensionnement Ajuster à la largeur."

@@ -48,6 +48,7 @@ Complex inline typography usually comes at a cost: the span elements needed to s
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
 * **Visual Interface**: User-friendly, resizable, moveable popover with organized feature categories.
 * **Advanced Typography Controls**: Adjust letter spacing, font weight, responsive font sizes, and more.
+* **Fit-to-Width Sizing**: Size each line of a Typography Stylist block to span the full block width — the classic wedding-invitation/poster look — with zero frontend JavaScript (CSS container queries), an optional maximum size cap, and a responsive fallback for older browsers.
 * **Block Editor Native**: Seamlessly integrates with Gutenberg.
 * **Custom Fonts Management**: Upload webfont kits from MyFonts, Font Squirrel, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
 * **Font Fallbacks**: Facing a rebranding and needing to change fonts? No worries. Delete a font previously defined, and use the fallback system to seamlessly replace them.

@@ -929,13 +929,15 @@ class Typost {
             )));
         }
 
-        // Fonts whose WP Font Library registration is live get their
-        // @font-face printed by WordPress (wp_print_font_faces) — skip the
-        // plugin's own output for those to avoid double-loading. Stale
-        // registrations resume the plugin path automatically.
+        // Skip the plugin's own @font-face only for fonts WordPress will
+        // actually print on this page (wp_print_font_faces covers theme
+        // fonts + Library fonts ACTIVATED in global styles). A live
+        // registration alone is not enough — registered-but-unactivated
+        // families get nothing from WordPress and need the plugin output.
+        // Stale registrations resume the plugin path automatically.
         $library_printed_ids = array();
         foreach ($all_fonts as $font) {
-            if (isset($font['font_id']) && $this->font_library_bridge()->entry_has_live_registration($font)) {
+            if (isset($font['font_id']) && $this->font_library_bridge()->entry_faces_printed_by_wordpress($font)) {
                 $library_printed_ids[] = (int) $font['font_id'];
             }
         }

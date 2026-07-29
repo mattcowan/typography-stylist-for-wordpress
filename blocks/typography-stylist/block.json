@@ -66,6 +66,14 @@
 			"type": "number",
 			"default": 64
 		},
+		"fitLineSizes": {
+			"type": "array",
+			"default": []
+		},
+		"fitMaxSize": {
+			"type": "number",
+			"default": 0
+		},
 		"fontWeight": {
 			"type": "string",
 			"default": "400"

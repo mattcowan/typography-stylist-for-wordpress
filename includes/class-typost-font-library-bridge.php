@@ -26,6 +26,12 @@ class Typost_Font_Library_Bridge {
      */
     private $library_snapshot = null;
 
+    /**
+     * Lowercased font-family names WordPress will print @font-face for
+     * on this request (per-request cache; null = not yet resolved)
+     */
+    private $printed_families = null;
+
     public function __construct(Typost_Font_Sources $sources) {
         $this->sources = $sources;
     }
@@ -190,6 +196,7 @@ class Typost_Font_Library_Bridge {
      */
     public function clear_snapshot_cache() {
         $this->library_snapshot = null;
+        $this->printed_families = null;
     }
 
     /**
@@ -212,6 +219,83 @@ class Typost_Font_Library_Bridge {
             return false;
         }
         return $this->library_slug_exists($entry['wp_slug']);
+    }
+
+    /**
+     * Whether WordPress itself will print @font-face rules for this
+     * entry's family on the current page load
+     *
+     * A live Library registration is NOT enough: wp_print_font_faces()
+     * only prints faces present in the merged theme.json data — theme
+     * fonts plus Library fonts the user has ACTIVATED in global styles.
+     * A family the plugin registered programmatically is installed but
+     * not activated, so WordPress prints nothing for it and the plugin
+     * must keep emitting its own @font-face (otherwise the frontend
+     * silently falls back to a local/system font while the editor, which
+     * keeps plugin font CSS, looks correct).
+     *
+     * Matching is by font-family NAME, not slug: rendering only cares
+     * whether a face with this family name reaches the page, whoever
+     * declared it.
+     *
+     * @since 2.2.x (next release)
+     * @param array $entry Font entry
+     * @return bool
+     */
+    public function entry_faces_printed_by_wordpress(array $entry) {
+        if (!$this->entry_has_live_registration($entry)) {
+            return false;
+        }
+        if (empty($entry['font_faces'][0]['family'])) {
+            return false;
+        }
+        $family = $this->normalize_family_name($entry['font_faces'][0]['family']);
+        return in_array($family, $this->get_wordpress_printed_families(), true);
+    }
+
+    /**
+     * Lowercased family names WordPress will print @font-face for
+     * (merged theme.json: theme fonts + activated Library fonts).
+     * Resolved once per request.
+     *
+     * @return string[]
+     */
+    private function get_wordpress_printed_families() {
+        if (null !== $this->printed_families) {
+            return $this->printed_families;
+        }
+
+        $this->printed_families = array();
+        if (!class_exists('WP_Font_Face_Resolver')) {
+            return $this->printed_families;
+        }
+
+        // Array of families, each an array of face arrays with kebab-case
+        // keys ('font-family', 'src', ...). Tolerate a flat face array too.
+        $fonts = WP_Font_Face_Resolver::get_fonts_from_theme_json();
+        foreach ((array) $fonts as $family_faces) {
+            if (isset($family_faces['font-family'])) {
+                $family_faces = array($family_faces);
+            }
+            foreach ((array) $family_faces as $face) {
+                if (!empty($face['font-family'])) {
+                    $this->printed_families[] = $this->normalize_family_name($face['font-family']);
+                }
+            }
+        }
+        $this->printed_families = array_values(array_unique($this->printed_families));
+
+        return $this->printed_families;
+    }
+
+    /**
+     * Normalize a font-family name for comparison (strip quotes, lowercase)
+     *
+     * @param string $family
+     * @return string
+     */
+    private function normalize_family_name($family) {
+        return strtolower(trim((string) $family, " \t\"'"));
     }
 
     /**

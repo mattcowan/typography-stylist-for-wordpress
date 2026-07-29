@@ -70,3 +70,33 @@
 	margin: 0;
 	padding: 0;
 }
+
+/* Fit-to-width sizing (fontSize: "fit")
+ * The styled heading becomes an inline-size container so the per-line
+ * font-size: calc(R * 100cqi) declarations resolve against its width.
+ * Scoped to .typost-fit only — inline-size containment changes layout
+ * semantics and must never apply to existing blocks. */
+.wp-block-typost .typost-styled.typost-fit {
+	container-type: inline-size;
+}
+
+/* Each visual line is its own block-level, non-wrapping row; the <br>
+ * separators are dropped from the fit markup.
+ * font-optical-sizing is disabled because fit sizing stores one
+ * measured width ratio per line: automatic optical sizing changes glyph
+ * widths with the rendered font size (Fraunces' opsz made lines run
+ * ~17% over), so widths must scale linearly for the stored ratio to
+ * hold at every container width. A manually chosen opsz axis value
+ * (variable-font sliders) is size-independent and still works. */
+.wp-block-typost .typost-fit .typost-line {
+	display: block;
+	white-space: nowrap;
+	font-optical-sizing: none;
+}
+
+/* Inline font sizes are ignored in fit mode — each line renders at one
+ * uniform size (the block controls sizing). Inline styles can only be
+ * beaten by !important. */
+.wp-block-typost .typost-fit .typost-line [data-fontsize] {
+	font-size: inherit !important;
+}

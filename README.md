@@ -181,7 +181,7 @@ When the block cannot be converted (e.g., inside a locked pattern), the conversi
    - Font family
    - Font weight
    - Letter spacing
-   - Font size (static or responsive/fluid)
+   - Font size (static, responsive/fluid, or fit-to-width per-line sizing)
    - OpenType features by category
    - Screen reader class
 5. **Preview** changes in real-time in the editor

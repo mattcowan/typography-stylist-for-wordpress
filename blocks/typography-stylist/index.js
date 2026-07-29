@@ -8,6 +8,7 @@
 import { registerBlockType, createBlock } from '@wordpress/blocks';
 import Edit from './edit';
 import save from './save';
+import deprecated from './deprecated';
 import { analyzeInlineFeatures, stripInlineFeatures } from './utils';
 
 // Custom "T" icon for Typography Stylist
@@ -22,6 +23,7 @@ registerBlockType('typost/block', {
 	icon: TSIcon,
 	edit: Edit,
 	save: save,
+	deprecated: deprecated,
 	transforms: {
 		from: [
 			{
