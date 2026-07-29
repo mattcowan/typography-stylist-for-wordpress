@@ -373,7 +373,7 @@ window.typostHooks.addAction('typost_qft_modal_top', function(containerEl, state
 
 The `typost_qft_after_font_controls` state also includes `inlineFontFamilyAtSelection` (the numeric font ID of an inline font at the current selection, if any) so extensions can prefer the inline font over the block-level `fontId`.
 
-*Since 2.2.x* the `typost_weight_control` and `typost_qft_after_font_controls` states also include `fontVariationSettings` (string) — the `data-font-variation-settings` value of the innermost styled span at the current selection, falling back to the block attribute, `''` when neither is set. The inspector-side hook states (`typost_weight_control` in the sidebar, `typost_inspector_after_font_weight`) carry the block attribute. Extensions should initialize axis controls from this instead of walking the DOM selection, which fails in an iframed editor canvas.
+*Since 2.2.2* the `typost_weight_control` and `typost_qft_after_font_controls` states also include `fontVariationSettings` (string) — the `data-font-variation-settings` value of the innermost styled span at the current selection, falling back to the block attribute, `''` when neither is set. The inspector-side hook states (`typost_weight_control` in the sidebar, `typost_inspector_after_font_weight`) carry the block attribute. Extensions should initialize axis controls from this instead of walking the DOM selection, which fails in an iframed editor canvas.
 
 ### Inspector Controls Hook Points
 
@@ -549,7 +549,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
 
 Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly, with one exception: a `'qft'` event's `fontVariationSettings` is applied to the current text selection as an inline `<span class="typost-styled" data-font-variation-settings="...">` (falling back to the block attribute when the caret isn't inside styled text) — the `'inspector'` source remains block-level. Only fields present in `properties` are updated — missing fields preserve current state.
 
-**Targeting (since 2.2.x):** every Typography Stylist block registers this listener, so the event is handled only by the block it targets — for `source: 'qft'` that is the block whose Quick Feature Toggles modal is open, and for `source: 'inspector'` the currently selected block. Previously every mounted block applied the event.
+`fontVariationSettings` values are validated on every apply path (each comma-separated entry must match the `"axis" number` format); an invalid value is treated as empty rather than partially applied, so it clears the property instead of reaching a style string.
+
+**Targeting (since 2.2.2):** every Typography Stylist block registers this listener, so the event is handled only by the block it targets — for `source: 'qft'` that is the block whose Quick Feature Toggles modal is open, and for `source: 'inspector'` the currently selected block. Previously every mounted block applied the event.
 
 **Note:** This event was renamed from `typost-apply-paragraph-style` in v2.0.0 to reflect its generic purpose.
 

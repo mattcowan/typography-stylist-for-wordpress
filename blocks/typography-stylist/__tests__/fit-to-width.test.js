@@ -12,7 +12,8 @@ import {
 	computeFitRatio,
 	buildFitFontSize,
 	buildFitLinesHtml,
-	buildResponsiveClamp
+	buildResponsiveClamp,
+	computeFitEditingFontSize
 } from '../utils';
 
 describe('Typography Stylist - fit-to-width utilities', () => {
@@ -184,6 +185,24 @@ describe('Typography Stylist - fit-to-width utilities', () => {
 				'<span class="typost-line" style="font-size:calc(0.5 * 100cqi)"><span class="typost-styled" data-font-id="12" style="font-family: var(--font-12)">one</span></span>' +
 				'<span class="typost-line" style="font-size:calc(0.25 * 100cqi)">two</span>'
 			);
+		});
+	});
+
+	// ===== computeFitEditingFontSize =====
+
+	describe('computeFitEditingFontSize', () => {
+		it('should use the smallest ratio so the longest line fits without wrapping', () => {
+			expect(computeFitEditingFontSize([0.0639, 0.1829, 0.0583])).toBe('calc(0.0583 * 100cqi)');
+		});
+
+		it('should ignore null/invalid entries from unmeasured lines', () => {
+			expect(computeFitEditingFontSize([null, 0.25, 0])).toBe('calc(0.25 * 100cqi)');
+		});
+
+		it('should return empty string before any measurement exists', () => {
+			expect(computeFitEditingFontSize([])).toBe('');
+			expect(computeFitEditingFontSize(undefined)).toBe('');
+			expect(computeFitEditingFontSize([null, 0])).toBe('');
 		});
 	});
 

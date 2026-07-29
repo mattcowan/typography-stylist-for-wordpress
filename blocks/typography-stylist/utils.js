@@ -2249,6 +2249,37 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
 	});
 }
 
+/**
+ * Validate and sanitize a font-variation-settings value.
+ *
+ * Ensures each comma-separated entry matches the "axis" number format
+ * (e.g. "wght" 700, "wdth" 100) and normalizes quoting. Returns '' for
+ * any invalid input — the value can arrive via the public
+ * typost-apply-block-properties CustomEvent (extensions), so it must
+ * never reach a style string unvalidated (e.g. '"wght" 700; color:red'
+ * would smuggle extra declarations in).
+ *
+ * Same rules as the inline-format editor's sanitizer (block-editor.js);
+ * save.js and deprecated.js intentionally keep their own frozen copies
+ * for save-output byte-stability.
+ *
+ * @param {string} value - font-variation-settings string
+ * @return {string} Validated and normalized value, or empty string
+ */
+export function sanitizeFontVariationSettings(value) {
+	if (!value) return '';
+	const str = String(value).trim();
+	if (!str) return '';
+	const entries = str.split(',').map(e => e.trim()).filter(Boolean);
+	const validEntries = [];
+	for (const entry of entries) {
+		const match = entry.match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
+		if (!match) return '';
+		validEntries.push(`"${match[1]}" ${match[2]}`);
+	}
+	return validEntries.join(', ');
+}
+
 // ===== Fit-to-width sizing (fontSize: "fit") =====
 
 // Viewport breakpoints for the responsive clamp() fallback — must stay in
@@ -2373,6 +2404,24 @@ export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize) {
 			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
 			: `<span class="typost-line">${lineHtml}</span>`;
 	}).join('');
+}
+
+/**
+ * Font size for the fit-mode EDITING surface (flat RichText, no per-line
+ * wrappers): the smallest measured ratio, so the longest line exactly
+ * spans the container and no line wraps or overflows under
+ * white-space: nowrap. Lines keep their identity while editing; the
+ * exact per-line preview returns on deselect.
+ *
+ * @param {number[]} fitLineSizes - Per-line ratios
+ * @return {string} CSS font-size value, or '' when nothing is measured yet
+ */
+export function computeFitEditingFontSize(fitLineSizes) {
+	const valid = Array.isArray(fitLineSizes) ? fitLineSizes.filter(r => r > 0) : [];
+	if (!valid.length) {
+		return '';
+	}
+	return `calc(${Math.min(...valid)} * 100cqi)`;
 }
 
 /**

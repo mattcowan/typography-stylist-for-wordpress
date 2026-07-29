@@ -238,7 +238,7 @@ class Typost_Font_Library_Bridge {
      * whether a face with this family name reaches the page, whoever
      * declared it.
      *
-     * @since 2.2.x (next release)
+     * @since 2.2.2
      * @param array $entry Font entry
      * @return bool
      */

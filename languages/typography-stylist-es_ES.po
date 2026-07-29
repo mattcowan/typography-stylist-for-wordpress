@@ -2048,3 +2048,4 @@ msgstr "Tamaño alternativo para navegadores sin compatibilidad con consultas de
 #: blocks/typography-stylist/edit.js
 msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
 msgstr "Los tamaños de fuente en línea se ignoran mientras este bloque usa el dimensionamiento Ajustar al ancho."
+

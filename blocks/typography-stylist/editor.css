@@ -55,3 +55,12 @@
 		outline-color: rgba(100, 150, 200, 0.7);
 	}
 }
+
+/* Fit-to-width editing surface: the block wrapper is the inline-size
+ * container that the RichText's calc(R * 100cqi) font-size (smallest
+ * line ratio — longest line spans the width, nothing wraps) resolves
+ * against while the block is selected. The deselected preview brings
+ * its own container via .typost-fit (style.css). */
+.wp-block-typost.typost-fit-editing {
+	container-type: inline-size;
+}

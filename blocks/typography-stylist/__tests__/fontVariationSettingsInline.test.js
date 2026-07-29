@@ -13,13 +13,45 @@ import {
 	updateSpanPropertyInPlace,
 	splitSpanAndApply,
 	applyStylingSafeStringMethod,
-	removePropertyFromSelection
+	removePropertyFromSelection,
+	sanitizeFontVariationSettings
 } from '../utils';
 
 const FVS = '"wght" 700, "SOFT" 50';
 const FVS_ATTR = '&quot;wght&quot; 700, &quot;SOFT&quot; 50';
 
 describe('Typography Stylist - font-variation-settings inline pipeline', () => {
+
+	// ===== sanitizeFontVariationSettings =====
+	// The value can arrive via the public typost-apply-block-properties
+	// CustomEvent, so it must be validated before entering a style string.
+
+	describe('sanitizeFontVariationSettings', () => {
+		it('should pass and normalize valid multi-axis values', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700, "SOFT" 50')).toBe('"wght" 700, "SOFT" 50');
+			expect(sanitizeFontVariationSettings("'wght' 700")).toBe('"wght" 700');
+			expect(sanitizeFontVariationSettings('  "slnt" -10.5  ')).toBe('"slnt" -10.5');
+		});
+
+		it('should reject style-string injection attempts entirely', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700; color:red')).toBe('');
+			expect(sanitizeFontVariationSettings('"wght" 700" onmouseover="alert(1)')).toBe('');
+			expect(sanitizeFontVariationSettings('expression(alert(1))')).toBe('');
+		});
+
+		it('should reject any invalid entry, not just strip it', () => {
+			expect(sanitizeFontVariationSettings('"wght" 700, garbage')).toBe('');
+			expect(sanitizeFontVariationSettings('"toolong5" 1')).toBe('');
+			expect(sanitizeFontVariationSettings('"wght" NaN')).toBe('');
+		});
+
+		it('should return empty string for empty/absent input', () => {
+			expect(sanitizeFontVariationSettings('')).toBe('');
+			expect(sanitizeFontVariationSettings(null)).toBe('');
+			expect(sanitizeFontVariationSettings(undefined)).toBe('');
+			expect(sanitizeFontVariationSettings('   ')).toBe('');
+		});
+	});
 
 	// ===== parseInlineStylesAtCursor =====
 

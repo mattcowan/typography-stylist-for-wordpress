@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo, createElement } from '@wordpress/element';
 import { useSelect } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, buildFitLinesHtml } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, buildFitLinesHtml, computeFitEditingFontSize, sanitizeFontVariationSettings } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -1446,7 +1446,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	};
 
 	const blockProps = useBlockProps({
-		className: 'wp-block-typost'
+		// typost-fit-editing establishes the inline-size container (editor.css)
+		// that the editing surface's calc(R * 100cqi) font-size resolves
+		// against while the block is in fit mode.
+		className: fontSize === 'fit' ? 'wp-block-typost typost-fit-editing' : 'wp-block-typost'
 	});
 
 	// Get available features from localized data, filtered by per-font visibility
@@ -2029,7 +2032,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// context to scope to).
 	const applyInlineFontVariationSettings = (settingsStr) => {
 		if (!content) return;
-		const value = (settingsStr || '').trim();
+		// The event is a public extension API, so the value cannot be
+		// trusted into a style string raw ('"wght" 700; color:red' would
+		// smuggle extra declarations). Invalid input sanitizes to '' and
+		// flows into the removal branch — same treatment as the
+		// inline-format editor's patch builder.
+		const value = sanitizeFontVariationSettings(settingsStr);
 
 		if (!resolvedApplyRange) {
 			setAttributes({ fontVariationSettings: value });
@@ -2773,11 +2781,20 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
-		// Fit-to-width: while editing, the RichText renders at the fallback
-		// clamp size (per-line cqi sizes only exist in the deselected
-		// preview and on the frontend, where typost-line wrappers exist).
+		// Fit-to-width: per-line cqi sizes only exist in the deselected
+		// preview and on the frontend (typost-line wrappers). While EDITING,
+		// the flat RichText renders at the smallest measured line ratio with
+		// no wrapping — the longest line exactly spans the block width, so
+		// line structure survives selection without wrap/overflow (fallback
+		// clamp until the first measurement lands).
 		if (fontSize === 'fit') {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			const editingSize = computeFitEditingFontSize(fitLineSizes);
+			if (editingSize) {
+				styles.fontSize = editingSize;
+				styles.whiteSpace = 'nowrap';
+			} else {
+				styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			}
 		}
 
 		if (fontVariationSettings) {
@@ -3824,9 +3841,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					/* Fit-to-width preview: exact frontend markup (per-line
 					   typost-line spans with cqi sizes; typost-fit establishes
 					   the container via style.css, which also loads in the
-					   editor iframe). Shown while the block is deselected —
-					   clicking it selects the block and reveals the editable
-					   RichText below at the fallback clamp size. */
+					   editor iframe). Shown while the block is deselected;
+					   selecting the block swaps in the editable RichText at a
+					   uniform fitted size (the longest line spans the width). */
 					createElement(tagName || 'h2', {
 						className: 'typost-block-content typost-styled typost-fit',
 						style: buildStyle(),

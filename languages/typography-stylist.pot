@@ -1675,3 +1675,4 @@ msgstr ""
 #: blocks/typography-stylist/edit.js
 msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
 msgstr ""
+
