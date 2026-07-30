@@ -2020,3 +2020,32 @@ msgstr "Restablecer el estilo de fuente"
 #: blocks/typography-stylist/edit.js
 msgid "Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead."
 msgstr "Solo estilo visual — la variante cursiva de la fuente, sin añadir énfasis. Para enfatizar texto semánticamente (los lectores de pantalla lo anuncian), usa el botón Cursiva del editor."
+
+#: blocks/typography-stylist/edit.js
+msgid "Fit to width"
+msgstr "Ajustar al ancho"
+
+#: blocks/typography-stylist/edit.js
+msgid "Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing."
+msgstr "Cada línea se dimensiona para ocupar todo el ancho del bloque, en vivo mientras editas. Las líneas nunca se dividen, y los tamaños de fuente en línea de las selecciones se ignoran — el bloque controla el tamaño."
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum font size"
+msgstr "Tamaño de fuente máximo"
+
+#: blocks/typography-stylist/edit.js
+msgid "Cap how large short lines can grow on wide screens."
+msgstr "Limita cuánto pueden crecer las líneas cortas en pantallas anchas."
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum size (px)"
+msgstr "Tamaño máximo (px)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Fallback size for browsers without container query support:"
+msgstr "Tamaño alternativo para navegadores sin compatibilidad con consultas de contenedor:"
+
+#: blocks/typography-stylist/edit.js
+msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
+msgstr "Los tamaños de fuente en línea se ignoran mientras este bloque usa el dimensionamiento Ajustar al ancho."
+

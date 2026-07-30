@@ -413,6 +413,7 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fontSizeMax: null,
 			letterSpacing: null,
 			lineHeight: null,
+			fontVariationSettings: null,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
 			spanEnd: spanEnd
@@ -511,6 +512,14 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 					if (lhMatch) {
 						result.lineHeight = parseFloat(lhMatch[1]);
 					}
+				}
+			}
+
+			// FontVariationSettings - inherited from first ancestor that has it
+			if (result.fontVariationSettings === null) {
+				const fvsAttr = currentSpan.getAttribute('data-font-variation-settings');
+				if (fvsAttr) {
+					result.fontVariationSettings = fvsAttr;
 				}
 			}
 
@@ -2238,6 +2247,254 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
 			parent.removeChild(span);
 		}
 	});
+}
+
+/**
+ * Validate and sanitize a font-variation-settings value.
+ *
+ * Ensures each comma-separated entry matches the "axis" number format
+ * (e.g. "wght" 700, "wdth" 100) and normalizes quoting. Returns '' for
+ * any invalid input — the value can arrive via the public
+ * typost-apply-block-properties CustomEvent (extensions), so it must
+ * never reach a style string unvalidated (e.g. '"wght" 700; color:red'
+ * would smuggle extra declarations in).
+ *
+ * Same rules as the inline-format editor's sanitizer (block-editor.js);
+ * save.js and deprecated.js intentionally keep their own frozen copies
+ * for save-output byte-stability.
+ *
+ * @param {string} value - font-variation-settings string
+ * @return {string} Validated and normalized value, or empty string
+ */
+export function sanitizeFontVariationSettings(value) {
+	if (!value) return '';
+	const str = String(value).trim();
+	if (!str) return '';
+	const entries = str.split(',').map(e => e.trim()).filter(Boolean);
+	const validEntries = [];
+	for (const entry of entries) {
+		const match = entry.match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
+		if (!match) return '';
+		validEntries.push(`"${match[1]}" ${match[2]}`);
+	}
+	return validEntries.join(', ');
+}
+
+// ===== Fit-to-width sizing (fontSize: "fit") =====
+
+// Viewport breakpoints for the responsive clamp() fallback — must stay in
+// sync with the constants of the same name in edit.js and save.js.
+const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
+const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+
+/**
+ * Split serialized RichText HTML into visual-line HTML strings on <br>
+ * boundaries. Elements straddling a boundary (a styled span containing a
+ * <br>) are cloned into both lines with all their attributes, via
+ * Range.cloneContents(). The <br> elements themselves are not included in
+ * any line.
+ *
+ * @param {string} html - Serialized RichText content
+ * @return {string[]} One HTML string per visual line ('' for empty lines)
+ */
+export function splitContentIntoLines(html) {
+	if (!html) {
+		return [''];
+	}
+
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		const brs = container.querySelectorAll('br');
+		if (!brs.length) {
+			return [container.innerHTML];
+		}
+
+		const scratch = doc.createElement('div');
+		const serializeRange = (range) => {
+			scratch.innerHTML = '';
+			scratch.appendChild(range.cloneContents());
+			return scratch.innerHTML;
+		};
+
+		const lines = [];
+		let prevBr = null;
+
+		brs.forEach(br => {
+			const range = doc.createRange();
+			if (prevBr) {
+				range.setStartAfter(prevBr);
+			} else {
+				range.setStart(container, 0);
+			}
+			range.setEndBefore(br);
+			lines.push(serializeRange(range));
+			prevBr = br;
+		});
+
+		const lastRange = doc.createRange();
+		lastRange.setStartAfter(prevBr);
+		lastRange.setEnd(container, container.childNodes.length);
+		lines.push(serializeRange(lastRange));
+
+		return lines;
+	} catch (error) {
+		return [html];
+	}
+}
+
+/**
+ * Compute the fit-to-width ratio for one line.
+ *
+ * R = referenceSize / measuredWidth, so that font-size: calc(R * 100cqi)
+ * renders the line exactly as wide as its container (line width scales
+ * linearly with font-size). Rounded to 4 decimals to keep serialization
+ * stable; worst-case rendered-width error is sub-pixel.
+ *
+ * @param {number} referenceSize - Font size the line was measured at (px)
+ * @param {number} measuredWidth - Natural width of the line at that size (px)
+ * @return {number|null} Ratio rounded to 4 decimals, or null when unmeasurable
+ */
+export function computeFitRatio(referenceSize, measuredWidth) {
+	if (!(referenceSize > 0) || !(measuredWidth > 0)) {
+		return null;
+	}
+	return Math.round((referenceSize / measuredWidth) * 10000) / 10000;
+}
+
+/**
+ * Build the CSS font-size value for a fit-to-width line.
+ *
+ * The ratio is interpolated as a bare multiplier (`calc(R * 100cqi)`)
+ * rather than pre-multiplied, so the emitted string is exactly the stored
+ * attribute value — no float artifacts, byte-stable for block validation.
+ *
+ * @param {number} ratio - Per-line ratio from computeFitRatio()
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @return {string} CSS font-size value, or '' when ratio is unusable
+ */
+export function buildFitFontSize(ratio, fitMaxSize) {
+	if (!(ratio > 0)) {
+		return '';
+	}
+	const cqi = `calc(${ratio} * 100cqi)`;
+	return fitMaxSize > 0 ? `min(${cqi}, ${fitMaxSize}px)` : cqi;
+}
+
+/**
+ * Compose the per-line wrapper HTML for a fit-to-width block's FRONTEND
+ * markup (save.js): typost-line wrappers with no separators — display:
+ * block does the line breaking. The editor's fit editing value is built
+ * by wrapFitLines instead, which keeps the <br> separators so rich-text
+ * offsets stay flat-model-identical. Lines without a valid ratio get no
+ * font-size and inherit the block-level fallback clamp.
+ *
+ * @param {string} content - Serialized RichText content
+ * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @return {string} HTML with each line wrapped in span.typost-line
+ */
+export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize) {
+	const lines = splitContentIntoLines(content);
+	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+
+	return lines.map((lineHtml, i) => {
+		const size = buildFitFontSize(sizes[i], fitMaxSize);
+		return size
+			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
+			: `<span class="typost-line">${lineHtml}</span>`;
+	}).join('');
+}
+
+/**
+ * Wrap flat br-model content into the fit-mode EDITING value fed to
+ * RichText: each non-empty visual line wrapped in span.typost-line with
+ * its per-line font-size, joined with '<br>'. Unlike buildFitLinesHtml
+ * (frontend/preview markup, no separators, display:block lines), the
+ * <br> separators are KEPT so the rich-text record's text is byte-identical
+ * to the flat model ("line1\nline2") — every stored selection offset and
+ * the whole QFT offset convention carry over unchanged.
+ *
+ * Empty lines are NOT wrapped: a zero-length span cannot exist as a
+ * format in the rich-text record — create() turns it into an
+ * object-replacement character that would occupy a text position and
+ * shift every following offset by one.
+ *
+ * @param {string} content - Flat serialized RichText content (br-model)
+ * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @return {string} Wrapped editing value for RichText
+ */
+export function wrapFitLines(content, fitLineSizes, fitMaxSize) {
+	if (!content) {
+		return '';
+	}
+	const lines = splitContentIntoLines(content);
+	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+
+	return lines.map((lineHtml, i) => {
+		if (!lineHtml) {
+			return '';
+		}
+		const size = buildFitFontSize(sizes[i], fitMaxSize);
+		return size
+			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
+			: `<span class="typost-line">${lineHtml}</span>`;
+	}).join('<br>');
+}
+
+/**
+ * Inverse of wrapFitLines: strip the span.typost-line wrappers from a
+ * RichText onChange value, leaving flat br-model content for the stored
+ * attribute. Only the wrappers are removed — inner markup, <br>s (both
+ * the line separators and any the rich-text ops placed inside/around a
+ * wrapper), and everything else pass through verbatim. Adjacent wrappers
+ * with no <br> between them (rich-text's backspace-merge shape)
+ * concatenate naturally into one line.
+ *
+ * @param {string} html - Wrapped editing value from RichText onChange
+ * @return {string} Flat br-model content
+ */
+export function unwrapFitLines(html) {
+	if (!html) {
+		return '';
+	}
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		container.querySelectorAll('span.typost-line').forEach(wrapper => {
+			while (wrapper.firstChild) {
+				wrapper.parentNode.insertBefore(wrapper.firstChild, wrapper);
+			}
+			wrapper.parentNode.removeChild(wrapper);
+		});
+
+		return container.innerHTML;
+	} catch (error) {
+		return html;
+	}
+}
+
+/**
+ * Build the responsive clamp() font-size expression.
+ *
+ * IMPORTANT: this must reproduce the legacy inline expression (edit.js /
+ * save.js) byte-for-byte — including float artifacts like
+ * 1.8124999999999998vw — because save output must stay byte-stable for
+ * block validation of already-published posts. The template and arithmetic
+ * are copied verbatim; a byte-identity test locks it in.
+ *
+ * @param {number} fontSizeMin - Mobile size (px, at 320px viewport)
+ * @param {number} fontSizePreferred - Preferred size (px, drives rem base)
+ * @param {number} fontSizeMax - Desktop size (px, at 1920px viewport)
+ * @return {string} clamp() expression
+ */
+export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax) {
+	return `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 }
 
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)

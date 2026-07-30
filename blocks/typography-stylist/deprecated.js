@@ -1,9 +1,15 @@
 /**
- * Typography Stylist Block - Save Component (Frontend Render)
+ * Typography Stylist Block - Deprecated save versions
+ *
+ * v1: the save format before fit-to-width sizing. Frozen verbatim copy of
+ * the pre-fit save() (including its local helpers) — never edit this copy;
+ * add a new deprecation entry instead. For fontSize values other than
+ * "fit" the current save output is byte-identical to this one, so existing
+ * published blocks validate against the current save directly and this
+ * entry is a pure safety net.
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml } from './utils';
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -28,7 +34,50 @@ const sanitizeFontVariationSettings = (value) => {
 	return validEntries.join(', ');
 };
 
-export default function save({ attributes }) {
+// Attribute schema at the time of v1 (no fitLineSizes/fitMaxSize)
+const v1Attributes = {
+	content: { type: 'string', default: '' },
+	tagName: { type: 'string', default: 'h2' },
+	features: { type: 'array', default: [] },
+	fontFamily: { type: 'string', default: '' },
+	fontId: { type: 'number', default: 0 },
+	fontSize: { type: 'string', default: 'inherit' },
+	fontSizeMin: { type: 'number', default: 16 },
+	fontSizePreferred: { type: 'number', default: 32 },
+	fontSizeMax: { type: 'number', default: 64 },
+	fontWeight: { type: 'string', default: '400' },
+	fontStyle: { type: 'string', default: '' },
+	letterSpacing: { type: 'number', default: 0 },
+	lineHeight: { type: 'number', default: 0 },
+	screenReaderClass: { type: 'string', default: 'visually-hidden' },
+	textAlign: { type: 'string' },
+	styleClass: { type: 'string', default: '' },
+	fontVariationSettings: { type: 'string', default: '' },
+	layeredConfigId: { type: 'number', default: 0 },
+	animationConfigId: { type: 'number', default: 0 }
+};
+
+const v1Supports = {
+	html: false,
+	align: ['wide', 'full'],
+	anchor: true,
+	color: {
+		text: true,
+		background: true,
+		link: false
+	},
+	spacing: {
+		margin: true,
+		padding: true
+	},
+	typography: {
+		fontSize: false,
+		lineHeight: true
+	},
+	__experimentalTextAlign: true
+};
+
+function v1Save({ attributes }) {
 	const {
 		content,
 		tagName,
@@ -39,8 +88,6 @@ export default function save({ attributes }) {
 		fontSizeMin,
 		fontSizePreferred,
 		fontSizeMax,
-		fitLineSizes,
-		fitMaxSize,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -99,14 +146,6 @@ export default function save({ attributes }) {
 			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
 		}
 
-		// Fit-to-width: per-line sizes are emitted on the typost-line spans
-		// (cqi units); the block-level clamp is the fallback for browsers
-		// without container-query support, which drop the calc(...cqi)
-		// declaration and let lines inherit this size.
-		if (fontSize === 'fit') {
-			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
-		}
-
 		if (fontVariationSettings) {
 			const safeFVS = sanitizeFontVariationSettings(fontVariationSettings);
 			if (safeFVS) {
@@ -155,15 +194,6 @@ export default function save({ attributes }) {
 	const styleIdMatch = styleClass ? styleClass.match(/typost-ps-(\d+)/) : null;
 	const styleId = styleIdMatch ? styleIdMatch[1] : undefined;
 
-	// Fit-to-width: wrap each visual line (split on <br>) in a
-	// span.typost-line carrying its cqi font-size. The typost-fit class
-	// establishes the container (container-type: inline-size in style.css)
-	// and the rule that neutralizes inline data-fontsize spans. Non-fit
-	// output below is byte-identical to the pre-fit save (block validation).
-	const isFit = fontSize === 'fit';
-	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize) : content;
-	const visualClassName = (isFit ? 'typost-styled typost-fit' : 'typost-styled') + (styleClass ? ` ${styleClass}` : '');
-
 	return (
 		<div className="wp-block-typost">
 			{/* Screen reader accessible text (hidden visually, maintains semantic heading structure) */}
@@ -176,9 +206,9 @@ export default function save({ attributes }) {
 			{/* Visually styled text (hidden from screen readers) */}
 			<RichText.Content
 				tagName={tagName}
-				value={visualValue}
+				value={content}
 				style={styleObj}
-				className={visualClassName}
+				className={styleClass ? `typost-styled ${styleClass}` : 'typost-styled'}
 				aria-hidden="true"
 				data-font={fontFamily || undefined}
 				data-font-id={fontId || undefined}
@@ -189,3 +219,11 @@ export default function save({ attributes }) {
 		</div>
 	);
 }
+
+const v1 = {
+	attributes: v1Attributes,
+	supports: v1Supports,
+	save: v1Save
+};
+
+export default [ v1 ];

@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.2.1
+Stable tag: 2.2.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -48,6 +48,7 @@ Complex inline typography usually comes at a cost: the span elements needed to s
 * **Rich Feature Support**: Ligatures (liga, dlig, calt), Stylistic Sets (ss01-ss20), Swashes, Alternates, and more.
 * **Visual Interface**: User-friendly, resizable, moveable popover with organized feature categories.
 * **Advanced Typography Controls**: Adjust letter spacing, font weight, responsive font sizes, and more.
+* **Fit-to-Width Sizing**: Size each line of a Typography Stylist block to span the full block width — the classic wedding-invitation/poster look — with zero frontend JavaScript (CSS container queries), an optional maximum size cap, and a responsive fallback for older browsers.
 * **Block Editor Native**: Seamlessly integrates with Gutenberg.
 * **Custom Fonts Management**: Upload webfont kits from MyFonts, Font Squirrel, or other providers, connect Adobe Fonts, or define custom fonts loaded through themes or CDNs. Fonts are loaded intelligently only on the pages you need them for optimum performance.
 * **Font Fallbacks**: Facing a rebranding and needing to change fonts? No worries. Delete a font previously defined, and use the fallback system to seamlessly replace them.
@@ -323,6 +324,12 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 == Changelog ==
 
+= 2.2.2 =
+* **NEW: Fit-to-width sizing.** A third font-size mode on the Typography Stylist block: each line is sized so its text spans the full block width — the classic wedding-invitation/poster look where a short line renders huge and a long line smaller, all flush to the same width. Editing is fully WYSIWYG: every line renders at its true fitted size while you type and style selections. Lines are measured with their real fonts, features, and letter spacing; the frontend stays zero-JavaScript (CSS container queries), with an optional maximum-size cap and a responsive fallback for older browsers. Existing blocks are untouched.
+* **Fixed: variable-font axis sliders in the Quick Feature Toggles now change only the selected text** instead of restyling the whole block (the sidebar sliders intentionally remain block-level), and an axis change no longer leaks into other Typography Stylist blocks on the page. The sliders also now read their starting values from your selection correctly in the iframed editor.
+* **Fixed: fonts registered in the WP Font Library keep their webfont on the frontend.** Registered-but-unactivated fonts previously fell back to a local or system font on the frontend while the editor looked correct; the plugin now prints its own @font-face whenever WordPress won't.
+* Full details are in changelog.txt.
+
 = 2.2.1 =
 * **Fixed: fonts uploaded together in one ZIP no longer share each other's variable-font axes.** Axis detection scanned the whole kit directory, so every family in a multi-font ZIP inherited the axes of whichever file parsed first — Fraunces lost its optical size, SOFT, and WONK sliders when uploaded alongside a weight-only font, and non-variable fonts in the same ZIP gained a phantom weight slider. Detection is now scoped to each family's own font files. Fonts uploaded on their own were never affected.
 * **Improved: "Detect Axes from Font File" repairs fonts in place.** Use it on any font whose axes were mis-detected before this fix. It now falls back to reading the font on the server when the browser can't, so it works either way. It also states plainly that it replaces every axis row and discards hand-set values, and asks for confirmation before overwriting axes you have already defined — nothing is stored until you save.
@@ -356,6 +363,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.2.2 =
+Adds fit-to-width sizing (each line fills the block width, zero frontend JS), scopes Quick Feature Toggle axis changes to the selected text, and fixes Font Library-registered fonts falling back to system fonts on the frontend.
 
 = 2.2.1 =
 Fixes variable-font axes being mixed up between fonts uploaded in the same ZIP. If a font is showing the wrong axes, open Settings → Typography Stylist → Custom Fonts and use "Detect Axes from Font File" to repair it.

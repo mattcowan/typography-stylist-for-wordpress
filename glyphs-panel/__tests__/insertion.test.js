@@ -2,7 +2,7 @@
  * Tests for buildInsertionPayload() — the typost-insert-content payload rules.
  */
 
-const { buildInsertionPayload, buildFeatureSettingsCSS } = require('../assets/js/lib/insertion.js');
+const { buildInsertionPayload, buildFeatureSettingsCSS, dispatchInsert } = require('../assets/js/lib/insertion.js');
 
 describe('buildFeatureSettingsCSS', () => {
 	test('formats tags as "tag" 1, comma-separated', () => {
@@ -166,6 +166,68 @@ describe('buildInsertionPayload', () => {
 		});
 	});
 
+	describe('base glyph of the alternates view (isBaseGlyph)', () => {
+		test('forces a span even when rule 1 would send plain text, so the inherited alternate is cleared', () => {
+			const payload = buildInsertionPayload({
+				text: '&',
+				featureTag: null,
+				isBaseGlyph: true,
+				panelFontId: 40,
+				contextFontId: 40,
+				contextFeatures: [],
+				contextFontWeight: ''
+			});
+			expect(payload.attributes).not.toBeNull();
+			// No feature keys: the core merge treats them as payload-owned,
+			// so the replaced span's "aalt" N does not survive
+			expect(payload.attributes['data-features']).toBeUndefined();
+			expect(payload.attributes['data-feature-settings']).toBeUndefined();
+			expect(payload.attributes['data-font-id']).toBe('40');
+			expect(payload.attributes.style).toBe('font-family: var(--font-40)');
+		});
+
+		test('context features and weight still ride along', () => {
+			const payload = buildInsertionPayload({
+				text: '&',
+				featureTag: null,
+				isBaseGlyph: true,
+				panelFontId: 40,
+				contextFontId: 40,
+				contextFeatures: ['liga'],
+				contextFontWeight: '700'
+			});
+			expect(payload.attributes['data-features']).toBe('liga');
+			expect(payload.attributes['data-fontweight']).toBe('700');
+			expect(payload.attributes.style).toContain('font-feature-settings: "liga" 1');
+		});
+
+		test('no font, no features, no weight → bare span with no style attribute', () => {
+			const payload = buildInsertionPayload({
+				text: '&',
+				featureTag: null,
+				isBaseGlyph: true,
+				panelFontId: 0,
+				contextFontId: 0,
+				contextFeatures: [],
+				contextFontWeight: ''
+			});
+			expect(payload.attributes).toEqual({});
+		});
+
+		test('false/omitted keeps rule 1 (plain insertion) unchanged', () => {
+			const payload = buildInsertionPayload({
+				text: '&',
+				featureTag: null,
+				isBaseGlyph: false,
+				panelFontId: 40,
+				contextFontId: 40,
+				contextFeatures: [],
+				contextFontWeight: ''
+			});
+			expect(payload).toEqual({ text: '&', attributes: null });
+		});
+	});
+
 	describe('WP Font Library fonts (panelFontFamily, no numeric id)', () => {
 		test('cross-font insertion uses raw font-family and data-font', () => {
 			const payload = buildInsertionPayload({
@@ -195,5 +257,31 @@ describe('buildInsertionPayload', () => {
 			expect(payload.attributes).not.toBeNull();
 			expect(payload.attributes['data-font']).toBe('"Inter"');
 		});
+	});
+});
+
+describe('dispatchInsert', () => {
+	function captureDetail(dispatch) {
+		let detail = null;
+		const listener = (e) => { detail = e.detail; };
+		document.addEventListener('typost-insert-content', listener);
+		dispatch();
+		document.removeEventListener('typost-insert-content', listener);
+		return detail;
+	}
+
+	test('forwards swap: true for alternates-view payloads', () => {
+		const detail = captureDetail(() =>
+			dispatchInsert('qft', { text: '&', attributes: null, swap: true }, { clientId: 'abc' })
+		);
+		expect(detail.swap).toBe(true);
+		expect(detail.clientId).toBe('abc');
+	});
+
+	test('omits swap for sequence insertions', () => {
+		const detail = captureDetail(() =>
+			dispatchInsert('qft', { text: '&', attributes: null }, {})
+		);
+		expect(detail.swap).toBeUndefined();
 	});
 });

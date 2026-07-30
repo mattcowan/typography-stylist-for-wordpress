@@ -27,9 +27,9 @@ import {
 	Notice
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
-import { useSelect } from '@wordpress/data';
+import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, sanitizeFontVariationSettings } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -118,7 +118,7 @@ const TSIcon = () => (
 	</svg>
 );
 
-export default function Edit({ attributes, setAttributes, clientId }) {
+export default function Edit({ attributes, setAttributes, clientId, isSelected }) {
 	const {
 		content,
 		tagName,
@@ -129,6 +129,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		fontSizeMin,
 		fontSizePreferred,
 		fontSizeMax,
+		fitLineSizes,
+		fitMaxSize,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -208,16 +210,18 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const [resizeDirection, setResizeDirection] = useState(null);
 
 	// Get selection from block editor store
-	const { selectionStart, selectionEnd } = useSelect(
+	const { selectionStart, selectionEnd, selectedBlockClientId } = useSelect(
 		(select) => {
 			const {
 				getSelectionStart,
 				getSelectionEnd,
+				getSelectedBlockClientId,
 			} = select(blockEditorStore);
 
 			return {
 				selectionStart: getSelectionStart(),
 				selectionEnd: getSelectionEnd(),
+				selectedBlockClientId: getSelectedBlockClientId(),
 			};
 		},
 		[]
@@ -235,6 +239,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const applyFontFamilyRef = useRef(null);
 	const applyFontWeightRef = useRef(null);
 	const applyFontSizeRef = useRef(null);
+	const applyFontVariationSettingsRef = useRef(null);
 
 	// Debounced auto-apply functions for responsive controls
 	// These are created once and reused across renders to maintain debounce state
@@ -310,7 +315,25 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		const handleApplyBlockProperties = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
-				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight } = blockPropsRef.current;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId } = blockPropsRef.current;
+				// Targeting guard: every Typography Stylist block registers this
+				// listener, so only the block the extension UI actually targets
+				// may handle the event. Extensions don't know clientIds, so the
+				// guard is receiving-side: a 'qft' event belongs to the block
+				// whose QFT modal is open; an 'inspector' event belongs to the
+				// currently selected block.
+				if (e.detail.source === 'qft' ? !popoverOpen : selectedId !== curClientId) {
+					return;
+				}
+				// QFT-scoped font-variation-settings applies to the current
+				// selection (inline span), not the whole block — the inspector's
+				// axis sliders remain block-level by design. Handled before the
+				// generic attribute loop and excluded from it below.
+				let fvsHandledInline = false;
+				if (e.detail.source === 'qft' && props.fontVariationSettings !== undefined && applyFontVariationSettingsRef.current) {
+					applyFontVariationSettingsRef.current(props.fontVariationSettings);
+					fvsHandledInline = true;
+				}
 				// Apply to block-level attributes
 				const newAttrs = {};
 				if (props.fontId !== undefined) {
@@ -333,10 +356,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				if (props.fontSizeMin !== undefined) newAttrs.fontSizeMin = props.fontSizeMin;
 				if (props.fontSizePreferred !== undefined) newAttrs.fontSizePreferred = props.fontSizePreferred;
 				if (props.fontSizeMax !== undefined) newAttrs.fontSizeMax = props.fontSizeMax;
+				// fitLineSizes is deliberately NOT settable here: it's
+				// content-specific and re-measured by the receiving block
+				if (props.fitMaxSize !== undefined) newAttrs.fitMaxSize = props.fitMaxSize;
 				if (props.letterSpacing !== undefined) newAttrs.letterSpacing = props.letterSpacing;
 				if (props.lineHeight !== undefined) newAttrs.lineHeight = props.lineHeight;
 				if (props.features !== undefined) newAttrs.features = props.features;
-				if (props.fontVariationSettings !== undefined) newAttrs.fontVariationSettings = props.fontVariationSettings;
+				if (props.fontVariationSettings !== undefined && !fvsHandledInline) newAttrs.fontVariationSettings = props.fontVariationSettings;
 				// Generic styleClass support: extensions can pass a CSS class to apply
 				if (e.detail.styleClass !== undefined) {
 					newAttrs.styleClass = e.detail.styleClass;
@@ -449,7 +475,13 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			// Commit: clear preview-restore so popover close doesn't revert the insertion
 			originalContentRef.current = null;
 			setAttributes({ content: toHTMLString({ value: newValue }) });
-			setCapturedSelection({ start: insertEnd, end: insertEnd, text: '', length: 0 });
+			// swap (alternates-view) insertions keep the inserted text SELECTED
+			// so the next alternate/base click replaces the same glyph;
+			// sequence insertions collapse the caret after the text so the
+			// next glyph appends.
+			setCapturedSelection(e.detail.swap
+				? { start: range.start, end: insertEnd, text: text, length: text.length }
+				: { start: insertEnd, end: insertEnd, text: '', length: 0 });
 		};
 		document.addEventListener('typost-insert-content', handleInsertContent);
 		return () => {
@@ -463,7 +495,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	const qftStateRef = useRef({});
 	qftStateRef.current = {
 		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred,
-		fontSizeMax, letterSpacing, lineHeight, features, styleClass,
+		fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, styleClass,
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
@@ -500,6 +532,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 					fontSizeMin: s.fontSizeMin,
 					fontSizePreferred: s.fontSizePreferred,
 					fontSizeMax: s.fontSizeMax,
+					fitMaxSize: s.fitMaxSize || 0,
 					letterSpacing: s.letterSpacing,
 					lineHeight: s.lineHeight,
 					features: s.features,
@@ -549,6 +582,142 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			setComputedFont('');
 		}
 	}, [fontFamily, clientId]); // Re-run when fontFamily or clientId changes
+
+	// ===== Fit-to-width measurement (fontSize: "fit") =====
+	// Measures each visual line's natural width at a 100px reference inside
+	// the editor canvas document — appending to the iframe body makes
+	// var(--font-N) and @font-face resolve — and stores per-line ratios in
+	// fitLineSizes (R = 100 / width, so font-size: calc(R * 100cqi) fills
+	// the container). Reads through a ref so the debounced closure never
+	// goes stale.
+	const measureFitPropsRef = useRef({});
+	measureFitPropsRef.current = {
+		content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing,
+		features, fontVariationSettings, fitLineSizes, setAttributes
+	};
+
+	const measureFitLines = () => {
+		const p = measureFitPropsRef.current;
+		if (!p.content) return;
+
+		const canvasIframe = document.querySelector('iframe[name="editor-canvas"]');
+		const targetDoc = (canvasIframe && canvasIframe.contentDocument) || document;
+		if (!targetDoc.body) return;
+
+		// Absolutely-positioned + nowrap = shrink-to-fit natural line width
+		const node = targetDoc.createElement('div');
+		node.style.position = 'absolute';
+		node.style.left = '-9999px';
+		node.style.top = '0';
+		node.style.visibility = 'hidden';
+		node.style.whiteSpace = 'nowrap';
+		node.style.fontSize = '100px';
+		// Match the .typost-line rendering rule: automatic optical sizing
+		// varies glyph width with font size, which breaks the linear
+		// width-per-font-size assumption the stored ratio depends on.
+		node.style.fontOpticalSizing = 'none';
+		if (p.fontFamily) {
+			node.style.fontFamily = p.fontId ? `var(--font-${p.fontId})` : p.fontFamily;
+		}
+		if (p.fontWeight) node.style.fontWeight = p.fontWeight;
+		if (p.fontStyle) node.style.fontStyle = p.fontStyle;
+		if (p.letterSpacing !== 0) node.style.letterSpacing = `${p.letterSpacing / 1000}em`;
+		if (p.features.length > 0) {
+			node.style.fontFeatureSettings = p.features.map(f => `"${f}" 1`).join(', ');
+		}
+		if (p.fontVariationSettings) node.style.fontVariationSettings = p.fontVariationSettings;
+
+		targetDoc.body.appendChild(node);
+
+		try {
+			const lines = splitContentIntoLines(p.content);
+			const ratios = lines.map(lineHtml => {
+				node.innerHTML = lineHtml;
+				// Inline font sizes are ignored in fit mode — mirror the
+				// frontend neutralization rule so measured widths match.
+				// Inline spans otherwise ride along: their own fonts, weights,
+				// features and variation settings all affect the width.
+				node.querySelectorAll('[data-fontsize]').forEach(s => { s.style.fontSize = ''; });
+				const width = node.getBoundingClientRect().width;
+				return computeFitRatio(100, width);
+			});
+
+			// Skip-when-equal: prevents effect loops and undo churn
+			const current = measureFitPropsRef.current.fitLineSizes || [];
+			const changed = ratios.length !== current.length ||
+				ratios.some((r, i) => r !== current[i]);
+			if (changed) {
+				// Derived state, not a user edit: without this, the ratio
+				// write forms its own undo step and the first Ctrl+Z after
+				// typing snaps line sizes back instead of undoing the text.
+				// Undone content re-triggers this effect, so ratios always
+				// recompute to match whatever content undo lands on.
+				if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
+					dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
+				}
+				measureFitPropsRef.current.setAttributes({ fitLineSizes: ratios });
+			}
+		} finally {
+			targetDoc.body.removeChild(node);
+		}
+	};
+
+	const measureFitRef = useRef(null);
+	measureFitRef.current = measureFitLines;
+
+	const debouncedMeasureFit = useRef(
+		debounce(() => {
+			if (measureFitRef.current) {
+				measureFitRef.current();
+			}
+		}, 300)
+	).current;
+
+	// Re-measure (debounced) whenever anything width-affecting changes.
+	// fitMaxSize is intentionally absent — the cap doesn't change ratios.
+	useEffect(() => {
+		if (fontSize !== 'fit') return;
+		debouncedMeasureFit();
+	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+
+	// Measure after fonts are ready, and re-measure on late font loads
+	useEffect(() => {
+		if (fontSize !== 'fit') return;
+		const canvasIframe = document.querySelector('iframe[name="editor-canvas"]');
+		const targetDoc = (canvasIframe && canvasIframe.contentDocument) || document;
+		const fontSet = targetDoc.fonts;
+		if (!fontSet) return;
+		let cancelled = false;
+		if (fontSet.ready && typeof fontSet.ready.then === 'function') {
+			fontSet.ready.then(() => {
+				if (!cancelled) debouncedMeasureFit();
+			}).catch(() => {});
+		}
+		const onLoadingDone = () => debouncedMeasureFit();
+		fontSet.addEventListener('loadingdone', onLoadingDone);
+		return () => {
+			cancelled = true;
+			fontSet.removeEventListener('loadingdone', onLoadingDone);
+		};
+	}, [fontSize]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+
+	// Cleanup fit measurement debounce on unmount
+	useEffect(() => {
+		return () => {
+			if (debouncedMeasureFit && typeof debouncedMeasureFit.cancel === 'function') {
+				debouncedMeasureFit.cancel();
+			}
+		};
+	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Fit-to-width editing value: the flat content attribute wrapped into
+	// per-line typost-line spans (with <br> separators kept) for the
+	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
+	// the render branch ever sees the wrapped form.
+	const wrappedFitValue = useMemo(
+		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize) : ''),
+		[fontSize, content, fitLineSizes, fitMaxSize]
+	);
 
 	// The range QFT property applies operate on: the LIVE selection when it's
 	// expanded and in this block, else the selection captured when the popover
@@ -1329,7 +1498,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId };
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
@@ -1873,6 +2042,160 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				// Note: Re-detection handled by useEffect, no manual reset needed
 			}
 		}
+	};
+
+	// Apply font-variation-settings to the selected text only (inline).
+	// Routed here from the typost-apply-block-properties handler when a
+	// variable-fonts axis control dispatches with source 'qft' — the
+	// inspector's sliders stay block-level. Falls back to the block
+	// attribute when the caret isn't inside styled text (no selection
+	// context to scope to).
+	const applyInlineFontVariationSettings = (settingsStr) => {
+		if (!content) return;
+		// The event is a public extension API, so the value cannot be
+		// trusted into a style string raw ('"wght" 700; color:red' would
+		// smuggle extra declarations). Invalid input sanitizes to '' and
+		// flows into the removal branch — same treatment as the
+		// inline-format editor's patch builder.
+		const value = sanitizeFontVariationSettings(settingsStr);
+
+		if (!resolvedApplyRange) {
+			setAttributes({ fontVariationSettings: value });
+			return;
+		}
+
+		const start = resolvedApplyRange.start;
+		const end = resolvedApplyRange.end;
+
+		// Empty value = "Reset to defaults": remove the property from the
+		// selection (same shape as the other QFT reset paths). A collapsed
+		// caret has no range to strip, so clear the block attribute instead.
+		if (!value) {
+			if (start !== end) {
+				const result = removePropertyFromSelection(
+					content,
+					start,
+					end,
+					'data-font-variation-settings',
+					'font-variation-settings'
+				);
+				if (result.success) {
+					setAttributes({ content: result.content });
+					originalContentRef.current = null;
+					return;
+				}
+			}
+			setAttributes({ fontVariationSettings: '' });
+			return;
+		}
+
+		// COLLAPSED CURSOR: Update parent span in-place; caret outside any
+		// styled span falls back to the block attribute
+		if (start === end) {
+			const result = updateSpanPropertyInPlace(
+				content,
+				start,
+				'data-font-variation-settings',
+				value,
+				'font-variation-settings',
+				value
+			);
+
+			if (result.success) {
+				setAttributes({ content: result.content });
+				originalContentRef.current = null;
+			} else {
+				setAttributes({ fontVariationSettings: value });
+			}
+			return;
+		}
+
+		// SELECTION: Check if we should split a parent span that already
+		// carries the property
+		if (inlineStylesAtSelection && inlineStylesAtSelection.fontVariationSettings) {
+			const result = splitSpanAndApply(
+				content,
+				start,
+				end,
+				'data-font-variation-settings',
+				{ 'data-font-variation-settings': value },
+				`font-variation-settings: ${value}`
+			);
+
+			if (result.success) {
+				setAttributes({ content: result.content });
+				originalContentRef.current = null;
+				return;
+			}
+		}
+
+		// SELECTION, general: Range method first, string fallback (same
+		// strategy as applyInlineFontWeight)
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		const range = getRangeForOffsets(container, start, end, doc);
+		const validation = validateRangeMatchesSelection(
+			range,
+			capturedSelection?.text || '',
+			capturedSelection?.length || 0
+		);
+
+		const attrs = { 'data-font-variation-settings': value };
+		const styleString = `font-variation-settings: ${value}`;
+		let success = false;
+		let newContent = content;
+
+		if (validation.valid) {
+			success = applyOrMergeStyling(range, attrs, styleString, doc);
+
+			if (success) {
+				newContent = container.innerHTML;
+
+				// POST-VALIDATION: Verify the result doesn't wrap entire content
+				const parser2 = new DOMParser();
+				const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+				const container2 = doc2.body.firstChild;
+				const typostSpans = container2.querySelectorAll('span.typost-styled');
+
+				let wrappedEverything = false;
+				typostSpans.forEach(span => {
+					const spanText = span.textContent || '';
+					const containerText = container2.textContent || '';
+					if (spanText.length >= containerText.length - 1) {
+						const isIntendedSelection = capturedSelection &&
+						                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+						if (!isIntendedSelection) {
+							wrappedEverything = true;
+						}
+					}
+				});
+
+				if (wrappedEverything) {
+					success = false;
+				}
+			}
+		}
+
+		if (!success) {
+			const fallbackResult = applyStylingSafeStringMethod(
+				content,
+				start,
+				end,
+				attrs,
+				styleString
+			);
+
+			if (fallbackResult.success) {
+				newContent = fallbackResult.content;
+			} else {
+				return;
+			}
+		}
+
+		setAttributes({ content: newContent });
+		originalContentRef.current = null;
 	};
 
 	// Apply font style (visual italic) to selected text only (inline).
@@ -2478,6 +2801,15 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
+		// Fit-to-width: the editing surface renders the real per-line
+		// typost-line wrappers (wrapFitLines), each carrying its own cqi
+		// font-size. The block-level size is only the fallback that
+		// unmeasured lines and empty lines inherit — the same clamp the
+		// frontend emits (save.js) for browsers without container queries.
+		if (fontSize === 'fit') {
+			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+		}
+
 		if (fontVariationSettings) {
 			styles.fontVariationSettings = fontVariationSettings;
 		}
@@ -2605,6 +2937,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 	applyFontSizeRef.current = applyInlineFontSize;
 	applyFontWeightRef.current = applyInlineFontWeight;
 	applyFontFamilyRef.current = applyInlineFontFamily;
+	applyFontVariationSettingsRef.current = applyInlineFontVariationSettings;
 
 	return (
 		<>
@@ -2774,7 +3107,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 													if (el && !el._hooked) {
 														el._hooked = true;
 														window.typostHooks.doAction('typost_weight_control', el, {
-															fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
+															fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection,
+															fontVariationSettings: inlineStylesAtSelection?.fontVariationSettings || fontVariationSettings || ''
 														});
 													}
 												}} />
@@ -2822,7 +3156,8 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 									if (el && !el._hooked) {
 										el._hooked = true;
 										window.typostHooks.doAction('typost_qft_after_font_controls', el, {
-											fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection
+											fontId, fontWeight, inlineFontFamily, inlineFontWeight, inlineFontFamilyAtSelection,
+											fontVariationSettings: inlineStylesAtSelection?.fontVariationSettings || fontVariationSettings || ''
 										});
 									}
 								}} />
@@ -2872,8 +3207,10 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
 											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' }
 										]}
+										disabled={fontSize === 'fit'}
+										help={fontSize === 'fit' ? __('Inline font sizes are ignored while this block uses Fit to width sizing.', 'typography-stylist') : undefined}
 									/>
-									{inlineFontSize === 'responsive' && (
+									{fontSize !== 'fit' && inlineFontSize === 'responsive' && (
 										<>
 											<RangeControl
 												label={__('Mobile (320px+)', 'typography-stylist')}
@@ -3281,7 +3618,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 								<div key={`typost-weight-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
 									if (el && !el._hooked) {
 										el._hooked = true;
-										window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight });
+										window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight, fontVariationSettings: fontVariationSettings || '' });
 									}
 								}} />
 							</PanelBody>
@@ -3306,7 +3643,7 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 				<div key={`typost-afw-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={(el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
-						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight });
+						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight, fontVariationSettings: fontVariationSettings || '' });
 					}
 				}} />
 
@@ -3328,13 +3665,45 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 						value={fontSize}
 						options={[
 							{ label: __('Inherit', 'typography-stylist'), value: 'inherit' },
-							{ label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
+							{ label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' },
+							{ label: __('Fit to width', 'typography-stylist'), value: 'fit' }
 						]}
 						onChange={(value) => setAttributes({ fontSize: value })}
-						help={fontSize === 'responsive' ? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist') : undefined}
+						help={
+							fontSize === 'responsive'
+								? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')
+								: fontSize === 'fit'
+									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing.', 'typography-stylist')
+									: undefined
+						}
 					/>
 
-					{fontSize === 'responsive' && (
+					{fontSize === 'fit' && (
+						<>
+							<ToggleControl
+								label={__('Maximum font size', 'typography-stylist')}
+								checked={fitMaxSize > 0}
+								onChange={(checked) => setAttributes({ fitMaxSize: checked ? 120 : 0 })}
+								help={__('Cap how large short lines can grow on wide screens.', 'typography-stylist')}
+							/>
+							{fitMaxSize > 0 && (
+								<RangeControl
+									label={__('Maximum size (px)', 'typography-stylist')}
+									value={fitMaxSize}
+									onChange={(value) => setAttributes({ fitMaxSize: value })}
+									min={8}
+									max={400}
+									step={1}
+									help={`${fitMaxSize}px`}
+								/>
+							)}
+							<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
+								{__('Fallback size for browsers without container query support:', 'typography-stylist')}
+							</p>
+						</>
+					)}
+
+					{(fontSize === 'responsive' || fontSize === 'fit') && (
 						<>
 							<RangeControl
 								label={__('Mobile (320px and up)', 'typography-stylist')}
@@ -3481,14 +3850,37 @@ export default function Edit({ attributes, setAttributes, clientId }) {
 			</InspectorControls>
 
 			<div {...blockProps}>
-				<RichText
-					tagName={tagName}
-					value={content}
-					onChange={(value) => setAttributes({ content: value })}
-					placeholder={__('Add text with advanced typography...', 'typography-stylist')}
-					style={buildStyle()}
-					className="typost-block-content"
-				/>
+				{fontSize === 'fit' && content ? (
+					/* Fit-to-width WYSIWYG editing (single view): the RichText
+					   is fed a WRAPPED value — per-line typost-line spans, each
+					   with its own calc(R * 100cqi) font-size, joined with <br>
+					   — while the stored content attribute stays flat.
+					   wrapFitLines/unwrapFitLines are the entire boundary. The
+					   kept <br> separators make the rich-text record's text
+					   byte-identical to the flat model, so store selection
+					   offsets and the whole QFT machinery are untouched.
+					   typost-fit brings the inline-size container + line rules
+					   from style.css (loaded in the editor canvas);
+					   typost-fit-editing re-inlines the wrappers (editor.css)
+					   so the real <br>s do the line breaking while editing. */
+					<RichText
+						tagName={tagName}
+						value={wrappedFitValue}
+						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
+						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
+						style={buildStyle()}
+						className="typost-block-content typost-styled typost-fit typost-fit-editing"
+					/>
+				) : (
+					<RichText
+						tagName={tagName}
+						value={content}
+						onChange={(value) => setAttributes({ content: value })}
+						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
+						style={buildStyle()}
+						className="typost-block-content"
+					/>
+				)}
 			</div>
 		</>
 	);

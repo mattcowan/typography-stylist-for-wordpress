@@ -1,7 +1,13 @@
 # Feature: Fit-to-Width Font Sizing ("scale to fill the row")
 
-Status: **not started** — this doc is the starter prompt for the implementing
-session. Written 2026-07-26.
+Status: **implemented** (2026-07-28) — shipped as the third `fontSize` mode
+(`"fit"`) on the Typography Stylist block: per-line ratios measured in the
+editor (`measureFitLines` in edit.js), stored in `fitLineSizes`, rendered as
+`span.typost-line` wrappers with `calc(R * 100cqi)` sizes (save.js /
+`buildFitLinesHtml`), `container-type: inline-size` scoped to `.typost-fit`
+in style.css, optional `fitMaxSize` cap, responsive-clamp fallback, first
+save deprecation in deprecated.js, and the blueprint demo H1 switched to the
+mode. See changelog.txt (Unreleased).
 
 ## What the user wants
 

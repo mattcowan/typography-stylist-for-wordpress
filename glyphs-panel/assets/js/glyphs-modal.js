@@ -271,6 +271,85 @@
 		var gridRef = useRef(null);
 		var loadSeq = useRef(0);
 
+		// Drag-to-reposition: the Modal's own title bar is the drag handle,
+		// matching the Quick Feature Toggles modal. Position is null until
+		// the first drag (the Modal stays centered by its own layout); once
+		// dragged, the frame is fixed-positioned at the stored coordinates.
+		var DRAG_MIN_VISIBLE = 50;
+		var dragPosState = useState(null);
+		var dragPos = dragPosState[0];
+		var setDragPos = dragPosState[1];
+		var draggingState = useState(false);
+		var dragging = draggingState[0];
+		var setDragging = draggingState[1];
+		// Pointer + frame coordinates at drag start (read by the move handler)
+		var dragStartRef = useRef({ pointerX: 0, pointerY: 0, x: 0, y: 0 });
+
+		function handleHeaderMouseDown(e) {
+			// Never drag from the close button
+			if (!e.target.closest || e.target.closest('button')) {
+				return;
+			}
+			var frame = e.target.closest('.typost-glyphs-modal');
+			if (!frame) {
+				return;
+			}
+			var rect = frame.getBoundingClientRect();
+			dragStartRef.current = {
+				pointerX: e.clientX,
+				pointerY: e.clientY,
+				x: rect.left,
+				y: rect.top
+			};
+			// Freeze the frame at its current spot before the first move so
+			// switching to fixed positioning causes no jump
+			setDragPos({ x: rect.left, y: rect.top });
+			setDragging(true);
+			e.preventDefault();
+		}
+
+		// The drag handle is the Modal's own title bar, which Modal renders
+		// itself — React props can't reach it (and Modal does not forward
+		// onMouseDown to the frame), so the listener is attached natively
+		// after mount. The handler only touches state setters and a ref, so
+		// the mount-time closure never goes stale.
+		useEffect(function() {
+			var frames = document.querySelectorAll('.typost-glyphs-modal');
+			var frame = frames.length ? frames[frames.length - 1] : null;
+			var headerEl = frame ? frame.querySelector('.components-modal__header') : null;
+			if (!headerEl) {
+				return;
+			}
+			headerEl.addEventListener('mousedown', handleHeaderMouseDown);
+			return function() {
+				headerEl.removeEventListener('mousedown', handleHeaderMouseDown);
+			};
+		}, []); // eslint-disable-line react-hooks/exhaustive-deps -- bind once per modal lifetime
+
+		useEffect(function() {
+			if (!dragging) {
+				return;
+			}
+			function onMove(e) {
+				var start = dragStartRef.current;
+				var x = start.x + (e.clientX - start.pointerX);
+				var y = start.y + (e.clientY - start.pointerY);
+				// Constrain like the QFT modal: keep at least a corner visible
+				x = Math.max(0, Math.min(x, window.innerWidth - DRAG_MIN_VISIBLE));
+				y = Math.max(0, Math.min(y, window.innerHeight - DRAG_MIN_VISIBLE));
+				setDragPos({ x: x, y: y });
+			}
+			function onUp() {
+				setDragging(false);
+			}
+			document.addEventListener('mousemove', onMove);
+			document.addEventListener('mouseup', onUp);
+			return function() {
+				document.removeEventListener('mousemove', onMove);
+				document.removeEventListener('mouseup', onUp);
+			};
+		}, [dragging]); // eslint-disable-line react-hooks/exhaustive-deps -- start coords live in a ref
+
 		// Keyboard navigation: the active cell index within the full items list.
 		// Focus stays on the grid container; the active cell is exposed via
 		// aria-activedescendant so it survives virtualization (cells unmount as
@@ -564,16 +643,25 @@
 				return;
 			}
 
+			// Alternates view = swap semantics: the base cell must CLEAR the
+			// alternate it replaces (a plain insertion would inherit it), and
+			// consecutive clicks must keep replacing the same glyph instead
+			// of appending after it.
+			var inAlternatesView = altCps !== null;
 			var payload = lib.buildInsertionPayload({
 				text: text,
 				featureTag: tag,
 				featureIndex: item.altIndex || 1,
+				isBaseGlyph: inAlternatesView && !tag,
 				panelFontId: selectedFont ? selectedFont.fontId : 0,
 				panelFontFamily: (selectedFont && !selectedFont.fontId) ? (selectedFont.cssFamily || '"' + selectedFont.family + '"') : '',
 				contextFontId: context.fontId || 0,
 				contextFeatures: context.features || [],
 				contextFontWeight: context.fontWeight || ''
 			});
+			if (inAlternatesView) {
+				payload.swap = true;
+			}
 			lib.dispatchInsert(source, payload, {
 				clientId: context.clientId,
 				range: context.range
@@ -697,9 +785,16 @@
 
 		return el(Modal, {
 			title: __('Glyphs', 'typost-glyphs-panel'),
-			className: 'typost-glyphs-modal',
+			className: 'typost-glyphs-modal' + (dragging ? ' is-dragging' : ''),
 			onRequestClose: onClose,
-			shouldCloseOnClickOutside: false
+			shouldCloseOnClickOutside: false,
+			style: dragPos ? {
+				position: 'fixed',
+				top: dragPos.y + 'px',
+				left: dragPos.x + 'px',
+				margin: 0,
+				transform: 'none'
+			} : undefined
 		},
 			// Header row: font selector + target indicator
 			el('div', { className: 'typost-glyphs-header' },

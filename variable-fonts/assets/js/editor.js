@@ -54,6 +54,21 @@
 	var buildVariationSettings = window.typostVFUtils.buildVariationSettings;
 
 	/**
+	 * Resolve the variation settings a panel should initialize from.
+	 * Prefers state.fontVariationSettings when the host editor provides it
+	 * (the Typography Stylist block passes the selection's inline value or
+	 * the block attribute — reliable even in an iframed canvas, where the
+	 * top-document selection walk below can't see block content). Falls
+	 * back to the DOM walk for hosts that don't (the inline format editor).
+	 */
+	function resolveInitialSettings(state) {
+		if (state && typeof state.fontVariationSettings === 'string') {
+			return parseVariationSettings(state.fontVariationSettings);
+		}
+		return getCurrentVariationSettings();
+	}
+
+	/**
 	 * Read the current font-variation-settings from the selected text in the editor.
 	 * Checks for data-font-variation-settings attribute on typost-styled spans.
 	 */
@@ -382,8 +397,8 @@
 			}
 		}
 
-		// Get current variation settings from selection
-		var currentSettings = getCurrentVariationSettings();
+		// Get current variation settings (host-provided state, else selection walk)
+		var currentSettings = resolveInitialSettings(state);
 
 		wp.element.render(
 			el(AxesPanel, {
@@ -408,8 +423,8 @@
 
 		injectStyles();
 
-		// Get current variation settings from selection
-		var currentSettings = getCurrentVariationSettings();
+		// Get current variation settings (host-provided state, else selection walk)
+		var currentSettings = resolveInitialSettings(state);
 
 		wp.element.render(
 			el('div', { className: 'typost-vf-other-axes' },

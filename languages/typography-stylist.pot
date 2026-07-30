@@ -1647,3 +1647,32 @@ msgstr ""
 #: assets/js/block-editor.js
 msgid "Normal"
 msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Fit to width"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum font size"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Cap how large short lines can grow on wide screens."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Maximum size (px)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Fallback size for browsers without container query support:"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
+msgstr ""
+

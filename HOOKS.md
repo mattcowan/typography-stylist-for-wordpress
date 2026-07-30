@@ -373,6 +373,8 @@ window.typostHooks.addAction('typost_qft_modal_top', function(containerEl, state
 
 The `typost_qft_after_font_controls` state also includes `inlineFontFamilyAtSelection` (the numeric font ID of an inline font at the current selection, if any) so extensions can prefer the inline font over the block-level `fontId`.
 
+*Since 2.2.2* the `typost_weight_control` and `typost_qft_after_font_controls` states also include `fontVariationSettings` (string) — the `data-font-variation-settings` value of the innermost styled span at the current selection, falling back to the block attribute, `''` when neither is set. The inspector-side hook states (`typost_weight_control` in the sidebar, `typost_inspector_after_font_weight`) carry the block attribute. Extensions should initialize axis controls from this instead of walking the DOM selection, which fails in an iframed editor canvas.
+
 ### Inspector Controls Hook Points
 
 These hooks fire inside the Typography Stylist block's sidebar Inspector Controls.
@@ -545,7 +547,11 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
 }));
 ```
 
-Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly. Only fields present in `properties` are updated — missing fields preserve current state.
+Each editor listens for this event and applies properties matching its `source`. The inline editor triggers a debounced apply; the QFT/inspector editors set block attributes directly, with one exception: a `'qft'` event's `fontVariationSettings` is applied to the current text selection as an inline `<span class="typost-styled" data-font-variation-settings="...">` (falling back to the block attribute when the caret isn't inside styled text) — the `'inspector'` source remains block-level. Only fields present in `properties` are updated — missing fields preserve current state.
+
+`fontVariationSettings` values are validated on every apply path (each comma-separated entry must match the `"axis" number` format); an invalid value is treated as empty rather than partially applied, so it clears the property instead of reaching a style string.
+
+**Targeting (since 2.2.2):** every Typography Stylist block registers this listener, so the event is handled only by the block it targets — for `source: 'qft'` that is the block whose Quick Feature Toggles modal is open, and for `source: 'inspector'` the currently selected block. Previously every mounted block applied the event.
 
 **Note:** This event was renamed from `typost-apply-paragraph-style` in v2.0.0 to reflect its generic purpose.
 
@@ -578,6 +584,12 @@ document.dispatchEvent(new CustomEvent('typost-insert-content', {
         // host editor modal closes (which resets its internal selection state).
         clientId: 'abc-123',          // QFT only: block clientId from the hook snapshot
         range: { start: 0, end: 10 }, // Fallback text range to insert into/replace
+        // Optional (since 2.2.2): swap semantics — after inserting, the
+        // editor keeps the inserted text SELECTED instead of collapsing the
+        // caret, so the extension's next insertion replaces the same text.
+        // Use for pick-a-variant UIs (e.g. the Glyphs Panel alternates view);
+        // omit for sequence insertion.
+        swap: true,
     },
 }));
 ```
@@ -587,7 +599,8 @@ Behavior:
 - **Targeting:** Every Typography Stylist block listens for this event. When `detail.clientId` is set, only the matching block handles it; without it, only the block whose QFT popover is currently open does. In the inline editor, only the live (mounted) format component instance handles the event.
 - **Format continuity:** The inserted text copies the formats of the character it replaces (or, for a collapsed cursor, the preceding character), so inserting inside styled text behaves like typing. When `attributes` is provided, the typost format on just the inserted range is replaced with those attributes — include any context features in `data-features` you want preserved on the inserted text.
 - **Styling preservation (since 2.2.0):** When `attributes` replaces an existing typost format, the replaced format's other styling — `data-fontsize`/`data-fontsize-min`/`-preferred`/`-max`, `data-letterspacing`, `data-lineheight`, `data-fontweight`, and their `style` declarations — is merged into the new span automatically (your attributes always win per-property; `data-features`, `data-feature-settings`, `data-font`, and `data-font-id` are never inherited, and `font-variation-settings` carries over only when `data-font-id` is unchanged). Extensions therefore only need to send what they own.
-- **Caret:** After insertion the caret collapses to the end of the inserted text.
+- **Caret:** After insertion the caret collapses to the end of the inserted text — unless `detail.swap` is set (since 2.2.2), in which case the inserted text stays selected so the extension's next insertion replaces it.
+- **Clearing inherited features (since 2.2.2):** Because a plain (`attributes: null`) insertion inherits the replaced character's formats, it can never *remove* a feature — a base-glyph swap over an alternate would re-inherit the alternate. To restore a plain form, send an `attributes` object *without* feature keys (plus whatever font/weight you want kept): feature attributes are payload-owned in the merge, so the inherited alternate is dropped while sizing/spacing survive.
 - **Frontend rendering:** The `style` attribute carries the actual CSS (same convention as the editors' own apply logic). Include `data-font-id` when the inserted text uses a different font than its surroundings so the frontend `@font-face` detection enqueues the font.
 
 **Availability:** Handled by both the inline editor (format type `typost/features`) and the Typography Stylist block.

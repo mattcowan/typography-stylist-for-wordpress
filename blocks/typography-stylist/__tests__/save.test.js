@@ -545,3 +545,79 @@ describe('fontStyle attribute (visual italic)', () => {
 		expect((withDefault.children[1].props.style || {}).fontStyle).toBeUndefined();
 	});
 });
+
+describe('Fit-to-width sizing (fontSize: "fit")', () => {
+	const baseAttributes = {
+		content: 'You are invited<br>April &amp; Andy<br>February 31',
+		tagName: 'h1',
+		features: [],
+		screenReaderClass: 'visually-hidden',
+		fontSize: 'fit',
+		fontSizeMin: 16,
+		fontSizePreferred: 32,
+		fontSizeMax: 64,
+		fitLineSizes: [0.125, 0.3003, 0.2],
+		fitMaxSize: 0,
+		fontWeight: '400',
+		letterSpacing: 0,
+		lineHeight: 0
+	};
+
+	it('adds the typost-fit class to the visual heading only', () => {
+		const tree = create(save({ attributes: baseAttributes })).toJSON();
+		expect(tree.children[1].props.className).toBe('typost-styled typost-fit');
+		expect(tree.children[0].props.className).toBe('visually-hidden');
+	});
+
+	it('wraps each line in a typost-line span with its cqi font-size', () => {
+		const tree = create(save({ attributes: baseAttributes })).toJSON();
+		const value = tree.children[1].children.join('');
+		expect(value).toBe(
+			'<span class="typost-line" style="font-size:calc(0.125 * 100cqi)">You are invited</span>' +
+			'<span class="typost-line" style="font-size:calc(0.3003 * 100cqi)">April &amp; Andy</span>' +
+			'<span class="typost-line" style="font-size:calc(0.2 * 100cqi)">February 31</span>'
+		);
+	});
+
+	it('applies the max cap to every line when fitMaxSize is set', () => {
+		const tree = create(save({ attributes: { ...baseAttributes, fitMaxSize: 96 } })).toJSON();
+		const value = tree.children[1].children.join('');
+		expect(value).toContain('min(calc(0.125 * 100cqi), 96px)');
+		expect(value).toContain('min(calc(0.3003 * 100cqi), 96px)');
+		expect(value).toContain('min(calc(0.2 * 100cqi), 96px)');
+	});
+
+	it('emits the fallback clamp on the heading style', () => {
+		const tree = create(save({ attributes: baseAttributes })).toJSON();
+		expect(tree.children[1].props.style.fontSize).toBe('clamp(16px, 2rem + 3vw, 64px)');
+	});
+
+	it('keeps the dual-heading structure and screen-reader text intact', () => {
+		const tree = create(save({ attributes: baseAttributes })).toJSON();
+		expect(tree.type).toBe('div');
+		expect(tree.children).toHaveLength(2);
+		expect(tree.children[0].type).toBe('h1');
+		expect(tree.children[1].type).toBe('h1');
+		// br separators become spaces in the accessible copy
+		expect(tree.children[0].children.join('')).toBe('You are invited April &amp; Andy February 31');
+	});
+
+	it('omits font-size for lines without a measured ratio', () => {
+		const tree = create(save({ attributes: { ...baseAttributes, fitLineSizes: [0.125] } })).toJSON();
+		const value = tree.children[1].children.join('');
+		expect(value).toContain('<span class="typost-line" style="font-size:calc(0.125 * 100cqi)">You are invited</span>');
+		expect(value).toContain('<span class="typost-line">April &amp; Andy</span>');
+		expect(value).toContain('<span class="typost-line">February 31</span>');
+	});
+
+	it('non-fit modes produce output identical to a build without fit attributes (block validation safety)', () => {
+		for (const mode of ['inherit', 'responsive']) {
+			const withFitAttrs = create(save({ attributes: { ...baseAttributes, fontSize: mode } })).toJSON();
+			const withoutFitAttrs = create(save({ attributes: { ...baseAttributes, fontSize: mode, fitLineSizes: [], fitMaxSize: 0 } })).toJSON();
+			expect(JSON.stringify(withFitAttrs)).toBe(JSON.stringify(withoutFitAttrs));
+			// Content passes through untouched — no typost-line wrappers
+			expect(withFitAttrs.children[1].children.join('')).toBe(baseAttributes.content);
+			expect(withFitAttrs.children[1].props.className).toBe('typost-styled');
+		}
+	});
+});
