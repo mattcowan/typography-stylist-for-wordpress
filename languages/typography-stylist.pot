@@ -1673,6 +1673,30 @@ msgid "Fallback size for browsers without container query support:"
 msgstr ""
 
 #: blocks/typography-stylist/edit.js
-msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
+msgid "Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line."
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Relative size (for selected text)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Full line size"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Relative Size"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Vertical shift (for selected text)"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "On the baseline"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Vertical Shift"
 msgstr ""
 

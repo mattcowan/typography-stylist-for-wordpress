@@ -2046,6 +2046,30 @@ msgid "Fallback size for browsers without container query support:"
 msgstr "Tamaño alternativo para navegadores sin compatibilidad con consultas de contenedor:"
 
 #: blocks/typography-stylist/edit.js
-msgid "Inline font sizes are ignored while this block uses Fit to width sizing."
-msgstr "Los tamaños de fuente en línea se ignoran mientras este bloque usa el dimensionamiento Ajustar al ancho."
+msgid "Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line."
+msgstr "Los tamaños de fuente en línea se ignoran mientras este bloque usa el dimensionamiento Ajustar al ancho. Usa Tamaño relativo más abajo para escalar el texto seleccionado respecto a su línea ajustada."
+
+#: blocks/typography-stylist/edit.js
+msgid "Relative size (for selected text)"
+msgstr "Tamaño relativo (para el texto seleccionado)"
+
+#: blocks/typography-stylist/edit.js
+msgid "Full line size"
+msgstr "Tamaño completo de la línea"
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Relative Size"
+msgstr "Restablecer el tamaño relativo"
+
+#: blocks/typography-stylist/edit.js
+msgid "Vertical shift (for selected text)"
+msgstr "Desplazamiento vertical (para el texto seleccionado)"
+
+#: blocks/typography-stylist/edit.js
+msgid "On the baseline"
+msgstr "Sobre la línea base"
+
+#: blocks/typography-stylist/edit.js
+msgid "Reset Vertical Shift"
+msgstr "Restablecer el desplazamiento vertical"
 

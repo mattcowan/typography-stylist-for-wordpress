@@ -90,6 +90,22 @@ describe('mergeInsertionFormatAttributes', () => {
 		expect(merged.style).not.toContain('var(--font-9)');
 	});
 
+	test('a scaled/shifted glyph keeps data-fitscale and data-fitshift through a swap', () => {
+		const inherited = {
+			'data-features': 'salt',
+			'data-fitscale': '0.6',
+			'data-fitshift': '0.35',
+			style: 'font-feature-settings: "salt" 1; font-size: 0.6em; vertical-align: 0.35em',
+		};
+		const merged = mergeInsertionFormatAttributes(glyphPayload, inherited);
+		expect(merged['data-fitscale']).toBe('0.6');
+		expect(merged['data-fitshift']).toBe('0.35');
+		expect(merged.style).toContain('font-size: 0.6em');
+		expect(merged.style).toContain('vertical-align: 0.35em');
+		// Payload-owned keys still win
+		expect(merged['data-features']).toBe('ss01');
+	});
+
 	test('font-variation-settings carries over only for the same font', () => {
 		const sameFont = mergeInsertionFormatAttributes(glyphPayload, {
 			'data-font-id': '4',
