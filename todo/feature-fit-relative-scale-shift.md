@@ -1,8 +1,13 @@
 # Feature: Per-selection relative size + vertical shift inside Fit-to-Width
 
-Status: **not started** — this doc is the starter prompt for a future
-session. Written 2026-07-29. Target release: **NOT 2.2.2** (2.2.2 is
-feature-complete and shipping); this is 2.3.x material.
+Status: **implemented 2026-07-31** (changelog under 2.2.3) — kept as the
+design record. Written 2026-07-29. Design decisions taken: CSS emitted
+unconditionally / UI gated to fit blocks; the fit-scale applier strips
+`data-fontsize*` from any span receiving `data-fitscale` (one font-size
+declaration per span, and the fit neutralization rule would win);
+update-in-place via the three-tier applier plus cascade mappings in
+`overrideStylingInDescendantSpans` so wrapping applies replace inner
+scales instead of compounding; presets excluded (like letterspacing).
 
 ## What the user wants
 

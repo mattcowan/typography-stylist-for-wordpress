@@ -105,6 +105,8 @@ All inline styles are stored using standardized data attributes in `<span class=
 - `data-fontweight` - Font weight value
 - `data-features` - Comma-separated OpenType feature codes
 - `data-style-id` - Paragraph style ID (v2.0.0+, set by extension). When present, inline `style` is omitted; a CSS class provides rendering
+- `data-fitscale` - Fit-relative scale factor (v2.2.3+), emitted as `font-size: Nem`. Strictly separate from `data-fontsize` (which fit mode neutralizes): em sizes scale linearly with the fitted line, so scaled spans are INCLUDED in fit measurement and never share a span with `data-fontsize`
+- `data-fitshift` - Fit-relative vertical shift in em (v2.2.3+, negative = down), emitted as `vertical-align: Nem`; moves the inline box without changing its advance, so it never affects fit measurement
 
 **CSS Variable System (v1.1.6+):**
 Inline fonts use CSS variables for consistent font loading:

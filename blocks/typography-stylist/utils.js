@@ -329,7 +329,8 @@ export function parseInlineFontFamilyAtCursor(htmlContent, cursorStart, cursorEn
  * Parse ALL inline style properties from HTML content at a specific cursor position
  *
  * Unified parser that detects features, fontId, fontWeight, fontSize (+ breakpoints),
- * letterSpacing, lineHeight, plus span boundaries (spanText, spanStart, spanEnd).
+ * letterSpacing, lineHeight, fitScale, fitShift, plus span boundaries
+ * (spanText, spanStart, spanEnd).
  *
  * @param {string} htmlContent - HTML content to parse
  * @param {number} cursorStart - Cursor/selection start offset (in text, not HTML)
@@ -413,6 +414,8 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fontSizeMax: null,
 			letterSpacing: null,
 			lineHeight: null,
+			fitScale: null,
+			fitShift: null,
 			fontVariationSettings: null,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
@@ -511,6 +514,30 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 					const lhMatch = style.match(/line-height:\s*([\d.]+)/);
 					if (lhMatch) {
 						result.lineHeight = parseFloat(lhMatch[1]);
+					}
+				}
+			}
+
+			// FitScale - inherited from first ancestor that has it. Data-attr
+			// only: a bare "font-size: Nem" declaration is ambiguous (could be
+			// a hand-authored size), so no style-string fallback.
+			if (result.fitScale === null) {
+				const fitScaleAttr = currentSpan.getAttribute('data-fitscale');
+				if (fitScaleAttr) {
+					const parsed = parseFloat(fitScaleAttr);
+					if (!isNaN(parsed)) {
+						result.fitScale = parsed;
+					}
+				}
+			}
+
+			// FitShift - inherited from first ancestor that has it (data-attr only)
+			if (result.fitShift === null) {
+				const fitShiftAttr = currentSpan.getAttribute('data-fitshift');
+				if (fitShiftAttr) {
+					const parsed = parseFloat(fitShiftAttr);
+					if (!isNaN(parsed)) {
+						result.fitShift = parsed;
 					}
 				}
 			}
@@ -912,7 +939,7 @@ export function canCreateNestedSpan(element) {
  * The single home for the merge rules previously duplicated between
  * applyOrMergeStyling() and applyStylingSafeStringMethod():
  * - attributes the caller doesn't set are preserved (font, sizes, weight,
- *   spacing, line-height), including their style declarations;
+ *   spacing, line-height, fit scale/shift), including their style declarations;
  * - data-features merge and deduplicate; font-feature-settings rebuilds from
  *   the merged set, honoring raw indexed alternates in data-feature-settings
  *   (e.g. '"salt" 2' — plain '"tag" 1' entries are added only for tags the
@@ -938,7 +965,7 @@ export function mergeTypostSpanStyling(span, attributes, styleString) {
 
 	// PRESERVE existing inline attributes that caller isn't explicitly setting
 	// This prevents losing inline font-family when applying line-height, etc.
-	const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-fontstyle', 'data-letterspacing', 'data-lineheight'];
+	const attributesToPreserve = ['data-font-id', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fontweight', 'data-fontstyle', 'data-letterspacing', 'data-lineheight', 'data-fitscale', 'data-fitshift'];
 	const preservedAttributes = {};
 	attributesToPreserve.forEach(attr => {
 		if (!Object.prototype.hasOwnProperty.call(attributes, attr) && span.hasAttribute(attr)) {
@@ -991,7 +1018,9 @@ export function mergeTypostSpanStyling(span, attributes, styleString) {
 			'data-fontstyle': 'font-style',
 			'data-fontsize': 'font-size',
 			'data-letterspacing': 'letter-spacing',
-			'data-lineheight': 'line-height'
+			'data-lineheight': 'line-height',
+			'data-fitscale': 'font-size',
+			'data-fitshift': 'vertical-align'
 		};
 
 		Object.entries(parseStyleString(styleString)).forEach(([prop, value]) => {
@@ -1792,9 +1821,12 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 	const hasFontWeight = span.getAttribute('data-fontweight');
 	const hasLetterSpacing = span.getAttribute('data-letterspacing');
 	const hasLineHeight = span.getAttribute('data-lineheight');
+	const hasFitScale = span.getAttribute('data-fitscale');
+	const hasFitShift = span.getAttribute('data-fitshift');
 
 	const hasAnyAttributes = hasFeatures || hasFontId || hasFontSize ||
-	                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+	                         hasFontWeight || hasLetterSpacing || hasLineHeight ||
+	                         hasFitScale || hasFitShift;
 
 	if (!hasAnyAttributes && Object.keys(styleObj).length === 0) {
 		return true; // Signal to unwrap span
@@ -1806,6 +1838,10 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 /**
  * Remove specific property from selected text's spans
  * Unwraps spans that have no remaining attributes
+ *
+ * A collapsed range (startOffset === endOffset) removes the property from
+ * the span at the caret — walking up to the ancestor that carries it —
+ * mirroring how updateSpanPropertyInPlace applies at a caret.
  *
  * @param {string} htmlContent - Block HTML content
  * @param {number} startOffset - Selection start offset
@@ -1827,19 +1863,49 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 	const textNodeMap = buildTextOffsetMap(container, doc);
 	const spansAtSelection = new Set();
 
-	// Walk through text nodes and find spans that overlap with selection
-	for (const entry of textNodeMap) {
-		// Check if this text node overlaps with selection
-		if (entry.end > startOffset && entry.start < endOffset) {
-			// Find typost-styled spans containing this text node
-			let parent = entry.node.parentElement;
-			while (parent && parent !== container) {
-				if (parent.classList && parent.classList.contains('typost-styled')) {
-					if (parent.getAttribute(dataAttribute)) {
-						spansAtSelection.add(parent);
-					}
+	if (startOffset === endOffset) {
+		// Collapsed caret: no text node can overlap a zero-width range, so
+		// find the innermost span containing the caret instead — same
+		// spanStart <= caret < spanEnd convention as updateSpanPropertyInPlace,
+		// the apply-side counterpart — then walk up to the first ancestor that
+		// actually carries the attribute.
+		let targetSpan = null;
+		let targetSize = Infinity;
+		container.querySelectorAll('span.typost-styled').forEach(span => {
+			let spanStart = Infinity, spanEnd = -1;
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (span.contains(node)) {
+					spanStart = Math.min(spanStart, start);
+					spanEnd = Math.max(spanEnd, end);
 				}
-				parent = parent.parentElement;
+			});
+			if (startOffset >= spanStart && startOffset < spanEnd && (spanEnd - spanStart) < targetSize) {
+				targetSpan = span;
+				targetSize = spanEnd - spanStart;
+			}
+		});
+		let current = targetSpan;
+		while (current && !current.getAttribute(dataAttribute)) {
+			current = current.parentElement ? current.parentElement.closest('span.typost-styled') : null;
+		}
+		if (current) {
+			spansAtSelection.add(current);
+		}
+	} else {
+		// Walk through text nodes and find spans that overlap with selection
+		for (const entry of textNodeMap) {
+			// Check if this text node overlaps with selection
+			if (entry.end > startOffset && entry.start < endOffset) {
+				// Find typost-styled spans containing this text node
+				let parent = entry.node.parentElement;
+				while (parent && parent !== container) {
+					if (parent.classList && parent.classList.contains('typost-styled')) {
+						if (parent.getAttribute(dataAttribute)) {
+							spansAtSelection.add(parent);
+						}
+					}
+					parent = parent.parentElement;
+				}
 			}
 		}
 	}
@@ -2184,9 +2250,10 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
 		'font-family': ['data-font-id', 'data-font'],
 		'font-weight': ['data-fontweight'],
 		'font-style': ['data-fontstyle'],
-		'font-size': ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'],
+		'font-size': ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-fitscale'],
 		'letter-spacing': ['data-letterspacing'],
 		'line-height': ['data-lineheight'],
+		'vertical-align': ['data-fitshift'],
 		'font-variation-settings': ['data-font-variation-settings']
 	};
 	const strippedProps = Object.keys(cascadeProps).filter((prop) => prop in appliedDecls);
@@ -2476,6 +2543,38 @@ export function unwrapFitLines(html) {
 		return container.innerHTML;
 	} catch (error) {
 		return html;
+	}
+}
+
+/**
+ * Remove data-fontsize attributes from spans that carry data-fitscale.
+ *
+ * A span cannot meaningfully hold both: the style attribute has one
+ * font-size declaration (the fit-scale applier overwrites it with Nem),
+ * and the fit-mode neutralization rule
+ * (.typost-fit .typost-line [data-fontsize] { font-size: inherit !important })
+ * would kill the scale. Called by the fit-scale applier after a
+ * successful apply so the two attributes never durably share a span.
+ *
+ * @since 2.2.3
+ * @param {string} content - Serialized RichText content
+ * @return {string} Content with conflicting data-fontsize attrs removed
+ */
+export function stripRedundantFontSizeAttrs(content) {
+	if (!content || content.indexOf('data-fitscale') === -1) {
+		return content;
+	}
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		container.querySelectorAll('span.typost-styled[data-fitscale][data-fontsize]').forEach(span => {
+			['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max']
+				.forEach(attr => span.removeAttribute(attr));
+		});
+		return container.innerHTML;
+	} catch (error) {
+		return content;
 	}
 }
 

@@ -29,7 +29,7 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, sanitizeFontVariationSettings } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -164,6 +164,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
 	const [inlineLineHeight, setInlineLineHeight] = useState(0);
 	const [previewLineHeight, setPreviewLineHeight] = useState(0);
+	// Fit-relative per-selection controls (fontSize: "fit" only):
+	// scale is held as a percent (100 = no attribute), shift in em (0 = none)
+	const [inlineFitScale, setInlineFitScale] = useState(100);
+	const [inlineFitShift, setInlineFitShift] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
 	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
@@ -240,6 +244,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const applyFontWeightRef = useRef(null);
 	const applyFontSizeRef = useRef(null);
 	const applyFontVariationSettingsRef = useRef(null);
+	const applyFitScaleRef = useRef(null);
+	const applyFitShiftRef = useRef(null);
 
 	// Debounced auto-apply functions for responsive controls
 	// These are created once and reused across renders to maintain debounce state
@@ -256,6 +262,22 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		debounce(() => {
 			if (applyLineHeightRef.current) {
 				applyLineHeightRef.current();
+			}
+		}, 400)
+	).current;
+
+	const debouncedApplyFitScale = useRef(
+		debounce(() => {
+			if (applyFitScaleRef.current) {
+				applyFitScaleRef.current();
+			}
+		}, 400)
+	).current;
+
+	const debouncedApplyFitShift = useRef(
+		debounce(() => {
+			if (applyFitShiftRef.current) {
+				applyFitShiftRef.current();
 			}
 		}, 400)
 	).current;
@@ -301,6 +323,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			}
 			if (debouncedApplyFontSize && typeof debouncedApplyFontSize.cancel === 'function') {
 				debouncedApplyFontSize.cancel();
+			}
+			if (debouncedApplyFitScale && typeof debouncedApplyFitScale.cancel === 'function') {
+				debouncedApplyFitScale.cancel();
+			}
+			if (debouncedApplyFitShift && typeof debouncedApplyFitShift.cancel === 'function') {
+				debouncedApplyFitShift.cancel();
 			}
 		};
 	}, []); // Empty deps - only run on unmount
@@ -730,7 +758,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	);
 
 	// Unified inline styles detection at current cursor/selection position
-	// Detects ALL properties: features, fontId, fontWeight, fontSize, letterSpacing, lineHeight
+	// Detects ALL properties: features, fontId, fontWeight, fontSize, letterSpacing, lineHeight, fitScale, fitShift
 	// Memoized to run once per render instead of once per feature (15-20x performance improvement)
 	const inlineStylesAtSelection = useMemo(() => {
 		if (!content || !resolvedApplyRange) return null;
@@ -1008,6 +1036,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			// No styled span at cursor - reset to defaults
 			setInlineLetterSpacing(0);
 			setInlineLineHeight(0);
+			setInlineFitScale(100);
+			setInlineFitShift(0);
 			setInlineFontWeight('inherit');
 			setInlineFontStyle('');
 			setInlineFontFamily('');
@@ -1024,6 +1054,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 		if (detected.lineHeight !== null && detected.lineHeight !== undefined) {
 			setInlineLineHeight(detected.lineHeight);
+		}
+		if (detected.fitScale !== null && detected.fitScale !== undefined) {
+			setInlineFitScale(Math.round(detected.fitScale * 100));
+		} else {
+			setInlineFitScale(100);
+		}
+		if (detected.fitShift !== null && detected.fitShift !== undefined) {
+			setInlineFitShift(detected.fitShift);
+		} else {
+			setInlineFitShift(0);
 		}
 		if (detected.fontWeight) {
 			setInlineFontWeight(detected.fontWeight);
@@ -1113,6 +1153,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// Reset line-height preview state
 		setInlineLineHeight(0);
 		setPreviewLineHeight(0);
+		// Reset fit-relative scale/shift state
+		setInlineFitScale(100);
+		setInlineFitShift(0);
 		// Reset responsive font-size preview state
 		setPreviewFontSize('inherit');
 		setPreviewFontSizeMin(16);
@@ -1686,6 +1729,172 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				originalContentRef.current = null;
 
 				// Note: Re-detection handled by useEffect, no manual reset needed
+			}
+		}
+	};
+
+	// Shared three-tier applier for the fit-relative span properties
+	// (data-fitscale / data-fitshift) — same strategy chain as
+	// applyLetterSpacingOnly: update-in-place at a collapsed cursor, split
+	// when the selection's span already has the property, else wrap/merge
+	// with the string-method fallback.
+	const applyFitSpanProperty = ({ dataAttr, attrValue, styleProperty, styleValue, hasExisting, postProcess }) => {
+		if (!content || !resolvedApplyRange) return;
+
+		const start = resolvedApplyRange.start;
+		const end = resolvedApplyRange.end;
+		const finish = (newContent) => {
+			setAttributes({ content: postProcess ? postProcess(newContent) : newContent });
+			originalContentRef.current = null;
+		};
+
+		// COLLAPSED CURSOR: Update parent span in-place
+		if (start === end) {
+			const result = updateSpanPropertyInPlace(content, start, dataAttr, attrValue, styleProperty, styleValue);
+			if (result.success) {
+				finish(result.content);
+			}
+			return;
+		}
+
+		// SELECTION: split the parent span when it already has the property
+		if (hasExisting) {
+			const result = splitSpanAndApply(content, start, end, dataAttr, { [dataAttr]: attrValue }, `${styleProperty}: ${styleValue}`);
+			if (result.success) {
+				finish(result.content);
+				return;
+			}
+			// If split failed, fall through to merge/nest logic below
+		}
+
+		const styleString = `${styleProperty}: ${styleValue}`;
+		const attributes = { [dataAttr]: attrValue };
+
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		// STRATEGY: Try Range method first, fallback to string manipulation
+		const range = getRangeForOffsets(container, start, end, doc);
+		const validation = validateRangeMatchesSelection(
+			range,
+			capturedSelection?.text || '',
+			capturedSelection?.length || 0
+		);
+
+		let success = false;
+		let newContent = content;
+
+		if (validation.valid) {
+			success = applyOrMergeStyling(range, attributes, styleString, doc);
+			if (success) {
+				newContent = container.innerHTML;
+
+				// POST-VALIDATION: Verify the result doesn't wrap entire content
+				const parser2 = new DOMParser();
+				const doc2 = parser2.parseFromString(`<div>${newContent}</div>`, 'text/html');
+				const container2 = doc2.body.firstChild;
+
+				let wrappedEverything = false;
+				container2.querySelectorAll('span.typost-styled').forEach(span => {
+					const spanText = span.textContent || '';
+					const containerText = container2.textContent || '';
+					if (spanText.length >= containerText.length - 1) {
+						const isIntendedSelection = capturedSelection &&
+						                            Math.abs(spanText.length - capturedSelection.length) <= 1;
+						if (!isIntendedSelection) {
+							wrappedEverything = true;
+						}
+					}
+				});
+
+				if (wrappedEverything) {
+					success = false; // Force fallback
+				}
+			}
+		}
+
+		if (!success) {
+			const fallbackResult = applyStylingSafeStringMethod(content, start, end, attributes, styleString);
+			if (fallbackResult.success) {
+				newContent = fallbackResult.content;
+			} else {
+				// Both methods failed - give up and don't update content
+				return;
+			}
+		}
+
+		finish(newContent);
+	};
+
+	// Apply fit-relative scale (data-fitscale → font-size: Nem). Em sizes
+	// scale linearly with the fitted line, so the stored width ratio stays
+	// valid; the content change re-triggers the debounced measure.
+	const applyFitScaleOnly = () => {
+		if (inlineFitScale === 100) return;
+		applyFitSpanProperty({
+			dataAttr: 'data-fitscale',
+			attrValue: String(inlineFitScale / 100),
+			styleProperty: 'font-size',
+			styleValue: `${inlineFitScale / 100}em`,
+			hasExisting: !!(inlineStylesAtSelection && inlineStylesAtSelection.fitScale !== null),
+			// A span can't carry both data-fitscale and data-fontsize (one
+			// font-size declaration; the fit neutralization rule would win)
+			postProcess: stripRedundantFontSizeAttrs
+		});
+	};
+
+	// Apply fit-relative vertical shift (data-fitshift → vertical-align: Nem).
+	// vertical-align moves the inline box without changing its advance, so
+	// measured widths are unaffected. Em resolves against the span's own
+	// (possibly fitscale-scaled) font size.
+	const applyFitShiftOnly = () => {
+		if (inlineFitShift === 0) return;
+		applyFitSpanProperty({
+			dataAttr: 'data-fitshift',
+			attrValue: String(inlineFitShift),
+			styleProperty: 'vertical-align',
+			styleValue: `${inlineFitShift}em`,
+			hasExisting: !!(inlineStylesAtSelection && inlineStylesAtSelection.fitShift !== null)
+		});
+	};
+
+	// Clear fit scale (reset to 100% and remove from content)
+	const clearFitScale = () => {
+		if (!content || inlineFitScale === 100) return;
+
+		setInlineFitScale(100);
+
+		if (resolvedApplyRange) {
+			const result = removePropertyFromSelection(
+				content,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
+				'data-fitscale',
+				'font-size'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
+			}
+		}
+	};
+
+	// Clear fit shift (reset to 0 and remove from content)
+	const clearFitShift = () => {
+		if (!content || inlineFitShift === 0) return;
+
+		setInlineFitShift(0);
+
+		if (resolvedApplyRange) {
+			const result = removePropertyFromSelection(
+				content,
+				resolvedApplyRange.start,
+				resolvedApplyRange.end,
+				'data-fitshift',
+				'vertical-align'
+			);
+			if (result.success) {
+				setAttributes({ content: result.content });
 			}
 		}
 	};
@@ -2934,6 +3143,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// Store latest apply functions in refs for debounced auto-apply (avoids stale closures)
 	applyLineHeightRef.current = applyLineHeightOnly;
 	applyLetterSpacingRef.current = applyLetterSpacingOnly;
+	applyFitScaleRef.current = applyFitScaleOnly;
+	applyFitShiftRef.current = applyFitShiftOnly;
 	applyFontSizeRef.current = applyInlineFontSize;
 	applyFontWeightRef.current = applyInlineFontWeight;
 	applyFontFamilyRef.current = applyInlineFontFamily;
@@ -3208,8 +3419,83 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' }
 										]}
 										disabled={fontSize === 'fit'}
-										help={fontSize === 'fit' ? __('Inline font sizes are ignored while this block uses Fit to width sizing.', 'typography-stylist') : undefined}
+										help={fontSize === 'fit' ? __('Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line.', 'typography-stylist') : undefined}
 									/>
+									{fontSize === 'fit' && (
+										<>
+											{/* Fit-relative scale: data-fitscale → font-size: Nem.
+											    Em-relative sizes scale linearly with the fitted line,
+											    so the stored width ratio stays valid (unlike absolute
+											    data-fontsize values, which fit mode neutralizes). */}
+											<RangeControl
+												label={__('Relative size (for selected text)', 'typography-stylist')}
+												value={inlineFitScale}
+												onChange={(value) => {
+													setInlineFitScale(value);
+													if (value === 100) {
+														// 100% = no attribute: cancel any pending
+														// apply and remove it from the selection
+														debouncedApplyFitScale.cancel();
+														clearFitScale();
+													} else {
+														debouncedApplyFitScale();
+													}
+												}}
+												min={10}
+												max={100}
+												step={5}
+												help={inlineFitScale === 100 ? __('Full line size', 'typography-stylist') : `${inlineFitScale}%`}
+												allowReset
+												resetFallbackValue={100}
+											/>
+											{inlineFitScale !== 100 && (
+												<Button
+													variant="secondary"
+													onClick={clearFitScale}
+													isDestructive
+													style={{ marginBottom: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+													icon="undo"
+												>
+													{__('Reset Relative Size', 'typography-stylist')}
+												</Button>
+											)}
+											{/* Fit-relative vertical shift: data-fitshift →
+											    vertical-align: Nem. Moves the inline box without
+											    changing its advance — no measurement impact. */}
+											<RangeControl
+												label={__('Vertical shift (for selected text)', 'typography-stylist')}
+												value={inlineFitShift}
+												onChange={(value) => {
+													setInlineFitShift(value);
+													if (value === 0) {
+														// 0 = no attribute: cancel any pending
+														// apply and remove it from the selection
+														debouncedApplyFitShift.cancel();
+														clearFitShift();
+													} else {
+														debouncedApplyFitShift();
+													}
+												}}
+												min={-1}
+												max={1}
+												step={0.05}
+												help={inlineFitShift === 0 ? __('On the baseline', 'typography-stylist') : `${inlineFitShift}em`}
+												allowReset
+												resetFallbackValue={0}
+											/>
+											{inlineFitShift !== 0 && (
+												<Button
+													variant="secondary"
+													onClick={clearFitShift}
+													isDestructive
+													style={{ fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+													icon="undo"
+												>
+													{__('Reset Vertical Shift', 'typography-stylist')}
+												</Button>
+											)}
+										</>
+									)}
 									{fontSize !== 'fit' && inlineFontSize === 'responsive' && (
 										<>
 											<RangeControl

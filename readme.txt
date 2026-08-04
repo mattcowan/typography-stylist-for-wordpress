@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.2.2
+Stable tag: 2.2.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -324,6 +324,10 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 
 == Changelog ==
 
+= 2.2.3 =
+* **NEW: Relative size and vertical shift for selected text in Fit-to-width blocks.** Select part of a fitted line — a single glyph like the ampersand in "April & Andy" — and scale it down relative to the line's fitted size or nudge it up and down. Because the adjustments are relative, the line still fills the block width exactly at every screen size, and the frontend stays zero-JavaScript. The two new sliders appear in the Quick Feature Toggles when the block uses Fit to width sizing.
+* Full details are in changelog.txt.
+
 = 2.2.2 =
 * **NEW: Fit-to-width sizing.** A third font-size mode on the Typography Stylist block: each line is sized so its text spans the full block width — the classic wedding-invitation/poster look where a short line renders huge and a long line smaller, all flush to the same width. Editing is fully WYSIWYG: every line renders at its true fitted size while you type and style selections. Lines are measured with their real fonts, features, and letter spacing; the frontend stays zero-JavaScript (CSS container queries), with an optional maximum-size cap and a responsive fallback for older browsers. Existing blocks are untouched.
 * **Fixed: variable-font axis sliders in the Quick Feature Toggles now change only the selected text** instead of restyling the whole block (the sidebar sliders intentionally remain block-level), and an axis change no longer leaks into other Typography Stylist blocks on the page. The sliders also now read their starting values from your selection correctly in the iframed editor.
@@ -363,6 +367,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.2.3 =
+Adds per-selection relative size and vertical shift inside Fit-to-width blocks — shrink a glyph relative to its fitted line and nudge it up or down, while every line keeps filling the block width exactly.
 
 = 2.2.2 =
 Adds fit-to-width sizing (each line fills the block width, zero frontend JS), scopes Quick Feature Toggle axis changes to the selected text, and fixes Font Library-registered fonts falling back to system fonts on the frontend.
