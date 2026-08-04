@@ -29,6 +29,7 @@ __mocks__
 /glyphs-panel/package.json
 /glyphs-panel/CLAUDE.md
 /variable-fonts/CLAUDE.md
+/paragraph-styles/CLAUDE.md
 
 # --- root config / dev files ---
 /.babelrc

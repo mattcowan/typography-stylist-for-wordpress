@@ -27,6 +27,24 @@ delete_option('typost_disable_accessibility_warning');
 delete_option('typost_show_clear_confirmation');
 delete_option('typost_global_settings');
 
+// Paragraph Styles module (bundled in v2.3)
+delete_option('typost_paragraph_styles');
+delete_option('typost_paragraph_styles_next_id');
+
+// Variable Fonts module (bundled in v2.1)
+delete_option('typost_variable_font_axes');
+delete_option('typost_variable_font_flags');
+
+// WP Font Library integration (v2.1)
+delete_option('typost_adopted_wp_fonts');
+delete_option('typost_auto_register_wp_fonts');
+delete_option('typost_wp_library_notice_dismissed');
+
+// Remaining settings options
+delete_option('typost_admin_color_scheme');
+delete_option('typost_allow_variable_weights');
+delete_option('typost_archive_full_content_check');
+
 // Delete transients
 // Direct database calls are required during uninstall for bulk deletion with wildcard patterns.
 // This is the standard approach for plugin cleanup as no caching is needed during uninstall.
@@ -48,6 +66,11 @@ delete_transient('typost_combined_font_css');
 delete_transient('typost_admin_font_css');
 delete_transient('typost_editor_font_css');
 delete_transient('typost_block_font_css');
+
+// Delete bundled module transients
+delete_transient('typost_paragraph_styles_cache');
+delete_transient('typost_paragraph_styles_css');
+delete_transient('typost_vf_axes_cache');
 
 // Delete per-page font CSS transients
 $wpdb->query(

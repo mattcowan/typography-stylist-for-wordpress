@@ -1,0 +1,135 @@
+/**
+ * Typography Stylist - Paragraph Styles: Admin Tab Styles
+ */
+
+.typost-ps-admin-tab {
+	max-width: 800px;
+}
+
+.typost-ps-description {
+	color: #646970;
+	font-size: 13px;
+	margin-bottom: 20px;
+}
+
+/* Empty state */
+.typost-ps-empty-state {
+	background: #f0f0f1;
+	border: 1px dashed #c3c4c7;
+	border-radius: 4px;
+	padding: 30px;
+	text-align: center;
+	color: #646970;
+}
+
+/* Style cards */
+.typost-ps-style-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	margin-bottom: 12px;
+	padding: 16px;
+	transition: border-color 0.15s ease;
+}
+
+.typost-ps-style-card:hover {
+	border-color: #2271b1;
+}
+
+.typost-ps-style-card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.typost-ps-style-name {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.typost-ps-css-class {
+	font-size: 11px;
+	color: #757575;
+	background: #f0f0f1;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-family: monospace;
+}
+
+.typost-ps-style-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.typost-ps-style-actions .button {
+	font-size: 12px;
+	padding: 2px 10px;
+	min-height: 28px;
+}
+
+.typost-ps-delete-btn {
+	color: #b32d2e !important;
+	border-color: #b32d2e !important;
+}
+
+.typost-ps-delete-btn:hover {
+	background: #b32d2e !important;
+	color: #fff !important;
+}
+
+/* Details */
+.typost-ps-style-card-details {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 16px;
+}
+
+.typost-ps-detail {
+	font-size: 12px;
+	color: #50575e;
+}
+
+.typost-ps-detail strong {
+	color: #1d2327;
+}
+
+/* Edit form */
+.typost-ps-edit-form {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+}
+
+.typost-ps-edit-form-inner label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.typost-ps-edit-form-inner input[type="text"] {
+	width: 100%;
+	max-width: 400px;
+	margin-top: 4px;
+}
+
+.typost-ps-edit-actions {
+	display: flex;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+/* Deleting animation */
+.typost-ps-style-card.typost-ps-deleting {
+	opacity: 0.5;
+	pointer-events: none;
+}
+
+/* Saving indicator */
+.typost-ps-style-card.typost-ps-saving {
+	opacity: 0.7;
+	pointer-events: none;
+}
