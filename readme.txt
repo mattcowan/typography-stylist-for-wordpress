@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 6.9
-Stable tag: 2.2.2
+Stable tag: 2.2.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -367,6 +367,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.2.3 =
+Adds per-selection relative size and vertical shift inside Fit-to-width blocks — shrink a glyph relative to its fitted line and nudge it up or down, while every line keeps filling the block width exactly.
 
 = 2.2.2 =
 Adds fit-to-width sizing (each line fills the block width, zero frontend JS), scopes Quick Feature Toggle axis changes to the selected text, and fixes Font Library-registered fonts falling back to system fonts on the frontend.
