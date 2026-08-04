@@ -3432,7 +3432,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												value={inlineFitScale}
 												onChange={(value) => {
 													setInlineFitScale(value);
-													if (value !== 100) {
+													if (value === 100) {
+														// 100% = no attribute: cancel any pending
+														// apply and remove it from the selection
+														debouncedApplyFitScale.cancel();
+														clearFitScale();
+													} else {
 														debouncedApplyFitScale();
 													}
 												}}
@@ -3462,7 +3467,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												value={inlineFitShift}
 												onChange={(value) => {
 													setInlineFitShift(value);
-													if (value !== 0) {
+													if (value === 0) {
+														// 0 = no attribute: cancel any pending
+														// apply and remove it from the selection
+														debouncedApplyFitShift.cancel();
+														clearFitShift();
+													} else {
 														debouncedApplyFitShift();
 													}
 												}}

@@ -1821,9 +1821,12 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 	const hasFontWeight = span.getAttribute('data-fontweight');
 	const hasLetterSpacing = span.getAttribute('data-letterspacing');
 	const hasLineHeight = span.getAttribute('data-lineheight');
+	const hasFitScale = span.getAttribute('data-fitscale');
+	const hasFitShift = span.getAttribute('data-fitshift');
 
 	const hasAnyAttributes = hasFeatures || hasFontId || hasFontSize ||
-	                         hasFontWeight || hasLetterSpacing || hasLineHeight;
+	                         hasFontWeight || hasLetterSpacing || hasLineHeight ||
+	                         hasFitScale || hasFitShift;
 
 	if (!hasAnyAttributes && Object.keys(styleObj).length === 0) {
 		return true; // Signal to unwrap span
@@ -1835,6 +1838,10 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 /**
  * Remove specific property from selected text's spans
  * Unwraps spans that have no remaining attributes
+ *
+ * A collapsed range (startOffset === endOffset) removes the property from
+ * the span at the caret — walking up to the ancestor that carries it —
+ * mirroring how updateSpanPropertyInPlace applies at a caret.
  *
  * @param {string} htmlContent - Block HTML content
  * @param {number} startOffset - Selection start offset
@@ -1856,19 +1863,49 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 	const textNodeMap = buildTextOffsetMap(container, doc);
 	const spansAtSelection = new Set();
 
-	// Walk through text nodes and find spans that overlap with selection
-	for (const entry of textNodeMap) {
-		// Check if this text node overlaps with selection
-		if (entry.end > startOffset && entry.start < endOffset) {
-			// Find typost-styled spans containing this text node
-			let parent = entry.node.parentElement;
-			while (parent && parent !== container) {
-				if (parent.classList && parent.classList.contains('typost-styled')) {
-					if (parent.getAttribute(dataAttribute)) {
-						spansAtSelection.add(parent);
-					}
+	if (startOffset === endOffset) {
+		// Collapsed caret: no text node can overlap a zero-width range, so
+		// find the innermost span containing the caret instead — same
+		// spanStart <= caret < spanEnd convention as updateSpanPropertyInPlace,
+		// the apply-side counterpart — then walk up to the first ancestor that
+		// actually carries the attribute.
+		let targetSpan = null;
+		let targetSize = Infinity;
+		container.querySelectorAll('span.typost-styled').forEach(span => {
+			let spanStart = Infinity, spanEnd = -1;
+			textNodeMap.forEach(({ node, start, end }) => {
+				if (span.contains(node)) {
+					spanStart = Math.min(spanStart, start);
+					spanEnd = Math.max(spanEnd, end);
 				}
-				parent = parent.parentElement;
+			});
+			if (startOffset >= spanStart && startOffset < spanEnd && (spanEnd - spanStart) < targetSize) {
+				targetSpan = span;
+				targetSize = spanEnd - spanStart;
+			}
+		});
+		let current = targetSpan;
+		while (current && !current.getAttribute(dataAttribute)) {
+			current = current.parentElement ? current.parentElement.closest('span.typost-styled') : null;
+		}
+		if (current) {
+			spansAtSelection.add(current);
+		}
+	} else {
+		// Walk through text nodes and find spans that overlap with selection
+		for (const entry of textNodeMap) {
+			// Check if this text node overlaps with selection
+			if (entry.end > startOffset && entry.start < endOffset) {
+				// Find typost-styled spans containing this text node
+				let parent = entry.node.parentElement;
+				while (parent && parent !== container) {
+					if (parent.classList && parent.classList.contains('typost-styled')) {
+						if (parent.getAttribute(dataAttribute)) {
+							spansAtSelection.add(parent);
+						}
+					}
+					parent = parent.parentElement;
+				}
 			}
 		}
 	}

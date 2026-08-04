@@ -104,6 +104,44 @@ describe('removePropertyFromSelection — reset paths', () => {
 		expect(result.content).toContain('vertical-align: 0.35em');
 	});
 
+	test('collapsed caret at the start of a single-glyph span removes the property (PR fix)', () => {
+		// A one-character span has no interior text position, so every caret
+		// sits on a node boundary — the overlap-based lookup could never
+		// match it and the Reset silently no-opped.
+		const html = 'April <span class="typost-styled" data-fitscale="0.6" data-letterspacing="-173" style="letter-spacing: -0.173em; font-size: 0.6em">&amp;</span> Andy';
+		const result = removePropertyFromSelection(html, 6, 6, 'data-fitscale', 'font-size');
+		expect(result.success).toBe(true);
+		expect(result.content).not.toContain('data-fitscale');
+		expect(result.content).not.toContain('font-size');
+		// Unrelated property survives, span not unwrapped
+		expect(result.content).toContain('data-letterspacing="-173"');
+	});
+
+	test('collapsed caret walks up to the ancestor span carrying the property', () => {
+		const html = '<span class="typost-styled" data-fitscale="0.6" style="font-size: 0.6em"><span class="typost-styled" data-fontweight="700" style="font-weight: 700">Hi</span></span>';
+		const result = removePropertyFromSelection(html, 0, 0, 'data-fitscale', 'font-size');
+		expect(result.success).toBe(true);
+		expect(result.content).not.toContain('data-fitscale');
+		expect(result.content).toContain('data-fontweight="700"');
+	});
+
+	test('collapsed caret in unstyled text leaves content unchanged', () => {
+		const html = 'Plain <span class="typost-styled" data-fitscale="0.6" style="font-size: 0.6em">x</span>';
+		const result = removePropertyFromSelection(html, 2, 2, 'data-fitscale', 'font-size');
+		expect(result.success).toBe(true);
+		expect(result.content).toBe(html);
+	});
+
+	test('a span left with only data-fitshift is not unwrapped when fitscale is removed', () => {
+		// removePropertyFromSpan must count the fit attributes as remaining
+		// styling or the unwrap check could discard them
+		const html = '<span class="typost-styled" data-fitscale="0.6" data-fitshift="0.3" style="font-size: 0.6em; vertical-align: 0.3em">&amp;</span>';
+		const result = removePropertyFromSelection(html, 0, 1, 'data-fitscale', 'font-size');
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('data-fitshift="0.3"');
+		expect(result.content).toContain('vertical-align: 0.3em');
+	});
+
 	test('removes data-fitshift and its vertical-align declaration', () => {
 		const html = '<span class="typost-styled" data-fitscale="0.6" data-fitshift="0.35" style="font-size: 0.6em; vertical-align: 0.35em">&amp;</span>';
 		const result = removePropertyFromSelection(html, 0, 1, 'data-fitshift', 'vertical-align');
