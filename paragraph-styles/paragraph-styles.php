@@ -152,8 +152,10 @@ final class Typost_Paragraph_Styles {
 		// Assign new sequential IDs, preserving old ID for backward-compatible CSS selectors
 		$next_id = 1;
 		foreach ( $styles as &$style ) {
-			$style['legacyId'] = $style['id'];
-			$style['id']       = $next_id;
+			if ( isset( $style['id'] ) ) {
+				$style['legacyId'] = $style['id'];
+			}
+			$style['id'] = $next_id;
 			$next_id++;
 		}
 		unset( $style );
@@ -249,8 +251,19 @@ final class Typost_Paragraph_Styles {
 				}
 			}
 			if ( ! empty( $clean_pairs ) ) {
-				$css_rules[] = 'font-variation-settings: ' . esc_attr( implode( ', ', $clean_pairs ) );
+				// No esc_attr() here: the pairs are rebuilt above from a strict
+				// regex ([a-zA-Z]{4} tag + floatval), and HTML-escaping would
+				// turn the required quotes into &quot; inside the <style> block,
+				// invalidating the declaration.
+				$css_rules[] = 'font-variation-settings: ' . implode( ', ', $clean_pairs );
 			}
+		}
+
+		// Font size — fixed numeric px value. The current editors only produce
+		// 'inherit' / 'responsive' / 'fit' states, but the REST API accepts any
+		// value and legacy/external data may store plain px numbers.
+		if ( isset( $props['fontSize'] ) && is_numeric( $props['fontSize'] ) && $props['fontSize'] > 0 ) {
+			$css_rules[] = 'font-size: ' . intval( $props['fontSize'] ) . 'px';
 		}
 
 		// Font size (responsive clamp)

@@ -8,6 +8,7 @@ const {
 	isStyleModified,
 	buildPropertiesFromState,
 	buildApplyEventDetail,
+	normalizeApplyProperties,
 } = require('../assets/js/lib/ps-utils.js');
 
 describe('findFontName', () => {
@@ -145,16 +146,102 @@ describe('buildPropertiesFromState', () => {
 	});
 });
 
+describe('normalizeApplyProperties', () => {
+	test('fills defaults for omitted style-owned keys so stale editor state is reset', () => {
+		expect(normalizeApplyProperties({ fontId: 12, fontWeight: '700' })).toEqual({
+			fontId: 12,
+			fontWeight: '700',
+			fontSize: 'inherit',
+			letterSpacing: 0,
+			lineHeight: 0,
+			features: [],
+			fontVariationSettings: '',
+		});
+	});
+
+	test('stored values always win over defaults', () => {
+		expect(normalizeApplyProperties({
+			fontId: 15,
+			fontWeight: 'bold',
+			fontSize: 'responsive',
+			fontSizeMin: 16,
+			fontSizePreferred: 24,
+			fontSizeMax: 64,
+			letterSpacing: 50,
+			lineHeight: 1.4,
+			features: ['liga', 'ss01'],
+			fontVariationSettings: '"wght" 650',
+		})).toEqual({
+			fontId: 15,
+			fontWeight: 'bold',
+			fontSize: 'responsive',
+			fontSizeMin: 16,
+			fontSizePreferred: 24,
+			fontSizeMax: 64,
+			letterSpacing: 50,
+			lineHeight: 1.4,
+			features: ['liga', 'ss01'],
+			fontVariationSettings: '"wght" 650',
+		});
+	});
+
+	test('never introduces keys styles cannot express (fontStyle, fit/extension keys)', () => {
+		const normalized = normalizeApplyProperties({});
+		expect(normalized).not.toHaveProperty('fontStyle');
+		expect(normalized).not.toHaveProperty('fitMaxSize');
+		expect(normalized).not.toHaveProperty('layeredConfigId');
+		expect(normalized).not.toHaveProperty('animationConfigId');
+	});
+
+	test('handles null/undefined input as all-defaults', () => {
+		expect(normalizeApplyProperties(null)).toEqual({
+			fontId: 0,
+			fontWeight: '400',
+			fontSize: 'inherit',
+			letterSpacing: 0,
+			lineHeight: 0,
+			features: [],
+			fontVariationSettings: '',
+		});
+	});
+
+	test('returns a fresh features array each call (no shared mutable default)', () => {
+		const a = normalizeApplyProperties({});
+		const b = normalizeApplyProperties({});
+		expect(a.features).not.toBe(b.features);
+	});
+});
+
 describe('buildApplyEventDetail', () => {
 	const style = { id: 3, properties: { fontId: 12, fontWeight: '700' } };
 
-	test('builds an apply payload with class + style id', () => {
+	test('builds a normalized apply payload with class + style id', () => {
 		expect(buildApplyEventDetail(style, 'inline')).toEqual({
-			properties: { fontId: 12, fontWeight: '700' },
+			properties: {
+				fontId: 12,
+				fontWeight: '700',
+				fontSize: 'inherit',
+				letterSpacing: 0,
+				lineHeight: 0,
+				features: [],
+				fontVariationSettings: '',
+			},
 			paragraphStyleId: 3,
 			styleClass: 'typost-ps-3',
 			source: 'inline',
 		});
+	});
+
+	test('passes stored responsive sizes through in the normalized payload', () => {
+		const responsive = {
+			id: 7,
+			properties: { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64 },
+		};
+		const detail = buildApplyEventDetail(responsive, 'qft');
+		expect(detail.properties.fontSize).toBe('responsive');
+		expect(detail.properties.fontSizeMin).toBe(16);
+		expect(detail.properties.fontSizePreferred).toBe(24);
+		expect(detail.properties.fontSizeMax).toBe(64);
 	});
 
 	test('maps inspector source through unchanged (inspector applies block-level)', () => {
@@ -162,7 +249,7 @@ describe('buildApplyEventDetail', () => {
 		expect(buildApplyEventDetail(style, 'qft').source).toBe('qft');
 	});
 
-	test('builds a detach payload when style is null', () => {
+	test('builds a detach payload without normalization (re-applies current state as-is)', () => {
 		expect(buildApplyEventDetail(null, 'qft', { fontId: 12 })).toEqual({
 			properties: { fontId: 12 },
 			paragraphStyleId: 0,

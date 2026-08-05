@@ -114,9 +114,51 @@
 	}
 
 	/**
+	 * Normalize a stored style's properties for the apply event.
+	 *
+	 * Core's typost-apply-block-properties handlers only update properties
+	 * that are present in the payload, so a style that omits a key (no
+	 * features, default weight, …) would leave the editor's current value
+	 * in place and the applied result would be a merge instead of the
+	 * style. Filling explicit defaults for every style-owned key makes
+	 * application deterministic: the text ends up looking like the style.
+	 *
+	 * Deliberately NOT normalized (never introduced when absent):
+	 * - fontStyle — styles cannot express italic; resetting it would strip
+	 *   a user's italic on every apply.
+	 * - fontSizeMin/Preferred/Max — only meaningful with the style's own
+	 *   fontSize mode; defaults would clobber the block's tuned responsive
+	 *   values while rendering identically.
+	 * - Extension-owned keys (fitMaxSize, layeredConfigId, animationConfigId).
+	 */
+	function normalizeApplyProperties(properties) {
+		var normalized = {
+			fontId: 0,
+			fontWeight: '400',
+			fontSize: 'inherit',
+			letterSpacing: 0,
+			lineHeight: 0,
+			features: [],
+			fontVariationSettings: '',
+		};
+		if (!properties) return normalized;
+		for (var key in properties) {
+			if (Object.prototype.hasOwnProperty.call(properties, key)) {
+				normalized[key] = properties[key];
+			}
+		}
+		return normalized;
+	}
+
+	/**
 	 * Build the detail payload for the typost-apply-block-properties
 	 * CustomEvent that applies (or detaches, when style is null) a
 	 * paragraph style in a given editor.
+	 *
+	 * Applying a style sends normalized properties (see
+	 * normalizeApplyProperties). Detaching sends the given properties
+	 * as-is — it intentionally re-applies the current editor state as
+	 * inline styling, so there is no stale state to reset.
 	 */
 	function buildApplyEventDetail(style, editorSource, detachProperties) {
 		var source = editorSource === 'inspector' ? 'inspector' : editorSource;
@@ -129,7 +171,7 @@
 			};
 		}
 		return {
-			properties: style.properties,
+			properties: normalizeApplyProperties(style.properties),
 			paragraphStyleId: style.id,
 			styleClass: 'typost-ps-' + style.id,
 			source: source,
@@ -140,6 +182,7 @@
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
 		buildPropertiesFromState: buildPropertiesFromState,
+		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 	};
 
