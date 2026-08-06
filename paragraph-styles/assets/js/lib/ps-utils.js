@@ -45,11 +45,17 @@
 		var styleFontSize = styleProps.fontSize || 'inherit';
 		if (stateFontSize !== styleFontSize) return true;
 
-		// Compare responsive font size values
-		if (stateFontSize === 'responsive') {
+		// Compare responsive/fit font size values (fit stores the same
+		// min/pref/max trio as its no-container-query fallback clamp)
+		if (stateFontSize === 'responsive' || stateFontSize === 'fit') {
 			if ((state.fontSizeMin || 16) !== (styleProps.fontSizeMin || 16)) return true;
 			if ((state.fontSizePreferred || 24) !== (styleProps.fontSizePreferred || 24)) return true;
 			if ((state.fontSizeMax || 32) !== (styleProps.fontSizeMax || 32)) return true;
+		}
+
+		// Compare fit max-size cap (0 = uncapped)
+		if (stateFontSize === 'fit') {
+			if ((state.fitMaxSize || 0) !== (styleProps.fitMaxSize || 0)) return true;
 		}
 
 		// Compare letterSpacing
@@ -86,6 +92,11 @@
 		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
+		}
+		// Fit mode: the max-size cap is part of the fit look. Always stored
+		// (0 = uncapped) so applying a fit style is deterministic.
+		if (state.fontSize === 'fit') {
+			properties.fitMaxSize = state.fitMaxSize || 0;
 		}
 		if (state.fontSizeMin) {
 			properties.fontSizeMin = state.fontSizeMin;
@@ -129,7 +140,10 @@
 	 * - fontSizeMin/Preferred/Max — only meaningful with the style's own
 	 *   fontSize mode; defaults would clobber the block's tuned responsive
 	 *   values while rendering identically.
-	 * - Extension-owned keys (fitMaxSize, layeredConfigId, animationConfigId).
+	 * - fitMaxSize — style-owned since fit became a first-class style
+	 *   property (fit styles always store it, so it rides in via properties);
+	 *   not defaulted when absent for the same reason as min/pref/max.
+	 * - Extension-owned keys (layeredConfigId, animationConfigId).
 	 */
 	function normalizeApplyProperties(properties) {
 		var normalized = {

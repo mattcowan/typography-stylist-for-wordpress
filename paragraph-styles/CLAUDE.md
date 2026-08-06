@@ -8,13 +8,13 @@ Self-contained module bundled into core in v2.3 (formerly the standalone `typogr
 
 ## Data model
 
-- `typost_paragraph_styles` — array of `{id, name, created, modified, properties}` in wp_options. `properties` mirrors editor state keys: `fontId` (numeric), `fontWeight`, `fontSize` (`'responsive'` or px value), `fontSizeMin/Preferred/Max`, `letterSpacing` (thousandths of em), `lineHeight`, `features[]`, `fontVariationSettings`.
+- `typost_paragraph_styles` — array of `{id, name, created, modified, properties}` in wp_options. `properties` mirrors editor state keys: `fontId` (numeric), `fontWeight`, `fontSize` (`'responsive'`, `'fit'`, or px value), `fontSizeMin/Preferred/Max`, `fitMaxSize` (fit styles only — always stored, 0 = uncapped), `letterSpacing` (thousandths of em), `lineHeight`, `features[]`, `fontVariationSettings`.
 - `typost_paragraph_styles_next_id` — sequential integer ID counter. Legacy timestamp IDs (`ps_1709312345_123`) are migrated on load; `legacyId` is kept so old CSS selectors keep matching.
 - `typost_paragraph_styles_cache` / `typost_paragraph_styles_css` — 12h transients (data / generated CSS), cleared on CRUD and `typost_cache_clear`. All cleaned up in core's `uninstall.php`.
 
 ## CSS rendering
 
-`generate_style_css()` emits a dual selector per style: `.typost-ps-{id}` (block-level `styleClass` attribute) and `.typost-styled[data-style-id="{id}"]` (inline spans), plus legacy-ID variants. Font family is `var(--font-{fontId})` so core's font detection/@font-face loading applies unchanged. Responsive sizes use `clamp()` with core's 320/1920 viewport constants. Output paths:
+`generate_style_css()` emits a dual selector per style: `.typost-ps-{id}` (block-level `styleClass` attribute) and `.typost-styled[data-style-id="{id}"]` (inline spans), plus legacy-ID variants. Font family is `var(--font-{fontId})` so core's font detection/@font-face loading applies unchanged. Responsive sizes use `clamp()` with core's 320/1920 viewport constants. Fit-to-width styles (`fontSize: 'fit'`) emit the **same fallback clamp** — on fit blocks the per-line `calc(...cqi)` sizes in content override it (the clamp restores the no-container-query fallback that save.js skips under `styleClass`); on inline spans fit degrades to the clamp by design. Applying a fit style block-level switches the target block into fit mode (it re-measures its own `fitLineSizes`; the stored `fitMaxSize` cap rides along). Output paths:
 
 - **Frontend:** `wp_head` priority 6 (right after core's font variables at 5) prints `<style id="typost-paragraph-styles-css">`.
 - **Editor:** `enqueue_block_assets` + `wp_add_inline_style()` on a dummy handle (`typost-paragraph-styles-inline`) — this reaches **iframed** editors (WP 6.3+) as well as non-iframed ones; guarded by `is_admin()` to avoid double output on the frontend. Verified against the checklist in `todo/editor-iframe-testing.md`.

@@ -47,6 +47,11 @@ msgstr ""
 msgid "Responsive (%1$s/%2$s/%3$spx)"
 msgstr ""
 
+#: includes/admin-tab.php:87
+#, php-format
+msgid "Fit to width (fallback %1$s–%2$spx)"
+msgstr ""
+
 #: includes/admin-tab.php:84
 #, php-format
 msgid "%spx"

@@ -634,7 +634,15 @@ export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDat
 		}
 
 		// Update the property
+		const previousValue = spanWithProperty.getAttribute(propertyDataAttr);
 		spanWithProperty.setAttribute(propertyDataAttr, newValue);
+
+		// A font CHANGE leaves any legacy family-name attribute stale
+		// (rendering keys off data-font-id since v1.1.6); same-font re-applies
+		// keep a still-accurate data-font
+		if (propertyDataAttr === 'data-font-id' && String(newValue) !== String(previousValue || '')) {
+			spanWithProperty.removeAttribute('data-font');
+		}
 
 		// Update style attribute
 		const styleObj = parseStyleString(spanWithProperty.getAttribute('style'));
@@ -745,6 +753,11 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			String(newAttributes['data-font-id']) !== String(parentAttrs['data-font-id'] || '')) {
 			delete mergedAttrs['data-font-variation-settings'];
 			delete mergedStyleObj['font-variation-settings'];
+			// The legacy family-name attribute would likewise go stale on the
+			// new-font segment (rendering keys off data-font-id since v1.1.6)
+			if (newAttributes['data-font'] === undefined) {
+				delete mergedAttrs['data-font'];
+			}
 		}
 		const mergedStyleString = buildStyleString(mergedStyleObj);
 
@@ -945,7 +958,8 @@ export function canCreateNestedSpan(element) {
  *   (e.g. '"salt" 2' — plain '"tag" 1' entries are added only for tags the
  *   raw value doesn't already cover);
  * - a font CHANGE (explicit data-font-id differing from the span's) removes
- *   font-variation-settings — axis values are font-specific.
+ *   font-variation-settings (axis values are font-specific) and any legacy
+ *   data-font family name (it would go stale; rendering keys off data-font-id).
  *
  * Mutates both the span and the passed attributes object (preservation writes
  * into it — callers construct fresh attribute literals per call).
@@ -1003,6 +1017,11 @@ export function mergeTypostSpanStyling(span, attributes, styleString) {
 
 	if (fontChanging) {
 		span.removeAttribute('data-font-variation-settings');
+		// The legacy family-name attribute goes stale on a font change — the
+		// QFT passes only data-font-id, so drop it unless explicitly re-set
+		if (!Object.prototype.hasOwnProperty.call(attributes, 'data-font')) {
+			span.removeAttribute('data-font');
+		}
 	}
 
 	// Style merge — also runs on feature-only merges so font-feature-settings

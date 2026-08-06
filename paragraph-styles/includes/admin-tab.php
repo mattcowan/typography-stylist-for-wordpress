@@ -79,6 +79,11 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 						$max  = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
 						/* translators: %1$s: min size, %2$s: preferred size, %3$s: max size */
 						$size_display = sprintf( __( 'Responsive (%1$s/%2$s/%3$spx)', 'typost-paragraph-styles' ), $min, $pref, $max );
+					} elseif ( $props['fontSize'] === 'fit' ) {
+						$min = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
+						$max = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
+						/* translators: %1$s: fallback min size, %2$s: fallback max size */
+						$size_display = sprintf( __( 'Fit to width (fallback %1$s–%2$spx)', 'typost-paragraph-styles' ), $min, $max );
 					} else {
 						/* translators: %s: font size in pixels */
 						$size_display = sprintf( __( '%spx', 'typost-paragraph-styles' ), $props['fontSize'] );

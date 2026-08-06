@@ -43,6 +43,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 
 ### Paragraph Styles (built in, v2.3+)
 - Save the current typography configuration (font, weight, size, spacing, OpenType features, variable font axes) as a named style — like paragraph styles in InDesign
+- Fit-to-width blocks save as styles too: fit mode, its maximum-size cap, and the fallback sizes are all captured; applying such a style switches the target block into fit mode (inline text renders the style's fluid fallback size instead)
 - Apply styles from a dropdown at the top of the inline editor, the Quick Feature Toggles, and the block sidebar
 - Styled text renders through a shared CSS class (`.typost-ps-{id}` / `data-style-id`), so "Update Style" restyles every use at once; "Detach Style" converts back to independent inline styling
 - Manage (rename/delete) styles from the Paragraph Styles tab in Settings → Typography Stylist

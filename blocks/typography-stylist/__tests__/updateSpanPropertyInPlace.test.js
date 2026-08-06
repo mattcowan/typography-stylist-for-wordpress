@@ -47,6 +47,52 @@ describe('Typography Stylist - updateSpanPropertyInPlace', () => {
 		expect(result.content).toContain('data-features="ss01"');
 	});
 
+	it('should remove a stale legacy data-font when the font changes', () => {
+		const html = '<span class="typost-styled" data-font="Old Family" data-font-id="4" style="font-family: var(--font-4)">Beautiful</span>';
+		const result = updateSpanPropertyInPlace(
+			html,
+			3,
+			'data-font-id',
+			'11',
+			'font-family',
+			'var(--font-11)'
+		);
+
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('data-font-id="11"');
+		expect(result.content).not.toContain('data-font="Old Family"');
+	});
+
+	it('should keep data-font on a same-font re-apply', () => {
+		const html = '<span class="typost-styled" data-font="Bookmania" data-font-id="4" style="font-family: var(--font-4)">Beautiful</span>';
+		const result = updateSpanPropertyInPlace(
+			html,
+			3,
+			'data-font-id',
+			'4',
+			'font-family',
+			'var(--font-4)'
+		);
+
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('data-font="Bookmania"');
+	});
+
+	it('should keep data-font when a non-font property is updated', () => {
+		const html = '<span class="typost-styled" data-font="Bookmania" data-letterspacing="100" style="letter-spacing: 0.1em">Beautiful</span>';
+		const result = updateSpanPropertyInPlace(
+			html,
+			3,
+			'data-letterspacing',
+			'150',
+			'letter-spacing',
+			'0.15em'
+		);
+
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('data-font="Bookmania"');
+	});
+
 	it('should return success: false when no span at cursor', () => {
 		const html = 'Plain text without any spans';
 		const cursorAt = 5;

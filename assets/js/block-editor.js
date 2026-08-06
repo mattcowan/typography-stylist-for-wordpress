@@ -1805,7 +1805,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
             if (pending.keys.has('fontSize')) {
                 if (fontSize !== 'inherit') {
-                    dataAttrs['data-fontsize'] = fontSize;
+                    // 'fit' (from a fit-mode paragraph style) has no inline
+                    // meaning — spans serialize its fallback clamp as responsive
+                    dataAttrs['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
                     dataAttrs['data-fontsize-min'] = String(fontSizeMin);
                     dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
                     dataAttrs['data-fontsize-max'] = String(fontSizeMax);
@@ -1990,9 +1992,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }
                 }
 
-                // Add font size
+                // Add font size. 'fit' (from a fit-mode paragraph style) has no
+                // inline meaning — spans serialize its fallback clamp as responsive
                 if (fontSize !== 'inherit') {
-                    attributes['data-fontsize'] = fontSize;
+                    attributes['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
                     attributes['data-fontsize-min'] = fontSizeMin.toString();
                     attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
                     attributes['data-fontsize-max'] = fontSizeMax.toString();
@@ -2741,10 +2744,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         value={fontSize}
                                         options={[
                                             { label: __('Inherit', 'typography-stylist'), value: 'inherit' },
-                                            { label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' }
+                                            { label: __('Responsive (Fluid)', 'typography-stylist'), value: 'responsive' },
+                                            // Fit to Width only exists on Typography Stylist blocks;
+                                            // the value can still appear here via a fit-mode paragraph
+                                            // style. Shown disabled (and only while active) so the
+                                            // dropdown reflects the truth instead of a wrong option.
+                                            ...(fontSize === 'fit' ? [{ label: __('Fit to Width (blocks only)', 'typography-stylist'), value: 'fit', disabled: true }] : [])
                                         ]}
                                         onChange={this.setFontSize}
-                                        help={fontSize === 'responsive' ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist') : undefined}
+                                        help={fontSize === 'responsive'
+                                            ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist')
+                                            : (fontSize === 'fit'
+                                                ? __('This paragraph style fits text to the block width — inline text renders the style’s fluid fallback size instead.', 'typography-stylist')
+                                                : undefined)}
                                     />
 
                                     {fontSize === 'responsive' && (

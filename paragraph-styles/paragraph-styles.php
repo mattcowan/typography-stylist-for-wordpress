@@ -266,8 +266,13 @@ final class Typost_Paragraph_Styles {
 			$css_rules[] = 'font-size: ' . intval( $props['fontSize'] ) . 'px';
 		}
 
-		// Font size (responsive clamp)
-		if ( isset( $props['fontSize'] ) && $props['fontSize'] === 'responsive'
+		// Font size (responsive clamp). Fit-to-width styles emit the same
+		// clamp: it mirrors the fallback save.js writes for non-styleClass fit
+		// blocks — per-line calc(...cqi) sizes on span.typost-line override it
+		// in container-query-capable browsers, others get fluid sizing instead
+		// of inheriting the theme size. For inline spans rendered by the
+		// [data-style-id] selector, fit degrades to this clamp by design.
+		if ( isset( $props['fontSize'] ) && in_array( $props['fontSize'], array( 'responsive', 'fit' ), true )
 			&& isset( $props['fontSizeMin'], $props['fontSizePreferred'], $props['fontSizeMax'] ) ) {
 			$min  = intval( $props['fontSizeMin'] );
 			$pref = intval( $props['fontSizePreferred'] );
@@ -716,6 +721,10 @@ final class Typost_Paragraph_Styles {
 
 		if ( isset( $raw['fontSizeMax'] ) ) {
 			$clean['fontSizeMax'] = absint( $raw['fontSizeMax'] );
+		}
+
+		if ( isset( $raw['fitMaxSize'] ) ) {
+			$clean['fitMaxSize'] = absint( $raw['fitMaxSize'] );
 		}
 
 		if ( isset( $raw['letterSpacing'] ) ) {

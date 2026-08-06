@@ -1,6 +1,23 @@
 # Gap: Paragraph styles saved from a Fit-to-Width block (`fontSize: 'fit'`)
 
-Status: **open — needs a design decision.** Found 2026-08-05 while triaging
+Status: **RESOLVED 2026-08-06 — Option B implemented** (fit is a first-class
+style property). Decisions made with Matt: styles saved from fit blocks also
+capture `fitMaxSize` (always stored, 0 = uncapped, so applies are
+deterministic); the inline editor keeps `'fit'` in state but shows a disabled
+"Fit to Width (blocks only)" dropdown option with explanatory help text, and
+serializes span `data-fontsize` as `'responsive'` (explicit degrade — the
+rendered value was already the fallback clamp). `generate_style_css()` now
+emits the fallback clamp for `'fit'` (restoring the no-container-query
+fallback that save.js skips under styleClass), the admin tab prints
+"Fit to width (fallback X–Ypx)" instead of "fitpx", and `isStyleModified`
+compares min/pref/max + fitMaxSize in fit mode. Jest coverage in
+`paragraph-styles/__tests__/ps-utils.test.js`.
+
+Original analysis below, kept for the record.
+
+---
+
+Found 2026-08-05 while triaging
 PR review on the paragraph-styles bundling (feature/#164). Not a regression:
 the standalone extension had the same behavior (masked by its broken apply
 event). Nothing here blocks the #164 PR.

@@ -89,6 +89,33 @@ describe('isStyleModified', () => {
 		expect(isStyleModified(Object.assign({}, responsive, { fontSizeMax: 64 }), props)).toBe(true);
 	});
 
+	test('compares fallback sizes and fitMaxSize in fit mode', () => {
+		const fit = {
+			fontId: 12, fontWeight: '700', features: ['liga', 'ss01'],
+			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 32,
+			fitMaxSize: 120,
+		};
+		const props = Object.assign({}, baseProps, {
+			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 32,
+			fitMaxSize: 120,
+		});
+		expect(isStyleModified(fit, props)).toBe(false);
+		expect(isStyleModified(Object.assign({}, fit, { fontSizeMax: 64 }), props)).toBe(true);
+		expect(isStyleModified(Object.assign({}, fit, { fitMaxSize: 200 }), props)).toBe(true);
+		// 0 and absent both mean uncapped
+		expect(isStyleModified(
+			Object.assign({}, fit, { fitMaxSize: 0 }),
+			Object.assign({}, props, { fitMaxSize: undefined })
+		)).toBe(false);
+	});
+
+	test('ignores fitMaxSize outside fit mode', () => {
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fitMaxSize: 90 },
+			baseProps
+		)).toBe(false);
+	});
+
 	test('detects letterSpacing, lineHeight and fontVariationSettings changes', () => {
 		expect(isStyleModified({ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], letterSpacing: 50 }, baseProps)).toBe(true);
 		expect(isStyleModified({ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], lineHeight: 1.4 }, baseProps)).toBe(true);
@@ -128,6 +155,29 @@ describe('buildPropertiesFromState', () => {
 		})).toEqual({
 			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 		});
+	});
+
+	test('keeps fit mode with its fallback sizes and fitMaxSize cap', () => {
+		expect(buildPropertiesFromState({
+			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fitMaxSize: 120,
+		})).toEqual({
+			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fitMaxSize: 120,
+		});
+	});
+
+	test('stores fitMaxSize as 0 (uncapped) when unset in fit mode', () => {
+		expect(buildPropertiesFromState({ fontSize: 'fit' })).toEqual({
+			fontSize: 'fit', fitMaxSize: 0,
+		});
+	});
+
+	test('does not store fitMaxSize outside fit mode', () => {
+		expect(buildPropertiesFromState({
+			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fitMaxSize: 120,
+		})).not.toHaveProperty('fitMaxSize');
 	});
 
 	test('falls back to legacy selected* state keys', () => {

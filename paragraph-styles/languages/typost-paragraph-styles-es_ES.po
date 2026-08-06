@@ -50,6 +50,11 @@ msgstr "Predeterminado"
 msgid "Responsive (%1$s/%2$s/%3$spx)"
 msgstr "Adaptable (%1$s/%2$s/%3$spx)"
 
+#: includes/admin-tab.php:87
+#, php-format
+msgid "Fit to width (fallback %1$s–%2$spx)"
+msgstr "Ajustado al ancho (alternativa %1$s–%2$spx)"
+
 #: includes/admin-tab.php:84
 #, php-format
 msgid "%spx"
