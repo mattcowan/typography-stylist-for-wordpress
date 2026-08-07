@@ -130,9 +130,15 @@ release.
 
 ## 7. Readme / assets updates without a release
 
+Every stable release already ships readme.txt and `.wordpress-org/` assets —
+the release deploy rsyncs readme.txt into trunk + the tag and syncs
+`.wordpress-org/` → `assets/`. This section is for updating those **between**
+releases.
+
 Edit `readme.txt` or files in `.wordpress-org/` (banners, icons,
-screenshots) and push to `main` — the **WP.org Readme/Assets Sync** workflow
-updates wp.org directly, no version bump needed. Use it for:
+screenshots), push to `main`, then run the workflow by hand: **Actions →
+WP.org Readme/Assets Sync → Run workflow** (branch `main`). It updates
+wp.org directly, no version bump needed. Use it for:
 
 - Bumping `Tested up to:` after a new WordPress release (keeps the "Tested
   with your version of WordPress" badge accurate — do this at least each WP
@@ -163,6 +169,15 @@ test blueprint changes before pushing: paste the JSON after
 playground). After the first sync that includes it, a committer must flip
 the "Live Preview" toggle on the plugin page once to enable the button for
 visitors.
+
+The workflow is manual-only on purpose. It used to auto-run whenever
+readme.txt or `.wordpress-org/**` changed on `main`, but that trigger also
+fired during release prep: §4 step 3 pushes the bumped readme (new `Stable
+tag`, new changelog) to `main` *before* the GitHub Release is published, so
+wp.org's trunk readme briefly advertised a version whose SVN tag didn't
+exist yet. Since releases ship the readme and assets anyway, the only job
+left for this workflow is deliberate out-of-band updates — and those are a
+one-click manual run.
 
 The workflow runs the 10up asset-update action with `IGNORE_OTHER_FILES:
 true`, meaning it commits ONLY readme.txt and the assets — every other
