@@ -6,16 +6,18 @@
 # tag's readme.txt, and syncs .wordpress-org/ → SVN assets/ WITH deletion —
 # files removed from .wordpress-org/ disappear from wp.org too.
 #
-# Runs automatically when readme.txt or .wordpress-org/** change on main, or
-# manually via Actions → "WP.org Readme/Assets Sync" → Run workflow.
+# MANUAL-ONLY (Actions → "WP.org Readme/Assets Sync" → Run workflow), and
+# deliberately so. Releases don't need it: the release deploy workflow
+# already ships readme.txt (in trunk + the tag) and syncs .wordpress-org/ →
+# assets/ on every stable release. The old push trigger (readme.txt /
+# .wordpress-org/** on main) also fired during release prep — step 3 of the
+# release checklist pushes the bumped readme to main BEFORE the release is
+# published, so wp.org's trunk readme advertised a Stable tag that didn't
+# exist in SVN yet. Manual dispatch keeps out-of-band updates one click away
+# without that hazard.
 name: WP.org Readme/Assets Sync
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'readme.txt'
-      - '.wordpress-org/**'
   workflow_dispatch:
 
 jobs:

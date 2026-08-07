@@ -772,6 +772,14 @@ msgstr "Les fonctionnalités OpenType sont des capacités typographiques avancé
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr "Le mode responsive utilise CSS clamp() pour un dimensionnement fluide entre les écrans."
 
+#: assets/js/block-editor.js
+msgid "Fit to Width (blocks only)"
+msgstr "Ajuster à la largeur (blocs uniquement)"
+
+#: assets/js/block-editor.js
+msgid "This paragraph style fits text to the block width — inline text renders the style’s fluid fallback size instead."
+msgstr "Ce style de paragraphe ajuste le texte à la largeur du bloc — le texte en ligne utilise à la place la taille fluide de repli du style."
+
 #: includes/admin-page.php:243
 msgid "Custom Preview Text:"
 msgstr "Texte d'Aperçu Personnalisé :"

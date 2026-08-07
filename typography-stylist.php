@@ -6230,6 +6230,14 @@ function typost_init() {
         Typost_Variable_Fonts::get_instance();
     }
 
+    // Load the Paragraph Styles module (integrated into core in v2.3).
+    // Guarded so a still-active standalone copy of the former extension wins
+    // gracefully instead of triggering a fatal class redeclare.
+    if ( ! class_exists( 'Typost_Paragraph_Styles' ) ) {
+        require_once TYPOST_PLUGIN_DIR . 'paragraph-styles/paragraph-styles.php';
+        Typost_Paragraph_Styles::get_instance();
+    }
+
     return $instance;
 }
 

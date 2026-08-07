@@ -56,7 +56,8 @@ if (missingVendor.length > 0) {
 // main file — a ZIP without one of these fatals on activation.
 const requiredModuleFiles = [
   'glyphs-panel/glyphs-panel.php',
-  'variable-fonts/variable-fonts.php'
+  'variable-fonts/variable-fonts.php',
+  'paragraph-styles/paragraph-styles.php'
 ];
 const missingModules = requiredModuleFiles.filter(
   rel => !fs.existsSync(path.join(rootDir, rel))

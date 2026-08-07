@@ -1,0 +1,161 @@
+# Translation of Typography Stylist - Paragraph Styles module (French).
+# Copyright (C) 2026 Matt Cowan
+# This file is distributed under the GPL-2.0-or-later license.
+msgid ""
+msgstr ""
+"Project-Id-Version: Typography Stylist - Paragraph Styles 1.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-08-04T22:08:49+00:00\n"
+"PO-Revision-Date: 2026-08-04 22:08+0000\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: typost-paragraph-styles\n"
+
+#: paragraph-styles.php:379
+msgid "Paragraph Styles"
+msgstr "Styles de paragraphe"
+
+#: paragraph-styles.php:473
+msgid "Style name is required."
+msgstr "Le nom du style est requis."
+
+#: paragraph-styles.php:506
+#: paragraph-styles.php:541
+msgid "Style not found."
+msgstr "Style introuvable."
+
+#: paragraph-styles.php:513
+msgid "Style name cannot be empty."
+msgstr "Le nom du style ne peut pas être vide."
+
+#: includes/admin-tab.php:50
+msgid "Manage your saved paragraph styles. These appear in the Typography Stylist editor for quick application to text."
+msgstr "Gérez vos styles de paragraphe enregistrés. Ils apparaissent dans l'éditeur Typography Stylist pour une application rapide au texte."
+
+#: includes/admin-tab.php:56
+#: assets/js/admin.js
+msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
+msgstr "Aucun style de paragraphe enregistré pour le moment. Créez des styles depuis l'éditeur Typography Stylist lors de la modification d'un article."
+
+#: includes/admin-tab.php:66
+#: assets/js/editor.js
+msgid "Default"
+msgstr "Par défaut"
+
+#: includes/admin-tab.php:81
+#, php-format
+msgid "Responsive (%1$s/%2$s/%3$spx)"
+msgstr "Adaptatif (%1$s/%2$s/%3$spx)"
+
+#: includes/admin-tab.php:87
+#, php-format
+msgid "Fit to width (fallback %1$s–%2$spx)"
+msgstr "Ajusté à la largeur (repli %1$s–%2$spx)"
+
+#: includes/admin-tab.php:84
+#, php-format
+msgid "%spx"
+msgstr "%spx"
+
+#: includes/admin-tab.php:93
+#, php-format
+msgid "%sem"
+msgstr "%sem"
+
+#: includes/admin-tab.php:108
+msgid "Edit"
+msgstr "Modifier"
+
+#: includes/admin-tab.php:111
+msgid "Delete"
+msgstr "Supprimer"
+
+#: includes/admin-tab.php:117
+msgid "Font:"
+msgstr "Police :"
+
+#: includes/admin-tab.php:122
+msgid "Size:"
+msgstr "Taille :"
+
+#: includes/admin-tab.php:128
+msgid "Features:"
+msgstr "Fonctionnalités :"
+
+#: includes/admin-tab.php:135
+msgid "Spacing:"
+msgstr "Espacement :"
+
+#: includes/admin-tab.php:142
+msgid "Line Height:"
+msgstr "Hauteur de ligne :"
+
+#: includes/admin-tab.php:152
+msgid "Name:"
+msgstr "Nom :"
+
+#: includes/admin-tab.php:157
+#: assets/js/editor.js
+msgid "Save"
+msgstr "Enregistrer"
+
+#: includes/admin-tab.php:160
+#: assets/js/editor.js
+msgid "Cancel"
+msgstr "Annuler"
+
+#: assets/js/editor.js
+msgid "— Select a style —"
+msgstr "— Sélectionner un style —"
+
+#: assets/js/editor.js
+msgid "(modified)"
+msgstr "(modifié)"
+
+#: assets/js/editor.js
+msgid "Paragraph Style"
+msgstr "Style de paragraphe"
+
+#: assets/js/editor.js
+msgid "Update Style"
+msgstr "Mettre à jour le style"
+
+#: assets/js/editor.js
+msgid "Save as New"
+msgstr "Enregistrer comme nouveau"
+
+#: assets/js/editor.js
+msgid "Detach Style"
+msgstr "Détacher le style"
+
+#: assets/js/editor.js
+msgid "New style name..."
+msgstr "Nom du nouveau style..."
+
+#: assets/js/editor.js
+msgid "Save Current Settings as Style"
+msgstr "Enregistrer les réglages actuels comme style"
+
+#: assets/js/editor.js
+msgid "Style name..."
+msgstr "Nom du style..."
+
+#: assets/js/editor.js
+msgid "Saving..."
+msgstr "Enregistrement..."
+
+#: assets/js/admin.js
+msgid "Failed to update style. Please try again."
+msgstr "Échec de la mise à jour du style. Veuillez réessayer."
+
+#: assets/js/admin.js
+msgid "Are you sure you want to delete \"%s\"? This cannot be undone."
+msgstr "Voulez-vous vraiment supprimer « %s » ? Cette action est irréversible."
+
+#: assets/js/admin.js
+msgid "Failed to delete style. Please try again."
+msgstr "Échec de la suppression du style. Veuillez réessayer."
+

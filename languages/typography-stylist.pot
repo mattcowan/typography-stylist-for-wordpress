@@ -773,6 +773,14 @@ msgstr ""
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr ""
 
+#: assets/js/block-editor.js
+msgid "Fit to Width (blocks only)"
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "This paragraph style fits text to the block width — inline text renders the style’s fluid fallback size instead."
+msgstr ""
+
 #: includes/admin-page.php:164
 msgid "Ligatures"
 msgstr ""

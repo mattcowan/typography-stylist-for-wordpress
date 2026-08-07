@@ -537,7 +537,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes
         },
         source: 'inline', // or 'qft' or 'inspector'
-        // Optional: class-based styling (used by paragraph styles extension)
+        // Optional: class-based styling (used by the bundled Paragraph Styles module)
         paragraphStyleId: 3,       // Integer style ID
         styleClass: 'typost-ps-3', // CSS class for Typography Stylist blocks
         // Optional (inline source only, since 2.1.0): animation config ID —

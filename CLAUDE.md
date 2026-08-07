@@ -167,11 +167,15 @@ The Glyphs Panel (an Illustrator-style full-font glyph browser) was originally a
 - **No plugin header:** `glyphs-panel/glyphs-panel.php` is the former standalone main file with the `Plugin Name:` header and `plugins_loaded` bootstrap stripped. `TYPOST_GP_PLUGIN_DIR/URL` resolve to the subdirectory automatically via `plugin_dir_path/url(__FILE__)`.
 - **Integration points (unchanged from the extension):** `typost_editor_data` (injects `glyphsPanel` data), `typost_editor_assets` (enqueues the lib chain + modal + `editor.js`), `typost_admin_tabs` / `typost_admin_tab_content_glyphs` / `typost_admin_assets` (the Glyphs admin tab). The editor button is injected at the `typost_inline_before_features` and `typost_qft_before_features` JS hook points; insertion uses the `typost-insert-content` CustomEvent (handlers already live in core `assets/js/block-editor.js` and `blocks/typography-stylist/edit.js`).
 - **Separate concerns kept separate:** its JS is hand-written ES5 (no build step), its Jest tests live in `glyphs-panel/__tests__/` (picked up automatically by core's `npm test`), and it keeps its own `typost-glyphs-panel` text domain + bundled `glyphs-panel/languages/`. EULA constraint preserved: metadata-only parsing, IndexedDB-only caching, text-rendered glyph cells. See `glyphs-panel/CLAUDE.md` for module internals.
-- Other extensions (Paragraph Styles, Layered Fonts) **remain separate plugins**.
+- Other extensions (e.g. Layered Fonts, Animations) **remain separate plugins**.
 
 ### Variable Fonts Module (v2.1+)
 
 Variable font support was added in v2.1 as a self-contained module, structured like the Glyphs Panel so it consumes only core's public extension API. It lives in [variable-fonts/](variable-fonts/) — loaded from `typost_init()` behind a `! class_exists('Typost_Variable_Fonts')` guard (the `final class` must never fatally redeclare), constants guarded by `! defined('TYPOST_VF_VERSION')`, own `typost-variable-fonts` text domain + `variable-fonts/languages/`, and Jest tests in `variable-fonts/__tests__/` (auto-collected by core `npm test`). See `variable-fonts/CLAUDE.md` for module internals.
+
+### Paragraph Styles Module (v2.3+)
+
+The Paragraph Styles panel (save/load named typography presets, applied via dropdown in both editors and rendered by CSS class on the frontend) was originally the standalone `typography-stylist-paragraph-styles` extension and is **bundled into core** in v2.3, following the same module pattern. It lives in [paragraph-styles/](paragraph-styles/) — loaded from `typost_init()` behind a `! class_exists('Typost_Paragraph_Styles')` guard, constants guarded by `! defined('TYPOST_PS_VERSION')`, own `typost-paragraph-styles` text domain + `paragraph-styles/languages/`, pure JS logic in `assets/js/lib/ps-utils.js` with Jest tests in `paragraph-styles/__tests__/`. Two fixes landed with the bundling: the panel now dispatches core's `typost-apply-block-properties` event (the standalone still used the pre-2.0 `typost-apply-paragraph-style` name, which nothing listens to), and the admin tab resolves font names through the public API (`get_custom_fonts()` etc. + adopted WP Library fonts) instead of wrong-case option reads. Fit-to-width blocks can be saved as styles: `fontSize: 'fit'` is a first-class style property (stored with its `fitMaxSize` cap and min/pref/max fallback clamp; applying such a style block-level switches the target into fit mode, inline spans degrade to the fallback clamp via the style's CSS class). Options: `typost_paragraph_styles`, `typost_paragraph_styles_next_id`. See `paragraph-styles/CLAUDE.md` for module internals.
 
 ### WP Font Library Integration (v2.1+, WP 6.5+)
 
@@ -213,6 +217,10 @@ Variable font support was added in v2.1 as a self-contained module, structured l
 **Variable Fonts (bundled module):**
 - `GET|POST|DELETE /wp-json/typost/v1/variable-font-axes[/{id}]` - Axis definitions per font string ID (requires `manage_options` — site-wide configuration)
 - `POST /wp-json/typost/v1/variable-font-axes/{id}/redetect` - Re-read axes from an uploaded font's own files and return them **without** writing the option; the admin form repopulates its rows for review and the user still saves (requires `manage_options`). Uploaded kit fonts only — Adobe/manual fonts have no server-side files and fall back to the browser parser.
+
+**Paragraph Styles (bundled module, v2.3+):**
+- `GET|POST /wp-json/typost/v1/paragraph-styles` - List / create paragraph styles (requires `edit_posts` — styles are author-facing content)
+- `PATCH|DELETE /wp-json/typost/v1/paragraph-styles/{id}` - Rename/update properties / delete (requires `edit_posts`)
 
 All endpoints include:
 - Rate limiting (50 requests/minute per user)
@@ -411,6 +419,7 @@ npm test -- --coverage    # See test coverage report
   - `typost_manual_fonts` - Custom font definitions
   - `typost_adopted_wp_fonts` - WP Font Library fonts adopted from the editor picker (v2.1+)
   - `typost_font_replacements` - Replacement mappings + the shared numeric font ID sequence (`next_id`)
+  - `typost_paragraph_styles` / `typost_paragraph_styles_next_id` - Paragraph style presets + their ID counter (v2.3+, bundled module)
 - Uploaded font files stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 - Frontend has zero JavaScript - purely CSS-based rendering
 - Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)

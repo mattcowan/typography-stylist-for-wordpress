@@ -41,6 +41,7 @@ Complex inline typography usually comes at a cost: the span elements needed to s
 
 * **Glyphs Panel**: Browse a font's complete character set Illustrator-style — search, filter by feature or stylistic set, and insert any glyph or alternate straight into your content.
 * **Variable Font Axis Controls**: Automatic axis detection plus per-axis sliders in the editor, producing clean font-variation-settings CSS.
+* **Paragraph Styles**: Save your current typography settings (font, weight, size, spacing, features, variable font axes) as a named style, then apply it anywhere from a dropdown — like paragraph styles in InDesign. Styled text renders through a shared CSS class, so updating a style updates every place it is used.
 * **WordPress Font Library Integration** (WP 6.5+): Register uploaded fonts into the Font Library with one click, and use Library fonts from the editor's font picker.
 * **Custom Typography Stylist Block**: Create complex typography with maximum accessibility using the dedicated block. Screen readers can "stumble" over complex inline formatting required to display specific ligatures and alternates. This block preserves the document outline while providing styled text for visual users.
 * **Inline Text Selection**: Highlight any text within richtext blocks like headings, and apply typography features instantly with live preview. If your selection breaks a word boundary, a non-blocking notice explains the accessibility impact and offers a one-click conversion to the Custom Typography Stylist Block. The notice can be disabled in Settings → Accessibility.
@@ -302,6 +303,10 @@ Check your font's documentation, or use the plugin to experiment. Features that 
 = Do variable fonts work? =
 
 Yes. When you upload a variable font, its axes (weight, width, slant, optical size, or any custom axis) are detected automatically from the font file. Each axis gets a slider in the editor — in both the inline editor and the Typography Stylist block — and the output is standard `font-variation-settings` CSS. Axis detection reads TTF/OTF files at upload time; for WOFF2-only kits, use the "Detect Axes from Font File" button in the font's settings (which handles WOFF2 in the browser) or define axes manually.
+
+= How do paragraph styles work? =
+
+Configure your typography (font, weight, size, spacing, OpenType features, variable font axes) in either editor, then click "Save Current Settings as Style" at the top of the panel and give it a name. The style then appears in a dropdown in the inline editor, the Quick Feature Toggles, and the block sidebar — pick it to apply everything at once. Styled text references a shared CSS class (`.typost-ps-1`, `.typost-ps-2`, …), so choosing "Update Style" later restyles every heading that uses it. Styles can be renamed and deleted from the Paragraph Styles tab in Settings → Typography Stylist, and "Detach Style" converts a selection back to independent inline styling.
 
 = What does registering a font in the WordPress Font Library do? =
 

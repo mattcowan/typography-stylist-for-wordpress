@@ -122,6 +122,55 @@ describe('mergeTypostSpanStyling — bug #3: variation settings vs font changes'
 	});
 });
 
+describe('mergeTypostSpanStyling — stale legacy data-font on font changes', () => {
+	const legacyAttrs = {
+		'data-font': 'Old Family',
+		'data-font-id': '4',
+		style: 'font-family: var(--font-4)',
+	};
+
+	test('font CHANGE removes the legacy family-name attribute', () => {
+		const span = makeSpan(legacyAttrs);
+		mergeTypostSpanStyling(span, { 'data-font-id': '11' }, 'font-family: var(--font-11)');
+		expect(span.getAttribute('data-font')).toBeNull();
+		expect(span.getAttribute('data-font-id')).toBe('11');
+	});
+
+	test('SAME font re-apply keeps a still-accurate data-font', () => {
+		const span = makeSpan(legacyAttrs);
+		mergeTypostSpanStyling(span, { 'data-font-id': '4' }, 'font-family: var(--font-4)');
+		expect(span.getAttribute('data-font')).toBe('Old Family');
+	});
+
+	test('non-font applies keep data-font (Glyphs Panel cross-font spans)', () => {
+		const span = makeSpan({ 'data-font': '"Inter", sans-serif', style: 'font-family: "Inter", sans-serif' });
+		mergeTypostSpanStyling(span, { 'data-lineheight': '1.5' }, 'line-height: 1.5');
+		expect(span.getAttribute('data-font')).toBe('"Inter", sans-serif');
+	});
+
+	test('an explicitly passed data-font survives a font change', () => {
+		const span = makeSpan(legacyAttrs);
+		mergeTypostSpanStyling(span, { 'data-font': 'New Family', 'data-font-id': '11' }, 'font-family: var(--font-11)');
+		expect(span.getAttribute('data-font')).toBe('New Family');
+	});
+});
+
+describe('splitSpanAndApply — stale data-font in the split path', () => {
+	test('font change strips data-font from the new-font segment only', () => {
+		const content = '<span class="typost-styled" data-font="Old Family" data-font-id="4" style="font-family: var(--font-4)">Elegant</span>';
+		const result = splitSpanAndApply(content, 2, 4, 'data-font-id',
+			{ 'data-font-id': '11' }, 'font-family: var(--font-11)');
+		expect(result.success).toBe(true);
+		const div = document.createElement('div');
+		div.innerHTML = result.content;
+		const spans = div.querySelectorAll('span.typost-styled');
+		expect(spans[0].getAttribute('data-font')).toBe('Old Family'); // before segment keeps old font
+		expect(spans[1].getAttribute('data-font-id')).toBe('11');
+		expect(spans[1].getAttribute('data-font')).toBeNull();
+		expect(spans[2].getAttribute('data-font')).toBe('Old Family'); // after segment keeps old font
+	});
+});
+
 describe('splitSpanAndApply — bug #3 in the split path', () => {
 	test('font change on a sub-range drops variation settings only in the new-font segment', () => {
 		const content = '<span class="typost-styled" data-font-id="4" data-font-variation-settings=\'"wght" 628\' style=\'font-family: var(--font-4); font-variation-settings: "wght" 628\'>Elegant</span>';

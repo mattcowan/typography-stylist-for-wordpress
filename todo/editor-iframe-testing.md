@@ -98,7 +98,7 @@ When testing paragraph styles CSS, verify in both environments:
 
 ## Related Files
 
-- `typography-stylist-paragraph-styles.php` — `enqueue_editor_style_css()` method
+- `paragraph-styles/paragraph-styles.php` — `enqueue_editor_style_css()` method (bundled module as of v2.3; formerly the standalone typography-stylist-paragraph-styles extension)
 - `typography-stylist.php` — `enqueue_block_assets()` hook for font CSS variables
 - `assets/js/block-editor.js` — Inline editor spans with `data-style-id`
 - `blocks/typography-stylist/edit.js` — Block editor preview (uses inline styles, not CSS class)
