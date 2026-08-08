@@ -164,420 +164,99 @@ function typost_render_feature_visibility_checkboxes($font, $instance) {
     <?php
 }
 
-function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {
+/**
+ * Render the <option> markup for the Font Features tab preview font selector.
+ *
+ * Used by the admin template and by the admin refresh REST endpoint so the
+ * selector can be repopulated without a page reload.
+ *
+ * @param Typost $instance     Plugin instance.
+ * @param array  $custom_fonts Uploaded font kits.
+ * @param array  $adobe_fonts  Adobe Fonts entries.
+ * @param array  $manual_fonts Manual font definitions.
+ */
+function typost_render_preview_font_options($instance, $custom_fonts, $adobe_fonts, $manual_fonts) {
     ?>
-<div class="wrap typost-admin-wrap" data-color-scheme="<?php echo esc_attr(get_option('typost_admin_color_scheme', 'alice-blue')); ?>">
-    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+    <option value=""><?php esc_html_e('Default (system font)', 'typography-stylist'); ?></option>
+    <?php
+    // MyFonts uploaded fonts
+    if (!empty($custom_fonts)) {
+        echo '<optgroup label="' . esc_attr__('MyFonts Uploads', 'typography-stylist') . '">';
+        foreach ($custom_fonts as $font) {
+            if (!empty($font['font_faces'])) {
+                $families = array_unique(array_map(function($face) {
+                    return $face['family'];
+                }, $font['font_faces']));
 
-    <!-- Skip link for accessibility -->
-    <a href="#typost-main-content" class="screen-reader-text skip-link">
-        <?php esc_html_e('Skip to main content', 'typography-stylist'); ?>
-    </a>
-
-    <div class="typost-admin-container" id="typost-main-content" tabindex="-1">
-        <?php
-        /**
-         * Filter the admin settings tabs.
-         *
-         * Allows extension plugins to register new tabs in the admin interface.
-         * Each tab needs: 'id' (string), 'label' (string), 'priority' (int).
-         * Built-in tabs use priorities 10-100. Extensions should use gaps between.
-         *
-         * @since 2.0.0
-         * @param array $tabs Array of tab definitions.
-         */
-        $built_in_tab_ids = array('fonts', 'presets', 'options', 'accessibility', 'replacements', 'help');
-        $built_in_tabs = array(
-            array('id' => 'fonts',         'label' => __('Custom Fonts', 'typography-stylist'),     'priority' => 10),
-            array('id' => 'presets',       'label' => __('Font Features', 'typography-stylist'),     'priority' => 20),
-            array('id' => 'options',       'label' => __('Options', 'typography-stylist'),            'priority' => 30),
-            array('id' => 'accessibility', 'label' => __('Accessibility', 'typography-stylist'),     'priority' => 40),
-            array('id' => 'replacements',  'label' => __('Replacement Fonts', 'typography-stylist'), 'priority' => 50),
-            array('id' => 'help',          'label' => __('Help', 'typography-stylist'),               'priority' => 100),
-        );
-        $tabs = apply_filters('typost_admin_tabs', $built_in_tabs);
-
-        // Validate and sanitize filtered tabs
-        if ( ! is_array( $tabs ) || empty( $tabs ) ) {
-            $tabs = $built_in_tabs;
-        }
-        $tabs = array_filter( $tabs, function( $tab ) {
-            return is_array( $tab ) && ! empty( $tab['id'] ) && ! empty( $tab['label'] );
-        } );
-        $tabs = array_values( $tabs );
-        if ( empty( $tabs ) ) {
-            $tabs = $built_in_tabs;
-        }
-
-        // Sanitize extension tab IDs and default missing priority
-        foreach ( $tabs as &$tab ) {
-            if ( ! in_array( $tab['id'], $built_in_tab_ids, true ) ) {
-                $tab['id'] = sanitize_key( $tab['id'] );
-            }
-            $tab['priority'] = isset( $tab['priority'] ) && is_numeric( $tab['priority'] ) ? absint( $tab['priority'] ) : 50;
-        }
-        unset( $tab );
-
-        usort($tabs, function($a, $b) { return $a['priority'] - $b['priority']; });
-
-        // Determine which tab should be active (URL parameter or first tab)
-        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : $tabs[0]['id']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab display only, no data modification
-        $tab_ids = array_column($tabs, 'id');
-        if (!in_array($active_tab, $tab_ids, true)) {
-            $active_tab = $tabs[0]['id'];
-        }
-        ?>
-        <nav class="typost-admin-tabs nav-tab-wrapper" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
-            <?php foreach ($tabs as $tab): ?>
-            <button
-                type="button"
-                class="nav-tab <?php echo $tab['id'] === $active_tab ? 'nav-tab-active' : ''; ?>"
-                data-tab="<?php echo esc_attr($tab['id']); ?>"
-                role="tab"
-                aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
-                tabindex="<?php echo $tab['id'] === $active_tab ? '0' : '-1'; ?>"
-                aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
-                id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
-                <?php echo esc_html($tab['label']); ?>
-            </button>
-            <?php endforeach; ?>
-        </nav>
-
-        <!-- Presets Tab -->
-        <div
-            class="typost-tab-content <?php echo 'presets' === $active_tab ? 'active' : ''; ?>"
-            id="typost-tab-presets"
-            role="tabpanel"
-            aria-labelledby="typost-tab-button-presets"
-            <?php echo 'presets' !== $active_tab ? 'hidden="hidden"' : ''; ?>
-            tabindex="0">
-            <h2><?php esc_html_e('Font Features', 'typography-stylist'); ?></h2>
-
-            <details class="typost-tab-help">
-                <summary><?php esc_html_e('About Font Features', 'typography-stylist'); ?></summary>
-                <div class="typost-tab-help-content">
-                    <p><?php esc_html_e('OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more.', 'typography-stylist'); ?></p>
-                    <p><?php esc_html_e('Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features.', 'typography-stylist'); ?></p>
-                    <ul>
-                        <li><?php esc_html_e('Features are grouped by category (ligatures, stylistic sets, numerals, etc.)', 'typography-stylist'); ?></li>
-                        <li><?php esc_html_e('Use the card width slider to adjust preview size for easier comparison', 'typography-stylist'); ?></li>
-                        <li><?php esc_html_e('When a font is selected, you can enable or disable individual features for that font in the editor', 'typography-stylist'); ?></li>
-                    </ul>
-                </div>
-            </details>
-
-            <p><?php esc_html_e('Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography.', 'typography-stylist'); ?></p>
-
-            <div class="typost-preset-controls">
-                <?php if (!empty($custom_fonts) || !empty($adobe_fonts) || !empty($manual_fonts)): ?>
-                <div class="typost-preset-font-selector">
-                    <label for="typost-preview-font-select">
-                        <?php esc_html_e('Preview with Font:', 'typography-stylist'); ?>
-                    </label>
-                    <select id="typost-preview-font-select" class="typost-font-select">
-                        <option value=""><?php esc_html_e('Default (system font)', 'typography-stylist'); ?></option>
-                        <?php
-                        // MyFonts uploaded fonts
-                        if (!empty($custom_fonts)) {
-                            echo '<optgroup label="' . esc_attr__('MyFonts Uploads', 'typography-stylist') . '">';
-                            foreach ($custom_fonts as $font) {
-                                if (!empty($font['font_faces'])) {
-                                    $families = array_unique(array_map(function($face) {
-                                        return $face['family'];
-                                    }, $font['font_faces']));
-
-                                    $font_id = isset($font['font_id']) ? $font['font_id'] : '';
-                                    foreach ($families as $family) {
-                                        echo '<option value="' . esc_attr($family) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($family) . '</option>';
-                                    }
-                                }
-                            }
-                            echo '</optgroup>';
-                        }
-
-                        // Adobe Fonts
-                        if (!empty($adobe_fonts)) {
-                            echo '<optgroup label="' . esc_attr__('Adobe Fonts', 'typography-stylist') . '">';
-                            foreach ($adobe_fonts as $font) {
-                                $font_id = isset($font['font_id']) ? $font['font_id'] : '';
-                                // New structure: individual font entries with font_family (single string)
-                                if (!empty($font['font_family'])) {
-                                    echo '<option value="' . esc_attr($font['font_family']) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($font['font_family']) . '</option>';
-                                }
-                                // Legacy structure: font entries with font_families (array)
-                                elseif (!empty($font['font_families'])) {
-                                    foreach ($font['font_families'] as $family) {
-                                        echo '<option value="' . esc_attr($family) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($family) . '</option>';
-                                    }
-                                }
-                            }
-                            echo '</optgroup>';
-                        }
-
-                        // Manual fonts
-                        if (!empty($manual_fonts)) {
-                            echo '<optgroup label="' . esc_attr__('Custom Fonts', 'typography-stylist') . '">';
-                            foreach ($manual_fonts as $font) {
-                                if (!empty($font['font_family'])) {
-                                    $font_id = isset($font['font_id']) ? $font['font_id'] : '';
-                                    echo '<option value="' . esc_attr($font['font_family']) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($font['name']) . '</option>';
-                                }
-                            }
-                            echo '</optgroup>';
-                        }
-
-                        // WP Font Library fonts (read-only source, WP 6.5+).
-                        // Display variant: families the plugin registered are
-                        // already listed as uploaded fonts above.
-                        $wpl_preview = $instance->get_wp_font_library_fonts_for_display();
-                        if (!empty($wpl_preview)) {
-                            echo '<optgroup label="' . esc_attr__('WP Library', 'typography-stylist') . '">';
-                            foreach ($wpl_preview as $wpl) {
-                                echo '<option value="' . esc_attr($wpl['font_family']) . '" data-font-id="">' . esc_html($wpl['name']) . '</option>';
-                            }
-                            echo '</optgroup>';
-                        }
-                        ?>
-                    </select>
-                    <p class="description">
-                        <?php esc_html_e('Select a custom font to preview how features will look with that font.', 'typography-stylist'); ?>
-                    </p>
-                    <div id="typost-visibility-master-controls" class="typost-visibility-master-controls" style="display:none;">
-                        <button type="button" id="typost-enable-all-features" class="button button-secondary">
-                            <?php esc_html_e('Enable All Features', 'typography-stylist'); ?>
-                        </button>
-                        <button type="button" id="typost-disable-all-features" class="button button-secondary">
-                            <?php esc_html_e('Disable All Features', 'typography-stylist'); ?>
-                        </button>
-                        <span id="typost-visibility-save-indicator" class="typost-visibility-save-indicator" aria-live="polite"></span>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <div class="typost-preset-size-control">
-                    <label for="typost-preview-size-slider">
-                        <?php esc_html_e('Preview Size:', 'typography-stylist'); ?>
-                        <span id="typost-preview-size-value" class="typost-size-value">50px</span>
-                    </label>
-                    <input
-                        type="range"
-                        id="typost-preview-size-slider"
-                        class="typost-size-slider"
-                        min="12"
-                        max="96"
-                        value="50"
-                        step="1"
-                        aria-label="<?php esc_attr_e('Adjust preview text size', 'typography-stylist'); ?>"
-                        aria-valuemin="12"
-                        aria-valuemax="96"
-                        aria-valuenow="50"
-                        aria-valuetext="50 pixels" />
-                    <p class="description">
-                        <?php esc_html_e('Adjust the size of the preview text to better see typography features.', 'typography-stylist'); ?>
-                    </p>
-                </div>
-
-                <div class="typost-preset-custom-text-control">
-                    <label for="typost-preview-custom-text">
-                        <?php esc_html_e('Custom Preview Text:', 'typography-stylist'); ?>
-                    </label>
-                    <input
-                        type="text"
-                        id="typost-preview-custom-text"
-                        class="regular-text"
-                        placeholder="<?php esc_attr_e('Type your own text to preview features...', 'typography-stylist'); ?>"
-                        aria-label="<?php esc_attr_e('Enter custom text to preview features', 'typography-stylist'); ?>" />
-                    <button
-                        type="button"
-                        id="typost-preview-reset-text"
-                        class="button button-secondary"
-                        style="display: none;">
-                        <?php esc_html_e('Reset to Defaults', 'typography-stylist'); ?>
-                    </button>
-                    <p class="description">
-                        <?php esc_html_e('Type your own text to see how each feature affects it, or leave blank to use default samples.', 'typography-stylist'); ?>
-                    </p>
-                </div>
-
-                <div class="typost-preset-card-width-control">
-                    <label for="typost-card-width-slider">
-                        <?php esc_html_e('Card Width:', 'typography-stylist'); ?>
-                        <span id="typost-card-width-value" class="typost-size-value">480px</span>
-                    </label>
-                    <input
-                        type="range"
-                        id="typost-card-width-slider"
-                        class="typost-size-slider"
-                        min="280"
-                        max="800"
-                        value="480"
-                        step="20"
-                        aria-label="<?php esc_attr_e('Adjust feature card width', 'typography-stylist'); ?>"
-                        aria-valuemin="280"
-                        aria-valuemax="800"
-                        aria-valuenow="480"
-                        aria-valuetext="480 pixels" />
-                    <p class="description">
-                        <?php esc_html_e('Adjust the minimum width of feature preview cards.', 'typography-stylist'); ?>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Baseline Font Preview -->
-            <div class="typost-baseline-preview-section">
-                <h3><?php esc_html_e('Font Preview (No Features Applied)', 'typography-stylist'); ?></h3>
-                <p class="description">
-                    <?php esc_html_e('This shows how the selected font looks without any OpenType features applied.', 'typography-stylist'); ?>
-                </p>
-                <div class="typost-baseline-preview-container">
-                    <div class="typost-baseline-preview" id="typost-baseline-preview" data-default-text="The quick brown fox jumps over the lazy dog">
-                        The quick brown fox jumps over the lazy dog
-                    </div>
-                </div>
-            </div>
-
-            <?php
-            $available_features = $instance->get_available_features();
-            $grouped_features = array();
-
-            // Group features by category
-            foreach ($available_features as $feature) {
-                $category = isset($feature['category']) ? $feature['category'] : 'other';
-                if (!isset($grouped_features[$category])) {
-                    $grouped_features[$category] = array();
+                $font_id = isset($font['font_id']) ? $font['font_id'] : '';
+                foreach ($families as $family) {
+                    echo '<option value="' . esc_attr($family) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($family) . '</option>';
                 }
-                $grouped_features[$category][] = $feature;
             }
+        }
+        echo '</optgroup>';
+    }
 
-            $category_titles = array(
-                'ligatures' => esc_html__('Ligatures', 'typography-stylist'),
-                'stylistic-sets' => esc_html__('Stylistic Sets', 'typography-stylist'),
-                'alternates' => esc_html__('Swashes & Alternates', 'typography-stylist'),
-                'decorative' => esc_html__('Decorative', 'typography-stylist'),
-                'numerals' => esc_html__('Numerals & Figures', 'typography-stylist'),
-                'capitals' => esc_html__('Capitals & Case', 'typography-stylist'),
-                'positional' => esc_html__('Positional Forms', 'typography-stylist'),
-                'super-sub' => esc_html__('Superscript & Ordinals', 'typography-stylist'),
-                'other' => esc_html__('Other Features', 'typography-stylist')
-            );
-            ?>
-
-            <?php foreach ($grouped_features as $category => $features): ?>
-            <details <?php echo $category === 'ligatures' ? 'open' : ''; ?> class="typost-feature-category-section">
-                <summary class="typost-feature-category-summary">
-                    <span class="typost-feature-category-title" role="heading" aria-level="3"><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></span>
-                    <span class="typost-feature-category-count"><?php
-                        $count = count($features);
-                        echo esc_html(sprintf(
-                            /* translators: %d: number of features in category */
-                            _n('%d feature', '%d features', $count, 'typography-stylist'),
-                            $count
-                        ));
-                    ?></span>
-                </summary>
-
-                <div class="typost-feature-demos-grid">
-                    <?php foreach ($features as $feature): ?>
-                    <div class="typost-feature-demo-card" data-feature-id="<?php echo esc_attr($feature['id']); ?>">
-                        <div class="typost-feature-demo-header">
-                            <h4><?php echo esc_html($feature['name']); ?></h4>
-                            <code class="typost-feature-code"><?php echo esc_html($feature['id']); ?></code>
-                        </div>
-                        <p class="typost-feature-demo-description"><?php echo esc_html($feature['description']); ?></p>
-
-                        <div class="typost-feature-comparison">
-                            <div class="typost-feature-preview-container">
-                                <div class="typost-feature-preview-label"><?php esc_html_e('With Feature:', 'typography-stylist'); ?></div>
-                                <div
-                                    class="typost-feature-preview typost-feature-preview-on"
-                                    data-demo-text="<?php echo esc_attr($instance->get_feature_demo_text($feature['id'])); ?>"
-                                    style="font-feature-settings: '<?php echo esc_attr($feature['id']); ?>' 1;">
-                                    <?php echo esc_html($instance->get_feature_demo_text($feature['id'])); ?>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="typost-feature-visibility-control" style="display:none;" aria-hidden="true">
-                            <label class="typost-feature-visibility-label">
-                                <input
-                                    type="checkbox"
-                                    class="typost-feature-visibility-checkbox"
-                                    data-feature-id="<?php echo esc_attr($feature['id']); ?>"
-                                    checked />
-                                <?php
-                                echo esc_html(sprintf(
-                                    /* translators: %s: OpenType feature name e.g. "Standard Ligatures" */
-                                    __('Enable %s in editor for this font', 'typography-stylist'),
-                                    $feature['name']
-                                ));
-                                ?>
-                            </label>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </details>
-            <?php endforeach; ?>
-
-            <?php if (!empty($presets)): ?>
-            <div class="typost-user-presets-section">
-                <h3><?php esc_html_e('Your Saved Presets', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('These are presets you have created in the block editor.', 'typography-stylist'); ?></p>
-
-                <div class="typost-presets-grid">
-                    <?php foreach ($presets as $preset): ?>
-                    <div class="typost-preset-card">
-                        <h4><?php echo esc_html($preset['name']); ?></h4>
-                        <p class="typost-preset-description"><?php echo esc_html($preset['description']); ?></p>
-                        <div class="typost-preset-features">
-                            <strong><?php esc_html_e('Features:', 'typography-stylist'); ?></strong>
-                            <?php echo esc_html(implode(', ', $preset['features'])); ?>
-                        </div>
-                        <div class="typost-preset-preview" style="font-feature-settings: <?php echo esc_attr($instance->features_to_css($preset['features'])); ?>">
-                            <?php echo esc_html($instance->get_feature_demo_text($preset['features'][0])); ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-            <?php endif; ?>
-            <?php do_action('typost_admin_tab_after_presets', $instance); ?>
-        </div>
-
-        <!-- Fonts Tab -->
-        <div
-            class="typost-tab-content <?php echo 'fonts' === $active_tab ? 'active' : ''; ?>"
-            id="typost-tab-fonts"
-            role="tabpanel"
-            aria-labelledby="typost-tab-button-fonts"
-            <?php echo 'fonts' !== $active_tab ? 'hidden="hidden"' : ''; ?>
-            tabindex="0">
-            <h2><?php esc_html_e('Custom Fonts', 'typography-stylist'); ?></h2>
-            <?php
-            // Print WP Font Library @font-face CSS (WP 6.4+) so the Library
-            // font card titles below can render in their own typeface. Cheap:
-            // browsers only download binaries for families actually rendered.
-            if (function_exists('wp_print_font_faces')) {
-                wp_print_font_faces();
+    // Adobe Fonts
+    if (!empty($adobe_fonts)) {
+        echo '<optgroup label="' . esc_attr__('Adobe Fonts', 'typography-stylist') . '">';
+        foreach ($adobe_fonts as $font) {
+            $font_id = isset($font['font_id']) ? $font['font_id'] : '';
+            // New structure: individual font entries with font_family (single string)
+            if (!empty($font['font_family'])) {
+                echo '<option value="' . esc_attr($font['font_family']) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($font['font_family']) . '</option>';
             }
-            ?>
+            // Legacy structure: font entries with font_families (array)
+            elseif (!empty($font['font_families'])) {
+                foreach ($font['font_families'] as $family) {
+                    echo '<option value="' . esc_attr($family) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($family) . '</option>';
+                }
+            }
+        }
+        echo '</optgroup>';
+    }
 
-            <details class="typost-tab-help">
-                <summary><?php esc_html_e('Why & How to Use Custom Fonts', 'typography-stylist'); ?></summary>
-                <div class="typost-tab-help-content">
-                    <p><strong><?php esc_html_e('Why use custom fonts?', 'typography-stylist'); ?></strong> <?php esc_html_e('OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin.', 'typography-stylist'); ?></p>
-                    <p><strong><?php esc_html_e('Performance benefit:', 'typography-stylist'); ?></strong> <?php esc_html_e('Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site.', 'typography-stylist'); ?></p>
-                    <p><strong><?php esc_html_e('Three ways to add fonts:', 'typography-stylist'); ?></strong></p>
-                    <ol>
-                        <li><strong><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></strong> — <?php esc_html_e('Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded.', 'typography-stylist'); ?></li>
-                        <li><strong><?php esc_html_e('Adobe Fonts', 'typography-stylist'); ?></strong> — <?php esc_html_e('Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers.', 'typography-stylist'); ?></li>
-                        <li><strong><?php esc_html_e('Custom Font Definition', 'typography-stylist'); ?></strong> — <?php esc_html_e('Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it.', 'typography-stylist'); ?></li>
-                    </ol>
-                </div>
-            </details>
+    // Manual fonts
+    if (!empty($manual_fonts)) {
+        echo '<optgroup label="' . esc_attr__('Custom Fonts', 'typography-stylist') . '">';
+        foreach ($manual_fonts as $font) {
+            if (!empty($font['font_family'])) {
+                $font_id = isset($font['font_id']) ? $font['font_id'] : '';
+                echo '<option value="' . esc_attr($font['font_family']) . '" data-font-id="' . esc_attr($font_id) . '">' . esc_html($font['name']) . '</option>';
+            }
+        }
+        echo '</optgroup>';
+    }
 
-            <p><?php esc_html_e('Manage all fonts available in the block editor. Drag items to reorder them — the order here determines the order in the editor font selector.', 'typography-stylist'); ?></p>
+    // WP Font Library fonts (read-only source, WP 6.5+).
+    // Display variant: families the plugin registered are
+    // already listed as uploaded fonts above.
+    $wpl_preview = $instance->get_wp_font_library_fonts_for_display();
+    if (!empty($wpl_preview)) {
+        echo '<optgroup label="' . esc_attr__('WP Library', 'typography-stylist') . '">';
+        foreach ($wpl_preview as $wpl) {
+            echo '<option value="' . esc_attr($wpl['font_family']) . '" data-font-id="">' . esc_html($wpl['name']) . '</option>';
+        }
+        echo '</optgroup>';
+    }
+}
 
-            <?php
+/**
+ * Render the Custom Fonts tab font-list section: the WP Font Library
+ * migration notice, the weight auto-detection notice, the unified draggable
+ * font list, and the empty state.
+ *
+ * Used by the admin template and by the admin refresh REST endpoint so the
+ * whole section can be re-rendered without a page reload.
+ *
+ * @param Typost $instance     Plugin instance.
+ * @param array  $custom_fonts Uploaded font kits.
+ * @param array  $adobe_fonts  Adobe Fonts entries.
+ * @param array  $manual_fonts Manual font definitions.
+ */
+function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts, $manual_fonts) {
+    ?>
+<?php
             // ── WP Font Library migration notice (opt-in, dismissible) ───────────────
             $wpl_bridge_available = $instance->font_library_bridge()->is_available();
             $wpl_unregistered_count = 0;
@@ -982,6 +661,370 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 <p><?php esc_html_e('Use the "Add Font" section below to upload a font kit, add an Adobe Fonts project, or define a custom font.', 'typography-stylist'); ?></p>
             </div>
             <?php endif; ?>
+    <?php
+}
+
+function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe_fonts, $manual_fonts) {
+    ?>
+<div class="wrap typost-admin-wrap" data-color-scheme="<?php echo esc_attr(get_option('typost_admin_color_scheme', 'alice-blue')); ?>">
+    <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+    <!-- Skip link for accessibility -->
+    <a href="#typost-main-content" class="screen-reader-text skip-link">
+        <?php esc_html_e('Skip to main content', 'typography-stylist'); ?>
+    </a>
+
+    <!-- Global status announcements for AJAX actions (screen readers only) -->
+    <div id="typost-live-region" class="screen-reader-text" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="typost-admin-container" id="typost-main-content" tabindex="-1">
+        <?php
+        /**
+         * Filter the admin settings tabs.
+         *
+         * Allows extension plugins to register new tabs in the admin interface.
+         * Each tab needs: 'id' (string), 'label' (string), 'priority' (int).
+         * Built-in tabs use priorities 10-100. Extensions should use gaps between.
+         *
+         * @since 2.0.0
+         * @param array $tabs Array of tab definitions.
+         */
+        $built_in_tab_ids = array('fonts', 'presets', 'options', 'accessibility', 'replacements', 'help');
+        $built_in_tabs = array(
+            array('id' => 'fonts',         'label' => __('Custom Fonts', 'typography-stylist'),     'priority' => 10),
+            array('id' => 'presets',       'label' => __('Font Features', 'typography-stylist'),     'priority' => 20),
+            array('id' => 'options',       'label' => __('Options', 'typography-stylist'),            'priority' => 30),
+            array('id' => 'accessibility', 'label' => __('Accessibility', 'typography-stylist'),     'priority' => 40),
+            array('id' => 'replacements',  'label' => __('Replacement Fonts', 'typography-stylist'), 'priority' => 50),
+            array('id' => 'help',          'label' => __('Help', 'typography-stylist'),               'priority' => 100),
+        );
+        $tabs = apply_filters('typost_admin_tabs', $built_in_tabs);
+
+        // Validate and sanitize filtered tabs
+        if ( ! is_array( $tabs ) || empty( $tabs ) ) {
+            $tabs = $built_in_tabs;
+        }
+        $tabs = array_filter( $tabs, function( $tab ) {
+            return is_array( $tab ) && ! empty( $tab['id'] ) && ! empty( $tab['label'] );
+        } );
+        $tabs = array_values( $tabs );
+        if ( empty( $tabs ) ) {
+            $tabs = $built_in_tabs;
+        }
+
+        // Sanitize extension tab IDs and default missing priority
+        foreach ( $tabs as &$tab ) {
+            if ( ! in_array( $tab['id'], $built_in_tab_ids, true ) ) {
+                $tab['id'] = sanitize_key( $tab['id'] );
+            }
+            $tab['priority'] = isset( $tab['priority'] ) && is_numeric( $tab['priority'] ) ? absint( $tab['priority'] ) : 50;
+        }
+        unset( $tab );
+
+        usort($tabs, function($a, $b) { return $a['priority'] - $b['priority']; });
+
+        // Determine which tab should be active (URL parameter or first tab)
+        $active_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : $tabs[0]['id']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tab display only, no data modification
+        $tab_ids = array_column($tabs, 'id');
+        if (!in_array($active_tab, $tab_ids, true)) {
+            $active_tab = $tabs[0]['id'];
+        }
+        ?>
+        <nav class="typost-admin-tabs nav-tab-wrapper" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
+            <?php foreach ($tabs as $tab): ?>
+            <button
+                type="button"
+                class="nav-tab <?php echo $tab['id'] === $active_tab ? 'nav-tab-active' : ''; ?>"
+                data-tab="<?php echo esc_attr($tab['id']); ?>"
+                role="tab"
+                aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
+                tabindex="<?php echo $tab['id'] === $active_tab ? '0' : '-1'; ?>"
+                aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
+                id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
+                <?php echo esc_html($tab['label']); ?>
+            </button>
+            <?php endforeach; ?>
+        </nav>
+
+        <!-- Presets Tab -->
+        <div
+            class="typost-tab-content <?php echo 'presets' === $active_tab ? 'active' : ''; ?>"
+            id="typost-tab-presets"
+            role="tabpanel"
+            aria-labelledby="typost-tab-button-presets"
+            <?php echo 'presets' !== $active_tab ? 'hidden="hidden"' : ''; ?>
+            tabindex="0">
+            <h2><?php esc_html_e('Font Features', 'typography-stylist'); ?></h2>
+
+            <details class="typost-tab-help">
+                <summary><?php esc_html_e('About Font Features', 'typography-stylist'); ?></summary>
+                <div class="typost-tab-help-content">
+                    <p><?php esc_html_e('OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more.', 'typography-stylist'); ?></p>
+                    <p><?php esc_html_e('Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features.', 'typography-stylist'); ?></p>
+                    <ul>
+                        <li><?php esc_html_e('Features are grouped by category (ligatures, stylistic sets, numerals, etc.)', 'typography-stylist'); ?></li>
+                        <li><?php esc_html_e('Use the card width slider to adjust preview size for easier comparison', 'typography-stylist'); ?></li>
+                        <li><?php esc_html_e('When a font is selected, you can enable or disable individual features for that font in the editor', 'typography-stylist'); ?></li>
+                    </ul>
+                </div>
+            </details>
+
+            <p><?php esc_html_e('Explore OpenType features with live previews. Type custom text or use the default samples to see how each feature affects your typography.', 'typography-stylist'); ?></p>
+
+            <div class="typost-preset-controls">
+                <?php
+                // Rendered even when empty (hidden) so an AJAX font add can
+                // reveal the selector without a page reload.
+                $typost_has_any_fonts = !empty($custom_fonts) || !empty($adobe_fonts) || !empty($manual_fonts)
+                    || !empty($instance->get_wp_font_library_fonts_for_display());
+                ?>
+                <div class="typost-preset-font-selector" id="typost-preset-font-selector" <?php echo $typost_has_any_fonts ? '' : 'style="display:none;"'; ?>>
+                    <label for="typost-preview-font-select">
+                        <?php esc_html_e('Preview with Font:', 'typography-stylist'); ?>
+                    </label>
+                    <select id="typost-preview-font-select" class="typost-font-select">
+                        <?php typost_render_preview_font_options($instance, $custom_fonts, $adobe_fonts, $manual_fonts); ?>
+                    </select>
+                    <p class="description">
+                        <?php esc_html_e('Select a custom font to preview how features will look with that font.', 'typography-stylist'); ?>
+                    </p>
+                    <div id="typost-visibility-master-controls" class="typost-visibility-master-controls" style="display:none;">
+                        <button type="button" id="typost-enable-all-features" class="button button-secondary">
+                            <?php esc_html_e('Enable All Features', 'typography-stylist'); ?>
+                        </button>
+                        <button type="button" id="typost-disable-all-features" class="button button-secondary">
+                            <?php esc_html_e('Disable All Features', 'typography-stylist'); ?>
+                        </button>
+                        <span id="typost-visibility-save-indicator" class="typost-visibility-save-indicator" aria-live="polite"></span>
+                    </div>
+                </div>
+
+                <div class="typost-preset-size-control">
+                    <label for="typost-preview-size-slider">
+                        <?php esc_html_e('Preview Size:', 'typography-stylist'); ?>
+                        <span id="typost-preview-size-value" class="typost-size-value">50px</span>
+                    </label>
+                    <input
+                        type="range"
+                        id="typost-preview-size-slider"
+                        class="typost-size-slider"
+                        min="12"
+                        max="96"
+                        value="50"
+                        step="1"
+                        aria-label="<?php esc_attr_e('Adjust preview text size', 'typography-stylist'); ?>"
+                        aria-valuemin="12"
+                        aria-valuemax="96"
+                        aria-valuenow="50"
+                        aria-valuetext="50 pixels" />
+                    <p class="description">
+                        <?php esc_html_e('Adjust the size of the preview text to better see typography features.', 'typography-stylist'); ?>
+                    </p>
+                </div>
+
+                <div class="typost-preset-custom-text-control">
+                    <label for="typost-preview-custom-text">
+                        <?php esc_html_e('Custom Preview Text:', 'typography-stylist'); ?>
+                    </label>
+                    <input
+                        type="text"
+                        id="typost-preview-custom-text"
+                        class="regular-text"
+                        placeholder="<?php esc_attr_e('Type your own text to preview features...', 'typography-stylist'); ?>"
+                        aria-label="<?php esc_attr_e('Enter custom text to preview features', 'typography-stylist'); ?>" />
+                    <button
+                        type="button"
+                        id="typost-preview-reset-text"
+                        class="button button-secondary"
+                        style="display: none;">
+                        <?php esc_html_e('Reset to Defaults', 'typography-stylist'); ?>
+                    </button>
+                    <p class="description">
+                        <?php esc_html_e('Type your own text to see how each feature affects it, or leave blank to use default samples.', 'typography-stylist'); ?>
+                    </p>
+                </div>
+
+                <div class="typost-preset-card-width-control">
+                    <label for="typost-card-width-slider">
+                        <?php esc_html_e('Card Width:', 'typography-stylist'); ?>
+                        <span id="typost-card-width-value" class="typost-size-value">480px</span>
+                    </label>
+                    <input
+                        type="range"
+                        id="typost-card-width-slider"
+                        class="typost-size-slider"
+                        min="280"
+                        max="800"
+                        value="480"
+                        step="20"
+                        aria-label="<?php esc_attr_e('Adjust feature card width', 'typography-stylist'); ?>"
+                        aria-valuemin="280"
+                        aria-valuemax="800"
+                        aria-valuenow="480"
+                        aria-valuetext="480 pixels" />
+                    <p class="description">
+                        <?php esc_html_e('Adjust the minimum width of feature preview cards.', 'typography-stylist'); ?>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Baseline Font Preview -->
+            <div class="typost-baseline-preview-section">
+                <h3><?php esc_html_e('Font Preview (No Features Applied)', 'typography-stylist'); ?></h3>
+                <p class="description">
+                    <?php esc_html_e('This shows how the selected font looks without any OpenType features applied.', 'typography-stylist'); ?>
+                </p>
+                <div class="typost-baseline-preview-container">
+                    <div class="typost-baseline-preview" id="typost-baseline-preview" data-default-text="The quick brown fox jumps over the lazy dog">
+                        The quick brown fox jumps over the lazy dog
+                    </div>
+                </div>
+            </div>
+
+            <?php
+            $available_features = $instance->get_available_features();
+            $grouped_features = array();
+
+            // Group features by category
+            foreach ($available_features as $feature) {
+                $category = isset($feature['category']) ? $feature['category'] : 'other';
+                if (!isset($grouped_features[$category])) {
+                    $grouped_features[$category] = array();
+                }
+                $grouped_features[$category][] = $feature;
+            }
+
+            $category_titles = array(
+                'ligatures' => esc_html__('Ligatures', 'typography-stylist'),
+                'stylistic-sets' => esc_html__('Stylistic Sets', 'typography-stylist'),
+                'alternates' => esc_html__('Swashes & Alternates', 'typography-stylist'),
+                'decorative' => esc_html__('Decorative', 'typography-stylist'),
+                'numerals' => esc_html__('Numerals & Figures', 'typography-stylist'),
+                'capitals' => esc_html__('Capitals & Case', 'typography-stylist'),
+                'positional' => esc_html__('Positional Forms', 'typography-stylist'),
+                'super-sub' => esc_html__('Superscript & Ordinals', 'typography-stylist'),
+                'other' => esc_html__('Other Features', 'typography-stylist')
+            );
+            ?>
+
+            <?php foreach ($grouped_features as $category => $features): ?>
+            <details <?php echo $category === 'ligatures' ? 'open' : ''; ?> class="typost-feature-category-section">
+                <summary class="typost-feature-category-summary">
+                    <span class="typost-feature-category-title" role="heading" aria-level="3"><?php echo esc_html(isset($category_titles[$category]) ? $category_titles[$category] : ucfirst($category)); ?></span>
+                    <span class="typost-feature-category-count"><?php
+                        $count = count($features);
+                        echo esc_html(sprintf(
+                            /* translators: %d: number of features in category */
+                            _n('%d feature', '%d features', $count, 'typography-stylist'),
+                            $count
+                        ));
+                    ?></span>
+                </summary>
+
+                <div class="typost-feature-demos-grid">
+                    <?php foreach ($features as $feature): ?>
+                    <div class="typost-feature-demo-card" data-feature-id="<?php echo esc_attr($feature['id']); ?>">
+                        <div class="typost-feature-demo-header">
+                            <h4><?php echo esc_html($feature['name']); ?></h4>
+                            <code class="typost-feature-code"><?php echo esc_html($feature['id']); ?></code>
+                        </div>
+                        <p class="typost-feature-demo-description"><?php echo esc_html($feature['description']); ?></p>
+
+                        <div class="typost-feature-comparison">
+                            <div class="typost-feature-preview-container">
+                                <div class="typost-feature-preview-label"><?php esc_html_e('With Feature:', 'typography-stylist'); ?></div>
+                                <div
+                                    class="typost-feature-preview typost-feature-preview-on"
+                                    data-demo-text="<?php echo esc_attr($instance->get_feature_demo_text($feature['id'])); ?>"
+                                    style="font-feature-settings: '<?php echo esc_attr($feature['id']); ?>' 1;">
+                                    <?php echo esc_html($instance->get_feature_demo_text($feature['id'])); ?>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="typost-feature-visibility-control" style="display:none;" aria-hidden="true">
+                            <label class="typost-feature-visibility-label">
+                                <input
+                                    type="checkbox"
+                                    class="typost-feature-visibility-checkbox"
+                                    data-feature-id="<?php echo esc_attr($feature['id']); ?>"
+                                    checked />
+                                <?php
+                                echo esc_html(sprintf(
+                                    /* translators: %s: OpenType feature name e.g. "Standard Ligatures" */
+                                    __('Enable %s in editor for this font', 'typography-stylist'),
+                                    $feature['name']
+                                ));
+                                ?>
+                            </label>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </details>
+            <?php endforeach; ?>
+
+            <?php if (!empty($presets)): ?>
+            <div class="typost-user-presets-section">
+                <h3><?php esc_html_e('Your Saved Presets', 'typography-stylist'); ?></h3>
+                <p><?php esc_html_e('These are presets you have created in the block editor.', 'typography-stylist'); ?></p>
+
+                <div class="typost-presets-grid">
+                    <?php foreach ($presets as $preset): ?>
+                    <div class="typost-preset-card">
+                        <h4><?php echo esc_html($preset['name']); ?></h4>
+                        <p class="typost-preset-description"><?php echo esc_html($preset['description']); ?></p>
+                        <div class="typost-preset-features">
+                            <strong><?php esc_html_e('Features:', 'typography-stylist'); ?></strong>
+                            <?php echo esc_html(implode(', ', $preset['features'])); ?>
+                        </div>
+                        <div class="typost-preset-preview" style="font-feature-settings: <?php echo esc_attr($instance->features_to_css($preset['features'])); ?>">
+                            <?php echo esc_html($instance->get_feature_demo_text($preset['features'][0])); ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            <?php do_action('typost_admin_tab_after_presets', $instance); ?>
+        </div>
+
+        <!-- Fonts Tab -->
+        <div
+            class="typost-tab-content <?php echo 'fonts' === $active_tab ? 'active' : ''; ?>"
+            id="typost-tab-fonts"
+            role="tabpanel"
+            aria-labelledby="typost-tab-button-fonts"
+            <?php echo 'fonts' !== $active_tab ? 'hidden="hidden"' : ''; ?>
+            tabindex="0">
+            <h2><?php esc_html_e('Custom Fonts', 'typography-stylist'); ?></h2>
+            <?php
+            // Print WP Font Library @font-face CSS (WP 6.4+) so the Library
+            // font card titles below can render in their own typeface. Cheap:
+            // browsers only download binaries for families actually rendered.
+            if (function_exists('wp_print_font_faces')) {
+                wp_print_font_faces();
+            }
+            ?>
+
+            <details class="typost-tab-help">
+                <summary><?php esc_html_e('Why & How to Use Custom Fonts', 'typography-stylist'); ?></summary>
+                <div class="typost-tab-help-content">
+                    <p><strong><?php esc_html_e('Why use custom fonts?', 'typography-stylist'); ?></strong> <?php esc_html_e('OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin.', 'typography-stylist'); ?></p>
+                    <p><strong><?php esc_html_e('Performance benefit:', 'typography-stylist'); ?></strong> <?php esc_html_e('Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site.', 'typography-stylist'); ?></p>
+                    <p><strong><?php esc_html_e('Three ways to add fonts:', 'typography-stylist'); ?></strong></p>
+                    <ol>
+                        <li><strong><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></strong> — <?php esc_html_e('Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Adobe Fonts', 'typography-stylist'); ?></strong> — <?php esc_html_e('Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Custom Font Definition', 'typography-stylist'); ?></strong> — <?php esc_html_e('Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it.', 'typography-stylist'); ?></li>
+                    </ol>
+                </div>
+            </details>
+
+            <p><?php esc_html_e('Manage all fonts available in the block editor. Drag items to reorder them — the order here determines the order in the editor font selector.', 'typography-stylist'); ?></p>
+
+            <div id="typost-fonts-region" tabindex="-1">
+                <?php typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts, $manual_fonts); ?>
+            </div>
 
             <!-- Add Font Section (collapsible) -->
             <details class="typost-add-font-section" id="typost-add-font-section">
@@ -1154,11 +1197,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <span id="typost-adobe-fonts-section-anchor" style="display:none;"></span>
             <span id="typost-manual-fonts-section-anchor" style="display:none;"></span>
 
-            <?php
-            // Suppress PHP "unused variable" notices for variables consumed above
-            unset($all_fonts_list, $font_order_saved, $wp_library_fonts, $fonts_by_kit, $standalone_fonts);
-            /* phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis -- $adobe_kits, $standalone_adobe_fonts used in prior code */ ?>
-
             <?php do_action('typost_admin_tab_after_fonts', $instance); ?>
         </div>
 
@@ -1231,7 +1269,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     id="typost_show_clear_confirmation"
                                     name="typost_show_clear_confirmation"
                                     value="1"
-                                    <?php checked(get_option('typography_stylist_show_clear_confirmation', true)); ?>
+                                    <?php checked(get_option('typost_show_clear_confirmation', true)); ?>
                                 />
                                 <label for="typost_show_clear_confirmation">
                                     <?php esc_html_e('Show confirmation when clearing typography features', 'typography-stylist'); ?>
@@ -1321,6 +1359,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <?php esc_html_e('Save Options', 'typography-stylist'); ?>
                     </button>
                 </p>
+                <div class="typost-settings-ajax-message" role="status" aria-live="polite" aria-atomic="true"></div>
             </form>
 
             <hr style="margin: 30px 0;">
@@ -1335,6 +1374,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <?php esc_html_e('Clear Font Cache', 'typography-stylist'); ?>
                     </button>
                 </p>
+                <div class="typost-settings-ajax-message" role="status" aria-live="polite" aria-atomic="true"></div>
             </form>
             <?php do_action('typost_admin_tab_after_options', $instance); ?>
         </div>
@@ -1384,7 +1424,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     id="typost_enable_aria_labels"
                                     name="typost_enable_aria_labels"
                                     value="1"
-                                    <?php checked(get_option('typography_stylist_enable_aria_labels', false)); ?>
+                                    <?php checked(get_option('typost_enable_aria_labels', false)); ?>
                                 />
                                 <label for="typost_enable_aria_labels">
                                     <?php esc_html_e('Add aria-label with original text to inline styled spans', 'typography-stylist'); ?>
@@ -1423,6 +1463,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <?php esc_html_e('Save Accessibility Settings', 'typography-stylist'); ?>
                     </button>
                 </p>
+                <div class="typost-settings-ajax-message" role="status" aria-live="polite" aria-atomic="true"></div>
             </form>
 
             <div class="typost-accessibility-recommendations">

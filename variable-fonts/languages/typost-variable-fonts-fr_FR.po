@@ -67,8 +67,8 @@ msgid "Axes array is required"
 msgstr "Le tableau d'axes est requis"
 
 #: variable-fonts.php:733
-msgid "Settings saved successfully! Reloading page..."
-msgstr "Réglages enregistrés ! Rechargement de la page…"
+msgid "Settings saved successfully!"
+msgstr "Réglages enregistrés !"
 
 #: assets/js/editor.js
 msgid "Variable Font Axes"

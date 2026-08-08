@@ -78,7 +78,7 @@ msgid "Axes array is required"
 msgstr ""
 
 #: variable-fonts.php:733
-msgid "Settings saved successfully! Reloading page..."
+msgid "Settings saved successfully!"
 msgstr ""
 
 #: assets/js/editor.js

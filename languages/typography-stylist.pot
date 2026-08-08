@@ -44,7 +44,7 @@ msgid "Please select a ZIP file."
 msgstr ""
 
 #: opentype-stylist.php:564
-msgid "Font kit uploaded and processed successfully! Reloading page..."
+msgid "Font kit uploaded and processed successfully!"
 msgstr ""
 
 #: opentype-stylist.php:565
@@ -88,7 +88,7 @@ msgid "Adding..."
 msgstr ""
 
 #: opentype-stylist.php:577
-msgid "Adobe Fonts project added successfully! Reloading page..."
+msgid "Adobe Fonts project added successfully!"
 msgstr ""
 
 #: opentype-stylist.php:578
@@ -116,7 +116,7 @@ msgid "Please enter a CSS font-family value."
 msgstr ""
 
 #: opentype-stylist.php:585
-msgid "Custom font added successfully! Reloading page..."
+msgid "Custom font added successfully!"
 msgstr ""
 
 #: opentype-stylist.php:586
@@ -1549,7 +1549,7 @@ msgid "Registering..."
 msgstr ""
 
 #: typography-stylist.php
-msgid "Font registered in the Font Library! Reloading page..."
+msgid "Font registered in the Font Library!"
 msgstr ""
 
 #: typography-stylist.php
@@ -1561,7 +1561,7 @@ msgid "Removing..."
 msgstr ""
 
 #: typography-stylist.php
-msgid "Font removed from the Font Library! Reloading page..."
+msgid "Font removed from the Font Library!"
 msgstr ""
 
 #: typography-stylist.php
@@ -1574,7 +1574,7 @@ msgstr ""
 
 #: typography-stylist.php
 #, php-format
-msgid "Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page..."
+msgid "Registered %1$s font(s) in the Font Library (%2$s failed)."
 msgstr ""
 
 #: assets/js/block-editor.js
@@ -1617,7 +1617,7 @@ msgstr ""
 
 #: typography-stylist.php
 #, php-format
-msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page..."
+msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked."
 msgstr ""
 
 #: typography-stylist.php
@@ -1708,3 +1708,63 @@ msgstr ""
 msgid "Reset Vertical Shift"
 msgstr ""
 
+
+#: typography-stylist.php
+msgid "Font deleted successfully!"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to delete font."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to create font replacement."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Fallback fonts updated successfully!"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Font updated successfully!"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Font list updated."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Could not refresh the font list. Reloading the page instead."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Saving..."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Options saved successfully."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Accessibility settings saved successfully."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to save options."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to save accessibility settings."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to clear the font cache."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Dismiss this notice."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Deleting..."
+msgstr ""
