@@ -1764,3 +1764,7 @@ msgstr ""
 #: typography-stylist.php
 msgid "Dismiss this notice."
 msgstr ""
+
+#: typography-stylist.php
+msgid "Deleting..."
+msgstr ""

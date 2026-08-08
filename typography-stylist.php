@@ -1117,6 +1117,7 @@ class Typost {
                 'deleteFontSuccess' => esc_html__('Font deleted successfully!', 'typography-stylist'),
                 'deleteFontFailed' => esc_html__('Failed to delete font.', 'typography-stylist'),
                 'replacementFailed' => esc_html__('Failed to create font replacement.', 'typography-stylist'),
+                'deleting' => esc_html__('Deleting...', 'typography-stylist'),
                 'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typography-stylist'),
                 'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typography-stylist'),
                 'uploading' => esc_html__('Uploading', 'typography-stylist'),
@@ -2863,13 +2864,15 @@ class Typost {
      * @param WP_REST_Request $request
      */
     public function rest_save_admin_options(WP_REST_Request $request) {
-        update_option('typost_show_clear_confirmation', $request->get_param('show_clear_confirmation') ? '1' : '0');
-        update_option('typost_archive_full_content_check', $request->get_param('archive_full_content_check') ? '1' : '0');
+        // rest_sanitize_boolean(): clients may send real booleans (JSON) or
+        // strings like "false"/"0" (form-encoded), which are truthy in PHP.
+        update_option('typost_show_clear_confirmation', rest_sanitize_boolean($request->get_param('show_clear_confirmation')) ? '1' : '0');
+        update_option('typost_archive_full_content_check', rest_sanitize_boolean($request->get_param('archive_full_content_check')) ? '1' : '0');
 
         // Checkbox rendered only when the Font Library is available; only
         // save when the client actually sent the value.
         if ($this->font_library_bridge()->is_available() && null !== $request->get_param('auto_register_wp_fonts')) {
-            update_option('typost_auto_register_wp_fonts', $request->get_param('auto_register_wp_fonts') ? '1' : '0');
+            update_option('typost_auto_register_wp_fonts', rest_sanitize_boolean($request->get_param('auto_register_wp_fonts')) ? '1' : '0');
         }
 
         $color_scheme = $this->sanitize_color_scheme(sanitize_key((string) $request->get_param('color_scheme')));
@@ -2897,8 +2900,10 @@ class Typost {
      * @param WP_REST_Request $request
      */
     public function rest_save_accessibility_options(WP_REST_Request $request) {
-        update_option('typost_enable_aria_labels', $request->get_param('enable_aria_labels') ? '1' : '0');
-        update_option('typost_disable_accessibility_warning', $request->get_param('disable_accessibility_warning') ? '1' : '0');
+        // rest_sanitize_boolean(): clients may send real booleans (JSON) or
+        // strings like "false"/"0" (form-encoded), which are truthy in PHP.
+        update_option('typost_enable_aria_labels', rest_sanitize_boolean($request->get_param('enable_aria_labels')) ? '1' : '0');
+        update_option('typost_disable_accessibility_warning', rest_sanitize_boolean($request->get_param('disable_accessibility_warning')) ? '1' : '0');
 
         // Clear cache when accessibility settings change
         $this->clear_cache();

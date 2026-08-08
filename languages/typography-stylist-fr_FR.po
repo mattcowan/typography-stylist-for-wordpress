@@ -2133,3 +2133,7 @@ msgstr "Échec du vidage du cache des polices."
 #: typography-stylist.php
 msgid "Dismiss this notice."
 msgstr "Ignorer cette notification."
+
+#: typography-stylist.php
+msgid "Deleting..."
+msgstr "Suppression..."

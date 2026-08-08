@@ -2133,3 +2133,7 @@ msgstr "Error al vaciar la caché de fuentes."
 #: typography-stylist.php
 msgid "Dismiss this notice."
 msgstr "Descartar este aviso."
+
+#: typography-stylist.php
+msgid "Deleting..."
+msgstr "Eliminando..."

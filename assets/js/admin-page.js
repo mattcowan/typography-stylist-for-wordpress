@@ -1383,12 +1383,28 @@ jQuery(document).ready(function($) {
     // Store previously focused element for modal focus management
     var previouslyFocusedElement = null;
 
+    // Default modal labels, captured from the PHP-localized markup so they
+    // can be restored when the modal is reused. Since the page no longer
+    // reloads after a deletion, a previous open (or an edit-replacement flow,
+    // which retitles the modal) would otherwise leak its state into the next.
+    var deleteModalDefaults = {
+        title: $('#typost-delete-font-modal .typost-modal-header h2').text(),
+        confirmLabel: $('#typost-delete-font-modal .typost-modal-confirm-delete').text()
+    };
+
     /**
      * Show deletion modal with replacement options
      */
     function showDeletionModal(fontId) {
         var $modal = $('#typost-delete-font-modal');
         var $select = $('#typost-replacement-font-select');
+
+        // Reset title and confirm button to their defaults; the
+        // edit-replacement flow overrides them after this call.
+        $modal.find('.typost-modal-header h2').text(deleteModalDefaults.title);
+        $modal.find('.typost-modal-confirm-delete')
+            .prop('disabled', false)
+            .text(deleteModalDefaults.confirmLabel);
 
         // Store currently focused element
         previouslyFocusedElement = document.activeElement;
@@ -1521,7 +1537,11 @@ jQuery(document).ready(function($) {
         var replacementId = $('#typost-replacement-font-select').val();
         var globalLoad = $('#typost-replacement-global-load').is(':checked');
 
-        $btn.prop('disabled', true).text('Deleting...');
+        // Capture the current label — it differs between the delete flow
+        // ("Delete Font") and the edit-replacement flow ("Update Replacement")
+        var originalLabel = $btn.text();
+
+        $btn.prop('disabled', true).text(typostAdmin.strings.deleting);
 
         // First, create replacement mapping if selected
         var promises = [];
@@ -1547,6 +1567,7 @@ jQuery(document).ready(function($) {
         $.when.apply($, promises).done(function() {
             // If editing mode, just reload the replacements list
             if (deleteFontContext.editing) {
+                $btn.prop('disabled', false).text(originalLabel);
                 closeDeletionModal();
                 loadReplacementsList();
                 return;
@@ -1576,12 +1597,12 @@ jQuery(document).ready(function($) {
                 },
                 error: function() {
                     alert(typostAdmin.strings.deleteFontFailed);
-                    $btn.prop('disabled', false).text('Delete Font');
+                    $btn.prop('disabled', false).text(originalLabel);
                 }
             });
         }).fail(function() {
             alert(typostAdmin.strings.replacementFailed);
-            $btn.prop('disabled', false).text('Delete Font');
+            $btn.prop('disabled', false).text(originalLabel);
         });
     });
 
