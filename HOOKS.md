@@ -445,7 +445,7 @@ $(document).on('typost:font-saved', function(e, data) {
     // data.fontId    — Font string ID (e.g., 'kit-123-inter')
     // data.type      — Font type: 'uploaded', 'adobe', or 'manual'
     // data.$card     — jQuery element of the font card
-    // data.waitUntil — Since 2.1.0: register a promise the page reload waits on
+    // data.waitUntil — Since 2.1.0: register a promise the post-save refresh waits on
     var request = saveMyExtensionData(data.fontId, data.type); // e.g. $.ajax(...)
     if (typeof data.waitUntil === 'function') {
         data.waitUntil(Promise.resolve(request));
@@ -453,11 +453,11 @@ $(document).on('typost:font-saved', function(e, data) {
 });
 ```
 
-**`waitUntil` (since 2.1.0):** core reloads the page after a font save. If your extension saves its own data asynchronously on this event, register the request via `data.waitUntil(promise)` — core waits for all registered promises to settle (with a 5-second cap) before reloading, instead of the old fixed 1500 ms timeout your request had to race.
+**`waitUntil` (since 2.1.0):** after a font save, core refreshes the font list in place over the REST API (before 2.3 it reloaded the whole page). If your extension saves its own data asynchronously on this event, register the request via `data.waitUntil(promise)` — core waits for all registered promises to settle (with a 5-second cap) before refreshing, instead of the old fixed 1500 ms timeout your request had to race. Because the refreshed font-list fragment is server-rendered through the same template functions as the page itself, data your extension saved here is reflected in the swapped-in markup exactly as it would be after a reload.
 
 #### `typost:fonts-added`
 
-jQuery event triggered on `$(document)` after new fonts are successfully added in the admin — a webfont kit ZIP upload or an Adobe Fonts kit. Use this to post-process brand-new entries before the page reloads (e.g. the bundled Variable Fonts module auto-detects fvar axes here).
+jQuery event triggered on `$(document)` after new fonts are successfully added in the admin — a webfont kit ZIP upload or an Adobe Fonts kit. Use this to post-process brand-new entries before the font list refreshes in place (e.g. the bundled Variable Fonts module auto-detects fvar axes here).
 
 ```javascript
 $(document).on('typost:fonts-added', function(e, data) {
@@ -466,7 +466,7 @@ $(document).on('typost:fonts-added', function(e, data) {
     //                  (each has id, font_id, and source-specific fields like
     //                  css_content for uploads or css_url/font_family for Adobe)
     // data.$message  — jQuery element of the form's message area (append notices here)
-    // data.waitUntil — Register a promise the page reload waits on
+    // data.waitUntil — Register a promise the post-add refresh waits on
     var work = processNewFonts(data.fonts); // e.g. detection + $.ajax saves
     if (typeof data.waitUntil === 'function') {
         data.waitUntil(work);
@@ -474,7 +474,7 @@ $(document).on('typost:fonts-added', function(e, data) {
 });
 ```
 
-**`waitUntil`:** same contract as `typost:font-saved`, but with a 15-second cap — listeners here may download and parse font binaries, which takes longer than a settings save. The reload also waits a minimum delay so the success notice stays readable.
+**`waitUntil`:** same contract as `typost:font-saved`, but with a 15-second cap — listeners here may download and parse font binaries, which takes longer than a settings save. The refresh also waits a minimum delay so the success notice stays readable.
 
 ### Lifecycle Hooks
 

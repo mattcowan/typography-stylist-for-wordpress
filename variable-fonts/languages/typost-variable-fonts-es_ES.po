@@ -67,8 +67,8 @@ msgid "Axes array is required"
 msgstr "Se requiere el array de ejes"
 
 #: variable-fonts.php:733
-msgid "Settings saved successfully! Reloading page..."
-msgstr "¡Ajustes guardados! Recargando página…"
+msgid "Settings saved successfully!"
+msgstr "¡Ajustes guardados!"
 
 #: assets/js/editor.js
 msgid "Variable Font Axes"

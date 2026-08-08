@@ -1112,9 +1112,11 @@ class Typost {
                 'uploadError' => esc_html__('Failed to upload font kit.', 'typography-stylist'),
                 'selectZip' => esc_html__('Please select a ZIP file (.zip)', 'typography-stylist'),
                 'selectFile' => esc_html__('Please select a ZIP file.', 'typography-stylist'),
-                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully! Reloading page...', 'typography-stylist'),
+                'uploadSuccess' => esc_html__('Font kit uploaded and processed successfully!', 'typography-stylist'),
                 'deleteError' => esc_html__('Failed to delete font kit.', 'typography-stylist'),
-                'deleteFontSuccess' => esc_html__('Font deleted successfully! Reloading page...', 'typography-stylist'),
+                'deleteFontSuccess' => esc_html__('Font deleted successfully!', 'typography-stylist'),
+                'deleteFontFailed' => esc_html__('Failed to delete font.', 'typography-stylist'),
+                'replacementFailed' => esc_html__('Failed to create font replacement.', 'typography-stylist'),
                 'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typography-stylist'),
                 'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typography-stylist'),
                 'uploading' => esc_html__('Uploading', 'typography-stylist'),
@@ -1125,7 +1127,7 @@ class Typost {
                 'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
                 'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
                 'adding' => esc_html__('Adding...', 'typography-stylist'),
-                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully! Reloading page...', 'typography-stylist'),
+                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully!', 'typography-stylist'),
                 'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'typography-stylist'),
                 'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'typography-stylist'),
                 'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'typography-stylist'),
@@ -1133,7 +1135,7 @@ class Typost {
                 // Manual/Custom Fonts strings
                 'enterManualFontName' => esc_html__('Please enter a font name.', 'typography-stylist'),
                 'enterFontFamily' => esc_html__('Please enter a CSS font-family value.', 'typography-stylist'),
-                'manualFontSuccess' => esc_html__('Custom font added successfully! Reloading page...', 'typography-stylist'),
+                'manualFontSuccess' => esc_html__('Custom font added successfully!', 'typography-stylist'),
                 'addManualFontError' => esc_html__('Failed to add custom font.', 'typography-stylist'),
                 'addManualFontButton' => esc_html__('Add Custom Font', 'typography-stylist'),
                 'confirmDeleteManualFont' => esc_html__('Are you sure you want to delete this custom font?', 'typography-stylist'),
@@ -1143,9 +1145,9 @@ class Typost {
                 // Edit font strings
                 'saving' => esc_html__('Saving...', 'typography-stylist'),
                 'saveChanges' => esc_html__('Save Changes', 'typography-stylist'),
-                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully! Reloading page...', 'typography-stylist'),
+                'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully!', 'typography-stylist'),
                 'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'typography-stylist'),
-                'fontUpdated' => esc_html__('Font updated successfully! Reloading page...', 'typography-stylist'),
+                'fontUpdated' => esc_html__('Font updated successfully!', 'typography-stylist'),
                 'updateFontError' => esc_html__('Failed to update font.', 'typography-stylist'),
                 // Feature visibility strings
                 'featureVisibilitySaved' => esc_html__('Saved', 'typography-stylist'),
@@ -1159,19 +1161,31 @@ class Typost {
                 'manageInEditor' => esc_html__('Manage in Appearance → Editor', 'typography-stylist'),
                 // WP Font Library registration strings
                 'wplRegistering' => esc_html__('Registering...', 'typography-stylist'),
-                'wplRegisterSuccess' => esc_html__('Font registered in the Font Library! Reloading page...', 'typography-stylist'),
+                'wplRegisterSuccess' => esc_html__('Font registered in the Font Library!', 'typography-stylist'),
                 'wplRegisterError' => esc_html__('Failed to register the font in the Font Library.', 'typography-stylist'),
                 'wplRemoving' => esc_html__('Removing...', 'typography-stylist'),
-                'wplRemoveSuccess' => esc_html__('Font removed from the Font Library! Reloading page...', 'typography-stylist'),
+                'wplRemoveSuccess' => esc_html__('Font removed from the Font Library!', 'typography-stylist'),
                 'wplRemoveError' => esc_html__('Failed to remove the font from the Font Library.', 'typography-stylist'),
                 'wplConfirmRemove' => esc_html__('Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself.', 'typography-stylist'),
                 /* translators: 1: number of registered fonts, 2: number of failed fonts */
-                'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page...', 'typography-stylist'),
+                'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed).', 'typography-stylist'),
                 // Weight auto-detection strings
                 'detectWeightsRunning' => esc_html__('Detecting weights...', 'typography-stylist'),
                 /* translators: 1: fonts with detected weights, 2: fonts left with all weights, 3: fonts that could not be checked */
-                'detectWeightsDone' => esc_html__('Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page...', 'typography-stylist'),
-                'detectWeightsError' => esc_html__('Weight detection failed. Please try again.', 'typography-stylist')
+                'detectWeightsDone' => esc_html__('Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.', 'typography-stylist'),
+                'detectWeightsError' => esc_html__('Weight detection failed. Please try again.', 'typography-stylist'),
+                // AJAX refresh strings
+                'fontListUpdated' => esc_html__('Font list updated.', 'typography-stylist'),
+                'refreshError' => esc_html__('Could not refresh the font list. Reloading the page instead.', 'typography-stylist'),
+                'dismissNotice' => esc_html__('Dismiss this notice.', 'typography-stylist'),
+                // Settings forms AJAX strings
+                'savingSettings' => esc_html__('Saving...', 'typography-stylist'),
+                'optionsSaved' => esc_html__('Options saved successfully.', 'typography-stylist'),
+                'optionsSaveError' => esc_html__('Failed to save options.', 'typography-stylist'),
+                'accessibilitySaved' => esc_html__('Accessibility settings saved successfully.', 'typography-stylist'),
+                'accessibilitySaveError' => esc_html__('Failed to save accessibility settings.', 'typography-stylist'),
+                'cacheCleared' => esc_html__('Font cache cleared successfully. Fonts will be re-detected on the next page load.', 'typography-stylist'),
+                'cacheClearError' => esc_html__('Failed to clear the font cache.', 'typography-stylist')
             )
         );
 
@@ -1232,10 +1246,37 @@ class Typost {
      * Output admin color scheme CSS variable overrides via inline style
      */
     public function output_admin_color_scheme() {
-        $scheme = get_option('typost_admin_color_scheme', 'alice-blue');
+        // Dedicated handle so the scheme CSS lands in its own inline <style>
+        // (id="typost-admin-color-scheme-inline-css"), which the Options tab
+        // AJAX save swaps to restyle the page without a reload.
+        wp_register_style('typost-admin-color-scheme', false, array('typost-admin'), TYPOST_VERSION);
+        wp_enqueue_style('typost-admin-color-scheme');
+
+        $css = $this->get_color_scheme_css();
+
+        if (!empty($css)) {
+            wp_add_inline_style('typost-admin-color-scheme', $css);
+        }
+    }
+
+    /**
+     * Get the CSS variable overrides for an admin color scheme.
+     *
+     * Public so the admin options REST endpoint can return the CSS for a
+     * newly selected scheme, letting the settings page restyle without a
+     * reload.
+     *
+     * @param string|null $scheme Scheme key, or null to use the saved option.
+     * @return string CSS string (empty for the 'default' scheme).
+     */
+    public function get_color_scheme_css($scheme = null) {
+        if (null === $scheme) {
+            $scheme = get_option('typost_admin_color_scheme', 'alice-blue');
+        }
+        $scheme = $this->sanitize_color_scheme($scheme);
 
         if ('default' === $scheme) {
-            return;
+            return '';
         }
 
         $css = '';
@@ -1339,9 +1380,7 @@ class Typost {
                 break;
         }
 
-        if (!empty($css)) {
-            wp_add_inline_style('typost-admin', $css);
-        }
+        return $css;
     }
 
     /**
@@ -1455,10 +1494,26 @@ class Typost {
      * Enqueue custom fonts for admin page preview
      */
     public function enqueue_custom_fonts_for_admin() {
+        $combined_css = $this->get_admin_font_css();
+
+        if (!empty($combined_css)) {
+            wp_add_inline_style('typost-admin', $combined_css);
+        }
+    }
+
+    /**
+     * Get the combined @font-face CSS for uploaded font kits on admin pages.
+     *
+     * Public so the admin refresh REST endpoint can return updated font CSS
+     * after fonts are added or removed without a page reload.
+     *
+     * @return string Combined, sanitized, minified CSS (may be empty).
+     */
+    public function get_admin_font_css() {
         $fonts = $this->get_custom_fonts();
 
         if (empty($fonts)) {
-            return;
+            return '';
         }
 
         // Cache combined font CSS
@@ -1483,9 +1538,7 @@ class Typost {
             set_transient($cache_key, $combined_css, DAY_IN_SECONDS);
         }
 
-        if (!empty($combined_css)) {
-            wp_add_inline_style('typost-admin', $combined_css);
-        }
+        return $combined_css;
     }
 
     /**
@@ -1902,6 +1955,40 @@ class Typost {
                     },
                 ),
             ),
+        ));
+
+        // Admin settings page AJAX endpoints. The settings page itself is
+        // manage_options-only, so its endpoints are too.
+        register_rest_route('typost/v1', '/admin/refresh', array(
+            'methods'             => 'GET',
+            'callback'            => array($this, 'rest_get_admin_refresh'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ));
+
+        register_rest_route('typost/v1', '/admin/options', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'rest_save_admin_options'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ));
+
+        register_rest_route('typost/v1', '/admin/accessibility', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'rest_save_accessibility_options'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
+        ));
+
+        register_rest_route('typost/v1', '/admin/clear-cache', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'rest_clear_font_cache'),
+            'permission_callback' => function() {
+                return current_user_can('manage_options');
+            },
         ));
 
         /**
@@ -2716,6 +2803,120 @@ class Typost {
             'success' => true,
             'order'   => $sanitized,
         ));
+    }
+
+    /**
+     * REST callback: GET /admin/refresh
+     *
+     * Returns re-rendered admin page fragments plus refreshed font data so
+     * the settings page can update in place after font changes instead of
+     * reloading. HTML fragments are produced by the same template functions
+     * the page itself uses, so extension hooks (badges, per-font settings)
+     * render identically.
+     *
+     * @since 2.3.0
+     */
+    public function rest_get_admin_refresh() {
+        require_once TYPOST_PLUGIN_DIR . 'includes/admin-page.php';
+
+        $custom_fonts = get_option('typost_custom_fonts', array());
+        $adobe_fonts  = $this->get_adobe_fonts();
+        $manual_fonts = $this->get_manual_fonts();
+
+        ob_start();
+        typost_render_font_list_section($this, $custom_fonts, $adobe_fonts, $manual_fonts);
+        $font_list_html = ob_get_clean();
+
+        ob_start();
+        typost_render_preview_font_options($this, $custom_fonts, $adobe_fonts, $manual_fonts);
+        $preview_options_html = ob_get_clean();
+
+        $adobe_css_urls = array();
+        foreach ($adobe_fonts as $adobe_font) {
+            if (!empty($adobe_font['css_url'])) {
+                $adobe_css_urls[] = $adobe_font['css_url'];
+            }
+        }
+
+        return rest_ensure_response(array(
+            'fontListHtml'          => $font_list_html,
+            'previewOptionsHtml'    => $preview_options_html,
+            'fonts'                 => $this->get_custom_fonts(),
+            'adobeFonts'            => $adobe_fonts,
+            'manualFonts'           => $manual_fonts,
+            'fontFeatureVisibility' => $this->get_font_feature_visibility(),
+            'fontOrder'             => $this->get_font_order(),
+            'wpFontLibraryFonts'    => $this->get_wp_font_library_fonts(),
+            'fontVariablesCss'      => $this->get_font_css_variables(),
+            'adminFontCss'          => $this->get_admin_font_css(),
+            'adobeCssUrls'          => array_values(array_unique($adobe_css_urls)),
+        ));
+    }
+
+    /**
+     * REST callback: POST /admin/options
+     *
+     * AJAX counterpart of the Options tab form. Mirrors the POST handler in
+     * render_admin_page() (which remains as the no-JavaScript fallback).
+     *
+     * @since 2.3.0
+     * @param WP_REST_Request $request
+     */
+    public function rest_save_admin_options(WP_REST_Request $request) {
+        update_option('typost_show_clear_confirmation', $request->get_param('show_clear_confirmation') ? '1' : '0');
+        update_option('typost_archive_full_content_check', $request->get_param('archive_full_content_check') ? '1' : '0');
+
+        // Checkbox rendered only when the Font Library is available; only
+        // save when the client actually sent the value.
+        if ($this->font_library_bridge()->is_available() && null !== $request->get_param('auto_register_wp_fonts')) {
+            update_option('typost_auto_register_wp_fonts', $request->get_param('auto_register_wp_fonts') ? '1' : '0');
+        }
+
+        $color_scheme = $this->sanitize_color_scheme(sanitize_key((string) $request->get_param('color_scheme')));
+        update_option('typost_admin_color_scheme', $color_scheme);
+
+        // Clear cache for all users when options change
+        // Archive content check changes require cache refresh to take effect
+        $this->clear_cache();
+
+        return rest_ensure_response(array(
+            'success'   => true,
+            'scheme'    => $color_scheme,
+            'schemeCss' => $this->get_color_scheme_css($color_scheme),
+        ));
+    }
+
+    /**
+     * REST callback: POST /admin/accessibility
+     *
+     * AJAX counterpart of the Accessibility tab form. Mirrors the POST
+     * handler in render_admin_page() (which remains as the no-JavaScript
+     * fallback).
+     *
+     * @since 2.3.0
+     * @param WP_REST_Request $request
+     */
+    public function rest_save_accessibility_options(WP_REST_Request $request) {
+        update_option('typost_enable_aria_labels', $request->get_param('enable_aria_labels') ? '1' : '0');
+        update_option('typost_disable_accessibility_warning', $request->get_param('disable_accessibility_warning') ? '1' : '0');
+
+        // Clear cache when accessibility settings change
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true));
+    }
+
+    /**
+     * REST callback: POST /admin/clear-cache
+     *
+     * AJAX counterpart of the Options tab cache-clear form.
+     *
+     * @since 2.3.0
+     */
+    public function rest_clear_font_cache() {
+        $this->clear_cache();
+
+        return rest_ensure_response(array('success' => true));
     }
 
     /**
@@ -6189,8 +6390,9 @@ class Typost {
             'manual_fonts' => $this->get_manual_fonts(),
         );
 
-        // Include template file and render
-        include TYPOST_PLUGIN_DIR . 'includes/admin-page.php';
+        // Include template file and render (include_once: the admin refresh
+        // REST endpoint loads the same file for its fragment renderers)
+        include_once TYPOST_PLUGIN_DIR . 'includes/admin-page.php';
         typost_render_admin_template(
             $template_data['instance'],
             $template_data['presets'],

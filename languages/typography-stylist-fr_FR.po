@@ -46,8 +46,8 @@ msgid "Please select a ZIP file."
 msgstr "Veuillez sélectionner un fichier ZIP."
 
 #: headline-ligatures-styles.php:394
-msgid "Font kit uploaded and processed successfully! Reloading page..."
-msgstr "Kit de polices téléversé et traité avec succès ! Rechargement de la page..."
+msgid "Font kit uploaded and processed successfully!"
+msgstr "Kit de polices téléversé et traité avec succès !"
 
 #: headline-ligatures-styles.php:395
 msgid "Failed to delete font kit."
@@ -86,8 +86,8 @@ msgid "Adding..."
 msgstr "Ajout en cours..."
 
 #: typography-stylist.php:407
-msgid "Adobe Fonts project added successfully! Reloading page..."
-msgstr "Projet Adobe Fonts ajouté avec succès ! Rechargement de la page..."
+msgid "Adobe Fonts project added successfully!"
+msgstr "Projet Adobe Fonts ajouté avec succès !"
 
 #: typography-stylist.php:408
 msgid "Failed to add Adobe Fonts project."
@@ -114,8 +114,8 @@ msgid "Please enter a CSS font-family value."
 msgstr "Veuillez saisir une valeur CSS font-family."
 
 #: typography-stylist.php:415
-msgid "Custom font added successfully! Reloading page..."
-msgstr "Police personnalisée ajoutée avec succès ! Rechargement de la page..."
+msgid "Custom font added successfully!"
+msgstr "Police personnalisée ajoutée avec succès !"
 
 #: typography-stylist.php:416
 msgid "Failed to add custom font."
@@ -1926,8 +1926,8 @@ msgid "Registering..."
 msgstr "Enregistrement…"
 
 #: typography-stylist.php
-msgid "Font registered in the Font Library! Reloading page..."
-msgstr "Police enregistrée dans la bibliothèque de polices ! Rechargement de la page…"
+msgid "Font registered in the Font Library!"
+msgstr "Police enregistrée dans la bibliothèque de polices !"
 
 #: typography-stylist.php
 msgid "Failed to register the font in the Font Library."
@@ -1938,8 +1938,8 @@ msgid "Removing..."
 msgstr "Retrait…"
 
 #: typography-stylist.php
-msgid "Font removed from the Font Library! Reloading page..."
-msgstr "Police retirée de la bibliothèque de polices ! Rechargement de la page…"
+msgid "Font removed from the Font Library!"
+msgstr "Police retirée de la bibliothèque de polices !"
 
 #: typography-stylist.php
 msgid "Failed to remove the font from the Font Library."
@@ -1951,8 +1951,8 @@ msgstr "Retirer cette police de la bibliothèque de polices WordPress ? Le conte
 
 #: typography-stylist.php
 #, php-format
-msgid "Registered %1$s font(s) in the Font Library (%2$s failed). Reloading page..."
-msgstr "%1$s police(s) enregistrée(s) dans la bibliothèque de polices (%2$s en échec). Rechargement de la page…"
+msgid "Registered %1$s font(s) in the Font Library (%2$s failed)."
+msgstr "%1$s police(s) enregistrée(s) dans la bibliothèque de polices (%2$s en échec)."
 
 #: assets/js/block-editor.js
 msgid "This WordPress Font Library font could not be added. Please try again."
@@ -1994,8 +1994,8 @@ msgstr "Détection des graisses…"
 
 #: typography-stylist.php
 #, php-format
-msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked. Reloading page..."
-msgstr "Graisses détectées pour %1$s police(s) ; %2$s ont conservé toutes les graisses ; %3$s n'ont pas pu être vérifiées. Rechargement de la page…"
+msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked."
+msgstr "Graisses détectées pour %1$s police(s) ; %2$s ont conservé toutes les graisses ; %3$s n'ont pas pu être vérifiées."
 
 #: typography-stylist.php
 msgid "Weight detection failed. Please try again."
@@ -2081,3 +2081,55 @@ msgstr "Sur la ligne de base"
 msgid "Reset Vertical Shift"
 msgstr "Réinitialiser le décalage vertical"
 
+
+#: typography-stylist.php
+msgid "Font deleted successfully!"
+msgstr "Police supprimée avec succès !"
+
+#: typography-stylist.php
+msgid "Failed to delete font."
+msgstr "Échec de la suppression de la police."
+
+#: typography-stylist.php
+msgid "Failed to create font replacement."
+msgstr "Échec de la création du remplacement de police."
+
+#: typography-stylist.php
+msgid "Fallback fonts updated successfully!"
+msgstr "Polices de secours mises à jour avec succès !"
+
+#: typography-stylist.php
+msgid "Font updated successfully!"
+msgstr "Police mise à jour avec succès !"
+
+#: typography-stylist.php
+msgid "Font list updated."
+msgstr "Liste des polices mise à jour."
+
+#: typography-stylist.php
+msgid "Could not refresh the font list. Reloading the page instead."
+msgstr "Impossible d'actualiser la liste des polices. Rechargement de la page à la place."
+
+#: typography-stylist.php
+msgid "Saving..."
+msgstr "Enregistrement..."
+
+#: typography-stylist.php
+msgid "Options saved successfully."
+msgstr "Options enregistrées avec succès."
+
+#: typography-stylist.php
+msgid "Failed to save options."
+msgstr "Échec de l'enregistrement des options."
+
+#: typography-stylist.php
+msgid "Failed to save accessibility settings."
+msgstr "Échec de l'enregistrement des réglages d'accessibilité."
+
+#: typography-stylist.php
+msgid "Failed to clear the font cache."
+msgstr "Échec du vidage du cache des polices."
+
+#: typography-stylist.php
+msgid "Dismiss this notice."
+msgstr "Ignorer cette notification."

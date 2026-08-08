@@ -20,9 +20,55 @@ function typostFormatDetectWeightsSummary(response, template) {
         .replace('%3$s', String(failed));
 }
 
+/**
+ * Merge an admin refresh REST payload into the typostAdmin data object.
+ *
+ * Only the known data keys are copied; anything else in the payload (HTML
+ * fragments, CSS strings) is left for the DOM-updating code.
+ *
+ * @param {object} adminData The typostAdmin object (mutated in place).
+ * @param {object} payload   Response from GET /typost/v1/admin/refresh.
+ * @return {object} The same adminData object.
+ */
+function typostMergeAdminRefreshData(adminData, payload) {
+    if (!adminData || !payload) {
+        return adminData;
+    }
+    ['fonts', 'adobeFonts', 'manualFonts', 'fontFeatureVisibility', 'fontOrder', 'wpFontLibraryFonts'].forEach(function(key) {
+        if (typeof payload[key] !== 'undefined') {
+            adminData[key] = payload[key];
+        }
+    });
+    return adminData;
+}
+
+/**
+ * Decide which value the preview font select should hold after its options
+ * are refreshed: keep the current selection when still available, otherwise
+ * fall back to the first available font (matching the page-load auto-select),
+ * or the default when no fonts remain.
+ *
+ * @param {string}   currentValue    The value selected before the refresh.
+ * @param {string[]} availableValues Option values after the refresh ('' = default).
+ * @return {string} The value the select should hold.
+ */
+function typostResolvePreviewSelection(currentValue, availableValues) {
+    if (currentValue && availableValues.indexOf(currentValue) !== -1) {
+        return currentValue;
+    }
+    for (var i = 0; i < availableValues.length; i++) {
+        if (availableValues[i]) {
+            return availableValues[i];
+        }
+    }
+    return '';
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        formatDetectWeightsSummary: typostFormatDetectWeightsSummary
+        formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
+        mergeAdminRefreshData: typostMergeAdminRefreshData,
+        resolvePreviewSelection: typostResolvePreviewSelection
     };
 }
 
@@ -99,6 +145,170 @@ jQuery(document).ready(function($) {
             }
         }
     })();
+
+    /* ─────────────────────────────────────────────────────────────────────
+     * AJAX refresh infrastructure
+     *
+     * Font changes used to end in location.reload(). Instead, the page now
+     * re-fetches server-rendered fragments (GET admin/refresh) and swaps
+     * them in place, announcing the update through a polite live region.
+     * ──────────────────────────────────────────────────────────────────── */
+
+    /**
+     * Announce a message through the global polite live region.
+     * Cleared first so repeating the same text is re-announced.
+     */
+    function announce(message) {
+        var $region = $('#typost-live-region');
+        if (!$region.length || !message) {
+            return;
+        }
+        $region.text('');
+        setTimeout(function() {
+            $region.text(message);
+        }, 100);
+    }
+
+    /**
+     * Ensure a <style> element with the given id exists in <head> and set
+     * its content. Returns the element.
+     */
+    function setStyleElement(id, css) {
+        var el = document.getElementById(id);
+        if (!el) {
+            el = document.createElement('style');
+            el.id = id;
+            document.head.appendChild(el);
+        }
+        el.textContent = css || '';
+        return el;
+    }
+
+    /**
+     * Apply an admin/refresh payload: swap the fonts region, repopulate the
+     * preview font selector, refresh typostAdmin data, and update font CSS
+     * so new fonts preview immediately.
+     */
+    function applyAdminRefresh(response) {
+        // 1. Swap the fonts region (notices + unified font list + empty state)
+        var $region = $('#typost-fonts-region');
+        var focusWasInRegion = $region.length && document.activeElement &&
+            $.contains($region[0], document.activeElement);
+        if ($region.length && typeof response.fontListHtml === 'string') {
+            $region.html(response.fontListHtml);
+            initFontListSortable();
+            // Re-attach dismiss buttons: WordPress only processes
+            // .is-dismissible notices at page load, so re-rendered ones
+            // would lose their button.
+            $region.find('.notice.is-dismissible').each(function() {
+                var $el = $(this);
+                if ($el.find('.notice-dismiss').length) {
+                    return;
+                }
+                var $button = $('<button type="button" class="notice-dismiss"></button>')
+                    .append($('<span class="screen-reader-text"></span>').text(typostAdmin.strings.dismissNotice || 'Dismiss this notice.'));
+                $button.on('click', function(event) {
+                    event.preventDefault();
+                    $el.fadeTo(100, 0, function() {
+                        $el.slideUp(100, function() {
+                            $el.remove();
+                        });
+                    });
+                });
+                $el.append($button);
+            });
+            // Keep keyboard users anchored: if focus lived inside the swapped
+            // markup (or was dropped to <body>), move it to the region container.
+            if (focusWasInRegion || document.activeElement === document.body) {
+                $region.trigger('focus');
+            }
+        }
+
+        // 2. Repopulate the preview font selector, preserving the selection
+        var $select = $('#typost-preview-font-select');
+        if ($select.length && typeof response.previewOptionsHtml === 'string') {
+            var previous = $select.val();
+            $select.html(response.previewOptionsHtml);
+            var available = $select.find('option').map(function() {
+                return $(this).val();
+            }).get();
+            $select.val(typostResolvePreviewSelection(previous, available));
+            $('#typost-preset-font-selector').toggle(available.length > 1);
+            // Re-apply preview font + feature visibility for the resolved selection
+            $select.trigger('change');
+        }
+
+        // 3. Refresh the localized data used by the deletion modal and the
+        //    Replacement Fonts tab
+        typostMergeAdminRefreshData(typostAdmin, response);
+
+        // 4. Refresh font CSS so newly added fonts render in previews
+        if (typeof response.fontVariablesCss === 'string') {
+            setStyleElement('typost-font-variables', response.fontVariablesCss);
+        }
+        if (typeof response.adminFontCss === 'string') {
+            setStyleElement('typost-ajax-font-css', response.adminFontCss);
+        }
+        (response.adobeCssUrls || []).forEach(function(url) {
+            var loaded = $('link[rel="stylesheet"]').filter(function() {
+                return this.href === url;
+            }).length;
+            if (!loaded) {
+                $('<link>', { rel: 'stylesheet', href: url }).appendTo('head');
+            }
+        });
+
+        // 5. The Replacement Fonts tab lists fonts by name — rebuild it if
+        //    the user is currently looking at it (it reloads on tab open
+        //    otherwise)
+        if ($('#typost-tab-replacements').hasClass('active')) {
+            loadReplacementsList();
+            populateAddReplacementForm();
+        }
+    }
+
+    var adminRefreshInFlight = false;
+
+    /**
+     * Fetch fresh fragments/data and update the page in place.
+     *
+     * @param {string} [extraMessage] Prepended to the polite announcement —
+     *        pass only when the triggering action has no aria-live message
+     *        of its own (e.g. font deletion).
+     */
+    function refreshAdminFontData(extraMessage) {
+        if (adminRefreshInFlight) {
+            return;
+        }
+        adminRefreshInFlight = true;
+
+        $.ajax({
+            url: typostAdmin.restUrl + 'admin/refresh',
+            method: 'GET',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            success: function(response) {
+                applyAdminRefresh(response);
+                var text = typostAdmin.strings.fontListUpdated;
+                if (extraMessage) {
+                    text = extraMessage + ' ' + text;
+                }
+                announce(text);
+            },
+            error: function() {
+                // The server-side change already happened but the page could
+                // not re-render — fall back to a reload rather than sit stale.
+                announce(typostAdmin.strings.refreshError);
+                setTimeout(function() {
+                    location.reload();
+                }, 800);
+            },
+            complete: function() {
+                adminRefreshInFlight = false;
+            }
+        });
+    }
 
     // File selection handling
     var selectedFile = null;
@@ -225,9 +435,9 @@ jQuery(document).ready(function($) {
                 $('#typost-font-file').val('');
                 $('#typost-selected-file').hide();
 
-                // Reload after extensions post-process the new entries.
+                // Refresh in place after extensions post-process the new entries.
                 // Warnings get a longer window so they can be read first.
-                reloadAfterFontsAdded({
+                refreshAfterFontsAdded({
                     type: 'uploaded',
                     fonts: response.fonts || [],
                     $message: $message
@@ -477,8 +687,13 @@ jQuery(document).ready(function($) {
     });
 
     // ── Unified font list: drag-to-reorder ──────────────────────────────────
-    var $unifiedList = $('#typost-unified-font-list');
-    if ($unifiedList.length && $.fn.sortable) {
+    // Wrapped in a function so it can be re-initialized after the font list
+    // is swapped in place by an AJAX refresh.
+    function initFontListSortable() {
+        var $unifiedList = $('#typost-unified-font-list');
+        if (!$unifiedList.length || !$.fn.sortable) {
+            return;
+        }
         $unifiedList.sortable({
             handle: '.typost-drag-handle',
             axis: 'y',
@@ -509,6 +724,7 @@ jQuery(document).ready(function($) {
             }
         });
     }
+    initFontListSortable();
     // ────────────────────────────────────────────────────────────────────────
 
     // Auto-select first non-system font on page load
@@ -720,8 +936,8 @@ jQuery(document).ready(function($) {
                 $('#typost-adobe-embed-code').val('');
                 $('#typost-adobe-font-families').val('');
 
-                // Reload after extensions post-process the new entries
-                reloadAfterFontsAdded({
+                // Refresh in place after extensions post-process the new entries
+                refreshAfterFontsAdded({
                     type: 'adobe',
                     fonts: response.fonts || [],
                     $message: $message
@@ -856,10 +1072,11 @@ jQuery(document).ready(function($) {
                 $('#typost-manual-font-name').val('');
                 $('#typost-manual-font-family').val('');
 
-                // Refresh page after 1.5 seconds
+                // Refresh the font list in place after a short delay so the
+                // success notice is read first
                 setTimeout(function() {
-                    location.reload();
-                }, 1500);
+                    refreshAdminFontData();
+                }, 1200);
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.addManualFontError;
@@ -994,7 +1211,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                reloadAfterFontSaved({ fontId: fontId, type: 'uploaded', $card: $card });
+                refreshAfterFontSaved({ fontId: fontId, type: 'uploaded', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -1010,13 +1227,13 @@ jQuery(document).ready(function($) {
     });
 
     /**
-     * Fire typost:font-saved with a waitUntil(promise) collector, then reload
-     * once every listener-registered promise settles (extensions save their
-     * own per-font data via REST on this event — previously they raced a
-     * blind 1500 ms timeout). Reload waits at least 1200 ms so the success
-     * message stays readable, and at most 5 s so a hung request can't block.
+     * Fire typost:font-saved with a waitUntil(promise) collector, then
+     * refresh the font list in place once every listener-registered promise
+     * settles (extensions save their own per-font data via REST on this
+     * event). The refresh waits at least 1200 ms so the success message
+     * stays readable, and at most 5 s so a hung request can't block.
      */
-    function reloadAfterFontSaved(payload) {
+    function refreshAfterFontSaved(payload) {
         var pending = [];
         payload.waitUntil = function(promise) {
             if (promise && typeof promise.then === 'function') {
@@ -1031,21 +1248,22 @@ jQuery(document).ready(function($) {
         var minDelay = new Promise(function(resolve) { setTimeout(resolve, 1200); });
 
         Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
-            location.reload();
+            refreshAdminFontData();
         });
     }
 
     /**
-     * Fire typost:fonts-added with a waitUntil(promise) collector, then reload
-     * once every listener-registered promise settles. Same contract as
-     * typost:font-saved, but for the add/upload flows where extensions
-     * post-process brand-new entries (e.g. variable font axis auto-detection,
-     * which downloads and parses font binaries — hence the longer 15 s cap).
+     * Fire typost:fonts-added with a waitUntil(promise) collector, then
+     * refresh the font list in place once every listener-registered promise
+     * settles. Same contract as typost:font-saved, but for the add/upload
+     * flows where extensions post-process brand-new entries (e.g. variable
+     * font axis auto-detection, which downloads and parses font binaries —
+     * hence the longer 15 s cap).
      *
      * @param {Object} payload   {type: 'uploaded'|'adobe', fonts: Array, $message: jQuery}
      * @param {number} minDelayMs Minimum delay so the success notice stays readable.
      */
-    function reloadAfterFontsAdded(payload, minDelayMs) {
+    function refreshAfterFontsAdded(payload, minDelayMs) {
         var pending = [];
         payload.waitUntil = function(promise) {
             if (promise && typeof promise.then === 'function') {
@@ -1060,7 +1278,7 @@ jQuery(document).ready(function($) {
         var minDelay = new Promise(function(resolve) { setTimeout(resolve, minDelayMs); });
 
         Promise.all([minDelay, Promise.race([settled, cap])]).then(function() {
-            location.reload();
+            refreshAdminFontData();
         });
     }
 
@@ -1089,7 +1307,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fallbacksUpdated + '</p></div>');
-                reloadAfterFontSaved({ fontId: fontId, type: 'adobe', $card: $card });
+                refreshAfterFontSaved({ fontId: fontId, type: 'adobe', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFallbacksError;
@@ -1143,7 +1361,7 @@ jQuery(document).ready(function($) {
             },
             success: function() {
                 $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.fontUpdated + '</p></div>');
-                reloadAfterFontSaved({ fontId: fontId, type: 'manual', $card: $card });
+                refreshAfterFontSaved({ fontId: fontId, type: 'manual', $card: $card });
             },
             error: function(xhr) {
                 var errorMsg = typostAdmin.strings.updateFontError;
@@ -1349,18 +1567,20 @@ jQuery(document).ready(function($) {
                                     typostAdmin.strings.deleteFontSuccess + '</p></div>');
                     $('.wrap h1').after($message);
 
-                    // Reload page after brief delay
+                    // Refresh the font list in place after a brief delay.
+                    // The h1 notice is not a live region, so the deletion is
+                    // included in the polite announcement.
                     setTimeout(function() {
-                        location.reload();
-                    }, 1500);
+                        refreshAdminFontData(typostAdmin.strings.deleteFontSuccess);
+                    }, 1200);
                 },
                 error: function() {
-                    alert('Failed to delete font.');
+                    alert(typostAdmin.strings.deleteFontFailed);
                     $btn.prop('disabled', false).text('Delete Font');
                 }
             });
         }).fail(function() {
-            alert('Failed to create font replacement.');
+            alert(typostAdmin.strings.replacementFailed);
             $btn.prop('disabled', false).text('Delete Font');
         });
     });
@@ -1692,7 +1912,7 @@ jQuery(document).ready(function($) {
 
         wplRestCall('fonts/' + fontId + '/wp-library', 'POST', function() {
             $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRegisterSuccess + '</p></div>');
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(function() { refreshAdminFontData(); }, 1200);
         }, function(xhr) {
             $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError) + '</p></div>');
             $btn.prop('disabled', false).text(originalText);
@@ -1714,7 +1934,7 @@ jQuery(document).ready(function($) {
 
         wplRestCall('fonts/' + fontId + '/wp-library', 'DELETE', function() {
             $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRemoveSuccess + '</p></div>');
-            setTimeout(function() { location.reload(); }, 1200);
+            setTimeout(function() { refreshAdminFontData(); }, 1200);
         }, function(xhr) {
             $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRemoveError) + '</p></div>');
             $btn.prop('disabled', false).text(originalText);
@@ -1735,7 +1955,7 @@ jQuery(document).ready(function($) {
                 .replace('%1$s', String(registered))
                 .replace('%2$s', String(failed));
             $btn.after($('<p role="status"></p>').text(msg));
-            setTimeout(function() { location.reload(); }, 1500);
+            setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
             alert(wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError));
             $btn.prop('disabled', false).text(originalText);
@@ -1758,10 +1978,145 @@ jQuery(document).ready(function($) {
         wplRestCall('fonts/detect-weights/bulk', 'POST', function(response) {
             var msg = typostFormatDetectWeightsSummary(response, typostAdmin.strings.detectWeightsDone);
             $message.html($('<p></p>').text(msg));
-            setTimeout(function() { location.reload(); }, 1500);
+            setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
             $message.html($('<p></p>').text(wplErrorMessage(xhr, typostAdmin.strings.detectWeightsError)));
             $btn.prop('disabled', false).text(originalText);
+        });
+    });
+
+    /* ─────────────────────────────────────────────────────────────────────
+     * Settings forms — progressive enhancement to AJAX
+     *
+     * The Options, Accessibility, and Clear Cache forms keep their PHP POST
+     * handlers as the no-JavaScript fallback; with JavaScript available the
+     * submits go through REST and the page updates in place.
+     * ──────────────────────────────────────────────────────────────────── */
+
+    /**
+     * Show an inline notice after a settings form's submit row.
+     * The notice container is a polite live region of its own so sighted
+     * and screen reader users get the same message.
+     */
+    function settingsFormMessage($form, type, text) {
+        var $msg = $form.find('.typost-settings-ajax-message');
+        if (!$msg.length) {
+            $msg = $('<div class="typost-settings-ajax-message" role="status" aria-live="polite" aria-atomic="true"></div>');
+            $form.find('p.submit').first().after($msg);
+        }
+        var $notice = $('<div></div>').addClass('notice inline notice-' + type).append($('<p></p>').text(text));
+        $msg.empty().append($notice);
+    }
+
+    /**
+     * Apply a color scheme in place: swap the data attribute (used by
+     * admin-page.css) and replace the scheme's inline style content.
+     */
+    function applyColorScheme(scheme, css) {
+        $('.typost-admin-wrap').attr('data-color-scheme', scheme);
+        // PHP prints the scheme CSS under this id (see
+        // output_admin_color_scheme); when the page loaded with the
+        // 'default' scheme there is no tag yet, so create it.
+        setStyleElement('typost-admin-color-scheme-inline-css', css || '');
+    }
+
+    // Options form (Options tab)
+    $('button[name="typost_save_options_settings"]').closest('form').on('submit', function(e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var $submit = $form.find('button[name="typost_save_options_settings"]');
+        var originalText = $submit.text();
+        var $autoRegister = $('#typost_auto_register_wp_fonts');
+
+        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+
+        $.ajax({
+            url: typostAdmin.restUrl + 'admin/options',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                show_clear_confirmation: $('#typost_show_clear_confirmation').is(':checked'),
+                archive_full_content_check: $('#typost_archive_full_content_check').is(':checked'),
+                // Checkbox only rendered when the WP Font Library is available
+                auto_register_wp_fonts: $autoRegister.length ? $autoRegister.is(':checked') : null,
+                color_scheme: $('#typost_admin_color_scheme').val()
+            }),
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            success: function(response) {
+                applyColorScheme(response.scheme, response.schemeCss);
+                settingsFormMessage($form, 'success', typostAdmin.strings.optionsSaved);
+            },
+            error: function(xhr) {
+                settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.optionsSaveError));
+            },
+            complete: function() {
+                $submit.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+
+    // Accessibility settings form (Accessibility tab)
+    $('button[name="typost_save_accessibility_settings"]').closest('form').on('submit', function(e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var $submit = $form.find('button[name="typost_save_accessibility_settings"]');
+        var originalText = $submit.text();
+
+        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+
+        $.ajax({
+            url: typostAdmin.restUrl + 'admin/accessibility',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                enable_aria_labels: $('#typost_enable_aria_labels').is(':checked'),
+                disable_accessibility_warning: $('#typost_disable_accessibility_warning').is(':checked')
+            }),
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            success: function() {
+                settingsFormMessage($form, 'success', typostAdmin.strings.accessibilitySaved);
+            },
+            error: function(xhr) {
+                settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.accessibilitySaveError));
+            },
+            complete: function() {
+                $submit.prop('disabled', false).text(originalText);
+            }
+        });
+    });
+
+    // Clear font cache form (Options tab)
+    $('button[name="typost_clear_cache"]').closest('form').on('submit', function(e) {
+        e.preventDefault();
+
+        var $form = $(this);
+        var $submit = $form.find('button[name="typost_clear_cache"]');
+        var originalText = $submit.text();
+
+        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+
+        $.ajax({
+            url: typostAdmin.restUrl + 'admin/clear-cache',
+            method: 'POST',
+            contentType: 'application/json',
+            beforeSend: function(xhr) {
+                xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
+            },
+            success: function() {
+                settingsFormMessage($form, 'success', typostAdmin.strings.cacheCleared);
+            },
+            error: function(xhr) {
+                settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.cacheClearError));
+            },
+            complete: function() {
+                $submit.prop('disabled', false).text(originalText);
+            }
         });
     });
 });

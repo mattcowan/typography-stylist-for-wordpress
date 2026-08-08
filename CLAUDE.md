@@ -60,6 +60,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
 - Options tab: Clear confirmation settings, archive page font detection, manual cache clear button
 - Inline styles and jQuery for tab switching
 - Located at Settings → Typography Stylist
+- **No-reload AJAX architecture (v2.3+):** every font action refreshes the page in place instead of reloading. `GET /typost/v1/admin/refresh` returns server-rendered fragments from the shared template functions `typost_render_font_list_section()` / `typost_render_preview_font_options()` (so PHP extension hooks render identically in fragments), plus refreshed `typostAdmin` data arrays and font CSS (`--font-N` variables, admin @font-face, Adobe stylesheet URLs). JS swaps `#typost-fonts-region`, repopulates the preview select (selection preserved), re-inits sortable, and re-attaches dismiss buttons on `.is-dismissible` notices (WP core only wires those at page load). The Options/Accessibility/Clear Cache forms POST to `admin/options`, `admin/accessibility`, `admin/clear-cache` (all `manage_options`), keeping their PHP POST handlers as the no-JS fallback; the color scheme restyles live by swapping `#typost-admin-color-scheme-inline-css`. Updates are announced through the polite `#typost-live-region`; the `typost:font-saved` / `typost:fonts-added` `waitUntil` contract still gates the refresh (see HOOKS.md). On refresh failure the page falls back to `location.reload()` so it can never sit stale.
 
 ### Font Loading Architecture (v1.1.9+)
 

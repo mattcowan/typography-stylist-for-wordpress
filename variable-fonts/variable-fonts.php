@@ -791,7 +791,7 @@ final class Typost_Variable_Fonts {
 	 */
 	public function filter_admin_strings( $data ) {
 		if ( isset( $data['strings'] ) ) {
-			$data['strings']['fallbacksUpdated'] = esc_html__( 'Settings saved successfully! Reloading page...', 'typost-variable-fonts' );
+			$data['strings']['fallbacksUpdated'] = esc_html__( 'Settings saved successfully!', 'typost-variable-fonts' );
 		}
 		return $data;
 	}
