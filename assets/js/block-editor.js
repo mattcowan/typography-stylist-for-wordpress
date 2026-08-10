@@ -541,7 +541,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         // the author can actually see, instead of falling back
                         // to whichever font happens to be first in the list.
                         fontId: self.state.selectedFontId || self.getInheritedFontId(),
-                        fontWeight: self.state.fontWeight,
+                        // Rendered weight, not the '400' default: a glyph
+                        // inserted into a theme-bold headline was coming out
+                        // lighter than the text around it, because consumers
+                        // wrote this value onto the span they created.
+                        fontWeight: self.getEffectiveFontWeight(),
                         // Rendered style, not just span styling — an <em>-italic
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
@@ -1016,6 +1020,32 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             return '';
+        }
+
+        /**
+         * The weight the selection should be treated as having.
+         *
+         * A heading is bold because the theme says so, so '400' — what
+         * getActiveFontWeight() reports for text with no stored weight — is a
+         * lie that anything acting on the selection would bake in: converting
+         * the block lightened it, and a glyph inserted by the Glyphs panel
+         * came out lighter than the headline around it.
+         *
+         * Precedence: a weight stored on the selection, then one the author
+         * picked in this popover, then the weight actually rendering.
+         *
+         * @since 2.3.0
+         * @return {string} Weight to use
+         */
+        getEffectiveFontWeight() {
+            const explicitWeight = this.getExplicitFontWeight();
+            if (explicitWeight) {
+                return explicitWeight;
+            }
+            if (this._pendingChanges.keys.has('fontWeight')) {
+                return this.state.fontWeight;
+            }
+            return this.getBlockInheritedWeight() || this.state.fontWeight;
         }
 
         getActiveFontVariationSettings() {
@@ -1862,22 +1892,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 tagName = 'p';
             }
 
-            // Weight for the new block. A core heading is bold because the
-            // theme styles h2, not because anything stored says 700 — and the
-            // block's fontWeight defaults to '400', which save.js always emits,
-            // so a straight conversion visibly lightens the heading.
-            //
-            // Precedence: a weight stored on the selection, then one the author
-            // picked in this popover, then the weight the block is actually
-            // rendering at. state.fontWeight cannot stand in for the first two:
-            // getActiveFontWeight() hard-defaults to '400', so an untouched
-            // popover is indistinguishable from a deliberate 400.
-            const explicitWeight = this.getExplicitFontWeight();
-            const pickedWeight = this._pendingChanges.keys.has('fontWeight') ? this.state.fontWeight : '';
-            const convertFontWeight = explicitWeight ||
-                pickedWeight ||
-                this.getBlockInheritedWeight() ||
-                this.state.fontWeight;
+            // A core heading is bold because the theme styles h2, not because
+            // anything stored says 700 — and the block's fontWeight defaults to
+            // '400', which save.js always emits, so a straight conversion
+            // visibly lightens the heading.
+            const convertFontWeight = this.getEffectiveFontWeight();
 
             let contentForBlock;
 
@@ -2983,6 +3002,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">
 
+                                {/* Accessibility Warning — Non-blocking Notice (v2.0.0).
+                                    Sits at the top of the panel: it reports a problem with
+                                    the selection the author just made and offers the fix, so
+                                    burying it under every feature control meant scrolling
+                                    past all of them to find out anything was wrong. */}
+                                {wordBoundaryWarning && (
+                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
+                                        <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
+                                        <p>{wordBoundaryWarning}</p>
+                                        {canConvert && (
+                                            <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button">
+                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
+                                            </Button>
+                                        )}
+                                        {!canConvert && convertBlockedMessage && (
+                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
+                                        )}
+                                        <p className="typost-warning-settings-link">
+                                            <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
+                                                {__('Manage accessibility settings', 'typography-stylist')}
+                                            </a>
+                                        </p>
+                                    </Notice>
+                                )}
+
                                 {/* Extension hook point: top of modal (e.g., Paragraph Styles dropdown) */}
                                 <div className="typost-hook-point" data-hook="typost_inline_modal_top" ref={(el) => {
                                     if (el && !el._hooked) {
@@ -3225,37 +3269,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     }
                                 }} />
 
-                                {/* Accessibility Warning - Non-blocking Notice (v2.0.0) */}
-                                {wordBoundaryWarning && (
-                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
-                                        <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
-                                        <p>{wordBoundaryWarning}</p>
-                                        {canConvert && (
-                                            <Button isLink onClick={this.convertToBlock}>
-                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
-                                            </Button>
-                                        )}
-                                        {!canConvert && convertBlockedMessage && (
-                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
-                                        )}
-                                        <p className="typost-warning-settings-link">
-                                            <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
-                                                {__('Manage accessibility settings', 'typography-stylist')}
-                                            </a>
-                                        </p>
-                                    </Notice>
-                                )}
-
                                 {/* Convert to block — always reachable for convertible blocks, not
                                     only when the accessibility notice fires. When the conversion is
                                     impossible the reason is stated instead of rendering nothing,
                                     which previously read as a missing feature. The word-boundary
-                                    notice carries its own copy, so this is suppressed while it shows. */}
+                                    notice at the top of the panel carries its own copy, so this is
+                                    suppressed while it shows. */}
                                 {!wordBoundaryWarning && (canConvert || convertBlockedMessage) && (
                                     <div className="typost-convert-section">
                                         {canConvert ? (
                                             <>
-                                                <Button isLink onClick={this.convertToBlock}>
+                                                <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button">
                                                     {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                                 </Button>
                                                 <p className="typost-convert-description">
