@@ -470,9 +470,29 @@ Descriptors without an `id` or a callable `onClick` are dropped.
 | `savedSelectionStart` / `savedSelectionEnd` | — | offsets, or `null` |
 | `selectedText` | selected text (`''` when none) | selected text (`''` when none) |
 | `state` | resolved editor state | resolved editor state |
+| `accessibility` | — | word-boundary state (see below) |
 | `reopenHost` | `false` | `false` |
 
-Two details matter:
+**`context.accessibility`** (inline editor) carries the word-boundary notice the editor's own modal would have shown, because a panel opened from the toolbar bypasses that modal entirely:
+
+```js
+{
+    wordBoundaryWarning: '',      // '' when the selection is fine, or off in Settings → Accessibility
+    canConvert: false,            // whether the conversion is offered as the fix
+    convertBlockedMessage: '',    // why it isn't, when it is worth explaining
+    settingsUrl: '…&tab=accessibility',
+}
+```
+
+If your panel can create inline spans, show this warning. To offer the fix, dispatch the conversion — it replaces the block, so close your UI at the same time:
+
+```js
+document.dispatchEvent(new CustomEvent('typost-convert-to-block', {
+    detail: { source: 'inline', clientId: context.clientId || null },
+}));
+```
+
+Two more details matter:
 
 - **Use `context.state`, not the `typost_current_editor_state` filter.** That filter is only answered by the block holding the caret, so a block selected from List View would report the default font. The context state is resolved for the block whose toolbar was clicked.
 - **`reopenHost: false`** means no host modal was open. If your panel closes by firing `typost_glyphs_panel_closed`, pass the flag through so the editors do not open a modal the author never asked for:

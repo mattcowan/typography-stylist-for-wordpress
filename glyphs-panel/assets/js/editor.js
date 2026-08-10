@@ -108,6 +108,10 @@
 		}
 
 		var context = {
+			// Word-boundary state, resolved by the host editor at launch. Only
+			// a toolbar launch supplies it — opened from inside an editor
+			// modal, that modal shows the notice itself.
+			accessibility: (snapshot && snapshot.accessibility) || null,
 			fontId: state.fontId || 0,
 			fontWeight: state.fontWeight || '',
 			// The face variant rendering at the selection — the panel loads and

@@ -237,3 +237,15 @@ msgstr "Ajouter un bouton Glyphes à la barre d’outils du bloc"
 #: glyphs-panel.php
 msgid "Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way."
 msgstr "Place un bouton Glyphes à côté du bouton Typography Stylist dans la barre d’outils du bloc, afin d’ouvrir le navigateur de glyphes en un clic plutôt qu’en passant par le panneau Typography Stylist. Le bouton situé dans ce panneau reste en place dans les deux cas."
+
+#: assets/js/glyphs-modal.js
+msgid "Accessibility Notice"
+msgstr "Avis d’accessibilité"
+
+#: assets/js/glyphs-modal.js
+msgid "Convert to Typography Stylist Block"
+msgstr "Convertir en bloc Typography Stylist"
+
+#: assets/js/glyphs-modal.js
+msgid "Manage accessibility settings"
+msgstr "Gérer les réglages d’accessibilité"

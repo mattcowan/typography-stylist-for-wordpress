@@ -125,6 +125,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
+     * Read a boolean flag out of typostData.
+     *
+     * These options are stored as '1'/'0' strings and wp_localize_script()
+     * stringifies whatever it is handed, so an uncast '0' arrives as the
+     * string "0" — truthy in JavaScript, which silently inverted every such
+     * setting. PHP now casts them, but a localized-data transient written
+     * before that fix can still hold the old strings for up to an hour, so
+     * treat "0" and "false" as off here too.
+     *
+     * @since 2.3.0
+     * @param {*} value Raw value from typostData
+     * @return {boolean} Whether the flag is on
+     */
+    function isFlagEnabled(value) {
+        if (value === undefined || value === null || value === false) {
+            return false;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return normalized !== '' && normalized !== '0' && normalized !== 'false';
+        }
+        return !!value;
+    }
+
+    /**
      * Filter extension-registered toolbar button descriptors down to the ones
      * this editor should render, dropping malformed entries. A descriptor with
      * no `editors` array is offered in every editor.
@@ -383,7 +408,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             sanitizeCSSValue,
             sanitizeFontVariationSettings,
             getBlockInheritedFont,
-            getBlockInheritedWeight
+            getBlockInheritedWeight,
+            isFlagEnabled
         };
     }
 
@@ -729,6 +755,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 });
             };
             window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
+
+            // Extension hook: let an extension trigger the conversion its own
+            // UI is offering — the word-boundary notice is only useful if the
+            // fix it recommends is reachable from where the notice is shown.
+            // Every mounted instance handles it, which is harmless: convert
+            // reads the selected block from the store, and replaceBlocks on an
+            // already-replaced client ID is a no-op.
+            this._handleConvertRequest = function() {
+                if (self._isMounted) {
+                    self.convertToBlock();
+                }
+            };
+            document.addEventListener('typost-convert-to-block', this._handleConvertRequest);
 
             // Extension hook: extra toolbar buttons may register after this
             // component first renders (async or conditionally loaded
@@ -1346,6 +1385,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 savedSelectionEnd: savedSelectionEnd,
                 selectedText: selectedText,
                 state: window.typostHooks.applyFilters('typost_current_editor_state', {}, 'inline'),
+                // The word-boundary notice this modal would have shown. A panel
+                // opened from the toolbar bypasses it entirely, so it has to be
+                // able to raise the same warning itself.
+                accessibility: this.getSelectionAccessibility(savedSelectionStart, savedSelectionEnd),
                 // No host modal was open, so nothing should reopen on close
                 reopenHost: false
             });
@@ -1389,13 +1432,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     detectionFailed = true;
                 }
 
-                // Check word boundary when opening (v2.0.0 - now informational, not blocking)
-                if (selectionStart !== selectionEnd) {
-                    const validation = this.validateSelection(selectionStart, selectionEnd);
-                    if (!validation.valid) {
-                        wordBoundaryWarning = validation.message;
-                    }
-                }
+                // Check word boundary when opening (v2.0.0 - now informational,
+                // not blocking). Honours the Settings → Accessibility switch,
+                // which the notice ignored until 2.3.0.
+                wordBoundaryWarning = this.getSelectionAccessibility(selectionStart, selectionEnd).wordBoundaryWarning;
 
                 // Convert capability is resolved on every open, not only when a
                 // word-boundary warning fires: the Convert action is offered for
@@ -1791,8 +1831,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          *
          * @return {string} Explanation, or '' when none applies.
          */
-        getConvertBlockedMessage() {
-            const { convertBlockedReason, convertParentTitle } = this.state;
+        getConvertBlockedMessage(reason, parentTitle) {
+            const convertBlockedReason = reason !== undefined ? reason : this.state.convertBlockedReason;
+            const convertParentTitle = parentTitle !== undefined ? parentTitle : this.state.convertParentTitle;
 
             if (!shouldExplainConvertBlock(convertBlockedReason)) {
                 return '';
@@ -1811,6 +1852,57 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             return __('This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist');
+        }
+
+        /**
+         * The accessibility state of a selection, resolved fresh.
+         *
+         * Everything the word-boundary notice needs, in one object, so that
+         * surfaces which never open this modal — the Glyphs panel launched
+         * straight from the block toolbar — can show the same notice instead
+         * of silently letting the author split a word.
+         *
+         * Resolved from the store rather than component state, because a
+         * toolbar launch has not run togglePopover() and so has no fresh state
+         * to read.
+         *
+         * @since 2.3.0
+         * @param {number|null} start Selection start offset
+         * @param {number|null} end   Selection end offset
+         * @return {{wordBoundaryWarning: string, canConvert: boolean, convertBlockedMessage: string, settingsUrl: string}}
+         */
+        getSelectionAccessibility(start = null, end = null) {
+            const result = {
+                wordBoundaryWarning: '',
+                canConvert: false,
+                convertBlockedMessage: '',
+                settingsUrl: (typostData.settingsUrl || '') + '&tab=accessibility'
+            };
+
+            // Site owners can turn the notice off in Settings → Accessibility
+            if (isFlagEnabled(typostData.disableAccessibilityWarning)) {
+                return result;
+            }
+
+            if (start !== null && end !== null && start !== end) {
+                const validation = this.validateSelection(start, end);
+                if (!validation.valid) {
+                    result.wordBoundaryWarning = validation.message;
+                }
+            }
+
+            // Only resolve the conversion when there is a warning to attach it
+            // to — the notice offers it as the fix, and resolving walks the
+            // block tree.
+            if (result.wordBoundaryWarning) {
+                const capability = this.resolveConvertState();
+                result.canConvert = capability.canConvert;
+                result.convertBlockedMessage = capability.canConvert
+                    ? ''
+                    : this.getConvertBlockedMessage(capability.reason, capability.parentTitle);
+            }
+
+            return result;
         }
 
         /**
@@ -2376,7 +2468,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
 
                 // Add aria-label if enabled for accessibility
-                if (typostData.enableAriaLabels && value) {
+                if (isFlagEnabled(typostData.enableAriaLabels) && value) {
                     const effectiveStart = selectionLost ? savedSelectionStart : value.start;
                     const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
                     const selectedText = effectiveStart !== effectiveEnd
@@ -2424,7 +2516,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         handleClearClick() {
             // Check if confirmation is enabled globally and not disabled for this session
-            const showConfirmation = typostData.showClearConfirmation && !this.state.dontShowClearWarning;
+            const showConfirmation = isFlagEnabled(typostData.showClearConfirmation) && !this.state.dontShowClearWarning;
 
             if (showConfirmation) {
                 // Show confirmation modal
@@ -2880,6 +2972,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Cleanup extension toolbar button re-render handler
             if (this._handleToolbarButtonsChanged) {
                 window.typostHooks.removeAction('typost_editor_toolbar_buttons_changed', this._handleToolbarButtonsChanged);
+            }
+
+            // Cleanup extension convert bridge
+            if (this._handleConvertRequest) {
+                document.removeEventListener('typost-convert-to-block', this._handleConvertRequest);
             }
         }
 

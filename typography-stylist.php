@@ -296,9 +296,14 @@ class Typost {
                 'adoptedWpFonts' => $this->get_adopted_wp_fonts_by_slug(),
                 'pluginRegisteredSlugs' => $this->get_plugin_registered_slugs(),
                 'restUrl' => rest_url('typost/v1/'),
-                'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
-                'disableAccessibilityWarning' => get_option('typost_disable_accessibility_warning', false),
-                'showClearConfirmation' => get_option('typost_show_clear_confirmation', true),
+                // Cast every flag: these options are stored as '1'/'0' strings,
+                // and wp_localize_script() stringifies whatever it is given —
+                // so an uncast '0' reaches JavaScript as the string "0", which
+                // is truthy. Every one of these settings silently did nothing
+                // when switched off until 2.3.0. (A bool becomes "" / "1".)
+                'enableAriaLabels' => (bool) get_option('typost_enable_aria_labels', false),
+                'disableAccessibilityWarning' => (bool) get_option('typost_disable_accessibility_warning', false),
+                'showClearConfirmation' => (bool) get_option('typost_show_clear_confirmation', true),
                 // When true (default), Enter inside a Typography Stylist block
                 // inserts a line break; when false the block declares core's
                 // `splitting` support and Enter starts a new block instead.
