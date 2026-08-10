@@ -2137,3 +2137,65 @@ msgstr "Ignorer cette notification."
 #: typography-stylist.php
 msgid "Deleting..."
 msgstr "Suppression..."
+
+#: assets/js/block-editor.js
+msgid "This block can’t be converted to a Typography Stylist block because it is locked, or part of a locked template or pattern."
+msgstr "Ce bloc ne peut pas être converti en bloc Typography Stylist car il est verrouillé, ou fait partie d’un modèle ou d’une composition verrouillée."
+
+#: assets/js/block-editor.js
+#. translators: %s: Title of the parent block, e.g. "Group".
+#, php-format
+msgid "This block can’t be converted here — the parent %s block only allows certain blocks inside it. Move the block out of it to convert."
+msgstr "Ce bloc ne peut pas être converti ici — le bloc parent %s n’autorise que certains blocs en son sein. Déplacez le bloc hors de celui-ci pour le convertir."
+
+#: assets/js/block-editor.js
+msgid "This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert."
+msgstr "Ce bloc ne peut pas être converti ici — son bloc parent n’autorise que certains blocs en son sein. Déplacez le bloc hors de celui-ci pour le convertir."
+
+#: assets/js/block-editor.js
+msgid "Converts this heading or paragraph into a Typography Stylist block, which adds screen reader text and block-level typography controls."
+msgstr "Convertit ce titre ou ce paragraphe en bloc Typography Stylist, qui ajoute un texte pour lecteurs d’écran et des réglages typographiques au niveau du bloc."
+
+#: includes/admin-page.php
+msgid "Enter Key in Typography Stylist Blocks"
+msgstr "Touche Entrée dans les blocs Typography Stylist"
+
+#: includes/admin-page.php
+msgid "Enter adds a line break inside the block"
+msgstr "Entrée insère un saut de ligne dans le bloc"
+
+#: includes/admin-page.php
+msgid "When enabled (the default), pressing Enter inside a Typography Stylist block adds a line break to the same block, so a multi-line headline stays one block with one set of typography settings. Turn this off to match the rest of the editor, where Enter starts a new block. Shift+Enter always adds a line break either way. Existing content is not changed by this setting."
+msgstr "Lorsque cette option est activée (par défaut), appuyer sur Entrée dans un bloc Typography Stylist insère un saut de ligne dans le même bloc : un titre sur plusieurs lignes reste un seul bloc avec un seul jeu de réglages typographiques. Désactivez-la pour retrouver le comportement du reste de l’éditeur, où Entrée crée un nouveau bloc. Maj+Entrée insère toujours un saut de ligne dans les deux cas. Ce réglage ne modifie pas le contenu existant."
+
+#: includes/admin-page.php
+msgid "Line Breaks and the Enter Key"
+msgstr "Sauts de ligne et touche Entrée"
+
+#: includes/admin-page.php
+msgid "The Enter key does different things in a Typography Stylist block than it does in a regular heading or paragraph, which catches people out."
+msgstr "La touche Entrée n’a pas le même effet dans un bloc Typography Stylist que dans un titre ou un paragraphe classique, ce qui surprend souvent."
+
+#: includes/admin-page.php
+msgid "In a Typography Stylist block:"
+msgstr "Dans un bloc Typography Stylist :"
+
+#: includes/admin-page.php
+msgid "Enter adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. You can change this on the Options tab so Enter starts a new block instead."
+msgstr "Entrée insère un saut de ligne et vous laisse dans le même bloc : un titre sur plusieurs lignes partage donc un seul jeu de réglages typographiques. Vous pouvez modifier ce comportement dans l’onglet Options pour qu’Entrée crée un nouveau bloc."
+
+#: includes/admin-page.php
+msgid "In a regular heading or paragraph:"
+msgstr "Dans un titre ou un paragraphe classique :"
+
+#: includes/admin-page.php
+msgid "Enter ends the block and starts a new paragraph. This is standard WordPress behaviour and the plugin does not change it."
+msgstr "Entrée termine le bloc et crée un nouveau paragraphe. C’est le comportement standard de WordPress et l’extension ne le modifie pas."
+
+#: includes/admin-page.php
+msgid "To add a line break inside a regular heading without splitting it, press Shift+Enter. If a heading has already split in two, put the cursor at the very start of the paragraph below and press Backspace to merge it back into the heading as a line break."
+msgstr "Pour insérer un saut de ligne dans un titre classique sans le scinder, appuyez sur Maj+Entrée. Si un titre a déjà été scindé en deux, placez le curseur tout au début du paragraphe situé en dessous et appuyez sur Retour arrière pour le fusionner à nouveau dans le titre sous forme de saut de ligne."
+
+#: includes/admin-page.php
+msgid "Shift+Enter adds a line break in a Typography Stylist block as well, whichever way the Options setting is set."
+msgstr "Maj+Entrée insère également un saut de ligne dans un bloc Typography Stylist, quel que soit le réglage choisi dans l’onglet Options."

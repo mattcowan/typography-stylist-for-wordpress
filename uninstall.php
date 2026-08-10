@@ -44,6 +44,7 @@ delete_option('typost_wp_library_notice_dismissed');
 delete_option('typost_admin_color_scheme');
 delete_option('typost_allow_variable_weights');
 delete_option('typost_archive_full_content_check');
+delete_option('typost_block_enter_line_break');
 
 // Delete transients
 // Direct database calls are required during uninstall for bulk deletion with wildcard patterns.
