@@ -179,3 +179,19 @@ msgstr ""
 #: assets/js/editor.js
 msgid "Applies to the whole block."
 msgstr ""
+
+#. translators: 1: smallest font size, 2: largest font size.
+#: assets/js/lib/ps-utils.js
+#, php-format
+msgid "Fluid %1$s–%2$s"
+msgstr ""
+
+#. translators: %s: maximum font size in pixels.
+#: assets/js/lib/ps-utils.js
+#, php-format
+msgid "Fit ≤ %spx"
+msgstr ""
+
+#: assets/js/lib/ps-utils.js
+msgid "Fit"
+msgstr ""

@@ -645,13 +645,18 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function enqueue_editor_assets() {
 		// Pure logic shared with Jest tests (UMD-lite, exposed as window.typostPSUtils)
+		// wp-i18n: the size labels this file builds are translatable, so the
+		// handle needs its own script translations — they are not inherited
+		// from the editor handle that depends on it.
 		wp_enqueue_script(
 			'typost-paragraph-styles-utils',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/lib/ps-utils.js',
-			array(),
+			array( 'wp-i18n' ),
 			TYPOST_PS_VERSION,
 			true
 		);
+
+		wp_set_script_translations( 'typost-paragraph-styles-utils', 'typost-paragraph-styles', TYPOST_PS_PLUGIN_DIR . 'languages' );
 
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',

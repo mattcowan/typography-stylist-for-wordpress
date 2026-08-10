@@ -422,4 +422,60 @@ describe('buildStylePreviewStyle', () => {
 		expect(Object.keys(buildStylePreviewStyle({ fontSize: '24' }).style).sort())
 			.toEqual(['fontSize', 'lineHeight']);
 	});
+
+	describe('size labels are translatable', () => {
+		afterEach(() => {
+			delete global.wp;
+		});
+
+		test('falls back to English when no wp.i18n is present (as under test)', () => {
+			expect(global.wp).toBeUndefined();
+			expect(buildStylePreviewStyle({ fontSize: '64' }).sizeLabel).toBe('64px');
+		});
+
+		test('runs labels through wp.i18n when WordPress is present', () => {
+			const translations = {
+				'Fluid %1$s–%2$s': 'Fluide %1$s–%2$s',
+				'Fit ≤ %spx': 'Ajusté ≤ %spx',
+				Fit: 'Ajusté',
+				'%spx': '%spx',
+			};
+			global.wp = {
+				i18n: {
+					__: (text, domain) => {
+						expect(domain).toBe('typost-paragraph-styles');
+						return translations[text] || text;
+					},
+					// Stand-in for the real sprintf, covering the forms used here
+					sprintf: (template, ...args) => {
+						let index = 0;
+						return template.replace(/%(\d+\$)?s/g, (m, pos) =>
+							String(pos ? args[parseInt(pos, 10) - 1] : args[index++]));
+					},
+				},
+			};
+
+			expect(buildStylePreviewStyle({
+				fontSize: 'responsive', fontSizeMin: 20, fontSizeMax: 48, fontSizePreferred: 30,
+			}).sizeLabel).toBe('Fluide 20–48');
+			expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 120 }).sizeLabel).toBe('Ajusté ≤ 120px');
+			expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 0 }).sizeLabel).toBe('Ajusté');
+			expect(buildStylePreviewStyle({ fontSize: '64' }).sizeLabel).toBe('64px');
+		});
+
+		test('placeholders are ordered, not positional-by-accident', () => {
+			// A translation that swaps the two placeholders must still map to
+			// the right numbers — that is the point of %1$s / %2$s.
+			global.wp = {
+				i18n: {
+					__: () => '%2$s down to %1$s',
+					sprintf: (template, ...args) =>
+						template.replace(/%(\d+\$)?s/g, (m, pos) => String(args[parseInt(pos, 10) - 1])),
+				},
+			};
+			expect(buildStylePreviewStyle({
+				fontSize: 'responsive', fontSizeMin: 20, fontSizeMax: 48, fontSizePreferred: 30,
+			}).sizeLabel).toBe('48 down to 20');
+		});
+	});
 });

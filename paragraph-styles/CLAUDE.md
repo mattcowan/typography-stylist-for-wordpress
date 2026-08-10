@@ -48,5 +48,6 @@ CRUD at `typost/v1/paragraph-styles` (GET/POST) and `/paragraph-styles/{id}` (PA
 ## Conventions
 
 - Own text domain `typost-paragraph-styles` with its own `languages/` (.pot, fr_FR/es_ES .po/.mo, and JED .json files for `wp_set_script_translations`; JED filenames hash the plugin-relative script path, e.g. `paragraph-styles/assets/js/editor.js`).
+- **`ps-utils.js` is translatable too**, because it builds the browser's size labels ("Fluid 20–48", "Fit ≤ 120px"). Script translations are per *handle*, not inherited from the editor script that depends on it, so `typost-paragraph-styles-utils` declares `wp-i18n` and gets its own `wp_set_script_translations()` call and its own JED file. Inside the file `wp.i18n` is looked up lazily behind a `typeof wp !== 'undefined'` guard and falls back to the English source, because Jest requires the module directly with no `wp` global.
 - No console logging / `error_log()` (repo policy); REST failures surface as HTTP error responses, saves fail quietly in the panel.
 - Editor panel CSS is injected once by `editor.js` into the top document (the panel renders in popovers/sidebar, not the editor canvas iframe).

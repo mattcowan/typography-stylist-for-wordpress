@@ -182,3 +182,19 @@ msgstr "Se aplica al texto seleccionado."
 #: assets/js/editor.js
 msgid "Applies to the whole block."
 msgstr "Se aplica a todo el bloque."
+
+#. translators: 1: smallest font size, 2: largest font size.
+#: assets/js/lib/ps-utils.js
+#, php-format
+msgid "Fluid %1$s–%2$s"
+msgstr "Fluido %1$s–%2$s"
+
+#. translators: %s: maximum font size in pixels.
+#: assets/js/lib/ps-utils.js
+#, php-format
+msgid "Fit ≤ %spx"
+msgstr "Ajustado ≤ %spx"
+
+#: assets/js/lib/ps-utils.js
+msgid "Fit"
+msgstr "Ajustado"

@@ -8,6 +8,41 @@
 (function () {
 	'use strict';
 
+	var TEXT_DOMAIN = 'typost-paragraph-styles';
+
+	/**
+	 * Translate a string, falling back to the original.
+	 *
+	 * Looked up lazily rather than captured at load: this file is also
+	 * required directly by Jest, where no `wp` global exists.
+	 */
+	function translate(text) {
+		if (typeof wp !== 'undefined' && wp.i18n && wp.i18n.__) {
+			return wp.i18n.__(text, TEXT_DOMAIN);
+		}
+		return text;
+	}
+
+	/**
+	 * Fill %s / %1$s placeholders in a (translated) string.
+	 *
+	 * Uses wp.i18n.sprintf when available so translators get the usual
+	 * argument-reordering support; the fallback covers the same two forms so
+	 * tests and non-WordPress consumers produce identical output.
+	 */
+	function format(template, args) {
+		if (typeof wp !== 'undefined' && wp.i18n && wp.i18n.sprintf) {
+			return wp.i18n.sprintf.apply(null, [template].concat(args));
+		}
+		var index = 0;
+		return template.replace(/%(\d+\$)?s/g, function (match, position) {
+			if (position) {
+				return String(args[parseInt(position, 10) - 1]);
+			}
+			return String(args[index++]);
+		});
+	}
+
 	/**
 	 * Resolve a font name from a font ID against a fonts array
 	 * (shape of window.typostData.fonts). Returns null when not found
@@ -235,16 +270,23 @@
 		if (fontSize === 'responsive') {
 			// Represent the fluid range by its preferred (mid) size
 			realSize = parseFloat(props.fontSizePreferred) || parseFloat(props.fontSizeMax) || null;
-			sizeLabel = 'Fluid ' +
-				(props.fontSizeMin || '?') + '–' + (props.fontSizeMax || '?');
+			sizeLabel = format(
+				/* translators: 1: smallest font size, 2: largest font size. */
+				translate('Fluid %1$s–%2$s'),
+				[props.fontSizeMin || '?', props.fontSizeMax || '?']
+			);
 		} else if (fontSize === 'fit') {
 			// Fit sizes are measured per line at render time; the cap is the
 			// only number the style itself knows.
 			realSize = parseFloat(props.fitMaxSize) || null;
-			sizeLabel = props.fitMaxSize ? 'Fit ≤ ' + props.fitMaxSize + 'px' : 'Fit';
+			sizeLabel = props.fitMaxSize
+				/* translators: %s: maximum font size in pixels. */
+				? format(translate('Fit ≤ %spx'), [props.fitMaxSize])
+				: translate('Fit');
 		} else if (fontSize && fontSize !== 'inherit') {
 			realSize = parseFloat(fontSize);
-			sizeLabel = isNaN(realSize) ? '' : realSize + 'px';
+			/* translators: %s: font size in pixels. */
+			sizeLabel = isNaN(realSize) ? '' : format(translate('%spx'), [realSize]);
 		}
 
 		var previewSize;
