@@ -2049,6 +2049,7 @@ jQuery(document).ready(function($) {
         var $submit = $form.find('button[name="typost_save_options_settings"]');
         var originalText = $submit.text();
         var $autoRegister = $('#typost_auto_register_wp_fonts');
+        var $enterLineBreak = $('#typost_block_enter_line_break');
 
         $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
 
@@ -2059,7 +2060,11 @@ jQuery(document).ready(function($) {
             data: JSON.stringify({
                 show_clear_confirmation: $('#typost_show_clear_confirmation').is(':checked'),
                 archive_full_content_check: $('#typost_archive_full_content_check').is(':checked'),
-                block_enter_line_break: $('#typost_block_enter_line_break').is(':checked'),
+                // null when the checkbox isn't in the DOM: a missing element must
+                // not read as "unchecked", which would turn the option off. The
+                // REST handler skips a null, so client and server agree that
+                // absent means "leave it alone".
+                block_enter_line_break: $enterLineBreak.length ? $enterLineBreak.is(':checked') : null,
                 // Checkbox only rendered when the WP Font Library is available
                 auto_register_wp_fonts: $autoRegister.length ? $autoRegister.is(':checked') : null,
                 color_scheme: $('#typost_admin_color_scheme').val()
