@@ -1768,3 +1768,65 @@ msgstr ""
 #: typography-stylist.php
 msgid "Deleting..."
 msgstr ""
+
+#: assets/js/block-editor.js
+msgid "This block can’t be converted to a Typography Stylist block because it is locked, or part of a locked template or pattern."
+msgstr ""
+
+#: assets/js/block-editor.js
+#. translators: %s: Title of the parent block, e.g. "Group".
+#, php-format
+msgid "This block can’t be converted here — the parent %s block only allows certain blocks inside it. Move the block out of it to convert."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Converts this heading or paragraph into a Typography Stylist block, which adds screen reader text and block-level typography controls."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enter Key in Typography Stylist Blocks"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enter adds a line break inside the block"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "When enabled (the default), pressing Enter inside a Typography Stylist block adds a line break to the same block, so a multi-line headline stays one block with one set of typography settings. Turn this off to match the rest of the editor, where Enter starts a new block. Shift+Enter always adds a line break either way. Existing content is not changed by this setting."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Line Breaks and the Enter Key"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "The Enter key does different things in a Typography Stylist block than it does in a regular heading or paragraph, which catches people out."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "In a Typography Stylist block:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enter adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. You can change this on the Options tab so Enter starts a new block instead."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "In a regular heading or paragraph:"
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Enter ends the block and starts a new paragraph. This is standard WordPress behaviour and the plugin does not change it."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "To add a line break inside a regular heading without splitting it, press Shift+Enter. If a heading has already split in two, put the cursor at the very start of the paragraph below and press Backspace to merge it back into the heading as a line break."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Shift+Enter adds a line break in a Typography Stylist block as well, whichever way the Options setting is set."
+msgstr ""

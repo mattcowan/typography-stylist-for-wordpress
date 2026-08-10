@@ -13,6 +13,7 @@ This document describes all action and filter hooks available in Typography Styl
   - [Quick Feature Toggle Hook Points](#quick-feature-toggle-hook-points)
   - [Inspector Controls Hook Points](#inspector-controls-hook-points)
   - [Weight Control Replacement](#weight-control-replacement)
+  - [Convert to Block Capability](#convert-to-block-capability)
   - [Admin jQuery Events](#admin-jquery-events)
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [State Communication](#state-communication)
@@ -189,6 +190,10 @@ add_filter('typost_editor_data', function($data) {
 ```
 
 **Note:** This data is cached in a transient. The nonce is always injected fresh (not cached).
+
+`wp_localize_script()` casts scalars to strings, so booleans arrive as `"1"` / `""` — truthy and falsy as expected, but never `true`/`false`. Fields worth knowing about:
+
+- `blockEnterLineBreak` *(since 2.3.0)* — `"1"` when Enter inside a Typography Stylist block inserts a line break (the default), `""` when Enter starts a new block. The editor itself does not read this: the behaviour is driven by core's `splitting` block support, added server-side in `filter_block_splitting_support()`, so `wp.blocks.hasBlockSupport('typost/block', 'splitting', false)` is the authoritative check inside the editor. The localized value is here for extensions that need the user's setting without reaching into the block registry.
 
 #### `typost_admin_localize_data`
 
@@ -433,6 +438,42 @@ window.typostHooks.addAction('typost_weight_control', function(containerEl, stat
     //   inspector: { fontId, fontWeight }
 }, 10);
 ```
+
+### Convert to Block Capability
+
+#### `typost_can_convert_to_block` (Filter)
+
+*Since 2.3.0.*
+
+Filters whether the inline editor offers **Convert to Typography Stylist Block** for the current selection. The core answer is computed each time the inline modal opens, from three facts:
+
+1. The selected block is a `core/heading` or `core/paragraph` (nothing else has a conversion mapping).
+2. `canRemoveBlock()` is true — the block is not locked, and not inside a locked template or pattern.
+3. `canInsertBlockType( 'typost/block', rootClientId )` is true — the **parent block allows `typost/block` among its inner blocks**.
+
+Point 3 is the one that surprises people. A block that restricts its children with `allowedBlocks` will refuse a Typography Stylist block unless it lists one, so the conversion is genuinely impossible there. When that happens the modal now says so and names the parent block, rather than silently rendering nothing.
+
+If your theme or plugin has a container block that should accept Typography Stylist blocks, **add `typost/block` to that block's `allowedBlocks` list** — that is the real fix, and it also makes the block insertable by hand. Use this filter only when the capability genuinely needs to be decided elsewhere.
+
+```javascript
+window.typostHooks.addFilter('typost_can_convert_to_block', function(canConvert, context) {
+    // context = { clientId, blockName, rootClientId, reason, parentTitle }
+    if (context.reason === 'parent' && context.parentTitle === 'My Container') {
+        return true; // this container handles typost/block itself
+    }
+    return canConvert;
+}, 10);
+```
+
+**Parameters:**
+- `canConvert` (boolean) — Core's answer.
+- `context.clientId` (string) — Selected block's client ID.
+- `context.blockName` (string) — Selected block's name.
+- `context.rootClientId` (string) — Parent block's client ID (`''` at the top level).
+- `context.reason` (string) — Why core said no: `'none'` (it said yes), `'unsupported'`, `'already'`, `'locked'`, `'parent'`.
+- `context.parentTitle` (string) — Parent block's human title, or `''`.
+
+Returning `true` clears the reason, so no stale explanation is shown next to a working button. Returning `false` hides the action without an explanation — if you want the user told why, keep the capability and disable your own container instead.
 
 ### Admin jQuery Events
 

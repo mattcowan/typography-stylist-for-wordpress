@@ -2059,6 +2059,7 @@ jQuery(document).ready(function($) {
             data: JSON.stringify({
                 show_clear_confirmation: $('#typost_show_clear_confirmation').is(':checked'),
                 archive_full_content_check: $('#typost_archive_full_content_check').is(':checked'),
+                block_enter_line_break: $('#typost_block_enter_line_break').is(':checked'),
                 // Checkbox only rendered when the WP Font Library is available
                 auto_register_wp_fonts: $autoRegister.length ? $autoRegister.is(':checked') : null,
                 color_scheme: $('#typost_admin_color_scheme').val()

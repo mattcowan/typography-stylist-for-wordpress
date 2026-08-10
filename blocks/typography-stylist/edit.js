@@ -27,6 +27,7 @@ import {
 	Notice
 } from '@wordpress/components';
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
+import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
 import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings } from './utils';
@@ -159,6 +160,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			// Local storage might not be available
 		}
 	};
+	// Whether Enter starts a new block. Registered server-side from the
+	// typost_block_enter_line_break option (see filter_block_splitting_support),
+	// so the flag is fixed for the page and safe to read outside an effect.
+	const splitOnEnter = hasBlockSupport('typost/block', 'splitting', false);
 	const [previewText, setPreviewText] = useState('');
 	const [inlineLetterSpacing, setInlineLetterSpacing] = useState(0);
 	const [previewLetterSpacing, setPreviewLetterSpacing] = useState(0);
@@ -4136,6 +4141,18 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			</InspectorControls>
 
 			<div {...blockProps}>
+				{/* `identifier` tells the store which attribute the caret sits in.
+				    Core's splitSelection() needs that attributeKey: our `content`
+				    attribute has no `source`, so its findRichTextAttributeKey()
+				    fallback finds nothing and the split silently no-ops (after
+				    writing-flow has already preventDefault()ed the key, which
+				    swallows the line break too — Enter would do nothing at all).
+
+				    Read from the block support rather than the option so there is
+				    one source of truth, and only set when splitting is enabled:
+				    a live attributeKey also arms core's "enter transforms", which
+				    would turn a URL-only block into an embed on Enter. That is a
+				    change the default line-break mode should not inherit. */}
 				{fontSize === 'fit' && content ? (
 					/* Fit-to-width WYSIWYG editing (single view): the RichText
 					   is fed a WRAPPED value — per-line typost-line spans, each
@@ -4151,6 +4168,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					   so the real <br>s do the line breaking while editing. */
 					<RichText
 						tagName={tagName}
+						identifier={splitOnEnter ? 'content' : undefined}
 						value={wrappedFitValue}
 						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
 						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
@@ -4160,6 +4178,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				) : (
 					<RichText
 						tagName={tagName}
+						identifier={splitOnEnter ? 'content' : undefined}
 						value={content}
 						onChange={(value) => setAttributes({ content: value })}
 						placeholder={__('Add text with advanced typography...', 'typography-stylist')}

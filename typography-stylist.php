@@ -299,6 +299,10 @@ class Typost {
                 'enableAriaLabels' => get_option('typost_enable_aria_labels', false),
                 'disableAccessibilityWarning' => get_option('typost_disable_accessibility_warning', false),
                 'showClearConfirmation' => get_option('typost_show_clear_confirmation', true),
+                // When true (default), Enter inside a Typography Stylist block
+                // inserts a line break; when false the block declares core's
+                // `splitting` support and Enter starts a new block instead.
+                'blockEnterLineBreak' => (bool) get_option('typost_block_enter_line_break', true),
                 'settingsUrl' => admin_url('options-general.php?page=typography-stylist')
             );
 
@@ -1692,7 +1696,46 @@ class Typost {
      * Register custom block
      */
     public function register_block() {
+        add_filter('block_type_metadata', array($this, 'filter_block_splitting_support'));
         register_block_type(TYPOST_PLUGIN_DIR . 'blocks/typography-stylist');
+        remove_filter('block_type_metadata', array($this, 'filter_block_splitting_support'));
+    }
+
+    /**
+     * Add core's `splitting` block support when Enter should start a new block.
+     *
+     * WordPress decides the Enter key entirely from this support flag: with it,
+     * writing-flow runs __unstableSplitSelection() and Enter starts a new block;
+     * without it RichText inserts a line break instead. Shift+Enter inserts a
+     * line break either way, so only the plain-Enter behaviour changes.
+     *
+     * Applied server-side rather than through a JS `blocks.registerBlockType`
+     * filter so the flag is present in the bootstrapped block definition before
+     * any editor script runs — the block script and the typostData localization
+     * belong to different handles with no guaranteed order between them.
+     *
+     * block.json is deliberately left alone: the default (line break) stays the
+     * static, no-configuration behaviour.
+     *
+     * @since 2.3.0
+     * @param array $metadata Block metadata read from block.json.
+     * @return array Metadata, with supports.splitting added when the option is off.
+     */
+    public function filter_block_splitting_support($metadata) {
+        if (!isset($metadata['name']) || 'typost/block' !== $metadata['name']) {
+            return $metadata;
+        }
+
+        if (get_option('typost_block_enter_line_break', true)) {
+            return $metadata;
+        }
+
+        if (!isset($metadata['supports']) || !is_array($metadata['supports'])) {
+            $metadata['supports'] = array();
+        }
+        $metadata['supports']['splitting'] = true;
+
+        return $metadata;
     }
 
     /**
@@ -2868,6 +2911,14 @@ class Typost {
         // strings like "false"/"0" (form-encoded), which are truthy in PHP.
         update_option('typost_show_clear_confirmation', rest_sanitize_boolean($request->get_param('show_clear_confirmation')) ? '1' : '0');
         update_option('typost_archive_full_content_check', rest_sanitize_boolean($request->get_param('archive_full_content_check')) ? '1' : '0');
+
+        // Only save when the client actually sent the value. A browser holding a
+        // cached copy of admin-page.js from before this option existed would post
+        // without the field, and an unguarded write would read that absence as
+        // "unchecked" and silently turn the default off.
+        if (null !== $request->get_param('block_enter_line_break')) {
+            update_option('typost_block_enter_line_break', rest_sanitize_boolean($request->get_param('block_enter_line_break')) ? '1' : '0');
+        }
 
         // Checkbox rendered only when the Font Library is available; only
         // save when the client actually sent the value.
@@ -6343,6 +6394,10 @@ class Typost {
             // Save archive full content check setting
             $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';
             update_option('typost_archive_full_content_check', $archive_check);
+
+            // Save Enter-key behaviour for the Typography Stylist block
+            $enter_line_break = isset($_POST['typost_block_enter_line_break']) ? '1' : '0';
+            update_option('typost_block_enter_line_break', $enter_line_break);
 
             // Save WP Font Library auto-register setting (checkbox rendered
             // only when the Font Library is available)

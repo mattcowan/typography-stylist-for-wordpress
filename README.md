@@ -175,9 +175,12 @@ font-family: 'Playfair Display', Georgia, serif;
 5. **Choose a preset** or toggle individual features
 6. **Changes apply instantly** with live preview — use Ctrl+Z (Cmd+Z on Mac) to undo
 
-**Note:** If you select partial words, a non-blocking accessibility notice appears explaining that fragmented spans can affect screen readers, with a one-click option to convert to an accessible Typography Stylist block (recommended). Your changes still apply either way.
+**Note:** If you select partial words, a non-blocking accessibility notice appears explaining that fragmented spans can affect screen readers. Your changes still apply either way. The notice includes a "Manage this setting" link to the admin accessibility settings; you can disable it entirely via "Disable Word Boundary Warning" in Settings → Typography Stylist → Accessibility.
 
-When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. The notice includes a "Manage this setting" link to the admin accessibility settings. You can disable it entirely via "Disable Word Boundary Warning" in Settings → Typography Stylist → Accessibility.
+**Convert to Typography Stylist Block** is offered in the modal for any heading or paragraph, whether or not the accessibility notice is showing. Two things can make it unavailable, and the modal says which applies:
+
+- The block is **locked**, or sits inside a locked template or pattern.
+- The **parent block restricts its inner blocks** and does not list `typost/block`. Container blocks with an `allowedBlocks` list (common in themes) refuse a Typography Stylist block until they include it — move the block out of the container, or add `typost/block` to the container's list. Extensions can override the decision with the `typost_can_convert_to_block` filter (see [HOOKS.md](HOOKS.md)).
 
 #### Method 2: Typography Stylist Block (for complex typography)
 
@@ -192,6 +195,8 @@ When the block cannot be converted (e.g., inside a locked pattern), the conversi
    - OpenType features by category
    - Screen reader class
 5. **Preview** changes in real-time in the editor
+
+**Line breaks:** pressing Enter inside a Typography Stylist block adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. If you would rather Enter start a new block (as it does in a core heading), turn off "Enter adds a line break inside the block" in Settings → Typography Stylist → Options. Shift+Enter adds a line break either way, and the setting never changes existing content.
 
 **Accessibility Benefits:**
 - Proper semantic HTML structure

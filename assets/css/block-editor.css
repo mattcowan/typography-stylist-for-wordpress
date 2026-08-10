@@ -505,6 +505,29 @@
     text-decoration: underline;
 }
 
+/* Convert to block — persistent action, and the explanation shown in its
+   place when the conversion is impossible (locked block, or a parent that
+   restricts its inner blocks). */
+.typost-convert-section {
+    margin: 12px 0 0 0;
+    padding: 12px 0 0 0;
+    border-top: 1px solid #e0e0e0;
+}
+
+.typost-convert-description {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #757575;
+}
+
+.typost-convert-blocked {
+    margin: 4px 0 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #50575e;
+}
+
 /* Active Feature Panel Highlighting */
 .typost-feature-category-panel.has-active-features > .components-panel__body-title {
     background-color: #f0f6fc !important;

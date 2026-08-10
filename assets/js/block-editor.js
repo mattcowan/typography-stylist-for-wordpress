@@ -9,6 +9,9 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 // Shared font picker option builder + WP Font Library adoption helpers
 const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily } = require('./font-options.js');
 
+// Convert-to-block capability resolution (why the Convert action is offered or not)
+const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock } = require('./convert-capability.js');
+
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
 const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
@@ -368,7 +371,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 selectedText: '', // Extracted text for feature previews
                 activePreset: null,
                 wordBoundaryWarning: '',
-                canConvert: true,
+                // Convert-to-block capability, recomputed on every popover open.
+                // canConvert false + a reason of 'locked'/'parent' is explained
+                // in the modal rather than silently hiding the action.
+                canConvert: false,
+                convertBlockedReason: CONVERT_BLOCKED.UNSUPPORTED,
+                convertParentTitle: '',
                 showClearConfirmation: false,
                 dontShowClearWarning: hideWarning,
                 tipsDismissed: tipsDismissed,
@@ -1118,7 +1126,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             let selectionStart = null;
             let selectionEnd = null;
             let wordBoundaryWarning = '';
-            let canConvert = true;
+            let convertCapability = { canConvert: false, reason: CONVERT_BLOCKED.UNSUPPORTED, parentTitle: '' };
 
             if (!this.state.isOpen && value) {
                 // Save selection bounds so they survive modal focus changes
@@ -1148,16 +1156,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const validation = this.validateSelection(selectionStart, selectionEnd);
                     if (!validation.valid) {
                         wordBoundaryWarning = validation.message;
-                        // Compute canConvert when there's a warning
-                        const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
-                        const rootClientId = selectedBlockClientId
-                            ? select('core/block-editor').getBlockRootClientId(selectedBlockClientId)
-                            : null;
-                        canConvert = selectedBlockClientId &&
-                            select('core/block-editor').canRemoveBlock(selectedBlockClientId) &&
-                            select('core/block-editor').canInsertBlockType('typost/block', rootClientId);
                     }
                 }
+
+                // Convert capability is resolved on every open, not only when a
+                // word-boundary warning fires: the Convert action is offered for
+                // any convertible block, and the warning's own button reuses the
+                // same answer.
+                convertCapability = this.resolveConvertState();
 
                 // Initialize modal position when opening
                 modalPosition = this.initializeModalPosition();
@@ -1187,7 +1193,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 blockInheritedFont: inheritedFont,
                 fontDetectionFailed: detectionFailed,
                 wordBoundaryWarning: !state.isOpen ? wordBoundaryWarning : '',
-                canConvert: canConvert,
+                canConvert: convertCapability.canConvert,
+                convertBlockedReason: convertCapability.reason,
+                convertParentTitle: convertCapability.parentTitle,
                 // Save selection bounds when opening, clear when closing
                 savedSelectionStart: !state.isOpen ? selectionStart : null,
                 savedSelectionEnd: !state.isOpen ? selectionEnd : null,
@@ -1465,6 +1473,106 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }, () => {
                 this._doApplyFeatures(); // instant apply, no debounce
             });
+        }
+
+        /**
+         * Resolve whether the current selection can be converted to a
+         * Typography Stylist block, and why not when it cannot.
+         *
+         * Gathers the editor facts and hands them to the pure resolver, then
+         * lets extensions override the answer through the
+         * `typost_can_convert_to_block` filter. An extension that forces the
+         * capability true also clears the reason, so no stale explanation is
+         * rendered next to a working button.
+         *
+         * @return {{canConvert: boolean, reason: string, parentTitle: string}} Capability result.
+         */
+        resolveConvertState() {
+            const { select } = wp.data;
+            const editor = select('core/block-editor');
+            const clientId = editor.getSelectedBlockClientId();
+
+            if (!clientId) {
+                return { canConvert: false, reason: CONVERT_BLOCKED.UNSUPPORTED, parentTitle: '' };
+            }
+
+            const blockName = editor.getBlockName(clientId);
+            const rootClientId = editor.getBlockRootClientId(clientId);
+
+            // Parent title is only used to make the "parent restricts its inner
+            // blocks" message specific; an unregistered parent just yields ''.
+            let parentTitle = '';
+            if (rootClientId) {
+                const parentType = wp.blocks.getBlockType(editor.getBlockName(rootClientId));
+                parentTitle = (parentType && parentType.title) || '';
+            }
+
+            const capability = resolveConvertCapability({
+                blockName: blockName,
+                canRemove: !!editor.canRemoveBlock(clientId),
+                canInsert: !!editor.canInsertBlockType('typost/block', rootClientId),
+                parentTitle: parentTitle
+            });
+
+            /**
+             * Filter the convert-to-block capability.
+             *
+             * @since 2.3.0
+             * @param {boolean} canConvert Whether the Convert action is offered.
+             * @param {object}  context    { clientId, blockName, rootClientId, reason, parentTitle }.
+             */
+            const filtered = !!window.typostHooks.applyFilters(
+                'typost_can_convert_to_block',
+                capability.canConvert,
+                {
+                    clientId: clientId,
+                    blockName: blockName,
+                    rootClientId: rootClientId,
+                    reason: capability.reason,
+                    parentTitle: parentTitle
+                }
+            );
+
+            if (filtered === capability.canConvert) {
+                return capability;
+            }
+
+            return {
+                canConvert: filtered,
+                reason: filtered ? CONVERT_BLOCKED.NONE : CONVERT_BLOCKED.UNSUPPORTED,
+                parentTitle: parentTitle
+            };
+        }
+
+        /**
+         * Build the user-facing explanation for a blocked conversion.
+         *
+         * Returns '' when there is nothing worth saying — the selection is
+         * already a Typography Stylist block, or is not a convertible block
+         * type, in which case no action is missing from the modal.
+         *
+         * @return {string} Explanation, or '' when none applies.
+         */
+        getConvertBlockedMessage() {
+            const { convertBlockedReason, convertParentTitle } = this.state;
+
+            if (!shouldExplainConvertBlock(convertBlockedReason)) {
+                return '';
+            }
+
+            if (convertBlockedReason === CONVERT_BLOCKED.LOCKED) {
+                return __('This block can’t be converted to a Typography Stylist block because it is locked, or part of a locked template or pattern.', 'typography-stylist');
+            }
+
+            if (convertParentTitle) {
+                /* translators: %s: Title of the parent block, e.g. "Group". */
+                return sprintf(
+                    __('This block can’t be converted here — the parent %s block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist'),
+                    convertParentTitle
+                );
+            }
+
+            return __('This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist');
         }
 
         /**
@@ -2533,6 +2641,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
             const hasFonts = fontOptions.length > 0;
+            // '' when the omission needs no explanation (already a Typography
+            // Stylist block, or a block type with no conversion mapping).
+            const convertBlockedMessage = canConvert ? '' : this.getConvertBlockedMessage();
 
             return (
                 <Fragment>
@@ -2878,12 +2989,37 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                             </Button>
                                         )}
+                                        {!canConvert && convertBlockedMessage && (
+                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
+                                        )}
                                         <p className="typost-warning-settings-link">
                                             <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
                                                 {__('Manage accessibility settings', 'typography-stylist')}
                                             </a>
                                         </p>
                                     </Notice>
+                                )}
+
+                                {/* Convert to block — always reachable for convertible blocks, not
+                                    only when the accessibility notice fires. When the conversion is
+                                    impossible the reason is stated instead of rendering nothing,
+                                    which previously read as a missing feature. The word-boundary
+                                    notice carries its own copy, so this is suppressed while it shows. */}
+                                {!wordBoundaryWarning && (canConvert || convertBlockedMessage) && (
+                                    <div className="typost-convert-section">
+                                        {canConvert ? (
+                                            <>
+                                                <Button isLink onClick={this.convertToBlock}>
+                                                    {__('Convert to Typography Stylist Block', 'typography-stylist')}
+                                                </Button>
+                                                <p className="typost-convert-description">
+                                                    {__('Converts this heading or paragraph into a Typography Stylist block, which adds screen reader text and block-level typography controls.', 'typography-stylist')}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
+                                        )}
+                                    </div>
                                 )}
 
                                 {/* Clear Confirmation - Inline */}

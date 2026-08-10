@@ -1281,6 +1281,26 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </tr>
                         <tr>
                             <th scope="row">
+                                <?php esc_html_e('Enter Key in Typography Stylist Blocks', 'typography-stylist'); ?>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="typost_block_enter_line_break"
+                                    name="typost_block_enter_line_break"
+                                    value="1"
+                                    <?php checked(get_option('typost_block_enter_line_break', true)); ?>
+                                />
+                                <label for="typost_block_enter_line_break">
+                                    <?php esc_html_e('Enter adds a line break inside the block', 'typography-stylist'); ?>
+                                </label>
+                                <p class="description">
+                                    <?php esc_html_e('When enabled (the default), pressing Enter inside a Typography Stylist block adds a line break to the same block, so a multi-line headline stays one block with one set of typography settings. Turn this off to match the rest of the editor, where Enter starts a new block. Shift+Enter always adds a line break either way. Existing content is not changed by this setting.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
                                 <?php esc_html_e('Archive Page Font Detection', 'typography-stylist'); ?>
                             </th>
                             <td>
@@ -1583,6 +1603,17 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <li><?php esc_html_e('Use sidebar controls for font family, size, and OpenType features', 'typography-stylist'); ?></li>
                     <li><?php esc_html_e('For inline text styling, select text to show the quick feature popover', 'typography-stylist'); ?></li>
                 </ol>
+            </div>
+
+            <div class="typost-help-section">
+                <h3><?php esc_html_e('Line Breaks and the Enter Key', 'typography-stylist'); ?></h3>
+                <p><?php esc_html_e('The Enter key does different things in a Typography Stylist block than it does in a regular heading or paragraph, which catches people out.', 'typography-stylist'); ?></p>
+                <ul>
+                    <li><strong><?php esc_html_e('In a Typography Stylist block:', 'typography-stylist'); ?></strong> <?php esc_html_e('Enter adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. You can change this on the Options tab so Enter starts a new block instead.', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('In a regular heading or paragraph:', 'typography-stylist'); ?></strong> <?php esc_html_e('Enter ends the block and starts a new paragraph. This is standard WordPress behaviour and the plugin does not change it.', 'typography-stylist'); ?></li>
+                </ul>
+                <p><?php esc_html_e('To add a line break inside a regular heading without splitting it, press Shift+Enter. If a heading has already split in two, put the cursor at the very start of the paragraph below and press Backspace to merge it back into the heading as a line break.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Shift+Enter adds a line break in a Typography Stylist block as well, whichever way the Options setting is set.', 'typography-stylist'); ?></p>
             </div>
 
             <div class="typost-help-section">
