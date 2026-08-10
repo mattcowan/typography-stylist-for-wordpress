@@ -35,6 +35,35 @@
 	flex-direction: column;
 }
 
+/* Word-boundary notice — first thing in the panel, matching the inline
+   editor's placement, because it reports a problem with the selection the
+   glyph is about to replace. */
+.typost-glyphs-a11y-notice {
+	margin: 0 0 12px 0;
+	flex: 0 0 auto;
+}
+
+.typost-glyphs-a11y-notice p {
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.typost-glyphs-convert-button {
+	margin-top: 4px;
+}
+
+.typost-glyphs-convert-blocked {
+	margin: 4px 0 0 0;
+	font-size: 12px;
+	color: #757575;
+}
+
+.typost-glyphs-a11y-settings {
+	margin: 8px 0 0 0;
+	font-size: 12px;
+	text-align: right;
+}
+
 /* Header: font selector + target indicator */
 .typost-glyphs-header {
 	display: flex;

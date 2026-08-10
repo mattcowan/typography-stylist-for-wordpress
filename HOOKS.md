@@ -12,6 +12,7 @@ This document describes all action and filter hooks available in Typography Styl
   - [Inline Editor Hook Points](#inline-editor-hook-points)
   - [Quick Feature Toggle Hook Points](#quick-feature-toggle-hook-points)
   - [Inspector Controls Hook Points](#inspector-controls-hook-points)
+  - [Block Toolbar Buttons](#block-toolbar-buttons)
   - [Weight Control Replacement](#weight-control-replacement)
   - [Convert to Block Capability](#convert-to-block-capability)
   - [Admin jQuery Events](#admin-jquery-events)
@@ -176,6 +177,30 @@ add_action('typost_admin_tab_after_fonts', function($instance) {
 });
 ```
 
+#### `typost_admin_options_rows`
+
+*Since 2.3.0.* Fired inside the Options tab settings table, after the core rows. Use it for a single editor-behaviour setting that would not justify a tab of its own — every such option then lives in one place.
+
+Echo complete `<tr>` rows. Mark checkbox inputs with `data-typost-option="1"` so the tab's AJAX save collects them, and register the option key with [`typost_admin_options_checkboxes`](#typost_admin_options_checkboxes) so it is actually persisted.
+
+```php
+add_action('typost_admin_options_rows', function($instance) {
+    ?>
+    <tr>
+        <th scope="row"><?php esc_html_e('My Toolbar Button', 'my-extension'); ?></th>
+        <td>
+            <input type="checkbox" id="my_ext_toolbar" name="my_ext_toolbar"
+                   value="1" data-typost-option="1"
+                   <?php checked(get_option('my_ext_toolbar', false)); ?> />
+            <label for="my_ext_toolbar"><?php esc_html_e('Show the button', 'my-extension'); ?></label>
+        </td>
+    </tr>
+    <?php
+});
+```
+
+Expose the value to the editor through [`typost_editor_data`](#typost_editor_data). That filter runs *after* the localized-data transient is read, so a toggle takes effect immediately rather than when the hour-long cache expires.
+
 ### PHP Filters
 
 #### `typost_editor_data`
@@ -243,6 +268,19 @@ add_filter('typost_font_card_badges', function($badges, $font, $type) {
 ```
 
 The bundled Variable Fonts module uses this to show a "Variable" pill (with the configured axis tags in its tooltip) on variable fonts.
+
+#### `typost_admin_options_checkboxes`
+
+*Since 2.3.0.* Register option keys for checkboxes you rendered on [`typost_admin_options_rows`](#typost_admin_options_rows), so that both the Options tab's AJAX save and its no-JavaScript POST fallback persist them. Values are stored as `'1'` / `'0'`.
+
+```php
+add_filter('typost_admin_options_checkboxes', function($options) {
+    $options[] = 'typost_my_extension_toolbar';
+    return $options;
+});
+```
+
+Keys must be prefixed `typost_`; anything else is ignored. This is deliberate — an extension may add its own settings to the form, not use it to write arbitrary WordPress options.
 
 #### `typost_available_features`
 
@@ -396,6 +434,78 @@ window.typostHooks.addAction('typost_inspector_after_font_weight', function(cont
     // state contains: fontId, features
 }, 10);
 ```
+
+### Block Toolbar Buttons
+
+*Since 2.3.0.* The other hook points hand you a container element to render into; this one is a **filter returning descriptors**, because a toolbar button rendered from a foreign React root would sit outside the toolbar's roving tabindex and break keyboard navigation. Core renders your descriptor as a real `ToolbarButton`.
+
+Buttons appear next to the Typography Stylist button — in the Typography Stylist block's toolbar (`qft`) and, for rich text blocks, in the inline format toolbar (`inline`).
+
+```javascript
+window.typostHooks.addFilter('typost_editor_toolbar_buttons', function(buttons, editor) {
+    return buttons.concat([{
+        id: 'my-panel',            // required, unique — used as the React key
+        icon: MyIconComponent,     // component or dashicon name
+        label: 'My Panel',         // tooltip + accessible name
+        isActive: false,           // optional pressed state
+        editors: ['qft'],          // optional; omit to appear in both editors
+        onClick: function(context) { openMyPanel(context); },
+    }]);
+}, 10);
+
+// Register during script load. If your extension registers later (async or
+// conditional loading), tell the editors to re-render:
+window.typostHooks.doAction('typost_editor_toolbar_buttons_changed');
+```
+
+Descriptors without an `id` or a callable `onClick` are dropped.
+
+**The click context** carries everything the panel needs, because no host modal was opened to gather it:
+
+| Field | `qft` | `inline` |
+|---|---|---|
+| `source` | `'qft'` | `'inline'` |
+| `clientId` | block client ID | — |
+| `capturedSelection` | `{start, end, text, length}` or `null` | — |
+| `savedSelectionStart` / `savedSelectionEnd` | — | offsets, or `null` |
+| `selectedText` | selected text (`''` when none) | selected text (`''` when none) |
+| `state` | resolved editor state | resolved editor state |
+| `accessibility` | — | word-boundary state (see below) |
+| `reopenHost` | `false` | `false` |
+
+**`context.accessibility`** (inline editor) carries the word-boundary notice the editor's own modal would have shown, because a panel opened from the toolbar bypasses that modal entirely:
+
+```js
+{
+    wordBoundaryWarning: '',      // '' when the selection is fine, or off in Settings → Accessibility
+    canConvert: false,            // whether the conversion is offered as the fix
+    convertBlockedMessage: '',    // why it isn't, when it is worth explaining
+    settingsUrl: '…&tab=accessibility',
+}
+```
+
+If your panel can create inline spans, show this warning. To offer the fix, dispatch the conversion — it replaces the block, so close your UI at the same time:
+
+```js
+document.dispatchEvent(new CustomEvent('typost-convert-to-block', {
+    detail: { source: 'inline', clientId: context.clientId || null },
+}));
+```
+
+Two more details matter:
+
+- **Use `context.state`, not the `typost_current_editor_state` filter.** That filter is only answered by the block holding the caret, so a block selected from List View would report the default font. The context state is resolved for the block whose toolbar was clicked.
+- **`reopenHost: false`** means no host modal was open. If your panel closes by firing `typost_glyphs_panel_closed`, pass the flag through so the editors do not open a modal the author never asked for:
+
+```javascript
+window.typostHooks.doAction('typost_glyphs_panel_closed', source, {
+    clientId: context.clientId,
+    range: context.range,
+    reopenHost: context.reopenHost !== false,
+});
+```
+
+Insertion still goes through the `typost-insert-content` event exactly as it does from inside the editor panels — core has already recorded the selection from the context, so inserted text lands at the selection and successive insertions advance the caret.
 
 ### Weight Control Replacement
 
@@ -581,6 +691,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         // Optional: class-based styling (used by the bundled Paragraph Styles module)
         paragraphStyleId: 3,       // Integer style ID
         styleClass: 'typost-ps-3', // CSS class for Typography Stylist blocks
+        // Optional (since 2.3.0): scope the paragraph style to the selected
+        // text instead of the whole block. Omit for block-level, the default.
+        applyTo: 'selection',
         // Optional (inline source only, since 2.1.0): animation config ID —
         // written to the span as data-animation-id (Animations extension)
         animationId: 2,
@@ -599,6 +712,7 @@ Each editor listens for this event and applies properties matching its `source`.
 **Class-based styling fields:**
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.
 - `styleClass` — When set, the Typography Stylist block stores this as a block attribute. The `save()` function outputs the class on the element and skips inline styles. The editor always renders inline styles for visual preview regardless of `styleClass`.
+- `applyTo` — *Since 2.3.0.* `'selection'` makes a Typography Stylist block wrap the selected text in a `<span class="typost-styled" data-style-id="N">` instead of writing block attributes, so styling one word leaves its neighbours alone. Send it only when you know a selection was captured; with a collapsed caret (or any other value) the apply stays block-level, which is what a paragraph style normally means. A `paragraphStyleId` of `0` with `applyTo: 'selection'` strips the style from the selection. The sidebar and in-panel dropdowns deliberately do not send it.
 
 **Extension config references (numeric block attributes):**
 - `properties.layeredConfigId` — Layered Fonts extension. Saved as `data-layered-config-id` on the visual heading.

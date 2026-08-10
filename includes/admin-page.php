@@ -1371,6 +1371,24 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             </td>
                         </tr>
                         <?php */ ?>
+                        <?php
+                        /**
+                         * Fires inside the Options tab settings table, after the core rows.
+                         *
+                         * Bundled modules and extension plugins add their own settings rows
+                         * here rather than in a tab of their own, so every editor option is
+                         * in one place. Echo complete <tr> rows.
+                         *
+                         * Checkbox inputs marked data-typost-option="1" are collected by the
+                         * options form's AJAX save automatically; register the option key with
+                         * the `typost_admin_options_checkboxes` filter so both the REST handler
+                         * and the no-JS POST fallback persist it.
+                         *
+                         * @since 2.3.0
+                         * @param Typost $instance Plugin instance.
+                         */
+                        do_action('typost_admin_options_rows', $instance);
+                        ?>
                     </tbody>
                 </table>
 

@@ -7,7 +7,53 @@ const {
 	buildFontOptions,
 	isWpLibraryValue,
 	wpSlugFromValue,
+	resolveFontIdFromFamily,
 } = require('../../../assets/js/font-options.js');
+
+describe('resolveFontIdFromFamily', () => {
+	// Shape produced by buildFontOptions()
+	const fontIdMap = {
+		1: { family: 'bookmania', fallbacks: 'serif' },
+		36: { family: 'Fraunces', fallbacks: 'serif' },
+		37: { family: 'EB Garamond', fallbacks: 'serif' },
+	};
+
+	test('resolves a bare family name', () => {
+		expect(resolveFontIdFromFamily('bookmania', fontIdMap)).toBe(1);
+	});
+
+	test('resolves the first known family in a stack, ignoring later fallbacks', () => {
+		expect(resolveFontIdFromFamily('Fraunces, Georgia, serif', fontIdMap)).toBe(36);
+	});
+
+	test('skips leading families the plugin does not know', () => {
+		expect(resolveFontIdFromFamily('Helvetica, "EB Garamond", serif', fontIdMap)).toBe(37);
+	});
+
+	test('ignores quotes and case, as browsers and authors both vary them', () => {
+		expect(resolveFontIdFromFamily('"eb garamond"', fontIdMap)).toBe(37);
+		expect(resolveFontIdFromFamily("'BOOKMANIA', serif", fontIdMap)).toBe(1);
+	});
+
+	test('a stack of only system fonts resolves to nothing', () => {
+		expect(resolveFontIdFromFamily('-apple-system, Arial, sans-serif', fontIdMap)).toBe(0);
+	});
+
+	test('returns 0 for empty or missing input rather than guessing a font', () => {
+		expect(resolveFontIdFromFamily('', fontIdMap)).toBe(0);
+		expect(resolveFontIdFromFamily(null, fontIdMap)).toBe(0);
+		expect(resolveFontIdFromFamily('bookmania', null)).toBe(0);
+		expect(resolveFontIdFromFamily('bookmania', {})).toBe(0);
+	});
+
+	test('entries without a family are skipped, not thrown on', () => {
+		expect(resolveFontIdFromFamily('Fraunces', { 5: null, 6: {}, 36: { family: 'Fraunces' } })).toBe(36);
+	});
+
+	test('returns a number, since block attributes are numeric font IDs', () => {
+		expect(typeof resolveFontIdFromFamily('bookmania', fontIdMap)).toBe('number');
+	});
+});
 
 describe('buildFontOptions', () => {
 	const uploadedFont = {

@@ -9,6 +9,7 @@ const {
 	buildPropertiesFromState,
 	buildApplyEventDetail,
 	normalizeApplyProperties,
+	buildStylePreviewStyle,
 } = require('../assets/js/lib/ps-utils.js');
 
 describe('findFontName', () => {
@@ -19,6 +20,28 @@ describe('findFontName', () => {
 
 	test('finds a font by numeric id', () => {
 		expect(findFontName(12, fonts)).toBe('Fraunces');
+	});
+
+	test('matches the canonical numeric font_id, which is what styles store', () => {
+		// Shape of window.typostData.fonts / adobeFonts: `id` is the string
+		// kit/project slug, `font_id` is the numeric identity.
+		const localized = [
+			{ id: 'kit-1785099086-nviis0sm-fraunces', font_id: 36, name: 'Fraunces' },
+			{ id: 'adobe-wkp4oav-bookmania', font_id: 1, name: 'bookmania' },
+		];
+		expect(findFontName(36, localized)).toBe('Fraunces');
+		expect(findFontName(1, localized)).toBe('bookmania');
+		expect(findFontName(99, localized)).toBeNull();
+	});
+
+	test('does not confuse a string slug for a numeric id', () => {
+		const localized = [{ id: 'kit-abc', font_id: 7, name: 'Kit Font' }];
+		expect(findFontName('kit-abc', localized)).toBe('Kit Font');
+		expect(findFontName(7, localized)).toBe('Kit Font');
+	});
+
+	test('skips null entries', () => {
+		expect(findFontName(7, [null, { font_id: 7, name: 'Kit Font' }])).toBe('Kit Font');
 	});
 
 	test('matches loosely across string/number ids', () => {
@@ -310,5 +333,149 @@ describe('buildApplyEventDetail', () => {
 
 	test('detach payload defaults properties to empty object', () => {
 		expect(buildApplyEventDetail(null, 'inline').properties).toEqual({});
+	});
+
+	test('omits applyTo by default, so a style stays block-level', () => {
+		expect(buildApplyEventDetail(style, 'inspector')).not.toHaveProperty('applyTo');
+		expect(buildApplyEventDetail(null, 'inspector', {})).not.toHaveProperty('applyTo');
+	});
+
+	test('applyTo "selection" scopes the style to the selected text', () => {
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'selection').applyTo).toBe('selection');
+		expect(buildApplyEventDetail(null, 'inspector', {}, 'selection').applyTo).toBe('selection');
+	});
+
+	test('an unrecognized scope is ignored rather than passed through', () => {
+		// Guards against a typo silently reaching the host as an unknown mode
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'block')).not.toHaveProperty('applyTo');
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'whatever')).not.toHaveProperty('applyTo');
+	});
+
+	test('scoping does not disturb the rest of the payload', () => {
+		const detail = buildApplyEventDetail(style, 'inspector', undefined, 'selection');
+		expect(detail.paragraphStyleId).toBe(style.id);
+		expect(detail.styleClass).toBe('typost-ps-' + style.id);
+		expect(detail.source).toBe('inspector');
+	});
+});
+
+describe('buildStylePreviewStyle', () => {
+	const size = (properties, bounds) => parseFloat(buildStylePreviewStyle(properties, bounds).style.fontSize);
+
+	test('clamps an oversized display style into the preview band', () => {
+		expect(size({ fontSize: '64' })).toBe(40);
+	});
+
+	test('raises a tiny style to the band floor', () => {
+		expect(size({ fontSize: '8' })).toBe(12);
+	});
+
+	test('keeps a size that already sits inside the band', () => {
+		expect(size({ fontSize: '24' })).toBe(24);
+	});
+
+	test('preserves relative order between styles, which is the point of the band', () => {
+		expect(size({ fontSize: '18' })).toBeLessThan(size({ fontSize: '30' }));
+	});
+
+	test('honours a custom band', () => {
+		expect(size({ fontSize: '64' }, { min: 10, max: 20 })).toBe(20);
+		expect(size({ fontSize: '4' }, { min: 10, max: 20 })).toBe(10);
+	});
+
+	test('responsive styles preview at their preferred size and label the range', () => {
+		const result = buildStylePreviewStyle({
+			fontSize: 'responsive',
+			fontSizeMin: 16,
+			fontSizePreferred: 32,
+			fontSizeMax: 64,
+		});
+		expect(parseFloat(result.style.fontSize)).toBe(32);
+		expect(result.sizeLabel).toBe('Fluid 16–64');
+	});
+
+	test('fit styles preview at their cap and say so', () => {
+		const capped = buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 120 });
+		expect(parseFloat(capped.style.fontSize)).toBe(40);
+		expect(capped.sizeLabel).toBe('Fit ≤ 120px');
+
+		// 0 means uncapped, so there is no number to show
+		expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 0 }).sizeLabel).toBe('Fit');
+	});
+
+	test('a style with no size of its own previews mid-band with no label', () => {
+		const result = buildStylePreviewStyle({ fontSize: 'inherit' });
+		expect(parseFloat(result.style.fontSize)).toBe(26);
+		expect(result.sizeLabel).toBe('');
+	});
+
+	test('tolerates missing or unparseable properties', () => {
+		expect(parseFloat(buildStylePreviewStyle(undefined).style.fontSize)).toBe(26);
+		expect(parseFloat(buildStylePreviewStyle({ fontSize: 'wat' }).style.fontSize)).toBe(26);
+	});
+
+	test('neutralizes line-height so a tall style cannot stretch its row', () => {
+		expect(buildStylePreviewStyle({ fontSize: '64', lineHeight: 3 }).style.lineHeight).toBe(1.25);
+	});
+
+	test('sets only size properties, leaving family/weight/features to the style class', () => {
+		expect(Object.keys(buildStylePreviewStyle({ fontSize: '24' }).style).sort())
+			.toEqual(['fontSize', 'lineHeight']);
+	});
+
+	describe('size labels are translatable', () => {
+		afterEach(() => {
+			delete global.wp;
+		});
+
+		test('falls back to English when no wp.i18n is present (as under test)', () => {
+			expect(global.wp).toBeUndefined();
+			expect(buildStylePreviewStyle({ fontSize: '64' }).sizeLabel).toBe('64px');
+		});
+
+		test('runs labels through wp.i18n when WordPress is present', () => {
+			const translations = {
+				'Fluid %1$s–%2$s': 'Fluide %1$s–%2$s',
+				'Fit ≤ %spx': 'Ajusté ≤ %spx',
+				Fit: 'Ajusté',
+				'%spx': '%spx',
+			};
+			global.wp = {
+				i18n: {
+					__: (text, domain) => {
+						expect(domain).toBe('typost-paragraph-styles');
+						return translations[text] || text;
+					},
+					// Stand-in for the real sprintf, covering the forms used here
+					sprintf: (template, ...args) => {
+						let index = 0;
+						return template.replace(/%(\d+\$)?s/g, (m, pos) =>
+							String(pos ? args[parseInt(pos, 10) - 1] : args[index++]));
+					},
+				},
+			};
+
+			expect(buildStylePreviewStyle({
+				fontSize: 'responsive', fontSizeMin: 20, fontSizeMax: 48, fontSizePreferred: 30,
+			}).sizeLabel).toBe('Fluide 20–48');
+			expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 120 }).sizeLabel).toBe('Ajusté ≤ 120px');
+			expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 0 }).sizeLabel).toBe('Ajusté');
+			expect(buildStylePreviewStyle({ fontSize: '64' }).sizeLabel).toBe('64px');
+		});
+
+		test('placeholders are ordered, not positional-by-accident', () => {
+			// A translation that swaps the two placeholders must still map to
+			// the right numbers — that is the point of %1$s / %2$s.
+			global.wp = {
+				i18n: {
+					__: () => '%2$s down to %1$s',
+					sprintf: (template, ...args) =>
+						template.replace(/%(\d+\$)?s/g, (m, pos) => String(args[parseInt(pos, 10) - 1])),
+				},
+			};
+			expect(buildStylePreviewStyle({
+				fontSize: 'responsive', fontSizeMin: 20, fontSizeMax: 48, fontSizePreferred: 30,
+			}).sizeLabel).toBe('48 down to 20');
+		});
 	});
 });

@@ -505,6 +505,23 @@
     text-decoration: underline;
 }
 
+/* Word-boundary notice — first thing in the panel, because it reports a
+   problem with the selection the author just made. */
+.typost-word-boundary-notice {
+    margin: 0 20px 16px 20px;
+}
+
+.typost-word-boundary-notice p {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* The conversion is the fix the notice is offering, so it reads as an action
+   rather than as another line of prose. */
+.typost-convert-button {
+    margin-top: 4px;
+}
+
 /* Convert to block — persistent action, and the explanation shown in its
    place when the conversion is impossible (locked block, or a parent that
    restricts its inner blocks). */

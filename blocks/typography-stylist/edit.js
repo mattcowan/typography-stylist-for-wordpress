@@ -30,8 +30,8 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings } from './utils';
-import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont } from '../../assets/js/font-options.js';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings } from './utils';
+import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -249,6 +249,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const applyFontWeightRef = useRef(null);
 	const applyFontSizeRef = useRef(null);
 	const applyFontVariationSettingsRef = useRef(null);
+	const applyParagraphStyleRef = useRef(null);
 	const applyFitScaleRef = useRef(null);
 	const applyFitShiftRef = useRef(null);
 
@@ -358,6 +359,19 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (e.detail.source === 'qft' ? !popoverOpen : selectedId !== curClientId) {
 					return;
 				}
+				// Selection-scoped paragraph style. Styles are block-level by
+				// nature, so this only happens when the sender explicitly asks
+				// for it (applyTo: 'selection') — the sidebar dropdown and the
+				// existing panels stay block-level. Without it, styling one
+				// selected word restyled every neighbouring word that happened
+				// to carry no explicit styling of its own.
+				if (e.detail.applyTo === 'selection' && e.detail.paragraphStyleId !== undefined && applyParagraphStyleRef.current) {
+					if (applyParagraphStyleRef.current(e.detail.paragraphStyleId)) {
+						return;
+					}
+					// No usable selection — fall through to the block-level path
+				}
+
 				// QFT-scoped font-variation-settings applies to the current
 				// selection (inline span), not the whole block — the inspector's
 				// axis sliders remain block-level by design. Handled before the
@@ -532,6 +546,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
+		// inheritedFontId is filled in below, once fontIdMap exists
 		// clientId of the block holding the active selection — used so only the
 		// selected block answers the shared typost_current_editor_state filter.
 		selectionClientId: selectionStart?.clientId || null
@@ -548,34 +563,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (s.selectionClientId !== clientId) {
 					return state;
 				}
-				const styleIdMatch = s.styleClass ? s.styleClass.match(/typost-ps-(\d+)/) : null;
-				// Prefer the font of the inline span at the cursor (stored as a
-				// string data-font-id) over the block-level font, so consumers
-				// like the Glyphs panel reflect the actually-selected font.
-				const activeFontId = s.inlineFontId
-					? parseInt(s.inlineFontId, 10)
-					: s.fontId;
-				return {
-					editorType: 'qft',
-					fontId: activeFontId,
-					// Effective style at the selection wins over the block attribute
-					fontStyle: s.inlineFontStyle || s.fontStyle || '',
-					fontWeight: s.fontWeight,
-					fontSize: s.fontSize,
-					fontSizeMin: s.fontSizeMin,
-					fontSizePreferred: s.fontSizePreferred,
-					fontSizeMax: s.fontSizeMax,
-					fitMaxSize: s.fitMaxSize || 0,
-					letterSpacing: s.letterSpacing,
-					lineHeight: s.lineHeight,
-					features: s.features,
-					paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
-					fontVariationSettings: s.fontVariationSettings || '',
-					layeredConfigId: s.layeredConfigId || 0,
-					animationConfigId: s.animationConfigId || 0,
-					content: s.content || '',
-					tagName: s.tagName || 'h2'
-				};
+				return buildQftEditorState(s);
 			}
 			return state;
 		};
@@ -590,8 +578,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// popover so the author returns to where they launched from. Scoped by
 	// clientId so only the block that opened it reopens (every block registers
 	// this shared action).
+	//
+	// info.reopenHost === false means the panel was launched straight from the
+	// block toolbar and no host modal was ever open — reopening one the author
+	// never asked for would be a surprise. Anything else (including an absent
+	// flag, as older extensions send) keeps the reopen behaviour.
 	useEffect(() => {
 		const handler = (src, info) => {
+			if (info && info.reopenHost === false) {
+				return;
+			}
 			if (src === 'qft' && info && info.clientId === clientId) {
 				setIsPopoverOpen(true);
 			}
@@ -601,6 +597,31 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			window.typostHooks.removeAction('typost_glyphs_panel_closed', handler);
 		};
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps -- clientId stable per instance
+
+	// Extension hook: additional block toolbar buttons (v2.3.0).
+	// Extensions return descriptors; core renders them as real ToolbarButtons so
+	// they take part in the toolbar's roving tabindex, which a foreign React
+	// root mounted into a hook container could not.
+	//
+	// Extension scripts register during their own load, which normally precedes
+	// the first block render — the changed action covers the case where it
+	// doesn't (async or conditionally loaded extensions).
+	const [toolbarButtonsVersion, setToolbarButtonsVersion] = useState(0);
+	useEffect(() => {
+		const bump = () => setToolbarButtonsVersion((version) => version + 1);
+		window.typostHooks.addAction('typost_editor_toolbar_buttons_changed', bump, 10);
+		return () => {
+			window.typostHooks.removeAction('typost_editor_toolbar_buttons_changed', bump);
+		};
+	}, []);
+
+	const extensionToolbarButtons = useMemo(
+		() => filterToolbarButtons(
+			window.typostHooks.applyFilters('typost_editor_toolbar_buttons', [], 'qft'),
+			'qft'
+		),
+		[toolbarButtonsVersion]
+	);
 
 	// Detect block's computed font-family after component mounts
 	// This runs after the DOM is ready and styles are applied
@@ -1087,46 +1108,38 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
+	/**
+	 * Snapshot the current selection before a modal steals focus.
+	 *
+	 * Returns the capturedSelection payload (null when there is no expanded
+	 * selection in this block) plus the text to preview: the selected text when
+	 * there is a selection, otherwise the whole block. Shared by the Quick
+	 * Feature Toggle button and the extension toolbar buttons so both hand
+	 * downstream UI the same selection information.
+	 */
+	const snapshotSelection = () => {
+		if (!content) {
+			return { capturedSelection: null, text: '' };
+		}
+		const richTextValue = create({ html: content });
+		const range = resolveBlockSelectionRange(selectionStart, selectionEnd, clientId);
+		if (!range) {
+			return { capturedSelection: null, text: getTextContent(richTextValue) };
+		}
+		const text = getTextContent(sliceRichText(richTextValue, range.start, range.end));
+		return {
+			capturedSelection: { start: range.start, end: range.end, text: text, length: text.length },
+			text: text
+		};
+	};
+
 	// Handle toolbar button click
 	const handleToolbarClick = () => {
-		// Extract selected text using RichText API
-		let extractedText = '';
-
-		if (content) {
-			// Create a rich text value from the HTML content
-			const richTextValue = create({ html: content });
-
-			// Check if we have a selection within this block
-			if (selectionStart && selectionEnd &&
-			    selectionStart.clientId === clientId &&
-			    selectionEnd.clientId === clientId) {
-
-				const start = selectionStart.offset || 0;
-				const end = selectionEnd.offset || 0;
-
-				if (start !== end) {
-					// There's a selection - extract it
-					const slicedValue = sliceRichText(richTextValue, start, end);
-					extractedText = getTextContent(slicedValue);
-
-					// Capture selection offsets and text before Modal opens (Modal clears selection)
-					setCapturedSelection({
-						start: start,
-						end: end,
-						text: extractedText,
-						length: extractedText.length
-					});
-				} else {
-					// No selection - clear captured selection
-					setCapturedSelection(null);
-					extractedText = getTextContent(richTextValue);
-				}
-			} else {
-				// No valid selection in this block - clear captured selection
-				setCapturedSelection(null);
-				extractedText = getTextContent(richTextValue);
-			}
-		}
+		// Capture selection offsets and text before the Modal opens (the Modal
+		// takes focus, which collapses the live selection)
+		const snapshot = snapshotSelection();
+		const extractedText = snapshot.text;
+		setCapturedSelection(snapshot.capturedSelection);
 
 		// Detect and populate inline styles when opening popover
 		if (!isPopoverOpen && selectionStart && selectionEnd && selectionStart.clientId === clientId) {
@@ -1176,6 +1189,37 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// Clear captured selection and close popover
 		setCapturedSelection(null);
 		setIsPopoverOpen(false);
+	};
+
+	/**
+	 * Launch an extension's toolbar button (Glyphs, Paragraph Styles, ...).
+	 *
+	 * The extension's UI opens without the Quick Feature Toggle modal ever
+	 * being open, so this handler has to do what opening that modal normally
+	 * does for it:
+	 *
+	 * - snapshot the selection into state, because handleInsertContent reads
+	 *   capturedSelection to place inserted text and to advance the caret
+	 *   between successive insertions;
+	 * - hand over a resolved editor state, because the shared
+	 *   typost_current_editor_state filter only answers for the block holding
+	 *   the caret — a block selected from List View would otherwise report the
+	 *   default font rather than its own.
+	 *
+	 * @since 2.3.0
+	 */
+	const handleExtensionToolbarClick = (button) => {
+		const snapshot = snapshotSelection();
+		setCapturedSelection(snapshot.capturedSelection);
+		button.onClick({
+			source: 'qft',
+			clientId,
+			capturedSelection: snapshot.capturedSelection,
+			selectedText: snapshot.capturedSelection ? snapshot.capturedSelection.text : '',
+			state: buildQftEditorState(qftStateRef.current),
+			// No host modal was open, so nothing should reopen on close
+			reopenHost: false
+		});
 	};
 
 	// Handle letter spacing change with live preview
@@ -1547,6 +1591,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
 	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId };
+
+	// Same reason: the shared editor state advertises the font the block
+	// inherits from the theme when it has none of its own, so consumers that
+	// need a real font file (the Glyphs panel) browse what the author can
+	// actually see instead of falling back to the first font in the list.
+	// computedFont is only detected while fontFamily is unset; a legacy block
+	// storing a literal family name resolves from that instead.
+	qftStateRef.current.inheritedFontId = fontId
+		? 0
+		: resolveFontIdFromFamily(computedFont || fontFamily, fontIdMap);
 
 	const toggleFeature = (featureId) => {
 		// Check if we have a valid selection - if so, toggle inline instead
@@ -2412,6 +2466,81 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		originalContentRef.current = null;
 	};
 
+	/**
+	 * Apply a paragraph style to the selected text only (inline).
+	 *
+	 * Paragraph styles are normally block-level — they describe a whole
+	 * paragraph — but applying one to a selection has to stay inside that
+	 * selection: styling a word must not restyle the words around it just
+	 * because those carry no explicit styling of their own.
+	 *
+	 * The span carries only `data-style-id`; the module's stylesheet renders
+	 * it through `.typost-styled[data-style-id="N"]`, so no inline style
+	 * string is written (that is what keeps "Update Style" able to restyle
+	 * every use at once).
+	 *
+	 * @since 2.3.0
+	 * @param {number} styleId Paragraph style ID (0 detaches)
+	 * @return {boolean} Whether the style was applied inline
+	 */
+	const applyInlineParagraphStyle = (styleId) => {
+		if (!content || !resolvedApplyRange) return false;
+
+		const start = resolvedApplyRange.start;
+		const end = resolvedApplyRange.end;
+		if (start === end) return false;
+
+		const id = parseInt(styleId, 10);
+
+		// Detaching: strip the attribute from the selection
+		if (!id) {
+			const removed = removePropertyFromSelection(content, start, end, 'data-style-id', '');
+			if (removed.success) {
+				setAttributes({ content: removed.content });
+				originalContentRef.current = null;
+				return true;
+			}
+			return false;
+		}
+
+		// Swapping the style on an existing span is handled by the applier
+		// below: a selection covering the whole span merges the new
+		// data-style-id into it instead of nesting a second span.
+		const attrs = { 'data-style-id': String(id) };
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		const range = getRangeForOffsets(container, start, end, doc);
+		const validation = validateRangeMatchesSelection(
+			range,
+			capturedSelection?.text || '',
+			capturedSelection?.length || 0
+		);
+
+		let success = false;
+		let newContent = content;
+
+		if (validation.valid) {
+			success = applyOrMergeStyling(range, attrs, '', doc);
+			if (success) {
+				newContent = container.innerHTML;
+			}
+		}
+
+		if (!success) {
+			const fallbackResult = applyStylingSafeStringMethod(content, start, end, attrs, '');
+			if (!fallbackResult.success) {
+				return false;
+			}
+			newContent = fallbackResult.content;
+		}
+
+		setAttributes({ content: newContent });
+		originalContentRef.current = null;
+		return true;
+	};
+
 	// Apply font style (visual italic) to selected text only (inline).
 	// Style-only by design: semantic emphasis stays the editor's own Italic
 	// button (<em>), which screen readers announce; this control just selects
@@ -3154,6 +3283,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	applyFontWeightRef.current = applyInlineFontWeight;
 	applyFontFamilyRef.current = applyInlineFontFamily;
 	applyFontVariationSettingsRef.current = applyInlineFontVariationSettings;
+	applyParagraphStyleRef.current = applyInlineParagraphStyle;
 
 	return (
 		<>
@@ -3165,6 +3295,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						onClick={handleToolbarClick}
 						isActive={features.length > 0}
 					/>
+					{extensionToolbarButtons.map((button) => (
+						<ToolbarButton
+							key={button.id}
+							icon={button.icon}
+							label={button.label}
+							isActive={!!button.isActive}
+							onClick={() => handleExtensionToolbarClick(button)}
+							className={`typost-ext-toolbar-button typost-ext-toolbar-button--${button.id}`}
+						/>
+					))}
 					{isPopoverOpen && (
 						<Modal
 							title=""

@@ -7,7 +7,7 @@
 const { constrainToViewport, calculateDragDelta, calculateResize } = require('./modal-drag-resize.js');
 
 // Shared font picker option builder + WP Font Library adoption helpers
-const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily } = require('./font-options.js');
+const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily, resolveFontIdFromFamily } = require('./font-options.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock } = require('./convert-capability.js');
@@ -125,6 +125,60 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
+     * Read a boolean flag out of typostData.
+     *
+     * These options are stored as '1'/'0' strings and wp_localize_script()
+     * stringifies whatever it is handed, so an uncast '0' arrives as the
+     * string "0" — truthy in JavaScript, which silently inverted every such
+     * setting. PHP now casts them, but a localized-data transient written
+     * before that fix can still hold the old strings for up to an hour, so
+     * treat "0" and "false" as off here too.
+     *
+     * @since 2.3.0
+     * @param {*} value Raw value from typostData
+     * @return {boolean} Whether the flag is on
+     */
+    function isFlagEnabled(value) {
+        if (value === undefined || value === null || value === false) {
+            return false;
+        }
+        if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return normalized !== '' && normalized !== '0' && normalized !== 'false';
+        }
+        return !!value;
+    }
+
+    /**
+     * Filter extension-registered toolbar button descriptors down to the ones
+     * this editor should render, dropping malformed entries. A descriptor with
+     * no `editors` array is offered in every editor.
+     *
+     * Duplicated from blocks/typography-stylist/utils.js (separate build
+     * pipelines, same reason the hook system above is duplicated); that copy is
+     * the one covered by unit tests.
+     *
+     * @since 2.3.0
+     * @param {Array} buttons - Descriptors from the typost_editor_toolbar_buttons filter
+     * @param {string} editor - Editor key ('qft' or 'inline')
+     * @return {Array} Valid descriptors for this editor
+     */
+    function filterToolbarButtons(buttons, editor) {
+        if (!Array.isArray(buttons)) {
+            return [];
+        }
+        return buttons.filter(function(button) {
+            if (!button || !button.id || typeof button.onClick !== 'function') {
+                return false;
+            }
+            if (Array.isArray(button.editors)) {
+                return button.editors.indexOf(editor) !== -1;
+            }
+            return true;
+        });
+    }
+
+    /**
      * Sanitize font family value to prevent CSS injection
      * Removes characters that could break out of CSS style strings
      * @param {string} font - Font family name
@@ -225,28 +279,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     }
 
     /**
-     * Get block's inherited font-family from computed styles
-     * Detects the current font applied by theme or block settings
+     * Find the element that actually renders a block's text, so computed
+     * styles can be read from it.
      *
      * @param {string} blockClientId - Block's client ID
      * @param {string} blockName - Block type name (e.g., 'core/heading')
      * @param {Document} targetDocument - Document to query (defaults to document)
-     * @param {Window} targetWindow - Window context for getComputedStyle (defaults to window)
-     * @return {string} Font family string from computed styles, or empty string if not found
+     * @return {Element|null} The text element, or null when it cannot be found
      */
-    function getBlockInheritedFont(blockClientId, blockName, targetDocument, targetWindow) {
+    function findBlockTextElement(blockClientId, blockName, targetDocument) {
         if (!blockClientId || !blockName) {
-            return '';
+            return null;
         }
 
-        // Use provided document/window or defaults
         const doc = targetDocument || document;
-        const win = targetWindow || window;
 
         // Find the block wrapper element
         const blockWrapper = doc.querySelector(`[data-block="${blockClientId}"]`);
         if (!blockWrapper) {
-            return '';
+            return null;
         }
 
         // Find the actual text element based on block type
@@ -287,14 +338,64 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             textElement = blockWrapper.querySelector('h1, h2, h3, h4, h5, h6, p, [contenteditable="true"]');
         }
 
-        // If we found a text element, get its computed font
-        if (textElement) {
-            const computedStyle = win.getComputedStyle(textElement);
-            const fontFamily = computedStyle.getPropertyValue('font-family');
-            return fontFamily ? fontFamily.replace(/['"]/g, '') : '';
+        return textElement;
+    }
+
+    /**
+     * Get block's inherited font-family from computed styles
+     * Detects the current font applied by theme or block settings
+     *
+     * @param {string} blockClientId - Block's client ID
+     * @param {string} blockName - Block type name (e.g., 'core/heading')
+     * @param {Document} targetDocument - Document to query (defaults to document)
+     * @param {Window} targetWindow - Window context for getComputedStyle (defaults to window)
+     * @return {string} Font family string from computed styles, or empty string if not found
+     */
+    function getBlockInheritedFont(blockClientId, blockName, targetDocument, targetWindow) {
+        const textElement = findBlockTextElement(blockClientId, blockName, targetDocument);
+        if (!textElement) {
+            return '';
         }
 
-        return '';
+        const win = targetWindow || window;
+        const fontFamily = win.getComputedStyle(textElement).getPropertyValue('font-family');
+        return fontFamily ? fontFamily.replace(/['"]/g, '') : '';
+    }
+
+    /**
+     * Get a block's rendered font-weight from computed styles.
+     *
+     * Themes make headings bold through CSS, not through any stored attribute,
+     * so this is the only way to know what a core heading actually looks like
+     * before converting it to a Typography Stylist block.
+     *
+     * @since 2.3.0
+     * @param {string} blockClientId - Block's client ID
+     * @param {string} blockName - Block type name (e.g., 'core/heading')
+     * @param {Document} targetDocument - Document to query (defaults to document)
+     * @param {Window} targetWindow - Window context for getComputedStyle (defaults to window)
+     * @return {string} Computed weight (e.g. '700'), or '' when it cannot be read
+     */
+    function getBlockInheritedWeight(blockClientId, blockName, targetDocument, targetWindow) {
+        const textElement = findBlockTextElement(blockClientId, blockName, targetDocument);
+        if (!textElement) {
+            return '';
+        }
+
+        const win = targetWindow || window;
+        const weight = win.getComputedStyle(textElement).getPropertyValue('font-weight');
+        if (!weight) {
+            return '';
+        }
+
+        // Browsers report keywords on some platforms; map them to numbers so
+        // the value is always a valid block attribute.
+        const keywords = { normal: '400', bold: '700', bolder: '700', lighter: '300' };
+        const normalized = String(weight).trim().toLowerCase();
+        if (keywords[normalized]) {
+            return keywords[normalized];
+        }
+        return /^\d+$/.test(normalized) ? normalized : '';
     }
 
     // Expose utilities for testing
@@ -306,7 +407,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             sanitizeFontFamily,
             sanitizeCSSValue,
             sanitizeFontVariationSettings,
-            getBlockInheritedFont
+            getBlockInheritedFont,
+            getBlockInheritedWeight,
+            isFlagEnabled
         };
     }
 
@@ -458,8 +561,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 if (editorType === 'inline') {
                     return {
                         editorType: 'inline',
-                        fontId: self.state.selectedFontId,
-                        fontWeight: self.state.fontWeight,
+                        // Text with no typost font of its own still renders in
+                        // something — usually a plugin font applied by the theme.
+                        // Resolving it means the Glyphs panel browses the font
+                        // the author can actually see, instead of falling back
+                        // to whichever font happens to be first in the list.
+                        fontId: self.state.selectedFontId || self.getInheritedFontId(),
+                        // Rendered weight, not the '400' default: a glyph
+                        // inserted into a theme-bold headline was coming out
+                        // lighter than the text around it, because consumers
+                        // wrote this value onto the span they created.
+                        fontWeight: self.getEffectiveFontWeight(),
                         // Rendered style, not just span styling — an <em>-italic
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
@@ -621,8 +733,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // the author returns to where they launched from. The saved selection
             // range travels back with the event because togglePopover cleared it
             // when WordPress force-closed this Modal.
+            //
+            // info.reopenHost === false means the panel was launched straight
+            // from the block toolbar with no host modal open — reopening one
+            // the author never asked for would be a surprise. An absent flag
+            // (as older extensions send) keeps the reopen behaviour.
             this._handleGlyphsClosed = function(src, info) {
                 if (src !== 'inline') {
+                    return;
+                }
+                if (info && info.reopenHost === false) {
                     return;
                 }
                 var reopenState = { isOpen: true };
@@ -635,6 +755,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 });
             };
             window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
+
+            // Extension hook: let an extension trigger the conversion its own
+            // UI is offering — the word-boundary notice is only useful if the
+            // fix it recommends is reachable from where the notice is shown.
+            // Every mounted instance handles it, which is harmless: convert
+            // reads the selected block from the store, and replaceBlocks on an
+            // already-replaced client ID is a no-op.
+            this._handleConvertRequest = function() {
+                if (self._isMounted) {
+                    self.convertToBlock();
+                }
+            };
+            document.addEventListener('typost-convert-to-block', this._handleConvertRequest);
+
+            // Extension hook: extra toolbar buttons may register after this
+            // component first renders (async or conditionally loaded
+            // extensions), so re-render when the registry changes.
+            this._handleToolbarButtonsChanged = function() {
+                if (self._isMounted) {
+                    self.forceUpdate();
+                }
+            };
+            window.typostHooks.addAction('typost_editor_toolbar_buttons_changed', this._handleToolbarButtonsChanged, 10);
         }
 
         /**
@@ -893,6 +1036,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * Get currently active font weight from format
          */
         getActiveFontWeight() {
+            return this.getExplicitFontWeight() || '400';
+        }
+
+        /**
+         * The weight stored on the selection, or '' when there is none.
+         *
+         * getActiveFontWeight() hard-defaults to '400', which callers cannot
+         * tell apart from a deliberate 400 — a distinction that matters when
+         * deciding whether to fall back to the weight the block inherits from
+         * the theme.
+         *
+         * @since 2.3.0
+         * @return {string} Stored weight, or '' when the selection has none
+         */
+        getExplicitFontWeight() {
             const { value } = this.props;
             const activeFormat = getActiveFormat(value, FORMAT_TYPE);
 
@@ -900,7 +1058,33 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 return activeFormat.attributes['data-fontweight'];
             }
 
-            return '400';
+            return '';
+        }
+
+        /**
+         * The weight the selection should be treated as having.
+         *
+         * A heading is bold because the theme says so, so '400' — what
+         * getActiveFontWeight() reports for text with no stored weight — is a
+         * lie that anything acting on the selection would bake in: converting
+         * the block lightened it, and a glyph inserted by the Glyphs panel
+         * came out lighter than the headline around it.
+         *
+         * Precedence: a weight stored on the selection, then one the author
+         * picked in this popover, then the weight actually rendering.
+         *
+         * @since 2.3.0
+         * @return {string} Weight to use
+         */
+        getEffectiveFontWeight() {
+            const explicitWeight = this.getExplicitFontWeight();
+            if (explicitWeight) {
+                return explicitWeight;
+            }
+            if (this._pendingChanges.keys.has('fontWeight')) {
+                return this.state.fontWeight;
+            }
+            return this.getBlockInheritedWeight() || this.state.fontWeight;
         }
 
         getActiveFontVariationSettings() {
@@ -974,6 +1158,58 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Use the standalone utility function
             return getBlockInheritedFont(
+                selectedBlockClientId,
+                selectedBlock.name,
+                targetDocument,
+                targetWindow
+            );
+        }
+
+        /**
+         * Resolve the plugin font ID of the font the block is *rendering* in,
+         * for text carrying no typost font of its own.
+         *
+         * A theme that styles h2 in one of the plugin's fonts leaves no
+         * data-font-id anywhere, so consumers that need a real font file (the
+         * Glyphs panel) would otherwise get nothing and fall back to the first
+         * font in the list — browsing a typeface the author never chose.
+         *
+         * @since 2.3.0
+         * @return {number} Numeric font ID, or 0 when the rendered font is not a plugin font
+         */
+        getInheritedFontId() {
+            const inheritedFamily = this.getBlockInheritedFont();
+            if (!inheritedFamily) {
+                return 0;
+            }
+            return resolveFontIdFromFamily(inheritedFamily, this.getFontIdMap());
+        }
+
+        /**
+         * Get the block's rendered font-weight from computed styles.
+         *
+         * Used when converting to a Typography Stylist block: a core heading is
+         * bold because the theme says so, not because of any stored attribute,
+         * and the block would otherwise be created with the default 400 and
+         * visibly lighten.
+         *
+         * @since 2.3.0
+         * @return {string} Computed weight as a string (e.g. '700'), or '' if undetectable
+         */
+        getBlockInheritedWeight() {
+            const { select } = wp.data;
+            const selectedBlockClientId = select('core/block-editor').getSelectedBlockClientId();
+            const selectedBlock = selectedBlockClientId ? select('core/block-editor').getBlock(selectedBlockClientId) : null;
+            if (!selectedBlock) {
+                return '';
+            }
+
+            // Block content lives in the editor canvas iframe (WP 6.3+)
+            const editorIframe = document.querySelector('iframe[name="editor-canvas"]');
+            const targetDocument = editorIframe?.contentDocument || document;
+            const targetWindow = editorIframe?.contentWindow || window;
+
+            return getBlockInheritedWeight(
                 selectedBlockClientId,
                 selectedBlock.name,
                 targetDocument,
@@ -1113,6 +1349,51 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         /**
          * Toggle popover visibility
          */
+        /**
+         * Launch an extension's toolbar button (e.g. Glyphs) without opening
+         * this editor's own modal first.
+         *
+         * Saves the selection bounds into state the same way togglePopover()
+         * does, because _handleInsertContent falls back to them once the
+         * extension's modal takes focus and collapses the live selection.
+         *
+         * @since 2.3.0
+         * @param {Object} button Descriptor from typost_editor_toolbar_buttons
+         */
+        handleExtensionToolbarClick(button) {
+            const { value } = this.props;
+            let savedSelectionStart = null;
+            let savedSelectionEnd = null;
+            let selectedText = '';
+
+            if (value) {
+                savedSelectionStart = value.start;
+                savedSelectionEnd = value.end;
+                if (Number.isFinite(value.start) && Number.isFinite(value.end) && value.start !== value.end) {
+                    selectedText = getTextContent(slice(value, value.start, value.end));
+                }
+            }
+
+            this.setState({
+                savedSelectionStart: savedSelectionStart,
+                savedSelectionEnd: savedSelectionEnd
+            });
+
+            button.onClick({
+                source: 'inline',
+                savedSelectionStart: savedSelectionStart,
+                savedSelectionEnd: savedSelectionEnd,
+                selectedText: selectedText,
+                state: window.typostHooks.applyFilters('typost_current_editor_state', {}, 'inline'),
+                // The word-boundary notice this modal would have shown. A panel
+                // opened from the toolbar bypasses it entirely, so it has to be
+                // able to raise the same warning itself.
+                accessibility: this.getSelectionAccessibility(savedSelectionStart, savedSelectionEnd),
+                // No host modal was open, so nothing should reopen on close
+                reopenHost: false
+            });
+        }
+
         togglePopover() {
             const { value } = this.props;
             const { select } = wp.data;
@@ -1151,13 +1432,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     detectionFailed = true;
                 }
 
-                // Check word boundary when opening (v2.0.0 - now informational, not blocking)
-                if (selectionStart !== selectionEnd) {
-                    const validation = this.validateSelection(selectionStart, selectionEnd);
-                    if (!validation.valid) {
-                        wordBoundaryWarning = validation.message;
-                    }
-                }
+                // Check word boundary when opening (v2.0.0 - now informational,
+                // not blocking). Honours the Settings → Accessibility switch,
+                // which the notice ignored until 2.3.0.
+                wordBoundaryWarning = this.getSelectionAccessibility(selectionStart, selectionEnd).wordBoundaryWarning;
 
                 // Convert capability is resolved on every open, not only when a
                 // word-boundary warning fires: the Convert action is offered for
@@ -1553,8 +1831,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          *
          * @return {string} Explanation, or '' when none applies.
          */
-        getConvertBlockedMessage() {
-            const { convertBlockedReason, convertParentTitle } = this.state;
+        getConvertBlockedMessage(reason, parentTitle) {
+            const convertBlockedReason = reason !== undefined ? reason : this.state.convertBlockedReason;
+            const convertParentTitle = parentTitle !== undefined ? parentTitle : this.state.convertParentTitle;
 
             if (!shouldExplainConvertBlock(convertBlockedReason)) {
                 return '';
@@ -1573,6 +1852,57 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             return __('This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist');
+        }
+
+        /**
+         * The accessibility state of a selection, resolved fresh.
+         *
+         * Everything the word-boundary notice needs, in one object, so that
+         * surfaces which never open this modal — the Glyphs panel launched
+         * straight from the block toolbar — can show the same notice instead
+         * of silently letting the author split a word.
+         *
+         * Resolved from the store rather than component state, because a
+         * toolbar launch has not run togglePopover() and so has no fresh state
+         * to read.
+         *
+         * @since 2.3.0
+         * @param {number|null} start Selection start offset
+         * @param {number|null} end   Selection end offset
+         * @return {{wordBoundaryWarning: string, canConvert: boolean, convertBlockedMessage: string, settingsUrl: string}}
+         */
+        getSelectionAccessibility(start = null, end = null) {
+            const result = {
+                wordBoundaryWarning: '',
+                canConvert: false,
+                convertBlockedMessage: '',
+                settingsUrl: (typostData.settingsUrl || '') + '&tab=accessibility'
+            };
+
+            // Site owners can turn the notice off in Settings → Accessibility
+            if (isFlagEnabled(typostData.disableAccessibilityWarning)) {
+                return result;
+            }
+
+            if (start !== null && end !== null && start !== end) {
+                const validation = this.validateSelection(start, end);
+                if (!validation.valid) {
+                    result.wordBoundaryWarning = validation.message;
+                }
+            }
+
+            // Only resolve the conversion when there is a warning to attach it
+            // to — the notice offers it as the fix, and resolving walks the
+            // block tree.
+            if (result.wordBoundaryWarning) {
+                const capability = this.resolveConvertState();
+                result.canConvert = capability.canConvert;
+                result.convertBlockedMessage = capability.canConvert
+                    ? ''
+                    : this.getConvertBlockedMessage(capability.reason, capability.parentTitle);
+            }
+
+            return result;
         }
 
         /**
@@ -1653,6 +1983,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             } else if (currentBlock.name === 'core/paragraph') {
                 tagName = 'p';
             }
+
+            // A core heading is bold because the theme styles h2, not because
+            // anything stored says 700 — and the block's fontWeight defaults to
+            // '400', which save.js always emits, so a straight conversion
+            // visibly lightens the heading.
+            const convertFontWeight = this.getEffectiveFontWeight();
 
             let contentForBlock;
 
@@ -1774,7 +2110,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         fontSizeMin: this.state.fontSizeMin,
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: this.state.fontWeight,
+                        fontWeight: convertFontWeight,
                         letterSpacing: this.state.letterSpacing,
                         lineHeight: this.state.lineHeight
                     });
@@ -1834,7 +2170,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         fontSizeMin: this.state.fontSizeMin,
                         fontSizePreferred: this.state.fontSizePreferred,
                         fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: this.state.fontWeight,
+                        fontWeight: convertFontWeight,
                         letterSpacing: this.state.letterSpacing,
                         lineHeight: this.state.lineHeight
                     });
@@ -2132,7 +2468,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
 
                 // Add aria-label if enabled for accessibility
-                if (typostData.enableAriaLabels && value) {
+                if (isFlagEnabled(typostData.enableAriaLabels) && value) {
                     const effectiveStart = selectionLost ? savedSelectionStart : value.start;
                     const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
                     const selectedText = effectiveStart !== effectiveEnd
@@ -2180,7 +2516,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         handleClearClick() {
             // Check if confirmation is enabled globally and not disabled for this session
-            const showConfirmation = typostData.showClearConfirmation && !this.state.dontShowClearWarning;
+            const showConfirmation = isFlagEnabled(typostData.showClearConfirmation) && !this.state.dontShowClearWarning;
 
             if (showConfirmation) {
                 // Show confirmation modal
@@ -2632,6 +2968,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (this._handleGlyphsClosed) {
                 window.typostHooks.removeAction('typost_glyphs_panel_closed', this._handleGlyphsClosed);
             }
+
+            // Cleanup extension toolbar button re-render handler
+            if (this._handleToolbarButtonsChanged) {
+                window.typostHooks.removeAction('typost_editor_toolbar_buttons_changed', this._handleToolbarButtonsChanged);
+            }
+
+            // Cleanup extension convert bridge
+            if (this._handleConvertRequest) {
+                document.removeEventListener('typost-convert-to-block', this._handleConvertRequest);
+            }
         }
 
         render() {
@@ -2644,6 +2990,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // '' when the omission needs no explanation (already a Typography
             // Stylist block, or a block type with no conversion mapping).
             const convertBlockedMessage = canConvert ? '' : this.getConvertBlockedMessage();
+            // Extension-registered toolbar buttons (v2.3.0). Rendered as real
+            // ToolbarButtons so they join the toolbar's roving tabindex.
+            const extensionButtons = filterToolbarButtons(
+                window.typostHooks.applyFilters('typost_editor_toolbar_buttons', [], 'inline'),
+                'inline'
+            );
 
             return (
                 <Fragment>
@@ -2658,6 +3010,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     isActive={isActive}
                                     className="typost-toolbar-button"
                                 />
+                                {extensionButtons.map((button) => (
+                                    <ToolbarButton
+                                        key={button.id}
+                                        icon={button.icon}
+                                        title={button.label}
+                                        isActive={!!button.isActive}
+                                        onClick={() => this.handleExtensionToolbarClick(button)}
+                                        className={`typost-toolbar-button typost-ext-toolbar-button typost-ext-toolbar-button--${button.id}`}
+                                    />
+                                ))}
                             </ToolbarGroup>
                         </BlockControls>
                     )}
@@ -2736,6 +3098,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                                 {/* Scrollable Content Wrapper */}
                                 <div className="typost-scrollable-content">
+
+                                {/* Accessibility Warning — Non-blocking Notice (v2.0.0).
+                                    Sits at the top of the panel: it reports a problem with
+                                    the selection the author just made and offers the fix, so
+                                    burying it under every feature control meant scrolling
+                                    past all of them to find out anything was wrong. */}
+                                {wordBoundaryWarning && (
+                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
+                                        <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
+                                        <p>{wordBoundaryWarning}</p>
+                                        {canConvert && (
+                                            <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button">
+                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
+                                            </Button>
+                                        )}
+                                        {!canConvert && convertBlockedMessage && (
+                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
+                                        )}
+                                        <p className="typost-warning-settings-link">
+                                            <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
+                                                {__('Manage accessibility settings', 'typography-stylist')}
+                                            </a>
+                                        </p>
+                                    </Notice>
+                                )}
 
                                 {/* Extension hook point: top of modal (e.g., Paragraph Styles dropdown) */}
                                 <div className="typost-hook-point" data-hook="typost_inline_modal_top" ref={(el) => {
@@ -2979,37 +3366,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     }
                                 }} />
 
-                                {/* Accessibility Warning - Non-blocking Notice (v2.0.0) */}
-                                {wordBoundaryWarning && (
-                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
-                                        <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
-                                        <p>{wordBoundaryWarning}</p>
-                                        {canConvert && (
-                                            <Button isLink onClick={this.convertToBlock}>
-                                                {__('Convert to Typography Stylist Block', 'typography-stylist')}
-                                            </Button>
-                                        )}
-                                        {!canConvert && convertBlockedMessage && (
-                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
-                                        )}
-                                        <p className="typost-warning-settings-link">
-                                            <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
-                                                {__('Manage accessibility settings', 'typography-stylist')}
-                                            </a>
-                                        </p>
-                                    </Notice>
-                                )}
-
                                 {/* Convert to block — always reachable for convertible blocks, not
                                     only when the accessibility notice fires. When the conversion is
                                     impossible the reason is stated instead of rendering nothing,
                                     which previously read as a missing feature. The word-boundary
-                                    notice carries its own copy, so this is suppressed while it shows. */}
+                                    notice at the top of the panel carries its own copy, so this is
+                                    suppressed while it shows. */}
                                 {!wordBoundaryWarning && (canConvert || convertBlockedMessage) && (
                                     <div className="typost-convert-section">
                                         {canConvert ? (
                                             <>
-                                                <Button isLink onClick={this.convertToBlock}>
+                                                <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button">
                                                     {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                                 </Button>
                                                 <p className="typost-convert-description">

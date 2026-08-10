@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Guarded like the other bundled modules, so re-entry can never redefine these.
 if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
-	define( 'TYPOST_PS_VERSION', '1.1.0' );
+	define( 'TYPOST_PS_VERSION', '1.2.0' );
 	define( 'TYPOST_PS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_PS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -50,6 +50,9 @@ final class Typost_Paragraph_Styles {
 
 	/** @var string Transient key for caching generated CSS */
 	const CSS_CACHE_KEY = 'typost_paragraph_styles_css';
+
+	/** @var string Option storing whether the block toolbar gets a direct styles button */
+	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
 
 	/** @var string REST namespace (shared with core plugin) */
 	const REST_NAMESPACE = 'typost/v1';
@@ -88,6 +91,10 @@ final class Typost_Paragraph_Styles {
 		// Admin tab
 		add_filter( 'typost_admin_tabs', array( $this, 'register_admin_tab' ) );
 		add_action( 'typost_admin_tab_content_paragraph-styles', array( $this, 'render_admin_tab' ) );
+
+		// Optional toolbar button setting (Options tab)
+		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
+		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
 
 		// Editor data
 		add_filter( 'typost_editor_data', array( $this, 'add_editor_data' ) );
@@ -420,8 +427,72 @@ final class Typost_Paragraph_Styles {
 	 * @return array Modified editor data.
 	 */
 	public function add_editor_data( $data ) {
-		$data['paragraphStyles'] = $this->get_styles();
+		$data['paragraphStyles']        = $this->get_styles();
+		$data['paragraphStylesOptions'] = array(
+			'toolbarButton' => $this->toolbar_button_enabled(),
+		);
 		return $data;
+	}
+
+	// -------------------------------------------------------------------------
+	// Options tab setting
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Whether the direct-access toolbar button is enabled.
+	 *
+	 * Off by default: the styles dropdown already sits in the Inspector sidebar
+	 * and both editor panels, so an extra toolbar button on upgrade would be
+	 * unrequested.
+	 *
+	 * @since 1.2.0
+	 * @return bool
+	 */
+	private function toolbar_button_enabled() {
+		return (bool) get_option( self::TOOLBAR_OPTION, false );
+	}
+
+	/**
+	 * Render the toolbar button setting into the core Options tab.
+	 *
+	 * @since 1.2.0
+	 */
+	public function render_options_row() {
+		?>
+		<tr>
+			<th scope="row">
+				<?php esc_html_e( 'Paragraph Styles Toolbar Button', 'typost-paragraph-styles' ); ?>
+			</th>
+			<td>
+				<input
+					type="checkbox"
+					id="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>"
+					name="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>"
+					value="1"
+					data-typost-option="1"
+					<?php checked( $this->toolbar_button_enabled() ); ?>
+				/>
+				<label for="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>">
+					<?php esc_html_e( 'Add a Paragraph Styles button to the Typography Stylist block toolbar', 'typost-paragraph-styles' ); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e( 'Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged.', 'typost-paragraph-styles' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Register the toolbar option so core's Options save persists it.
+	 *
+	 * @since 1.2.0
+	 * @param array $options Registered option keys.
+	 * @return array
+	 */
+	public function register_option_key( $options ) {
+		$options[] = self::TOOLBAR_OPTION;
+		return $options;
 	}
 
 	// -------------------------------------------------------------------------
@@ -574,13 +645,18 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function enqueue_editor_assets() {
 		// Pure logic shared with Jest tests (UMD-lite, exposed as window.typostPSUtils)
+		// wp-i18n: the size labels this file builds are translatable, so the
+		// handle needs its own script translations — they are not inherited
+		// from the editor handle that depends on it.
 		wp_enqueue_script(
 			'typost-paragraph-styles-utils',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/lib/ps-utils.js',
-			array(),
+			array( 'wp-i18n' ),
 			TYPOST_PS_VERSION,
 			true
 		);
+
+		wp_set_script_translations( 'typost-paragraph-styles-utils', 'typost-paragraph-styles', TYPOST_PS_PLUGIN_DIR . 'languages' );
 
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',

@@ -8,16 +8,62 @@
 (function () {
 	'use strict';
 
+	var TEXT_DOMAIN = 'typost-paragraph-styles';
+
+	/**
+	 * Translate a string, falling back to the original.
+	 *
+	 * Looked up lazily rather than captured at load: this file is also
+	 * required directly by Jest, where no `wp` global exists.
+	 */
+	function translate(text) {
+		if (typeof wp !== 'undefined' && wp.i18n && wp.i18n.__) {
+			return wp.i18n.__(text, TEXT_DOMAIN);
+		}
+		return text;
+	}
+
+	/**
+	 * Fill %s / %1$s placeholders in a (translated) string.
+	 *
+	 * Uses wp.i18n.sprintf when available so translators get the usual
+	 * argument-reordering support; the fallback covers the same two forms so
+	 * tests and non-WordPress consumers produce identical output.
+	 */
+	function format(template, args) {
+		if (typeof wp !== 'undefined' && wp.i18n && wp.i18n.sprintf) {
+			return wp.i18n.sprintf.apply(null, [template].concat(args));
+		}
+		var index = 0;
+		return template.replace(/%(\d+\$)?s/g, function (match, position) {
+			if (position) {
+				return String(args[parseInt(position, 10) - 1]);
+			}
+			return String(args[index++]);
+		});
+	}
+
 	/**
 	 * Resolve a font name from a font ID against a fonts array
 	 * (shape of window.typostData.fonts). Returns null when not found
 	 * so the caller can substitute a translated "Default" label.
+	 *
+	 * Styles store the canonical numeric font id, which lives on `font_id` in
+	 * the localized font entries — `id` there is the string kit/project slug.
+	 * Matching `font_id` first is what makes the lookup work at all; the `id`
+	 * comparison stays for entry shapes that carry only that.
 	 */
 	function findFontName(fontId, fonts) {
 		if (!fontId || !fonts) return null;
+		var wanted = String(fontId);
 		for (var i = 0; i < fonts.length; i++) {
-			if (fonts[i].id === fontId || String(fonts[i].id) === String(fontId)) {
-				return fonts[i].name;
+			var entry = fonts[i];
+			if (!entry) continue;
+			if (entry.font_id !== undefined && String(entry.font_id) === wanted) {
+				return entry.name;
+			}
+			if (entry.id !== undefined && String(entry.id) === wanted) {
+				return entry.name;
 			}
 		}
 		return null;
@@ -174,21 +220,88 @@
 	 * as-is — it intentionally re-applies the current editor state as
 	 * inline styling, so there is no stale state to reset.
 	 */
-	function buildApplyEventDetail(style, editorSource, detachProperties) {
+	function buildApplyEventDetail(style, editorSource, detachProperties, applyTo) {
 		var source = editorSource === 'inspector' ? 'inspector' : editorSource;
+		// 'selection' asks the host to wrap the selected text rather than
+		// restyle the whole block. Only set when the caller knows a selection
+		// was captured; anything else stays block-level, which is what a
+		// paragraph style normally means.
+		var scope = applyTo === 'selection' ? { applyTo: 'selection' } : {};
+
 		if (!style) {
-			return {
+			return Object.assign({
 				properties: detachProperties || {},
 				paragraphStyleId: 0,
 				styleClass: '',
 				source: source,
-			};
+			}, scope);
 		}
-		return {
+		return Object.assign({
 			properties: normalizeApplyProperties(style.properties),
 			paragraphStyleId: style.id,
 			styleClass: 'typost-ps-' + style.id,
 			source: source,
+		}, scope);
+	}
+
+	/**
+	 * Build the inline style + size label for one row of the style browser.
+	 *
+	 * The row also carries the style's own CSS class, which supplies family,
+	 * weight, letter-spacing, OpenType features and variation settings. Only
+	 * the size is overridden here: a 64px display style would otherwise make
+	 * the list unreadable. The override maps the real size into a 12–40px band
+	 * so relative order still reads — a display style still looks bigger than a
+	 * body style — while every row stays a sensible height. line-height is
+	 * neutralised for the same reason.
+	 *
+	 * @param {Object} properties Stored style properties.
+	 * @param {Object} bounds     Optional {min, max} preview size band.
+	 * @return {{style: Object, sizeLabel: string}} Inline style and a label for the true size.
+	 */
+	function buildStylePreviewStyle(properties, bounds) {
+		var props = properties || {};
+		var min = (bounds && bounds.min) || 12;
+		var max = (bounds && bounds.max) || 40;
+		var fontSize = props.fontSize;
+		var sizeLabel = '';
+		var realSize = null;
+
+		if (fontSize === 'responsive') {
+			// Represent the fluid range by its preferred (mid) size
+			realSize = parseFloat(props.fontSizePreferred) || parseFloat(props.fontSizeMax) || null;
+			sizeLabel = format(
+				/* translators: 1: smallest font size, 2: largest font size. */
+				translate('Fluid %1$s–%2$s'),
+				[props.fontSizeMin || '?', props.fontSizeMax || '?']
+			);
+		} else if (fontSize === 'fit') {
+			// Fit sizes are measured per line at render time; the cap is the
+			// only number the style itself knows.
+			realSize = parseFloat(props.fitMaxSize) || null;
+			sizeLabel = props.fitMaxSize
+				/* translators: %s: maximum font size in pixels. */
+				? format(translate('Fit ≤ %spx'), [props.fitMaxSize])
+				: translate('Fit');
+		} else if (fontSize && fontSize !== 'inherit') {
+			realSize = parseFloat(fontSize);
+			/* translators: %s: font size in pixels. */
+			sizeLabel = isNaN(realSize) ? '' : format(translate('%spx'), [realSize]);
+		}
+
+		var previewSize;
+		if (realSize === null || isNaN(realSize)) {
+			previewSize = Math.round((min + max) / 2);
+		} else {
+			previewSize = Math.min(max, Math.max(min, realSize));
+		}
+
+		return {
+			style: {
+				fontSize: previewSize + 'px',
+				lineHeight: 1.25,
+			},
+			sizeLabel: sizeLabel,
 		};
 	}
 
@@ -198,6 +311,7 @@
 		buildPropertiesFromState: buildPropertiesFromState,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
+		buildStylePreviewStyle: buildStylePreviewStyle,
 	};
 
 	if (typeof window !== 'undefined') {

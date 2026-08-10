@@ -207,6 +207,23 @@
 		var onClose = props.onClose;
 		var lib = G();
 
+		// Word-boundary state resolved by the host editor when the panel was
+		// launched. Absent when the panel was opened from inside the editor's
+		// own modal, which shows the notice itself.
+		var accessibility = context.accessibility || {};
+
+		/**
+		 * Run the conversion the notice recommends, then close: the block this
+		 * panel is pointed at is replaced by the conversion, so its captured
+		 * range and client ID no longer refer to anything.
+		 */
+		function handleConvertToBlock() {
+			document.dispatchEvent(new CustomEvent('typost-convert-to-block', {
+				detail: { source: source, clientId: context.clientId || null }
+			}));
+			onClose();
+		}
+
 		var fonts = useMemo(getFontSources, []);
 
 		// Default to the font active in the editor context. fonts[i].fontId is a
@@ -796,6 +813,33 @@
 				transform: 'none'
 			} : undefined
 		},
+			// Accessibility notice — the same word-boundary warning the inline
+			// editor shows. This panel can be opened straight from the block
+			// toolbar, bypassing that modal entirely, so without this an author
+			// could split a word here and never be told.
+			accessibility.wordBoundaryWarning && el(Notice, {
+				status: 'warning',
+				isDismissible: false,
+				className: 'typost-glyphs-a11y-notice'
+			},
+				el('strong', null, __('Accessibility Notice', 'typost-glyphs-panel')),
+				el('p', null, accessibility.wordBoundaryWarning),
+				accessibility.canConvert && el(Button, {
+					variant: 'secondary',
+					className: 'typost-glyphs-convert-button',
+					onClick: handleConvertToBlock
+				}, __('Convert to Typography Stylist Block', 'typost-glyphs-panel')),
+				!accessibility.canConvert && accessibility.convertBlockedMessage &&
+					el('p', { className: 'typost-glyphs-convert-blocked' }, accessibility.convertBlockedMessage),
+				accessibility.settingsUrl && el('p', { className: 'typost-glyphs-a11y-settings' },
+					el('a', {
+						href: accessibility.settingsUrl,
+						target: '_blank',
+						rel: 'noopener noreferrer'
+					}, __('Manage accessibility settings', 'typost-glyphs-panel'))
+				)
+			),
+
 			// Header row: font selector + target indicator
 			el('div', { className: 'typost-glyphs-header' },
 				el(SelectControl, {

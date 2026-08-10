@@ -261,10 +261,65 @@ function resolveActiveFontFamily(activeFont, activeFontId, fontIdMap) {
 	return '';
 }
 
+/**
+ * Resolve a plugin font ID from a computed `font-family` stack.
+ *
+ * The inverse of resolveActiveFontFamily(), for text that carries no typost
+ * font of its own: a heading styled only by the theme still *renders* in one
+ * of the plugin's fonts, and consumers like the Glyphs panel need its numeric
+ * ID to load the actual font file. Without this they fall back to the first
+ * font in the list and browse the wrong typeface.
+ *
+ * Matching walks the stack in order and takes the first family the plugin
+ * knows, so `"Fraunces", Georgia, serif` resolves to Fraunces while a stack
+ * of only system fonts resolves to nothing. Comparison ignores quotes and
+ * case, which is how browsers report and authors write family names.
+ *
+ * @param {string} familyStack Computed font-family value (may list fallbacks)
+ * @param {Object} fontIdMap   Map of font_id -> {family, ...} from buildFontOptions()
+ * @return {number} Numeric font ID, or 0 when no family in the stack is a plugin font
+ */
+function resolveFontIdFromFamily(familyStack, fontIdMap) {
+	if (!familyStack || !fontIdMap) {
+		return 0;
+	}
+
+	var normalize = function (name) {
+		return String(name).replace(/['"]/g, '').trim().toLowerCase();
+	};
+
+	var families = String(familyStack).split(',').map(normalize).filter(Boolean);
+	if (!families.length) {
+		return 0;
+	}
+
+	// Index the known fonts once, then walk the stack in priority order
+	var byFamily = {};
+	Object.keys(fontIdMap).forEach(function (id) {
+		var entry = fontIdMap[id];
+		if (entry && entry.family) {
+			var key = normalize(entry.family);
+			// First registration wins, matching the font list's own order
+			if (!byFamily[key]) {
+				byFamily[key] = parseInt(id, 10);
+			}
+		}
+	});
+
+	for (var i = 0; i < families.length; i++) {
+		if (byFamily[families[i]]) {
+			return byFamily[families[i]];
+		}
+	}
+
+	return 0;
+}
+
 module.exports = {
 	buildFontOptions: buildFontOptions,
 	isWpLibraryValue: isWpLibraryValue,
 	wpSlugFromValue: wpSlugFromValue,
 	adoptWpFont: adoptWpFont,
-	resolveActiveFontFamily: resolveActiveFontFamily
+	resolveActiveFontFamily: resolveActiveFontFamily,
+	resolveFontIdFromFamily: resolveFontIdFromFamily
 };
