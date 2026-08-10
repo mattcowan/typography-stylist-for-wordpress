@@ -28,6 +28,7 @@
 	var SelectControl  = wp.components.SelectControl;
 	var Button         = wp.components.Button;
 	var TextControl    = wp.components.TextControl;
+	var Modal          = wp.components.Modal;
 	var __             = wp.i18n.__;
 
 	var utils                    = window.typostPSUtils;
@@ -35,15 +36,50 @@
 	var isStyleModified          = utils.isStyleModified;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
+	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
+
+	/**
+	 * Toolbar icon: "Ps" — Bookmania Regular, P from `salt` alternate #2 with a
+	 * roman s, outlined and scaled to the same cap height as core's swash "T"
+	 * icon. The viewBox is wider than tall so the cap height matches its
+	 * neighbours instead of shrinking to fit a square.
+	 */
+	var PS_ICON_PATH = 'M533.134 422.428L533.134 805.596C533.134 959.568 507.276 1004.232 436.754 1004.232C372.109 1004.232 394.441 897.274 314.517 897.274C282.782 897.274 255.749 923.132 255.749 960.744C255.749 1003.057 298.062 1063 414.422 1063C554.290 1063 649.494 981.900 649.494 806.771L649.494 422.428L825.799 422.428C1022.084 422.428 1159.601 366.011 1159.601 213.214C1159.601 60.417 1022.084 4 826.974 4L355.654 4C142.914 4 23.027 127.413 23.027 277.859C23.027 408.324 108.829 497.651 231.066 497.651C332.147 497.651 407.370 434.182 407.370 338.978C407.370 293.139 381.512 252.001 333.322 252.001C294.536 252.001 263.976 279.034 263.976 323.698C263.976 357.784 287.483 375.414 287.483 400.097C287.483 428.305 263.976 443.585 222.839 443.585C147.615 443.585 81.795 373.063 81.795 277.859C82.971 141.517 185.227 56.891 355.654 56.891L439.105 56.891C514.328 56.891 533.134 75.697 533.134 137.991ZM1030.311 213.214C1030.311 321.347 957.439 370.713 825.799 370.713L649.494 370.713L649.494 92.152C649.494 69.820 662.423 56.891 684.755 56.891L826.974 56.891C957.439 56.891 1030.311 106.256 1030.311 213.214ZM1264.208 400.097C1264.208 356.608 1299.469 323.698 1371.166 323.698C1451.090 323.698 1520.437 360.134 1575.679 457.689L1601.537 448.286L1567.451 296.665L1538.067 296.665L1526.314 326.049C1491.053 299.016 1438.161 279.034 1364.114 279.034C1250.104 279.034 1172.530 348.381 1172.530 433.007C1172.530 642.221 1550.996 552.893 1550.996 703.340C1550.996 770.335 1488.702 798.544 1426.408 798.544C1326.502 798.544 1250.104 752.705 1179.582 641.046L1153.724 649.273L1196.037 826.752L1226.597 826.752L1240.701 787.966C1281.839 819.700 1352.360 844.383 1427.583 844.383C1547.470 844.383 1637.973 776.212 1637.973 670.430C1637.973 451.812 1264.208 535.263 1264.208 400.097Z';
+
+	function PSIcon() {
+		return el('svg', {
+			height: 24,
+			width: 37,
+			viewBox: '0 0 1661 1067',
+			xmlns: 'http://www.w3.org/2000/svg',
+			'aria-hidden': 'true',
+			focusable: 'false'
+		}, el('path', { d: PS_ICON_PATH, fill: 'currentColor' }));
+	}
 
 	// Get paragraph styles from localized data
 	function getStyles() {
 		return (window.typostData && window.typostData.paragraphStyles) || [];
 	}
 
-	// Resolve font name from font ID using typostData.fonts
+	// Whether the site has opted into the direct block toolbar button
+	function toolbarButtonEnabled() {
+		return !!(window.typostData &&
+			window.typostData.paragraphStylesOptions &&
+			window.typostData.paragraphStylesOptions.toolbarButton);
+	}
+
+	// Resolve a font name from a numeric font ID. A style may reference any font
+	// source, so search all of them — uploaded kits alone would report "Default"
+	// for every Adobe, manual, or adopted Font Library face.
 	function getFontName(fontId) {
-		var fonts = (window.typostData && window.typostData.fonts) || [];
+		var data = window.typostData || {};
+		var fonts = [].concat(
+			data.fonts || [],
+			data.adobeFonts || [],
+			data.manualFonts || [],
+			data.adoptedWpFonts || []
+		);
 		return findFontName(fontId, fonts) || __('Default', 'typost-paragraph-styles');
 	}
 
@@ -405,6 +441,155 @@
 		);
 	}
 
+	/**
+	 * ParagraphStylesBrowser — the toolbar-launched style browser.
+	 *
+	 * Shows every saved style rendered in its own typeface rather than as a
+	 * dropdown label, so the author can see a style before applying it. Each
+	 * row carries the style's real CSS class (family, weight, letter-spacing,
+	 * OpenType features) with only the size overridden; see
+	 * buildStylePreviewStyle.
+	 *
+	 * Applies through the same event as the panel, with source 'inspector' —
+	 * core routes an 'inspector' apply to the selected block, which is exactly
+	 * the block whose toolbar was clicked. ('qft' would be dropped: core only
+	 * accepts that source while the Quick Feature Toggle modal is open.)
+	 *
+	 * Props:
+	 *   activeStyleId: number — style currently on the block (0 for none)
+	 *   onClose: function
+	 */
+	function ParagraphStylesBrowser(props) {
+		var stylesState      = useState(getStyles());
+		var currentStyles    = stylesState[0];
+		var setCurrentStyles = stylesState[1];
+
+		var activeState    = useState(props.activeStyleId || 0);
+		var activeStyleId  = activeState[0];
+		var setActiveStyleId = activeState[1];
+
+		useEffect(function() {
+			function onStylesUpdated() {
+				setCurrentStyles(getStyles());
+			}
+			document.addEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+			return function() {
+				document.removeEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+			};
+		}, []);
+
+		// Applying and detaching are both terminal: close afterwards so the
+		// author sees the result on the block instead of through a modal, and
+		// so focus returns to the toolbar button. Closing also avoids stranding
+		// keyboard focus — detaching unmounts the very button that was clicked,
+		// which would otherwise drop focus to the document root.
+		var onApply = useCallback(function(style) {
+			setActiveStyleId(style.id);
+			dispatchApply(style, 'inspector');
+			props.onClose();
+		}, [props.onClose]);
+
+		var onDetach = useCallback(function() {
+			setActiveStyleId(0);
+			var state = window.typostHooks
+				? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft')
+				: {};
+			dispatchApply(null, 'inspector', buildPropertiesFromState(state));
+			props.onClose();
+		}, [props.onClose]);
+
+		var rows = currentStyles.map(function(style) {
+			var preview = buildStylePreviewStyle(style.properties);
+			var isActive = String(style.id) === String(activeStyleId);
+			var fontName = getFontName(style.properties && style.properties.fontId);
+			var meta = [fontName];
+			if (style.properties && style.properties.fontWeight) {
+				meta.push(style.properties.fontWeight);
+			}
+			if (preview.sizeLabel) {
+				meta.push(preview.sizeLabel);
+			}
+
+			return el('li', { key: style.id, className: 'typost-ps-browser-item' },
+				el('button', {
+					type: 'button',
+					className: 'typost-ps-browser-row' + (isActive ? ' is-active' : ''),
+					'aria-pressed': isActive,
+					onClick: function() { onApply(style); },
+				},
+					el('span', {
+						className: 'typost-ps-browser-sample typost-ps-' + style.id,
+						style: preview.style,
+						// Purely visual: the sample text is the style name, which
+						// the meta line below already announces along with the
+						// font, weight and size. Without this the name is read twice.
+						'aria-hidden': 'true',
+					}, style.name),
+					el('span', { className: 'typost-ps-browser-meta' },
+						el('span', { className: 'typost-ps-browser-name' }, style.name),
+						el('span', { className: 'typost-ps-browser-detail' }, meta.join(' · '))
+					)
+				)
+			);
+		});
+
+		return el(Modal, {
+			title: __('Paragraph Styles', 'typost-paragraph-styles'),
+			onRequestClose: props.onClose,
+			className: 'typost-ps-browser-modal',
+		},
+			currentStyles.length === 0
+				? el('p', { className: 'typost-ps-browser-empty' },
+					__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'))
+				: el('ul', { className: 'typost-ps-browser-list' }, rows),
+			activeStyleId ? el('div', { className: 'typost-ps-browser-footer' },
+				el(Button, {
+					variant: 'link',
+					isDestructive: true,
+					onClick: function() { onDetach(); },
+				}, __('Detach Style', 'typost-paragraph-styles'))
+			) : null
+		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Browser mounting (a Modal outside the editor's React tree)
+	// -------------------------------------------------------------------------
+
+	var browserRoot = null;
+
+	function closeBrowser() {
+		if (browserRoot) {
+			wp.element.unmountComponentAtNode(browserRoot);
+			if (browserRoot.parentNode) {
+				browserRoot.parentNode.removeChild(browserRoot);
+			}
+			browserRoot = null;
+		}
+	}
+
+	function openBrowser(context) {
+		injectStyles();
+		closeBrowser();
+		browserRoot = document.createElement('div');
+		browserRoot.className = 'typost-ps-browser-root';
+		document.body.appendChild(browserRoot);
+
+		// The toolbar hands over resolved state; fall back to the shared filter
+		// for any caller that does not.
+		var state = (context && context.state) ||
+			(window.typostHooks ? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft') : {}) ||
+			{};
+
+		wp.element.render(
+			el(ParagraphStylesBrowser, {
+				activeStyleId: state.paragraphStyleId || 0,
+				onClose: closeBrowser,
+			}),
+			browserRoot
+		);
+	}
+
 	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)
 	// -------------------------------------------------------------------------
@@ -437,6 +622,21 @@
 			// Inspector sidebar override — compact spacing
 			'[data-hook="typost_inspector_top"] .typost-ps-panel { margin: 0; padding: 12px 16px; border-bottom: 1px solid #e0e0e0; }',
 			'[data-hook="typost_inspector_top"] .typost-ps-panel-label { margin-bottom: 8px; }',
+			// Style browser (toolbar button)
+			'.typost-ps-browser-modal { max-width: 720px; width: 90vw; }',
+			'.typost-ps-browser-list { list-style: none; margin: 0; padding: 0; }',
+			'.typost-ps-browser-item + .typost-ps-browser-item { border-top: 1px solid #e0e0e0; }',
+			'.typost-ps-browser-row { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 14px 12px; background: none; border: 0; border-radius: 4px; cursor: pointer; text-align: left; }',
+			'.typost-ps-browser-row:hover { background: #f0f0f0; }',
+			'.typost-ps-browser-row:focus-visible { outline: 2px solid #007cba; outline-offset: -2px; }',
+			'.typost-ps-browser-row.is-active { background: #f0f6fc; box-shadow: inset 3px 0 0 #007cba; }',
+			// Long sample text must not push the modal wide
+			'.typost-ps-browser-sample { display: block; color: #1e1e1e; overflow-wrap: anywhere; }',
+			'.typost-ps-browser-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }',
+			'.typost-ps-browser-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
+			'.typost-ps-browser-detail { font-size: 11px; color: #757575; }',
+			'.typost-ps-browser-empty { color: #757575; margin: 0; }',
+			'.typost-ps-browser-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }',
 		].join('\n');
 
 		var styleEl = document.createElement('style');
@@ -498,6 +698,22 @@
 				renderPanel(hookEl, 'inline');
 			}
 		}, 10);
+
+		// Optional direct-access button in the Typography Stylist block toolbar.
+		// Block-level only: a paragraph style describes a whole block, and the
+		// 'inspector' apply route it uses targets the selected block.
+		if (toolbarButtonEnabled()) {
+			window.typostHooks.addFilter('typost_editor_toolbar_buttons', function(buttons) {
+				return buttons.concat([{
+					id: 'paragraph-styles',
+					icon: PSIcon,
+					label: __('Paragraph Styles', 'typost-paragraph-styles'),
+					editors: ['qft'],
+					onClick: openBrowser,
+				}]);
+			}, 10);
+			window.typostHooks.doAction('typost_editor_toolbar_buttons_changed');
+		}
 	});
 
 })();

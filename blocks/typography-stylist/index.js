@@ -9,7 +9,43 @@ import { registerBlockType, createBlock } from '@wordpress/blocks';
 import Edit from './edit';
 import save from './save';
 import deprecated from './deprecated';
-import { analyzeInlineFeatures, stripInlineFeatures } from './utils';
+import { analyzeInlineFeatures, stripInlineFeatures, detectBlockComputedWeight } from './utils';
+
+/**
+ * The weight the block being transformed is currently rendering at.
+ *
+ * A core heading is bold because the theme styles h2, not because of any
+ * stored attribute — and this block's fontWeight defaults to 400, which save
+ * always emits, so a plain transform visibly lightens the heading. Transforms
+ * only receive attributes, so the source block is located through the
+ * selection, which is what the block menu acts on.
+ *
+ * Returns undefined (leave the default alone) when the source cannot be
+ * identified with certainty — a multi-block transform, or a DOM node that
+ * isn't there.
+ *
+ * @return {string|undefined} Weight attribute to apply, or undefined
+ */
+const inheritedWeightForTransform = () => {
+	try {
+		const blockEditor = wp.data.select('core/block-editor');
+		const selected = blockEditor.getSelectedBlockClientIds
+			? blockEditor.getSelectedBlockClientIds()
+			: [];
+		if (!selected || selected.length !== 1) {
+			return undefined;
+		}
+		return detectBlockComputedWeight(selected[0], 'h1,h2,h3,h4,h5,h6,p') || undefined;
+	} catch (error) {
+		return undefined;
+	}
+};
+
+/** Spread helper: only set fontWeight when one was detected. */
+const inheritedWeightAttrs = () => {
+	const fontWeight = inheritedWeightForTransform();
+	return fontWeight ? { fontWeight } : {};
+};
 
 // Custom "T" icon for Typography Stylist
 const TSIcon = () => (
@@ -33,12 +69,16 @@ registerBlockType('typost/block', {
 					// Analyze inline features to determine conversion strategy
 					const analysis = analyzeInlineFeatures(attributes.content);
 
+					// Read the rendered weight before the source block leaves the DOM
+					const inherited = inheritedWeightAttrs();
+
 					if (analysis.shouldExtractToBlock) {
 						// Full coverage with uniform features - extract to block level
 						return createBlock('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'p',
-							features: analysis.commonFeatures
+							features: analysis.commonFeatures,
+							...inherited
 						});
 					}
 
@@ -46,7 +86,8 @@ registerBlockType('typost/block', {
 					return createBlock('typost/block', {
 						content: attributes.content,
 						tagName: 'p',
-						features: []
+						features: [],
+						...inherited
 					});
 				},
 			},
@@ -57,12 +98,18 @@ registerBlockType('typost/block', {
 					// Analyze inline features to determine conversion strategy
 					const analysis = analyzeInlineFeatures(attributes.content);
 
+					// Read the rendered weight before the source block leaves the
+					// DOM — a theme-bold heading would otherwise convert to the
+					// block's default 400 and visibly lighten.
+					const inherited = inheritedWeightAttrs();
+
 					if (analysis.shouldExtractToBlock) {
 						// Full coverage with uniform features - extract to block level
 						return createBlock('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'h' + attributes.level,
-							features: analysis.commonFeatures
+							features: analysis.commonFeatures,
+							...inherited
 						});
 					}
 
@@ -70,7 +117,8 @@ registerBlockType('typost/block', {
 					return createBlock('typost/block', {
 						content: attributes.content,
 						tagName: 'h' + attributes.level,
-						features: []
+						features: [],
+						...inherited
 					});
 				},
 			},

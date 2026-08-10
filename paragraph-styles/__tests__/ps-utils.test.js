@@ -9,6 +9,7 @@ const {
 	buildPropertiesFromState,
 	buildApplyEventDetail,
 	normalizeApplyProperties,
+	buildStylePreviewStyle,
 } = require('../assets/js/lib/ps-utils.js');
 
 describe('findFontName', () => {
@@ -19,6 +20,28 @@ describe('findFontName', () => {
 
 	test('finds a font by numeric id', () => {
 		expect(findFontName(12, fonts)).toBe('Fraunces');
+	});
+
+	test('matches the canonical numeric font_id, which is what styles store', () => {
+		// Shape of window.typostData.fonts / adobeFonts: `id` is the string
+		// kit/project slug, `font_id` is the numeric identity.
+		const localized = [
+			{ id: 'kit-1785099086-nviis0sm-fraunces', font_id: 36, name: 'Fraunces' },
+			{ id: 'adobe-wkp4oav-bookmania', font_id: 1, name: 'bookmania' },
+		];
+		expect(findFontName(36, localized)).toBe('Fraunces');
+		expect(findFontName(1, localized)).toBe('bookmania');
+		expect(findFontName(99, localized)).toBeNull();
+	});
+
+	test('does not confuse a string slug for a numeric id', () => {
+		const localized = [{ id: 'kit-abc', font_id: 7, name: 'Kit Font' }];
+		expect(findFontName('kit-abc', localized)).toBe('Kit Font');
+		expect(findFontName(7, localized)).toBe('Kit Font');
+	});
+
+	test('skips null entries', () => {
+		expect(findFontName(7, [null, { font_id: 7, name: 'Kit Font' }])).toBe('Kit Font');
 	});
 
 	test('matches loosely across string/number ids', () => {
@@ -310,5 +333,70 @@ describe('buildApplyEventDetail', () => {
 
 	test('detach payload defaults properties to empty object', () => {
 		expect(buildApplyEventDetail(null, 'inline').properties).toEqual({});
+	});
+});
+
+describe('buildStylePreviewStyle', () => {
+	const size = (properties, bounds) => parseFloat(buildStylePreviewStyle(properties, bounds).style.fontSize);
+
+	test('clamps an oversized display style into the preview band', () => {
+		expect(size({ fontSize: '64' })).toBe(40);
+	});
+
+	test('raises a tiny style to the band floor', () => {
+		expect(size({ fontSize: '8' })).toBe(12);
+	});
+
+	test('keeps a size that already sits inside the band', () => {
+		expect(size({ fontSize: '24' })).toBe(24);
+	});
+
+	test('preserves relative order between styles, which is the point of the band', () => {
+		expect(size({ fontSize: '18' })).toBeLessThan(size({ fontSize: '30' }));
+	});
+
+	test('honours a custom band', () => {
+		expect(size({ fontSize: '64' }, { min: 10, max: 20 })).toBe(20);
+		expect(size({ fontSize: '4' }, { min: 10, max: 20 })).toBe(10);
+	});
+
+	test('responsive styles preview at their preferred size and label the range', () => {
+		const result = buildStylePreviewStyle({
+			fontSize: 'responsive',
+			fontSizeMin: 16,
+			fontSizePreferred: 32,
+			fontSizeMax: 64,
+		});
+		expect(parseFloat(result.style.fontSize)).toBe(32);
+		expect(result.sizeLabel).toBe('Fluid 16–64');
+	});
+
+	test('fit styles preview at their cap and say so', () => {
+		const capped = buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 120 });
+		expect(parseFloat(capped.style.fontSize)).toBe(40);
+		expect(capped.sizeLabel).toBe('Fit ≤ 120px');
+
+		// 0 means uncapped, so there is no number to show
+		expect(buildStylePreviewStyle({ fontSize: 'fit', fitMaxSize: 0 }).sizeLabel).toBe('Fit');
+	});
+
+	test('a style with no size of its own previews mid-band with no label', () => {
+		const result = buildStylePreviewStyle({ fontSize: 'inherit' });
+		expect(parseFloat(result.style.fontSize)).toBe(26);
+		expect(result.sizeLabel).toBe('');
+	});
+
+	test('tolerates missing or unparseable properties', () => {
+		expect(parseFloat(buildStylePreviewStyle(undefined).style.fontSize)).toBe(26);
+		expect(parseFloat(buildStylePreviewStyle({ fontSize: 'wat' }).style.fontSize)).toBe(26);
+	});
+
+	test('neutralizes line-height so a tall style cannot stretch its row', () => {
+		expect(buildStylePreviewStyle({ fontSize: '64', lineHeight: 3 }).style.lineHeight).toBe(1.25);
+	});
+
+	test('sets only size properties, leaving family/weight/features to the style class', () => {
+		expect(Object.keys(buildStylePreviewStyle({ fontSize: '24' }).style).sort())
+			.toEqual(['fontSize', 'lineHeight']);
 	});
 });

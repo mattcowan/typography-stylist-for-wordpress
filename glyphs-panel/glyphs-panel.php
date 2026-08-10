@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Guard the constants so a still-active standalone copy (deactivated but left
 // on disk) cannot trigger a duplicate define() or a fatal class redeclare.
 if ( ! defined( 'TYPOST_GP_VERSION' ) ) {
-	define( 'TYPOST_GP_VERSION', '1.2.2' );
+	define( 'TYPOST_GP_VERSION', '1.3.0' );
 	define( 'TYPOST_GP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_GP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -41,6 +41,13 @@ require_once TYPOST_GP_PLUGIN_DIR . 'includes/font-files.php';
  * plain text styled with the already-loaded webfont.
  */
 final class Typost_Glyphs_Panel {
+
+	/**
+	 * Option storing whether the block toolbar gets a direct "Glyphs" button.
+	 *
+	 * @since 1.3.0
+	 */
+	const TOOLBAR_OPTION = 'typost_glyphs_toolbar_button';
 
 	/** @var self|null */
 	private static $instance = null;
@@ -81,6 +88,23 @@ final class Typost_Glyphs_Panel {
 		add_filter( 'typost_admin_tabs', array( $this, 'register_admin_tab' ) );
 		add_action( 'typost_admin_tab_content_glyphs', array( $this, 'render_admin_tab' ) );
 		add_action( 'typost_admin_assets', array( $this, 'enqueue_admin_assets' ) );
+
+		// Optional toolbar button setting (Options tab)
+		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
+		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
+	}
+
+	/**
+	 * Whether the direct-access toolbar button is enabled.
+	 *
+	 * Off by default: the panel is reachable from inside both editors already,
+	 * and an unrequested extra toolbar button on every rich text block would be
+	 * a surprise on upgrade.
+	 *
+	 * @return bool
+	 */
+	private function toolbar_button_enabled() {
+		return (bool) get_option( self::TOOLBAR_OPTION, false );
 	}
 
 	/**
@@ -144,8 +168,52 @@ final class Typost_Glyphs_Panel {
 			'metadataUrl'   => TYPOST_GP_PLUGIN_URL . 'assets/js/lib/metadata.js',
 			'wpFontFiles'   => typost_gp_get_wp_font_files(),
 			'vendorMissing' => $this->get_missing_vendor_files(),
+			'toolbarButton' => $this->toolbar_button_enabled(),
 			'version'       => TYPOST_GP_VERSION,
 		);
+	}
+
+	/**
+	 * Render the toolbar button setting into the core Options tab.
+	 *
+	 * @since 1.3.0
+	 */
+	public function render_options_row() {
+		?>
+		<tr>
+			<th scope="row">
+				<?php esc_html_e( 'Glyphs Toolbar Button', 'typost-glyphs-panel' ); ?>
+			</th>
+			<td>
+				<input
+					type="checkbox"
+					id="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>"
+					name="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>"
+					value="1"
+					data-typost-option="1"
+					<?php checked( $this->toolbar_button_enabled() ); ?>
+				/>
+				<label for="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>">
+					<?php esc_html_e( 'Add a Glyphs button to the block toolbar', 'typost-glyphs-panel' ); ?>
+				</label>
+				<p class="description">
+					<?php esc_html_e( 'Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way.', 'typost-glyphs-panel' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Register the toolbar option so core's Options save persists it.
+	 *
+	 * @since 1.3.0
+	 * @param array $options Registered option keys.
+	 * @return array
+	 */
+	public function register_option_key( $options ) {
+		$options[] = self::TOOLBAR_OPTION;
+		return $options;
 	}
 
 	/**

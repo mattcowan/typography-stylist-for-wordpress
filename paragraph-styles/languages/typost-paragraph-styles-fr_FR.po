@@ -159,3 +159,18 @@ msgstr "Voulez-vous vraiment supprimer « %s » ? Cette action est irréversible
 msgid "Failed to delete style. Please try again."
 msgstr "Échec de la suppression du style. Veuillez réessayer."
 
+#: paragraph-styles.php
+msgid "Paragraph Styles Toolbar Button"
+msgstr "Bouton Styles de paragraphe dans la barre d’outils"
+
+#: paragraph-styles.php
+msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
+msgstr "Ajouter un bouton Styles de paragraphe à la barre d’outils du bloc Typography Stylist"
+
+#: paragraph-styles.php
+msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
+msgstr "Ouvre un navigateur affichant chaque style de paragraphe enregistré dans sa propre police, afin de voir un style avant de l’appliquer. La liste déroulante des styles dans la colonne latérale et les panneaux de l’éditeur reste inchangée."
+
+#: assets/js/editor.js
+msgid "No paragraph styles saved yet. Set up the typography you want, then use \"Save Current Settings as Style\" in the sidebar."
+msgstr "Aucun style de paragraphe enregistré pour le moment. Réglez la typographie souhaitée, puis utilisez « Enregistrer les réglages actuels comme style » dans la colonne latérale."

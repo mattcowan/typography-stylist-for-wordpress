@@ -1421,6 +1421,68 @@ export function detectBlockComputedFont(clientId, elementSelector = '.typost-blo
 }
 
 /**
+ * Detect the font-weight a block is actually rendering at.
+ *
+ * Themes make headings bold through CSS (`h2 { font-weight: 700 }`), never
+ * through a stored attribute, so this is the only way to know what a core
+ * heading looks like before converting it to a Typography Stylist block —
+ * whose fontWeight attribute defaults to 400 and is always emitted, silently
+ * lightening the text.
+ *
+ * The selector list covers both DOM shapes: WordPress 6.5+ puts data-block on
+ * the text element itself, older versions wrap it.
+ *
+ * @since 2.3.0
+ * @param {string} clientId - Block client ID
+ * @param {string} elementSelector - Selector for the text element
+ * @return {string} Computed weight as a numeric string (e.g. '700'), or '' when undetectable
+ */
+export function detectBlockComputedWeight(clientId, elementSelector = '.typost-block-content') {
+	if (!clientId) {
+		return '';
+	}
+
+	try {
+		// WordPress editor content is in an iframe
+		const editorIframe = typeof document !== 'undefined' ? document.querySelector('iframe[name="editor-canvas"]') : null;
+		const targetDocument = editorIframe?.contentDocument || (typeof document !== 'undefined' ? document : null);
+		const targetWindow = editorIframe?.contentWindow || (typeof window !== 'undefined' ? window : null);
+
+		if (!targetDocument || !targetWindow) {
+			return '';
+		}
+
+		const blockWrapper = targetDocument.querySelector(`[data-block="${clientId}"]`);
+		if (!blockWrapper) {
+			return '';
+		}
+
+		const textElement = blockWrapper.matches(elementSelector)
+			? blockWrapper
+			: blockWrapper.querySelector(elementSelector);
+		if (!textElement) {
+			return '';
+		}
+
+		const weight = targetWindow.getComputedStyle(textElement).getPropertyValue('font-weight');
+		if (!weight) {
+			return '';
+		}
+
+		// Some platforms report keywords; map them so the result is always a
+		// valid block attribute value.
+		const keywords = { normal: '400', bold: '700', bolder: '700', lighter: '300' };
+		const normalized = String(weight).trim().toLowerCase();
+		if (keywords[normalized]) {
+			return keywords[normalized];
+		}
+		return /^\d+$/.test(normalized) ? normalized : '';
+	} catch (error) {
+		return '';
+	}
+}
+
+/**
  * Analyze inline features in HTML content for block conversion
  *
  * This function determines whether inline OpenType features should be extracted
@@ -1763,6 +1825,109 @@ export function resolveQftApplyRange(selectionStart, selectionEnd, clientId, cap
 	}
 
 	return null;
+}
+
+/**
+ * Resolve an expanded selection range inside this block from the block
+ * editor's selectionStart/selectionEnd.
+ *
+ * Both ends must belong to this block: a selection that starts here and ends
+ * in a sibling block is not a range this block may act on. A collapsed caret
+ * returns null — callers that want the caret use resolveQftApplyRange().
+ * Reversed offsets (selecting right-to-left) are normalized.
+ *
+ * @since 2.3.0
+ * @param {Object|null} selectionStart - Block editor selection start {clientId, offset}
+ * @param {Object|null} selectionEnd - Block editor selection end {clientId, offset}
+ * @param {string} clientId - This block's client ID
+ * @return {{start: number, end: number}|null} Normalized range, or null when there is no selection in this block
+ */
+export function resolveBlockSelectionRange(selectionStart, selectionEnd, clientId) {
+	if (!selectionStart || !selectionEnd) {
+		return null;
+	}
+	if (selectionStart.clientId !== clientId || selectionEnd.clientId !== clientId) {
+		return null;
+	}
+	const start = selectionStart.offset || 0;
+	const end = selectionEnd.offset || 0;
+	if (start === end) {
+		return null;
+	}
+	return start < end ? { start, end } : { start: end, end: start };
+}
+
+/**
+ * Build the shared editor-state object that the `typost_current_editor_state`
+ * filter answers with for the 'qft' editor.
+ *
+ * Extracted so the state provider and the extension toolbar buttons (which
+ * hand extensions a state snapshot directly, without going through the
+ * filter) can never drift apart.
+ *
+ * @since 2.3.0
+ * @param {Object} s - Raw block state (the qftStateRef payload in edit.js)
+ * @return {Object} Editor state for extensions
+ */
+export function buildQftEditorState(s) {
+	const source = s || {};
+	const styleIdMatch = source.styleClass ? String(source.styleClass).match(/typost-ps-(\d+)/) : null;
+	// Prefer the font of the inline span at the cursor (stored as a string
+	// data-font-id) over the block-level font, so consumers like the Glyphs
+	// panel reflect the actually-selected font. With neither set, fall back to
+	// the font the block inherits from the theme — text with no plugin font is
+	// still rendering in something, and reporting 0 leaves consumers to guess.
+	const activeFontId = source.inlineFontId
+		? parseInt(source.inlineFontId, 10)
+		: (source.fontId || source.inheritedFontId || 0);
+
+	return {
+		editorType: 'qft',
+		fontId: activeFontId,
+		// Effective style at the selection wins over the block attribute
+		fontStyle: source.inlineFontStyle || source.fontStyle || '',
+		fontWeight: source.fontWeight,
+		fontSize: source.fontSize,
+		fontSizeMin: source.fontSizeMin,
+		fontSizePreferred: source.fontSizePreferred,
+		fontSizeMax: source.fontSizeMax,
+		fitMaxSize: source.fitMaxSize || 0,
+		letterSpacing: source.letterSpacing,
+		lineHeight: source.lineHeight,
+		features: source.features,
+		paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
+		fontVariationSettings: source.fontVariationSettings || '',
+		layeredConfigId: source.layeredConfigId || 0,
+		animationConfigId: source.animationConfigId || 0,
+		content: source.content || '',
+		tagName: source.tagName || 'h2'
+	};
+}
+
+/**
+ * Filter extension-registered toolbar button descriptors down to the ones a
+ * given editor should render, dropping malformed entries.
+ *
+ * A descriptor without an `editors` array is offered in every editor.
+ *
+ * @since 2.3.0
+ * @param {Array} buttons - Descriptors returned by the typost_editor_toolbar_buttons filter
+ * @param {string} editor - Editor key ('qft' or 'inline')
+ * @return {Array} Valid descriptors for this editor
+ */
+export function filterToolbarButtons(buttons, editor) {
+	if (!Array.isArray(buttons)) {
+		return [];
+	}
+	return buttons.filter((button) => {
+		if (!button || !button.id || typeof button.onClick !== 'function') {
+			return false;
+		}
+		if (Array.isArray(button.editors)) {
+			return button.editors.indexOf(editor) !== -1;
+		}
+		return true;
+	});
 }
 
 /**

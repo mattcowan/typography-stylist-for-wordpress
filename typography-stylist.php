@@ -2898,6 +2898,43 @@ class Typost {
     }
 
     /**
+     * Option keys for extension checkboxes rendered into the Options tab.
+     *
+     * Modules and extension plugins that echo a settings row on the
+     * `typost_admin_options_rows` action register the option key here so both
+     * the REST save and the no-JavaScript POST fallback persist it. Values are
+     * always stored as '1'/'0'.
+     *
+     * Keys must start with `typost_`: an extension may add its own settings,
+     * not rewrite arbitrary WordPress options through this plugin's form.
+     *
+     * @since 2.3.0
+     * @return array List of option names.
+     */
+    public function get_extension_option_checkboxes() {
+        /**
+         * Filter the extension checkbox options saved with the Options tab.
+         *
+         * @since 2.3.0
+         * @param array $options List of option names (must be prefixed `typost_`).
+         */
+        $options = apply_filters('typost_admin_options_checkboxes', array());
+
+        if (!is_array($options)) {
+            return array();
+        }
+
+        $valid = array();
+        foreach ($options as $option_key) {
+            if (is_string($option_key) && 0 === strpos($option_key, 'typost_')) {
+                $valid[] = $option_key;
+            }
+        }
+
+        return array_values(array_unique($valid));
+    }
+
+    /**
      * REST callback: POST /admin/options
      *
      * AJAX counterpart of the Options tab form. Mirrors the POST handler in
@@ -2924,6 +2961,15 @@ class Typost {
         // save when the client actually sent the value.
         if ($this->font_library_bridge()->is_available() && null !== $request->get_param('auto_register_wp_fonts')) {
             update_option('typost_auto_register_wp_fonts', rest_sanitize_boolean($request->get_param('auto_register_wp_fonts')) ? '1' : '0');
+        }
+
+        // Extension-registered checkbox options (see typost_admin_options_rows).
+        // Keyed by the full option name, which is also the form field name.
+        // Same "only save what the client sent" rule as above.
+        foreach ($this->get_extension_option_checkboxes() as $option_key) {
+            if (null !== $request->get_param($option_key)) {
+                update_option($option_key, rest_sanitize_boolean($request->get_param($option_key)) ? '1' : '0');
+            }
         }
 
         $color_scheme = $this->sanitize_color_scheme(sanitize_key((string) $request->get_param('color_scheme')));
@@ -6404,6 +6450,13 @@ class Typost {
             if ($this->font_library_bridge()->is_available()) {
                 $auto_register = isset($_POST['typost_auto_register_wp_fonts']) ? '1' : '0';
                 update_option('typost_auto_register_wp_fonts', $auto_register);
+            }
+
+            // Save extension-registered checkbox options (see typost_admin_options_rows).
+            // A full form POST always carries every rendered checkbox, so an
+            // absent field genuinely means unchecked here.
+            foreach ($this->get_extension_option_checkboxes() as $option_key) {
+                update_option($option_key, isset($_POST[$option_key]) ? '1' : '0');
             }
 
             // Save color scheme setting

@@ -33,6 +33,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Illustrator-style glyph browser to explore every character and OpenType feature in a font
 - Search by character, `U+` codepoint, or glyph name; filter by Unicode block or stylistic set
 - Insert glyphs directly into the inline or block editor via the "Glyphs…" button, or browse and copy from the dedicated Glyphs admin tab
+- Optional one-click access: enable "Glyphs Toolbar Button" in Options to put a Glyphs button in the block toolbar itself (off by default)
 - Font data is read in the browser, on demand, for metadata only — no glyph outlines are ever extracted or stored
 
 ### Variable Fonts (built in, v2.1+)
@@ -45,6 +46,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Save the current typography configuration (font, weight, size, spacing, OpenType features, variable font axes) as a named style — like paragraph styles in InDesign
 - Fit-to-width blocks save as styles too: fit mode, its maximum-size cap, and the fallback sizes are all captured; applying such a style switches the target block into fit mode (inline text renders the style's fluid fallback size instead)
 - Apply styles from a dropdown at the top of the inline editor, the Quick Feature Toggles, and the block sidebar
+- Optional style browser: enable "Paragraph Styles Toolbar Button" in Options to add a block toolbar button that shows every saved style rendered in its own typeface, so you can see a style before applying it (off by default)
 - Styled text renders through a shared CSS class (`.typost-ps-{id}` / `data-style-id`), so "Update Style" restyles every use at once; "Detach Style" converts back to independent inline styling
 - Manage (rename/delete) styles from the Paragraph Styles tab in Settings → Typography Stylist
 

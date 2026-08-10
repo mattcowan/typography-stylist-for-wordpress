@@ -225,3 +225,15 @@ msgstr "Reemplaza la selección: «%s»"
 #: glyphs-panel/assets/js/glyphs-modal.js:419
 msgid "Inserts at cursor"
 msgstr "Inserta en el cursor"
+
+#: glyphs-panel.php
+msgid "Glyphs Toolbar Button"
+msgstr "Botón de glifos en la barra de herramientas"
+
+#: glyphs-panel.php
+msgid "Add a Glyphs button to the block toolbar"
+msgstr "Añadir un botón de glifos a la barra de herramientas del bloque"
+
+#: glyphs-panel.php
+msgid "Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way."
+msgstr "Coloca un botón de glifos junto al botón de Typography Stylist en la barra de herramientas del bloque, de modo que el explorador de glifos se abra con un solo clic en lugar de a través del panel de Typography Stylist. El botón dentro de ese panel permanece igual en ambos casos."

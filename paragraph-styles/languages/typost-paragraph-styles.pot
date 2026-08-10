@@ -156,3 +156,18 @@ msgstr ""
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
+#: paragraph-styles.php
+msgid "Paragraph Styles Toolbar Button"
+msgstr ""
+
+#: paragraph-styles.php
+msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
+msgstr ""
+
+#: paragraph-styles.php
+msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
+msgstr ""
+
+#: assets/js/editor.js
+msgid "No paragraph styles saved yet. Set up the typography you want, then use \"Save Current Settings as Style\" in the sidebar."
+msgstr ""

@@ -224,3 +224,15 @@ msgstr ""
 #: glyphs-panel/assets/js/glyphs-modal.js:419
 msgid "Inserts at cursor"
 msgstr ""
+
+#: glyphs-panel.php
+msgid "Glyphs Toolbar Button"
+msgstr ""
+
+#: glyphs-panel.php
+msgid "Add a Glyphs button to the block toolbar"
+msgstr ""
+
+#: glyphs-panel.php
+msgid "Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way."
+msgstr ""

@@ -2053,11 +2053,23 @@ jQuery(document).ready(function($) {
 
         $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
 
+        // Checkbox rows added by modules/extensions on the
+        // typost_admin_options_rows action. Collected by attribute rather than
+        // by name so core does not need to know what they are; the server saves
+        // only the keys registered on typost_admin_options_checkboxes.
+        var payload = {};
+        $form.find('input[type="checkbox"][data-typost-option]').each(function() {
+            var name = $(this).attr('name');
+            if (name) {
+                payload[name] = $(this).is(':checked');
+            }
+        });
+
         $.ajax({
             url: typostAdmin.restUrl + 'admin/options',
             method: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({
+            data: JSON.stringify($.extend(payload, {
                 show_clear_confirmation: $('#typost_show_clear_confirmation').is(':checked'),
                 archive_full_content_check: $('#typost_archive_full_content_check').is(':checked'),
                 // null when the checkbox isn't in the DOM: a missing element must
@@ -2068,7 +2080,7 @@ jQuery(document).ready(function($) {
                 // Checkbox only rendered when the WP Font Library is available
                 auto_register_wp_fonts: $autoRegister.length ? $autoRegister.is(':checked') : null,
                 color_scheme: $('#typost_admin_color_scheme').val()
-            }),
+            })),
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
