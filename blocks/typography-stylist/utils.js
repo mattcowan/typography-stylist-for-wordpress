@@ -2008,9 +2008,15 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 	const hasFitScale = span.getAttribute('data-fitscale');
 	const hasFitShift = span.getAttribute('data-fitshift');
 
+	// data-style-id counts: a paragraph style applied to a selection renders
+	// entirely through the CSS class it implies, so a span carrying only that
+	// has no inline style of its own — unwrapping it because "nothing is left"
+	// would silently drop the style when some other property is removed.
+	const hasStyleId = span.getAttribute('data-style-id');
+
 	const hasAnyAttributes = hasFeatures || hasFontId || hasFontSize ||
 	                         hasFontWeight || hasLetterSpacing || hasLineHeight ||
-	                         hasFitScale || hasFitShift;
+	                         hasFitScale || hasFitShift || hasStyleId;
 
 	if (!hasAnyAttributes && Object.keys(styleObj).length === 0) {
 		return true; // Signal to unwrap span

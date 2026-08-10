@@ -249,6 +249,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const applyFontWeightRef = useRef(null);
 	const applyFontSizeRef = useRef(null);
 	const applyFontVariationSettingsRef = useRef(null);
+	const applyParagraphStyleRef = useRef(null);
 	const applyFitScaleRef = useRef(null);
 	const applyFitShiftRef = useRef(null);
 
@@ -358,6 +359,19 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (e.detail.source === 'qft' ? !popoverOpen : selectedId !== curClientId) {
 					return;
 				}
+				// Selection-scoped paragraph style. Styles are block-level by
+				// nature, so this only happens when the sender explicitly asks
+				// for it (applyTo: 'selection') — the sidebar dropdown and the
+				// existing panels stay block-level. Without it, styling one
+				// selected word restyled every neighbouring word that happened
+				// to carry no explicit styling of its own.
+				if (e.detail.applyTo === 'selection' && e.detail.paragraphStyleId !== undefined && applyParagraphStyleRef.current) {
+					if (applyParagraphStyleRef.current(e.detail.paragraphStyleId)) {
+						return;
+					}
+					// No usable selection — fall through to the block-level path
+				}
+
 				// QFT-scoped font-variation-settings applies to the current
 				// selection (inline span), not the whole block — the inspector's
 				// axis sliders remain block-level by design. Handled before the
@@ -2452,6 +2466,81 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		originalContentRef.current = null;
 	};
 
+	/**
+	 * Apply a paragraph style to the selected text only (inline).
+	 *
+	 * Paragraph styles are normally block-level — they describe a whole
+	 * paragraph — but applying one to a selection has to stay inside that
+	 * selection: styling a word must not restyle the words around it just
+	 * because those carry no explicit styling of their own.
+	 *
+	 * The span carries only `data-style-id`; the module's stylesheet renders
+	 * it through `.typost-styled[data-style-id="N"]`, so no inline style
+	 * string is written (that is what keeps "Update Style" able to restyle
+	 * every use at once).
+	 *
+	 * @since 2.3.0
+	 * @param {number} styleId Paragraph style ID (0 detaches)
+	 * @return {boolean} Whether the style was applied inline
+	 */
+	const applyInlineParagraphStyle = (styleId) => {
+		if (!content || !resolvedApplyRange) return false;
+
+		const start = resolvedApplyRange.start;
+		const end = resolvedApplyRange.end;
+		if (start === end) return false;
+
+		const id = parseInt(styleId, 10);
+
+		// Detaching: strip the attribute from the selection
+		if (!id) {
+			const removed = removePropertyFromSelection(content, start, end, 'data-style-id', '');
+			if (removed.success) {
+				setAttributes({ content: removed.content });
+				originalContentRef.current = null;
+				return true;
+			}
+			return false;
+		}
+
+		// Swapping the style on an existing span is handled by the applier
+		// below: a selection covering the whole span merges the new
+		// data-style-id into it instead of nesting a second span.
+		const attrs = { 'data-style-id': String(id) };
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+
+		const range = getRangeForOffsets(container, start, end, doc);
+		const validation = validateRangeMatchesSelection(
+			range,
+			capturedSelection?.text || '',
+			capturedSelection?.length || 0
+		);
+
+		let success = false;
+		let newContent = content;
+
+		if (validation.valid) {
+			success = applyOrMergeStyling(range, attrs, '', doc);
+			if (success) {
+				newContent = container.innerHTML;
+			}
+		}
+
+		if (!success) {
+			const fallbackResult = applyStylingSafeStringMethod(content, start, end, attrs, '');
+			if (!fallbackResult.success) {
+				return false;
+			}
+			newContent = fallbackResult.content;
+		}
+
+		setAttributes({ content: newContent });
+		originalContentRef.current = null;
+		return true;
+	};
+
 	// Apply font style (visual italic) to selected text only (inline).
 	// Style-only by design: semantic emphasis stays the editor's own Italic
 	// button (<em>), which screen readers announce; this control just selects
@@ -3194,6 +3283,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	applyFontWeightRef.current = applyInlineFontWeight;
 	applyFontFamilyRef.current = applyInlineFontFamily;
 	applyFontVariationSettingsRef.current = applyInlineFontVariationSettings;
+	applyParagraphStyleRef.current = applyInlineParagraphStyle;
 
 	return (
 		<>

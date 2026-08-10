@@ -185,22 +185,28 @@
 	 * as-is — it intentionally re-applies the current editor state as
 	 * inline styling, so there is no stale state to reset.
 	 */
-	function buildApplyEventDetail(style, editorSource, detachProperties) {
+	function buildApplyEventDetail(style, editorSource, detachProperties, applyTo) {
 		var source = editorSource === 'inspector' ? 'inspector' : editorSource;
+		// 'selection' asks the host to wrap the selected text rather than
+		// restyle the whole block. Only set when the caller knows a selection
+		// was captured; anything else stays block-level, which is what a
+		// paragraph style normally means.
+		var scope = applyTo === 'selection' ? { applyTo: 'selection' } : {};
+
 		if (!style) {
-			return {
+			return Object.assign({
 				properties: detachProperties || {},
 				paragraphStyleId: 0,
 				styleClass: '',
 				source: source,
-			};
+			}, scope);
 		}
-		return {
+		return Object.assign({
 			properties: normalizeApplyProperties(style.properties),
 			paragraphStyleId: style.id,
 			styleClass: 'typost-ps-' + style.id,
 			source: source,
-		};
+		}, scope);
 	}
 
 	/**

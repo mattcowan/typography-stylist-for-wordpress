@@ -174,3 +174,11 @@ msgstr "Ouvre un navigateur affichant chaque style de paragraphe enregistré dan
 #: assets/js/editor.js
 msgid "No paragraph styles saved yet. Set up the typography you want, then use \"Save Current Settings as Style\" in the sidebar."
 msgstr "Aucun style de paragraphe enregistré pour le moment. Réglez la typographie souhaitée, puis utilisez « Enregistrer les réglages actuels comme style » dans la colonne latérale."
+
+#: assets/js/editor.js
+msgid "Applies to the selected text."
+msgstr "S’applique au texte sélectionné."
+
+#: assets/js/editor.js
+msgid "Applies to the whole block."
+msgstr "S’applique à tout le bloc."

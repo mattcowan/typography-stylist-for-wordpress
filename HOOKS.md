@@ -691,6 +691,9 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         // Optional: class-based styling (used by the bundled Paragraph Styles module)
         paragraphStyleId: 3,       // Integer style ID
         styleClass: 'typost-ps-3', // CSS class for Typography Stylist blocks
+        // Optional (since 2.3.0): scope the paragraph style to the selected
+        // text instead of the whole block. Omit for block-level, the default.
+        applyTo: 'selection',
         // Optional (inline source only, since 2.1.0): animation config ID —
         // written to the span as data-animation-id (Animations extension)
         animationId: 2,
@@ -709,6 +712,7 @@ Each editor listens for this event and applies properties matching its `source`.
 **Class-based styling fields:**
 - `paragraphStyleId` — When set (non-zero), the inline editor stores `data-style-id` on the span and skips inline `style` (CSS class provides rendering). Data attributes (`data-font-id`, `data-features`, etc.) are still set for font detection.
 - `styleClass` — When set, the Typography Stylist block stores this as a block attribute. The `save()` function outputs the class on the element and skips inline styles. The editor always renders inline styles for visual preview regardless of `styleClass`.
+- `applyTo` — *Since 2.3.0.* `'selection'` makes a Typography Stylist block wrap the selected text in a `<span class="typost-styled" data-style-id="N">` instead of writing block attributes, so styling one word leaves its neighbours alone. Send it only when you know a selection was captured; with a collapsed caret (or any other value) the apply stays block-level, which is what a paragraph style normally means. A `paragraphStyleId` of `0` with `applyTo: 'selection'` strips the style from the selection. The sidebar and in-panel dropdowns deliberately do not send it.
 
 **Extension config references (numeric block attributes):**
 - `properties.layeredConfigId` — Layered Fonts extension. Saved as `data-layered-config-id` on the visual heading.

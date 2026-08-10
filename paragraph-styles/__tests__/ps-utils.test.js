@@ -334,6 +334,29 @@ describe('buildApplyEventDetail', () => {
 	test('detach payload defaults properties to empty object', () => {
 		expect(buildApplyEventDetail(null, 'inline').properties).toEqual({});
 	});
+
+	test('omits applyTo by default, so a style stays block-level', () => {
+		expect(buildApplyEventDetail(style, 'inspector')).not.toHaveProperty('applyTo');
+		expect(buildApplyEventDetail(null, 'inspector', {})).not.toHaveProperty('applyTo');
+	});
+
+	test('applyTo "selection" scopes the style to the selected text', () => {
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'selection').applyTo).toBe('selection');
+		expect(buildApplyEventDetail(null, 'inspector', {}, 'selection').applyTo).toBe('selection');
+	});
+
+	test('an unrecognized scope is ignored rather than passed through', () => {
+		// Guards against a typo silently reaching the host as an unknown mode
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'block')).not.toHaveProperty('applyTo');
+		expect(buildApplyEventDetail(style, 'inspector', undefined, 'whatever')).not.toHaveProperty('applyTo');
+	});
+
+	test('scoping does not disturb the rest of the payload', () => {
+		const detail = buildApplyEventDetail(style, 'inspector', undefined, 'selection');
+		expect(detail.paragraphStyleId).toBe(style.id);
+		expect(detail.styleClass).toBe('typost-ps-' + style.id);
+		expect(detail.source).toBe('inspector');
+	});
 });
 
 describe('buildStylePreviewStyle', () => {

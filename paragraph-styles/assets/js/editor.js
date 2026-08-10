@@ -83,10 +83,12 @@
 		return findFontName(fontId, fonts) || __('Default', 'typost-paragraph-styles');
 	}
 
-	// Dispatch the apply event for a style (or a detach when style is null)
-	function dispatchApply(style, editorSource, detachProperties) {
+	// Dispatch the apply event for a style (or a detach when style is null).
+	// applyTo 'selection' scopes it to the selected text; omitted means
+	// block-level, which is what a paragraph style normally describes.
+	function dispatchApply(style, editorSource, detachProperties, applyTo) {
 		document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
-			detail: buildApplyEventDetail(style, editorSource, detachProperties),
+			detail: buildApplyEventDetail(style, editorSource, detachProperties, applyTo),
 		}));
 	}
 
@@ -483,20 +485,31 @@
 		// so focus returns to the toolbar button. Closing also avoids stranding
 		// keyboard focus — detaching unmounts the very button that was clicked,
 		// which would otherwise drop focus to the document root.
+		// With text selected, the style wraps that text; with only a caret it
+		// applies to the whole block. Styling one word must not restyle its
+		// neighbours just because they carry no explicit styling of their own.
+		var applyTo = props.hasSelection ? 'selection' : undefined;
+
 		var onApply = useCallback(function(style) {
 			setActiveStyleId(style.id);
-			dispatchApply(style, 'inspector');
+			dispatchApply(style, 'inspector', undefined, applyTo);
 			props.onClose();
-		}, [props.onClose]);
+		}, [props.onClose, applyTo]);
 
 		var onDetach = useCallback(function() {
 			setActiveStyleId(0);
+			if (applyTo === 'selection') {
+				// Strip the style from the selected text only
+				dispatchApply(null, 'inspector', {}, applyTo);
+				props.onClose();
+				return;
+			}
 			var state = window.typostHooks
 				? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft')
 				: {};
 			dispatchApply(null, 'inspector', buildPropertiesFromState(state));
 			props.onClose();
-		}, [props.onClose]);
+		}, [props.onClose, applyTo]);
 
 		var rows = currentStyles.map(function(style) {
 			var preview = buildStylePreviewStyle(style.properties);
@@ -538,6 +551,11 @@
 			onRequestClose: props.onClose,
 			className: 'typost-ps-browser-modal',
 		},
+			currentStyles.length > 0 && el('p', { className: 'typost-ps-browser-scope' },
+				props.hasSelection
+					? __('Applies to the selected text.', 'typost-paragraph-styles')
+					: __('Applies to the whole block.', 'typost-paragraph-styles')
+			),
 			currentStyles.length === 0
 				? el('p', { className: 'typost-ps-browser-empty' },
 					__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'))
@@ -581,9 +599,15 @@
 			(window.typostHooks ? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft') : {}) ||
 			{};
 
+		// A captured selection means the author highlighted text before opening
+		// the browser, so the style should wrap that text rather than the block.
+		var captured = context && context.capturedSelection;
+		var hasSelection = !!(captured && captured.start !== captured.end);
+
 		wp.element.render(
 			el(ParagraphStylesBrowser, {
 				activeStyleId: state.paragraphStyleId || 0,
+				hasSelection: hasSelection,
 				onClose: closeBrowser,
 			}),
 			browserRoot
@@ -636,6 +660,7 @@
 			'.typost-ps-browser-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
 			'.typost-ps-browser-detail { font-size: 11px; color: #757575; }',
 			'.typost-ps-browser-empty { color: #757575; margin: 0; }',
+			'.typost-ps-browser-scope { margin: 0 0 12px 0; font-size: 12px; color: #757575; }',
 			'.typost-ps-browser-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }',
 		].join('\n');
 

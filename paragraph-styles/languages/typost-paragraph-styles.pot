@@ -171,3 +171,11 @@ msgstr ""
 #: assets/js/editor.js
 msgid "No paragraph styles saved yet. Set up the typography you want, then use \"Save Current Settings as Style\" in the sidebar."
 msgstr ""
+
+#: assets/js/editor.js
+msgid "Applies to the selected text."
+msgstr ""
+
+#: assets/js/editor.js
+msgid "Applies to the whole block."
+msgstr ""
