@@ -1,7 +1,8 @@
 # Typography Stylist × Advanced Custom Fields — integration study
 
-**Status:** design only. No code has been written. Nothing in this document has been
-built or shipped.
+**Status:** RESOLVED 2026-08-12 — Path A (§3) verified live end to end; **no extension
+will be built** unless the non-block-template need (§4) materializes. See §9 for the
+live verification results. The rest of this document is the original design study.
 
 **What was asked:** ACF has frontend/inline editing for ACF block fields — could an
 extension hook into that so a Typography Stylist headline can live inside an ACF block
@@ -355,6 +356,10 @@ reader has this document available.
 ---
 
 ## 8. Open questions — need a live ACF install to answer
+
+> **2026-08-12:** §9 answers what still mattered. Q5 is confirmed end to end; Q1 is
+> "likely yes" from 6.8.7 source (no field-type allowlist in
+> `acf_inline_toolbar_editing_attrs()`); Q2–Q4 are moot while the field type is shelved.
 
 None of these block the design; each one could change a detail of it.
 

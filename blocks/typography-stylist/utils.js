@@ -903,6 +903,32 @@ export function buildStyleString(styleObj) {
 }
 
 /**
+ * Resolve the block-level font-family value for editor rendering.
+ *
+ * Must stay in parity with save.js: fontId wins and emits the CSS variable
+ * (so font replacements keep working), the fontFamily string is the fallback
+ * for legacy/custom fonts. The editor previously gated on the fontFamily
+ * STRING attribute alone, so a block carrying only fontId — valid content the
+ * frontend renders correctly — showed the theme's inherited font in the
+ * editor, and fit measurement measured the wrong font's advance widths.
+ *
+ * @since 2.3.0
+ * @param {number|string} fontId     Numeric font id attribute. Judged by JS
+ *                                   truthiness, same as save.js: any falsy
+ *                                   value (0, '', null, undefined) is unset,
+ *                                   and a truthy string ('42', even '0')
+ *                                   emits the variable — parity over lint.
+ * @param {string}        fontFamily Font family string attribute
+ * @return {string} CSS font-family value, or '' when neither is set
+ */
+export function resolveBlockFontFamilyStyle(fontId, fontFamily) {
+	if (fontId) {
+		return `var(--font-${fontId})`;
+	}
+	return fontFamily || '';
+}
+
+/**
  * Validate nesting depth before applying styling
  * Prevents creating excessive nesting (max 3 levels)
  *
