@@ -912,8 +912,12 @@ export function buildStyleString(styleObj) {
  * frontend renders correctly — showed the theme's inherited font in the
  * editor, and fit measurement measured the wrong font's advance widths.
  *
- * @since 2.3.1
- * @param {number|string} fontId     Numeric font id attribute (0/'' = unset)
+ * @since 2.3.0
+ * @param {number|string} fontId     Numeric font id attribute. Judged by JS
+ *                                   truthiness, same as save.js: any falsy
+ *                                   value (0, '', null, undefined) is unset,
+ *                                   and a truthy string ('42', even '0')
+ *                                   emits the variable — parity over lint.
  * @param {string}        fontFamily Font family string attribute
  * @return {string} CSS font-family value, or '' when neither is set
  */

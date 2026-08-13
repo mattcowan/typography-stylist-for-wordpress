@@ -3857,7 +3857,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 																fontFeatureSettings: [...new Set([feature.id, ...features, ...inlineFeaturesAtSelection])].map(f => `"${f}" 1`).join(', '),
 																fontFamily: inlineFontFamilyAtSelection
 																	? `var(--font-${inlineFontFamilyAtSelection})`
-																	: (fontFamily || computedFont || 'inherit'),
+																	// Block font must resolve from fontId too (save.js parity):
+																	// computedFont is only detected while fontFamily is unset,
+																	// so gating on the string rendered fontId-only blocks'
+																	// feature previews in the theme's inherited font.
+																	: (resolveBlockFontFamilyStyle(fontId, fontFamily) || computedFont || 'inherit'),
 																// Render the italic face when the selection is italic
 																// (data-fontstyle span, <em>/<i>, or the block setting) —
 																// italic faces carry their own glyphs and features
