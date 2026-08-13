@@ -30,7 +30,7 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
@@ -670,8 +670,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// varies glyph width with font size, which breaks the linear
 		// width-per-font-size assumption the stored ratio depends on.
 		node.style.fontOpticalSizing = 'none';
-		if (p.fontFamily) {
-			node.style.fontFamily = p.fontId ? `var(--font-${p.fontId})` : p.fontFamily;
+		// fontId alone must resolve (save.js parity) — gating on the fontFamily
+		// string would measure the theme's inherited font instead.
+		const measureFontFamily = resolveBlockFontFamilyStyle(p.fontId, p.fontFamily);
+		if (measureFontFamily) {
+			node.style.fontFamily = measureFontFamily;
 		}
 		if (p.fontWeight) node.style.fontWeight = p.fontWeight;
 		if (p.fontStyle) node.style.fontStyle = p.fontStyle;
@@ -3118,10 +3121,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			styles.fontFeatureSettings = features.map(f => `"${f}" 1`).join(', ');
 		}
 
-		if (fontFamily) {
-			// Use CSS variable if fontId is set (for font replacements)
-			// Otherwise use literal font name for legacy/custom fonts
-			styles.fontFamily = fontId ? `var(--font-${fontId})` : fontFamily;
+		// Use CSS variable if fontId is set (for font replacements), otherwise
+		// the literal font name for legacy/custom fonts. fontId alone must
+		// resolve too (save.js parity): blocks authored outside the editor UI
+		// carry only fontId, and gating on fontFamily rendered them in the
+		// theme's inherited font.
+		const blockFontFamily = resolveBlockFontFamilyStyle(fontId, fontFamily);
+		if (blockFontFamily) {
+			styles.fontFamily = blockFontFamily;
 		}
 
 		if (fontWeight) {
