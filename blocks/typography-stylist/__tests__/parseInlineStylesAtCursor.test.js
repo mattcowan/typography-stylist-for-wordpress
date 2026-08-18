@@ -256,6 +256,39 @@ describe('fontStyle detection (visual italic)', () => {
 	});
 });
 
+describe('detectStrongBoldAtRange', () => {
+	const { detectStrongBoldAtRange } = require('../utils');
+
+	test('selection fully inside <strong> reports 700 (no typost span needed)', () => {
+		// Core's Bold button leaves semantic markup and no weight span, so
+		// without this the Glyphs panel drew and inserted glyphs at the
+		// block's weight — light text dropped into a bold run.
+		expect(detectStrongBoldAtRange('<strong>Elegant</strong> Caps', 0, 4)).toBe('700');
+	});
+
+	test('caret inside <b> reports 700', () => {
+		expect(detectStrongBoldAtRange('ab<b>cd</b>', 3, 3)).toBe('700');
+	});
+
+	test('selection straddling the bold boundary reports null (mixed weights)', () => {
+		expect(detectStrongBoldAtRange('<strong>Elegant</strong> Caps', 5, 10)).toBeNull();
+	});
+
+	test('plain text and empty input report null', () => {
+		expect(detectStrongBoldAtRange('Elegant Caps', 0, 4)).toBeNull();
+		expect(detectStrongBoldAtRange('', 0, 0)).toBeNull();
+		expect(detectStrongBoldAtRange('<strong>x</strong>', undefined, undefined)).toBeNull();
+	});
+
+	test('strong wrapping a typost span still reports 700', () => {
+		expect(detectStrongBoldAtRange('<strong><span class="typost-styled" data-font-id="1">A</span></strong>', 0, 1)).toBe('700');
+	});
+
+	test('italic markup alone is not bold', () => {
+		expect(detectStrongBoldAtRange('<em>Elegant</em>', 0, 4)).toBeNull();
+	});
+});
+
 describe('detectEmItalicAtRange', () => {
 	const { detectEmItalicAtRange } = require('../utils');
 

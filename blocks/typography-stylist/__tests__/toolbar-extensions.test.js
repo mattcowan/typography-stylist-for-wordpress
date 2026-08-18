@@ -85,12 +85,12 @@ describe('buildQftEditorState', () => {
 		// instead made the Glyphs panel draw its cells in the block's weight
 		// and insert glyphs at that weight, so a glyph swapped into a bold
 		// run came back lighter than the text around it.
-		expect(buildQftEditorState({ fontWeight: '400', inlineFontWeight: '700' }).fontWeight).toBe('700');
+		expect(buildQftEditorState({ fontWeight: '400', selectionFontWeight: '700' }).fontWeight).toBe('700');
 	});
 
 	test('falls back to the block weight when the selection carries none', () => {
 		expect(buildQftEditorState({ fontWeight: '600' }).fontWeight).toBe('600');
-		expect(buildQftEditorState({ fontWeight: '600', inlineFontWeight: null }).fontWeight).toBe('600');
+		expect(buildQftEditorState({ fontWeight: '600', selectionFontWeight: null }).fontWeight).toBe('600');
 	});
 
 	test('the effective style at the selection wins over the block attribute', () => {
