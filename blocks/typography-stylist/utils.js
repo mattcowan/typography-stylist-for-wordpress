@@ -1912,7 +1912,13 @@ export function buildQftEditorState(s) {
 		fontId: activeFontId,
 		// Effective style at the selection wins over the block attribute
 		fontStyle: source.inlineFontStyle || source.fontStyle || '',
-		fontWeight: source.fontWeight,
+		// Likewise the weight: the selection may sit inside a span that sets
+		// one (or inside a nested span inheriting it from an ancestor, which
+		// parseInlineStylesAtCursor resolves). Reporting the block attribute
+		// there tells consumers the wrong weight — the Glyphs panel drew its
+		// cells in it and inserted glyphs at it, so a glyph placed in a bold
+		// run came out lighter than the text around it.
+		fontWeight: source.inlineFontWeight || source.fontWeight,
 		fontSize: source.fontSize,
 		fontSizeMin: source.fontSizeMin,
 		fontSizePreferred: source.fontSizePreferred,

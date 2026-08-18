@@ -812,6 +812,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		return detectEmItalicAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
 	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
 	qftStateRef.current.inlineFontStyle = inlineStylesAtSelection?.fontStyle || emItalicAtSelection || null;
+	// Effective weight at the selection. parseInlineStylesAtCursor walks up
+	// from the innermost span, so this is set for a letter selected inside a
+	// weighted span as well as for a span that carries the weight itself.
+	qftStateRef.current.inlineFontWeight = inlineStylesAtSelection?.fontWeight || null;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations
