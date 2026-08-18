@@ -444,11 +444,24 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     );
 
     /**
+     * Sequence backing the per-instance modal heading ids.
+     *
+     * The inline format control is a class component with no clientId to lean
+     * on, and two instances can be mounted at once (one per rich-text field),
+     * so the heading each dialog is named by has to be unique per instance.
+     */
+    let typostInlineInstanceCount = 0;
+
+    /**
      * Typography Features Component
      */
     class TypographyFeaturesControl extends Component {
         constructor(props) {
             super(props);
+
+            // Names this instance's modal. See typostInlineInstanceCount above.
+            typostInlineInstanceCount += 1;
+            this.modalTitleId = `typost-inline-title-${typostInlineInstanceCount}`;
 
             // Check if user has disabled warning for this session
             let hideWarning = false;
@@ -3018,7 +3031,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             <ToolbarGroup>
                                 <ToolbarButton
                                     icon={TSIcon}
-                                    title={__('Typography Stylist', 'typography-stylist')}
+                                    // Same string as the block's Quick Feature
+                                    // Toggle button in edit.js: one control,
+                                    // one name. "Typography Stylist" alone did
+                                    // not say what the button does.
+                                    label={__('Typography Stylist Features', 'typography-stylist')}
                                     onClick={this.togglePopover}
                                     isActive={isActive}
                                     className="typost-toolbar-button"
@@ -3039,7 +3056,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                     {isOpen && (
                         <Modal
+                            // Core's header is hidden because this modal draws
+                            // its own draggable one, which leaves the dialog
+                            // unnamed unless it is pointed at that heading:
+                            // core reads `aria.labelledby` exactly when `title`
+                            // is empty.
                             title=""
+                            aria={{ labelledby: this.modalTitleId }}
                             onRequestClose={this.togglePopover}
                             className={`typost-modal ${this.state.isDragging ? 'is-dragging' : ''} ${this.state.isResizing ? 'is-resizing' : ''}`}
                             isDismissible={true}
@@ -3074,7 +3097,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 tabIndex={0}
                                 style={{ cursor: this.state.isDragging ? 'grabbing' : 'grab' }}
                             >
-                                <h3>{__('Typography Stylist', 'typography-stylist')}</h3>
+                                <h3 id={this.modalTitleId}>{__('Typography Stylist', 'typography-stylist')}</h3>
                                 <Button
                                     icon="no-alt"
                                     label={__('Close', 'typography-stylist')}

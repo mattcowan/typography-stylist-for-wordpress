@@ -131,6 +131,15 @@ const TSIcon = () => (
 );
 
 export default function Edit({ attributes, setAttributes, clientId, isSelected }) {
+	/**
+	 * Id of the Quick Feature Toggles heading, used to name its dialog.
+	 *
+	 * Derived from clientId because that is already unique per block instance,
+	 * so two Typography Stylist blocks open on the same page cannot end up
+	 * pointing their dialogs at the same heading.
+	 */
+	const qftTitleId = `typost-qft-title-${clientId}`;
+
 	const {
 		content,
 		tagName,
@@ -3339,7 +3348,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					))}
 					{isPopoverOpen && (
 						<Modal
+							// The header is drawn by hand below (it has to be
+							// draggable), so core's own heading is suppressed
+							// with __experimentalHideHeader and title="". That
+							// leaves the dialog with no accessible name unless
+							// it is pointed at our heading: core reads
+							// `aria.labelledby` precisely when `title` is empty.
+							// Without it a screen reader announces an anonymous
+							// dialog while everyone else sees a titled panel.
 							title=""
+							aria={{ labelledby: qftTitleId }}
 							onRequestClose={handlePopoverClose}
 							className={`typost-modal typost-block-modal ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''}`}
 							isDismissible={true}
@@ -3373,7 +3391,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								tabIndex={0}
 								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
 							>
-								<h3>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
+								<h3 id={qftTitleId}>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
 								<Button
 									icon="no-alt"
 									label={__('Close', 'typography-stylist')}
