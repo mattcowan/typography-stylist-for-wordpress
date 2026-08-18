@@ -1702,6 +1702,65 @@ export function detectEmItalicAtRange(htmlContent, start, end) {
 }
 
 /**
+ * The weight a range renders at by virtue of semantic bold markup.
+ *
+ * The weight twin of detectEmItalicAtRange(): text can be bold because it sits
+ * in a <strong> or <b> — core's Bold button, Ctrl+B — with no Typography
+ * Stylist weight span anywhere. Without this, such a selection reports the
+ * block's weight, and consumers that write the reported weight onto markup
+ * they create (the Glyphs Panel inserting a glyph, say) put light text inside
+ * a bold run.
+ *
+ * Returns null unless *every* text node the range touches is inside bold
+ * markup, so a selection straddling bold and plain text reports nothing rather
+ * than guessing — matching the italic detection exactly.
+ *
+ * '700' rather than the keyword: consumers treat this as a weight value, and
+ * 700 is the same mapping the inline editor applies when a browser reports the
+ * `bold` keyword.
+ *
+ * @since 2.4.0
+ * @param {string} htmlContent - Block content HTML
+ * @param {number} start       - Range start offset
+ * @param {number} end         - Range end offset
+ * @return {string|null} '700' when the range is entirely bold, else null
+ */
+export function detectStrongBoldAtRange(htmlContent, start, end) {
+	if (!htmlContent || typeof start !== 'number' || !isFinite(start)) {
+		return null;
+	}
+	if (typeof end !== 'number' || !isFinite(end)) {
+		end = start;
+	}
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		if (!container.querySelector('strong, b')) {
+			return null;
+		}
+		const textNodeMap = buildTextOffsetMap(container, doc);
+		let sawNode = false;
+		for (const entry of textNodeMap) {
+			const overlaps = (start === end)
+				? (start >= entry.start && start < entry.end)
+				: (start < entry.end && end > entry.start);
+			if (!overlaps) {
+				continue;
+			}
+			sawNode = true;
+			const parent = entry.node.parentElement;
+			if (!parent || !parent.closest('strong, b')) {
+				return null;
+			}
+		}
+		return sawNode ? '700' : null;
+	} catch (error) {
+		return null;
+	}
+}
+
+/**
  * Strip inline OpenType feature spans from HTML content
  *
  * Removes all <span class="typost-styled"> elements while preserving their text content
@@ -1912,7 +1971,13 @@ export function buildQftEditorState(s) {
 		fontId: activeFontId,
 		// Effective style at the selection wins over the block attribute
 		fontStyle: source.inlineFontStyle || source.fontStyle || '',
-		fontWeight: source.fontWeight,
+		// Likewise the weight: the selection may sit inside a span that sets
+		// one (or inside a nested span inheriting it from an ancestor, which
+		// parseInlineStylesAtCursor resolves). Reporting the block attribute
+		// there tells consumers the wrong weight — the Glyphs panel drew its
+		// cells in it and inserted glyphs at it, so a glyph placed in a bold
+		// run came out lighter than the text around it.
+		fontWeight: source.selectionFontWeight || source.fontWeight,
 		fontSize: source.fontSize,
 		fontSizeMin: source.fontSizeMin,
 		fontSizePreferred: source.fontSizePreferred,

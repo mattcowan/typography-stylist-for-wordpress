@@ -78,6 +78,21 @@ describe('buildQftEditorState', () => {
 		expect(buildQftEditorState({ fontId: 0, inheritedFontId: 0 }).fontId).toBe(0);
 	});
 
+	test('the weight at the selection wins over the block attribute', () => {
+		// A span's weight — including one inherited from an ancestor span,
+		// which parseInlineStylesAtCursor() resolves — is the weight the
+		// selected text actually renders at. Reporting the block attribute
+		// instead made the Glyphs panel draw its cells in the block's weight
+		// and insert glyphs at that weight, so a glyph swapped into a bold
+		// run came back lighter than the text around it.
+		expect(buildQftEditorState({ fontWeight: '400', selectionFontWeight: '700' }).fontWeight).toBe('700');
+	});
+
+	test('falls back to the block weight when the selection carries none', () => {
+		expect(buildQftEditorState({ fontWeight: '600' }).fontWeight).toBe('600');
+		expect(buildQftEditorState({ fontWeight: '600', selectionFontWeight: null }).fontWeight).toBe('600');
+	});
+
 	test('the effective style at the selection wins over the block attribute', () => {
 		expect(buildQftEditorState({ fontStyle: '', inlineFontStyle: 'italic' }).fontStyle).toBe('italic');
 		expect(buildQftEditorState({ fontStyle: 'italic' }).fontStyle).toBe('italic');
