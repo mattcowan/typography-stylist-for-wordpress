@@ -42,6 +42,31 @@ describe('normalizeFontPickerValue', () => {
 	});
 });
 
+describe('what counts as "no font" is the same going in and coming out', () => {
+	// The value handed to the control and the value handed back by it have to
+	// agree about emptiness, or a value could be "no font" on the way out and
+	// a real selection on the way back in.
+	const base = { label: 'Font Family', placeholder: '(Default)', options: OPTIONS, onChange: () => {} };
+
+	test.each([['empty string', ''], ['null', null], ['undefined', undefined], ['false', false]])(
+		'%s is empty everywhere',
+		(_label, value) => {
+			expect(normalizeFontPickerValue(value)).toBe('');
+			expect(buildComboboxProps({ ...base, value }).value).toBeNull();
+			expect(buildSelectProps({ ...base, value }).value).toBe('');
+		}
+	);
+
+	test.each([['zero', 0, '0'], ['a font ID', 36, '36'], ['a Library slug', 'wp:inter', 'wp:inter']])(
+		'%s is a real value everywhere',
+		(_label, value, expected) => {
+			expect(normalizeFontPickerValue(value)).toBe(expected);
+			expect(buildComboboxProps({ ...base, value }).value).toBe(expected);
+			expect(buildSelectProps({ ...base, value }).value).toBe(expected);
+		}
+	);
+});
+
 describe('buildComboboxProps', () => {
 	const base = {
 		label: 'Font Family',

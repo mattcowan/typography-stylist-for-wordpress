@@ -34,15 +34,20 @@ var CLEAR_VALUE = '';
 /**
  * Whether a value means "nothing selected".
  *
- * Only empty string, null and undefined qualify. A numeric 0 is a real value
- * as far as this control is concerned — no font source emits ID 0 today, but
- * silently swallowing it here would be a trap for whichever one first does.
+ * The single definition of emptiness in this file — what goes in through
+ * `value` and what comes back out through `onChange` have to agree, or a
+ * value could be "no font" on the way out and a selection on the way back in.
+ *
+ * Empty string, null, undefined and false qualify; `false` because boolean
+ * state is an easy thing for a consumer to pass. A numeric 0 does NOT: no
+ * font source emits ID 0 today, but silently swallowing it would be a trap
+ * for whichever one first does.
  *
  * @param {*} value
  * @return {boolean}
  */
 function isEmptyValue(value) {
-	return value === '' || value === null || value === undefined;
+	return value === '' || value === null || value === undefined || value === false;
 }
 
 /**
@@ -56,10 +61,7 @@ function isEmptyValue(value) {
  * @return {string} Value, or '' when nothing is selected.
  */
 function normalizeFontPickerValue(value) {
-	if (value === null || value === undefined || value === false) {
-		return '';
-	}
-	return String(value);
+	return isEmptyValue(value) ? '' : String(value);
 }
 
 /**
