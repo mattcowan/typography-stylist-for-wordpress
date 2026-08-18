@@ -1202,6 +1202,10 @@ msgstr "Fonctionnalités Typographiques"
 msgid "Elegant Typography & Flourish"
 msgstr "Typographie Élégante et Ornements"
 
+#: blocks/typography-stylist/edit.js:3403
+msgid "Select a font..."
+msgstr "Sélectionner une police..."
+
 #: assets/js/block-editor.js:457
 msgid "Font Family"
 msgstr "Famille de Polices"

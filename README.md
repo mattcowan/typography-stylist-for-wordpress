@@ -28,6 +28,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Live preview before applying changes
 - Organized feature categories
 - Visual popover interface
+- Searchable font menus (sidebar, Quick Feature Toggles, and inline editor) that match any part of a font name, so large font libraries stay navigable by keyboard
 
 ### Glyphs Panel (built in)
 - Illustrator-style glyph browser to explore every character and OpenType feature in a font

@@ -32,6 +32,7 @@ import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
 import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
+import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
 
 // Viewport breakpoints for responsive font sizing
@@ -3397,9 +3398,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 								{/* Font Family Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
-									<SelectControl
+									<FontPicker
 										label={__('Font Family (for selected text)', 'typography-stylist')}
+										placeholder={__('Select a font...', 'typography-stylist')}
 										value={inlineFontFamily}
+										options={fontOptions}
 										onChange={(value) => {
 											if (isWpLibraryValue(value)) {
 												// Unadopted WP Font Library font — adopt first
@@ -3415,29 +3418,32 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												}).catch(() => {});
 												return;
 											}
+											if (!value) {
+												// Clearing has to take the font off the selection, not
+												// just empty the field. resetFontFamily() removes it from
+												// the content and clears the state itself — and it reads
+												// inlineFontFamily to decide there is anything to do, so it
+												// has to run before that state is cleared, not after.
+												resetFontFamily();
+												return;
+											}
 											setInlineFontFamily(value);
-											if (value) {
-												debouncedApplyFontFamily();
-												// Validate inline weight against new font
-												const newFontId = parseInt(value, 10);
-												if (!isNaN(newFontId) && fontIdMap[newFontId]) {
-													const available = fontIdMap[newFontId].availableWeights;
-													if (available && available.length > 0 && inlineFontWeight !== 'inherit') {
-														if (!available.includes(inlineFontWeight)) {
-															setInlineFontWeight(getClosestWeight(inlineFontWeight, available));
-														}
-														if (available.length === 1) {
-															setInlineFontWeight(available[0]);
-															debouncedApplyFontWeight();
-														}
+											debouncedApplyFontFamily();
+											// Validate inline weight against new font
+											const newFontId = parseInt(value, 10);
+											if (!isNaN(newFontId) && fontIdMap[newFontId]) {
+												const available = fontIdMap[newFontId].availableWeights;
+												if (available && available.length > 0 && inlineFontWeight !== 'inherit') {
+													if (!available.includes(inlineFontWeight)) {
+														setInlineFontWeight(getClosestWeight(inlineFontWeight, available));
+													}
+													if (available.length === 1) {
+														setInlineFontWeight(available[0]);
+														debouncedApplyFontWeight();
 													}
 												}
 											}
 										}}
-										options={[
-											{ label: __('Select a font...', 'typography-stylist'), value: '' },
-											...fontOptions
-										]}
 									/>
 									{inlineFontFamily && (
 										<Button
@@ -3984,12 +3990,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				{fontOptions.length > 0 && (
 					<PanelBody title={__('Font Family', 'typography-stylist')} initialOpen={false}>
-						<SelectControl
+						<FontPicker
+							// The panel title is the visible heading; the
+							// control still needs its own accessible name.
+							label={__('Font Family', 'typography-stylist')}
+							hideLabelFromVision
+							placeholder={__('(Default)', 'typography-stylist')}
 							value={fontId ? String(fontId) : (fontFamily || '')}
-							options={[
-								{ label: __('(Default)', 'typography-stylist'), value: '' },
-								...fontOptions
-							]}
+							options={fontOptions}
 							onChange={(value) => {
 								if (value === '') {
 									setAttributes({ fontFamily: '', fontId: 0 });

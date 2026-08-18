@@ -8,6 +8,7 @@ const { constrainToViewport, calculateDragDelta, calculateResize } = require('./
 
 // Shared font picker option builder + WP Font Library adoption helpers
 const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveActiveFontFamily, resolveFontIdFromFamily } = require('./font-options.js');
+const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock } = require('./convert-capability.js');
@@ -3152,12 +3153,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 {hasFonts && (
                                     <div className="typost-modal-section typost-font-section">
                                         <h4>{__('Font Family', 'typography-stylist')}</h4>
-                                        <SelectControl
+                                        <FontPicker
+                                            /* The h4 above is the visible heading; the
+                                               control still needs its own accessible name. */
+                                            label={__('Font Family', 'typography-stylist')}
+                                            hideLabelFromVision
+                                            placeholder={__('(Default)', 'typography-stylist')}
                                             value={selectedFontId ? String(selectedFontId) : ''}
-                                            options={[
-                                                { label: __('(Default)', 'typography-stylist'), value: '' },
-                                                ...fontOptions
-                                            ]}
+                                            options={fontOptions}
                                             onChange={this.setFont}
                                         />
                                         {this.state.wpAdoptError && (
