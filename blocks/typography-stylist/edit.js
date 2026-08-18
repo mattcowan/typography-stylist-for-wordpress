@@ -960,6 +960,57 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
+	/**
+	 * Move the modal with the arrow keys.
+	 *
+	 * The header advertises `role="toolbar"` and takes focus, so a keyboard
+	 * user reaches it and is told it is operable. Without this it answered to
+	 * nothing — a 2.1.1 failure, and the mouse-only twin of a control the
+	 * inline editor has always had (handleHeaderKeyDown in block-editor.js).
+	 *
+	 * Clamping matches handleDragMove below rather than the inline editor's,
+	 * so dragging and arrow-keying cannot come to rest in different places.
+	 */
+	const handleHeaderKeyDown = (e) => {
+		const STEP = 10;
+		const MIN_VISIBLE = 50;
+
+		let nextX = modalX;
+		let nextY = modalY;
+		let moved = false;
+
+		switch (e.key) {
+			case 'ArrowUp':
+				nextY = modalY - STEP;
+				moved = true;
+				break;
+			case 'ArrowDown':
+				nextY = modalY + STEP;
+				moved = true;
+				break;
+			case 'ArrowLeft':
+				nextX = modalX - STEP;
+				moved = true;
+				break;
+			case 'ArrowRight':
+				nextX = modalX + STEP;
+				moved = true;
+				break;
+			default:
+				break;
+		}
+
+		if (!moved) {
+			return;
+		}
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		setModalX(Math.max(0, Math.min(nextX, window.innerWidth - MIN_VISIBLE)));
+		setModalY(Math.max(0, Math.min(nextY, window.innerHeight - MIN_VISIBLE)));
+	};
+
 	// Drag handlers
 	const handleDragStart = (e) => {
 		// Don't drag if clicking close button
@@ -3386,6 +3437,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							<div
 								className="typost-modal-header"
 								onMouseDown={handleDragStart}
+								onKeyDown={handleHeaderKeyDown}
 								role="toolbar"
 								aria-label={__('Drag to reposition modal', 'typography-stylist')}
 								tabIndex={0}

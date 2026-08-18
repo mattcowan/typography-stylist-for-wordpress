@@ -60,33 +60,51 @@ describe('icon sources', () => {
 	});
 });
 
+/**
+ * Every file that inlines an icon, and which source it must agree with.
+ *
+ * Each of these files carries exactly the paths for its own icon and nothing
+ * else, which is what lets the assertions below compare whole sets rather than
+ * merely checking the expected path is somewhere among them. `toContain` would
+ * pass a file that inlined one path of a two-path icon.
+ */
+const INLINE_COPIES = [
+	['blocks/typography-stylist/index.js', 'block.svg'],
+	['blocks/typography-stylist/block.json', 'block.svg'],
+	['blocks/typography-stylist/edit.js', 'toolbar-t.svg'],
+	['assets/js/block-editor.js', 'toolbar-t.svg'],
+	['glyphs-panel/assets/js/editor.js', 'toolbar-g.svg'],
+	['paragraph-styles/assets/js/editor.js', 'toolbar-p.svg'],
+];
+
 describe('inline copies match their source', () => {
-	it('the TS monogram matches block.svg in both block registrations', () => {
-		const expected = svgPaths('block.svg');
+	it.each(INLINE_COPIES)('%s carries exactly the paths from %s', (file, svg) => {
+		const expected = svgPaths(svg);
 
-		expect(expected).toHaveLength(2);
-		expect(paths(read('blocks/typography-stylist/index.js'))).toEqual(expected);
-		expect(paths(read('blocks/typography-stylist/block.json'))).toEqual(expected);
+		expect(expected.length).toBeGreaterThan(0);
+		expect(paths(read(file))).toEqual(expected);
 	});
 
-	it('the swash T matches toolbar-t.svg in both popover editors', () => {
-		const [expected] = svgPaths('toolbar-t.svg');
-
-		expect(paths(read('blocks/typography-stylist/edit.js'))).toContain(expected);
-		expect(paths(read('assets/js/block-editor.js'))).toContain(expected);
+	it('the TS monogram is two paths, so a partial copy is a failure', () => {
+		expect(svgPaths('block.svg')).toHaveLength(2);
 	});
 
-	it('the swash G matches toolbar-g.svg in the Glyphs Panel', () => {
-		const [expected] = svgPaths('toolbar-g.svg');
+	// The attribute check on the source files is not enough on its own: it
+	// passes happily while someone deletes aria-hidden from the JSX. Verified
+	// by simulating exactly that — stripping the attributes from block.json
+	// left all the other assertions green.
+	it.each(INLINE_COPIES.map(([file]) => file))(
+		'%s keeps the icon a11y attributes',
+		(file) => {
+			const source = read(file);
 
-		expect(paths(read('glyphs-panel/assets/js/editor.js'))).toContain(expected);
-	});
-
-	it('the swash P matches toolbar-p.svg in Paragraph Styles', () => {
-		const [expected] = svgPaths('toolbar-p.svg');
-
-		expect(paths(read('paragraph-styles/assets/js/editor.js'))).toContain(expected);
-	});
+			// Three syntaxes reach the DOM here: JSX attributes, a
+			// createElement props object, and a quoted SVG string in
+			// block.json. Match the intent rather than one spelling.
+			expect(source).toMatch(/aria-hidden["']?\s*[:=]\s*["']true["']/);
+			expect(source).toMatch(/focusable["']?\s*[:=]\s*["']false["']/);
+		}
+	);
 
 	// The block icon and the popover-launcher icon are deliberately different
 	// marks that both live in blocks/typography-stylist/. Asserting it stops a

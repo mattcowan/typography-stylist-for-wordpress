@@ -271,10 +271,17 @@ class Typost {
             true
         );
 
-        // Enable JavaScript translations
+        // Enable JavaScript translations.
+        //
+        // The domain must be the one the strings themselves declare. Every
+        // __() call in the editor scripts uses 'typography-stylist' (the
+        // plugin's Text Domain header); this argument said 'typost', so
+        // WordPress looked for a catalogue under a domain no string belongs
+        // to and the editor's JS strings could never be translated. The
+        // bundled modules already pass their own matching domains.
         wp_set_script_translations(
             'typost-block-editor',
-            'typost',
+            'typography-stylist',
             TYPOST_PLUGIN_DIR . 'languages'
         );
 

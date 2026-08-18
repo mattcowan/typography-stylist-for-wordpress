@@ -3044,7 +3044,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     <ToolbarButton
                                         key={button.id}
                                         icon={button.icon}
-                                        title={button.label}
+                                        // `label`, matching the button beside
+                                        // it and the block editor's rendering
+                                        // of the same descriptors in edit.js.
+                                        // The descriptor field is named
+                                        // `label` too (see HOOKS.md), so this
+                                        // is the one-to-one mapping.
+                                        label={button.label}
                                         isActive={!!button.isActive}
                                         onClick={() => this.handleExtensionToolbarClick(button)}
                                         className={`typost-toolbar-button typost-ext-toolbar-button typost-ext-toolbar-button--${button.id}`}
