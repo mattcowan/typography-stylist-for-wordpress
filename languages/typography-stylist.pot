@@ -13,7 +13,8 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Custom PHP Script\n"
-"X-Domain: Typography Stylist\n"
+"X-Domain: typography-stylist
+"
 
 #: opentype-stylist.php:348
 msgid "Headline Ligatures & Styles"

@@ -15,7 +15,8 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "X-Generator: Manual Translation\n"
-"X-Domain: headline-ligatures-styles\n"
+"X-Domain: typography-stylist
+"
 
 #: headline-ligatures-styles.php:348
 msgid "Headline Ligatures & Styles"
