@@ -3418,21 +3418,28 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												}).catch(() => {});
 												return;
 											}
+											if (!value) {
+												// Clearing has to take the font off the selection, not
+												// just empty the field. resetFontFamily() removes it from
+												// the content and clears the state itself — and it reads
+												// inlineFontFamily to decide there is anything to do, so it
+												// has to run before that state is cleared, not after.
+												resetFontFamily();
+												return;
+											}
 											setInlineFontFamily(value);
-											if (value) {
-												debouncedApplyFontFamily();
-												// Validate inline weight against new font
-												const newFontId = parseInt(value, 10);
-												if (!isNaN(newFontId) && fontIdMap[newFontId]) {
-													const available = fontIdMap[newFontId].availableWeights;
-													if (available && available.length > 0 && inlineFontWeight !== 'inherit') {
-														if (!available.includes(inlineFontWeight)) {
-															setInlineFontWeight(getClosestWeight(inlineFontWeight, available));
-														}
-														if (available.length === 1) {
-															setInlineFontWeight(available[0]);
-															debouncedApplyFontWeight();
-														}
+											debouncedApplyFontFamily();
+											// Validate inline weight against new font
+											const newFontId = parseInt(value, 10);
+											if (!isNaN(newFontId) && fontIdMap[newFontId]) {
+												const available = fontIdMap[newFontId].availableWeights;
+												if (available && available.length > 0 && inlineFontWeight !== 'inherit') {
+													if (!available.includes(inlineFontWeight)) {
+														setInlineFontWeight(getClosestWeight(inlineFontWeight, available));
+													}
+													if (available.length === 1) {
+														setInlineFontWeight(available[0]);
+														debouncedApplyFontWeight();
 													}
 												}
 											}

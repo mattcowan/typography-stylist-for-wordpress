@@ -50,13 +50,28 @@ describe('buildComboboxProps', () => {
 		onChange: () => {},
 	};
 
-	test('offers the font options without a synthetic empty entry', () => {
-		// The placeholder is the input's, not a selectable option — an option
-		// with an empty value could never match ComboboxControl's lookup.
+	test('leads the list with an entry that clears the font', () => {
+		// Clearing must be reachable from the list itself. ComboboxControl's
+		// own reset button renders only while the field is not expanded, and
+		// focusing the field expands it — so relying on that button leaves no
+		// way back to "no font" once the field has focus.
 		const props = buildComboboxProps({ ...base, value: '36' });
-		expect(props.options).toEqual(OPTIONS);
-		expect(props.options.some((option) => option.value === '')).toBe(false);
+		expect(props.options[0]).toEqual({ label: '(Default)', value: '' });
+		expect(props.options.slice(1)).toEqual(OPTIONS);
 		expect(props.placeholder).toBe('(Default)');
+	});
+
+	test('does not offer a second, disappearing way to clear', () => {
+		expect(buildComboboxProps({ ...base, value: '36' }).allowReset).toBe(false);
+	});
+
+	test('selecting the clearing entry reports "no font" to the consumer', () => {
+		const seen = [];
+		const props = buildComboboxProps({ ...base, value: '36', onChange: (v) => seen.push(v) });
+
+		props.onChange(props.options[0].value);
+
+		expect(seen).toEqual(['']);
 	});
 
 	test('passes the current value through as a string', () => {
@@ -70,6 +85,13 @@ describe('buildComboboxProps', () => {
 		expect(buildComboboxProps({ ...base, value: '' }).value).toBeNull();
 	});
 
+	test('treats a numeric 0 as a real value, not as "no font"', () => {
+		// No font source emits ID 0 today, but "none" is '' / null / undefined
+		// here — swallowing 0 would be a trap for whichever source first does.
+		expect(buildComboboxProps({ ...base, value: 0 }).value).toBe('0');
+		expect(buildSelectProps({ ...base, value: 0 }).value).toBe('0');
+	});
+
 	test('always supplies an accessible name, visible or not', () => {
 		const visible = buildComboboxProps({ ...base, value: '' });
 		expect(visible.label).toBe('Font Family');
@@ -80,11 +102,7 @@ describe('buildComboboxProps', () => {
 		expect(hidden.hideLabelFromVision).toBe(true);
 	});
 
-	test('keeps the reset affordance, which is how a font is cleared', () => {
-		expect(buildComboboxProps({ ...base, value: '36' }).allowReset).toBe(true);
-	});
-
-	test('normalizes the reset before handing it to the consumer', () => {
+	test('normalizes a null from the control before handing it on', () => {
 		const seen = [];
 		const props = buildComboboxProps({
 			...base,
