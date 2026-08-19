@@ -13,7 +13,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Custom PHP Script\n"
-"X-Domain: Typography Stylist\n"
+"X-Domain: typography-stylist\n"
 
 #: opentype-stylist.php:348
 msgid "Headline Ligatures & Styles"
@@ -1833,4 +1833,14 @@ msgstr ""
 
 #: includes/admin-page.php
 msgid "Shift+Enter adds a line break in a Typography Stylist block as well, whichever way the Options setting is set."
+msgstr ""
+
+
+#: blocks/typography-stylist/edit.js:3446
+msgid "Quick Feature Toggles"
+msgstr ""
+
+#: blocks/typography-stylist/edit.js:3442
+#: assets/js/block-editor.js:3102
+msgid "Drag to reposition modal"
 msgstr ""

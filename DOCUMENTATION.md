@@ -246,7 +246,7 @@ Best for applying features to complete words or phrases in heading blocks.
 2. **Add a Heading block** (H1, H2, H3, H4, H5, or H6)
 3. **Type your headline** text
 4. **Select the text** you want to style (complete words only)
-5. **Click the Typography Stylist button** in the toolbar (circle "O" icon)
+5. **Click the Typography Stylist button** in the toolbar (a swash "T" icon)
 6. A popover will appear with:
    - **Quick Presets** - Pre-configured feature combinations
    - **Individual Features** - Toggle specific OpenType features

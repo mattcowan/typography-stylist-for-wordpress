@@ -23,7 +23,7 @@ This is a WordPress plugin that adds advanced OpenType typography features (liga
 The plugin provides two distinct interfaces for applying OpenType features:
 
 1. **Inline Editor** [assets/js/block-editor.js](assets/js/block-editor.js)
-   - **What:** Toolbar button (with "T" icon) available on standard rich text blocks (core/heading, core/paragraph, etc.)
+   - **What:** Toolbar button (with the swash "T" icon) available on standard rich text blocks (core/heading, core/paragraph, etc.)
    - **When:** Use for applying features to complete words/phrases in any heading or paragraph block
    - **How:** Opens a popover with presets, individual features, font controls, and preview
    - **Implementation:** Registers custom format type `typost/features` using WordPress `@wordpress/format-api`

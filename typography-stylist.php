@@ -178,6 +178,18 @@ class Typost {
         // Register custom block
         add_action('init', array($this, 'register_block'));
 
+        // Load translations.
+        //
+        // On WordPress 6.7+ just-in-time loading already finds the bundled
+        // languages/ directory, so this is belt-and-braces there — verified by
+        // forcing the locale and watching the domain load on the first __()
+        // call. It matters for the older versions this plugin still supports:
+        // before the textdomain registry learned to discover plugin language
+        // directories, just-in-time loading looked only in
+        // wp-content/languages/plugins/, and a bundled .mo was never opened
+        // without this call. The three bundled modules each make it too.
+        add_action('init', array($this, 'load_textdomain'));
+
         // Add Settings link on plugins page
         add_filter('plugin_action_links_' . TYPOST_PLUGIN_BASENAME, array($this, 'add_plugin_action_links'));
 
@@ -271,10 +283,17 @@ class Typost {
             true
         );
 
-        // Enable JavaScript translations
+        // Enable JavaScript translations.
+        //
+        // The domain must be the one the strings themselves declare. Every
+        // __() call in the editor scripts uses 'typography-stylist' (the
+        // plugin's Text Domain header); this argument said 'typost', so
+        // WordPress looked for a catalogue under a domain no string belongs
+        // to and the editor's JS strings could never be translated. The
+        // bundled modules already pass their own matching domains.
         wp_set_script_translations(
             'typost-block-editor',
-            'typost',
+            'typography-stylist',
             TYPOST_PLUGIN_DIR . 'languages'
         );
 
@@ -1698,11 +1717,42 @@ class Typost {
     }
 
     /**
+     * Load the plugin text domain.
+     *
+     * Registers the bundled languages/ directory with WordPress so the
+     * shipped .mo files are found on every supported version, not only those
+     * new enough to discover the directory on their own.
+     *
+     * @return void
+     */
+    public function load_textdomain() {
+        load_plugin_textdomain(
+            'typography-stylist',
+            false,
+            dirname(TYPOST_PLUGIN_BASENAME) . '/languages'
+        );
+    }
+
+    /**
      * Register custom block
      */
     public function register_block() {
         add_filter('block_type_metadata', array($this, 'filter_block_splitting_support'));
         register_block_type(TYPOST_PLUGIN_DIR . 'blocks/typography-stylist');
+
+        // Point the block's editor script at this plugin's languages folder.
+        //
+        // register_block_type() already calls wp_set_script_translations() for
+        // us when block.json declares a textdomain, but it passes no path (see
+        // register_block_script_handle() in wp-includes/blocks.php), so core
+        // looks only in wp-content/languages/plugins/ and never finds the JSON
+        // files bundled here. Calling it again with the path is what makes the
+        // block's strings translatable from the plugin's own catalogue.
+        wp_set_script_translations(
+            'typost-block-editor-script',
+            'typography-stylist',
+            TYPOST_PLUGIN_DIR . 'languages'
+        );
         remove_filter('block_type_metadata', array($this, 'filter_block_splitting_support'));
     }
 

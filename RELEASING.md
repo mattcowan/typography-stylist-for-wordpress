@@ -88,19 +88,47 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    - `typography-stylist.php` — `define('TYPOST_VERSION', ...)`
    - `readme.txt` — `Stable tag:`
    - `package.json` — `version`
-2. Add a changelog entry in `readme.txt` (recent releases) and move older
+2. **Rebuild the translation catalogues** if any user-facing string changed
+   this cycle. The `.po`/`.pot` files are edited by hand; the compiled `.mo`
+   and the JavaScript `.json` files are generated, and stale ones ship
+   silently — nothing fails, translations just quietly stop updating.
+
+   ```bash
+   wp i18n make-mo languages languages
+   wp i18n make-json languages languages --no-purge      --use-map='{"blocks/typography-stylist/edit.js":"blocks/typography-stylist/build/index.js"}'
+   ```
+
+   Notes that are easy to get wrong here:
+   - **`--no-purge` is required.** Without it, make-json strips the JS strings
+     out of the `.po` files it just read.
+   - **Only `edit.js` needs mapping.** It is bundled into `build/index.js`.
+     `assets/js/block-editor.js` needs no entry: WordPress always derives the
+     translation filename from the *unminified* path, so one file serves both
+     `block-editor.js` and `block-editor.min.js`.
+   - **Check `X-Domain` is `typography-stylist`** in all three catalogues. It
+     is what prefixes every generated `.json` filename, and a wrong value
+     produces files WordPress will never look for. It has been wrong before.
+   - Run the same commands in `glyphs-panel/`, `paragraph-styles/` and
+     `variable-fonts/` if their strings changed — each module has its own
+     domain and its own `languages/` directory.
+
+   Confirm the result rather than assuming it: the new string should appear in
+   the `.mo` (`wp i18n make-mo` reports the file count) and in the matching
+   `languages/*.json`.
+
+3. Add a changelog entry in `readme.txt` (recent releases) and move older
    entries to `changelog.txt` if the readme section is growing. Entries for
    not-yet-released fixes are parked in `changelog.txt` only (the wp.org
    listing renders readme.txt's whole Changelog section immediately via the
    assets sync, but changelog.txt never reaches the listing) — copy them
    into readme.txt now, under this release's heading.
-3. Push to `main`; wait for **CI** to go green (it runs the version
+4. Push to `main`; wait for **CI** to go green (it runs the version
    consistency check, both test suites, and a production build).
-4. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
+5. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
    `main`, title it, write the release notes (users see these — the
    changelog entry is a good start). Leave "Set as a pre-release" UNCHECKED.
-5. **Publish.** Watch the **Release Deploy** run in the Actions tab.
-6. Verify: wp.org listing shows the new version; `typography-stylist.zip` is
+6. **Publish.** Watch the **Release Deploy** run in the Actions tab.
+7. Verify: wp.org listing shows the new version; `typography-stylist.zip` is
    attached to the GitHub Release; install/update on a test site works.
 
 Tag format is always `vX.Y.Z` (the workflow strips the `v` when comparing

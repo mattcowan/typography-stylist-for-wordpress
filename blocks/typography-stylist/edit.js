@@ -113,14 +113,33 @@ const removePreviewSpans = (htmlContent) => {
 	return container.innerHTML;
 };
 
-// Custom "T" icon for Typography Stylist
+/**
+ * Toolbar icon: a swash "T" — the launcher for this block's Quick Feature
+ * Toggle popover. Source: assets/images/icons/toolbar-t.svg.
+ *
+ * Deliberately NOT the same mark as the `TSIcon` in index.js, which is the
+ * "TS" monogram used to identify the block itself in the inserter. Same name,
+ * two different jobs — do not "unify" them.
+ *
+ * 24×24 matches the swash G and P supplied by the Glyphs Panel and Paragraph
+ * Styles modules, so the toolbar group sits on one cap height.
+ */
 const TSIcon = () => (
-	<svg width={20} height={20} viewBox="0 0 1067 1067" xmlns="http://www.w3.org/2000/svg">
-		<path d="M22.621,323.219c0,116.595 86.232,204.042 200.398,204.042c81.374,0 134.814,-41.294 134.814,-100.806c0,-36.436 -26.72,-68.014 -66.799,-68.014c-71.658,0 -75.301,80.159 -122.668,80.159c-54.654,0 -87.447,-58.298 -87.447,-115.381c0,-78.945 52.225,-137.243 156.675,-137.243c78.945,0 162.748,29.149 250.194,59.512l0,647.348c0,92.305 -20.647,99.592 -117.81,105.665l0,30.363l355.859,0l0,-30.363c-97.163,-6.073 -117.81,-13.36 -117.81,-105.665l0,-609.697c65.585,20.647 133.599,36.436 206.471,36.436c144.53,0 229.547,-83.803 229.547,-184.609c0,-57.083 -32.792,-97.163 -80.159,-97.163c-40.08,0 -72.872,27.934 -72.872,69.229c0,49.796 42.509,65.585 42.509,100.806c0,36.436 -38.865,58.298 -106.879,58.298c-136.028,0 -329.139,-171.25 -534.396,-171.25c-173.679,0 -269.627,109.308 -269.627,228.333Z" fill="currentColor"/>
+	<svg width={24} height={24} viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+		<path d="M86.93,19.59c51.57,0,99.2,30.44,125.69,30.44,12.4,0,13.25-12.96,22.26-12.96,5.92,0,8.74,3.95,8.74,7.89,0,10.43-16.06,26.21-48.19,26.21-10.71-.28-21.42-1.41-32.13-2.82v136.4c0,16.06,4.23,18.32,22.26,19.73v11.84h-94.41v-11.84c18.04-1.41,22.26-3.66,22.26-19.73V58.76c-18.6-3.95-34.94-7.61-48.47-7.61-20.01,0-35.23,10.71-35.23,30.15,0,9.58,4.79,18.04,12.68,18.04,10.15,0,12.4-16.63,30.44-16.63,12.68,0,22.54,10.15,22.54,22.83,0,16.63-13.25,28.75-34.94,28.75-26.21,0-50.16-18.6-50.16-52.98,0-37.76,35.79-61.72,76.65-61.72Z" fill="currentColor"/>
 	</svg>
 );
 
 export default function Edit({ attributes, setAttributes, clientId, isSelected }) {
+	/**
+	 * Id of the Quick Feature Toggles heading, used to name its dialog.
+	 *
+	 * Derived from clientId because that is already unique per block instance,
+	 * so two Typography Stylist blocks open on the same page cannot end up
+	 * pointing their dialogs at the same heading.
+	 */
+	const qftTitleId = `typost-qft-title-${clientId}`;
+
 	const {
 		content,
 		tagName,
@@ -939,6 +958,57 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			// Silently fail for preview - user can still apply manually
 			return false;
 		}
+	};
+
+	/**
+	 * Move the modal with the arrow keys.
+	 *
+	 * The header advertises `role="toolbar"` and takes focus, so a keyboard
+	 * user reaches it and is told it is operable. Without this it answered to
+	 * nothing — a 2.1.1 failure, and the mouse-only twin of a control the
+	 * inline editor has always had (handleHeaderKeyDown in block-editor.js).
+	 *
+	 * Clamping matches handleDragMove below rather than the inline editor's,
+	 * so dragging and arrow-keying cannot come to rest in different places.
+	 */
+	const handleHeaderKeyDown = (e) => {
+		const STEP = 10;
+		const MIN_VISIBLE = 50;
+
+		let nextX = modalX;
+		let nextY = modalY;
+		let moved = false;
+
+		switch (e.key) {
+			case 'ArrowUp':
+				nextY = modalY - STEP;
+				moved = true;
+				break;
+			case 'ArrowDown':
+				nextY = modalY + STEP;
+				moved = true;
+				break;
+			case 'ArrowLeft':
+				nextX = modalX - STEP;
+				moved = true;
+				break;
+			case 'ArrowRight':
+				nextX = modalX + STEP;
+				moved = true;
+				break;
+			default:
+				break;
+		}
+
+		if (!moved) {
+			return;
+		}
+
+		e.preventDefault();
+		e.stopPropagation();
+
+		setModalX(Math.max(0, Math.min(nextX, window.innerWidth - MIN_VISIBLE)));
+		setModalY(Math.max(0, Math.min(nextY, window.innerHeight - MIN_VISIBLE)));
 	};
 
 	// Drag handlers
@@ -3329,7 +3399,21 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					))}
 					{isPopoverOpen && (
 						<Modal
+							// The header is drawn by hand below (it has to be
+							// draggable). Two props get core out of the way,
+							// and they do different jobs:
+							//   __experimentalHideHeader (further down this
+							//     list) drops core's header element entirely —
+							//     core renders it behind `!__experimentalHideHeader`.
+							//   title="" empties the heading text, which is
+							//     what routes the dialog's name elsewhere:
+							//     core uses `aria.labelledby` precisely when
+							//     `title` is falsy.
+							// So the name has to be supplied here, or a screen
+							// reader announces an anonymous dialog while
+							// everyone else sees a titled panel.
 							title=""
+							aria={{ labelledby: qftTitleId }}
 							onRequestClose={handlePopoverClose}
 							className={`typost-modal typost-block-modal ${isDragging ? 'is-dragging' : ''} ${isResizing ? 'is-resizing' : ''}`}
 							isDismissible={true}
@@ -3358,12 +3442,13 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							<div
 								className="typost-modal-header"
 								onMouseDown={handleDragStart}
+								onKeyDown={handleHeaderKeyDown}
 								role="toolbar"
 								aria-label={__('Drag to reposition modal', 'typography-stylist')}
 								tabIndex={0}
 								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
 							>
-								<h3>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
+								<h3 id={qftTitleId}>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
 								<Button
 									icon="no-alt"
 									label={__('Close', 'typography-stylist')}
