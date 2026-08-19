@@ -12,6 +12,11 @@ coverage/
 .playwright-mcp/
 blocks/*/build/
 
+# Packaging staging dir (scripts/package.js). Excluded from the
+# distributed zip by .distignore, but that file has no effect on git —
+# without this, `npm run package` leaves an untracked build/ behind.
+/build/
+
 # PHP dependencies (Composer) — anchored to the plugin root so it does not
 # swallow glyphs-panel/assets/js/vendor/ (bundled JS libraries, committed)
 /vendor/

@@ -3400,13 +3400,18 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					{isPopoverOpen && (
 						<Modal
 							// The header is drawn by hand below (it has to be
-							// draggable), so core's own heading is suppressed
-							// with __experimentalHideHeader and title="". That
-							// leaves the dialog with no accessible name unless
-							// it is pointed at our heading: core reads
-							// `aria.labelledby` precisely when `title` is empty.
-							// Without it a screen reader announces an anonymous
-							// dialog while everyone else sees a titled panel.
+							// draggable). Two props get core out of the way,
+							// and they do different jobs:
+							//   __experimentalHideHeader (further down this
+							//     list) drops core's header element entirely —
+							//     core renders it behind `!__experimentalHideHeader`.
+							//   title="" empties the heading text, which is
+							//     what routes the dialog's name elsewhere:
+							//     core uses `aria.labelledby` precisely when
+							//     `title` is falsy.
+							// So the name has to be supplied here, or a screen
+							// reader announces an anonymous dialog while
+							// everyone else sees a titled panel.
 							title=""
 							aria={{ labelledby: qftTitleId }}
 							onRequestClose={handlePopoverClose}
