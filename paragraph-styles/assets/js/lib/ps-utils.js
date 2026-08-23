@@ -86,6 +86,9 @@
 		var styleWeight = styleProps.fontWeight || '400';
 		if (stateWeight !== styleWeight) return true;
 
+		// Compare fontStyle ('' = inherit; 'normal' is a distinct forced-upright choice)
+		if ((state.fontStyle || '') !== (styleProps.fontStyle || '')) return true;
+
 		// Compare fontSize
 		var stateFontSize = state.fontSize || 'inherit';
 		var styleFontSize = styleProps.fontSize || 'inherit';
@@ -136,6 +139,10 @@
 		if (state.fontWeight || state.selectedFontWeight) {
 			properties.fontWeight = state.fontWeight || state.selectedFontWeight;
 		}
+		// '' means inherit (not stored); 'normal' is a real forced-upright choice
+		if (state.fontStyle) {
+			properties.fontStyle = state.fontStyle;
+		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
 		}
@@ -181,8 +188,6 @@
 	 * application deterministic: the text ends up looking like the style.
 	 *
 	 * Deliberately NOT normalized (never introduced when absent):
-	 * - fontStyle — styles cannot express italic; resetting it would strip
-	 *   a user's italic on every apply.
 	 * - fontSizeMin/Preferred/Max — only meaningful with the style's own
 	 *   fontSize mode; defaults would clobber the block's tuned responsive
 	 *   values while rendering identically.
@@ -190,11 +195,19 @@
 	 *   property (fit styles always store it, so it rides in via properties);
 	 *   not defaulted when absent for the same reason as min/pref/max.
 	 * - Extension-owned keys (layeredConfigId, animationConfigId).
+	 *
+	 * fontStyle IS normalized (to '' = inherit): styles express italic as a
+	 * first-class property now, so a style saved without one must reset a
+	 * lingering italic on apply — the applied result has to look like the
+	 * style. (An earlier revision excluded it because styles could not
+	 * express italic at all; that carve-out was the bug that silently
+	 * dropped italic from saved styles.)
 	 */
 	function normalizeApplyProperties(properties) {
 		var normalized = {
 			fontId: 0,
 			fontWeight: '400',
+			fontStyle: '',
 			fontSize: 'inherit',
 			letterSpacing: 0,
 			lineHeight: 0,
@@ -305,6 +318,116 @@
 		};
 	}
 
+	// Mirror core's responsive viewport constants (px). generate_style_css()
+	// in paragraph-styles.php uses the same pair; keep all four in sync.
+	var RESPONSIVE_FONT_MIN_VIEWPORT = 320;
+	var RESPONSIVE_FONT_MAX_VIEWPORT = 1920;
+
+	// PHP round($x, 4) equivalent, so clamp() maths prints identically
+	function round4(x) {
+		return Math.round(x * 10000) / 10000;
+	}
+
+	/**
+	 * Build the CSS rule block for one stored style — the JS twin of PHP
+	 * generate_style_css() in paragraph-styles.php.
+	 *
+	 * Exists so the editor can inject CSS for styles created or updated
+	 * in-session: the server prints style CSS only at page load, so without
+	 * this a freshly saved style has no rules in the editor document and the
+	 * styled text falls back to theme defaults until reload. Output must stay
+	 * byte-identical to the PHP for the same (sanitized) properties — when
+	 * one side changes, change the other.
+	 *
+	 * Values are re-validated here with the same whitelists/regexes as the
+	 * PHP even though the store is REST-sanitized, because this runs on
+	 * whatever typostData.paragraphStyles holds.
+	 *
+	 * @param {Object} style Stored style ({id, legacyId?, properties}).
+	 * @return {string} CSS rule block, or '' when nothing to emit.
+	 */
+	function buildStyleCssBlock(style) {
+		if (!style || !style.id || !style.properties) return '';
+		var props = style.properties;
+		var rules = [];
+
+		if (props.fontId && parseInt(props.fontId, 10) > 0) {
+			rules.push('font-family: var(--font-' + parseInt(props.fontId, 10) + ')');
+		}
+
+		if (props.fontWeight) {
+			var weight = props.fontWeight;
+			if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
+				rules.push('font-weight: ' + parseInt(weight, 10));
+			} else if (['normal', 'bold', 'lighter', 'bolder'].indexOf(String(weight)) !== -1) {
+				rules.push('font-weight: ' + weight);
+			}
+		}
+
+		if (props.fontStyle && ['normal', 'italic', 'oblique'].indexOf(String(props.fontStyle)) !== -1) {
+			rules.push('font-style: ' + props.fontStyle);
+		}
+
+		if (props.features && props.features.length) {
+			var tags = [];
+			for (var i = 0; i < props.features.length; i++) {
+				if (/^[a-z0-9_-]+$/i.test(String(props.features[i]))) {
+					tags.push('"' + props.features[i] + '" 1');
+				}
+			}
+			if (tags.length) {
+				rules.push('font-feature-settings: ' + tags.join(', '));
+			}
+		}
+
+		if (props.letterSpacing && parseInt(props.letterSpacing, 10) !== 0) {
+			rules.push('letter-spacing: ' + (parseInt(props.letterSpacing, 10) / 1000) + 'em');
+		}
+
+		if (props.lineHeight && parseFloat(props.lineHeight)) {
+			rules.push('line-height: ' + parseFloat(props.lineHeight));
+		}
+
+		if (props.fontVariationSettings) {
+			var pairs = String(props.fontVariationSettings).split(',');
+			var cleanPairs = [];
+			for (var j = 0; j < pairs.length; j++) {
+				var m = pairs[j].trim().match(/^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/);
+				if (m) {
+					cleanPairs.push('"' + m[1] + '" ' + parseFloat(m[2]));
+				}
+			}
+			if (cleanPairs.length) {
+				rules.push('font-variation-settings: ' + cleanPairs.join(', '));
+			}
+		}
+
+		if (props.fontSize !== undefined && isFinite(props.fontSize) && Number(props.fontSize) > 0) {
+			rules.push('font-size: ' + parseInt(props.fontSize, 10) + 'px');
+		}
+
+		// Responsive clamp; fit styles emit the same fallback clamp (see the
+		// PHP twin for why)
+		if ((props.fontSize === 'responsive' || props.fontSize === 'fit') &&
+			props.fontSizeMin !== undefined && props.fontSizePreferred !== undefined && props.fontSizeMax !== undefined) {
+			var min = parseInt(props.fontSizeMin, 10);
+			var pref = parseInt(props.fontSizePreferred, 10);
+			var max = parseInt(props.fontSizeMax, 10);
+			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
+			rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
+		}
+
+		if (!rules.length) return '';
+
+		var id = parseInt(style.id, 10);
+		var selector = '.typost-ps-' + id + ',\n.typost-styled[data-style-id="' + id + '"]';
+		if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+			selector += ',\n.typost-ps-' + style.legacyId + ',\n.typost-styled[data-style-id="' + style.legacyId + '"]';
+		}
+
+		return selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
@@ -312,6 +435,7 @@
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,
+		buildStyleCssBlock: buildStyleCssBlock,
 	};
 
 	if (typeof window !== 'undefined') {

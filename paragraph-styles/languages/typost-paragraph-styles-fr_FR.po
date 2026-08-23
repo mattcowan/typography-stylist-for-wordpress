@@ -77,6 +77,22 @@ msgstr "Supprimer"
 msgid "Font:"
 msgstr "Police :"
 
+#: includes/admin-tab.php:75
+msgid "Italic"
+msgstr "Italique"
+
+#: includes/admin-tab.php:76
+msgid "Oblique"
+msgstr "Oblique"
+
+#: includes/admin-tab.php:77
+msgid "Normal (upright)"
+msgstr "Normal (droit)"
+
+#: includes/admin-tab.php:139
+msgid "Style:"
+msgstr "Style :"
+
 #: includes/admin-tab.php:122
 msgid "Size:"
 msgstr "Taille :"

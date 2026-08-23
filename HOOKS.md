@@ -664,8 +664,10 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+
+*Since 2.3.0* both editors report `fontStyle` (`''` inherit, `'normal'`, or `'italic'`) — the *rendered* style at the selection, so text italicized by an enclosing `<em>`/`<i>` or a `data-fontstyle` span reports `'italic'` even without its own setting. The bundled Paragraph Styles module captures this into saved styles; consumers writing state back onto spans they create (like the Glyphs Panel does with `fontWeight`) should honour it the same way.
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
 
@@ -683,6 +685,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         properties: {
             fontId: 12,
             fontWeight: '700',
+            fontStyle: 'italic', // Optional (since 2.3.0): '' inherit / 'normal' / 'italic'
             letterSpacing: 50,
             features: ['liga', 'dlig', 'ss01'],
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes

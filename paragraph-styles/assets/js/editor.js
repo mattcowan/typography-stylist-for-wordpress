@@ -618,6 +618,62 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Dynamic style CSS (freshly saved/updated styles)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Rebuild the CSS for every stored style and inject it into the editor
+	 * documents (top document + canvas iframe).
+	 *
+	 * The server prints style CSS only at page load, so a style created or
+	 * updated in-session has no rules where the styled text lives — and
+	 * because applying a style strips inline styles from spans/blocks
+	 * (rendering is delegated to the style's CSS class), the text would fall
+	 * back to theme defaults until the editor is reloaded. This listener
+	 * closes that gap; buildStyleCssBlock (ps-utils) mirrors the PHP
+	 * generate_style_css() so the injected rules match what the server will
+	 * print on the next load.
+	 */
+	function refreshDynamicStyleCss() {
+		var styles = getStyles();
+		var blocks = [];
+		for (var i = 0; i < styles.length; i++) {
+			var block = utils.buildStyleCssBlock(styles[i]);
+			if (block) {
+				blocks.push(block);
+			}
+		}
+		var css = blocks.join('\n\n');
+
+		var docs = [document];
+		var frames = document.querySelectorAll('iframe[name="editor-canvas"]');
+		for (var f = 0; f < frames.length; f++) {
+			try {
+				if (frames[f].contentDocument) {
+					docs.push(frames[f].contentDocument);
+				}
+			} catch (e) {
+				// Inaccessible frame — skip
+			}
+		}
+
+		for (var d = 0; d < docs.length; d++) {
+			var doc = docs[d];
+			var styleEl = doc.getElementById('typost-ps-dynamic-css');
+			if (!styleEl) {
+				styleEl = doc.createElement('style');
+				styleEl.id = 'typost-ps-dynamic-css';
+				(doc.head || doc.documentElement).appendChild(styleEl);
+			}
+			styleEl.textContent = css;
+		}
+	}
+
+	// The panel dispatches this after every save/update (before it applies the
+	// style), so the rules exist by the time the span/block starts relying on them.
+	document.addEventListener('typost-paragraph-styles-updated', refreshDynamicStyleCss);
+
+	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)
 	// -------------------------------------------------------------------------
 

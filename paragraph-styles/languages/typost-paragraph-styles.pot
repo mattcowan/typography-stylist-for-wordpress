@@ -74,6 +74,22 @@ msgstr ""
 msgid "Font:"
 msgstr ""
 
+#: includes/admin-tab.php:75
+msgid "Italic"
+msgstr ""
+
+#: includes/admin-tab.php:76
+msgid "Oblique"
+msgstr ""
+
+#: includes/admin-tab.php:77
+msgid "Normal (upright)"
+msgstr ""
+
+#: includes/admin-tab.php:139
+msgid "Style:"
+msgstr ""
+
 #: includes/admin-tab.php:122
 msgid "Size:"
 msgstr ""

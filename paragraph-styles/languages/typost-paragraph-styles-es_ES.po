@@ -77,6 +77,22 @@ msgstr "Eliminar"
 msgid "Font:"
 msgstr "Fuente:"
 
+#: includes/admin-tab.php:75
+msgid "Italic"
+msgstr "Cursiva"
+
+#: includes/admin-tab.php:76
+msgid "Oblique"
+msgstr "Oblicua"
+
+#: includes/admin-tab.php:77
+msgid "Normal (upright)"
+msgstr "Normal (recto)"
+
+#: includes/admin-tab.php:139
+msgid "Style:"
+msgstr "Estilo:"
+
 #: includes/admin-tab.php:122
 msgid "Size:"
 msgstr "Tamaño:"

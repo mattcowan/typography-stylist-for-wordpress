@@ -10,6 +10,7 @@ const {
 	buildApplyEventDetail,
 	normalizeApplyProperties,
 	buildStylePreviewStyle,
+	buildStyleCssBlock,
 } = require('../assets/js/lib/ps-utils.js');
 
 describe('findFontName', () => {
@@ -144,6 +145,26 @@ describe('isStyleModified', () => {
 		expect(isStyleModified({ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], lineHeight: 1.4 }, baseProps)).toBe(true);
 		expect(isStyleModified({ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontVariationSettings: '"wght" 650' }, baseProps)).toBe(true);
 	});
+
+	test('detects fontStyle changes, treating empty (inherit) as the default', () => {
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: 'italic' },
+			baseProps
+		)).toBe(true);
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: 'italic' },
+			Object.assign({}, baseProps, { fontStyle: 'italic' })
+		)).toBe(false);
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: '' },
+			Object.assign({}, baseProps, { fontStyle: 'italic' })
+		)).toBe(true);
+		// '' (inherit) and forced 'normal' are different declarations
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: 'normal' },
+			baseProps
+		)).toBe(true);
+	});
 });
 
 describe('buildPropertiesFromState', () => {
@@ -217,6 +238,13 @@ describe('buildPropertiesFromState', () => {
 			selectedFeatures: ['liga'],
 		})).toEqual({ features: ['dlig'] });
 	});
+
+	test('captures fontStyle when set, skips inherit', () => {
+		expect(buildPropertiesFromState({ fontStyle: 'italic' })).toEqual({ fontStyle: 'italic' });
+		// Forced upright is a real choice, distinct from inherit
+		expect(buildPropertiesFromState({ fontStyle: 'normal' })).toEqual({ fontStyle: 'normal' });
+		expect(buildPropertiesFromState({ fontStyle: '' })).toEqual({});
+	});
 });
 
 describe('normalizeApplyProperties', () => {
@@ -224,6 +252,7 @@ describe('normalizeApplyProperties', () => {
 		expect(normalizeApplyProperties({ fontId: 12, fontWeight: '700' })).toEqual({
 			fontId: 12,
 			fontWeight: '700',
+			fontStyle: '',
 			fontSize: 'inherit',
 			letterSpacing: 0,
 			lineHeight: 0,
@@ -232,10 +261,18 @@ describe('normalizeApplyProperties', () => {
 		});
 	});
 
+	test('fontStyle is style-owned: a stored italic rides through, an omitted one resets', () => {
+		expect(normalizeApplyProperties({ fontStyle: 'italic' }).fontStyle).toBe('italic');
+		// A style saved without fontStyle must reset a lingering italic on
+		// apply — the applied result has to look like the style.
+		expect(normalizeApplyProperties({ fontId: 12 }).fontStyle).toBe('');
+	});
+
 	test('stored values always win over defaults', () => {
 		expect(normalizeApplyProperties({
 			fontId: 15,
 			fontWeight: 'bold',
+			fontStyle: 'italic',
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 24,
@@ -247,6 +284,7 @@ describe('normalizeApplyProperties', () => {
 		})).toEqual({
 			fontId: 15,
 			fontWeight: 'bold',
+			fontStyle: 'italic',
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 24,
@@ -258,9 +296,8 @@ describe('normalizeApplyProperties', () => {
 		});
 	});
 
-	test('never introduces keys styles cannot express (fontStyle, fit/extension keys)', () => {
+	test('never introduces keys styles cannot express (fit/extension keys)', () => {
 		const normalized = normalizeApplyProperties({});
-		expect(normalized).not.toHaveProperty('fontStyle');
 		expect(normalized).not.toHaveProperty('fitMaxSize');
 		expect(normalized).not.toHaveProperty('layeredConfigId');
 		expect(normalized).not.toHaveProperty('animationConfigId');
@@ -270,6 +307,7 @@ describe('normalizeApplyProperties', () => {
 		expect(normalizeApplyProperties(null)).toEqual({
 			fontId: 0,
 			fontWeight: '400',
+			fontStyle: '',
 			fontSize: 'inherit',
 			letterSpacing: 0,
 			lineHeight: 0,
@@ -293,6 +331,7 @@ describe('buildApplyEventDetail', () => {
 			properties: {
 				fontId: 12,
 				fontWeight: '700',
+				fontStyle: '',
 				fontSize: 'inherit',
 				letterSpacing: 0,
 				lineHeight: 0,
@@ -477,5 +516,97 @@ describe('buildStylePreviewStyle', () => {
 				fontSize: 'responsive', fontSizeMin: 20, fontSizeMax: 48, fontSizePreferred: 30,
 			}).sizeLabel).toBe('48 down to 20');
 		});
+	});
+});
+
+describe('buildStyleCssBlock', () => {
+	// The JS twin of PHP generate_style_css(): the editor injects this for
+	// styles created/updated in-session, so its output must match what the
+	// server will print on the next full load.
+
+	test('emits the dual selector and all set properties, PHP-formatted', () => {
+		expect(buildStyleCssBlock({
+			id: 3,
+			properties: {
+				fontId: 12,
+				fontWeight: '700',
+				fontStyle: 'italic',
+				features: ['liga', 'ss01'],
+				letterSpacing: 50,
+				lineHeight: 1.4,
+				fontSize: '24',
+			},
+		})).toBe(
+			'.typost-ps-3,\n.typost-styled[data-style-id="3"] {\n' +
+			'    font-family: var(--font-12);\n' +
+			'    font-weight: 700;\n' +
+			'    font-style: italic;\n' +
+			'    font-feature-settings: "liga" 1, "ss01" 1;\n' +
+			'    letter-spacing: 0.05em;\n' +
+			'    line-height: 1.4;\n' +
+			'    font-size: 24px;\n' +
+			'}'
+		);
+	});
+
+	test('responsive sizes emit the same clamp() the server does', () => {
+		const css = buildStyleCssBlock({
+			id: 7,
+			properties: { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64 },
+		});
+		expect(css).toContain('font-size: clamp(16px, 1.5rem + 3vw, 64px)');
+	});
+
+	test('fit styles emit the fallback clamp, like the server', () => {
+		const css = buildStyleCssBlock({
+			id: 7,
+			properties: { fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64, fitMaxSize: 120 },
+		});
+		expect(css).toContain('font-size: clamp(16px, 1.5rem + 3vw, 64px)');
+	});
+
+	test('keyword weights pass, invalid weights are dropped', () => {
+		expect(buildStyleCssBlock({ id: 1, properties: { fontWeight: 'bold' } }))
+			.toContain('font-weight: bold');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontWeight: '5000', fontId: 2 } }))
+			.not.toContain('font-weight');
+	});
+
+	test('only whitelisted font-style values are emitted', () => {
+		expect(buildStyleCssBlock({ id: 1, properties: { fontStyle: 'normal' } }))
+			.toContain('font-style: normal');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontStyle: 'oblique' } }))
+			.toContain('font-style: oblique');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontStyle: 'expression(alert(1))', fontId: 2 } }))
+			.not.toContain('font-style');
+	});
+
+	test('font-variation-settings pairs are re-validated like the server regex', () => {
+		expect(buildStyleCssBlock({ id: 1, properties: { fontVariationSettings: '"wght" 650, "opsz" 14.5' } }))
+			.toContain('font-variation-settings: "wght" 650, "opsz" 14.5');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontVariationSettings: 'url(x); "wght" 650' } }))
+			.not.toContain('font-variation-settings');
+	});
+
+	test('feature tags that fail sanitize_key-style validation are dropped', () => {
+		expect(buildStyleCssBlock({ id: 1, properties: { features: ['liga', 'bad"tag'] } }))
+			.toBe('.typost-ps-1,\n.typost-styled[data-style-id="1"] {\n    font-feature-settings: "liga" 1;\n}');
+	});
+
+	test('legacy IDs get their selector variants', () => {
+		const css = buildStyleCssBlock({
+			id: 4,
+			legacyId: 'ps_1709312345_123',
+			properties: { fontId: 2 },
+		});
+		expect(css).toContain('.typost-ps-4,');
+		expect(css).toContain('.typost-ps-ps_1709312345_123,');
+		expect(css).toContain('.typost-styled[data-style-id="ps_1709312345_123"]');
+	});
+
+	test('returns empty string for empty or invalid styles', () => {
+		expect(buildStyleCssBlock({ id: 5, properties: {} })).toBe('');
+		expect(buildStyleCssBlock({ id: 5 })).toBe('');
+		expect(buildStyleCssBlock(null)).toBe('');
 	});
 });

@@ -227,6 +227,11 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Font style (visual italic — the editors' Font Style control; '' = inherit is never stored)
+		if ( ! empty( $props['fontStyle'] ) && in_array( $props['fontStyle'], array( 'normal', 'italic', 'oblique' ), true ) ) {
+			$css_rules[] = 'font-style: ' . $props['fontStyle'];
+		}
+
 		// OpenType features
 		if ( ! empty( $props['features'] ) && is_array( $props['features'] ) ) {
 			$features    = array_map( function( $f ) {
@@ -781,6 +786,12 @@ final class Typost_Paragraph_Styles {
 
 		if ( isset( $raw['fontWeight'] ) ) {
 			$clean['fontWeight'] = sanitize_text_field( $raw['fontWeight'] );
+		}
+
+		// Whitelisted outright: unlike fontWeight there are only three valid
+		// values, and CSS generation re-checks the same list.
+		if ( isset( $raw['fontStyle'] ) && in_array( $raw['fontStyle'], array( 'normal', 'italic', 'oblique' ), true ) ) {
+			$clean['fontStyle'] = $raw['fontStyle'];
 		}
 
 		if ( isset( $raw['fontSize'] ) ) {
