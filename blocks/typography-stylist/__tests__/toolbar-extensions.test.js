@@ -98,6 +98,18 @@ describe('buildQftEditorState', () => {
 		expect(buildQftEditorState({ fontStyle: 'italic' }).fontStyle).toBe('italic');
 	});
 
+	test('explicitFontStyle excludes <em>-derived italic but keeps span/attribute values', () => {
+		// Selection inside <em> only: rendered says italic, explicit stays ''
+		const emOnly = buildQftEditorState({ fontStyle: '', inlineFontStyle: 'italic', inlineExplicitFontStyle: null });
+		expect(emOnly.fontStyle).toBe('italic');
+		expect(emOnly.explicitFontStyle).toBe('');
+		// A data-fontstyle span reports on both channels
+		const span = buildQftEditorState({ fontStyle: '', inlineFontStyle: 'italic', inlineExplicitFontStyle: 'italic' });
+		expect(span.explicitFontStyle).toBe('italic');
+		// The block attribute is an explicit author choice
+		expect(buildQftEditorState({ fontStyle: 'italic' }).explicitFontStyle).toBe('italic');
+	});
+
 	test('parses the paragraph style id out of the style class', () => {
 		expect(buildQftEditorState({ styleClass: 'typost-ps-7' }).paragraphStyleId).toBe(7);
 		expect(buildQftEditorState({ styleClass: 'some-other-class' }).paragraphStyleId).toBe(0);

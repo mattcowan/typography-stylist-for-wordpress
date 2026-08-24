@@ -634,7 +634,10 @@
 	 * generate_style_css() so the injected rules match what the server will
 	 * print on the next load.
 	 */
+	var dynamicCssInjected = false;
+
 	function refreshDynamicStyleCss() {
+		dynamicCssInjected = true;
 		var styles = getStyles();
 		var blocks = [];
 		for (var i = 0; i < styles.length; i++) {
@@ -648,12 +651,19 @@
 		var docs = [document];
 		var frames = document.querySelectorAll('iframe[name="editor-canvas"]');
 		for (var f = 0; f < frames.length; f++) {
+			var frame = frames[f];
 			try {
-				if (frames[f].contentDocument) {
-					docs.push(frames[f].contentDocument);
+				if (frame.contentDocument) {
+					docs.push(frame.contentDocument);
 				}
 			} catch (e) {
 				// Inaccessible frame — skip
+			}
+			// A (re)created iframe replaces its document when the srcdoc
+			// loads, dropping anything injected before that — re-inject then
+			if (!frame._typostPsWatched) {
+				frame._typostPsWatched = true;
+				frame.addEventListener('load', refreshDynamicStyleCss);
 			}
 		}
 
@@ -667,6 +677,39 @@
 			}
 			styleEl.textContent = css;
 		}
+
+		watchForCanvasRemount();
+	}
+
+	// The canvas iframe is unmounted and recreated by editor mode switches
+	// (Visual ⇄ Code Editor) and similar remounts — the injected <style> dies
+	// with the old document, silently reverting to the stale-editor bug the
+	// injection exists to fix. Once dynamic CSS is in play, watch the DOM for
+	// a new canvas iframe and re-inject. Server CSS makes this unnecessary
+	// after a full page load, so the observer only starts after a first
+	// in-session save.
+	var canvasObserver = null;
+	function watchForCanvasRemount() {
+		if (canvasObserver || typeof MutationObserver === 'undefined') return;
+		canvasObserver = new MutationObserver(function (mutations) {
+			if (!dynamicCssInjected) return;
+			for (var i = 0; i < mutations.length; i++) {
+				var added = mutations[i].addedNodes;
+				for (var j = 0; j < added.length; j++) {
+					var node = added[j];
+					if (node.nodeType !== 1) continue;
+					if ((node.matches && node.matches('iframe[name="editor-canvas"]')) ||
+						(node.querySelector && node.querySelector('iframe[name="editor-canvas"]'))) {
+						// The new frame's document may not exist yet;
+						// refresh now (harmless if not) and again on its load
+						// via the listener refresh attaches.
+						refreshDynamicStyleCss();
+						return;
+					}
+				}
+			}
+		});
+		canvasObserver.observe(document.body, { childList: true, subtree: true });
 	}
 
 	// The panel dispatches this after every save/update (before it applies the

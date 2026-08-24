@@ -11,6 +11,26 @@
 	var TEXT_DOMAIN = 'typost-paragraph-styles';
 
 	/**
+	 * The font style a paragraph style may persist for this editor state.
+	 *
+	 * state.fontStyle is the RENDERED style and includes italic derived from
+	 * semantic <em>/<i> emphasis (for previews and the Glyphs panel's face
+	 * pick). A style must never capture that: em renders italic on its own,
+	 * so the style's CSS could neither reproduce it elsewhere nor reset it —
+	 * em's element rule outranks an inherited font-style — and the capture
+	 * would also make the "(modified)" badge lie whenever the caret sits in
+	 * emphasis. Both core editors therefore report explicitFontStyle (span
+	 * data-fontstyle / popover choice / block attribute only); fall back to
+	 * fontStyle solely for providers that predate the key.
+	 */
+	function persistableFontStyle(state) {
+		if (state.explicitFontStyle !== undefined) {
+			return state.explicitFontStyle || '';
+		}
+		return state.fontStyle || '';
+	}
+
+	/**
 	 * Translate a string, falling back to the original.
 	 *
 	 * Looked up lazily rather than captured at load: this file is also
@@ -86,8 +106,9 @@
 		var styleWeight = styleProps.fontWeight || '400';
 		if (stateWeight !== styleWeight) return true;
 
-		// Compare fontStyle ('' = inherit; 'normal' is a distinct forced-upright choice)
-		if ((state.fontStyle || '') !== (styleProps.fontStyle || '')) return true;
+		// Compare fontStyle ('' = inherit; 'normal' is a distinct forced-upright
+		// choice). Explicit only — <em>-derived italic must not flag "(modified)"
+		if (persistableFontStyle(state) !== (styleProps.fontStyle || '')) return true;
 
 		// Compare fontSize
 		var stateFontSize = state.fontSize || 'inherit';
@@ -139,9 +160,11 @@
 		if (state.fontWeight || state.selectedFontWeight) {
 			properties.fontWeight = state.fontWeight || state.selectedFontWeight;
 		}
-		// '' means inherit (not stored); 'normal' is a real forced-upright choice
-		if (state.fontStyle) {
-			properties.fontStyle = state.fontStyle;
+		// '' means inherit (not stored); 'normal' is a real forced-upright
+		// choice. Explicit only — never <em>-derived italic (see persistableFontStyle)
+		var fontStyle = persistableFontStyle(state);
+		if (fontStyle) {
+			properties.fontStyle = fontStyle;
 		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
@@ -328,6 +351,21 @@
 		return Math.round(x * 10000) / 10000;
 	}
 
+	// PHP intval() equivalent for numeric strings: parseInt reads '1e3' as 1,
+	// PHP casts it to 1000. Callers guard non-numeric input themselves.
+	function phpInt(x) {
+		var n = Number(x);
+		return isFinite(n) ? Math.trunc(n) : 0;
+	}
+
+	// PHP float-to-string equivalent: PHP prints floats at precision=14
+	// significant digits, JS at up to 17 — trim to match.
+	function phpFloatStr(x) {
+		var n = parseFloat(x);
+		if (!isFinite(n)) return '0';
+		return String(Number(n.toPrecision(14)));
+	}
+
 	/**
 	 * Build the CSS rule block for one stored style — the JS twin of PHP
 	 * generate_style_css() in paragraph-styles.php.
@@ -351,14 +389,14 @@
 		var props = style.properties;
 		var rules = [];
 
-		if (props.fontId && parseInt(props.fontId, 10) > 0) {
-			rules.push('font-family: var(--font-' + parseInt(props.fontId, 10) + ')');
+		if (props.fontId && phpInt(props.fontId) > 0) {
+			rules.push('font-family: var(--font-' + phpInt(props.fontId) + ')');
 		}
 
 		if (props.fontWeight) {
 			var weight = props.fontWeight;
 			if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
-				rules.push('font-weight: ' + parseInt(weight, 10));
+				rules.push('font-weight: ' + phpInt(weight));
 			} else if (['normal', 'bold', 'lighter', 'bolder'].indexOf(String(weight)) !== -1) {
 				rules.push('font-weight: ' + weight);
 			}
@@ -380,12 +418,12 @@
 			}
 		}
 
-		if (props.letterSpacing && parseInt(props.letterSpacing, 10) !== 0) {
-			rules.push('letter-spacing: ' + (parseInt(props.letterSpacing, 10) / 1000) + 'em');
+		if (props.letterSpacing && phpInt(props.letterSpacing) !== 0) {
+			rules.push('letter-spacing: ' + (phpInt(props.letterSpacing) / 1000) + 'em');
 		}
 
 		if (props.lineHeight && parseFloat(props.lineHeight)) {
-			rules.push('line-height: ' + parseFloat(props.lineHeight));
+			rules.push('line-height: ' + phpFloatStr(props.lineHeight));
 		}
 
 		if (props.fontVariationSettings) {
@@ -394,7 +432,7 @@
 			for (var j = 0; j < pairs.length; j++) {
 				var m = pairs[j].trim().match(/^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/);
 				if (m) {
-					cleanPairs.push('"' + m[1] + '" ' + parseFloat(m[2]));
+					cleanPairs.push('"' + m[1] + '" ' + phpFloatStr(m[2]));
 				}
 			}
 			if (cleanPairs.length) {
@@ -403,16 +441,16 @@
 		}
 
 		if (props.fontSize !== undefined && isFinite(props.fontSize) && Number(props.fontSize) > 0) {
-			rules.push('font-size: ' + parseInt(props.fontSize, 10) + 'px');
+			rules.push('font-size: ' + phpInt(props.fontSize) + 'px');
 		}
 
 		// Responsive clamp; fit styles emit the same fallback clamp (see the
 		// PHP twin for why)
 		if ((props.fontSize === 'responsive' || props.fontSize === 'fit') &&
 			props.fontSizeMin !== undefined && props.fontSizePreferred !== undefined && props.fontSizeMax !== undefined) {
-			var min = parseInt(props.fontSizeMin, 10);
-			var pref = parseInt(props.fontSizePreferred, 10);
-			var max = parseInt(props.fontSizeMax, 10);
+			var min = phpInt(props.fontSizeMin);
+			var pref = phpInt(props.fontSizePreferred);
+			var max = phpInt(props.fontSizeMax);
 			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
 			rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
 		}

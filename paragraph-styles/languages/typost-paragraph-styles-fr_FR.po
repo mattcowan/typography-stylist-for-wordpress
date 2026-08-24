@@ -73,23 +73,23 @@ msgstr "Modifier"
 msgid "Delete"
 msgstr "Supprimer"
 
+#: includes/admin-tab.php:74
+msgid "Italic"
+msgstr "Italique"
+
+#: includes/admin-tab.php:75
+msgid "Oblique"
+msgstr "Oblique"
+
+#: includes/admin-tab.php:76
+msgid "Normal (upright)"
+msgstr "Normal (droit)"
+
 #: includes/admin-tab.php:117
 msgid "Font:"
 msgstr "Police :"
 
-#: includes/admin-tab.php:75
-msgid "Italic"
-msgstr "Italique"
-
-#: includes/admin-tab.php:76
-msgid "Oblique"
-msgstr "Oblique"
-
-#: includes/admin-tab.php:77
-msgid "Normal (upright)"
-msgstr "Normal (droit)"
-
-#: includes/admin-tab.php:139
+#: includes/admin-tab.php:140
 msgid "Style:"
 msgstr "Style :"
 

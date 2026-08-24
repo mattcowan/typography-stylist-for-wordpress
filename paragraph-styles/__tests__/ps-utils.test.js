@@ -165,6 +165,19 @@ describe('isStyleModified', () => {
 			baseProps
 		)).toBe(true);
 	});
+
+	test('rendered <em>-italic does not flag "(modified)" — explicit state wins', () => {
+		// Caret inside <em>: fontStyle reports rendered italic, explicit is unset
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: 'italic', explicitFontStyle: '' },
+			baseProps
+		)).toBe(false);
+		// A real explicit italic against a style without one still flags
+		expect(isStyleModified(
+			{ fontId: 12, fontWeight: '700', features: ['liga', 'ss01'], fontStyle: 'italic', explicitFontStyle: 'italic' },
+			baseProps
+		)).toBe(true);
+	});
 });
 
 describe('buildPropertiesFromState', () => {
@@ -244,6 +257,17 @@ describe('buildPropertiesFromState', () => {
 		// Forced upright is a real choice, distinct from inherit
 		expect(buildPropertiesFromState({ fontStyle: 'normal' })).toEqual({ fontStyle: 'normal' });
 		expect(buildPropertiesFromState({ fontStyle: '' })).toEqual({});
+	});
+
+	test('prefers explicitFontStyle: rendered <em>-italic is never captured', () => {
+		// Caret inside <em>: rendered fontStyle is 'italic' but nothing was
+		// explicitly set — the style must not bake that italic in.
+		expect(buildPropertiesFromState({ fontStyle: 'italic', explicitFontStyle: '' })).toEqual({});
+		// An explicit choice rides through
+		expect(buildPropertiesFromState({ fontStyle: 'italic', explicitFontStyle: 'italic' }))
+			.toEqual({ fontStyle: 'italic' });
+		// Providers without the key (extensions, older states) keep old behavior
+		expect(buildPropertiesFromState({ fontStyle: 'italic' })).toEqual({ fontStyle: 'italic' });
 	});
 });
 
@@ -608,5 +632,25 @@ describe('buildStyleCssBlock', () => {
 		expect(buildStyleCssBlock({ id: 5, properties: {} })).toBe('');
 		expect(buildStyleCssBlock({ id: 5 })).toBe('');
 		expect(buildStyleCssBlock(null)).toBe('');
+	});
+
+	test('exponent-notation numerics cast like PHP intval, not parseInt', () => {
+		// PHP intval('1e2') is 100; parseInt('1e2') is 1 — the server would
+		// print 100px, so the injected CSS must too
+		expect(buildStyleCssBlock({ id: 1, properties: { fontSize: '1e2' } }))
+			.toContain('font-size: 100px');
+		expect(buildStyleCssBlock({ id: 1, properties: { letterSpacing: '1e2' } }))
+			.toContain('letter-spacing: 0.1em');
+	});
+
+	test('floats print at PHP precision (14 significant digits)', () => {
+		// PHP echoes floats at precision=14; JS at up to 17 — the long tail
+		// must be trimmed identically
+		expect(buildStyleCssBlock({ id: 1, properties: { lineHeight: 1.2345678901234567 } }))
+			.toContain('line-height: 1.2345678901235;');
+		expect(buildStyleCssBlock({ id: 1, properties: { lineHeight: 1.4 } }))
+			.toContain('line-height: 1.4;');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontVariationSettings: '"opsz" 14.5' } }))
+			.toContain('font-variation-settings: "opsz" 14.5');
 	});
 });

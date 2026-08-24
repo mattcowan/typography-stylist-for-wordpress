@@ -408,6 +408,11 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fontId: null,
 			fontWeight: null,
 			fontStyle: null,
+			// data-fontstyle only — never the <em>/<i> fallback below. Rendered
+			// consumers (previews, Glyphs face pick) read fontStyle; consumers
+			// that persist the value (paragraph style capture) read this, so a
+			// selection inside semantic emphasis can't bake italic into a style.
+			explicitFontStyle: null,
 			fontSize: null,
 			fontSizeMin: null,
 			fontSizePreferred: null,
@@ -468,6 +473,7 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontStyle = currentSpan.getAttribute('data-fontstyle');
 				if (fontStyle) {
 					result.fontStyle = fontStyle;
+					result.explicitFontStyle = fontStyle;
 				}
 			}
 
@@ -1971,6 +1977,12 @@ export function buildQftEditorState(s) {
 		fontId: activeFontId,
 		// Effective style at the selection wins over the block attribute
 		fontStyle: source.inlineFontStyle || source.fontStyle || '',
+		// Explicit only — a data-fontstyle span or the block attribute, never
+		// the <em>/<i> derivation that fontStyle folds in. Persisting consumers
+		// (paragraph style capture/diff) read this: semantic emphasis renders
+		// italic on its own and a style's CSS could neither reproduce it
+		// elsewhere nor reset it, so it must not be captured as if chosen.
+		explicitFontStyle: source.inlineExplicitFontStyle || source.fontStyle || '',
 		// Likewise the weight: the selection may sit inside a span that sets
 		// one (or inside a nested span inheriting it from an ancestor, which
 		// parseInlineStylesAtCursor resolves). Reporting the block attribute

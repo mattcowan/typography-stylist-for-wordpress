@@ -10,6 +10,7 @@ The rule of thumb: a property is not done until it round-trips through **every**
 - [ ] **Inline editor state provider** (`typost_current_editor_state` filter for `'inline'`, in the constructor): report the property. Extensions — including the bundled Paragraph Styles and Glyphs modules — see only what this filter reports.
 - [ ] **Block editor** ([blocks/typography-stylist/edit.js](../blocks/typography-stylist/edit.js)): block attribute in [block.json](../blocks/typography-stylist/block.json), Inspector control, and the QFT selection-level detection (`parseInlineStylesAtCursor` in [utils.js](../blocks/typography-stylist/utils.js)).
 - [ ] **Shared QFT state** (`buildQftEditorState` in [blocks/typography-stylist/utils.js](../blocks/typography-stylist/utils.js)): add the key, deciding inline-span-at-selection vs block-attribute precedence explicitly.
+- [ ] **Rendered vs explicit channels**: if the state reports a *rendered/effective* value (theme CSS, semantic markup like `<em>`/`<strong>`), decide whether persisting consumers need a separate explicit-only channel. `fontStyle` (rendered, for previews/Glyphs) is paired with `explicitFontStyle` (set values only) precisely because capturing `<em>`-derived italic into a paragraph style produced CSS that could neither reproduce nor reset it, plus a permanently-lying "(modified)" badge.
 - [ ] **Pending-changes tracking** (inline editor `_pendingChanges` / `_recordChange`): register the property so mixed selections only patch what the author actually changed.
 
 ## 2. Apply bridge (how extensions write)

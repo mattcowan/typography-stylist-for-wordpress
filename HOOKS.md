@@ -664,10 +664,10 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
 
-*Since 2.3.0* both editors report `fontStyle` (`''` inherit, `'normal'`, or `'italic'`) — the *rendered* style at the selection, so text italicized by an enclosing `<em>`/`<i>` or a `data-fontstyle` span reports `'italic'` even without its own setting. The bundled Paragraph Styles module captures this into saved styles; consumers writing state back onto spans they create (like the Glyphs Panel does with `fontWeight`) should honour it the same way.
+*Since 2.3.0* both editors report the font style on two channels (`''` inherit, `'normal'`, or `'italic'`). `fontStyle` is the *rendered* style at the selection — text italicized by an enclosing `<em>`/`<i>` reports `'italic'` even without its own setting; use it to render the right face (previews, the Glyphs panel's face pick). `explicitFontStyle` is only what was *set* — a `data-fontstyle` span, the popover's Font Style choice, or the block attribute — and is what consumers that persist the value must read: the bundled Paragraph Styles module captures it into saved styles, so semantic emphasis can't be baked into a style whose CSS could neither reproduce nor reset it.
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
 

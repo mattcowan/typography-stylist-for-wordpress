@@ -28,6 +28,8 @@ Pure logic lives in `assets/js/lib/ps-utils.js` (UMD-lite: `window.typostPSUtils
 
 `fontStyle` is captured, diffed and normalized like any other style-owned property: `buildPropertiesFromState` stores it when set (`''` = inherit is never stored), `isStyleModified` compares it, and `normalizeApplyProperties` defaults it to `''` so applying a non-italic style resets a lingering italic. It was originally excluded on the theory that "styles cannot express italic" — that carve-out plus the missing capture/sanitize/CSS steps meant saving a style from italic text silently dropped the italic everywhere; do not reintroduce it.
 
+Capture and diff read `state.explicitFontStyle` (falling back to `state.fontStyle` only for providers that predate the key — see `persistableFontStyle`). `state.fontStyle` is the **rendered** style and includes italic derived from semantic `<em>`/`<i>`, which must never reach a saved style: em renders italic on its own, so the style's CSS could neither reproduce it elsewhere nor reset it (em's element rule outranks inherited `font-style`), and capturing it would pin the "(modified)" badge on whenever the caret sits in emphasis — one Update Style click away from propagating phantom italic to every use of the style.
+
 `findFontName` matches the **`font_id`** field, not `id`: styles store the canonical numeric font id while the localized font entries key `id` to the string kit/project slug. `getFontName` searches `fonts` + `adobeFonts` + `manualFonts` + `adoptedWpFonts` for the same reason. Both were wrong until v1.2 (matching `id` only, uploaded kits only), so every style's label read "Default" — the editor-side twin of the wrong-case admin bug noted below; do not reintroduce either.
 
 ### Style browser (toolbar button, v1.2+)

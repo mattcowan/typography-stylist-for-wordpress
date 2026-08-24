@@ -254,6 +254,19 @@ describe('fontStyle detection (visual italic)', () => {
 		const html = '<span class="typost-styled" data-fontsize="20px" style="font-size: 20px">Elegant</span>';
 		expect(parseInlineStylesAtCursor(html, 2, 2).fontStyle).toBeNull();
 	});
+
+	test('explicitFontStyle carries only the attribute, never the <em> fallback', () => {
+		// Attribute-derived: both channels report it
+		const attr = '<span class="typost-styled" data-fontstyle="italic" style="font-style: italic">Elegant</span>';
+		expect(parseInlineStylesAtCursor(attr, 2, 2).explicitFontStyle).toBe('italic');
+
+		// <em>-derived: rendered fontStyle says italic, explicit stays null —
+		// persisting consumers (paragraph style capture) must not see it
+		const em = '<em><span class="typost-styled" data-features="swsh" style=\'font-feature-settings: "swsh" 1\'>Elegant</span></em>';
+		const result = parseInlineStylesAtCursor(em, 2, 2);
+		expect(result.fontStyle).toBe('italic');
+		expect(result.explicitFontStyle).toBeNull();
+	});
 });
 
 describe('detectStrongBoldAtRange', () => {

@@ -73,23 +73,23 @@ msgstr "Editar"
 msgid "Delete"
 msgstr "Eliminar"
 
+#: includes/admin-tab.php:74
+msgid "Italic"
+msgstr "Cursiva"
+
+#: includes/admin-tab.php:75
+msgid "Oblique"
+msgstr "Oblicua"
+
+#: includes/admin-tab.php:76
+msgid "Normal (upright)"
+msgstr "Normal (recto)"
+
 #: includes/admin-tab.php:117
 msgid "Font:"
 msgstr "Fuente:"
 
-#: includes/admin-tab.php:75
-msgid "Italic"
-msgstr "Cursiva"
-
-#: includes/admin-tab.php:76
-msgid "Oblique"
-msgstr "Oblicua"
-
-#: includes/admin-tab.php:77
-msgid "Normal (upright)"
-msgstr "Normal (recto)"
-
-#: includes/admin-tab.php:139
+#: includes/admin-tab.php:140
 msgid "Style:"
 msgstr "Estilo:"
 
