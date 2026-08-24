@@ -351,11 +351,20 @@
 		return Math.round(x * 10000) / 10000;
 	}
 
-	// PHP intval() equivalent for numeric strings: parseInt reads '1e3' as 1,
-	// PHP casts it to 1000. Callers guard non-numeric input themselves.
+	// PHP intval() equivalent, verified against PHP 8.4: the leading numeric
+	// portion is parsed, exponents included — intval('1e3px') is 1000 where
+	// parseInt says 1 and Number says NaN. parseFloat matches that prefix scan
+	// for every case in scratch harness intval-parity.php ('50px'→50,
+	// '12abc'→12, '.5px'→0, '0x1A'→0, 'abc'→0).
 	function phpInt(x) {
-		var n = Number(x);
+		var n = parseFloat(x);
 		return isFinite(n) ? Math.trunc(n) : 0;
+	}
+
+	// PHP empty() for the scalar values styles hold: 0, 0.0, '', '0', null,
+	// false are empty. The '0' string is the JS-truthy trap.
+	function phpFalsy(v) {
+		return !v || v === '0';
 	}
 
 	// PHP float-to-string equivalent: PHP prints floats at precision=14
@@ -389,11 +398,15 @@
 		var props = style.properties;
 		var rules = [];
 
-		if (props.fontId && phpInt(props.fontId) > 0) {
-			rules.push('font-family: var(--font-' + phpInt(props.fontId) + ')');
+		// PHP guards with !empty then absint()s whatever is left, so a junk
+		// fontId still emits (var(--font-0), a harmless undefined variable)
+		// and a negative one is abs()ed — match, or injected CSS diverges
+		// from what the server prints on the next load.
+		if (!phpFalsy(props.fontId)) {
+			rules.push('font-family: var(--font-' + Math.abs(phpInt(props.fontId)) + ')');
 		}
 
-		if (props.fontWeight) {
+		if (!phpFalsy(props.fontWeight)) {
 			var weight = props.fontWeight;
 			if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
 				rules.push('font-weight: ' + phpInt(weight));
@@ -418,11 +431,14 @@
 			}
 		}
 
-		if (props.letterSpacing && phpInt(props.letterSpacing) !== 0) {
+		// !empty is PHP's only guard here: any non-empty value emits, so
+		// '50px' renders 0.05em and even garbage renders 0em — which matters,
+		// because an explicit 0 resets inherited spacing where absence would not
+		if (!phpFalsy(props.letterSpacing)) {
 			rules.push('letter-spacing: ' + (phpInt(props.letterSpacing) / 1000) + 'em');
 		}
 
-		if (props.lineHeight && parseFloat(props.lineHeight)) {
+		if (!phpFalsy(props.lineHeight)) {
 			rules.push('line-height: ' + phpFloatStr(props.lineHeight));
 		}
 

@@ -643,6 +643,44 @@ describe('buildStyleCssBlock', () => {
 			.toContain('letter-spacing: 0.1em');
 	});
 
+	test('suffixed numerics parse their leading number like PHP intval', () => {
+		// intval('50px') is 50 (verified against PHP 8.4) — Number() would
+		// say NaN and silently drop the rule the server will print
+		expect(buildStyleCssBlock({ id: 1, properties: { letterSpacing: '50px' } }))
+			.toContain('letter-spacing: 0.05em');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontId: '12abc' } }))
+			.toContain('font-family: var(--font-12)');
+		expect(buildStyleCssBlock({
+			id: 1,
+			properties: { fontSize: 'responsive', fontSizeMin: '16px', fontSizePreferred: '24px', fontSizeMax: '64px' },
+		})).toContain('font-size: clamp(16px, 1.5rem + 3vw, 64px)');
+		// The px branch is guarded by is_numeric() in PHP, which rejects
+		// suffixes — neither side emits for a suffixed fontSize
+		expect(buildStyleCssBlock({ id: 1, properties: { fontSize: '50px', fontId: 2 } }))
+			.not.toContain('font-size');
+	});
+
+	test('PHP !empty guard semantics: garbage emits zero-valued rules, "0" is empty', () => {
+		// PHP guards these with !empty only, then casts — so the server prints
+		// letter-spacing: 0em / line-height: 0 for junk, and an explicit 0
+		// resets inherited values where absence would not. Match it.
+		expect(buildStyleCssBlock({ id: 1, properties: { letterSpacing: 'abc' } }))
+			.toContain('letter-spacing: 0em');
+		expect(buildStyleCssBlock({ id: 1, properties: { lineHeight: 'abc' } }))
+			.toContain('line-height: 0;');
+		// absint() also abs()es: the server prints var(--font-5) and, for
+		// junk, the harmless var(--font-0)
+		expect(buildStyleCssBlock({ id: 1, properties: { fontId: '-5' } }))
+			.toContain('font-family: var(--font-5)');
+		expect(buildStyleCssBlock({ id: 1, properties: { fontId: 'abc' } }))
+			.toContain('font-family: var(--font-0)');
+		// empty('0') is true in PHP — the string '0' must not emit
+		expect(buildStyleCssBlock({ id: 1, properties: { letterSpacing: '0', fontId: 2 } }))
+			.not.toContain('letter-spacing');
+		expect(buildStyleCssBlock({ id: 1, properties: { lineHeight: '0', fontId: 2 } }))
+			.not.toContain('line-height');
+	});
+
 	test('floats print at PHP precision (14 significant digits)', () => {
 		// PHP echoes floats at precision=14; JS at up to 17 — the long tail
 		// must be trimmed identically
