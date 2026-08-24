@@ -831,6 +831,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		return detectEmItalicAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
 	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
 	qftStateRef.current.inlineFontStyle = inlineStylesAtSelection?.fontStyle || emItalicAtSelection || null;
+	// The attr-derived value only (no <em> fallback) — feeds the shared
+	// state's explicitFontStyle so persisting consumers can't capture
+	// semantic italic (see buildQftEditorState)
+	qftStateRef.current.inlineExplicitFontStyle = inlineStylesAtSelection?.explicitFontStyle || null;
 	// Effective weight at the selection: a Typography Stylist weight span
 	// (parseInlineStylesAtCursor walks up from the innermost one, so a letter
 	// selected inside a weighted span resolves too), or failing that semantic

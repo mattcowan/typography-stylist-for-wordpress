@@ -67,6 +67,19 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 				$weight   = ! empty( $props['fontWeight'] ) ? $props['fontWeight'] : '400';
 				$features = isset( $props['features'] ) && is_array( $props['features'] ) ? $props['features'] : array();
 
+				// Font style — absent means inherit, so only real choices get a label
+				$style_display = '';
+				if ( ! empty( $props['fontStyle'] ) ) {
+					$font_style_labels = array(
+						'italic'  => __( 'Italic', 'typost-paragraph-styles' ),
+						'oblique' => __( 'Oblique', 'typost-paragraph-styles' ),
+						'normal'  => __( 'Normal (upright)', 'typost-paragraph-styles' ),
+					);
+					if ( isset( $font_style_labels[ $props['fontStyle'] ] ) ) {
+						$style_display = $font_style_labels[ $props['fontStyle'] ];
+					}
+				}
+
 				// CSS class name
 				$css_class = 'typost-ps-' . $style_id;
 
@@ -122,6 +135,12 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 							<strong><?php esc_html_e( 'Font:', 'typost-paragraph-styles' ); ?></strong>
 							<?php echo esc_html( $font_name . ' (' . $weight . ')' ); ?>
 						</span>
+						<?php if ( $style_display ) : ?>
+							<span class="typost-ps-detail">
+								<strong><?php esc_html_e( 'Style:', 'typost-paragraph-styles' ); ?></strong>
+								<?php echo esc_html( $style_display ); ?>
+							</span>
+						<?php endif; ?>
 						<?php if ( $size_display ) : ?>
 							<span class="typost-ps-detail">
 								<strong><?php esc_html_e( 'Size:', 'typost-paragraph-styles' ); ?></strong>

@@ -618,6 +618,105 @@
 	}
 
 	// -------------------------------------------------------------------------
+	// Dynamic style CSS (freshly saved/updated styles)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Rebuild the CSS for every stored style and inject it into the editor
+	 * documents (top document + canvas iframe).
+	 *
+	 * The server prints style CSS only at page load, so a style created or
+	 * updated in-session has no rules where the styled text lives — and
+	 * because applying a style strips inline styles from spans/blocks
+	 * (rendering is delegated to the style's CSS class), the text would fall
+	 * back to theme defaults until the editor is reloaded. This listener
+	 * closes that gap; buildStyleCssBlock (ps-utils) mirrors the PHP
+	 * generate_style_css() so the injected rules match what the server will
+	 * print on the next load.
+	 */
+	var dynamicCssInjected = false;
+
+	function refreshDynamicStyleCss() {
+		dynamicCssInjected = true;
+		var styles = getStyles();
+		var blocks = [];
+		for (var i = 0; i < styles.length; i++) {
+			var block = utils.buildStyleCssBlock(styles[i]);
+			if (block) {
+				blocks.push(block);
+			}
+		}
+		var css = blocks.join('\n\n');
+
+		var docs = [document];
+		var frames = document.querySelectorAll('iframe[name="editor-canvas"]');
+		for (var f = 0; f < frames.length; f++) {
+			var frame = frames[f];
+			try {
+				if (frame.contentDocument) {
+					docs.push(frame.contentDocument);
+				}
+			} catch (e) {
+				// Inaccessible frame — skip
+			}
+			// A (re)created iframe replaces its document when the srcdoc
+			// loads, dropping anything injected before that — re-inject then
+			if (!frame._typostPsWatched) {
+				frame._typostPsWatched = true;
+				frame.addEventListener('load', refreshDynamicStyleCss);
+			}
+		}
+
+		for (var d = 0; d < docs.length; d++) {
+			var doc = docs[d];
+			var styleEl = doc.getElementById('typost-ps-dynamic-css');
+			if (!styleEl) {
+				styleEl = doc.createElement('style');
+				styleEl.id = 'typost-ps-dynamic-css';
+				(doc.head || doc.documentElement).appendChild(styleEl);
+			}
+			styleEl.textContent = css;
+		}
+
+		watchForCanvasRemount();
+	}
+
+	// The canvas iframe is unmounted and recreated by editor mode switches
+	// (Visual ⇄ Code Editor) and similar remounts — the injected <style> dies
+	// with the old document, silently reverting to the stale-editor bug the
+	// injection exists to fix. Once dynamic CSS is in play, watch the DOM for
+	// a new canvas iframe and re-inject. Server CSS makes this unnecessary
+	// after a full page load, so the observer only starts after a first
+	// in-session save.
+	var canvasObserver = null;
+	function watchForCanvasRemount() {
+		if (canvasObserver || typeof MutationObserver === 'undefined') return;
+		canvasObserver = new MutationObserver(function (mutations) {
+			if (!dynamicCssInjected) return;
+			for (var i = 0; i < mutations.length; i++) {
+				var added = mutations[i].addedNodes;
+				for (var j = 0; j < added.length; j++) {
+					var node = added[j];
+					if (node.nodeType !== 1) continue;
+					if ((node.matches && node.matches('iframe[name="editor-canvas"]')) ||
+						(node.querySelector && node.querySelector('iframe[name="editor-canvas"]'))) {
+						// The new frame's document may not exist yet;
+						// refresh now (harmless if not) and again on its load
+						// via the listener refresh attaches.
+						refreshDynamicStyleCss();
+						return;
+					}
+				}
+			}
+		});
+		canvasObserver.observe(document.body, { childList: true, subtree: true });
+	}
+
+	// The panel dispatches this after every save/update (before it applies the
+	// style), so the rules exist by the time the span/block starts relying on them.
+	document.addEventListener('typost-paragraph-styles-updated', refreshDynamicStyleCss);
+
+	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)
 	// -------------------------------------------------------------------------
 

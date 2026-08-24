@@ -270,6 +270,8 @@ Block editor JavaScript requires:
 2. Check if tests exist for the code you're modifying
 3. Run `npm test` to ensure all tests pass
 
+**When adding a new typography property or text-styling setting:** walk [docs/typography-property-checklist.md](docs/typography-property-checklist.md) end to end. A property can be fully wired in core (editors, state filter, apply bridge, spans) and still silently break the Paragraph Styles round-trip — `fontStyle` shipped exactly that way and saved styles dropped italic until the module-side touchpoints were added.
+
 **When making code changes:**
 1. Extract testable logic to utility functions in `utils.js`
 2. Update or add tests for modified/new functionality

@@ -664,8 +664,10 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+
+*Since 2.3.0* both editors report the font style on two channels (`''` inherit, `'normal'`, `'italic'`, or `'oblique'` — the built-in Font Style controls only offer the first three, but `'oblique'` set by an extension through the apply event round-trips the full pipeline: span serialization, state reporting, and paragraph-style persistence/CSS). `fontStyle` is the *rendered* style at the selection — text italicized by an enclosing `<em>`/`<i>` reports `'italic'` even without its own setting; use it to render the right face (previews, the Glyphs panel's face pick). `explicitFontStyle` is only what was *set* — a `data-fontstyle` span, the popover's Font Style choice, or the block attribute — and is what consumers that persist the value must read: the bundled Paragraph Styles module captures it into saved styles, so semantic emphasis can't be baked into a style whose CSS could neither reproduce nor reset it.
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
 
@@ -683,6 +685,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
         properties: {
             fontId: 12,
             fontWeight: '700',
+            fontStyle: 'italic', // Optional (since 2.3.0): '' inherit / 'normal' / 'italic' / 'oblique'
             letterSpacing: 50,
             features: ['liga', 'dlig', 'ss01'],
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes

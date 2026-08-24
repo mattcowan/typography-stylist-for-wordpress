@@ -70,8 +70,24 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
+#: includes/admin-tab.php:74
+msgid "Italic"
+msgstr ""
+
+#: includes/admin-tab.php:75
+msgid "Oblique"
+msgstr ""
+
+#: includes/admin-tab.php:76
+msgid "Normal (upright)"
+msgstr ""
+
 #: includes/admin-tab.php:117
 msgid "Font:"
+msgstr ""
+
+#: includes/admin-tab.php:140
+msgid "Style:"
 msgstr ""
 
 #: includes/admin-tab.php:122

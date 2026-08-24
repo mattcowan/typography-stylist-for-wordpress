@@ -11,6 +11,26 @@
 	var TEXT_DOMAIN = 'typost-paragraph-styles';
 
 	/**
+	 * The font style a paragraph style may persist for this editor state.
+	 *
+	 * state.fontStyle is the RENDERED style and includes italic derived from
+	 * semantic <em>/<i> emphasis (for previews and the Glyphs panel's face
+	 * pick). A style must never capture that: em renders italic on its own,
+	 * so the style's CSS could neither reproduce it elsewhere nor reset it —
+	 * em's element rule outranks an inherited font-style — and the capture
+	 * would also make the "(modified)" badge lie whenever the caret sits in
+	 * emphasis. Both core editors therefore report explicitFontStyle (span
+	 * data-fontstyle / popover choice / block attribute only); fall back to
+	 * fontStyle solely for providers that predate the key.
+	 */
+	function persistableFontStyle(state) {
+		if (state.explicitFontStyle !== undefined) {
+			return state.explicitFontStyle || '';
+		}
+		return state.fontStyle || '';
+	}
+
+	/**
 	 * Translate a string, falling back to the original.
 	 *
 	 * Looked up lazily rather than captured at load: this file is also
@@ -86,6 +106,10 @@
 		var styleWeight = styleProps.fontWeight || '400';
 		if (stateWeight !== styleWeight) return true;
 
+		// Compare fontStyle ('' = inherit; 'normal' is a distinct forced-upright
+		// choice). Explicit only — <em>-derived italic must not flag "(modified)"
+		if (persistableFontStyle(state) !== (styleProps.fontStyle || '')) return true;
+
 		// Compare fontSize
 		var stateFontSize = state.fontSize || 'inherit';
 		var styleFontSize = styleProps.fontSize || 'inherit';
@@ -136,6 +160,12 @@
 		if (state.fontWeight || state.selectedFontWeight) {
 			properties.fontWeight = state.fontWeight || state.selectedFontWeight;
 		}
+		// '' means inherit (not stored); 'normal' is a real forced-upright
+		// choice. Explicit only — never <em>-derived italic (see persistableFontStyle)
+		var fontStyle = persistableFontStyle(state);
+		if (fontStyle) {
+			properties.fontStyle = fontStyle;
+		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
 		}
@@ -181,8 +211,6 @@
 	 * application deterministic: the text ends up looking like the style.
 	 *
 	 * Deliberately NOT normalized (never introduced when absent):
-	 * - fontStyle — styles cannot express italic; resetting it would strip
-	 *   a user's italic on every apply.
 	 * - fontSizeMin/Preferred/Max — only meaningful with the style's own
 	 *   fontSize mode; defaults would clobber the block's tuned responsive
 	 *   values while rendering identically.
@@ -190,11 +218,19 @@
 	 *   property (fit styles always store it, so it rides in via properties);
 	 *   not defaulted when absent for the same reason as min/pref/max.
 	 * - Extension-owned keys (layeredConfigId, animationConfigId).
+	 *
+	 * fontStyle IS normalized (to '' = inherit): styles express italic as a
+	 * first-class property now, so a style saved without one must reset a
+	 * lingering italic on apply — the applied result has to look like the
+	 * style. (An earlier revision excluded it because styles could not
+	 * express italic at all; that carve-out was the bug that silently
+	 * dropped italic from saved styles.)
 	 */
 	function normalizeApplyProperties(properties) {
 		var normalized = {
 			fontId: 0,
 			fontWeight: '400',
+			fontStyle: '',
 			fontSize: 'inherit',
 			letterSpacing: 0,
 			lineHeight: 0,
@@ -305,6 +341,147 @@
 		};
 	}
 
+	// Mirror core's responsive viewport constants (px). generate_style_css()
+	// in paragraph-styles.php uses the same pair; keep all four in sync.
+	var RESPONSIVE_FONT_MIN_VIEWPORT = 320;
+	var RESPONSIVE_FONT_MAX_VIEWPORT = 1920;
+
+	// PHP round($x, 4) equivalent, so clamp() maths prints identically
+	function round4(x) {
+		return Math.round(x * 10000) / 10000;
+	}
+
+	// PHP intval() equivalent, verified against PHP 8.4: the leading numeric
+	// portion is parsed, exponents included — intval('1e3px') is 1000 where
+	// parseInt says 1 and Number says NaN. parseFloat matches that prefix scan
+	// for every case in scratch harness intval-parity.php ('50px'→50,
+	// '12abc'→12, '.5px'→0, '0x1A'→0, 'abc'→0).
+	function phpInt(x) {
+		var n = parseFloat(x);
+		return isFinite(n) ? Math.trunc(n) : 0;
+	}
+
+	// PHP empty() for the scalar values styles hold: 0, 0.0, '', '0', null,
+	// false are empty. The '0' string is the JS-truthy trap.
+	function phpFalsy(v) {
+		return !v || v === '0';
+	}
+
+	// PHP float-to-string equivalent: PHP prints floats at precision=14
+	// significant digits, JS at up to 17 — trim to match.
+	function phpFloatStr(x) {
+		var n = parseFloat(x);
+		if (!isFinite(n)) return '0';
+		return String(Number(n.toPrecision(14)));
+	}
+
+	/**
+	 * Build the CSS rule block for one stored style — the JS twin of PHP
+	 * generate_style_css() in paragraph-styles.php.
+	 *
+	 * Exists so the editor can inject CSS for styles created or updated
+	 * in-session: the server prints style CSS only at page load, so without
+	 * this a freshly saved style has no rules in the editor document and the
+	 * styled text falls back to theme defaults until reload. Output must stay
+	 * byte-identical to the PHP for the same (sanitized) properties — when
+	 * one side changes, change the other.
+	 *
+	 * Values are re-validated here with the same whitelists/regexes as the
+	 * PHP even though the store is REST-sanitized, because this runs on
+	 * whatever typostData.paragraphStyles holds.
+	 *
+	 * @param {Object} style Stored style ({id, legacyId?, properties}).
+	 * @return {string} CSS rule block, or '' when nothing to emit.
+	 */
+	function buildStyleCssBlock(style) {
+		if (!style || !style.id || !style.properties) return '';
+		var props = style.properties;
+		var rules = [];
+
+		// PHP guards with !empty then absint()s whatever is left, so a junk
+		// fontId still emits (var(--font-0), a harmless undefined variable)
+		// and a negative one is abs()ed — match, or injected CSS diverges
+		// from what the server prints on the next load.
+		if (!phpFalsy(props.fontId)) {
+			rules.push('font-family: var(--font-' + Math.abs(phpInt(props.fontId)) + ')');
+		}
+
+		if (!phpFalsy(props.fontWeight)) {
+			var weight = props.fontWeight;
+			if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
+				rules.push('font-weight: ' + phpInt(weight));
+			} else if (['normal', 'bold', 'lighter', 'bolder'].indexOf(String(weight)) !== -1) {
+				rules.push('font-weight: ' + weight);
+			}
+		}
+
+		if (props.fontStyle && ['normal', 'italic', 'oblique'].indexOf(String(props.fontStyle)) !== -1) {
+			rules.push('font-style: ' + props.fontStyle);
+		}
+
+		if (props.features && props.features.length) {
+			var tags = [];
+			for (var i = 0; i < props.features.length; i++) {
+				if (/^[a-z0-9_-]+$/i.test(String(props.features[i]))) {
+					tags.push('"' + props.features[i] + '" 1');
+				}
+			}
+			if (tags.length) {
+				rules.push('font-feature-settings: ' + tags.join(', '));
+			}
+		}
+
+		// !empty is PHP's only guard here: any non-empty value emits, so
+		// '50px' renders 0.05em and even garbage renders 0em — which matters,
+		// because an explicit 0 resets inherited spacing where absence would not
+		if (!phpFalsy(props.letterSpacing)) {
+			rules.push('letter-spacing: ' + (phpInt(props.letterSpacing) / 1000) + 'em');
+		}
+
+		if (!phpFalsy(props.lineHeight)) {
+			rules.push('line-height: ' + phpFloatStr(props.lineHeight));
+		}
+
+		if (props.fontVariationSettings) {
+			var pairs = String(props.fontVariationSettings).split(',');
+			var cleanPairs = [];
+			for (var j = 0; j < pairs.length; j++) {
+				var m = pairs[j].trim().match(/^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/);
+				if (m) {
+					cleanPairs.push('"' + m[1] + '" ' + phpFloatStr(m[2]));
+				}
+			}
+			if (cleanPairs.length) {
+				rules.push('font-variation-settings: ' + cleanPairs.join(', '));
+			}
+		}
+
+		if (props.fontSize !== undefined && isFinite(props.fontSize) && Number(props.fontSize) > 0) {
+			rules.push('font-size: ' + phpInt(props.fontSize) + 'px');
+		}
+
+		// Responsive clamp; fit styles emit the same fallback clamp (see the
+		// PHP twin for why)
+		if ((props.fontSize === 'responsive' || props.fontSize === 'fit') &&
+			props.fontSizeMin !== undefined && props.fontSizePreferred !== undefined && props.fontSizeMax !== undefined) {
+			var min = phpInt(props.fontSizeMin);
+			var pref = phpInt(props.fontSizePreferred);
+			var max = phpInt(props.fontSizeMax);
+			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
+			rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
+		}
+
+		if (!rules.length) return '';
+
+		var id = parseInt(style.id, 10);
+		var selector = '.typost-ps-' + id + ',\n.typost-styled[data-style-id="' + id + '"]';
+		if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+			selector += ',\n.typost-ps-' + style.legacyId + ',\n.typost-styled[data-style-id="' + style.legacyId + '"]';
+		}
+
+		return selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
@@ -312,6 +489,7 @@
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,
+		buildStyleCssBlock: buildStyleCssBlock,
 	};
 
 	if (typeof window !== 'undefined') {

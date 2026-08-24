@@ -602,6 +602,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
                         fontStyle: self.getRenderedFontStyle(),
+                        // Attr/choice-derived only — what persisting consumers
+                        // (paragraph style capture/diff) must read instead
+                        explicitFontStyle: self.getExplicitFontStyle(),
                         fontSize: self.state.fontSize,
                         fontSizeMin: self.state.fontSizeMin,
                         fontSizePreferred: self.state.fontSizePreferred,
@@ -1139,6 +1142,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             return '';
+        }
+
+        /**
+         * The font style explicitly SET on the selection — the popover's live
+         * Font Style choice while it is open, else the span's data-fontstyle.
+         * Never the core Italic (<em>) format: that renders italic on its own,
+         * so persisting consumers (paragraph style capture) must not treat it
+         * as a chosen value — a style's CSS could neither reproduce it
+         * elsewhere nor reset it (em's element rule outranks an inherited
+         * font-style), so capturing it would bake phantom italic into styles.
+         */
+        getExplicitFontStyle() {
+            if (this.state && this.state.isOpen) {
+                return this.state.fontStyle || '';
+            }
+            return this.getActiveFontStyle() || '';
         }
 
         /**
