@@ -351,7 +351,7 @@ add_filter('typost_content_font_ids', function($ids, $content) {
 **Details:**
 - `$content` is the raw post content plus its rendered form for the page scan, and a block's `content` attribute for the block scan — attribute JSON escapes quotes, so match `["\'\\\\]*` around values.
 - Return an array of positive integer font IDs; invalid entries are discarded. IDs resolve through the font-replacement chain like every other detected font.
-- Results are cached per post for 12 hours with the rest of the detection. When the data behind your IDs changes, call `Typost::get_instance()->clear_font_detection_cache()`.
+- Results are cached per post for 12 hours with the rest of the detection. When the data behind your IDs changes, call `Typost::get_instance()->clear_font_detection_cache()`. Call it on saves, not on every request: under a persistent object cache (Redis, Memcached) it flushes the whole object cache, because the wildcard transient deletes cannot reach the cached copies.
 - Unlike `typost_force_enqueue_font_ids`, this loads fonts only on pages whose content references them.
 
 ---

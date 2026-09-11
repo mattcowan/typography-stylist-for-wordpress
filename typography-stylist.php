@@ -3201,6 +3201,12 @@ class Typost {
      * invalidate it when that data changes — a style that switches font
      * would otherwise keep serving the old @font-face for up to 12 hours.
      *
+     * Under a persistent object cache (Redis, Memcached) this flushes the
+     * whole object cache, because the wildcard row deletes cannot reach the
+     * cached transient copies. Call it on data changes, not on every request.
+     * On the `clear_cache()` path the later editor-data invalidation flushes
+     * again; both are idempotent.
+     *
      * @since 2.3.0
      */
     public function clear_font_detection_cache() {
