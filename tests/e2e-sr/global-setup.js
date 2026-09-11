@@ -1,34 +1,50 @@
 /**
  * Log in once with headless Chromium and save the cookies for the
  * screen-reader project. Credentials come from .env (WP_USERNAME /
- * WP_PASSWORD); the base URL defaults to the mnc4 Local site.
+ * WP_PASSWORD); WP_BASE_URL is the site.
  */
 require('dotenv').config();
+const dns = require('dns').promises;
 const path = require('path');
 const { chromium } = require('@playwright/test');
 
-/**
- * Is this a host where plain HTTP is acceptable for a login?
- *
- * Local development sites: loopback, private IPv4 ranges, dotless hostnames
- * (`typography-stylist:8080`, `host.docker.internal` is covered by the
- * suffix list), and the usual local TLDs. Anything else looks public and
- * must use HTTPS, because the login posts the password.
- * `WP_ALLOW_HTTP=1` overrides for the odd intranet host.
- */
-function isLocalHost(hostname) {
-  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
-  if (!h) return false;
-  if (h === 'localhost' || h === '::1' || h === '0.0.0.0') return true;
-  if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) || /^169\.254\./.test(h)) return true;
-  if (!h.includes('.')) return true; // dotless intranet / hosts-file name
-  return /\.(local|test|localhost|internal|lan|home|example)$/.test(h);
+/** Loopback addresses: the only hosts where cleartext HTTP never leaves the machine. */
+function isLoopbackAddress(address) {
+  const a = String(address || '').toLowerCase().replace(/^\[|\]$/g, '');
+  return a === '::1' || a === '0.0.0.0' || /^127\./.test(a) || /^::ffff:127\./.test(a);
 }
 
-function assertSafeBaseUrl(baseURL) {
+/**
+ * May this host be reached over plain HTTP for a login?
+ *
+ * Only a host that resolves to loopback qualifies on its own: Local-style
+ * hosts-file names (`mnc4.local`, `typography-stylist`) resolve to
+ * 127.0.0.1, so they pass without ceremony, while a LAN address such as
+ * `192.168.1.10` does not — the password would cross the network in clear.
+ * `WP_ALLOW_HTTP=1` is the explicit override for a trusted intranet host.
+ */
+async function isLoopbackHost(hostname) {
+  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
+  if (!h) return false;
+  if (h === 'localhost' || isLoopbackAddress(h)) return true;
+  try {
+    const records = await dns.lookup(h, { all: true });
+    return records.length > 0 && records.every((r) => isLoopbackAddress(r.address));
+  } catch (e) {
+    return false; // unresolvable: not provably local
+  }
+}
+
+/** Throw unless the URL is HTTPS, loopback, or explicitly allowed. */
+async function assertSafeBaseUrl(baseURL) {
   const url = new URL(baseURL);
-  if (url.protocol === 'http:' && !isLocalHost(url.hostname) && process.env.WP_ALLOW_HTTP !== '1') {
-    throw new Error(`WP_BASE_URL uses plain HTTP for a non-local host (${url.hostname}). Use https:// for remote sites, or set WP_ALLOW_HTTP=1 for a trusted intranet host.`);
+  if (url.protocol === 'https:') return;
+  if (url.protocol !== 'http:') {
+    throw new Error(`WP_BASE_URL must be http(s): ${baseURL}`);
+  }
+  if (process.env.WP_ALLOW_HTTP === '1') return;
+  if (!(await isLoopbackHost(url.hostname))) {
+    throw new Error(`WP_BASE_URL uses plain HTTP for a host that does not resolve to loopback (${url.hostname}). Use https://, or set WP_ALLOW_HTTP=1 for a trusted intranet host.`);
   }
 }
 
@@ -39,11 +55,20 @@ module.exports = async () => {
   if (!username || !password) {
     throw new Error('Set WP_USERNAME and WP_PASSWORD in .env before running the screen-reader tests.');
   }
-  assertSafeBaseUrl(baseURL);
+  await assertSafeBaseUrl(baseURL);
+  const expectedOrigin = new URL(baseURL).origin;
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(`${baseURL}/wp-login.php`);
+  // goto follows redirects. Do not type the password into a page that a
+  // redirect moved to another origin or downgraded to HTTP.
+  const landed = page.url();
+  if (new URL(landed).origin !== expectedOrigin) {
+    await browser.close();
+    throw new Error(`The login page redirected to a different origin (${landed}); expected ${expectedOrigin}.`);
+  }
+  await assertSafeBaseUrl(landed);
   await page.fill('#user_login', username);
   await page.fill('#user_pass', password);
   await Promise.all([
@@ -54,5 +79,5 @@ module.exports = async () => {
   await browser.close();
 };
 
-module.exports.isLocalHost = isLocalHost;
+module.exports.isLoopbackHost = isLoopbackHost;
 module.exports.assertSafeBaseUrl = assertSafeBaseUrl;
