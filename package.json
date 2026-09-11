@@ -26,13 +26,17 @@
     "test:e2e:report": "playwright show-report",
     "test:all": "npm test && npm run test:php",
     "version": "npm run build",
-    "package": "npm run build && node scripts/package.js"
+    "package": "npm run build && node scripts/package.js",
+    "test:sr": "playwright test -c playwright.nvda.config.js",
+    "test:sr:headed": "playwright test -c playwright.nvda.config.js --headed"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.5",
     "@babel/preset-env": "^7.28.5",
     "@babel/preset-react": "^7.28.5",
+    "@guidepup/guidepup": "^0.34.0",
+    "@guidepup/playwright": "^0.19.1",
     "@playwright/test": "^1.58.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",

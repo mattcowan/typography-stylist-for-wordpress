@@ -333,6 +333,27 @@ add_filter('typost_force_enqueue_font_ids', function($ids) {
 - Forcing any ID causes the `--font-N` variables `<style>` block and the frontend stylesheet handle to be output on all pages.
 - The result is memoized per request and feeds transient cache keys — callbacks must return stable output for a given request.
 
+#### `typost_content_font_ids`
+
+*Since 2.3.0.* Report font IDs that a piece of content uses indirectly. The frontend font scan recognizes `data-font`, `data-font-id` and `--font-N`. Content styled only through a class — a `<span data-style-id="N">` or a block with `typost-ps-N` — names no font, so the scan cannot see it. Return the numeric font IDs those references stand for and core enqueues their `@font-face` and `--font-N` variables for that page only. The bundled Paragraph Styles module uses this filter.
+
+```php
+add_filter('typost_content_font_ids', function($ids, $content) {
+    if (preg_match_all('/data-my-preset=["\'\\\\]*(\d+)/', $content, $m)) {
+        foreach ($m[1] as $preset_id) {
+            $ids[] = my_plugin_font_id_for_preset((int) $preset_id);
+        }
+    }
+    return $ids;
+}, 10, 2);
+```
+
+**Details:**
+- `$content` is the raw post content plus its rendered form for the page scan, and a block's `content` attribute for the block scan — attribute JSON escapes quotes, so match `["\'\\\\]*` around values.
+- Return an array of positive integer font IDs; invalid entries are discarded. IDs resolve through the font-replacement chain like every other detected font.
+- Results are cached per post for 12 hours with the rest of the detection. When the data behind your IDs changes, call `Typost::get_instance()->clear_font_detection_cache()`. Call it on saves, not on every request: under a persistent object cache (Redis, Memcached) it flushes the whole object cache, because the wildcard transient deletes cannot reach the cached copies.
+- Unlike `typost_force_enqueue_font_ids`, this loads fonts only on pages whose content references them.
+
 ---
 
 ## JavaScript Hooks

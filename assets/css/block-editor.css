@@ -381,13 +381,16 @@
     outline-offset: 2px;
 }
 
-/* Styled Text in Editor */
-.typost-styled {
+/* Styled Text in Editor — inline spans only. A styled Typography Stylist
+   block carries .typost-styled on its content element too (so the
+   paragraph-style class rule can render it in the editor), and must not
+   get the span affordances. */
+span.typost-styled {
     position: relative;
     border-bottom: 1px dotted rgba(0, 122, 204, 0.4);
 }
 
-.typost-styled:hover {
+span.typost-styled:hover {
     background: rgba(0, 122, 204, 0.05);
 }
 

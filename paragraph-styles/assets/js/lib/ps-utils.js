@@ -376,6 +376,19 @@
 	}
 
 	/**
+	 * The selector list for one style id (numeric or legacy string).
+	 *
+	 * @param {number|string} id Style id.
+	 * @return {string} Comma+newline separated selectors.
+	 */
+	function selectorSet(id) {
+		var cls = '.typost-ps-' + id;
+		return cls + ',\n' +
+			'.typost-styled' + cls + cls + cls + cls + cls + ',\n' +
+			'.typost-styled[data-style-id="' + id + '"][data-style-id][data-style-id][data-style-id][data-style-id]';
+	}
+
+	/**
 	 * Build the CSS rule block for one stored style — the JS twin of PHP
 	 * generate_style_css() in paragraph-styles.php.
 	 *
@@ -473,10 +486,16 @@
 
 		if (!rules.length) return '';
 
+		// Same three selectors as generate_style_css() in PHP, byte for byte:
+		// a plain `.typost-ps-N` for previews, then the block-level and
+		// inline-span forms boosted to (0,6,0) so theme heading rules (often
+		// (0,1,1), up to (0,3,4) on the frontend and (0,5,2) in the editor where
+		// WordPress prefixes them with .editor-styles-wrapper) cannot override
+		// the style.
 		var id = parseInt(style.id, 10);
-		var selector = '.typost-ps-' + id + ',\n.typost-styled[data-style-id="' + id + '"]';
+		var selector = selectorSet(id);
 		if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
-			selector += ',\n.typost-ps-' + style.legacyId + ',\n.typost-styled[data-style-id="' + style.legacyId + '"]';
+			selector += ',\n' + selectorSet(String(style.legacyId));
 		}
 
 		return selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';

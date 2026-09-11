@@ -173,13 +173,42 @@
 			return null;
 		}, [activeStyleId, currentStyles]);
 
-		// Check if current state is modified from the active style
-		var modified = useMemo(function() {
-			if (!activeStyle) return false;
-			if (!window.typostHooks) return false;
+		// Is the editor state modified from the active style?
+		//
+		// Computed live, not memoized on [activeStyle, editorSource]: that memo
+		// ran once in the render right after a style was picked — before core
+		// had applied it, so it said "(modified)" for an unmodified style — and
+		// never re-ran after a real edit, so it stayed blank until the panel
+		// remounted (QA findings PS-1/PS-1b). The block-editor store changes on
+		// every apply and every Inspector edit, so a store subscription is the
+		// signal; the value is only committed to state when it actually flips.
+		var modifiedState = useState(false);
+		var modified       = modifiedState[0];
+		var setModified    = modifiedState[1];
+
+		useEffect(function() {
+			if (!activeStyle || !window.typostHooks) {
+				setModified(false);
+				return undefined;
+			}
 			var editorType = editorSource === 'inspector' ? 'qft' : editorSource;
-			var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType);
-			return isStyleModified(state, activeStyle.properties);
+			var cancelled = false;
+			var compute = function() {
+				if (cancelled) return;
+				var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType);
+				var next = isStyleModified(state, activeStyle.properties);
+				setModified(function(prev) { return prev === next ? prev : next; });
+			};
+			// The apply that made this style active is dispatched as an event and
+			// lands in the store a tick later; check now and again after it.
+			compute();
+			var timer = setTimeout(compute, 150);
+			var unsubscribe = (window.wp && wp.data && wp.data.subscribe) ? wp.data.subscribe(compute) : function() {};
+			return function() {
+				cancelled = true;
+				clearTimeout(timer);
+				unsubscribe();
+			};
 		}, [activeStyle, editorSource]);
 
 		// Get current editor state for saving
@@ -406,6 +435,11 @@
 					__('Paragraph Style', 'typost-paragraph-styles')
 				),
 				el(SelectControl, {
+					// The visible "Paragraph Style" heading above is a plain div, so
+					// without this the select had no accessible name — NVDA read it
+					// as "combo box, — Select a style —, collapsed" (QA finding SR-2).
+					label: __('Paragraph Style', 'typost-paragraph-styles'),
+					hideLabelFromVision: true,
 					value: selectedStyleId,
 					options: options,
 					onChange: onSelectStyle,

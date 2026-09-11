@@ -30,10 +30,17 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
+
+// Keep keyboard focus inside the plugin's modals (inline modal, QFT modal,
+// Glyphs panel, Paragraph Styles browser) when RichText re-applies a
+// selection after an apply/insert. Firefox moves focus into the canvas
+// iframe on that write, stranding keyboard users outside an open dialog.
+// The guard lives on the editor document, so one install covers every editor.
+installModalFocusGuard();
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -484,6 +491,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// typost-styled span via format attributes. Uses ref pattern to avoid stale closures.
 	const insertContentRef = useRef({});
 	insertContentRef.current = { content, capturedSelection, selectionStart, selectionEnd, clientId, isPopoverOpen };
+	// What the last extension insertion put where (see adjustInsertionRangeForSwap)
+	const lastInsertRef = useRef(null);
 
 	useEffect(() => {
 		const handleInsertContent = (e) => {
@@ -504,14 +513,19 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			const value = create({ html: cleanContent });
 			// Selection priority: own captured selection → range captured by the
 			// extension at launch (detail.range) → live block selection → append
-			const range = resolveQftInsertionRange(
+			const resolved = resolveQftInsertionRange(
 				captured || e.detail.range || null,
 				selStart, selEnd, curClientId, value.text.length
 			);
+			// Keep a glyph that stayed selected only for alternate swapping from
+			// being overwritten by a different character, and let an alternate
+			// picked right after a caret insertion replace that glyph (GP-1).
+			const range = adjustInsertionRangeForSwap(resolved, lastInsertRef.current, !!e.detail.swap, value.text);
 
 			const text = String(e.detail.text).slice(0, 50);
 			let newValue = insertRichText(value, text, range.start, range.end);
 			const insertEnd = range.start + text.length;
+			lastInsertRef.current = { start: range.start, end: insertEnd, text, swap: !!e.detail.swap };
 
 			// Copy formats so insertion behaves like typing (continuity). When
 			// replacing a selection, inherit from the replaced range's first
@@ -3228,33 +3242,111 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			newContent = container.innerHTML;
 		}
 
-		// Single setAttributes call for both content and block-level attributes
+		// Single setAttributes call for both content and block-level attributes.
+		// A full reset also drops the paragraph style (otherwise the class kept
+		// rendering it) and the block-level font, style and variation axes.
 		setAttributes({
 			content: newContent,
+			styleClass: '',
 			features: [],
+			fontId: 0,
 			fontFamily: '',
 			fontWeight: '',
+			fontStyle: '',
+			fontVariationSettings: '',
 			letterSpacing: 0,
 			lineHeight: 0,
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 32,
-			fontSizeMax: 64
+			fontSizeMax: 64,
+			fitMaxSize: 0
 		});
 
 		setShowInlineResetConfirm(false);
 		setShowFullResetConfirm(false);
 	};
 
+	// The paragraph style behind styleClass, when it still exists. With it the
+	// content element carries the style's class and the class rule renders the
+	// style in the editor exactly as on the frontend (save.js emits no inline
+	// styles under a styleClass). Attributes are the Inspector's working copy:
+	// only the ones that differ from the style are still rendered inline, so
+	// an in-progress edit previews without hiding the style, and a style
+	// updated elsewhere shows on every block that uses it (PS-5) — including
+	// fixed px sizes the block cannot express itself (PS-4).
+	// Bumps when the Paragraph Styles module saves/updates/deletes a style
+	// (it rewrites window.typostData.paragraphStyles and fires this event), so
+	// every block using the style re-reads it and re-renders from the class.
+	const [paragraphStylesVersion, setParagraphStylesVersion] = useState(0);
+	useEffect(() => {
+		const onStylesUpdated = () => {
+			setParagraphStylesVersion((v) => v + 1);
+			// Re-sync this block's working copy with the style it uses. The
+			// attributes are a copy taken when the style was applied; after
+			// "Update Style" elsewhere they would differ from the style and be
+			// rendered inline as if they were edits, hiding the update (PS-5).
+			// An in-progress edit on a block other than the one that saved the
+			// style is overwritten by that save — the style is authoritative.
+			const current = qftStateRef.current || {};
+			const style = findParagraphStyleByClass(current.styleClass, window.typostData && window.typostData.paragraphStyles);
+			if (!style || !style.properties) {
+				return;
+			}
+			const overrides = stylePropertyOverrides(current, style.properties);
+			if (!Object.keys(overrides).length) {
+				return;
+			}
+			const psUtils = window.typostPSUtils;
+			const props = psUtils && psUtils.normalizeApplyProperties ? psUtils.normalizeApplyProperties(style.properties) : style.properties;
+			const { fontIdMap: idMap } = blockPropsRef.current || {};
+			const synced = {};
+			['fontId', 'fontWeight', 'fontStyle', 'fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize', 'letterSpacing', 'lineHeight', 'features', 'fontVariationSettings'].forEach((key) => {
+				if (props[key] !== undefined) {
+					synced[key] = props[key];
+				}
+			});
+			if (synced.fontId !== undefined && idMap && idMap[synced.fontId]) {
+				synced.fontFamily = idMap[synced.fontId].family;
+			}
+			// Derived state, not an edit: one undo step per synced block would
+			// let Ctrl+Z pull a single block back out of sync with its style.
+			if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
+				dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
+			}
+			setAttributes(synced);
+		};
+		document.addEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+		return () => document.removeEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+	}, [setAttributes]);
+	const activeParagraphStyle = useMemo(
+		() => findParagraphStyleByClass(styleClass, window.typostData && window.typostData.paragraphStyles),
+		[styleClass, paragraphStylesVersion]
+	);
+	// A styleClass whose style was deleted leaves the editor and the frontend
+	// permanently apart: save.js emits no inline styles under a styleClass and
+	// the class rule is gone, so the frontend falls back to the theme while the
+	// editor still shows the attribute copy. Drop the orphaned class so the
+	// block behaves as detached and both sides render the attributes inline.
+	useEffect(() => {
+		if (isOrphanStyleClass(styleClass, window.typostData && window.typostData.paragraphStyles)) {
+			setAttributes({ styleClass: '' });
+		}
+	}, [styleClass, paragraphStylesVersion, setAttributes]);
+	const styleOverrides = useMemo(
+		() => activeParagraphStyle
+			? stylePropertyOverrides({ fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings }, activeParagraphStyle.properties)
+			: null,
+		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings]
+	);
+	const rendersInline = (key) => !styleOverrides || !!styleOverrides[key];
+	const contentClassName = 'typost-block-content' + (activeParagraphStyle ? ` typost-styled ${styleClass}` : '');
+
 	// Build inline style for preview
 	const buildStyle = () => {
 		const styles = {};
 
-		// Note: styleClass is used by save.js to skip inline styles on the frontend
-		// (CSS class provides styling there). In the editor, we always need inline
-		// styles for visual preview since the block element doesn't carry the class.
-
-		if (features.length > 0) {
+		if (features.length > 0 && rendersInline('features')) {
 			styles.fontFeatureSettings = features.map(f => `"${f}" 1`).join(', ');
 		}
 
@@ -3264,27 +3356,27 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// carry only fontId, and gating on fontFamily rendered them in the
 		// theme's inherited font.
 		const blockFontFamily = resolveBlockFontFamilyStyle(fontId, fontFamily);
-		if (blockFontFamily) {
+		if (blockFontFamily && rendersInline('fontId')) {
 			styles.fontFamily = blockFontFamily;
 		}
 
-		if (fontWeight) {
+		if (fontWeight && rendersInline('fontWeight')) {
 			styles.fontWeight = fontWeight;
 		}
 
-		if (fontStyle) {
+		if (fontStyle && rendersInline('fontStyle')) {
 			styles.fontStyle = fontStyle;
 		}
 
-		if (letterSpacing !== 0) {
+		if (letterSpacing !== 0 && rendersInline('letterSpacing')) {
 			styles.letterSpacing = `${letterSpacing / 1000}em`;
 		}
 
-		if (lineHeight !== 0) {
+		if (lineHeight !== 0 && rendersInline('lineHeight')) {
 			styles.lineHeight = lineHeight;
 		}
 
-		if (fontSize === 'responsive') {
+		if (fontSize === 'responsive' && rendersInline('fontSize')) {
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
@@ -3293,11 +3385,20 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// font-size. The block-level size is only the fallback that
 		// unmeasured lines and empty lines inherit — the same clamp the
 		// frontend emits (save.js) for browsers without container queries.
-		if (fontSize === 'fit') {
+		if (fontSize === 'fit' && rendersInline('fontSize')) {
 			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
 		}
 
-		if (fontVariationSettings) {
+		// A fixed px size (a style created from the inline editor) has no
+		// block-native control; render it inline when it is not coming from
+		// the style's class (an edit in progress, or a detached block that
+		// kept the size — an orphaned styleClass is cleared above, so the
+		// frontend renders the same inline size).
+		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize))) {
+			styles.fontSize = `${fontSize}px`;
+		}
+
+		if (fontVariationSettings && rendersInline('fontVariationSettings')) {
 			styles.fontVariationSettings = fontVariationSettings;
 		}
 
@@ -4494,7 +4595,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
 						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
 						style={buildStyle()}
-						className="typost-block-content typost-styled typost-fit typost-fit-editing"
+						className={`typost-block-content typost-styled typost-fit typost-fit-editing${activeParagraphStyle ? ` ${styleClass}` : ''}`}
 					/>
 				) : (
 					<RichText
@@ -4504,7 +4605,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						onChange={(value) => setAttributes({ content: value })}
 						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
 						style={buildStyle()}
-						className="typost-block-content"
+						className={contentClassName}
 					/>
 				)}
 			</div>
