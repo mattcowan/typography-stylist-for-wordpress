@@ -30,8 +30,14 @@ describe('isOrphanStyleClass', () => {
 		expect(isOrphanStyleClass('typost-ps-999', undefined)).toBe(false);
 		expect(isOrphanStyleClass('typost-ps-999', null)).toBe(false);
 		expect(isOrphanStyleClass('', styles)).toBe(false);
-		// An empty list is a real answer: every class is orphaned.
+		// An empty list is a real answer: every paragraph-style class is orphaned.
 		expect(isOrphanStyleClass('typost-ps-4', [])).toBe(true);
+	});
+
+	test('a class from another extension is not a paragraph style and is never cleared', () => {
+		expect(isOrphanStyleClass('my-extension-class', styles)).toBe(false);
+		expect(isOrphanStyleClass('my-extension-class', [])).toBe(false);
+		expect(isOrphanStyleClass('typost-layered-3', [])).toBe(false);
 	});
 });
 

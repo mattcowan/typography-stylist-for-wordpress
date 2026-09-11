@@ -65,6 +65,20 @@ class ContentFontIdsFilterTest extends TestCase {
         $this->assertSame([], $used);
     }
 
+    public function test_extension_only_content_counts_as_styled_for_the_frontend_gate() {
+        // No typost-styled class and no Typography Stylist block: only the
+        // filter can say this page needs font assets.
+        Filters\expectApplied('typost_content_font_ids')
+            ->twice()
+            ->andReturnUsing(function ($ids, $content) {
+                return strpos($content, 'data-my-preset="2"') !== false ? [40] : $ids;
+            });
+
+        $plugin = $this->freshInstance();
+        $this->assertTrue($this->invokePrivate($plugin, 'content_references_extension_fonts', ['<p data-my-preset="2">x</p>']));
+        $this->assertFalse($this->invokePrivate($plugin, 'content_references_extension_fonts', ['<p>plain</p>']));
+    }
+
     public function test_block_attribute_scan_asks_the_filter_for_inline_content() {
         // A Typography Stylist block whose only styling is a class-only span.
         $blocks = [[

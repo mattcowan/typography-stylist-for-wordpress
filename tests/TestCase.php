@@ -33,6 +33,8 @@ abstract class TestCase extends PHPUnitTestCase {
         Monkey\Functions\when('esc_html__')->returnArg();
         Monkey\Functions\when('__')->returnArg();
         Monkey\Functions\when('wp_strip_all_tags')->returnArg();
+        // Tests run without a persistent object cache.
+        Monkey\Functions\when('wp_using_ext_object_cache')->justReturn(false);
         Monkey\Functions\when('esc_attr')->returnArg();
         Monkey\Functions\when('esc_html')->returnArg();
 

@@ -3302,6 +3302,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			if (synced.fontId !== undefined && idMap && idMap[synced.fontId]) {
 				synced.fontFamily = idMap[synced.fontId].family;
 			}
+			// Derived state, not an edit: one undo step per synced block would
+			// let Ctrl+Z pull a single block back out of sync with its style.
+			if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
+				dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
+			}
 			setAttributes(synced);
 		};
 		document.addEventListener('typost-paragraph-styles-updated', onStylesUpdated);

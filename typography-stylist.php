@@ -500,7 +500,13 @@ class Typost {
                 // Also check for Typography Stylist blocks directly (block-level fonts)
                 $has_typost_block = (strpos($raw_content, 'wp:typost/block') !== false);
 
-                $has_styled = ($has_styled_class || $has_typost_block) ? 'yes' : 'no';
+                // Content that references fonts only through an extension's own
+                // markup (typost_content_font_ids) carries neither marker, yet
+                // still needs the font assets. Ask before deciding "no".
+                $has_extension_fonts = (!$has_styled_class && !$has_typost_block)
+                    && $this->content_references_extension_fonts($raw_content . ' ' . $rendered_content);
+
+                $has_styled = ($has_styled_class || $has_typost_block || $has_extension_fonts) ? 'yes' : 'no';
 
                 set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
             }
@@ -541,6 +547,12 @@ class Typost {
                     if (strpos($rendered_content, 'typost-styled') !== false) {
                         $has_styled = 'yes';
                         break; // Found styled content, no need to check more
+                    }
+
+                    // Fonts referenced only through an extension's own markup
+                    if ($this->content_references_extension_fonts($content_to_check . ' ' . $rendered_content)) {
+                        $has_styled = 'yes';
+                        break;
                     }
                 }
 
@@ -3203,6 +3215,13 @@ class Typost {
         $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_typost_used_fonts_') . '%'));
         $wpdb->query($wpdb->prepare("DELETE FROM {$wpdb->options} WHERE option_name LIKE %s", $wpdb->esc_like('_transient_timeout_typost_used_fonts_') . '%'));
         // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+
+        // The row deletes above do not reach a persistent object cache, where
+        // get_transient() would keep answering from the cached copy. The other
+        // wildcard deletion paths flush for the same reason.
+        if (wp_using_ext_object_cache()) {
+            wp_cache_flush();
+        }
     }
 
     /**
@@ -5723,6 +5742,24 @@ class Typost {
                 $used_fonts[] = 'id:' . $id;
             }
         }
+    }
+
+    /**
+     * Does this content reference any font only through an extension's markup?
+     *
+     * Used by the has-styled-content gate: a page whose only typography
+     * comes from an extension (no `typost-styled` class, no Typography
+     * Stylist block) would otherwise be skipped before the font scan ran,
+     * and its `@font-face` rules and `--font-N` variables never printed.
+     *
+     * @since 2.3.0
+     * @param string $content Raw plus rendered content.
+     * @return bool
+     */
+    private function content_references_extension_fonts($content) {
+        $ids = array();
+        $this->collect_extension_font_ids($content, $ids);
+        return !empty($ids);
     }
 
     /**

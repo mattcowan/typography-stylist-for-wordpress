@@ -3379,6 +3379,12 @@ export function isOrphanStyleClass(styleClass, styles) {
 	if (!styleClass || !Array.isArray(styles)) {
 		return false;
 	}
+	// styleClass is generic infrastructure: an extension may set a class of
+	// its own through the apply bridge. Only paragraph-style classes are ours
+	// to judge; anything without a typost-ps-<id> token is left alone.
+	if (!/typost-ps-[A-Za-z0-9_-]+/.test(String(styleClass))) {
+		return false;
+	}
 	return findParagraphStyleByClass(styleClass, styles) === null;
 }
 

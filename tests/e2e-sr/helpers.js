@@ -54,13 +54,22 @@ async function focusBrowser(page, nvda) {
   await delay(300);
   const wanted = /Add Post|Edit Post|Word ?Press/i;
   const seen = [];
+  let focused = false;
   for (let i = 0; i < 8; i++) {
     await nvda.perform(nvda.keyboardCommands.reportTitle);
     const title = await nvda.lastSpokenPhrase();
     seen.push(title);
-    if (wanted.test(title)) break;
+    if (wanted.test(title)) {
+      focused = true;
+      break;
+    }
     await nvda.perform({ keyCode: [WindowsKeyCodes.Escape], modifiers: [WindowsModifiers.Alt] }, { capture: false });
     await delay(500);
+  }
+  if (!focused) {
+    // Never carry on: every later keystroke would land in whatever
+    // application is in the foreground instead of the browser.
+    throw new Error(`Could not bring Firefox to the front for NVDA. Titles seen: ${JSON.stringify(seen)}`);
   }
   await nvda.clearSpokenPhraseLog();
   return seen;

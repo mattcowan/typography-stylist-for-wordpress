@@ -38,13 +38,19 @@ window.__qa = {
     await this.sleep(150);
     this.selectText(clientId, start, end);
     await this.sleep(400);
+    // The store must report this block with these offsets — matching
+    // offsets in a different block would pass every downstream assertion
+    // against the wrong text.
+    const matches = (sel) => !!(sel.start && sel.end
+      && sel.start.clientId === clientId && sel.end.clientId === clientId
+      && sel.start.offset === start && sel.end.offset === end);
     let st = this.storeSel();
-    if (st.start.offset !== start || st.end.offset !== end) {
+    if (!matches(st)) {
       d.selectionChange(clientId, 'content', start, end);
       await this.sleep(200);
       st = this.storeSel();
     }
-    return { ok: st.start.offset === start && st.end.offset === end, store: st };
+    return { ok: matches(st), store: st };
   },
   html(clientId) { return wp.blocks.serialize(wp.data.select('core/block-editor').getBlock(clientId)); },
   storeSel() { const s = wp.data.select('core/block-editor'); return { start: s.getSelectionStart(), end: s.getSelectionEnd() }; },

@@ -66,6 +66,12 @@ test.describe('Glyphs panel with NVDA', () => {
     // can no longer close it — that is a product finding, not a harness one.)
     const focusAfterInsert = await h.describeFocus(page);
     const focusInCanvas = await h.describeCanvasFocus(page);
+    // Containment is the real assertion: focus on the body or a toolbar
+    // button outside the dialog is as broken as focus in the canvas.
+    const focusInsideDialog = await page.evaluate(() => {
+      const modal = document.querySelector('.components-modal__frame.typost-glyphs-modal');
+      return Boolean(modal && modal.contains(document.activeElement));
+    });
 
     const close = await h.closeModalWithEscape(page, nvda, '.typost-glyph-cell');
     const modalClosed = close.closed;
@@ -73,7 +79,7 @@ test.describe('Glyphs panel with NVDA', () => {
     const escapesNeeded = close.escapesNeeded;
 
     const log = await h.saveSpeechLog(nvda, 'glyphs-panel', { focusTitles,
-      openPhrase, focusAtOpen, tabStops, focusAtGrid, initialCell, modePhrases, cell, cellPhrase, insertPhrase, closePhrase, escapesNeeded, close, focusAfterInsert, focusInCanvas, html, modalClosed,
+      openPhrase, focusAtOpen, tabStops, focusAtGrid, initialCell, modePhrases, cell, cellPhrase, insertPhrase, closePhrase, escapesNeeded, close, focusAfterInsert, focusInCanvas, focusInsideDialog, html, modalClosed,
     });
 
     // Product assertions (true regardless of exact NVDA wording).
@@ -82,7 +88,7 @@ test.describe('Glyphs panel with NVDA', () => {
     expect(html).toContain('data-features="salt"');
     // SR-7: after Enter inserts a glyph, focus jumps into the editor canvas and
     // the dialog can no longer be closed with Escape. Expected to fail until fixed.
-    expect(focusAfterInsert && focusAfterInsert.tag, 'focus must stay inside the dialog after inserting (SR-7)').not.toBe('IFRAME');
+    expect(focusInsideDialog, 'focus must stay inside the dialog after inserting (SR-7)').toBe(true);
     expect(modalClosed, 'Escape should close the dialog (SR-7)').toBe(true);
 
     // Screen-reader assertions.

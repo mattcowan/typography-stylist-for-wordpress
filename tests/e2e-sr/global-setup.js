@@ -14,6 +14,13 @@ module.exports = async () => {
   if (!username || !password) {
     throw new Error('Set WP_USERNAME and WP_PASSWORD in .env before running the screen-reader tests.');
   }
+  // The login posts the password. Plain HTTP is acceptable only for a local
+  // development site; a remote site must be reached over HTTPS.
+  const url = new URL(baseURL);
+  const localHost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(url.hostname) || /\.(local|test|localhost)$/i.test(url.hostname);
+  if (url.protocol === 'http:' && !localHost) {
+    throw new Error(`WP_BASE_URL uses plain HTTP for a non-local host (${url.hostname}). Use https:// for remote sites.`);
+  }
 
   const browser = await chromium.launch();
   const page = await browser.newPage();

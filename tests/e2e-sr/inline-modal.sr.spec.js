@@ -37,8 +37,11 @@ test.describe('Inline editor modal with NVDA', () => {
 
     // Jump to the Standard Ligatures checkbox and toggle it with Space.
     const ligaInput = page.locator('.components-modal__frame input[type="checkbox"]').first();
+    // The toggle is the journey's primary interaction: a missing checkbox must
+    // fail the test, not quietly skip its assertions.
+    await expect(ligaInput).toHaveCount(1);
     let toggled = null;
-    if (await ligaInput.count()) {
+    {
       await ligaInput.focus();
       await h.delay(400);
       await nvda.press('Space');
@@ -49,6 +52,8 @@ test.describe('Inline editor modal with NVDA', () => {
         html: await h.blockHtml(page, clientId),
         focusAfter: await h.describeFocus(page),
         focusInCanvas: await h.describeCanvasFocus(page),
+        focusInsideModal: await page.locator('.components-modal__frame')
+          .evaluate((modal) => modal.contains(document.activeElement)),
       };
     }
 
@@ -70,7 +75,7 @@ test.describe('Inline editor modal with NVDA', () => {
       expect(toggled.phrase, 'Space should announce the new state').toMatch(/checked/i);
       // SR-7: after Space toggles a feature, focus jumps into the editor canvas
       // and the modal can no longer be closed with Escape. Expected to fail until fixed.
-      expect(toggled.focusAfter && toggled.focusAfter.tag, 'focus must stay inside the modal after toggling (SR-7)').not.toBe('IFRAME');
+      expect(toggled.focusInsideModal, 'focus must stay inside the modal after toggling (SR-7)').toBe(true);
     }
     expect(close.closed, 'Escape should close the modal (SR-7)').toBe(true);
 
