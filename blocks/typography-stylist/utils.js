@@ -3367,9 +3367,15 @@ export function findParagraphStyleByClass(styleClass, styles) {
  * gone once the style is deleted, so such a block renders at the theme's
  * defaults on the frontend while the editor still shows its attribute copy.
  * The editor clears the orphaned class so the block behaves as detached:
- * both sides then render the attributes inline. Only decided when the style
- * list is actually available — with the module absent there is nothing to
- * compare against and every styleClass would look orphaned.
+ * both sides then render the attributes inline.
+ *
+ * Two preconditions, both answered false rather than guessed:
+ *  - the class must carry a `typost-ps-<id>` token — `styleClass` is generic
+ *    infrastructure and an extension may set a class of its own through the
+ *    apply bridge, which is never ours to clear;
+ *  - the style list must be available — with the module absent there is
+ *    nothing to compare against and every paragraph-style class would look
+ *    orphaned. An empty list is a real answer (every such class is orphaned).
  *
  * @param {string}     styleClass Block attribute.
  * @param {Array|null} styles     window.typostData.paragraphStyles, when present.

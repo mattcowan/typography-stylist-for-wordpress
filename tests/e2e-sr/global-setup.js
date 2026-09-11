@@ -7,6 +7,31 @@ require('dotenv').config();
 const path = require('path');
 const { chromium } = require('@playwright/test');
 
+/**
+ * Is this a host where plain HTTP is acceptable for a login?
+ *
+ * Local development sites: loopback, private IPv4 ranges, dotless hostnames
+ * (`typography-stylist:8080`, `host.docker.internal` is covered by the
+ * suffix list), and the usual local TLDs. Anything else looks public and
+ * must use HTTPS, because the login posts the password.
+ * `WP_ALLOW_HTTP=1` overrides for the odd intranet host.
+ */
+function isLocalHost(hostname) {
+  const h = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
+  if (!h) return false;
+  if (h === 'localhost' || h === '::1' || h === '0.0.0.0') return true;
+  if (/^127\./.test(h) || /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) || /^169\.254\./.test(h)) return true;
+  if (!h.includes('.')) return true; // dotless intranet / hosts-file name
+  return /\.(local|test|localhost|internal|lan|home|example)$/.test(h);
+}
+
+function assertSafeBaseUrl(baseURL) {
+  const url = new URL(baseURL);
+  if (url.protocol === 'http:' && !isLocalHost(url.hostname) && process.env.WP_ALLOW_HTTP !== '1') {
+    throw new Error(`WP_BASE_URL uses plain HTTP for a non-local host (${url.hostname}). Use https:// for remote sites, or set WP_ALLOW_HTTP=1 for a trusted intranet host.`);
+  }
+}
+
 module.exports = async () => {
   const baseURL = process.env.WP_BASE_URL || 'http://mnc4.local';
   const username = process.env.WP_USERNAME;
@@ -14,13 +39,7 @@ module.exports = async () => {
   if (!username || !password) {
     throw new Error('Set WP_USERNAME and WP_PASSWORD in .env before running the screen-reader tests.');
   }
-  // The login posts the password. Plain HTTP is acceptable only for a local
-  // development site; a remote site must be reached over HTTPS.
-  const url = new URL(baseURL);
-  const localHost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(url.hostname) || /\.(local|test|localhost)$/i.test(url.hostname);
-  if (url.protocol === 'http:' && !localHost) {
-    throw new Error(`WP_BASE_URL uses plain HTTP for a non-local host (${url.hostname}). Use https:// for remote sites.`);
-  }
+  assertSafeBaseUrl(baseURL);
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -34,3 +53,6 @@ module.exports = async () => {
   await page.context().storageState({ path: path.join(__dirname, 'auth.json') });
   await browser.close();
 };
+
+module.exports.isLocalHost = isLocalHost;
+module.exports.assertSafeBaseUrl = assertSafeBaseUrl;
