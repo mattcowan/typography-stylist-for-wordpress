@@ -3242,18 +3242,25 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			newContent = container.innerHTML;
 		}
 
-		// Single setAttributes call for both content and block-level attributes
+		// Single setAttributes call for both content and block-level attributes.
+		// A full reset also drops the paragraph style (otherwise the class kept
+		// rendering it) and the block-level font, style and variation axes.
 		setAttributes({
 			content: newContent,
+			styleClass: '',
 			features: [],
+			fontId: 0,
 			fontFamily: '',
 			fontWeight: '',
+			fontStyle: '',
+			fontVariationSettings: '',
 			letterSpacing: 0,
 			lineHeight: 0,
 			fontSize: 'responsive',
 			fontSizeMin: 16,
 			fontSizePreferred: 32,
-			fontSizeMax: 64
+			fontSizeMax: 64,
+			fitMaxSize: 0
 		});
 
 		setShowInlineResetConfirm(false);
