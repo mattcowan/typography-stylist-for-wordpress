@@ -3299,9 +3299,393 @@ export function stripParagraphStyleOverrides(htmlContent, start, end, styleId) {
 	return { content: container.innerHTML, stripped };
 }
 
+/**
+ * Adjust an insertion range around the glyph inserted last (GP-1).
+ *
+ * The Glyphs panel's alternates view inserts with `swap: true`, which keeps
+ * the inserted glyph selected so the next alternate replaces it. Two cases
+ * went wrong at the seams:
+ *  - the author browses a *different* character next: the previous glyph
+ *    was still selected only for swapping, so a plain insertion overwrote
+ *    it ("Seq&" → "SeqW"). Such an insertion goes after it instead.
+ *  - the author inserted from a caret (no swap, caret collapsed after the
+ *    glyph) and then picks an alternate of that same glyph: the swap should
+ *    replace the glyph just inserted, not append another.
+ * `lastInsert` is what the editor recorded after its previous insertion
+ * ({start, end, text, swap}); it is honored only while that text is still
+ * at that position.
+ *
+ * @param {{start:number,end:number}} range      Range resolved from the selection.
+ * @param {Object|null}               lastInsert Previous insertion record, if any.
+ * @param {boolean}                   swap       Whether this insertion swaps alternates.
+ * @param {string}                    fullText   Current plain text of the value.
+ * @return {{start:number,end:number}} Possibly adjusted range.
+ */
+export function adjustInsertionRangeForSwap(range, lastInsert, swap, fullText) {
+	const start = range.start;
+	const end = range.end;
+	if (!lastInsert || typeof lastInsert.start !== 'number' || typeof lastInsert.end !== 'number') {
+		return { start, end };
+	}
+	const text = typeof fullText === 'string' ? fullText : '';
+	if (text.slice(lastInsert.start, lastInsert.end) !== (lastInsert.text || '')) {
+		return { start, end }; // content moved on; the record is stale
+	}
+	if (!swap && lastInsert.swap && start === lastInsert.start && end === lastInsert.end) {
+		return { start: lastInsert.end, end: lastInsert.end };
+	}
+	if (swap && start === end && start === lastInsert.end) {
+		return { start: lastInsert.start, end: lastInsert.end };
+	}
+	return { start, end };
+}
+
+/**
+ * Find the paragraph style a block's `styleClass` attribute points at.
+ *
+ * @param {string} styleClass Block attribute, e.g. "typost-ps-4".
+ * @param {Array}  styles     Localized style list (window.typostData.paragraphStyles).
+ * @return {Object|null} The style, or null when the class names no known style.
+ */
+export function findParagraphStyleByClass(styleClass, styles) {
+	if (!styleClass || !Array.isArray(styles)) {
+		return null;
+	}
+	const match = String(styleClass).match(/typost-ps-([A-Za-z0-9_-]+)/);
+	if (!match) {
+		return null;
+	}
+	const ref = match[1];
+	return styles.find((style) => style && (String(style.id) === ref || (style.legacyId && String(style.legacyId) === ref))) || null;
+}
+
+/**
+ * Does a block's `styleClass` point at a paragraph style that no longer
+ * exists?
+ *
+ * save.js emits no inline styles under a styleClass and the class rule is
+ * gone once the style is deleted, so such a block renders at the theme's
+ * defaults on the frontend while the editor still shows its attribute copy.
+ * The editor clears the orphaned class so the block behaves as detached:
+ * both sides then render the attributes inline.
+ *
+ * Two preconditions, both answered false rather than guessed:
+ *  - the class must carry a `typost-ps-<id>` token — `styleClass` is generic
+ *    infrastructure and an extension may set a class of its own through the
+ *    apply bridge, which is never ours to clear;
+ *  - the style list must be available — with the module absent there is
+ *    nothing to compare against and every paragraph-style class would look
+ *    orphaned. An empty list is a real answer (every such class is orphaned).
+ *
+ * @param {string}     styleClass Block attribute.
+ * @param {Array|null} styles     window.typostData.paragraphStyles, when present.
+ * @return {boolean}
+ */
+export function isOrphanStyleClass(styleClass, styles) {
+	if (!styleClass || !Array.isArray(styles)) {
+		return false;
+	}
+	// styleClass is generic infrastructure: an extension may set a class of
+	// its own through the apply bridge. Only paragraph-style classes are ours
+	// to judge; anything without a typost-ps-<id> token is left alone.
+	if (!/typost-ps-[A-Za-z0-9_-]+/.test(String(styleClass))) {
+		return false;
+	}
+	return findParagraphStyleByClass(styleClass, styles) === null;
+}
+
+/**
+ * Which style-owned block attributes differ from the paragraph style they
+ * were copied from.
+ *
+ * Applying a style copies its properties into the block attributes, which the
+ * Inspector then edits as a working copy ("(modified)" → Update Style). The
+ * editor used to render every attribute inline, so a block kept showing its
+ * copy after the style itself changed (PS-5), and a fixed px size the block
+ * cannot express natively rendered at the theme size (PS-4). With the style's
+ * class on the content element the class rule renders the style; only the
+ * attributes that differ from it still need inline declarations, so an
+ * in-progress edit previews without hiding the style. Comparison mirrors
+ * ps-utils isStyleModified()/normalizeApplyProperties() defaults.
+ *
+ * @param {Object} attrs      Block attributes.
+ * @param {Object} styleProps The style's stored properties.
+ * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize).
+ */
+export function stylePropertyOverrides(attrs, styleProps) {
+	const a = attrs || {};
+	const s = styleProps || {};
+	const overrides = {};
+
+	if (String(a.fontId || 0) !== String(s.fontId || 0)) {
+		overrides.fontId = true;
+	}
+	if (String(a.fontWeight || '400') !== String(s.fontWeight || '400')) {
+		overrides.fontWeight = true;
+	}
+	if ((a.fontStyle || '') !== (s.fontStyle || '')) {
+		overrides.fontStyle = true;
+	}
+
+	const attrSize = a.fontSize || 'inherit';
+	const styleSize = s.fontSize || 'inherit';
+	if (String(attrSize) !== String(styleSize)) {
+		overrides.fontSize = true;
+	} else if (attrSize === 'responsive' || attrSize === 'fit') {
+		if ((a.fontSizeMin || 16) !== (s.fontSizeMin || 16)
+			|| (a.fontSizePreferred || 24) !== (s.fontSizePreferred || 24)
+			|| (a.fontSizeMax || 32) !== (s.fontSizeMax || 32)
+			|| (attrSize === 'fit' && (a.fitMaxSize || 0) !== (s.fitMaxSize || 0))) {
+			overrides.fontSize = true;
+		}
+	}
+
+	if ((Number(a.letterSpacing) || 0) !== (Number(s.letterSpacing) || 0)) {
+		overrides.letterSpacing = true;
+	}
+	// Tolerance absorbs float artifacts in stored values (1.6 vs 1.6000000000000001).
+	if (Math.abs((Number(a.lineHeight) || 0) - (Number(s.lineHeight) || 0)) > 1e-6) {
+		overrides.lineHeight = true;
+	}
+
+	const attrFeatures = (Array.isArray(a.features) ? a.features : []).slice().sort().join(',');
+	const styleFeatures = (Array.isArray(s.features) ? s.features : []).slice().sort().join(',');
+	if (attrFeatures !== styleFeatures) {
+		overrides.features = true;
+	}
+	if ((a.fontVariationSettings || '') !== (s.fontVariationSettings || '')) {
+		overrides.fontVariationSettings = true;
+	}
+	return overrides;
+}
+
+/**
+ * Selector for the plugin's own modal frames (inline modal, block QFT modal,
+ * Glyphs panel, Paragraph Styles browser). All of them render through
+ * wp.components.Modal with a `typost-` class on the frame.
+ */
+export const MODAL_FOCUS_GUARD_FRAME_SELECTOR = '.components-modal__frame[class*="typost-"]';
+
+/**
+ * Return focus to a modal after the editor moved it into the canvas.
+ *
+ * @param {Document} doc             Document the modal lives in.
+ * @param {Element}  frame           The modal frame that contained the focus.
+ * @param {Element}  target          The element that lost focus.
+ * @param {Function} isCanvasFocused Returns true when the canvas iframe has focus.
+ * @return {boolean} True when focus was moved back.
+ */
+export function restoreModalFocus(doc, frame, target, isCanvasFocused) {
+	if (!frame || !frame.isConnected) {
+		return false; // the modal closed — focus is allowed to leave
+	}
+	if (!isCanvasFocused()) {
+		return false;
+	}
+	let el = target && target.isConnected && frame.contains(target) ? target : null;
+	if (!el && target && target.id) {
+		// The control re-rendered (a toggle after its state changed): the
+		// replacement carries the same generated id.
+		el = frame.querySelector('[id="' + target.id.replace(/"/g, '\\"') + '"]');
+	}
+	if (!el) {
+		el = frame;
+	}
+	if (typeof el.focus !== 'function') {
+		return false;
+	}
+	const focus = (node) => {
+		try {
+			node.focus({ preventScroll: true });
+		} catch (e) {
+			node.focus();
+		}
+	};
+	focus(el);
+	if (isCanvasFocused()) {
+		// Firefox ignores focus() on the element it still records as the
+		// outer document's focused node while a subframe holds focus. Move
+		// focus to another node in the modal first, then back.
+		if (el !== frame && typeof frame.focus === 'function') {
+			focus(frame);
+		} else if (typeof el.blur === 'function') {
+			el.blur();
+		}
+		focus(el);
+	}
+	return true;
+}
+
+/**
+ * Keep keyboard focus inside a plugin modal after the editor re-applies a
+ * selection.
+ *
+ * Applying a format or inserting text hands RichText a value with a
+ * selection; RichText writes that selection into the canvas iframe, and in
+ * Firefox that moves focus into the iframe. A keyboard user who pressed Enter
+ * on a glyph or Space on a feature toggle then sits outside a dialog that is
+ * still open, and Escape no longer closes it. Mouse clicks refocus the
+ * clicked control afterwards, which is why only keyboard use showed it.
+ *
+ * The modal's screen overlay means focus cannot reach the canvas by user
+ * action while one of our modals is open, so any such move is programmatic
+ * and safe to undo. Two signals catch it:
+ *  - focusout inside one of our modal frames (Chrome-style, when the outer
+ *    document sees the move), and
+ *  - focusin inside the canvas iframe's own document. Firefox changes the
+ *    outer document's activeElement to the iframe without firing any focus
+ *    event there, so the guard attaches to the inner document on demand
+ *    (re-attached whenever focus moves inside a modal, because the canvas
+ *    iframe can be remounted).
+ * A moment after either signal, focus returns to the element that last had
+ * it inside the modal when the document's active element is the canvas
+ * iframe. A modal that closed in the meantime is left alone.
+ *
+ * Idempotent per document: a second call returns the existing uninstaller.
+ *
+ * @param {Document} [doc]     Document to guard (defaults to window.document).
+ * @param {Object}   [options] frameSelector, canvasSelector, delays (ms), isCanvasFocused.
+ * @return {Function|null} Uninstall function, or null without a DOM.
+ */
+export function installModalFocusGuard(doc, options = {}) {
+	const targetDoc = doc || (typeof document !== 'undefined' ? document : null);
+	if (!targetDoc || typeof targetDoc.addEventListener !== 'function') {
+		return null;
+	}
+	if (targetDoc.__typostModalFocusGuard) {
+		return targetDoc.__typostModalFocusGuard;
+	}
+	const frameSelector = options.frameSelector || MODAL_FOCUS_GUARD_FRAME_SELECTOR;
+	const canvasSelector = options.canvasSelector || 'iframe[name="editor-canvas"]';
+	const delays = options.delays || [0, 80];
+	const isCanvasFocused = options.isCanvasFocused || (() => {
+		const active = targetDoc.activeElement;
+		return !!(active && typeof active.matches === 'function' && active.matches(canvasSelector));
+	});
+
+	let lastModalFocus = null;
+	let lastModalFrame = null;
+	// The guard's own focus() calls fire focusin/focusout too; they must not
+	// schedule further restores or the guard would chase its own tail.
+	let restoring = false;
+
+	const restore = (frame, target) => {
+		restoring = true;
+		try {
+			return restoreModalFocus(targetDoc, frame, target, isCanvasFocused);
+		} finally {
+			restoring = false;
+		}
+	};
+
+	const schedule = (frame, target) => {
+		delays.forEach((ms) => {
+			setTimeout(() => restore(frame, target), ms);
+		});
+	};
+
+	const onFocusOut = (event) => {
+		if (restoring) {
+			return;
+		}
+		const target = event.target;
+		const frame = target && typeof target.closest === 'function' ? target.closest(frameSelector) : null;
+		if (!frame) {
+			return;
+		}
+		schedule(frame, target);
+	};
+
+	// Focus moved into the canvas document while one of our modals is open.
+	const onCanvasFocusIn = () => {
+		const frame = (lastModalFrame && lastModalFrame.isConnected) ? lastModalFrame : targetDoc.querySelector(frameSelector);
+		if (!frame) {
+			return;
+		}
+		schedule(frame, lastModalFocus);
+	};
+
+	const attachedCanvasDocs = [];
+	const attachToCanvas = () => {
+		const iframe = typeof targetDoc.querySelector === 'function' ? targetDoc.querySelector(canvasSelector) : null;
+		let inner = null;
+		try {
+			inner = iframe && iframe.contentDocument;
+		} catch (e) {
+			inner = null; // cross-origin canvas: nothing to attach to
+		}
+		if (!inner || attachedCanvasDocs.indexOf(inner) !== -1) {
+			return;
+		}
+		inner.addEventListener('focusin', onCanvasFocusIn, true);
+		attachedCanvasDocs.push(inner);
+	};
+
+	// Firefox can also move the active element along with a selection change
+	// without firing a focus event in either document. While one of our
+	// modals is open, a slow poll is the only signal left. It starts when
+	// focus enters a modal and stops as soon as no modal is connected.
+	const pollMs = options.pollMs || 100;
+	let pollTimer = null;
+	const stopPolling = () => {
+		if (pollTimer !== null) {
+			clearInterval(pollTimer);
+			pollTimer = null;
+		}
+	};
+	const poll = () => {
+		const frame = (lastModalFrame && lastModalFrame.isConnected) ? lastModalFrame : targetDoc.querySelector(frameSelector);
+		if (!frame) {
+			stopPolling();
+			return;
+		}
+		restore(frame, lastModalFocus);
+	};
+	const startPolling = () => {
+		if (pollTimer === null) {
+			pollTimer = setInterval(poll, pollMs);
+		}
+	};
+
+	const onFocusIn = (event) => {
+		if (restoring) {
+			return;
+		}
+		const target = event.target;
+		const frame = target && typeof target.closest === 'function' ? target.closest(frameSelector) : null;
+		if (!frame) {
+			return;
+		}
+		lastModalFocus = target;
+		lastModalFrame = frame;
+		attachToCanvas();
+		startPolling();
+	};
+
+	targetDoc.addEventListener('focusin', onFocusIn, true);
+	targetDoc.addEventListener('focusout', onFocusOut, true);
+	const uninstall = () => {
+		stopPolling();
+		targetDoc.removeEventListener('focusin', onFocusIn, true);
+		targetDoc.removeEventListener('focusout', onFocusOut, true);
+		attachedCanvasDocs.forEach((inner) => {
+			try {
+				inner.removeEventListener('focusin', onCanvasFocusIn, true);
+			} catch (e) { /* detached document */ }
+		});
+		attachedCanvasDocs.length = 0;
+		delete targetDoc.__typostModalFocusGuard;
+	};
+	targetDoc.__typostModalFocusGuard = uninstall;
+	return uninstall;
+}
+
 // Expose utility functions for cross-module use (block-editor.js uses CommonJS/Browserify)
 if (typeof window !== 'undefined') {
 	window.typostSharedUtils = {
+		installModalFocusGuard,
+		restoreModalFocus,
+		adjustInsertionRangeForSwap,
 		buildTextOffsetMap,
 		parseInlineStylesAtCursor,
 		parseInlineFeaturesAtCursor,

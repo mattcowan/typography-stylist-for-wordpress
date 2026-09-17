@@ -203,9 +203,38 @@
 		}));
 	}
 
+	/**
+	 * Should this insertion swap (replace the glyph that is currently selected
+	 * for alternate browsing and keep the new one selected) or insert?
+	 *
+	 * Swap semantics belong to browsing alternates of ONE character. The first
+	 * pick swaps when the launch selection is that character (its alternates
+	 * replace it); later picks swap while the browsed character is unchanged.
+	 * As soon as the author browses a different character, the next insertion
+	 * is a plain one, so the editor places it after the glyph that only stayed
+	 * selected for swapping instead of over it (QA finding GP-1).
+	 *
+	 * @param {Object} args { inAlternatesView, altKey, lastAltKey, selectionText }
+	 * @return {boolean}
+	 */
+	function shouldSwapInsertion(args) {
+		if (!args || !args.inAlternatesView) {
+			return false;
+		}
+		var altKey = args.altKey || '';
+		if (!altKey) {
+			return false;
+		}
+		if (args.lastAltKey !== null && args.lastAltKey !== undefined) {
+			return args.lastAltKey === altKey;
+		}
+		return String(args.selectionText || '') === altKey;
+	}
+
 	var api = {
 		buildFeatureSettingsCSS: buildFeatureSettingsCSS,
 		buildInsertionPayload: buildInsertionPayload,
+		shouldSwapInsertion: shouldSwapInsertion,
 		dispatchInsert: dispatchInsert
 	};
 

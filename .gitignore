@@ -48,3 +48,9 @@ docs/media/
 # Private working notes (handoff reports, review write-ups, scratch analysis).
 # Never committed and never distributed — see .distignore for the zip side.
 /private/
+
+# Screen-reader e2e auth state
+tests/e2e-sr/auth.json
+test-results/sr-logs/
+tests/e2e-sr/logs/
+playwright-report-sr/

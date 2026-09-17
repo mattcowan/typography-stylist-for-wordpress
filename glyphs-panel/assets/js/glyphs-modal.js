@@ -286,6 +286,9 @@
 		var setGridSize = gridSizeState[1];
 
 		var gridRef = useRef(null);
+		// Character whose alternates the last insertion came from (null when the
+		// last insertion was from the all-glyphs view); see shouldSwapInsertion.
+		var lastAltKeyRef = useRef(null);
 		var loadSeq = useRef(0);
 
 		// Drag-to-reposition: the Modal's own title bar is the drag handle,
@@ -691,9 +694,18 @@
 				contextFeatures: context.features || [],
 				contextFontWeight: context.fontWeight || ''
 			});
-			if (inAlternatesView) {
-				payload.swap = true;
-			}
+			// Swap only while the author keeps browsing the SAME character: the
+			// first pick for the launch selection, and further picks after it.
+			// Browsing a different character next must insert after the glyph
+			// that stayed selected for swapping, not over it (QA finding GP-1).
+			var altKey = inAlternatesView ? Array.from((altChar || '').trim()).join('') : null;
+			payload.swap = lib.shouldSwapInsertion({
+				inAlternatesView: inAlternatesView,
+				altKey: altKey,
+				lastAltKey: lastAltKeyRef.current,
+				selectionText: context.selectionText || ''
+			});
+			lastAltKeyRef.current = inAlternatesView ? altKey : null;
 			lib.dispatchInsert(source, payload, {
 				clientId: context.clientId,
 				range: context.range
@@ -794,6 +806,10 @@
 				case ' ':
 					if (items[activeIndex]) {
 						handleInsert(items[activeIndex]);
+						// Keep keyboard control on the grid container, as the
+						// click path does — the insertion hands the editor a new
+						// selection and the editor may pull focus toward it.
+						if (gridRef.current) { gridRef.current.focus(); }
 					}
 					break;
 				default:

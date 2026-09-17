@@ -98,6 +98,9 @@ final class Typost_Paragraph_Styles {
 
 		// Editor data
 		add_filter( 'typost_editor_data', array( $this, 'add_editor_data' ) );
+		// Content styled only through a style class names no font; tell core's
+		// frontend font detection which fonts those classes stand for.
+		add_filter( 'typost_content_font_ids', array( $this, 'font_ids_from_content' ), 10, 2 );
 
 		// REST routes
 		add_action( 'typost_register_rest_routes', array( $this, 'register_rest_routes' ) );
@@ -304,9 +307,25 @@ final class Typost_Paragraph_Styles {
 			return '';
 		}
 
-		// Dual selector: block class + inline data attribute
+		// Three selectors per style:
+		//  - `.typost-ps-N` (0,1,0): previews such as the style browser rows.
+		//  - block-level and inline-span forms boosted to (0,6,0) by repeating
+		//    the class / attribute. Theme heading rules are routinely more
+		//    specific than a single class (`.entry-content h2` is (0,1,1); a
+		//    color-scheme rule with a `:not()` reached (0,3,4) on a real site,
+		//    and (0,5,2) in the editor, where WordPress prefixes theme styles
+		//    with .editor-styles-wrapper)
+		//    and were overriding the style's font-family and font-weight on
+		//    the frontend, where save.js emits no inline styles under a
+		//    styleClass. Inline `style=""` attributes still win, by design.
+		// buildStyleCssBlock() in ps-utils.js must emit the same text.
 		$selector = sprintf(
-			".typost-ps-%d,\n.typost-styled[data-style-id=\"%d\"]",
+			".typost-ps-%d,\n.typost-styled.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d,\n.typost-styled[data-style-id=\"%d\"][data-style-id][data-style-id][data-style-id][data-style-id]",
+			$id,
+			$id,
+			$id,
+			$id,
+			$id,
 			$id,
 			$id
 		);
@@ -315,7 +334,12 @@ final class Typost_Paragraph_Styles {
 		if ( ! empty( $style['legacyId'] ) ) {
 			$legacy    = esc_attr( $style['legacyId'] );
 			$selector .= sprintf(
-				",\n.typost-ps-%s,\n.typost-styled[data-style-id=\"%s\"]",
+				",\n.typost-ps-%s,\n.typost-styled.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s,\n.typost-styled[data-style-id=\"%s\"][data-style-id][data-style-id][data-style-id][data-style-id]",
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy,
 				$legacy,
 				$legacy
 			);
@@ -424,6 +448,60 @@ final class Typost_Paragraph_Styles {
 	// -------------------------------------------------------------------------
 	// Editor Data
 	// -------------------------------------------------------------------------
+
+	/**
+	 * Report the fonts that paragraph style references in content resolve to.
+	 *
+	 * A span applied from the block editor is `<span class="typost-styled"
+	 * data-style-id="5">` and a styled block carries `typost-ps-5`: neither
+	 * names a font, so core's content scan (data-font, data-font-id,
+	 * --font-N) never enqueued the style's font and the frontend rendered a
+	 * fallback face. Hooked to `typost_content_font_ids`.
+	 *
+	 * Legacy timestamp ids (`ps_1709…`) still appear in old content; they are
+	 * matched against each style's `legacyId`. Block attribute JSON escapes the
+	 * quotes (`data-style-id=\"5\"`), so the quote is optional in the pattern.
+	 *
+	 * @param int[]  $ids     Font IDs collected so far.
+	 * @param string $content Content being scanned.
+	 * @return int[] Font IDs including those the referenced styles use.
+	 */
+	public function font_ids_from_content( $ids, $content ) {
+		if ( ! is_array( $ids ) ) {
+			$ids = array();
+		}
+		if ( ! is_string( $content ) || '' === $content ) {
+			return $ids;
+		}
+
+		$style_refs = array();
+		// Same token class as findParagraphStyleByClass() and the legacyId
+		// validators: a hyphenated legacy id must not truncate at the hyphen.
+		if ( preg_match_all( '/data-style-id=["\'\\\\]*([A-Za-z0-9_-]+)/', $content, $matches ) ) {
+			$style_refs = $matches[1];
+		}
+		if ( preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', $content, $matches ) ) {
+			$style_refs = array_merge( $style_refs, $matches[1] );
+		}
+		if ( empty( $style_refs ) ) {
+			return $ids;
+		}
+		$style_refs = array_unique( array_map( 'strval', $style_refs ) );
+
+		foreach ( $this->get_styles() as $style ) {
+			$style_id  = isset( $style['id'] ) ? (string) $style['id'] : '';
+			$legacy_id = isset( $style['legacyId'] ) ? (string) $style['legacyId'] : '';
+			if ( ! in_array( $style_id, $style_refs, true ) && ( '' === $legacy_id || ! in_array( $legacy_id, $style_refs, true ) ) ) {
+				continue;
+			}
+			$font_id = isset( $style['properties']['fontId'] ) ? intval( $style['properties']['fontId'] ) : 0;
+			if ( $font_id > 0 ) {
+				$ids[] = $font_id;
+			}
+		}
+
+		return array_values( array_unique( array_map( 'intval', $ids ) ) );
+	}
 
 	/**
 	 * Add paragraph styles to the editor localized data.
@@ -749,6 +827,11 @@ final class Typost_Paragraph_Styles {
 		set_transient( self::CACHE_KEY, $styles, 12 * HOUR_IN_SECONDS );
 		// Regenerate CSS cache
 		delete_transient( self::CSS_CACHE_KEY );
+		// Core caches "which fonts does this page use" per post; a style that
+		// changed font would keep serving the old @font-face until it expired.
+		if ( class_exists( 'Typost' ) && method_exists( 'Typost', 'clear_font_detection_cache' ) ) {
+			Typost::get_instance()->clear_font_detection_cache();
+		}
 	}
 
 	/**

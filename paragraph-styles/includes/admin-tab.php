@@ -16,25 +16,37 @@ $styles = Typost_Paragraph_Styles::get_instance()->get_styles();
 
 // Build a flat font lookup (numeric font ID => name) from every source the
 // core plugin exposes through its public API.
+// Styles store the canonical numeric `font_id`; the entries' `id` is the
+// string kit/project slug. Keying on `id` here made every card read
+// "Default" (QA finding ADM-1) — the same mistake the editor-side
+// findFontName had. Key on font_id, keeping id for entry shapes without one.
 $font_lookup = array();
-foreach ( $instance->get_custom_fonts() as $font ) {
-	if ( isset( $font['id'], $font['name'] ) ) {
-		$font_lookup[ $font['id'] ] = $font['name'];
+$add_font    = function ( $font ) use ( &$font_lookup ) {
+	if ( ! is_array( $font ) || ! isset( $font['name'] ) ) {
+		return;
 	}
+	if ( isset( $font['font_id'] ) ) {
+		$font_lookup[ (string) $font['font_id'] ] = $font['name'];
+	}
+	if ( isset( $font['id'] ) && ! isset( $font_lookup[ (string) $font['id'] ] ) ) {
+		$font_lookup[ (string) $font['id'] ] = $font['name'];
+	}
+};
+foreach ( $instance->get_custom_fonts() as $font ) {
+	$add_font( $font );
 }
 foreach ( $instance->get_adobe_fonts() as $project ) {
+	// An Adobe entry is one family and carries its own font_id; older
+	// entries may also list families under `fonts`.
+	$add_font( $project );
 	if ( isset( $project['fonts'] ) && is_array( $project['fonts'] ) ) {
 		foreach ( $project['fonts'] as $font ) {
-			if ( isset( $font['id'], $font['name'] ) ) {
-				$font_lookup[ $font['id'] ] = $font['name'];
-			}
+			$add_font( $font );
 		}
 	}
 }
 foreach ( $instance->get_manual_fonts() as $font ) {
-	if ( isset( $font['id'], $font['name'] ) ) {
-		$font_lookup[ $font['id'] ] = $font['name'];
-	}
+	$add_font( $font );
 }
 // Adopted WP Font Library fonts carry their numeric ID in font_id
 // (their string id is "wpl-{slug}").

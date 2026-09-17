@@ -710,9 +710,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 start = Math.max(0, Math.min(start, value.text.length));
                 end = Math.max(start, Math.min(end, value.text.length));
 
+                // A glyph that stayed selected only so its alternates could
+                // replace it must not be overwritten by a different character,
+                // and an alternate picked right after a caret insertion should
+                // replace that glyph (GP-1). Shared logic; no-op without it.
+                const adjustRange = (window.typostSharedUtils && window.typostSharedUtils.adjustInsertionRangeForSwap)
+                    ? window.typostSharedUtils.adjustInsertionRangeForSwap
+                    : function(range) { return range; };
+                const adjusted = adjustRange({ start, end }, self._lastInsert || null, !!e.detail.swap, value.text);
+                start = adjusted.start;
+                end = adjusted.end;
+
                 const text = String(e.detail.text).slice(0, 50);
                 let newValue = insert(value, text, start, end);
                 const insertEnd = start + text.length;
+                self._lastInsert = { start, end: insertEnd, text, swap: !!e.detail.swap };
 
                 // Copy formats so insertion behaves like typing (continuity).
                 // When replacing a selection, inherit from the replaced range's
@@ -3272,7 +3284,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     return (
                                         <div className="typost-modal-section typost-fontweight-section">
                                             <h4>{__('Font Weight', 'typography-stylist')}</h4>
+                                            {/* The h4 is not associated with the control; the hidden
+                                                label is what gives the select its accessible name
+                                                (NVDA read it as "combo box, 400 - Normal" — QA SR-2). */}
                                             <SelectControl
+                                                label={__('Font Weight', 'typography-stylist')}
+                                                hideLabelFromVision
                                                 value={fontWeight}
                                                 options={weightOptions}
                                                 onChange={this.setFontWeight}
@@ -3296,6 +3313,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 <div className="typost-modal-section typost-fontstyle-section">
                                     <h4>{__('Font Style', 'typography-stylist')}</h4>
                                     <SelectControl
+                                        label={__('Font Style', 'typography-stylist')}
+                                        hideLabelFromVision
                                         value={this.state.fontStyle}
                                         options={[
                                             { label: __('Inherit', 'typography-stylist'), value: '' },
@@ -3311,6 +3330,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 <div className="typost-modal-section typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
                                     <SelectControl
+                                        label={__('Font Size', 'typography-stylist')}
+                                        hideLabelFromVision
                                         value={fontSize}
                                         options={[
                                             { label: __('Inherit', 'typography-stylist'), value: 'inherit' },
@@ -3366,6 +3387,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 <div className="typost-modal-section typost-lineheight-section">
                                     <h4>{__('Line Height', 'typography-stylist')}</h4>
                                     <RangeControl
+                                        label={__('Line Height', 'typography-stylist')}
+                                        hideLabelFromVision
                                         value={lineHeight === 0 ? 1.5 : lineHeight}
                                         onChange={this.setLineHeight}
                                         min={0.5}
@@ -3385,6 +3408,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 <div className="typost-modal-section typost-letterspacing-section">
                                     <h4>{__('Letter Spacing', 'typography-stylist')}</h4>
                                     <RangeControl
+                                        label={__('Letter Spacing', 'typography-stylist')}
+                                        hideLabelFromVision
                                         value={letterSpacing}
                                         onChange={this.setLetterSpacing}
                                         min={-200}

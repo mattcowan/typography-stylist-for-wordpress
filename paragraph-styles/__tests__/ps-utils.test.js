@@ -561,7 +561,7 @@ describe('buildStyleCssBlock', () => {
 				fontSize: '24',
 			},
 		})).toBe(
-			'.typost-ps-3,\n.typost-styled[data-style-id="3"] {\n' +
+			'.typost-ps-3,\n.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3,\n.typost-styled[data-style-id="3"][data-style-id][data-style-id][data-style-id][data-style-id] {\n' +
 			'    font-family: var(--font-12);\n' +
 			'    font-weight: 700;\n' +
 			'    font-style: italic;\n' +
@@ -614,7 +614,7 @@ describe('buildStyleCssBlock', () => {
 
 	test('feature tags that fail sanitize_key-style validation are dropped', () => {
 		expect(buildStyleCssBlock({ id: 1, properties: { features: ['liga', 'bad"tag'] } }))
-			.toBe('.typost-ps-1,\n.typost-styled[data-style-id="1"] {\n    font-feature-settings: "liga" 1;\n}');
+			.toBe('.typost-ps-1,\n.typost-styled.typost-ps-1.typost-ps-1.typost-ps-1.typost-ps-1.typost-ps-1,\n.typost-styled[data-style-id="1"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-feature-settings: "liga" 1;\n}');
 	});
 
 	test('legacy IDs get their selector variants', () => {
@@ -625,7 +625,30 @@ describe('buildStyleCssBlock', () => {
 		});
 		expect(css).toContain('.typost-ps-4,');
 		expect(css).toContain('.typost-ps-ps_1709312345_123,');
-		expect(css).toContain('.typost-styled[data-style-id="ps_1709312345_123"]');
+		expect(css).toContain('.typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123,');
+		expect(css).toContain('.typost-styled[data-style-id="ps_1709312345_123"][data-style-id][data-style-id][data-style-id][data-style-id]');
+	});
+
+	test('block and span selectors outrank a specific theme heading rule (PS-6)', () => {
+		// Specificity of a selector as (ids, classes+attrs+pseudo-classes, elements).
+		const specificity = (sel) => {
+			const ids = (sel.match(/#[\w-]+/g) || []).length;
+			const classes = (sel.match(/\.[\w-]+|\[[^\]]+\]|:not\(|:[\w-]+(?!\()/g) || []).length;
+			const elements = (sel.match(/(^|[\s>+~,(])[a-z][\w-]*/g) || []).length;
+			return [ids, classes, elements];
+		};
+		const css = buildStyleCssBlock({ id: 7, properties: { fontId: 1 } });
+		const selectors = css.split(' {')[0].split(',\n');
+		expect(selectors).toHaveLength(3);
+		// The preview selector stays a plain class.
+		expect(specificity(selectors[0])).toEqual([0, 1, 0]);
+		// Block-level and inline-span forms reach (0,6,0).
+		expect(specificity(selectors[1])).toEqual([0, 6, 0]);
+		expect(specificity(selectors[2])).toEqual([0, 6, 0]);
+		// Rules seen in the wild that beat the old (0,1,0)/(0,2,0) selectors.
+		expect(specificity('.entry-content h2')).toEqual([0, 1, 1]);
+		expect(specificity('.wp-site-blocks .wp-block-heading h2')).toEqual([0, 2, 1]);
+		expect(specificity('.typost-styled[data-style-id="7"]')).toEqual([0, 2, 0]);
 	});
 
 	test('returns empty string for empty or invalid styles', () => {
