@@ -83,6 +83,12 @@ test.describe('Inline editor modal with NVDA', () => {
     // to FAIL until the modal is fixed (SR-2 unnamed selects, SR-3 one stop
     // reading the whole modal, SR-4 silent focusable stops).
     expect(openPhrase, 'opening should announce the dialog').toMatch(/Typography Stylist/i);
+    // The tips notice used to be pushed into the live region on mount and was
+    // read before the dialog's name (same mechanism as SR-1 on the Glyphs panel).
+    expect(openPhrase, 'the dialog name should come before any notice text').toMatch(/^Typography Stylist/);
+    // SR-4: the drag handle and the scroll wrappers are no longer Tab stops.
+    const wrapperStops = stops.filter((s) => s.el && /typost-modal-header|typost-modal-content|typost-scrollable-content/.test(s.el.className));
+    expect(wrapperStops, `Wrappers reached by Tab: ${JSON.stringify(wrapperStops.map((s) => s.el.className))}`).toEqual([]);
     expect(unnamedControls, `Controls announced without a name: ${JSON.stringify(unnamedControls.map((u) => u.id))}`).toEqual([]);
     expect(longestPhrase, 'no single Tab stop should read the whole modal').toBeLessThan(400);
     expect(silentStops, `Focusable elements announced as nothing: ${JSON.stringify(silentStops.map((e) => e && (e.className || e.tag)))}`).toEqual([]);

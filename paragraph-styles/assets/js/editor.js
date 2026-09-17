@@ -23,6 +23,7 @@
 	var el             = wp.element.createElement;
 	var useState       = wp.element.useState;
 	var useEffect      = wp.element.useEffect;
+	var useRef         = wp.element.useRef;
 	var useCallback    = wp.element.useCallback;
 	var useMemo        = wp.element.useMemo;
 	var SelectControl  = wp.components.SelectControl;
@@ -34,6 +35,7 @@
 	var utils                    = window.typostPSUtils;
 	var findFontName             = utils.findFontName;
 	var isStyleModified          = utils.isStyleModified;
+	var resolveBrowserActiveStyleId = utils.resolveBrowserActiveStyleId;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
@@ -517,6 +519,23 @@
 			};
 		}, []);
 
+		// Open with focus on a style row — the active one, else the first —
+		// rather than on the dialog frame. From the frame, a keyboard user
+		// reached Modal's scroll wrapper (a silent stop) and then Close before
+		// any style (QA finding SR-6). Runs after Modal's own focus-on-mount,
+		// which fires from a child ref effect; the frame keeps focus when the
+		// list is empty.
+		var listRef = useRef(null);
+		useEffect(function() {
+			var list = listRef.current;
+			if (!list) return;
+			var row = list.querySelector('.typost-ps-browser-row.is-active') ||
+				list.querySelector('.typost-ps-browser-row');
+			if (row && typeof row.focus === 'function') {
+				row.focus();
+			}
+		}, []);
+
 		// Applying and detaching are both terminal: close afterwards so the
 		// author sees the result on the block instead of through a modal, and
 		// so focus returns to the toolbar button. Closing also avoids stranding
@@ -596,7 +615,7 @@
 			currentStyles.length === 0
 				? el('p', { className: 'typost-ps-browser-empty' },
 					__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'))
-				: el('ul', { className: 'typost-ps-browser-list' }, rows),
+				: el('ul', { className: 'typost-ps-browser-list', ref: listRef }, rows),
 			activeStyleId ? el('div', { className: 'typost-ps-browser-footer' },
 				el(Button, {
 					variant: 'link',
@@ -643,7 +662,9 @@
 
 		wp.element.render(
 			el(ParagraphStylesBrowser, {
-				activeStyleId: state.paragraphStyleId || 0,
+				// In selection scope the pressed row and Detach must describe
+				// the selection's own style, not the block's (see the helper).
+				activeStyleId: resolveBrowserActiveStyleId(state, hasSelection),
 				hasSelection: hasSelection,
 				onClose: closeBrowser,
 			}),

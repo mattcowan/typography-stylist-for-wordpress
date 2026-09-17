@@ -1597,6 +1597,11 @@ msgid "Tip: Drag the title bar to reposition this panel."
 msgstr ""
 
 #: assets/js/block-editor.js
+#: blocks/typography-stylist/edit.js
+msgid "Dismiss tip"
+msgstr ""
+
+#: assets/js/block-editor.js
 msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr ""
 

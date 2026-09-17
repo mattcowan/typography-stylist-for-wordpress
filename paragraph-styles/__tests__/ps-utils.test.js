@@ -6,6 +6,8 @@
 const {
 	findFontName,
 	isStyleModified,
+	roundLineHeight,
+	resolveBrowserActiveStyleId,
 	buildPropertiesFromState,
 	buildApplyEventDetail,
 	normalizeApplyProperties,
@@ -713,5 +715,74 @@ describe('buildStyleCssBlock', () => {
 			.toContain('line-height: 1.4;');
 		expect(buildStyleCssBlock({ id: 1, properties: { fontVariationSettings: '"opsz" 14.5' } }))
 			.toContain('font-variation-settings: "opsz" 14.5');
+	});
+});
+
+describe('PS-3: size trio only stored for responsive/fit sizes', () => {
+	test('a fixed px style does not store the responsive trio', () => {
+		// Every editor state carries the trio at its defaults; a fixed size
+		// must not persist them (they rendered nothing and spread on update)
+		expect(buildPropertiesFromState({
+			fontSize: '16', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
+		})).toEqual({ fontSize: '16' });
+	});
+
+	test('an inherit-size style does not store the trio either', () => {
+		expect(buildPropertiesFromState({
+			fontSize: 'inherit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fontWeight: '600',
+		})).toEqual({ fontWeight: '600' });
+	});
+
+	test('responsive and fit sizes keep the trio', () => {
+		expect(buildPropertiesFromState({
+			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
+		})).toEqual({ fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 });
+		expect(buildPropertiesFromState({
+			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0,
+		})).toEqual({ fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 });
+	});
+});
+
+describe('PS-8: line-height float hardening', () => {
+	test('roundLineHeight stores three decimals and maps junk to 0', () => {
+		expect(roundLineHeight(1.6000000000000001)).toBe(1.6);
+		expect(roundLineHeight(1.23456)).toBe(1.235);
+		expect(roundLineHeight('1.5')).toBe(1.5);
+		expect(roundLineHeight('abc')).toBe(0);
+		expect(roundLineHeight(undefined)).toBe(0);
+	});
+
+	test('buildPropertiesFromState rounds the line-height it stores', () => {
+		expect(buildPropertiesFromState({ lineHeight: 1.6000000000000001 })).toEqual({ lineHeight: 1.6 });
+		expect(buildPropertiesFromState({ lineHeight: 1.23456 })).toEqual({ lineHeight: 1.235 });
+	});
+
+	test('isStyleModified tolerates float noise in the stored line-height', () => {
+		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.6000000000000001 })).toBe(false);
+		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.6004 })).toBe(false);
+	});
+
+	test('isStyleModified still sees a real line-height change', () => {
+		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.601 })).toBe(true);
+		expect(isStyleModified({ lineHeight: 1.5 }, { lineHeight: 1.6 })).toBe(true);
+		expect(isStyleModified({ lineHeight: 0 }, { lineHeight: 1.6 })).toBe(true);
+	});
+});
+
+describe('resolveBrowserActiveStyleId (browser scope indicator)', () => {
+	test('with a selection, reports the selection\'s style, not the block\'s', () => {
+		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4, selectionParagraphStyleId: 0 }, true)).toBe(0);
+		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4, selectionParagraphStyleId: 7 }, true)).toBe(7);
+		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4, selectionParagraphStyleId: '7' }, true)).toBe(7);
+	});
+
+	test('with a selection and a state that predates the key, reports none', () => {
+		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4 }, true)).toBe(0);
+	});
+
+	test('without a selection, reports the block\'s style', () => {
+		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4, selectionParagraphStyleId: 7 }, false)).toBe(4);
+		expect(resolveBrowserActiveStyleId({}, false)).toBe(0);
+		expect(resolveBrowserActiveStyleId(null, false)).toBe(0);
 	});
 });

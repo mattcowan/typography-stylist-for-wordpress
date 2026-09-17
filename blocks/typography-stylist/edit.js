@@ -1318,12 +1318,18 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const handleExtensionToolbarClick = (button) => {
 		const snapshot = snapshotSelection();
 		setCapturedSelection(snapshot.capturedSelection);
+		// The style on the selected text (not the block): the style browser
+		// marks this one as active when it is applying to a selection.
+		const captured = snapshot.capturedSelection;
+		const detected = captured && captured.start !== captured.end
+			? parseInlineStylesAtCursor(content, captured.start, captured.end)
+			: null;
 		button.onClick({
 			source: 'qft',
 			clientId,
 			capturedSelection: snapshot.capturedSelection,
 			selectedText: snapshot.capturedSelection ? snapshot.capturedSelection.text : '',
-			state: buildQftEditorState(qftStateRef.current),
+			state: buildQftEditorState({ ...qftStateRef.current, selectionStyleId: detected ? detected.styleId : 0 }),
 			// No host modal was open, so nothing should reopen on close
 			reopenHost: false
 		});
@@ -3598,7 +3604,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								onKeyDown={handleHeaderKeyDown}
 								role="toolbar"
 								aria-label={__('Drag to reposition modal', 'typography-stylist')}
-								tabIndex={0}
+								// Not a Tab stop (QA finding SR-4, same as the inline
+								// modal); still click-focusable for arrow-key nudging.
+								tabIndex={-1}
 								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
 							>
 								<h3 id={qftTitleId}>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
@@ -3610,29 +3618,45 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								/>
 							</div>
 
-							{/* Modal content wrapper with scroll */}
-							<div className="typost-modal-content" style={{
+							{/* Modal content wrapper with scroll. tabIndex -1: a scroll
+							    container is otherwise a Tab stop that a screen reader
+							    reads in full (QA finding SR-3); its controls remain
+							    reachable and scroll it into view. */}
+							<div className="typost-modal-content" tabIndex={-1} style={{
 								height: `calc(${modalHeight}px - 60px)`,
 								overflowY: 'auto'
 							}}>
 								{/* Usage tips notice — same strings, dismissal flag, and
 								    sticky wrapper (spacing lives in block-editor.css) as the
 								    inline format modal's notice. Notice does not forward a
-								    style prop, so an inline margin here never rendered. */}
+								    style prop, so an inline margin here never rendered.
+								    spokenMessage '' keeps the tip out of the live region on
+								    mount (it was read before the dialog's name); the own
+								    dismiss button replaces Notice's "Close" so there are not
+								    two differently-acting "Close" stops (QA finding SR-4). */}
 								{!tipsDismissed && (
 									<div className="typost-sticky-notice-wrapper">
 										<Notice
 											status="info"
-											isDismissible={true}
-											onRemove={dismissTips}
+											isDismissible={false}
+											spokenMessage=""
 											className="typost-drag-notice"
 										>
-											<p style={{ margin: 0 }}>
-												{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
-											</p>
-											<p style={{ margin: '4px 0 0' }}>
-												{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
-											</p>
+											<div className="typost-tip-text">
+												<p style={{ margin: 0 }}>
+													{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
+												</p>
+												<p style={{ margin: '4px 0 0' }}>
+													{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
+												</p>
+											</div>
+											<Button
+												icon="no-alt"
+												label={__('Dismiss tip', 'typography-stylist')}
+												onClick={dismissTips}
+												className="typost-tip-dismiss"
+												size="small"
+											/>
 										</Notice>
 									</div>
 								)}

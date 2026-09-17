@@ -175,6 +175,18 @@ msgstr "¿Seguro que quieres eliminar «%s»? Esta acción no se puede deshacer.
 msgid "Failed to delete style. Please try again."
 msgstr "No se pudo eliminar el estilo. Inténtalo de nuevo."
 
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style renamed to \"%s\"."
+msgstr "Estilo renombrado a «%s»."
+
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style \"%s\" deleted."
+msgstr "Estilo «%s» eliminado."
+
 #: paragraph-styles.php
 msgid "Paragraph Styles Toolbar Button"
 msgstr "Botón de estilos de párrafo en la barra de herramientas"

@@ -435,6 +435,11 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fitScale: null,
 			fitShift: null,
 			fontVariationSettings: null,
+			// Paragraph style applied to the selected text (data-style-id of
+			// the nearest span carrying one), 0 when the selection has none.
+			// The toolbar style browser uses it to mark the selection's own
+			// style rather than the block's when text is selected.
+			styleId: 0,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
 			spanEnd: spanEnd
@@ -496,6 +501,14 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontId = currentSpan.getAttribute('data-font-id');
 				if (fontId) {
 					result.fontId = fontId;
+				}
+			}
+
+			// Paragraph style - nearest ancestor-or-self carrying data-style-id
+			if (!result.styleId) {
+				const styleId = parseInt(currentSpan.getAttribute('data-style-id'), 10);
+				if (styleId > 0) {
+					result.styleId = styleId;
 				}
 			}
 
@@ -2058,6 +2071,11 @@ export function buildQftEditorState(s) {
 		lineHeight: source.lineHeight,
 		features: source.features,
 		paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
+		// Style on the selected text itself (a data-style-id span), as
+		// opposed to the block-level style above. Consumers that apply to a
+		// selection (the toolbar style browser) read this one, so they do not
+		// report the block's style as "active" for text that carries none.
+		selectionParagraphStyleId: parseInt(source.selectionStyleId, 10) || 0,
 		fontVariationSettings: source.fontVariationSettings || '',
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,

@@ -93,6 +93,10 @@ test.describe('Glyphs panel with NVDA', () => {
 
     // Screen-reader assertions.
     expect(openPhrase, 'opening the panel should announce the dialog').toMatch(/Glyphs/i);
+    // SR-1: the dialog's name must come first. The partial-word selection
+    // above raises the word-boundary notice, which used to be read in full
+    // (~45 words) before "Glyphs, dialog".
+    expect(openPhrase, 'the dialog name should be announced before the word-boundary notice (SR-1)').toMatch(/^Glyphs/);
     expect(cellPhrase, 'arrowing should announce the cell').toMatch(/Stylistic Alternates/i);
     expect(h.spoke(log, /Inserted/i), 'Enter should announce the live region').toBe(true);
   });

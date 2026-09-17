@@ -64,6 +64,25 @@
     border-radius: 0;
 }
 
+/* The tips bar carries its own dismiss button (Notice's is labelled
+   "Close", which read as a second, differently-acting Close stop to screen
+   readers): text on the left, button on the right. */
+.typost-drag-notice .components-notice__content {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.typost-drag-notice .typost-tip-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.typost-drag-notice .typost-tip-dismiss {
+    flex-shrink: 0;
+    margin: -2px -4px 0 0;
+}
+
 /* A notice that directly follows the tips bar already has the bar's gap */
 .typost-sticky-notice-wrapper + .typost-scrollable-content > .components-notice:first-child {
     margin-top: 0;
@@ -521,8 +540,11 @@ span.typost-styled:hover {
     text-align: left;
 }
 
+/* #135e96 is 6.4:1 on the warning notice's #fff7e1; the WP link blues
+   (#0073aa 4.5:1, #007cba 4.3:1) sit at or below the AA line there
+   (QA finding A11Y-3). */
 .typost-warning-settings-link a {
-    color: #0073aa;
+    color: #135e96;
     text-decoration: underline;
 }
 

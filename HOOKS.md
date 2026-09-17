@@ -494,6 +494,8 @@ Descriptors without an `id` or a callable `onClick` are dropped.
 | `accessibility` | — | word-boundary state (see below) |
 | `reopenHost` | `false` | `false` |
 
+`context.state` carries two style ids: `paragraphStyleId` is the style on the block (or, in the inline editor, at the selection), and `selectionParagraphStyleId` (`qft`, *since 2.3.1*) is the `data-style-id` on the selected text itself, `0` when it carries none. A panel that applies to a selection should treat the second as "active"; the block's style says nothing about the selected words.
+
 **`context.accessibility`** (inline editor) carries the word-boundary notice the editor's own modal would have shown, because a panel opened from the toolbar bypasses that modal entirely:
 
 ```js

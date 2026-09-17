@@ -37,6 +37,11 @@
 	var CELL_SIZE = 56;
 	var OVERSCAN_ROWS = 3;
 
+	// Word-boundary notice: ids and the delay before it is announced (long
+	// enough for "Glyphs, dialog" to be read first; see GlyphsModal).
+	var a11yNoticeSeq = 0;
+	var A11Y_NOTICE_ANNOUNCE_DELAY = 800;
+
 	// -------------------------------------------------------------------------
 	// Data helpers
 	// -------------------------------------------------------------------------
@@ -211,6 +216,32 @@
 		// launched. Absent when the panel was opened from inside the editor's
 		// own modal, which shows the notice itself.
 		var accessibility = context.accessibility || {};
+
+		// Id for the notice text, so the Convert button can point at it.
+		var noticeIdRef = useRef(null);
+		if (noticeIdRef.current === null) {
+			a11yNoticeSeq += 1;
+			noticeIdRef.current = 'typost-glyphs-a11y-notice-' + a11yNoticeSeq;
+		}
+
+		// Announce the word-boundary notice AFTER the dialog has introduced
+		// itself. Notice speaks its content through the a11y live region the
+		// moment it mounts — the same tick the modal takes focus — so NVDA
+		// read the ~45-word warning before "Glyphs, dialog" (QA finding
+		// SR-1). The notice mounts silent (spokenMessage '') and is queued
+		// here as a polite message once the title has had time to be read.
+		useEffect(function() {
+			var message = accessibility.wordBoundaryWarning;
+			if (!message || !window.wp || !window.wp.a11y || typeof window.wp.a11y.speak !== 'function') {
+				return undefined;
+			}
+			var timer = setTimeout(function() {
+				window.wp.a11y.speak(__('Accessibility Notice', 'typost-glyphs-panel') + '. ' + message, 'polite');
+			}, A11Y_NOTICE_ANNOUNCE_DELAY);
+			return function() {
+				clearTimeout(timer);
+			};
+		}, [accessibility.wordBoundaryWarning]);
 
 		/**
 		 * Run the conversion the notice recommends, then close: the block this
@@ -851,13 +882,20 @@
 			accessibility.wordBoundaryWarning && el(Notice, {
 				status: 'warning',
 				isDismissible: false,
+				// Silent on mount; announced by the deferred effect above so
+				// the dialog's name comes first (SR-1).
+				spokenMessage: '',
 				className: 'typost-glyphs-a11y-notice'
 			},
 				el('strong', null, __('Accessibility Notice', 'typost-glyphs-panel')),
-				el('p', null, accessibility.wordBoundaryWarning),
+				el('p', { id: noticeIdRef.current }, accessibility.wordBoundaryWarning),
 				accessibility.canConvert && el(Button, {
 					variant: 'secondary',
 					className: 'typost-glyphs-convert-button',
+					// The reason travels with the button: a Tab stop reading
+					// only "Convert to Typography Stylist Block" said nothing
+					// about why.
+					'aria-describedby': noticeIdRef.current,
 					onClick: handleConvertToBlock
 				}, __('Convert to Typography Stylist Block', 'typost-glyphs-panel')),
 				!accessibility.canConvert && accessibility.convertBlockedMessage &&

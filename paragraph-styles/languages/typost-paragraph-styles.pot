@@ -172,6 +172,18 @@ msgstr ""
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style renamed to \"%s\"."
+msgstr ""
+
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style \"%s\" deleted."
+msgstr ""
+
 #: paragraph-styles.php
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""

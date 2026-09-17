@@ -759,7 +759,8 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-admin',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/admin.js',
-			array( 'jquery', 'wp-i18n' ),
+			// wp-a11y: rename/delete are announced through wp.a11y.speak (ADM-2)
+			array( 'jquery', 'wp-i18n', 'wp-a11y' ),
 			TYPOST_PS_VERSION,
 			true
 		);
@@ -881,15 +882,23 @@ final class Typost_Paragraph_Styles {
 			$clean['fontSize'] = sanitize_text_field( $raw['fontSize'] );
 		}
 
-		if ( isset( $raw['fontSizeMin'] ) ) {
+		// The min/preferred/max trio only means something for responsive and
+		// fit sizes (fit keeps it as its fallback clamp). Older clients sent
+		// it for every style, so fixed-size styles carried three junk numbers
+		// (QA finding PS-3); the JS builder no longer sends them and the
+		// server drops them for good measure.
+		$size_mode   = isset( $clean['fontSize'] ) ? $clean['fontSize'] : '';
+		$uses_trio   = in_array( $size_mode, array( 'responsive', 'fit' ), true );
+
+		if ( $uses_trio && isset( $raw['fontSizeMin'] ) ) {
 			$clean['fontSizeMin'] = absint( $raw['fontSizeMin'] );
 		}
 
-		if ( isset( $raw['fontSizePreferred'] ) ) {
+		if ( $uses_trio && isset( $raw['fontSizePreferred'] ) ) {
 			$clean['fontSizePreferred'] = absint( $raw['fontSizePreferred'] );
 		}
 
-		if ( isset( $raw['fontSizeMax'] ) ) {
+		if ( $uses_trio && isset( $raw['fontSizeMax'] ) ) {
 			$clean['fontSizeMax'] = absint( $raw['fontSizeMax'] );
 		}
 
@@ -901,8 +910,11 @@ final class Typost_Paragraph_Styles {
 			$clean['letterSpacing'] = intval( $raw['letterSpacing'] );
 		}
 
+		// Three decimals: the slider steps by 0.1, and a fixed precision keeps
+		// float noise (1.6000000000000001 once came back from JSON, QA finding
+		// PS-8) out of the option and out of the generated CSS.
 		if ( isset( $raw['lineHeight'] ) ) {
-			$clean['lineHeight'] = floatval( $raw['lineHeight'] );
+			$clean['lineHeight'] = round( floatval( $raw['lineHeight'] ), 3 );
 		}
 
 		if ( isset( $raw['features'] ) && is_array( $raw['features'] ) ) {

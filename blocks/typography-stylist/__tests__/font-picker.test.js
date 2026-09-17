@@ -171,3 +171,73 @@ describe('buildSelectProps (fallback where ComboboxControl is unavailable)', () 
 		expect(seen).toEqual(['', '36']);
 	});
 });
+
+const React = require('react');
+// Required at module scope: testing-library registers Jest hooks on load.
+const { render } = require('@testing-library/react');
+
+describe('SR-5: the suggestions list is not a Tab stop', () => {
+	const { removeSuggestionsListFromTabOrder, watchSuggestionsList, FontPicker } = require('../../../assets/js/font-picker.js');
+
+	function buildList() {
+		const ul = document.createElement('ul');
+		ul.setAttribute('role', 'listbox');
+		ul.className = 'components-form-token-field__suggestions-list';
+		return ul;
+	}
+
+	test('sets tabindex -1 on an existing list and reports how many it changed', () => {
+		const root = document.createElement('div');
+		root.appendChild(buildList());
+		expect(removeSuggestionsListFromTabOrder(root)).toBe(1);
+		expect(root.querySelector('ul').getAttribute('tabindex')).toBe('-1');
+		// Idempotent: a second pass changes nothing
+		expect(removeSuggestionsListFromTabOrder(root)).toBe(0);
+	});
+
+	test('ignores a missing root', () => {
+		expect(removeSuggestionsListFromTabOrder(null)).toBe(0);
+	});
+
+	test('a list that mounts later (the field expanding) is fixed by the observer', async () => {
+		const root = document.createElement('div');
+		document.body.appendChild(root);
+		const stop = watchSuggestionsList(root);
+		const ul = buildList();
+		root.appendChild(ul);
+		// MutationObserver callbacks are delivered as microtasks
+		await Promise.resolve();
+		expect(ul.getAttribute('tabindex')).toBe('-1');
+		stop();
+		const later = buildList();
+		root.appendChild(later);
+		await Promise.resolve();
+		expect(later.getAttribute('tabindex')).toBeNull();
+		root.remove();
+	});
+
+	test('FontPicker wraps the combobox and fixes the list it renders', () => {
+		// Stand-in for core's ComboboxControl: renders the same listbox shape
+		const ComboboxControl = () => React.createElement('ul', { role: 'listbox' });
+		const previous = window.wp;
+		window.wp = {
+			element: {
+				createElement: React.createElement,
+				useRef: React.useRef,
+				useEffect: React.useEffect,
+			},
+			components: { ComboboxControl },
+		};
+		try {
+			const { container, unmount } = render(
+				React.createElement(FontPicker, { label: 'Font Family', value: '', options: OPTIONS, placeholder: '(Default)', onChange: () => {} })
+			);
+			const wrapper = container.querySelector('.typost-font-picker');
+			expect(wrapper).not.toBeNull();
+			expect(wrapper.querySelector('ul[role="listbox"]').getAttribute('tabindex')).toBe('-1');
+			unmount();
+		} finally {
+			window.wp = previous;
+		}
+	});
+});
