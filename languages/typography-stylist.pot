@@ -1602,6 +1602,11 @@ msgid "Dismiss tip"
 msgstr ""
 
 #: assets/js/block-editor.js
+#: blocks/typography-stylist/edit.js
+msgid "Move panel, use arrow keys"
+msgstr ""
+
+#: assets/js/block-editor.js
 msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr ""
 
@@ -1843,11 +1848,6 @@ msgstr ""
 
 #: blocks/typography-stylist/edit.js:3446
 msgid "Quick Feature Toggles"
-msgstr ""
-
-#: blocks/typography-stylist/edit.js:3442
-#: assets/js/block-editor.js:3102
-msgid "Drag to reposition modal"
 msgstr ""
 
 #: includes/admin-page.php

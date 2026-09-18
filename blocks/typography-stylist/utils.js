@@ -435,11 +435,6 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fitScale: null,
 			fitShift: null,
 			fontVariationSettings: null,
-			// Paragraph style applied to the selected text (data-style-id of
-			// the nearest span carrying one), 0 when the selection has none.
-			// The toolbar style browser uses it to mark the selection's own
-			// style rather than the block's when text is selected.
-			styleId: 0,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
 			spanEnd: spanEnd
@@ -501,14 +496,6 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontId = currentSpan.getAttribute('data-font-id');
 				if (fontId) {
 					result.fontId = fontId;
-				}
-			}
-
-			// Paragraph style - nearest ancestor-or-self carrying data-style-id
-			if (!result.styleId) {
-				const styleId = parseInt(currentSpan.getAttribute('data-style-id'), 10);
-				if (styleId > 0) {
-					result.styleId = styleId;
 				}
 			}
 
@@ -2534,6 +2521,47 @@ export function computeTypostFormatRuns(formats, start, end, formatType) {
 	return runs;
 }
 
+// PARAGRAPH_STYLE_OWNED_ATTRS / PARAGRAPH_STYLE_OWNED_PROPS (declared with the
+// HTML-side helpers below) also drive the rich-text twin here.
+
+/**
+ * Count the rich-text formatting runs inside a selection whose own styling
+ * a paragraph style would replace — the inline-editor twin of
+ * countParagraphStyleConflicts(), working on RichText `formats` rather than
+ * HTML. The inline editor applies a style by re-applying its format over the
+ * range, which drops every run's previous attributes, so the author is asked
+ * first when this is non-zero (QA finding PS-2).
+ *
+ * A run that only carries a paragraph style (data-style-id) is not a
+ * conflict; nor is a glyph-level raw alternate (data-feature-settings without
+ * data-features) or a fit-relative scale, mirroring
+ * spanHasParagraphStyleOverrides().
+ *
+ * @since 2.3.0
+ * @param {Array}  formats    RichText value.formats
+ * @param {number} start      Selection start
+ * @param {number} end        Selection end (exclusive)
+ * @param {string} formatType The typost format type name
+ * @returns {number}
+ */
+export function countInlineParagraphStyleConflicts(formats, start, end, formatType) {
+	return computeTypostFormatRuns(formats, start, end, formatType).filter((run) => {
+		const attrs = run.attributes;
+		if (!attrs) {
+			return false;
+		}
+		if (PARAGRAPH_STYLE_OWNED_ATTRS.some((key) => attrs[key])) {
+			return true;
+		}
+		// Legacy spans carried only a style attribute
+		const hasDataAttrs = Object.keys(attrs).some((key) => key.indexOf('data-') === 0);
+		if (hasDataAttrs || typeof attrs.style !== 'string') {
+			return false;
+		}
+		return PARAGRAPH_STYLE_OWNED_PROPS.some((prop) => new RegExp('(^|;)\s*' + prop + '\s*:', 'i').test(attrs.style));
+	}).length;
+}
+
 /**
  * Whether a range covers more than one distinct typost formatting run.
  *
@@ -3174,6 +3202,54 @@ export function countParagraphStyleConflicts(htmlContent, start, end) {
 }
 
 /**
+ * The paragraph style that covers a whole selection: the data-style-id on
+ * the innermost span containing [start, end) or on one of its ancestors.
+ *
+ * Containment, not overlap: a span that carries a style over only part of
+ * the selection does not make that style "the selection's style", so the
+ * toolbar browser must not mark it active or offer to detach it (review of
+ * the 2026-09 QA scope-indicator fix). A span exactly equal to the range
+ * counts as containing it.
+ *
+ * @since 2.3.0
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @returns {number} Style id, 0 when no single style covers the selection
+ */
+export function findCoveringParagraphStyleId(htmlContent, start, end) {
+	if (!htmlContent || !(end > start)) {
+		return 0;
+	}
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const textMap = buildTextOffsetMap(container, doc);
+	let innermost = null;
+	let innermostLength = Infinity;
+	Array.prototype.slice.call(container.querySelectorAll('span.typost-styled')).forEach((span) => {
+		const range = spanTextRange(span, textMap);
+		if (!range || range.start > start || range.end < end) {
+			return;
+		}
+		const length = range.end - range.start;
+		if (length < innermostLength) {
+			innermostLength = length;
+			innermost = span;
+		}
+	});
+	let node = innermost;
+	while (node && node !== container) {
+		const id = parseInt(node.getAttribute && node.getAttribute('data-style-id'), 10);
+		if (id > 0) {
+			return id;
+		}
+		node = node.parentNode;
+	}
+	return 0;
+}
+
+/**
  * Apply a paragraph style to a selection that sits strictly INSIDE a styled
  * span, by splitting that span at the selection boundaries. The selected
  * segment gets the style id (and, being equal to the range, is then stripped
@@ -3711,6 +3787,8 @@ if (typeof window !== 'undefined') {
 		filterFeaturesByVisibility,
 		mergeInsertionFormatAttributes,
 		computeTypostFormatRuns,
+		countInlineParagraphStyleConflicts,
+		findCoveringParagraphStyleId,
 		isMixedFormatSelection,
 		patchTypostFormatAttributes,
 		pruneRawFeatureSettings,

@@ -31,11 +31,15 @@
 	var TextControl    = wp.components.TextControl;
 	var Modal          = wp.components.Modal;
 	var __             = wp.i18n.__;
+	var _n             = wp.i18n._n;
+	var sprintf        = wp.i18n.sprintf;
 
 	var utils                    = window.typostPSUtils;
 	var findFontName             = utils.findFontName;
 	var isStyleModified          = utils.isStyleModified;
 	var resolveBrowserActiveStyleId = utils.resolveBrowserActiveStyleId;
+	var filterParagraphStyles    = utils.filterParagraphStyles;
+	var BROWSER_PAGE_SIZE        = utils.BROWSER_PAGE_SIZE;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
@@ -164,6 +168,58 @@
 			}
 		}, [editorSource]);
 
+		// The style shown before the last pick, so a cancelled apply (the
+		// host asked before replacing the selection's own styling and the
+		// author said no) can put the badge back. The host reports the cancel
+		// through typost-paragraph-style-apply-cancelled; without this the
+		// panel kept showing a style that was never applied.
+		var lastActiveRef = useRef({ id: 0, selected: '' });
+		function rememberActive() {
+			lastActiveRef.current = { id: activeStyleId, selected: selectedStyleId };
+		}
+		useEffect(function() {
+			var editorType = editorSource === 'inspector' ? 'qft' : editorSource;
+			function onCancelled(e) {
+				if (!e.detail || e.detail.source !== editorType) return;
+				setActiveStyleId(lastActiveRef.current.id);
+				setSelectedStyleId(lastActiveRef.current.selected);
+			}
+			document.addEventListener('typost-paragraph-style-apply-cancelled', onCancelled);
+			return function() {
+				document.removeEventListener('typost-paragraph-style-apply-cancelled', onCancelled);
+			};
+		}, [editorSource]);
+
+		// "Browse styles…" (inline editor): the visual browser replaces the
+		// native select there — a select with no preview was unusable at a
+		// few hundred styles (QA §4, decision 3). The browser applies through
+		// the inline route and reports back so the badge follows.
+		// Opening a second Modal makes WordPress close this one (the Glyphs
+		// panel documents the same), so the host's saved selection range goes
+		// with the browser and comes back through typost_extension_panel_closed,
+		// which reopens the inline modal where the author left it.
+		function openBrowserFromPanel() {
+			var host = props.hostState || {};
+			var range = (typeof host.savedSelectionStart === 'number' && typeof host.savedSelectionEnd === 'number')
+				? { start: host.savedSelectionStart, end: host.savedSelectionEnd }
+				: null;
+			openBrowser({
+				editorSource: 'inline',
+				hasSelection: true,
+				state: getCurrentState(),
+				onClosed: function() {
+					if (window.typostHooks) {
+						window.typostHooks.doAction('typost_extension_panel_closed', 'inline', { range: range, reopenHost: true });
+					}
+				},
+				onApplied: function(style) {
+					rememberActive();
+					setActiveStyleId(style ? style.id : 0);
+					setSelectedStyleId(style ? String(style.id) : '');
+				},
+			});
+		}
+
 		// Look up the active style object
 		var activeStyle = useMemo(function() {
 			if (!activeStyleId) return null;
@@ -249,9 +305,10 @@
 			}
 			if (!style || !style.properties) return;
 
+			rememberActive();
 			setActiveStyleId(style.id);
 			dispatchApply(style, editorSource);
-		}, [currentStyles, editorSource]);
+		}, [currentStyles, editorSource, activeStyleId, selectedStyleId]);
 
 		// Handle save new style
 		var onSave = useCallback(function() {
@@ -381,6 +438,11 @@
 					),
 					// Actions
 					el('div', { className: 'typost-ps-style-actions' },
+						editorSource === 'inline' && el(Button, {
+							variant: 'secondary',
+							onClick: openBrowserFromPanel,
+							size: 'small',
+						}, __('Browse styles…', 'typost-paragraph-styles')),
 						modified && el(Button, {
 							variant: 'primary',
 							onClick: onUpdateStyle,
@@ -436,17 +498,25 @@
 				el('div', { className: 'typost-ps-panel-label' },
 					__('Paragraph Style', 'typost-paragraph-styles')
 				),
-				el(SelectControl, {
-					// The visible "Paragraph Style" heading above is a plain div, so
-					// without this the select had no accessible name — NVDA read it
-					// as "combo box, — Select a style —, collapsed" (QA finding SR-2).
-					label: __('Paragraph Style', 'typost-paragraph-styles'),
-					hideLabelFromVision: true,
-					value: selectedStyleId,
-					options: options,
-					onChange: onSelectStyle,
-					__nextHasNoMarginBottom: true,
-				}),
+				editorSource === 'inline'
+					? el(Button, {
+						variant: 'secondary',
+						className: 'typost-ps-browse-btn',
+						onClick: openBrowserFromPanel,
+						// Names what opens; the panel heading above is a plain div
+						'aria-haspopup': 'dialog',
+					}, __('Browse styles…', 'typost-paragraph-styles'))
+					: el(SelectControl, {
+						// The visible "Paragraph Style" heading above is a plain div, so
+						// without this the select had no accessible name — NVDA read it
+						// as "combo box, — Select a style —, collapsed" (QA finding SR-2).
+						label: __('Paragraph Style', 'typost-paragraph-styles'),
+						hideLabelFromVision: true,
+						value: selectedStyleId,
+						options: options,
+						onChange: onSelectStyle,
+						__nextHasNoMarginBottom: true,
+					}),
 				!isShowSave && el(Button, {
 					variant: 'secondary',
 					className: 'typost-ps-save-btn',
@@ -501,6 +571,9 @@
 	 *   onClose: function
 	 */
 	function ParagraphStylesBrowser(props) {
+		var editorSource = props.editorSource || 'inspector';
+		var editorType   = editorSource === 'inspector' ? 'qft' : editorSource;
+
 		var stylesState      = useState(getStyles());
 		var currentStyles    = stylesState[0];
 		var setCurrentStyles = stylesState[1];
@@ -508,6 +581,19 @@
 		var activeState    = useState(props.activeStyleId || 0);
 		var activeStyleId  = activeState[0];
 		var setActiveStyleId = activeState[1];
+
+		// Search + "first 24, show more" paging (QA §4 option 2, decision 3).
+		// At 300 styles the full list was 30,000 px tall; a search box and a
+		// short first page make it usable without changing what a row is.
+		var queryState   = useState('');
+		var query        = queryState[0];
+		var setQuery     = queryState[1];
+		var visibleState = useState(BROWSER_PAGE_SIZE);
+		var visibleCount = visibleState[0];
+		var setVisibleCount = visibleState[1];
+		// Index of the first row revealed by the last "Show more", so focus
+		// can land on it once it exists (-1: nothing pending)
+		var revealFromRef = useRef(-1);
 
 		useEffect(function() {
 			function onStylesUpdated() {
@@ -536,38 +622,85 @@
 			}
 		}, []);
 
+		var filtered = useMemo(function() {
+			return filterParagraphStyles(currentStyles, query, function(style) {
+				return getFontName(style.properties && style.properties.fontId);
+			});
+		}, [currentStyles, query]);
+		var visible = filtered.slice(0, visibleCount);
+		var hiddenCount = filtered.length - visible.length;
+
+		// After "Show more", focus the first newly revealed row so a keyboard
+		// user continues where the list grew instead of from the button.
+		useEffect(function() {
+			var index = revealFromRef.current;
+			if (index < 0 || !listRef.current) return;
+			revealFromRef.current = -1;
+			var rows = listRef.current.querySelectorAll('.typost-ps-browser-row');
+			if (rows[index] && typeof rows[index].focus === 'function') {
+				rows[index].focus();
+			}
+		}, [visibleCount]);
+
+		// Announce the match count as the author types: the list changes
+		// under a screen-reader user with no other signal.
+		useEffect(function() {
+			if (!query || !window.wp || !window.wp.a11y || typeof window.wp.a11y.speak !== 'function') return;
+			window.wp.a11y.speak(sprintf(
+				/* translators: %d: number of matching styles */
+				_n('%d style matches.', '%d styles match.', filtered.length, 'typost-paragraph-styles'),
+				filtered.length
+			), 'polite');
+		}, [query, filtered.length]);
+
+		function onQueryChange(value) {
+			setQuery(value);
+			setVisibleCount(BROWSER_PAGE_SIZE);
+		}
+
+		function onShowMore() {
+			revealFromRef.current = visible.length;
+			setVisibleCount(visibleCount + BROWSER_PAGE_SIZE);
+		}
+
 		// Applying and detaching are both terminal: close afterwards so the
 		// author sees the result on the block instead of through a modal, and
-		// so focus returns to the toolbar button. Closing also avoids stranding
-		// keyboard focus — detaching unmounts the very button that was clicked,
-		// which would otherwise drop focus to the document root.
+		// so focus returns to the launching button. Closing also avoids
+		// stranding keyboard focus — detaching unmounts the very button that
+		// was clicked, which would otherwise drop focus to the document root.
 		// With text selected, the style wraps that text; with only a caret it
 		// applies to the whole block. Styling one word must not restyle its
 		// neighbours just because they carry no explicit styling of their own.
-		var applyTo = props.hasSelection ? 'selection' : undefined;
+		// The inline editor is selection-scoped by nature, so it needs no
+		// applyTo flag; its host applies to the saved selection.
+		var applyTo = props.hasSelection && editorSource !== 'inline' ? 'selection' : undefined;
 
 		var onApply = useCallback(function(style) {
 			setActiveStyleId(style.id);
-			dispatchApply(style, 'inspector', undefined, applyTo);
+			// The launching panel first, so a cancel reported during the
+			// apply (typost-paragraph-style-apply-cancelled) lands after it
+			if (props.onApplied) props.onApplied(style);
+			dispatchApply(style, editorSource, undefined, applyTo);
 			props.onClose();
-		}, [props.onClose, applyTo]);
+		}, [props.onClose, props.onApplied, applyTo, editorSource]);
 
 		var onDetach = useCallback(function() {
 			setActiveStyleId(0);
+			if (props.onApplied) props.onApplied(null);
 			if (applyTo === 'selection') {
 				// Strip the style from the selected text only
-				dispatchApply(null, 'inspector', {}, applyTo);
+				dispatchApply(null, editorSource, {}, applyTo);
 				props.onClose();
 				return;
 			}
 			var state = window.typostHooks
-				? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft')
+				? window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType)
 				: {};
-			dispatchApply(null, 'inspector', buildPropertiesFromState(state));
+			dispatchApply(null, editorSource, buildPropertiesFromState(state));
 			props.onClose();
-		}, [props.onClose, applyTo]);
+		}, [props.onClose, props.onApplied, applyTo, editorSource, editorType]);
 
-		var rows = currentStyles.map(function(style) {
+		var rows = visible.map(function(style) {
 			var preview = buildStylePreviewStyle(style.properties);
 			var isActive = String(style.id) === String(activeStyleId);
 			var fontName = getFontName(style.properties && style.properties.fontId);
@@ -602,6 +735,17 @@
 			);
 		});
 
+		var body;
+		if (currentStyles.length === 0) {
+			body = el('p', { className: 'typost-ps-browser-empty' },
+				__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'));
+		} else if (filtered.length === 0) {
+			body = el('p', { className: 'typost-ps-browser-empty', role: 'status' },
+				sprintf(/* translators: %s: search text */ __('No styles match "%s".', 'typost-paragraph-styles'), query));
+		} else {
+			body = el('ul', { className: 'typost-ps-browser-list', ref: listRef }, rows);
+		}
+
 		return el(Modal, {
 			title: __('Paragraph Styles', 'typost-paragraph-styles'),
 			onRequestClose: props.onClose,
@@ -612,10 +756,27 @@
 					? __('Applies to the selected text.', 'typost-paragraph-styles')
 					: __('Applies to the whole block.', 'typost-paragraph-styles')
 			),
-			currentStyles.length === 0
-				? el('p', { className: 'typost-ps-browser-empty' },
-					__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'))
-				: el('ul', { className: 'typost-ps-browser-list', ref: listRef }, rows),
+			currentStyles.length > 0 && el('div', { className: 'typost-ps-browser-search' },
+				el(TextControl, {
+					label: __('Search styles', 'typost-paragraph-styles'),
+					type: 'search',
+					value: query,
+					onChange: onQueryChange,
+					placeholder: __('Style or font name', 'typost-paragraph-styles'),
+					__nextHasNoMarginBottom: true,
+				})
+			),
+			body,
+			hiddenCount > 0 && el('div', { className: 'typost-ps-browser-more' },
+				el(Button, {
+					variant: 'secondary',
+					onClick: onShowMore,
+				}, sprintf(
+					/* translators: %d: number of styles not shown yet */
+					_n('Show %d more style', 'Show %d more styles', hiddenCount, 'typost-paragraph-styles'),
+					hiddenCount
+				))
+			),
 			activeStyleId ? el('div', { className: 'typost-ps-browser-footer' },
 				el(Button, {
 					variant: 'link',
@@ -631,6 +792,7 @@
 	// -------------------------------------------------------------------------
 
 	var browserRoot = null;
+	var browserOnClosed = null;
 
 	function closeBrowser() {
 		if (browserRoot) {
@@ -640,11 +802,17 @@
 			}
 			browserRoot = null;
 		}
+		var onClosed = browserOnClosed;
+		browserOnClosed = null;
+		if (typeof onClosed === 'function') {
+			onClosed();
+		}
 	}
 
 	function openBrowser(context) {
 		injectStyles();
 		closeBrowser();
+		browserOnClosed = (context && typeof context.onClosed === 'function') ? context.onClosed : null;
 		browserRoot = document.createElement('div');
 		browserRoot.className = 'typost-ps-browser-root';
 		document.body.appendChild(browserRoot);
@@ -658,7 +826,9 @@
 		// A captured selection means the author highlighted text before opening
 		// the browser, so the style should wrap that text rather than the block.
 		var captured = context && context.capturedSelection;
-		var hasSelection = !!(captured && captured.start !== captured.end);
+		var hasSelection = context && context.hasSelection !== undefined
+			? !!context.hasSelection
+			: !!(captured && captured.start !== captured.end);
 
 		wp.element.render(
 			el(ParagraphStylesBrowser, {
@@ -666,6 +836,10 @@
 				// the selection's own style, not the block's (see the helper).
 				activeStyleId: resolveBrowserActiveStyleId(state, hasSelection),
 				hasSelection: hasSelection,
+				// 'inline' when launched from the inline modal's panel; the
+				// toolbar button (block) keeps the 'inspector' route
+				editorSource: (context && context.editorSource) || 'inspector',
+				onApplied: context && context.onApplied,
 				onClose: closeBrowser,
 			}),
 			browserRoot
@@ -815,7 +989,11 @@
 			'.typost-ps-browser-sample { display: block; color: #1e1e1e; overflow-wrap: anywhere; }',
 			'.typost-ps-browser-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }',
 			'.typost-ps-browser-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
-			'.typost-ps-browser-detail { font-size: 11px; color: #757575; }',
+			// #50575e is 6.4:1 on the #f0f0f0 hover background; #757575 at 11px was 4.0:1 (QA finding A11Y-3)
+			'.typost-ps-browser-detail { font-size: 12px; color: #50575e; }',
+			'.typost-ps-browser-search { margin: 0 0 12px 0; }',
+			'.typost-ps-browser-more { margin-top: 12px; text-align: center; }',
+			'.typost-ps-browse-btn { width: 100%; justify-content: center; }',
 			'.typost-ps-browser-empty { color: #757575; margin: 0; }',
 			'.typost-ps-browser-scope { margin: 0 0 12px 0; font-size: 12px; color: #757575; }',
 			'.typost-ps-browser-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }',
@@ -830,10 +1008,10 @@
 	// Hook into both editors
 	// -------------------------------------------------------------------------
 
-	function renderPanel(containerEl, editorSource) {
+	function renderPanel(containerEl, editorSource, hostState) {
 		injectStyles();
 		wp.element.render(
-			el(ParagraphStylesPanel, { editorSource: editorSource }),
+			el(ParagraphStylesPanel, { editorSource: editorSource, hostState: hostState || null }),
 			containerEl
 		);
 	}
@@ -859,8 +1037,10 @@
 
 	waitForHooks(function() {
 		// Inline editor — top of modal
-		window.typostHooks.addAction('typost_inline_modal_top', function(el) {
-			renderPanel(el, 'inline');
+		// The host's state rides along: its saved selection range is what the
+		// style browser hands back so the modal can reopen where it was.
+		window.typostHooks.addAction('typost_inline_modal_top', function(el, state) {
+			renderPanel(el, 'inline', state);
 		}, 10);
 
 		// Typography Stylist block — Quick Feature Toggle top
@@ -874,10 +1054,10 @@
 		}, 10);
 
 		// Re-render on modal open to refresh styles list and detect active style
-		window.typostHooks.addAction('typost_inline_modal_opened', function() {
+		window.typostHooks.addAction('typost_inline_modal_opened', function(state) {
 			var hookEl = document.querySelector('[data-hook="typost_inline_modal_top"]');
 			if (hookEl) {
-				renderPanel(hookEl, 'inline');
+				renderPanel(hookEl, 'inline', state);
 			}
 		}, 10);
 

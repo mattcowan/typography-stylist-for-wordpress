@@ -8,6 +8,8 @@ const {
 	isStyleModified,
 	roundLineHeight,
 	resolveBrowserActiveStyleId,
+	filterParagraphStyles,
+	BROWSER_PAGE_SIZE,
 	buildPropertiesFromState,
 	buildApplyEventDetail,
 	normalizeApplyProperties,
@@ -745,20 +747,29 @@ describe('PS-3: size trio only stored for responsive/fit sizes', () => {
 
 describe('PS-8: line-height float hardening', () => {
 	test('roundLineHeight stores three decimals and maps junk to 0', () => {
-		expect(roundLineHeight(1.6000000000000001)).toBe(1.6);
+		// 0.1 + 0.2 is 0.30000000000000004 in IEEE doubles — a real witness;
+		// the literal 1.6000000000000001 the REST response showed parses to
+		// exactly 1.6 and cannot exercise anything.
+		expect(0.1 + 0.2).not.toBe(0.3);
+		expect(roundLineHeight(0.1 + 0.2)).toBe(0.3);
 		expect(roundLineHeight(1.23456)).toBe(1.235);
+		// Exact half-steps round up like PHP's round(); a naive n * 1000
+		// gives 1000.4999… and would round 1.0005 down to 1.0
+		expect(roundLineHeight(1.0005)).toBe(1.001);
+		expect(roundLineHeight(2.0015)).toBe(2.002);
 		expect(roundLineHeight('1.5')).toBe(1.5);
 		expect(roundLineHeight('abc')).toBe(0);
 		expect(roundLineHeight(undefined)).toBe(0);
 	});
 
 	test('buildPropertiesFromState rounds the line-height it stores', () => {
-		expect(buildPropertiesFromState({ lineHeight: 1.6000000000000001 })).toEqual({ lineHeight: 1.6 });
+		expect(buildPropertiesFromState({ lineHeight: 0.1 + 0.2 })).toEqual({ lineHeight: 0.3 });
 		expect(buildPropertiesFromState({ lineHeight: 1.23456 })).toEqual({ lineHeight: 1.235 });
 	});
 
 	test('isStyleModified tolerates float noise in the stored line-height', () => {
-		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.6000000000000001 })).toBe(false);
+		expect(isStyleModified({ lineHeight: 0.3 }, { lineHeight: 0.1 + 0.2 })).toBe(false);
+		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.6002 })).toBe(false);
 		expect(isStyleModified({ lineHeight: 1.6 }, { lineHeight: 1.6004 })).toBe(false);
 	});
 
@@ -784,5 +795,40 @@ describe('resolveBrowserActiveStyleId (browser scope indicator)', () => {
 		expect(resolveBrowserActiveStyleId({ paragraphStyleId: 4, selectionParagraphStyleId: 7 }, false)).toBe(4);
 		expect(resolveBrowserActiveStyleId({}, false)).toBe(0);
 		expect(resolveBrowserActiveStyleId(null, false)).toBe(0);
+	});
+});
+
+describe('filterParagraphStyles (browser search)', () => {
+	const styles = [
+		{ id: 2, name: 'Display Swash', properties: { fontId: 1 } },
+		{ id: 3, name: 'Body Garamond', properties: { fontId: 37 } },
+		{ id: 5, name: 'Script Accent', properties: { fontId: 40 } },
+	];
+	const fontNameOf = (style) => ({ 1: 'bookmania', 37: 'EB Garamond', 40: 'Style Script' })[style.properties.fontId];
+
+	test('an empty query returns every style, as a copy', () => {
+		const all = filterParagraphStyles(styles, '', fontNameOf);
+		expect(all).toEqual(styles);
+		expect(all).not.toBe(styles);
+		expect(filterParagraphStyles(styles, '   ')).toHaveLength(3);
+	});
+
+	test('matches the style name, case-insensitively, anywhere in the name', () => {
+		expect(filterParagraphStyles(styles, 'swash').map((s) => s.id)).toEqual([2]);
+		expect(filterParagraphStyles(styles, 'ACCENT').map((s) => s.id)).toEqual([5]);
+	});
+
+	test('matches the font name through the lookup', () => {
+		expect(filterParagraphStyles(styles, 'garamond', fontNameOf).map((s) => s.id)).toEqual([3]);
+		expect(filterParagraphStyles(styles, 'script', fontNameOf).map((s) => s.id)).toEqual([5]);
+	});
+
+	test('returns nothing for a query that matches neither', () => {
+		expect(filterParagraphStyles(styles, 'fraktur', fontNameOf)).toEqual([]);
+		expect(filterParagraphStyles(null, 'x')).toEqual([]);
+	});
+
+	test('the page size is 24', () => {
+		expect(BROWSER_PAGE_SIZE).toBe(24);
 	});
 });

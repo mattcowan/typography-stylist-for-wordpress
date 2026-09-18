@@ -494,7 +494,11 @@ Descriptors without an `id` or a callable `onClick` are dropped.
 | `accessibility` | — | word-boundary state (see below) |
 | `reopenHost` | `false` | `false` |
 
-`context.state` carries two style ids: `paragraphStyleId` is the style on the block (or, in the inline editor, at the selection), and `selectionParagraphStyleId` (`qft`, *since 2.3.1*) is the `data-style-id` on the selected text itself, `0` when it carries none. A panel that applies to a selection should treat the second as "active"; the block's style says nothing about the selected words.
+`context.state` carries two style ids: `paragraphStyleId` is the style on the block (or, in the inline editor, at the selection), and `selectionParagraphStyleId` (*since 2.3.0*) is the `data-style-id` of the span that covers the whole selected text, `0` when no single style does (a style over part of the selection does not count). In the inline editor the two are the same value. A panel that applies to a selection should treat the second as "active"; the block's style says nothing about the selected words.
+
+**`typost_extension_panel_closed`** (*since 2.3.0*, `typostHooks` action, `(source, { range, reopenHost })`). Opening a second `Modal` from inside the inline editor's modal makes WordPress close the inline modal. A panel launched from inside it fires this action when it closes so the inline modal reopens where the author was; `range` is the host's saved selection (`{ start, end }`) as received from the `typost_inline_modal_top` / `typost_inline_modal_opened` hook state, and `reopenHost: false` means "do not reopen" (launched from the toolbar). `typost_glyphs_panel_closed` is the older, Glyphs-specific name for the same contract and keeps working.
+
+**`typost-paragraph-style-apply-cancelled`** (*since 2.3.0*, `document` CustomEvent). Both editors ask before a paragraph style replaces styling the selected text already carries. When the author cancels, the editor fires this event with `detail: { source: 'inline' | 'qft', paragraphStyleId }` instead of applying, so the panel that dispatched `typost-apply-block-properties` can put its previous state back. Listen for it if your UI shows the applied style before the apply resolves.
 
 **`context.accessibility`** (inline editor) carries the word-boundary notice the editor's own modal would have shown, because a panel opened from the toolbar bypasses that modal entirely:
 

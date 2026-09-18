@@ -625,6 +625,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
                         paragraphStyleId: self.state.paragraphStyleId,
+                        // The inline editor's style is always the selection's
+                        // (see HOOKS.md, Block Toolbar Buttons)
+                        selectionParagraphStyleId: self.state.paragraphStyleId,
                         animationId: self.state.animationId,
                         fontVariationSettings: self.state.fontVariationSettings
                     };
@@ -639,6 +642,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._handleApplyBlockProperties = function(e) {
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
+                    // A paragraph style replaces whatever styling the selected
+                    // runs carry (applying the format drops their previous
+                    // attributes). The block editor asks first; so does this
+                    // one now (QA finding PS-2). A cancel is reported so the
+                    // panel that dispatched the apply can drop its badge.
+                    if (e.detail.paragraphStyleId && !self.confirmParagraphStyleOverride()) {
+                        document.dispatchEvent(new CustomEvent('typost-paragraph-style-apply-cancelled', {
+                            detail: { source: 'inline', paragraphStyleId: e.detail.paragraphStyleId }
+                        }));
+                        return;
+                    }
                     // Record which properties this event changes so mixed
                     // selections only get those patched per-run. Style/animation
                     // ids reset to wholesale (extensions own the full format).
@@ -808,6 +822,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 });
             };
             window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
+            // Generic name for the same contract: any panel that opened as a
+            // separate Modal from inside this one (the Paragraph Styles browser
+            // is the second) fires it on close to bring this modal back.
+            window.typostHooks.addAction('typost_extension_panel_closed', this._handleGlyphsClosed, 10);
 
             // Extension hook: let an extension trigger the conversion its own
             // UI is offering — the word-boundary notice is only useful if the
@@ -1597,6 +1615,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 clearTimeout(this._noticeSpeakTimer);
                 this._noticeSpeakTimer = null;
             }
+        }
+
+        /**
+         * Ask before a paragraph style replaces the selection's own styling.
+         *
+         * Returns true when there is nothing to replace or the author agreed,
+         * false when they cancelled. The range is the live selection, or the
+         * bounds saved when the modal took focus (the same fallback
+         * _doApplyFeatures uses).
+         */
+        confirmParagraphStyleOverride() {
+            const { value } = this.props;
+            const { savedSelectionStart, savedSelectionEnd } = this.state;
+            const shared = window.typostSharedUtils || {};
+            if (!value || typeof shared.countInlineParagraphStyleConflicts !== 'function') {
+                return true;
+            }
+            const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+            const start = selectionLost ? savedSelectionStart : value.start;
+            const end = selectionLost ? savedSelectionEnd : value.end;
+            const conflicts = shared.countInlineParagraphStyleConflicts(value.formats, start, end, FORMAT_TYPE);
+            if (conflicts === 0) {
+                return true;
+            }
+            return window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));
         }
 
         /**
@@ -2897,7 +2940,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         handleDragStart(e) {
             // Don't drag if clicking the close button
-            if (e.target.closest('.typost-modal-close-button')) {
+            // Any header button (Move panel, Close) is not a drag handle
+            if (e.target.closest('.components-button')) {
                 return;
             }
 
@@ -3082,6 +3126,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Cleanup glyphs-panel reopen handler
             if (this._handleGlyphsClosed) {
                 window.typostHooks.removeAction('typost_glyphs_panel_closed', this._handleGlyphsClosed);
+                window.typostHooks.removeAction('typost_extension_panel_closed', this._handleGlyphsClosed);
             }
 
             // Cleanup extension toolbar button re-render handler
@@ -3183,22 +3228,26 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             }}
                         >
                             {/* Custom draggable header */}
+                            {/* Custom draggable header. The bar itself is a
+                                mouse drag surface only: as a focusable
+                                role="toolbar" div it was a Tab stop NVDA read
+                                as "document. Drag to reposition modal, tool
+                                bar" (QA finding SR-4). Keyboard repositioning
+                                lives on the named "Move panel" button, so it
+                                is discoverable rather than an accident of
+                                keydown bubbling from Close. */}
                             <div
                                 className="typost-modal-header"
                                 onMouseDown={this.handleDragStart}
-                                onKeyDown={this.handleHeaderKeyDown}
-                                role="toolbar"
-                                aria-label={__('Drag to reposition modal', 'typography-stylist')}
-                                // Not in the Tab order: NVDA read it as
-                                // "document. Drag to reposition modal, tool bar"
-                                // before the dialog's first real control (QA
-                                // finding SR-4). Still focusable by click, so
-                                // the arrow-key nudging keeps working after a
-                                // mouse user grabs the bar.
-                                tabIndex={-1}
                                 style={{ cursor: this.state.isDragging ? 'grabbing' : 'grab' }}
                             >
                                 <h3 id={this.modalTitleId}>{__('Typography Stylist', 'typography-stylist')}</h3>
+                                <Button
+                                    icon="move"
+                                    label={__('Move panel, use arrow keys', 'typography-stylist')}
+                                    onKeyDown={this.handleHeaderKeyDown}
+                                    className="typost-modal-move-button"
+                                />
                                 <Button
                                     icon="no-alt"
                                     label={__('Close', 'typography-stylist')}
@@ -3642,49 +3691,49 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 from assistive tech instead; the modal is usable unresized. */}
                             <div className="typost-resize-handles">
                                 <div
-                                    className="typost-resize-handle typost-resize-n"
+                                    className="typost-resize-handle typost-resize-handle-n"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'n')}
                                     aria-hidden="true"
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-ne"
+                                    className="typost-resize-handle typost-resize-handle-ne"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'ne')}
                                     aria-hidden="true"
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-e"
+                                    className="typost-resize-handle typost-resize-handle-e"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'e')}
                                     aria-hidden="true"
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-se"
+                                    className="typost-resize-handle typost-resize-handle-se"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'se')}
                                     aria-hidden="true"
                                     style={{ cursor: 'nwse-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-s"
+                                    className="typost-resize-handle typost-resize-handle-s"
                                     onMouseDown={(e) => this.handleResizeStart(e, 's')}
                                     aria-hidden="true"
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-sw"
+                                    className="typost-resize-handle typost-resize-handle-sw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'sw')}
                                     aria-hidden="true"
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-w"
+                                    className="typost-resize-handle typost-resize-handle-w"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'w')}
                                     aria-hidden="true"
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-nw"
+                                    className="typost-resize-handle typost-resize-handle-nw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'nw')}
                                     aria-hidden="true"
                                     style={{ cursor: 'nwse-resize' }}

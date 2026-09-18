@@ -1979,6 +1979,11 @@ msgid "Dismiss tip"
 msgstr "Descartar el consejo"
 
 #: assets/js/block-editor.js
+#: blocks/typography-stylist/edit.js
+msgid "Move panel, use arrow keys"
+msgstr "Mover el panel, usa las flechas"
+
+#: assets/js/block-editor.js
 msgid "Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr "Los cambios se aplican al instante, pulsa Ctrl+Z (Cmd+Z en Mac) para deshacer."
 
@@ -2213,11 +2218,6 @@ msgstr "Mayús+Intro también inserta un salto de línea en un bloque Typography
 #: blocks/typography-stylist/edit.js:3446
 msgid "Quick Feature Toggles"
 msgstr "Ajustes rápidos de funciones"
-
-#: blocks/typography-stylist/edit.js:3442
-#: assets/js/block-editor.js:3102
-msgid "Drag to reposition modal"
-msgstr "Arrastrar para reposicionar la ventana"
 
 #: includes/admin-page.php
 msgid "Editor Tips"

@@ -105,7 +105,13 @@
 	function roundLineHeight(value) {
 		var n = parseFloat(value);
 		if (!isFinite(n)) return 0;
-		return Math.round(n * 1000) / 1000;
+		// Exponent notation instead of `n * 1000`: the multiplication turns
+		// an exact half-step such as 1.0005 into 1000.4999…, which
+		// Math.round takes down to 1.0 while PHP's round() (which pre-rounds
+		// the representation) gives 1.001 — a disagreement larger than the
+		// compare tolerance. Shifting the decimal point textually rounds the
+		// value the author actually typed, matching PHP.
+		return Number(Math.round(Number(n + 'e3')) + 'e-3');
 	}
 
 	/**
@@ -551,11 +557,46 @@
 		return parseInt(s.paragraphStyleId, 10) || 0;
 	}
 
+	/**
+	 * Rows the style browser shows before "Show more". At the 300-style
+	 * stress test the list was 30,000 px tall; bytes were never the problem,
+	 * a list that long is.
+	 */
+	var BROWSER_PAGE_SIZE = 24;
+
+	/**
+	 * Filter styles for the browser's search field: a case-insensitive
+	 * substring match on the style name or its font name.
+	 *
+	 * @param {Array}    styles     Stored styles
+	 * @param {string}   query      Search text
+	 * @param {Function} fontNameOf Optional: style → font name
+	 * @return {Array} Matching styles, all of them for an empty query
+	 */
+	function filterParagraphStyles(styles, query, fontNameOf) {
+		var list = styles || [];
+		var q = String(query || '').trim().toLowerCase();
+		if (!q) {
+			return list.slice();
+		}
+		return list.filter(function (style) {
+			if (!style) return false;
+			var name = String(style.name || '').toLowerCase();
+			if (name.indexOf(q) !== -1) {
+				return true;
+			}
+			var font = fontNameOf ? String(fontNameOf(style) || '').toLowerCase() : '';
+			return font.indexOf(q) !== -1;
+		});
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
 		roundLineHeight: roundLineHeight,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
+		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
+		filterParagraphStyles: filterParagraphStyles,
 		buildPropertiesFromState: buildPropertiesFromState,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,

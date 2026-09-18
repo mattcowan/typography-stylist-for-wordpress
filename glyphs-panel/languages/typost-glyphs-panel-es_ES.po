@@ -186,6 +186,12 @@ msgstr "«%s» insertado"
 msgid "This character is not available in the selected font."
 msgstr "Este carácter no está disponible en la fuente seleccionada."
 
+#. translators: %s: the characters typed
+#: glyphs-panel/assets/js/glyphs-modal.js
+#, js-format
+msgid "This font has no ligature for \"%s\". Type one character to browse its alternates."
+msgstr "Esta fuente no tiene ligadura para «%s». Escribe un solo carácter para explorar sus alternativas."
+
 #: glyphs-panel/assets/js/glyphs-modal.js:557
 msgid "No glyphs match the current search and filters."
 msgstr "Ningún glifo coincide con la búsqueda y los filtros actuales."

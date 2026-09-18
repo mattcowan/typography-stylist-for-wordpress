@@ -200,16 +200,17 @@ function FontPicker(props) {
 	var element = window.wp.element;
 	var createElement = element.createElement;
 
+	// Hooks run unconditionally, before the control branch, so the hook
+	// order is the same on every render (rules of hooks). The SelectControl
+	// fallback simply never attaches the ref. wp.element has shipped both
+	// hooks since WordPress 5.2, below this plugin's floor.
+	var ref = element.useRef(null);
+	element.useEffect(function () {
+		return watchSuggestionsList(ref.current);
+	}, []);
+
 	if (components.ComboboxControl) {
-		// The wrapper exists for the suggestions-list fix above; hooks are
-		// read from wp.element at call time so the module still loads where
-		// they are absent (the SelectControl fallback path needs neither).
-		var ref = element.useRef ? element.useRef(null) : { current: null };
-		if (element.useEffect) {
-			element.useEffect(function () {
-				return watchSuggestionsList(ref.current);
-			}, []);
-		}
+		// The wrapper exists for the suggestions-list fix above.
 		return createElement(
 			'div',
 			{ className: 'typost-font-picker', ref: ref },

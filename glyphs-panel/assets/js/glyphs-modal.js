@@ -503,10 +503,8 @@
 		// Alternates view takes over the grid when a character (single
 		// codepoint) or a short sequence (exact-ligature view) is set
 		var altCps = useMemo(function() {
-			var chars = Array.from((altChar || '').trim());
-			return chars.length >= 1 ? chars.map(function(c) {
-				return c.codePointAt(0);
-			}) : null;
+			// Character, short sequence, or U+XXXX (GP-2)
+			return lib.parseAltCharInput(altChar);
 		}, [altChar]);
 
 		// Validate the selection-pre-filled alternates value once metadata is
@@ -548,7 +546,15 @@
 				return [];
 			}
 			if (altCps !== null) {
-				return lib.buildAlternateItems(meta, altCps);
+				var alternates = lib.buildAlternateItems(meta, altCps);
+				// A sequence with no ligature in this font has only its base
+				// cell — plain characters labelled as a glyph ("ampe — base
+				// glyph", QA finding GP-2). Show the empty state's message
+				// instead; the author keeps the text they typed.
+				if (altCps.length > 1 && !lib.sequenceHasAlternates(alternates)) {
+					return [];
+				}
+				return alternates;
 			}
 			return lib.buildGridItems(meta, featureFilter || null);
 		}, [meta, featureFilter, altCps]);
@@ -729,7 +735,9 @@
 			// first pick for the launch selection, and further picks after it.
 			// Browsing a different character next must insert after the glyph
 			// that stayed selected for swapping, not over it (QA finding GP-1).
-			var altKey = inAlternatesView ? Array.from((altChar || '').trim()).join('') : null;
+			// Keyed on the resolved codepoints, so "U+0026" and "&" are the
+			// same browsed character for the swap window
+			var altKey = inAlternatesView ? String.fromCodePoint.apply(null, altCps) : null;
 			payload.swap = lib.shouldSwapInsertion({
 				inAlternatesView: inAlternatesView,
 				altKey: altKey,
@@ -962,7 +970,9 @@
 							// A short sequence ("Th") shows its exact ligature alternates
 							maxLength: 8,
 							onChange: function(value) {
-								setAltChar(Array.from(value || '').slice(0, 4).join(''));
+								// Longer sequences are trimmed, not rejected: a
+								// font may carry a ligature for several letters
+								setAltChar(Array.from(value || '').slice(0, lib.ALT_CHAR_MAX).join(''));
 							},
 							__nextHasNoMarginBottom: true
 						}),
@@ -1086,10 +1096,12 @@
 							);
 						})
 					),
-					items.length === 0 && el('p', { className: 'typost-glyphs-empty' },
-						altCps !== null
-							? __('This character is not available in the selected font.', 'typost-glyphs-panel')
-							: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
+					items.length === 0 && el('p', { className: 'typost-glyphs-empty', role: 'status' },
+						altCps !== null && altCps.length > 1
+							? sprintf(/* translators: %s: the characters typed */ __('This font has no ligature for "%s". Type one character to browse its alternates.', 'typost-glyphs-panel'), String.fromCodePoint.apply(null, altCps))
+							: altCps !== null
+								? __('This character is not available in the selected font.', 'typost-glyphs-panel')
+								: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
 				),
 
 				// Detail bar

@@ -79,7 +79,12 @@ class ParagraphStylesSanitizePropertiesTest extends TestCase {
     }
 
     public function test_line_height_is_rounded_to_three_decimals() {
-        $this->assertSame(1.6, $this->sanitize(['lineHeight' => 1.6000000000000001])['lineHeight']);
+        // 0.1 + 0.2 is not 0.3 in PHP either; the literal 1.6000000000000001 is
+        // bit-identical to 1.6 and would witness nothing.
+        $this->assertNotSame(0.3, 0.1 + 0.2);
+        $this->assertSame(0.3, $this->sanitize(['lineHeight' => 0.1 + 0.2])['lineHeight']);
+        // Exact half-steps round away from zero, matching the JS roundLineHeight()
+        $this->assertSame(1.001, $this->sanitize(['lineHeight' => '1.0005'])['lineHeight']);
         $this->assertSame(1.235, $this->sanitize(['lineHeight' => '1.23456'])['lineHeight']);
         $this->assertSame(1.5, $this->sanitize(['lineHeight' => '1.5'])['lineHeight']);
     }

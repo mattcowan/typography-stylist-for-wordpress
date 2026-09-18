@@ -540,9 +540,10 @@ span.typost-styled:hover {
     text-align: left;
 }
 
-/* #135e96 is 6.4:1 on the warning notice's #fff7e1; the WP link blues
-   (#0073aa 4.5:1, #007cba 4.3:1) sit at or below the AA line there
-   (QA finding A11Y-3). */
+/* #135e96 is 6.4:1 on the warning notice's #fff7e1. The previous #0073aa
+   was 4.9:1 here (passing); the Glyphs panel's identical notice used the
+   default #007cba at 4.3:1 (failing, QA finding A11Y-3), and both notices
+   now share this one color. */
 .typost-warning-settings-link a {
     color: #135e96;
     text-decoration: underline;
@@ -675,6 +676,16 @@ span.typost-styled:hover {
     flex-shrink: 0;
     margin-left: 16px;
     pointer-events: auto;
+}
+
+/* Keyboard handle for repositioning: the one named Tab stop in the header
+   (arrow keys move the panel while it has focus). The bar itself is a
+   mouse-only drag surface. */
+.typost-modal-move-button {
+    flex-shrink: 0;
+    margin-left: 8px;
+    pointer-events: auto;
+    cursor: default;
 }
 
 .typost-modal-close-button:hover {
