@@ -172,6 +172,18 @@ msgstr ""
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style renamed to \"%s\"."
+msgstr ""
+
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style \"%s\" deleted."
+msgstr ""
+
 #: paragraph-styles.php
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""
@@ -195,6 +207,40 @@ msgstr ""
 #: assets/js/editor.js
 msgid "Applies to the whole block."
 msgstr ""
+
+#: assets/js/editor.js
+msgid "Browse styles…"
+msgstr ""
+
+#: assets/js/editor.js
+msgid "Search styles"
+msgstr ""
+
+#: assets/js/editor.js
+msgid "Style or font name"
+msgstr ""
+
+#. translators: %s: search text
+#: assets/js/editor.js
+#, js-format
+msgid "No styles match \"%s\"."
+msgstr ""
+
+#. translators: %d: number of matching styles
+#: assets/js/editor.js
+#, js-format
+msgid "%d style matches."
+msgid_plural "%d styles match."
+msgstr[0] ""
+msgstr[1] ""
+
+#. translators: %d: number of styles the button reveals
+#: assets/js/editor.js
+#, js-format
+msgid "Show %d more style"
+msgid_plural "Show %d more styles"
+msgstr[0] ""
+msgstr[1] ""
 
 #. translators: 1: smallest font size, 2: largest font size.
 #: assets/js/lib/ps-utils.js

@@ -277,7 +277,10 @@ class Typost {
                 'wp-rich-text',
                 'wp-block-editor',
                 'wp-i18n',
-                'wp-compose'
+                'wp-compose',
+                // The inline modal announces its word-boundary notice through
+                // wp.a11y.speak once the dialog has been read (SR-1).
+                'wp-a11y'
             ),
             TYPOST_VERSION,
             true

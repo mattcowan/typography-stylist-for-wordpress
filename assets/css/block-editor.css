@@ -64,6 +64,25 @@
     border-radius: 0;
 }
 
+/* The tips bar carries its own dismiss button (Notice's is labelled
+   "Close", which read as a second, differently-acting Close stop to screen
+   readers): text on the left, button on the right. */
+.typost-drag-notice .components-notice__content {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.typost-drag-notice .typost-tip-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.typost-drag-notice .typost-tip-dismiss {
+    flex-shrink: 0;
+    margin: -2px -4px 0 0;
+}
+
 /* A notice that directly follows the tips bar already has the bar's gap */
 .typost-sticky-notice-wrapper + .typost-scrollable-content > .components-notice:first-child {
     margin-top: 0;
@@ -521,8 +540,12 @@ span.typost-styled:hover {
     text-align: left;
 }
 
+/* #135e96 is 6.4:1 on the warning notice's #fff7e1. The previous #0073aa
+   was 4.9:1 here (passing); the Glyphs panel's identical notice used the
+   default #007cba at 4.3:1 (failing, QA finding A11Y-3), and both notices
+   now share this one color. */
 .typost-warning-settings-link a {
-    color: #0073aa;
+    color: #135e96;
     text-decoration: underline;
 }
 
@@ -653,6 +676,16 @@ span.typost-styled:hover {
     flex-shrink: 0;
     margin-left: 16px;
     pointer-events: auto;
+}
+
+/* Keyboard handle for repositioning: the one named Tab stop in the header
+   (arrow keys move the panel while it has focus). The bar itself is a
+   mouse-only drag surface. */
+.typost-modal-move-button {
+    flex-shrink: 0;
+    margin-left: 8px;
+    pointer-events: auto;
+    cursor: default;
 }
 
 .typost-modal-close-button:hover {

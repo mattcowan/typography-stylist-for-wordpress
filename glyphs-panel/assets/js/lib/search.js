@@ -336,6 +336,64 @@
 	}
 
 	/**
+	 * Longest character sequence the "Alternates for character" field
+	 * browses. Ligatures of more than a few letters are rare but real
+	 * (discretionary "ffl", stylistic word ligatures), so the field does not
+	 * block them; it just stops somewhere sane.
+	 */
+	var ALT_CHAR_MAX = 8;
+
+	/**
+	 * Codepoints for the "Alternates for character" field.
+	 *
+	 * Accepts a character, a short sequence (browsed as an exact ligature),
+	 * or the U+XXXX form — the same form the search field takes, which this
+	 * field did not honor, so "U+0026" showed a bogus "U+00" cell (QA finding
+	 * GP-2). Longer sequences are trimmed, never rejected.
+	 *
+	 * @param {string} value Field value
+	 * @return {Array<number>|null} Codepoints; null when the field is empty;
+	 *                              an empty array when the field names no
+	 *                              browsable codepoint (a U+ value past
+	 *                              U+10FFFF), so the modal shows its
+	 *                              "not available" message rather than the
+	 *                              full grid
+	 */
+	function parseAltCharInput(value) {
+		var raw = String(value || '').trim();
+		if (!raw) {
+			return null;
+		}
+		var hexMatch = raw.match(/^u\+?([0-9a-f]{1,6})$/i);
+		if (hexMatch) {
+			var cp = parseInt(hexMatch[1], 16);
+			// Six hex digits reach past the last code point (U+10FFFF).
+			// Distinct from null: "typed something unbrowsable" keeps the
+			// alternates view (and its message) instead of falling back to
+			// the grid as an empty field does, and no consumer ever calls
+			// String.fromCodePoint on the invalid value.
+			return cp <= 0x10FFFF ? [cp] : [];
+		}
+		return Array.from(raw).slice(0, ALT_CHAR_MAX).map(function(ch) {
+			return ch.codePointAt(0);
+		});
+	}
+
+	/**
+	 * Whether a sequence-alternates result has anything beyond its base
+	 * cell. A sequence the font has no ligature for should show a message,
+	 * not a cell of plain characters labelled as a glyph (QA finding GP-2).
+	 *
+	 * @param {Array} items Result of buildAlternateItems() for a sequence
+	 * @return {boolean}
+	 */
+	function sequenceHasAlternates(items) {
+		return (items || []).some(function(item) {
+			return item && !item.base;
+		});
+	}
+
+	/**
 	 * Alternates input value to pre-fill when the panel opens over an editor
 	 * text selection. Only short, whitespace-free selections qualify — a
 	 * selected phrase means the author wants the full glyph grid, but a
@@ -381,6 +439,9 @@
 		filterBySearch: filterBySearch,
 		buildGridItems: buildGridItems,
 		buildAlternateItems: buildAlternateItems,
+		ALT_CHAR_MAX: ALT_CHAR_MAX,
+		parseAltCharInput: parseAltCharInput,
+		sequenceHasAlternates: sequenceHasAlternates,
 		initialAltCharFromSelection: initialAltCharFromSelection,
 		countByBlock: countByBlock
 	};

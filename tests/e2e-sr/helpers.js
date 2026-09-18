@@ -113,7 +113,17 @@ async function activateToolbarButton(page, nvda, label) {
   await delay(300);
   await nvda.press('Enter');
   await delay(300);
-  return nvda.lastSpokenPhrase();
+  let phrase = await nvda.lastSpokenPhrase();
+  if (!phrase) {
+    // Speech that lands after Guidepup's one-second window is never logged
+    // (a capture gap, not a product finding). Ask NVDA to report the focused
+    // object instead, which re-reads the dialog that opened.
+    await delay(900);
+    await nvda.perform(nvda.keyboardCommands.reportCurrentFocus);
+    await delay(400);
+    phrase = await nvda.lastSpokenPhrase();
+  }
+  return phrase;
 }
 
 /**

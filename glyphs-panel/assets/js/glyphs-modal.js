@@ -37,6 +37,11 @@
 	var CELL_SIZE = 56;
 	var OVERSCAN_ROWS = 3;
 
+	// Word-boundary notice: ids and the delay before it is announced (long
+	// enough for "Glyphs, dialog" to be read first; see GlyphsModal).
+	var a11yNoticeSeq = 0;
+	var A11Y_NOTICE_ANNOUNCE_DELAY = 800;
+
 	// -------------------------------------------------------------------------
 	// Data helpers
 	// -------------------------------------------------------------------------
@@ -211,6 +216,32 @@
 		// launched. Absent when the panel was opened from inside the editor's
 		// own modal, which shows the notice itself.
 		var accessibility = context.accessibility || {};
+
+		// Id for the notice text, so the Convert button can point at it.
+		var noticeIdRef = useRef(null);
+		if (noticeIdRef.current === null) {
+			a11yNoticeSeq += 1;
+			noticeIdRef.current = 'typost-glyphs-a11y-notice-' + a11yNoticeSeq;
+		}
+
+		// Announce the word-boundary notice AFTER the dialog has introduced
+		// itself. Notice speaks its content through the a11y live region the
+		// moment it mounts — the same tick the modal takes focus — so NVDA
+		// read the ~45-word warning before "Glyphs, dialog" (QA finding
+		// SR-1). The notice mounts silent (spokenMessage '') and is queued
+		// here as a polite message once the title has had time to be read.
+		useEffect(function() {
+			var message = accessibility.wordBoundaryWarning;
+			if (!message || !window.wp || !window.wp.a11y || typeof window.wp.a11y.speak !== 'function') {
+				return undefined;
+			}
+			var timer = setTimeout(function() {
+				window.wp.a11y.speak(__('Accessibility Notice', 'typost-glyphs-panel') + '. ' + message, 'polite');
+			}, A11Y_NOTICE_ANNOUNCE_DELAY);
+			return function() {
+				clearTimeout(timer);
+			};
+		}, [accessibility.wordBoundaryWarning]);
 
 		/**
 		 * Run the conversion the notice recommends, then close: the block this
@@ -472,10 +503,8 @@
 		// Alternates view takes over the grid when a character (single
 		// codepoint) or a short sequence (exact-ligature view) is set
 		var altCps = useMemo(function() {
-			var chars = Array.from((altChar || '').trim());
-			return chars.length >= 1 ? chars.map(function(c) {
-				return c.codePointAt(0);
-			}) : null;
+			// Character, short sequence, or U+XXXX (GP-2)
+			return lib.parseAltCharInput(altChar);
 		}, [altChar]);
 
 		// Validate the selection-pre-filled alternates value once metadata is
@@ -517,7 +546,15 @@
 				return [];
 			}
 			if (altCps !== null) {
-				return lib.buildAlternateItems(meta, altCps);
+				var alternates = lib.buildAlternateItems(meta, altCps);
+				// A sequence with no ligature in this font has only its base
+				// cell — plain characters labelled as a glyph ("ampe — base
+				// glyph", QA finding GP-2). Show the empty state's message
+				// instead; the author keeps the text they typed.
+				if (altCps.length > 1 && !lib.sequenceHasAlternates(alternates)) {
+					return [];
+				}
+				return alternates;
 			}
 			return lib.buildGridItems(meta, featureFilter || null);
 		}, [meta, featureFilter, altCps]);
@@ -698,7 +735,9 @@
 			// first pick for the launch selection, and further picks after it.
 			// Browsing a different character next must insert after the glyph
 			// that stayed selected for swapping, not over it (QA finding GP-1).
-			var altKey = inAlternatesView ? Array.from((altChar || '').trim()).join('') : null;
+			// Keyed on the resolved codepoints, so "U+0026" and "&" are the
+			// same browsed character for the swap window
+			var altKey = inAlternatesView ? String.fromCodePoint.apply(null, altCps) : null;
 			payload.swap = lib.shouldSwapInsertion({
 				inAlternatesView: inAlternatesView,
 				altKey: altKey,
@@ -851,13 +890,20 @@
 			accessibility.wordBoundaryWarning && el(Notice, {
 				status: 'warning',
 				isDismissible: false,
+				// Silent on mount; announced by the deferred effect above so
+				// the dialog's name comes first (SR-1).
+				spokenMessage: '',
 				className: 'typost-glyphs-a11y-notice'
 			},
 				el('strong', null, __('Accessibility Notice', 'typost-glyphs-panel')),
-				el('p', null, accessibility.wordBoundaryWarning),
+				el('p', { id: noticeIdRef.current }, accessibility.wordBoundaryWarning),
 				accessibility.canConvert && el(Button, {
 					variant: 'secondary',
 					className: 'typost-glyphs-convert-button',
+					// The reason travels with the button: a Tab stop reading
+					// only "Convert to Typography Stylist Block" said nothing
+					// about why.
+					'aria-describedby': noticeIdRef.current,
 					onClick: handleConvertToBlock
 				}, __('Convert to Typography Stylist Block', 'typost-glyphs-panel')),
 				!accessibility.canConvert && accessibility.convertBlockedMessage &&
@@ -924,7 +970,9 @@
 							// A short sequence ("Th") shows its exact ligature alternates
 							maxLength: 8,
 							onChange: function(value) {
-								setAltChar(Array.from(value || '').slice(0, 4).join(''));
+								// Longer sequences are trimmed, not rejected: a
+								// font may carry a ligature for several letters
+								setAltChar(Array.from(value || '').slice(0, lib.ALT_CHAR_MAX).join(''));
 							},
 							__nextHasNoMarginBottom: true
 						}),
@@ -1048,10 +1096,12 @@
 							);
 						})
 					),
-					items.length === 0 && el('p', { className: 'typost-glyphs-empty' },
-						altCps !== null
-							? __('This character is not available in the selected font.', 'typost-glyphs-panel')
-							: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
+					items.length === 0 && el('p', { className: 'typost-glyphs-empty', role: 'status' },
+						altCps !== null && altCps.length > 1
+							? sprintf(/* translators: %s: the characters typed */ __('This font has no ligature for "%s". Type one character to browse its alternates.', 'typost-glyphs-panel'), String.fromCodePoint.apply(null, altCps))
+							: altCps !== null
+								? __('This character is not available in the selected font.', 'typost-glyphs-panel')
+								: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
 				),
 
 				// Detail bar

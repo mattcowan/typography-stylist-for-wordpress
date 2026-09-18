@@ -229,3 +229,23 @@ describe('Typography Stylist - splitSpanAndApply', () => {
 		expect(result.content).toContain('data-fontweight="700"'); // Selection
 	});
 });
+
+describe('splitSpanAndApply with a trailing <br> (review of PR #193)', () => {
+	test('a selection of the trailing break inside a styled span is split out, not dropped', () => {
+		// "Alpha" = 0-5, the break = 5-6. The span's extent must include the
+		// break, or the selection finds no parent and the caller falls back
+		// to block-level handling.
+		const html = '<span class="typost-styled" data-fontsize="48" style="font-size: 48px">Alpha<br></span>Gamma';
+		const result = splitSpanAndApply(html, 5, 6, 'data-fontsize', { 'data-style-id': '3' }, '');
+		expect(result.success).toBe(true);
+		expect(result.content).toContain('data-fontsize="48"');
+		expect(result.content).toMatch(/<span class="typost-styled"[^>]*data-style-id="3"[^>]*><br><\/span>Gamma$/);
+		expect(result.content).toMatch(/^<span class="typost-styled"[^>]*>Alpha<\/span>/);
+	});
+
+	test('a selection covering text plus the trailing break is a whole-span selection', () => {
+		const html = '<span class="typost-styled" data-fontsize="48" style="font-size: 48px">Alpha<br></span>Gamma';
+		// Whole span (0-6): not a split case; the caller merges instead
+		expect(splitSpanAndApply(html, 0, 6, 'data-fontsize', { 'data-style-id': '3' }, '').success).toBe(false);
+	});
+});

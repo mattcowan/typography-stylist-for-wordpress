@@ -51,8 +51,10 @@
 }
 
 .typost-ps-css-class {
-	font-size: 11px;
-	color: #757575;
+	font-size: 12px;
+	/* #50575e is 6.4:1 on the #f0f0f1 chip; #757575 was 4.05:1 at 11px
+	   (QA finding A11Y-3). */
+	color: #50575e;
 	background: #f0f0f1;
 	padding: 2px 6px;
 	border-radius: 3px;

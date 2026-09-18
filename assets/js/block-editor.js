@@ -453,6 +453,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     let typostInlineInstanceCount = 0;
 
     /**
+     * How long after the modal opens the word-boundary notice is announced.
+     * Long enough for a screen reader to finish "Typography Stylist, dialog"
+     * (NVDA needs well under half a second); short enough that the warning
+     * still arrives before the author starts tabbing (see
+     * scheduleWordBoundaryAnnouncement).
+     */
+    const WORD_BOUNDARY_ANNOUNCE_DELAY = 800;
+
+    /**
      * Typography Features Component
      */
     class TypographyFeaturesControl extends Component {
@@ -462,6 +471,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Names this instance's modal. See typostInlineInstanceCount above.
             typostInlineInstanceCount += 1;
             this.modalTitleId = `typost-inline-title-${typostInlineInstanceCount}`;
+            this.wordBoundaryNoticeId = `typost-inline-word-boundary-${typostInlineInstanceCount}`;
+            // Pending deferred announcement of the word-boundary notice (see togglePopover)
+            this._noticeSpeakTimer = null;
 
             // Check if user has disabled warning for this session
             let hideWarning = false;
@@ -613,6 +625,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         lineHeight: self.state.lineHeight,
                         features: self.state.selectedFeatures,
                         paragraphStyleId: self.state.paragraphStyleId,
+                        // The inline editor's style is always the selection's
+                        // (see HOOKS.md, Block Toolbar Buttons)
+                        selectionParagraphStyleId: self.state.paragraphStyleId,
                         animationId: self.state.animationId,
                         fontVariationSettings: self.state.fontVariationSettings
                     };
@@ -625,8 +640,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Uses !== undefined checks so partial updates only override fields
             // present in the event, preserving current state for missing fields
             this._handleApplyBlockProperties = function(e) {
+                // Registered in the constructor, so a StrictMode shadow
+                // instance can still hold a listener; only the mounted
+                // instance may act (or ask the confirm question twice).
+                if (!self._isMounted) {
+                    return;
+                }
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
+                    // A paragraph style replaces whatever styling the selected
+                    // runs carry (applying the format drops their previous
+                    // attributes). The block editor asks first; so does this
+                    // one now (QA finding PS-2). A cancel is reported so the
+                    // panel that dispatched the apply can drop its badge.
+                    if (e.detail.paragraphStyleId && !self.confirmParagraphStyleOverride()) {
+                        document.dispatchEvent(new CustomEvent('typost-paragraph-style-apply-cancelled', {
+                            detail: { source: 'inline', paragraphStyleId: e.detail.paragraphStyleId }
+                        }));
+                        return;
+                    }
                     // Record which properties this event changes so mixed
                     // selections only get those patched per-run. Style/animation
                     // ids reset to wholesale (extensions own the full format).
@@ -780,7 +812,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // the author never asked for would be a surprise. An absent flag
             // (as older extensions send) keeps the reopen behaviour.
             this._handleGlyphsClosed = function(src, info) {
-                if (src !== 'inline') {
+                // Same mount guard as the other constructor-registered
+                // handlers: a StrictMode shadow instance would otherwise fire
+                // typost_inline_modal_opened with stale state.
+                if (!self._isMounted || src !== 'inline') {
                     return;
                 }
                 if (info && info.reopenHost === false) {
@@ -796,6 +831,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 });
             };
             window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
+            // Generic name for the same contract: any panel that opened as a
+            // separate Modal from inside this one (the Paragraph Styles browser
+            // is the second) fires it on close to bring this modal back.
+            window.typostHooks.addAction('typost_extension_panel_closed', this._handleGlyphsClosed, 10);
 
             // Extension hook: let an extension trigger the conversion its own
             // UI is offering — the word-boundary notice is only useful if the
@@ -1545,10 +1584,71 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // Fire lifecycle hooks for extensions
                 if (!wasOpen && this.state.isOpen) {
                     window.typostHooks.doAction('typost_inline_modal_opened', this.state);
+                    this.scheduleWordBoundaryAnnouncement();
                 } else if (wasOpen && !this.state.isOpen) {
+                    this.cancelWordBoundaryAnnouncement();
                     window.typostHooks.doAction('typost_inline_modal_closed');
                 }
             });
+        }
+
+        /**
+         * Announce the word-boundary notice AFTER the dialog has introduced
+         * itself.
+         *
+         * The Notice component speaks its content through the a11y live
+         * region the moment it mounts, which is the same tick the modal
+         * takes focus — and NVDA read the ~45-word warning before "Typography
+         * Stylist, dialog", so the author heard a wall of text before
+         * learning what had opened (QA finding SR-1, seen on the Glyphs panel
+         * and the tip notice here). The notice mounts silent (spokenMessage
+         * '') and is queued here as a polite message once the title has had
+         * time to be read.
+         */
+        scheduleWordBoundaryAnnouncement() {
+            this.cancelWordBoundaryAnnouncement();
+            const message = this.state.wordBoundaryWarning;
+            if (!message || !window.wp || !wp.a11y || typeof wp.a11y.speak !== 'function') {
+                return;
+            }
+            this._noticeSpeakTimer = setTimeout(() => {
+                this._noticeSpeakTimer = null;
+                if (this.state.isOpen && this.state.wordBoundaryWarning === message) {
+                    wp.a11y.speak(__('Accessibility Notice', 'typography-stylist') + '. ' + message, 'polite');
+                }
+            }, WORD_BOUNDARY_ANNOUNCE_DELAY);
+        }
+
+        cancelWordBoundaryAnnouncement() {
+            if (this._noticeSpeakTimer) {
+                clearTimeout(this._noticeSpeakTimer);
+                this._noticeSpeakTimer = null;
+            }
+        }
+
+        /**
+         * Ask before a paragraph style replaces the selection's own styling.
+         *
+         * Returns true when there is nothing to replace or the author agreed,
+         * false when they cancelled. The range is the live selection, or the
+         * bounds saved when the modal took focus (the same fallback
+         * _doApplyFeatures uses).
+         */
+        confirmParagraphStyleOverride() {
+            const { value } = this.props;
+            const { savedSelectionStart, savedSelectionEnd } = this.state;
+            const shared = window.typostSharedUtils || {};
+            if (!value || typeof shared.countInlineParagraphStyleConflicts !== 'function') {
+                return true;
+            }
+            const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+            const start = selectionLost ? savedSelectionStart : value.start;
+            const end = selectionLost ? savedSelectionEnd : value.end;
+            const conflicts = shared.countInlineParagraphStyleConflicts(value.formats, start, end, FORMAT_TYPE);
+            if (conflicts === 0) {
+                return true;
+            }
+            return window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));
         }
 
         /**
@@ -2849,7 +2949,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         handleDragStart(e) {
             // Don't drag if clicking the close button
-            if (e.target.closest('.typost-modal-close-button')) {
+            // Any header button (Move panel, Close) is not a drag handle
+            if (e.target.closest('.components-button')) {
                 return;
             }
 
@@ -3005,6 +3106,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
         componentWillUnmount() {
             this._isMounted = false;
+            this.cancelWordBoundaryAnnouncement();
 
             // Cleanup modal drag/resize event listeners
             document.removeEventListener('mousemove', this.handleDragMove);
@@ -3033,6 +3135,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Cleanup glyphs-panel reopen handler
             if (this._handleGlyphsClosed) {
                 window.typostHooks.removeAction('typost_glyphs_panel_closed', this._handleGlyphsClosed);
+                window.typostHooks.removeAction('typost_extension_panel_closed', this._handleGlyphsClosed);
             }
 
             // Cleanup extension toolbar button re-render handler
@@ -3134,16 +3237,26 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             }}
                         >
                             {/* Custom draggable header */}
+                            {/* Custom draggable header. The bar itself is a
+                                mouse drag surface only: as a focusable
+                                role="toolbar" div it was a Tab stop NVDA read
+                                as "document. Drag to reposition modal, tool
+                                bar" (QA finding SR-4). Keyboard repositioning
+                                lives on the named "Move panel" button, so it
+                                is discoverable rather than an accident of
+                                keydown bubbling from Close. */}
                             <div
                                 className="typost-modal-header"
                                 onMouseDown={this.handleDragStart}
-                                onKeyDown={this.handleHeaderKeyDown}
-                                role="toolbar"
-                                aria-label={__('Drag to reposition modal', 'typography-stylist')}
-                                tabIndex={0}
                                 style={{ cursor: this.state.isDragging ? 'grabbing' : 'grab' }}
                             >
                                 <h3 id={this.modalTitleId}>{__('Typography Stylist', 'typography-stylist')}</h3>
+                                <Button
+                                    icon="move"
+                                    label={__('Move panel, use arrow keys', 'typography-stylist')}
+                                    onKeyDown={this.handleHeaderKeyDown}
+                                    className="typost-modal-move-button"
+                                />
                                 <Button
                                     icon="no-alt"
                                     label={__('Close', 'typography-stylist')}
@@ -3152,34 +3265,57 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                 />
                             </div>
 
-                            {/* Modal content wrapper with scroll */}
-                            <div className="typost-modal-content" style={{
+                            {/* Modal content wrapper with scroll.
+                                tabIndex -1 on both scroll containers: browsers
+                                put scrollable elements in the Tab order, and a
+                                screen reader then reads the whole container —
+                                NVDA spoke the entire modal (every heading, help
+                                text and checkbox, ~600 words) at one Tab stop,
+                                twice (QA finding SR-3). The controls inside are
+                                still reachable and scroll the container into
+                                view, which is what keyboard users need. */}
+                            <div className="typost-modal-content" tabIndex={-1} style={{
                                 height: `calc(${this.state.modalHeight}px - 60px)`,
                                 overflowY: 'auto'
                             }}>
                                 <div className="typost-popover-content">
 
-                                {/* Usage tips notice - dismissible, dismissal remembered per browser */}
+                                {/* Usage tips notice - dismissible, dismissal remembered per browser.
+                                    spokenMessage '' keeps Notice from pushing the
+                                    tip into the live region on mount, where NVDA
+                                    read it BEFORE the dialog's name. Own dismiss
+                                    button: Notice's is labelled "Close", which
+                                    put two "Close, button" stops in a row with
+                                    different effects (QA finding SR-4). */}
                                 {!this.state.tipsDismissed && (
                                     <div className="typost-sticky-notice-wrapper">
                                         {wp.element.createElement(Notice, {
                                             status: 'info',
-                                            isDismissible: true,
-                                            onRemove: this.dismissTips,
+                                            isDismissible: false,
+                                            spokenMessage: '',
                                             className: 'typost-drag-notice'
                                         },
-                                            wp.element.createElement('p', { style: { margin: 0 } },
-                                                '💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')
+                                            wp.element.createElement('div', { className: 'typost-tip-text' },
+                                                wp.element.createElement('p', { style: { margin: 0 } },
+                                                    '💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')
+                                                ),
+                                                wp.element.createElement('p', { style: { margin: '4px 0 0' } },
+                                                    __('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')
+                                                )
                                             ),
-                                            wp.element.createElement('p', { style: { margin: '4px 0 0' } },
-                                                __('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')
-                                            )
+                                            wp.element.createElement(Button, {
+                                                icon: 'no-alt',
+                                                label: __('Dismiss tip', 'typography-stylist'),
+                                                onClick: this.dismissTips,
+                                                className: 'typost-tip-dismiss',
+                                                size: 'small'
+                                            })
                                         )}
                                     </div>
                                 )}
 
-                                {/* Scrollable Content Wrapper */}
-                                <div className="typost-scrollable-content">
+                                {/* Scrollable Content Wrapper (see the tabIndex note above) */}
+                                <div className="typost-scrollable-content" tabIndex={-1}>
 
                                 {/* Accessibility Warning — Non-blocking Notice (v2.0.0).
                                     Sits at the top of the panel: it reports a problem with
@@ -3187,11 +3323,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     burying it under every feature control meant scrolling
                                     past all of them to find out anything was wrong. */}
                                 {wordBoundaryWarning && (
-                                    <Notice status="warning" isDismissible={false} className="typost-word-boundary-notice">
+                                    // spokenMessage '': Notice would otherwise
+                                    // push the whole warning into the live
+                                    // region on mount, ahead of the dialog's own
+                                    // announcement (QA finding SR-1). It is
+                                    // announced instead by togglePopover once the
+                                    // title has been read, and travels with the
+                                    // Convert button through aria-describedby.
+                                    <Notice status="warning" isDismissible={false} spokenMessage="" className="typost-word-boundary-notice">
                                         <strong>{__('Accessibility Notice', 'typography-stylist')}</strong>
-                                        <p>{wordBoundaryWarning}</p>
+                                        <p id={this.wordBoundaryNoticeId}>{wordBoundaryWarning}</p>
                                         {canConvert && (
-                                            <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button">
+                                            <Button variant="secondary" onClick={this.convertToBlock} className="typost-convert-button" aria-describedby={this.wordBoundaryNoticeId}>
                                                 {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                             </Button>
                                         )}
@@ -3551,69 +3694,57 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             </div>{/* End typost-modal-content */}
 
                             {/* Resize handles - 8 directions */}
+                            {/* Resize handles - 8 directions. Mouse-only affordances: they had
+                                role="slider" without a value (axe A11Y-1) and tabIndex 0 with
+                                no keyboard handler, so they were eight dead Tab stops. Hidden
+                                from assistive tech instead; the modal is usable unresized. */}
                             <div className="typost-resize-handles">
                                 <div
-                                    className="typost-resize-handle typost-resize-n"
+                                    className="typost-resize-handle typost-resize-handle-n"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'n')}
-                                    role="slider"
-                                    aria-label={__('Resize modal vertically', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-ne"
+                                    className="typost-resize-handle typost-resize-handle-ne"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'ne')}
-                                    role="slider"
-                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-e"
+                                    className="typost-resize-handle typost-resize-handle-e"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'e')}
-                                    role="slider"
-                                    aria-label={__('Resize modal horizontally', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-se"
+                                    className="typost-resize-handle typost-resize-handle-se"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'se')}
-                                    role="slider"
-                                    aria-label={__('Resize modal', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'nwse-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-s"
+                                    className="typost-resize-handle typost-resize-handle-s"
                                     onMouseDown={(e) => this.handleResizeStart(e, 's')}
-                                    role="slider"
-                                    aria-label={__('Resize modal vertically', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'ns-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-sw"
+                                    className="typost-resize-handle typost-resize-handle-sw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'sw')}
-                                    role="slider"
-                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'nesw-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-w"
+                                    className="typost-resize-handle typost-resize-handle-w"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'w')}
-                                    role="slider"
-                                    aria-label={__('Resize modal horizontally', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'ew-resize' }}
                                 />
                                 <div
-                                    className="typost-resize-handle typost-resize-nw"
+                                    className="typost-resize-handle typost-resize-handle-nw"
                                     onMouseDown={(e) => this.handleResizeStart(e, 'nw')}
-                                    role="slider"
-                                    aria-label={__('Resize modal diagonally', 'typography-stylist')}
-                                    tabIndex={0}
+                                    aria-hidden="true"
                                     style={{ cursor: 'nwse-resize' }}
                                 />
                             </div>

@@ -57,6 +57,33 @@ test.describe('Inline editor modal with NVDA', () => {
       };
     }
 
+    // "Browse styles…" (Session B feature): focus the button, open the style
+    // browser with Enter through NVDA, record what it announces and where
+    // focus lands (a style row, SR-6), then close it with Escape. The inline
+    // modal stays open underneath, so the final close below still applies.
+    const browseButton = page.locator('.components-modal__frame .typost-ps-browse-btn');
+    let browse = null;
+    if (await browseButton.count()) {
+      await browseButton.focus();
+      await h.delay(400);
+      await nvda.press('Enter');
+      await page.waitForSelector('.typost-ps-browser-modal', { timeout: 30000 }).catch(() => null);
+      await page.waitForTimeout(1200);
+      browse = {
+        openPhrase: await nvda.lastSpokenPhrase(),
+        focusAtOpen: await h.describeFocus(page),
+        rowCount: await page.locator('.typost-ps-browser-row').count(),
+      };
+      browse.close = await h.closeModalWithEscape(page, nvda, '.typost-ps-browser-modal');
+      await h.delay(800);
+      browse.focusAfterClose = await h.describeFocus(page);
+      browse.hostReopened = await page.evaluate(() => {
+        const host = document.querySelector('.components-modal__frame.typost-modal');
+        return Boolean(host && host.contains(document.activeElement));
+      });
+      await h.delay(500);
+    }
+
     const close = await h.closeModalWithEscape(page, nvda, '.components-modal__frame');
 
     // Classify the stops for the report.
@@ -66,7 +93,19 @@ test.describe('Inline editor modal with NVDA', () => {
     const silentStops = stops.filter((s) => !s.phrase).map((s) => s.el);
     const longestPhrase = stops.reduce((m, s) => Math.max(m, (s.phrase || '').length), 0);
 
-    const log = await h.saveSpeechLog(nvda, 'inline-modal', { focusTitles, openPhrase, focusAtOpen, stops, toggled, close, unnamedControls, silentStops, longestPhrase });
+    const log = await h.saveSpeechLog(nvda, 'inline-modal', { focusTitles, openPhrase, focusAtOpen, stops, toggled, browse, close, unnamedControls, silentStops, longestPhrase });
+
+    // Browse styles: the browser announces itself, opens on a style row, and
+    // Escape returns focus to the button that opened it.
+    expect(browse, 'the inline modal should offer "Browse styles…"').not.toBeNull();
+    expect(browse.openPhrase, 'opening the browser should announce the dialog').toMatch(/Paragraph Styles/i);
+    if (browse.rowCount > 0) {
+      expect(browse.focusAtOpen && browse.focusAtOpen.className, 'the browser should open on a style row (SR-6)').toContain('typost-ps-browser-row');
+    }
+    expect(browse.close.closed, 'Escape should close the browser').toBe(true);
+    // Opening the browser makes WordPress close the inline modal (as with the
+    // Glyphs panel); closing the browser reopens it, and focus lands inside it.
+    expect(browse.hostReopened, 'closing the browser should reopen the inline modal with focus inside it').toBe(true);
 
     // Product assertions.
     if (toggled) {
@@ -83,6 +122,12 @@ test.describe('Inline editor modal with NVDA', () => {
     // to FAIL until the modal is fixed (SR-2 unnamed selects, SR-3 one stop
     // reading the whole modal, SR-4 silent focusable stops).
     expect(openPhrase, 'opening should announce the dialog').toMatch(/Typography Stylist/i);
+    // The tips notice used to be pushed into the live region on mount and was
+    // read before the dialog's name (same mechanism as SR-1 on the Glyphs panel).
+    expect(openPhrase, 'the dialog name should come before any notice text').toMatch(/^Typography Stylist/);
+    // SR-4: the drag handle and the scroll wrappers are no longer Tab stops.
+    const wrapperStops = stops.filter((s) => s.el && /typost-modal-header|typost-modal-content|typost-scrollable-content/.test(s.el.className));
+    expect(wrapperStops, `Wrappers reached by Tab: ${JSON.stringify(wrapperStops.map((s) => s.el.className))}`).toEqual([]);
     expect(unnamedControls, `Controls announced without a name: ${JSON.stringify(unnamedControls.map((u) => u.id))}`).toEqual([]);
     expect(longestPhrase, 'no single Tab stop should read the whole modal').toBeLessThan(400);
     expect(silentStops, `Focusable elements announced as nothing: ${JSON.stringify(silentStops.map((e) => e && (e.className || e.tag)))}`).toEqual([]);

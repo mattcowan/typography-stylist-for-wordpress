@@ -132,6 +132,64 @@ function buildSelectProps(config) {
 }
 
 /**
+ * Selector of ComboboxControl's suggestions list.
+ */
+var SUGGESTIONS_LIST_SELECTOR = 'ul[role="listbox"]';
+
+/**
+ * Take the combobox's suggestions list out of the Tab order.
+ *
+ * The list is a scroll container (it holds every font), and browsers put
+ * scrollable elements in the Tab order, so on a site with many fonts the
+ * next Tab after the field landed on the bare list — NVDA announced it as
+ * "list" and nothing else (QA finding SR-5). The list is operated with the
+ * arrow keys from the field, which is what the combobox pattern promises;
+ * an explicit tabindex -1 keeps it reachable that way and removes the stop.
+ *
+ * Core renders the list without a tabindex and only while the field is
+ * expanded, so this is applied to whatever list exists now and again to
+ * each one added later, from a MutationObserver on the picker's wrapper.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {number} How many lists were adjusted.
+ */
+function removeSuggestionsListFromTabOrder(root) {
+	if (!root || !root.querySelectorAll) {
+		return 0;
+	}
+	var lists = root.querySelectorAll(SUGGESTIONS_LIST_SELECTOR);
+	var changed = 0;
+	for (var i = 0; i < lists.length; i++) {
+		if (lists[i].getAttribute('tabindex') !== '-1') {
+			lists[i].setAttribute('tabindex', '-1');
+			changed++;
+		}
+	}
+	return changed;
+}
+
+/**
+ * Watch a picker wrapper for suggestions lists and keep them out of the
+ * Tab order. Returns a function that stops watching.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {Function} Cleanup.
+ */
+function watchSuggestionsList(root) {
+	removeSuggestionsListFromTabOrder(root);
+	if (!root || typeof MutationObserver === 'undefined') {
+		return function () {};
+	}
+	var observer = new MutationObserver(function () {
+		removeSuggestionsListFromTabOrder(root);
+	});
+	observer.observe(root, { childList: true, subtree: true });
+	return function () {
+		observer.disconnect();
+	};
+}
+
+/**
  * The font family picker.
  *
  * @param {Object} props See buildComboboxProps().
@@ -139,10 +197,25 @@ function buildSelectProps(config) {
  */
 function FontPicker(props) {
 	var components = window.wp.components;
-	var createElement = window.wp.element.createElement;
+	var element = window.wp.element;
+	var createElement = element.createElement;
+
+	// Hooks run unconditionally, before the control branch, so the hook
+	// order is the same on every render (rules of hooks). The SelectControl
+	// fallback simply never attaches the ref. wp.element has shipped both
+	// hooks since WordPress 5.2, below this plugin's floor.
+	var ref = element.useRef(null);
+	element.useEffect(function () {
+		return watchSuggestionsList(ref.current);
+	}, []);
 
 	if (components.ComboboxControl) {
-		return createElement(components.ComboboxControl, buildComboboxProps(props));
+		// The wrapper exists for the suggestions-list fix above.
+		return createElement(
+			'div',
+			{ className: 'typost-font-picker', ref: ref },
+			createElement(components.ComboboxControl, buildComboboxProps(props))
+		);
 	}
 
 	return createElement(components.SelectControl, buildSelectProps(props));
@@ -152,5 +225,7 @@ module.exports = {
 	FontPicker: FontPicker,
 	buildComboboxProps: buildComboboxProps,
 	buildSelectProps: buildSelectProps,
-	normalizeFontPickerValue: normalizeFontPickerValue
+	normalizeFontPickerValue: normalizeFontPickerValue,
+	removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
+	watchSuggestionsList: watchSuggestionsList
 };

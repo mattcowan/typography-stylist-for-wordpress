@@ -346,3 +346,32 @@ describe('block conversion regression — cross-span selection over per-letter s
 		expect(text).toBe('Powerful Mechanics');
 	});
 });
+
+describe('applyStylingSafeStringMethod on break-only selections (review of PR #193)', () => {
+	test('replaces the paragraph style on a span that holds only a <br>', () => {
+		const html = '<span class="typost-styled" data-style-id="5"><br></span>Gamma';
+		const result = applyStylingSafeStringMethod(html, 0, 1, { 'data-style-id': '3' }, '');
+		expect(result.success).toBe(true);
+		expect(result.content).toBe('<span class="typost-styled" data-style-id="3"><br></span>Gamma');
+	});
+
+	test('wraps a lone <br> selected in plain text', () => {
+		const html = 'A<br>B';
+		const result = applyStylingSafeStringMethod(html, 1, 2, { 'data-style-id': '3' }, '');
+		expect(result.success).toBe(true);
+		expect(result.content).toBe('A<span class="typost-styled" data-style-id="3"><br></span>B');
+	});
+
+	test('wraps consecutive breaks under one parent', () => {
+		const html = 'A<br><br>B';
+		const result = applyStylingSafeStringMethod(html, 1, 3, { 'data-fontsize': '24' }, 'font-size: 24px');
+		expect(result.success).toBe(true);
+		expect(result.content).toBe('A<span class="typost-styled" data-fontsize="24" style="font-size: 24px"><br><br></span>B');
+	});
+
+	test('still reports no text nodes when the range holds nothing at all', () => {
+		const result = applyStylingSafeStringMethod('AB', 5, 6, { 'data-style-id': '3' }, '');
+		expect(result.success).toBe(false);
+		expect(result.error).toBe('No text nodes in range');
+	});
+});

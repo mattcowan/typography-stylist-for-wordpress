@@ -175,6 +175,18 @@ msgstr "Voulez-vous vraiment supprimer « %s » ? Cette action est irréversible
 msgid "Failed to delete style. Please try again."
 msgstr "Échec de la suppression du style. Veuillez réessayer."
 
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style renamed to \"%s\"."
+msgstr "Style renommé en « %s »."
+
+#. translators: %s: style name
+#: assets/js/admin.js
+#, js-format
+msgid "Style \"%s\" deleted."
+msgstr "Style « %s » supprimé."
+
 #: paragraph-styles.php
 msgid "Paragraph Styles Toolbar Button"
 msgstr "Bouton Styles de paragraphe dans la barre d’outils"
@@ -198,6 +210,40 @@ msgstr "S’applique au texte sélectionné."
 #: assets/js/editor.js
 msgid "Applies to the whole block."
 msgstr "S’applique à tout le bloc."
+
+#: assets/js/editor.js
+msgid "Browse styles…"
+msgstr "Parcourir les styles…"
+
+#: assets/js/editor.js
+msgid "Search styles"
+msgstr "Rechercher des styles"
+
+#: assets/js/editor.js
+msgid "Style or font name"
+msgstr "Nom du style ou de la police"
+
+#. translators: %s: search text
+#: assets/js/editor.js
+#, js-format
+msgid "No styles match \"%s\"."
+msgstr "Aucun style ne correspond à « %s »."
+
+#. translators: %d: number of matching styles
+#: assets/js/editor.js
+#, js-format
+msgid "%d style matches."
+msgid_plural "%d styles match."
+msgstr[0] "%d style correspond."
+msgstr[1] "%d styles correspondent."
+
+#. translators: %d: number of styles the button reveals
+#: assets/js/editor.js
+#, js-format
+msgid "Show %d more style"
+msgid_plural "Show %d more styles"
+msgstr[0] "Afficher %d style de plus"
+msgstr[1] "Afficher %d styles de plus"
 
 #. translators: 1: smallest font size, 2: largest font size.
 #: assets/js/lib/ps-utils.js

@@ -66,6 +66,12 @@
 	text-align: left;
 }
 
+/* #135e96 is 6.4:1 on the warning notice's #fff7e1; the default link
+   #007cba was 4.3:1 there (QA finding A11Y-3). */
+.typost-glyphs-a11y-settings a {
+	color: #135e96;
+}
+
 /* Header: font selector + target indicator */
 .typost-glyphs-header {
 	display: flex;

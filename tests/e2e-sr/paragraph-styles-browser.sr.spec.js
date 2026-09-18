@@ -61,6 +61,10 @@ test.describe('Paragraph Styles browser with NVDA', () => {
     const log = await h.saveSpeechLog(nvda, 'paragraph-styles-browser', { focusTitles, openPhrase, focusAtOpen, tabStops, focusedRow, rowPhrase, applyPhrase, after, styles });
 
     // Product assertions.
+    // SR-6: the browser opens with focus on a style row (the active one, else
+    // the first), not on the frame — from there Tab reached Modal's silent
+    // scroll wrapper and Close before any style.
+    expect(focusAtOpen && focusAtOpen.className, 'the browser should open with focus on a style row (SR-6)').toContain('typost-ps-browser-row');
     expect(focusedRow, 'Tab must reach a style row').not.toBeNull();
     expect(after.modalOpen).toBe(false);
     expect(after.content).toMatch(/<span class="typost-styled" data-style-id="\d+">Stylist<\/span>/);

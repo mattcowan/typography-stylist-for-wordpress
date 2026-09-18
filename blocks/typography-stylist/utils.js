@@ -23,6 +23,24 @@
  * @return {Array<{node: Node, start: number, end: number, text: string}>} Text node map with BR-adjusted offsets
  */
 export function buildTextOffsetMap(container, docContext) {
+	return walkTextOffsets(container, docContext).text;
+}
+
+/**
+ * Offsets of the <br> elements inside a container, in the same coordinate
+ * space as buildTextOffsetMap(): each break occupies one position, as it
+ * does in a WordPress RichText value. Kept apart from the text map because
+ * that map's consumers read entry.text and entry.node.nodeValue.
+ *
+ * @param {Element}  container  Container element
+ * @param {Document} docContext Document that owns the container
+ * @returns {Array<{node: Element, start: number, end: number}>}
+ */
+export function buildBreakOffsetMap(container, docContext) {
+	return walkTextOffsets(container, docContext).breaks;
+}
+
+function walkTextOffsets(container, docContext) {
 	const walker = docContext.createTreeWalker(
 		container,
 		NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
@@ -41,6 +59,7 @@ export function buildTextOffsetMap(container, docContext) {
 	);
 
 	const map = [];
+	const breaks = [];
 	let currentOffset = 0;
 	let node;
 
@@ -56,11 +75,12 @@ export function buildTextOffsetMap(container, docContext) {
 			currentOffset += text.length;
 		} else if (node.nodeName === 'BR') {
 			// BR counts as 1 character position to match WordPress RichText offsets
+			breaks.push({ node: node, start: currentOffset, end: currentOffset + 1 });
 			currentOffset += 1;
 		}
 	}
 
-	return map;
+	return { text: map, breaks: breaks };
 }
 
 /**
@@ -723,8 +743,14 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			return { success: false, content: htmlContent };
 		}
 
-		// Build text offset map (accounts for <br> line breaks)
+		// Build text offset map (accounts for <br> line breaks). Breaks are
+		// ranged too: a span's extent must include a trailing <br> (one
+		// RichText position) or a selection of that break finds no parent
+		// and the caller falls through to block-level handling (review of
+		// PR #193). The segment builder below already treats <br> as an
+		// atomic node of length 1.
 		const textNodeMap = buildTextOffsetMap(container, doc);
+		const offsetEntries = textNodeMap.concat(buildBreakOffsetMap(container, doc));
 
 		// Find parent span that has the property and overlaps selection
 		let parentSpan = null;
@@ -734,7 +760,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			if (!span.hasAttribute(propertyDataAttr)) return;
 
 			let spanStart = Infinity, spanEnd = -1;
-			textNodeMap.forEach(({ node, start, end }) => {
+			offsetEntries.forEach(({ node, start, end }) => {
 				if (span.contains(node)) {
 					spanStart = Math.min(spanStart, start);
 					spanEnd = Math.max(spanEnd, end);
@@ -762,7 +788,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 		const childSpans = parentSpan.querySelectorAll('span.typost-styled');
 		for (let child of childSpans) {
 			let childStart = Infinity, childEnd = -1;
-			textNodeMap.forEach(({ node, start, end }) => {
+			offsetEntries.forEach(({ node, start, end }) => {
 				if (child.contains(node)) {
 					childStart = Math.min(childStart, start);
 					childEnd = Math.max(childEnd, end);
@@ -1290,6 +1316,76 @@ export function validateRangeMatchesSelection(range, expectedText, expectedLengt
 }
 
 /**
+ * Apply styling to a selection that covers only <br> elements.
+ *
+ * Two shapes: the breaks are the whole content of one typost span whose
+ * range equals the selection (a paragraph style is being replaced on a
+ * break-only span), which merges into that span like any whole-span
+ * selection; or the breaks are contiguous siblings under one parent, which
+ * get wrapped in a new span. Anything else (breaks under different
+ * parents) is left to the caller's failure path.
+ *
+ * @param {Element}  container   Parsed content container
+ * @param {Document} doc         Owning document
+ * @param {number}   startOffset Selection start
+ * @param {number}   endOffset   Selection end (exclusive)
+ * @param {Object}   attributes  Attributes to apply
+ * @param {string}   styleString Inline style to apply
+ * @returns {{success: boolean, content: string, error: null}|null} null when
+ *          the selection holds no breaks or they cannot be wrapped
+ */
+function applyStylingToBreaks(container, doc, startOffset, endOffset, attributes, styleString) {
+	const breaks = buildBreakOffsetMap(container, doc).filter((entry) =>
+		entry.start < endOffset && entry.end > startOffset
+	);
+	if (!breaks.length) {
+		return null;
+	}
+	const parent = breaks[0].node.parentNode;
+	if (!parent || breaks.some((entry) => entry.node.parentNode !== parent)) {
+		return null;
+	}
+	const first = breaks[0].node;
+	const last = breaks[breaks.length - 1].node;
+
+	// Whole-span selection: the span holds exactly these breaks
+	const isTypostSpan = parent.classList && parent.classList.contains('typost-styled');
+	const spanHoldsOnlyTheseBreaks = isTypostSpan &&
+		parent.childNodes.length === breaks.length &&
+		breaks[0].start <= startOffset && breaks[breaks.length - 1].end >= endOffset;
+	if (spanHoldsOnlyTheseBreaks) {
+		mergeTypostSpanStyling(parent, attributes, styleString);
+		return { success: true, content: container.innerHTML, error: null };
+	}
+
+	// Contiguous siblings: wrap them
+	let node = first;
+	while (node && node !== last) {
+		node = node.nextSibling;
+		if (!node || node.nodeName !== 'BR') {
+			return null;
+		}
+	}
+	if (!canCreateNestedSpan(parent)) {
+		return null;
+	}
+	const span = doc.createElement('span');
+	span.className = 'typost-styled';
+	Object.keys(attributes).forEach((key) => {
+		const value = attributes[key];
+		if (value !== null && value !== undefined && value !== '') {
+			span.setAttribute(key, String(value));
+		}
+	});
+	if (styleString) {
+		span.setAttribute('style', styleString);
+	}
+	parent.insertBefore(span, first);
+	breaks.forEach((entry) => span.appendChild(entry.node));
+	return { success: true, content: container.innerHTML, error: null };
+}
+
+/**
  * Apply styling using string manipulation (fallback when Range fails)
  *
  * This method works by:
@@ -1319,6 +1415,13 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 		);
 
 		if (affectedNodes.length === 0) {
+			// A selection holding only line breaks (a lone <br>, or a styled
+			// span that contains nothing else) has no text node to anchor on,
+			// yet RichText gives each break a position (review of PR #193).
+			const breakResult = applyStylingToBreaks(container, doc, startOffset, endOffset, attributes, styleString);
+			if (breakResult) {
+				return breakResult;
+			}
 			return { success: false, content: htmlContent, error: 'No text nodes in range' };
 		}
 
@@ -2058,6 +2161,11 @@ export function buildQftEditorState(s) {
 		lineHeight: source.lineHeight,
 		features: source.features,
 		paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
+		// Style on the selected text itself (a data-style-id span), as
+		// opposed to the block-level style above. Consumers that apply to a
+		// selection (the toolbar style browser) read this one, so they do not
+		// report the block's style as "active" for text that carries none.
+		selectionParagraphStyleId: parseInt(source.selectionStyleId, 10) || 0,
 		fontVariationSettings: source.fontVariationSettings || '',
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,
@@ -2514,6 +2622,48 @@ export function computeTypostFormatRuns(formats, start, end, formatType) {
 	}
 	runs.push({ start: runStart, end: end, attributes: runAttrs });
 	return runs;
+}
+
+// PARAGRAPH_STYLE_OWNED_ATTRS / PARAGRAPH_STYLE_OWNED_PROPS (declared with the
+// HTML-side helpers below) also drive the rich-text twin here.
+
+/**
+ * Count the rich-text formatting runs inside a selection whose own styling
+ * a paragraph style would replace — the inline-editor twin of
+ * countParagraphStyleConflicts(), working on RichText `formats` rather than
+ * HTML. The inline editor applies a style by re-applying its format over the
+ * range, which drops every run's previous attributes, so the author is asked
+ * first when this is non-zero (QA finding PS-2).
+ *
+ * A run that only carries a paragraph style (data-style-id) is not a
+ * conflict; nor is a glyph-level raw alternate (data-feature-settings without
+ * data-features) or a fit-relative scale, mirroring
+ * spanHasParagraphStyleOverrides().
+ *
+ * @since 2.3.0
+ * @param {Array}  formats    RichText value.formats
+ * @param {number} start      Selection start
+ * @param {number} end        Selection end (exclusive)
+ * @param {string} formatType The typost format type name
+ * @returns {number}
+ */
+export function countInlineParagraphStyleConflicts(formats, start, end, formatType) {
+	return computeTypostFormatRuns(formats, start, end, formatType).filter((run) => {
+		const attrs = run.attributes;
+		if (!attrs) {
+			return false;
+		}
+		if (PARAGRAPH_STYLE_OWNED_ATTRS.some((key) => attrs[key])) {
+			return true;
+		}
+		// Legacy spans carried only a style attribute
+		const hasDataAttrs = Object.keys(attrs).some((key) => key.indexOf('data-') === 0);
+		if (hasDataAttrs || typeof attrs.style !== 'string') {
+			return false;
+		}
+		// Double backslash: inside a string literal a single \s is just "s"
+		return PARAGRAPH_STYLE_OWNED_PROPS.some((prop) => new RegExp('(^|;)\\s*' + prop + '\\s*:', 'i').test(attrs.style));
+	}).length;
 }
 
 /**
@@ -3038,10 +3188,13 @@ const PARAGRAPH_STYLE_OWNED_PROPS = [
  * @param {Array}   textMap buildTextOffsetMap() output
  * @returns {{start: number, end: number}|null} null for a span with no text
  */
-function spanTextRange(span, textMap) {
+function spanTextRange(span, textMap, breakMap) {
 	let spanStart = Infinity;
 	let spanEnd = -Infinity;
-	textMap.forEach((entry) => {
+	// Breaks count too: a selection that ends at a trailing <br> inside a
+	// span (RichText offsets include it) must still be covered by that span,
+	// and a span holding only a <br> still has a range (review of PR #193).
+	(textMap || []).concat(breakMap || []).forEach((entry) => {
 		if (span.contains(entry.node)) {
 			spanStart = Math.min(spanStart, entry.start);
 			spanEnd = Math.max(spanEnd, entry.end);
@@ -3075,12 +3228,13 @@ function spanTextRange(span, textMap) {
 function findParagraphStyleAffectedSpans(container, start, end) {
 	const doc = container.ownerDocument;
 	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
 	const spans = Array.prototype.slice.call(container.querySelectorAll('span.typost-styled'));
 	const affected = [];
 	let innermostContainer = null;
 	let innermostLength = Infinity;
 	spans.forEach((span) => {
-		const range = spanTextRange(span, textMap);
+		const range = spanTextRange(span, textMap, breakMap);
 		if (!range) {
 			return;
 		}
@@ -3153,6 +3307,55 @@ export function countParagraphStyleConflicts(htmlContent, start, end) {
 	// and its selected segment loses the same styling
 	const candidates = found.container ? found.affected.concat([found.container]) : found.affected;
 	return candidates.filter(spanHasParagraphStyleOverrides).length;
+}
+
+/**
+ * The paragraph style that covers a whole selection: the data-style-id on
+ * the innermost span containing [start, end) or on one of its ancestors.
+ *
+ * Containment, not overlap: a span that carries a style over only part of
+ * the selection does not make that style "the selection's style", so the
+ * toolbar browser must not mark it active or offer to detach it (review of
+ * the 2026-09 QA scope-indicator fix). A span exactly equal to the range
+ * counts as containing it.
+ *
+ * @since 2.3.0
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @returns {number} Style id, 0 when no single style covers the selection
+ */
+export function findCoveringParagraphStyleId(htmlContent, start, end) {
+	if (!htmlContent || !(end > start)) {
+		return 0;
+	}
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
+	let innermost = null;
+	let innermostLength = Infinity;
+	Array.prototype.slice.call(container.querySelectorAll('span.typost-styled')).forEach((span) => {
+		const range = spanTextRange(span, textMap, breakMap);
+		if (!range || range.start > start || range.end < end) {
+			return;
+		}
+		const length = range.end - range.start;
+		if (length < innermostLength) {
+			innermostLength = length;
+			innermost = span;
+		}
+	});
+	let node = innermost;
+	while (node && node !== container) {
+		const id = parseInt(node.getAttribute && node.getAttribute('data-style-id'), 10);
+		if (id > 0) {
+			return id;
+		}
+		node = node.parentNode;
+	}
+	return 0;
 }
 
 /**
@@ -3693,6 +3896,8 @@ if (typeof window !== 'undefined') {
 		filterFeaturesByVisibility,
 		mergeInsertionFormatAttributes,
 		computeTypostFormatRuns,
+		countInlineParagraphStyleConflicts,
+		findCoveringParagraphStyleId,
 		isMixedFormatSelection,
 		patchTypostFormatAttributes,
 		pruneRawFeatureSettings,

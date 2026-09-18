@@ -289,3 +289,67 @@ describe('initialAltCharFromSelection', () => {
 		expect(initialAltCharFromSelection('𝒜')).toBe('𝒜');
 	});
 });
+
+describe('GP-2: parseAltCharInput / sequenceHasAlternates', () => {
+	const { parseAltCharInput, sequenceHasAlternates, buildAlternateItems, ALT_CHAR_MAX } = require('../assets/js/lib/search.js');
+
+	test('a single character is one codepoint', () => {
+		expect(parseAltCharInput('W')).toEqual([0x57]);
+		expect(parseAltCharInput('  & ')).toEqual([0x26]);
+	});
+
+	test('the U+XXXX form resolves to the codepoint instead of literal characters', () => {
+		expect(parseAltCharInput('U+0026')).toEqual([0x26]);
+		expect(parseAltCharInput('u+41')).toEqual([0x41]);
+		expect(parseAltCharInput('U1F600')).toEqual([0x1f600]);
+	});
+
+	test('the U+ form stops at the last code point', () => {
+		// Six hex digits can name values past U+10FFFF. Those parse to an
+		// empty array — not null, which means an empty field and would swap
+		// the alternates view for the full grid — so the modal keeps showing
+		// "This character is not available in the selected font."
+		expect(parseAltCharInput('U+10FFFF')).toEqual([0x10ffff]);
+		expect(parseAltCharInput('U+110000')).toEqual([]);
+		expect(parseAltCharInput('U+FFFFFF')).toEqual([]);
+		expect(buildAlternateItems({ codepoints: [0x41], features: {} }, parseAltCharInput('U+110000'))).toEqual([]);
+	});
+
+	test('a sequence is browsed as its codepoints, trimmed to the cap but never rejected', () => {
+		expect(parseAltCharInput('Th')).toEqual([0x54, 0x68]);
+		expect(parseAltCharInput('ffl')).toEqual([0x66, 0x66, 0x6c]);
+		const long = parseAltCharInput('abcdefghij');
+		expect(long).toHaveLength(ALT_CHAR_MAX);
+		expect(long[0]).toBe(0x61);
+	});
+
+	test('astral characters count as one', () => {
+		expect(parseAltCharInput('😀W')).toEqual([0x1f600, 0x57]);
+	});
+
+	test('empty input is null', () => {
+		expect(parseAltCharInput('')).toBeNull();
+		expect(parseAltCharInput('   ')).toBeNull();
+		expect(parseAltCharInput(undefined)).toBeNull();
+	});
+
+	test('a sequence the font has no ligature for reports no alternates (only the base cell)', () => {
+		const meta = {
+			codepoints: [0x61, 0x6d, 0x70, 0x65],
+			features: { dlig: { ligatures: [{ text: 'Th', components: [0x54, 0x68] }] } },
+		};
+		const items = buildAlternateItems(meta, parseAltCharInput('ampe'));
+		expect(items).toHaveLength(1);
+		expect(items[0].base).toBe(true);
+		expect(sequenceHasAlternates(items)).toBe(false);
+	});
+
+	test('a sequence with a ligature reports alternates', () => {
+		const meta = {
+			codepoints: [0x54, 0x68],
+			features: { dlig: { ligatures: [{ text: 'Th', components: [0x54, 0x68] }] } },
+		};
+		expect(sequenceHasAlternates(buildAlternateItems(meta, parseAltCharInput('Th')))).toBe(true);
+		expect(sequenceHasAlternates([])).toBe(false);
+	});
+});

@@ -56,7 +56,19 @@ test.describe('Glyphs panel with NVDA', () => {
       await h.delay(400);
       cell = await activeCell();
     }
-    const cellPhrase = await nvda.lastSpokenPhrase();
+    let cellPhrase = await nvda.lastSpokenPhrase();
+    // A single arrow press is sometimes recorded as "" when NVDA speaks after
+    // Guidepup's one-second window (a capture gap, not a product finding; the
+    // cell did change, see `cell`). Ask NVDA to report the focused object
+    // instead, which re-reads the active cell.
+    let cellPhraseSource = 'arrow';
+    if (!cellPhrase) {
+      await h.delay(700);
+      await nvda.perform(nvda.keyboardCommands.reportCurrentFocus);
+      await h.delay(400);
+      cellPhrase = await nvda.lastSpokenPhrase();
+      cellPhraseSource = 'reportCurrentFocus';
+    }
 
     await nvda.press('Enter');
     await page.waitForTimeout(1200);
@@ -79,7 +91,7 @@ test.describe('Glyphs panel with NVDA', () => {
     const escapesNeeded = close.escapesNeeded;
 
     const log = await h.saveSpeechLog(nvda, 'glyphs-panel', { focusTitles,
-      openPhrase, focusAtOpen, tabStops, focusAtGrid, initialCell, modePhrases, cell, cellPhrase, insertPhrase, closePhrase, escapesNeeded, close, focusAfterInsert, focusInCanvas, focusInsideDialog, html, modalClosed,
+      openPhrase, focusAtOpen, tabStops, focusAtGrid, initialCell, modePhrases, cell, cellPhrase, cellPhraseSource, insertPhrase, closePhrase, escapesNeeded, close, focusAfterInsert, focusInCanvas, focusInsideDialog, html, modalClosed,
     });
 
     // Product assertions (true regardless of exact NVDA wording).
@@ -93,7 +105,24 @@ test.describe('Glyphs panel with NVDA', () => {
 
     // Screen-reader assertions.
     expect(openPhrase, 'opening the panel should announce the dialog').toMatch(/Glyphs/i);
-    expect(cellPhrase, 'arrowing should announce the cell').toMatch(/Stylistic Alternates/i);
-    expect(h.spoke(log, /Inserted/i), 'Enter should announce the live region').toBe(true);
+    // SR-1: the dialog's name must come first. The partial-word selection
+    // above raises the word-boundary notice, which used to be read in full
+    // (~45 words) before "Glyphs, dialog".
+    expect(openPhrase, 'the dialog name should be announced before the word-boundary notice (SR-1)').toMatch(/^Glyphs/);
+    // Arrowing announces glyph cells. The exact cell of a single press can be
+    // lost to the capture window (or NVDA's focus report can lag one cell), so
+    // the phrase is checked for a cell announcement and the exact alternate is
+    // pinned through the DOM (`cell`) and the insertion announcement, which
+    // repeats the cell's label.
+    // The spoken cell must be the character the DOM says is active: NVDA
+    // says "U plus 0057" for the label's "U+0057". A stale focus report can
+    // name the previous alternate of the same character, so the feature is
+    // not compared here, but a different character would be a real
+    // aria-activedescendant desync and must fail.
+    const activeCodepoint = (cell.match(/U\+([0-9A-F]{4,6})/i) || [])[1];
+    expect(activeCodepoint, 'the active cell label should carry a codepoint').toBeTruthy();
+    expect(cellPhrase, 'arrowing should announce the active cell\'s character').toMatch(new RegExp('U plus ' + activeCodepoint, 'i'));
+    expect(h.spoke(log, /Stylistic Alternates/i), 'the salt cell should be announced at some point').toBe(true);
+    expect(insertPhrase, 'Enter should announce the live region with the inserted character').toMatch(new RegExp('Inserted.*U plus ' + activeCodepoint, 'i'));
   });
 });

@@ -30,7 +30,7 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -1033,7 +1033,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// Drag handlers
 	const handleDragStart = (e) => {
 		// Don't drag if clicking close button
-		if (e.target.closest('.typost-modal-close-button')) {
+		// Any header button (Move panel, Close) is not a drag handle
+		if (e.target.closest('.components-button')) {
 			return;
 		}
 
@@ -1318,12 +1319,19 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const handleExtensionToolbarClick = (button) => {
 		const snapshot = snapshotSelection();
 		setCapturedSelection(snapshot.capturedSelection);
+		// The style covering the selected text (not the block's): the style
+		// browser marks this one as active when it is applying to a selection.
+		// Containment, so a style over part of the selection does not count.
+		const captured = snapshot.capturedSelection;
+		const selectionStyleId = captured && captured.start !== captured.end
+			? findCoveringParagraphStyleId(content, captured.start, captured.end)
+			: 0;
 		button.onClick({
 			source: 'qft',
 			clientId,
 			capturedSelection: snapshot.capturedSelection,
 			selectedText: snapshot.capturedSelection ? snapshot.capturedSelection.text : '',
-			state: buildQftEditorState(qftStateRef.current),
+			state: buildQftEditorState({ ...qftStateRef.current, selectionStyleId }),
 			// No host modal was open, so nothing should reopen on close
 			reopenHost: false
 		});
@@ -2619,6 +2627,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		if (conflicts > 0) {
 			const proceed = window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));
 			if (!proceed) {
+				// Tell the panel that dispatched the apply, so its badge does
+				// not keep showing a style that was never applied.
+				document.dispatchEvent(new CustomEvent('typost-paragraph-style-apply-cancelled', {
+					detail: { source: 'qft', paragraphStyleId: id }
+				}));
 				return true;
 			}
 		}
@@ -3592,16 +3605,21 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							}}
 						>
 							{/* Custom draggable header */}
+							{/* Mouse drag surface only; keyboard repositioning is the
+							    named "Move panel" button (QA finding SR-4, same as the
+							    inline modal). */}
 							<div
 								className="typost-modal-header"
 								onMouseDown={handleDragStart}
-								onKeyDown={handleHeaderKeyDown}
-								role="toolbar"
-								aria-label={__('Drag to reposition modal', 'typography-stylist')}
-								tabIndex={0}
 								style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
 							>
 								<h3 id={qftTitleId}>{__('Quick Feature Toggles', 'typography-stylist')}</h3>
+								<Button
+									icon="move"
+									label={__('Move panel, use arrow keys', 'typography-stylist')}
+									onKeyDown={handleHeaderKeyDown}
+									className="typost-modal-move-button"
+								/>
 								<Button
 									icon="no-alt"
 									label={__('Close', 'typography-stylist')}
@@ -3610,29 +3628,45 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								/>
 							</div>
 
-							{/* Modal content wrapper with scroll */}
-							<div className="typost-modal-content" style={{
+							{/* Modal content wrapper with scroll. tabIndex -1: a scroll
+							    container is otherwise a Tab stop that a screen reader
+							    reads in full (QA finding SR-3); its controls remain
+							    reachable and scroll it into view. */}
+							<div className="typost-modal-content" tabIndex={-1} style={{
 								height: `calc(${modalHeight}px - 60px)`,
 								overflowY: 'auto'
 							}}>
 								{/* Usage tips notice — same strings, dismissal flag, and
 								    sticky wrapper (spacing lives in block-editor.css) as the
 								    inline format modal's notice. Notice does not forward a
-								    style prop, so an inline margin here never rendered. */}
+								    style prop, so an inline margin here never rendered.
+								    spokenMessage '' keeps the tip out of the live region on
+								    mount (it was read before the dialog's name); the own
+								    dismiss button replaces Notice's "Close" so there are not
+								    two differently-acting "Close" stops (QA finding SR-4). */}
 								{!tipsDismissed && (
 									<div className="typost-sticky-notice-wrapper">
 										<Notice
 											status="info"
-											isDismissible={true}
-											onRemove={dismissTips}
+											isDismissible={false}
+											spokenMessage=""
 											className="typost-drag-notice"
 										>
-											<p style={{ margin: 0 }}>
-												{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
-											</p>
-											<p style={{ margin: '4px 0 0' }}>
-												{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
-											</p>
+											<div className="typost-tip-text">
+												<p style={{ margin: 0 }}>
+													{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
+												</p>
+												<p style={{ margin: '4px 0 0' }}>
+													{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
+												</p>
+											</div>
+											<Button
+												icon="no-alt"
+												label={__('Dismiss tip', 'typography-stylist')}
+												onClick={dismissTips}
+												className="typost-tip-dismiss"
+												size="small"
+											/>
 										</Notice>
 									</div>
 								)}

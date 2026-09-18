@@ -58,6 +58,9 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 ?>
 
 <div class="typost-ps-admin-tab">
+	<?php // Every core tab opens with an h2; the style cards are h3s, so without
+	      // this the page jumped from its h1 to h3 (QA finding A11Y-3, heading order). ?>
+	<h2><?php esc_html_e( 'Paragraph Styles', 'typost-paragraph-styles' ); ?></h2>
 	<p class="typost-ps-description">
 		<?php esc_html_e( 'Manage your saved paragraph styles. These appear in the Typography Stylist editor for quick application to text.', 'typost-paragraph-styles' ); ?>
 	</p>

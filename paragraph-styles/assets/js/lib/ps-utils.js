@@ -90,6 +90,31 @@
 	}
 
 	/**
+	 * Line-height is stored to three decimals (see roundLineHeight); half a
+	 * unit in the last place is the largest difference that is still "equal".
+	 */
+	var LINE_HEIGHT_TOLERANCE = 0.0005;
+
+	/**
+	 * Round a line-height to three decimals for storage.
+	 *
+	 * The editor slider steps by 0.1, so three decimals lose nothing, and a
+	 * fixed precision keeps float noise (1.6000000000000001) out of the
+	 * stored style and out of the CSS it generates.
+	 */
+	function roundLineHeight(value) {
+		var n = parseFloat(value);
+		if (!isFinite(n)) return 0;
+		// Exponent notation instead of `n * 1000`: the multiplication turns
+		// an exact half-step such as 1.0005 into 1000.4999…, which
+		// Math.round takes down to 1.0 while PHP's round() (which pre-rounds
+		// the representation) gives 1.001 — a disagreement larger than the
+		// compare tolerance. Shifting the decimal point textually rounds the
+		// value the author actually typed, matching PHP.
+		return Number(Math.round(Number(n + 'e3')) + 'e-3');
+	}
+
+	/**
 	 * Compare current editor state against a stored style's properties.
 	 * Returns true if any property differs.
 	 */
@@ -131,8 +156,11 @@
 		// Compare letterSpacing
 		if ((state.letterSpacing || 0) !== (styleProps.letterSpacing || 0)) return true;
 
-		// Compare lineHeight
-		if ((state.lineHeight || 0) !== (styleProps.lineHeight || 0)) return true;
+		// Compare lineHeight with a tolerance: the stored value has been
+		// through PHP floatval and JSON (1.6 came back as
+		// 1.6000000000000001 once, QA finding PS-8), and a strict compare
+		// would flag "(modified)" forever on a style nobody touched.
+		if (Math.abs((state.lineHeight || 0) - (styleProps.lineHeight || 0)) > LINE_HEIGHT_TOLERANCE) return true;
 
 		// Compare features
 		var stateFeatures = (state.features || state.selectedFeatures || []).slice().sort();
@@ -174,20 +202,27 @@
 		if (state.fontSize === 'fit') {
 			properties.fitMaxSize = state.fitMaxSize || 0;
 		}
-		if (state.fontSizeMin) {
-			properties.fontSizeMin = state.fontSizeMin;
-		}
-		if (state.fontSizePreferred) {
-			properties.fontSizePreferred = state.fontSizePreferred;
-		}
-		if (state.fontSizeMax) {
-			properties.fontSizeMax = state.fontSizeMax;
+		// The min/preferred/max trio only means something in responsive and
+		// fit modes (fit stores it as its fallback clamp). Every editor state
+		// carries the trio at its defaults, so storing it unconditionally
+		// gave every fixed-size and inherit style three junk numbers that
+		// "Update Style" then spread to older styles (QA finding PS-3).
+		if (state.fontSize === 'responsive' || state.fontSize === 'fit') {
+			if (state.fontSizeMin) {
+				properties.fontSizeMin = state.fontSizeMin;
+			}
+			if (state.fontSizePreferred) {
+				properties.fontSizePreferred = state.fontSizePreferred;
+			}
+			if (state.fontSizeMax) {
+				properties.fontSizeMax = state.fontSizeMax;
+			}
 		}
 		if (state.letterSpacing) {
 			properties.letterSpacing = state.letterSpacing;
 		}
 		if (state.lineHeight) {
-			properties.lineHeight = state.lineHeight;
+			properties.lineHeight = roundLineHeight(state.lineHeight);
 		}
 		if (state.features && state.features.length > 0) {
 			properties.features = state.features;
@@ -501,9 +536,67 @@
 		return selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
 	}
 
+	/**
+	 * Which style the toolbar browser should mark as active.
+	 *
+	 * With text selected the browser applies to that text, so the pressed row
+	 * (and the Detach button) must describe the selection's own style — the
+	 * span's data-style-id, or none — not the block's. Marking the block's
+	 * style while saying "Applies to the selected text" offered to detach a
+	 * style the selection did not carry (QA finding: browser scope mismatch).
+	 *
+	 * @param {Object}  state        Editor state from the toolbar click context.
+	 * @param {boolean} hasSelection Whether a text selection was captured.
+	 * @return {number} Style id, 0 for none.
+	 */
+	function resolveBrowserActiveStyleId(state, hasSelection) {
+		var s = state || {};
+		if (hasSelection) {
+			return parseInt(s.selectionParagraphStyleId, 10) || 0;
+		}
+		return parseInt(s.paragraphStyleId, 10) || 0;
+	}
+
+	/**
+	 * Rows the style browser shows before "Show more". At the 300-style
+	 * stress test the list was 30,000 px tall; bytes were never the problem,
+	 * a list that long is.
+	 */
+	var BROWSER_PAGE_SIZE = 24;
+
+	/**
+	 * Filter styles for the browser's search field: a case-insensitive
+	 * substring match on the style name or its font name.
+	 *
+	 * @param {Array}    styles     Stored styles
+	 * @param {string}   query      Search text
+	 * @param {Function} fontNameOf Optional: style → font name
+	 * @return {Array} Matching styles, all of them for an empty query
+	 */
+	function filterParagraphStyles(styles, query, fontNameOf) {
+		var list = styles || [];
+		var q = String(query || '').trim().toLowerCase();
+		if (!q) {
+			return list.slice();
+		}
+		return list.filter(function (style) {
+			if (!style) return false;
+			var name = String(style.name || '').toLowerCase();
+			if (name.indexOf(q) !== -1) {
+				return true;
+			}
+			var font = fontNameOf ? String(fontNameOf(style) || '').toLowerCase() : '';
+			return font.indexOf(q) !== -1;
+		});
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
+		roundLineHeight: roundLineHeight,
+		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
+		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
+		filterParagraphStyles: filterParagraphStyles,
 		buildPropertiesFromState: buildPropertiesFromState,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
