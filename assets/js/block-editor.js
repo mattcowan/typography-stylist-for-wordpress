@@ -640,6 +640,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Uses !== undefined checks so partial updates only override fields
             // present in the event, preserving current state for missing fields
             this._handleApplyBlockProperties = function(e) {
+                // Registered in the constructor, so a StrictMode shadow
+                // instance can still hold a listener; only the mounted
+                // instance may act (or ask the confirm question twice).
+                if (!self._isMounted) {
+                    return;
+                }
                 if (e.detail && e.detail.source === 'inline' && e.detail.properties) {
                     const props = e.detail.properties;
                     // A paragraph style replaces whatever styling the selected

@@ -361,7 +361,11 @@
 		}
 		var hexMatch = raw.match(/^u\+?([0-9a-f]{1,6})$/i);
 		if (hexMatch) {
-			return [parseInt(hexMatch[1], 16)];
+			var cp = parseInt(hexMatch[1], 16);
+			// Six hex digits reach past the last code point (U+10FFFF);
+			// String.fromCodePoint throws on anything above it, so an
+			// out-of-range value means "nothing to browse", not a crash.
+			return cp <= 0x10FFFF ? [cp] : null;
 		}
 		return Array.from(raw).slice(0, ALT_CHAR_MAX).map(function(ch) {
 			return ch.codePointAt(0);

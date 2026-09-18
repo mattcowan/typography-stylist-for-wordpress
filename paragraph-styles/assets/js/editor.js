@@ -629,6 +629,9 @@
 		}, [currentStyles, query]);
 		var visible = filtered.slice(0, visibleCount);
 		var hiddenCount = filtered.length - visible.length;
+		// The button promises what one activation reveals: one page, or
+		// the remainder when fewer are left
+		var nextPageCount = Math.min(hiddenCount, BROWSER_PAGE_SIZE);
 
 		// After "Show more", focus the first newly revealed row so a keyboard
 		// user continues where the list grew instead of from the button.
@@ -772,9 +775,9 @@
 					variant: 'secondary',
 					onClick: onShowMore,
 				}, sprintf(
-					/* translators: %d: number of styles not shown yet */
-					_n('Show %d more style', 'Show %d more styles', hiddenCount, 'typost-paragraph-styles'),
-					hiddenCount
+					/* translators: %d: number of styles the button reveals */
+					_n('Show %d more style', 'Show %d more styles', nextPageCount, 'typost-paragraph-styles'),
+					nextPageCount
 				))
 			),
 			activeStyleId ? el('div', { className: 'typost-ps-browser-footer' },

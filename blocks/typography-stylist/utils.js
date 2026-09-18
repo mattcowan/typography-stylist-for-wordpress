@@ -2558,7 +2558,8 @@ export function countInlineParagraphStyleConflicts(formats, start, end, formatTy
 		if (hasDataAttrs || typeof attrs.style !== 'string') {
 			return false;
 		}
-		return PARAGRAPH_STYLE_OWNED_PROPS.some((prop) => new RegExp('(^|;)\s*' + prop + '\s*:', 'i').test(attrs.style));
+		// Double backslash: inside a string literal a single \s is just "s"
+		return PARAGRAPH_STYLE_OWNED_PROPS.some((prop) => new RegExp('(^|;)\\s*' + prop + '\\s*:', 'i').test(attrs.style));
 	}).length;
 }
 

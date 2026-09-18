@@ -114,7 +114,7 @@ test.describe('Glyphs panel with NVDA', () => {
     // the phrase is checked for a cell announcement and the exact alternate is
     // pinned through the DOM (`cell`) and the insertion announcement, which
     // repeats the cell's label.
-    expect(cellPhrase, 'arrowing should announce a glyph cell').toMatch(/U plus 0057/i);
+    expect(cellPhrase, 'arrowing should announce a glyph cell').toMatch(/U plus [0-9A-F]{4,6}/i);
     expect(h.spoke(log, /Stylistic Alternates/i), 'the salt cell should be announced at some point').toBe(true);
     expect(h.spoke(log, /Inserted/i), 'Enter should announce the live region').toBe(true);
   });

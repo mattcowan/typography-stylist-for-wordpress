@@ -64,6 +64,17 @@ describe('countInlineParagraphStyleConflicts', () => {
 		expect(countInlineParagraphStyleConflicts(other, 0, 10, TYPE)).toBe(0);
 	});
 
+	test('the legacy matcher tolerates whitespace and a preceding declaration', () => {
+		// These only match when the \s in the pattern is a real whitespace
+		// class, not the letter "s" (review of PR #193)
+		const spaced = formats(10, [{ from: 0, to: 10, attributes: { style: 'font-weight : 700' } }]);
+		expect(countInlineParagraphStyleConflicts(spaced, 0, 10, TYPE)).toBe(1);
+		const second = formats(10, [{ from: 0, to: 10, attributes: { style: 'color: red; font-weight: 700' } }]);
+		expect(countInlineParagraphStyleConflicts(second, 0, 10, TYPE)).toBe(1);
+		const inWord = formats(10, [{ from: 0, to: 10, attributes: { style: 'xfont-weight: 700' } }]);
+		expect(countInlineParagraphStyleConflicts(inWord, 0, 10, TYPE)).toBe(0);
+	});
+
 	test('is 0 for an empty or inverted range', () => {
 		const f = formats(10, [{ from: 0, to: 10, attributes: { 'data-fontsize': '48' } }]);
 		expect(countInlineParagraphStyleConflicts(f, 4, 4, TYPE)).toBe(0);

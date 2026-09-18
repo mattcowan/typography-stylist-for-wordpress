@@ -304,6 +304,13 @@ describe('GP-2: parseAltCharInput / sequenceHasAlternates', () => {
 		expect(parseAltCharInput('U1F600')).toEqual([0x1f600]);
 	});
 
+	test('the U+ form stops at the last code point', () => {
+		// Six hex digits can name values String.fromCodePoint rejects
+		expect(parseAltCharInput('U+10FFFF')).toEqual([0x10ffff]);
+		expect(parseAltCharInput('U+110000')).toBeNull();
+		expect(parseAltCharInput('U+FFFFFF')).toBeNull();
+	});
+
 	test('a sequence is browsed as its codepoints, trimmed to the cap but never rejected', () => {
 		expect(parseAltCharInput('Th')).toEqual([0x54, 0x68]);
 		expect(parseAltCharInput('ffl')).toEqual([0x66, 0x66, 0x6c]);
