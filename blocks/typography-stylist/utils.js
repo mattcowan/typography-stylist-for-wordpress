@@ -23,6 +23,24 @@
  * @return {Array<{node: Node, start: number, end: number, text: string}>} Text node map with BR-adjusted offsets
  */
 export function buildTextOffsetMap(container, docContext) {
+	return walkTextOffsets(container, docContext).text;
+}
+
+/**
+ * Offsets of the <br> elements inside a container, in the same coordinate
+ * space as buildTextOffsetMap(): each break occupies one position, as it
+ * does in a WordPress RichText value. Kept apart from the text map because
+ * that map's consumers read entry.text and entry.node.nodeValue.
+ *
+ * @param {Element}  container  Container element
+ * @param {Document} docContext Document that owns the container
+ * @returns {Array<{node: Element, start: number, end: number}>}
+ */
+export function buildBreakOffsetMap(container, docContext) {
+	return walkTextOffsets(container, docContext).breaks;
+}
+
+function walkTextOffsets(container, docContext) {
 	const walker = docContext.createTreeWalker(
 		container,
 		NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
@@ -41,6 +59,7 @@ export function buildTextOffsetMap(container, docContext) {
 	);
 
 	const map = [];
+	const breaks = [];
 	let currentOffset = 0;
 	let node;
 
@@ -56,11 +75,12 @@ export function buildTextOffsetMap(container, docContext) {
 			currentOffset += text.length;
 		} else if (node.nodeName === 'BR') {
 			// BR counts as 1 character position to match WordPress RichText offsets
+			breaks.push({ node: node, start: currentOffset, end: currentOffset + 1 });
 			currentOffset += 1;
 		}
 	}
 
-	return map;
+	return { text: map, breaks: breaks };
 }
 
 /**
@@ -3085,10 +3105,13 @@ const PARAGRAPH_STYLE_OWNED_PROPS = [
  * @param {Array}   textMap buildTextOffsetMap() output
  * @returns {{start: number, end: number}|null} null for a span with no text
  */
-function spanTextRange(span, textMap) {
+function spanTextRange(span, textMap, breakMap) {
 	let spanStart = Infinity;
 	let spanEnd = -Infinity;
-	textMap.forEach((entry) => {
+	// Breaks count too: a selection that ends at a trailing <br> inside a
+	// span (RichText offsets include it) must still be covered by that span,
+	// and a span holding only a <br> still has a range (review of PR #193).
+	(textMap || []).concat(breakMap || []).forEach((entry) => {
 		if (span.contains(entry.node)) {
 			spanStart = Math.min(spanStart, entry.start);
 			spanEnd = Math.max(spanEnd, entry.end);
@@ -3122,12 +3145,13 @@ function spanTextRange(span, textMap) {
 function findParagraphStyleAffectedSpans(container, start, end) {
 	const doc = container.ownerDocument;
 	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
 	const spans = Array.prototype.slice.call(container.querySelectorAll('span.typost-styled'));
 	const affected = [];
 	let innermostContainer = null;
 	let innermostLength = Infinity;
 	spans.forEach((span) => {
-		const range = spanTextRange(span, textMap);
+		const range = spanTextRange(span, textMap, breakMap);
 		if (!range) {
 			return;
 		}
@@ -3226,10 +3250,11 @@ export function findCoveringParagraphStyleId(htmlContent, start, end) {
 	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 	const container = doc.body.firstChild;
 	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
 	let innermost = null;
 	let innermostLength = Infinity;
 	Array.prototype.slice.call(container.querySelectorAll('span.typost-styled')).forEach((span) => {
-		const range = spanTextRange(span, textMap);
+		const range = spanTextRange(span, textMap, breakMap);
 		if (!range || range.start > start || range.end < end) {
 			return;
 		}

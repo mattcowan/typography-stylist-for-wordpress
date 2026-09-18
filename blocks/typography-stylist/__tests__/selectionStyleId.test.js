@@ -63,3 +63,25 @@ describe('buildQftEditorState: selectionParagraphStyleId', () => {
 		expect(state.selectionParagraphStyleId).toBe(0);
 	});
 });
+
+describe('findCoveringParagraphStyleId with line breaks', () => {
+	test('a selection ending at a trailing <br> inside the span is still covered', () => {
+		// RichText counts the break as one position: "Alpha" + <br> = offsets 0-6
+		const html = '<span class="typost-styled" data-style-id="3">Alpha<br></span>Gamma';
+		expect(findCoveringParagraphStyleId(html, 0, 6)).toBe(3);
+		expect(findCoveringParagraphStyleId(html, 0, 5)).toBe(3);
+		// Past the span (into "Gamma") is not covered
+		expect(findCoveringParagraphStyleId(html, 0, 7)).toBe(0);
+	});
+
+	test('a span holding only a <br> has a range', () => {
+		const html = '<span class="typost-styled" data-style-id="3"><br></span>Gamma';
+		expect(findCoveringParagraphStyleId(html, 0, 1)).toBe(3);
+	});
+
+	test('an interior <br> keeps the span range contiguous', () => {
+		const html = '<span class="typost-styled" data-style-id="3">Alpha<br>Beta</span>';
+		expect(findCoveringParagraphStyleId(html, 0, 10)).toBe(3);
+		expect(findCoveringParagraphStyleId(html, 5, 6)).toBe(3);
+	});
+});
