@@ -743,8 +743,14 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			return { success: false, content: htmlContent };
 		}
 
-		// Build text offset map (accounts for <br> line breaks)
+		// Build text offset map (accounts for <br> line breaks). Breaks are
+		// ranged too: a span's extent must include a trailing <br> (one
+		// RichText position) or a selection of that break finds no parent
+		// and the caller falls through to block-level handling (review of
+		// PR #193). The segment builder below already treats <br> as an
+		// atomic node of length 1.
 		const textNodeMap = buildTextOffsetMap(container, doc);
+		const offsetEntries = textNodeMap.concat(buildBreakOffsetMap(container, doc));
 
 		// Find parent span that has the property and overlaps selection
 		let parentSpan = null;
@@ -754,7 +760,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 			if (!span.hasAttribute(propertyDataAttr)) return;
 
 			let spanStart = Infinity, spanEnd = -1;
-			textNodeMap.forEach(({ node, start, end }) => {
+			offsetEntries.forEach(({ node, start, end }) => {
 				if (span.contains(node)) {
 					spanStart = Math.min(spanStart, start);
 					spanEnd = Math.max(spanEnd, end);
@@ -782,7 +788,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
 		const childSpans = parentSpan.querySelectorAll('span.typost-styled');
 		for (let child of childSpans) {
 			let childStart = Infinity, childEnd = -1;
-			textNodeMap.forEach(({ node, start, end }) => {
+			offsetEntries.forEach(({ node, start, end }) => {
 				if (child.contains(node)) {
 					childStart = Math.min(childStart, start);
 					childEnd = Math.max(childEnd, end);
@@ -1310,6 +1316,76 @@ export function validateRangeMatchesSelection(range, expectedText, expectedLengt
 }
 
 /**
+ * Apply styling to a selection that covers only <br> elements.
+ *
+ * Two shapes: the breaks are the whole content of one typost span whose
+ * range equals the selection (a paragraph style is being replaced on a
+ * break-only span), which merges into that span like any whole-span
+ * selection; or the breaks are contiguous siblings under one parent, which
+ * get wrapped in a new span. Anything else (breaks under different
+ * parents) is left to the caller's failure path.
+ *
+ * @param {Element}  container   Parsed content container
+ * @param {Document} doc         Owning document
+ * @param {number}   startOffset Selection start
+ * @param {number}   endOffset   Selection end (exclusive)
+ * @param {Object}   attributes  Attributes to apply
+ * @param {string}   styleString Inline style to apply
+ * @returns {{success: boolean, content: string, error: null}|null} null when
+ *          the selection holds no breaks or they cannot be wrapped
+ */
+function applyStylingToBreaks(container, doc, startOffset, endOffset, attributes, styleString) {
+	const breaks = buildBreakOffsetMap(container, doc).filter((entry) =>
+		entry.start < endOffset && entry.end > startOffset
+	);
+	if (!breaks.length) {
+		return null;
+	}
+	const parent = breaks[0].node.parentNode;
+	if (!parent || breaks.some((entry) => entry.node.parentNode !== parent)) {
+		return null;
+	}
+	const first = breaks[0].node;
+	const last = breaks[breaks.length - 1].node;
+
+	// Whole-span selection: the span holds exactly these breaks
+	const isTypostSpan = parent.classList && parent.classList.contains('typost-styled');
+	const spanHoldsOnlyTheseBreaks = isTypostSpan &&
+		parent.childNodes.length === breaks.length &&
+		breaks[0].start <= startOffset && breaks[breaks.length - 1].end >= endOffset;
+	if (spanHoldsOnlyTheseBreaks) {
+		mergeTypostSpanStyling(parent, attributes, styleString);
+		return { success: true, content: container.innerHTML, error: null };
+	}
+
+	// Contiguous siblings: wrap them
+	let node = first;
+	while (node && node !== last) {
+		node = node.nextSibling;
+		if (!node || node.nodeName !== 'BR') {
+			return null;
+		}
+	}
+	if (!canCreateNestedSpan(parent)) {
+		return null;
+	}
+	const span = doc.createElement('span');
+	span.className = 'typost-styled';
+	Object.keys(attributes).forEach((key) => {
+		const value = attributes[key];
+		if (value !== null && value !== undefined && value !== '') {
+			span.setAttribute(key, String(value));
+		}
+	});
+	if (styleString) {
+		span.setAttribute('style', styleString);
+	}
+	parent.insertBefore(span, first);
+	breaks.forEach((entry) => span.appendChild(entry.node));
+	return { success: true, content: container.innerHTML, error: null };
+}
+
+/**
  * Apply styling using string manipulation (fallback when Range fails)
  *
  * This method works by:
@@ -1339,6 +1415,13 @@ export function applyStylingSafeStringMethod(htmlContent, startOffset, endOffset
 		);
 
 		if (affectedNodes.length === 0) {
+			// A selection holding only line breaks (a lone <br>, or a styled
+			// span that contains nothing else) has no text node to anchor on,
+			// yet RichText gives each break a position (review of PR #193).
+			const breakResult = applyStylingToBreaks(container, doc, startOffset, endOffset, attributes, styleString);
+			if (breakResult) {
+				return breakResult;
+			}
 			return { success: false, content: htmlContent, error: 'No text nodes in range' };
 		}
 
