@@ -234,7 +234,7 @@ msgid_plural "%d styles match."
 msgstr[0] ""
 msgstr[1] ""
 
-#. translators: %d: number of styles not shown yet
+#. translators: %d: number of styles the button reveals
 #: assets/js/editor.js
 #, js-format
 msgid "Show %d more style"

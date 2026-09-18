@@ -352,7 +352,12 @@
 	 * GP-2). Longer sequences are trimmed, never rejected.
 	 *
 	 * @param {string} value Field value
-	 * @return {Array<number>|null} Codepoints, or null when the field is empty
+	 * @return {Array<number>|null} Codepoints; null when the field is empty;
+	 *                              an empty array when the field names no
+	 *                              browsable codepoint (a U+ value past
+	 *                              U+10FFFF), so the modal shows its
+	 *                              "not available" message rather than the
+	 *                              full grid
 	 */
 	function parseAltCharInput(value) {
 		var raw = String(value || '').trim();
@@ -362,10 +367,12 @@
 		var hexMatch = raw.match(/^u\+?([0-9a-f]{1,6})$/i);
 		if (hexMatch) {
 			var cp = parseInt(hexMatch[1], 16);
-			// Six hex digits reach past the last code point (U+10FFFF);
-			// String.fromCodePoint throws on anything above it, so an
-			// out-of-range value means "nothing to browse", not a crash.
-			return cp <= 0x10FFFF ? [cp] : null;
+			// Six hex digits reach past the last code point (U+10FFFF).
+			// Distinct from null: "typed something unbrowsable" keeps the
+			// alternates view (and its message) instead of falling back to
+			// the grid as an empty field does, and no consumer ever calls
+			// String.fromCodePoint on the invalid value.
+			return cp <= 0x10FFFF ? [cp] : [];
 		}
 		return Array.from(raw).slice(0, ALT_CHAR_MAX).map(function(ch) {
 			return ch.codePointAt(0);

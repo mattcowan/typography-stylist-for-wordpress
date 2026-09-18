@@ -305,10 +305,14 @@ describe('GP-2: parseAltCharInput / sequenceHasAlternates', () => {
 	});
 
 	test('the U+ form stops at the last code point', () => {
-		// Six hex digits can name values String.fromCodePoint rejects
+		// Six hex digits can name values past U+10FFFF. Those parse to an
+		// empty array — not null, which means an empty field and would swap
+		// the alternates view for the full grid — so the modal keeps showing
+		// "This character is not available in the selected font."
 		expect(parseAltCharInput('U+10FFFF')).toEqual([0x10ffff]);
-		expect(parseAltCharInput('U+110000')).toBeNull();
-		expect(parseAltCharInput('U+FFFFFF')).toBeNull();
+		expect(parseAltCharInput('U+110000')).toEqual([]);
+		expect(parseAltCharInput('U+FFFFFF')).toEqual([]);
+		expect(buildAlternateItems({ codepoints: [0x41], features: {} }, parseAltCharInput('U+110000'))).toEqual([]);
 	});
 
 	test('a sequence is browsed as its codepoints, trimmed to the cap but never rejected', () => {

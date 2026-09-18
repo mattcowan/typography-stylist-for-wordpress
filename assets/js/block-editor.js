@@ -812,7 +812,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // the author never asked for would be a surprise. An absent flag
             // (as older extensions send) keeps the reopen behaviour.
             this._handleGlyphsClosed = function(src, info) {
-                if (src !== 'inline') {
+                // Same mount guard as the other constructor-registered
+                // handlers: a StrictMode shadow instance would otherwise fire
+                // typost_inline_modal_opened with stale state.
+                if (!self._isMounted || src !== 'inline') {
                     return;
                 }
                 if (info && info.reopenHost === false) {

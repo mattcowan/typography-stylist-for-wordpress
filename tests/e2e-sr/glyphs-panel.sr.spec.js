@@ -114,8 +114,15 @@ test.describe('Glyphs panel with NVDA', () => {
     // the phrase is checked for a cell announcement and the exact alternate is
     // pinned through the DOM (`cell`) and the insertion announcement, which
     // repeats the cell's label.
-    expect(cellPhrase, 'arrowing should announce a glyph cell').toMatch(/U plus [0-9A-F]{4,6}/i);
+    // The spoken cell must be the character the DOM says is active: NVDA
+    // says "U plus 0057" for the label's "U+0057". A stale focus report can
+    // name the previous alternate of the same character, so the feature is
+    // not compared here, but a different character would be a real
+    // aria-activedescendant desync and must fail.
+    const activeCodepoint = (cell.match(/U\+([0-9A-F]{4,6})/i) || [])[1];
+    expect(activeCodepoint, 'the active cell label should carry a codepoint').toBeTruthy();
+    expect(cellPhrase, 'arrowing should announce the active cell\'s character').toMatch(new RegExp('U plus ' + activeCodepoint, 'i'));
     expect(h.spoke(log, /Stylistic Alternates/i), 'the salt cell should be announced at some point').toBe(true);
-    expect(h.spoke(log, /Inserted/i), 'Enter should announce the live region').toBe(true);
+    expect(insertPhrase, 'Enter should announce the live region with the inserted character').toMatch(new RegExp('Inserted.*U plus ' + activeCodepoint, 'i'));
   });
 });
