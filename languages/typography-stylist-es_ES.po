@@ -2242,3 +2242,125 @@ msgstr "No se pudieron restablecer los consejos del editor. Tu navegador bloquea
 #: blocks/typography-stylist/edit.js
 msgid "Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?"
 msgstr "Parte del texto seleccionado tiene su propio estilo (fuente, peso, tamaño, espaciado o características). Aplicar el estilo de párrafo reemplaza ese estilo para que toda la selección coincida con el estilo. ¿Continuar?"
+
+#: assets/js/block-editor.js
+msgid "Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior."
+msgstr "Nota: Los tamaños de fuente están desordenados. Mínimo debe ser ≤ Preferido ≤ Máximo para el comportamiento esperado."
+
+#: assets/js/block-editor.js
+msgid "Conversion is available for heading and paragraph blocks."
+msgstr "La conversión está disponible para los bloques de encabezado y párrafo."
+
+#. translators: %d: maximum number of nested styled spans
+#: blocks/typography-stylist/utils.js
+msgid "Maximum nesting depth (%d) reached. Select the whole styled text to change it."
+msgstr "Se alcanzó la profundidad máxima de anidamiento (%d). Seleccione todo el texto con estilo para cambiarlo."
+
+#: blocks/typography-stylist/utils.js
+msgid "The styling could not be applied to this selection."
+msgstr "El estilo no se pudo aplicar a esta selección."
+
+#: includes/admin-page.php
+msgid "Font list"
+msgstr "Lista de fuentes"
+
+#: typography-stylist.php
+msgid "Unknown Font"
+msgstr "Fuente desconocida"
+
+#: typography-stylist.php
+msgid "Deleted Font"
+msgstr "Fuente eliminada"
+
+#: typography-stylist.php
+msgid "Replacement Font"
+msgstr "Fuente de reemplazo"
+
+#: typography-stylist.php
+msgid "Global Load"
+msgstr "Carga global"
+
+#: typography-stylist.php
+msgid "Actions"
+msgstr "Acciones"
+
+#. translators: %s: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "ID: %s"
+msgstr "ID: %s"
+
+#. translators: 1: font name, 2: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "%1$s (ID: %2$s)"
+msgstr "%1$s (ID: %2$s)"
+
+#: typography-stylist.php
+msgid "No font replacements configured."
+msgstr "No hay reemplazos de fuente configurados."
+
+#. translators: %s: comma-separated list of font IDs
+#: typography-stylist.php
+#, php-format
+msgid "Unassigned IDs: %s"
+msgstr "ID sin asignar: %s"
+
+#: typography-stylist.php
+msgid "Edit"
+msgstr "Editar"
+
+#: typography-stylist.php
+msgid "Remove"
+msgstr "Quitar"
+
+#: typography-stylist.php
+msgid "Edit Font Replacement"
+msgstr "Editar reemplazo de fuente"
+
+#: typography-stylist.php
+msgid "Update Replacement"
+msgstr "Actualizar reemplazo"
+
+#. translators: %s: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "Select a new replacement font for ID %s."
+msgstr "Seleccione una nueva fuente de reemplazo para el ID %s."
+
+#: typography-stylist.php
+msgid "Invalid font ID. Please refresh the page and try again."
+msgstr "ID de fuente no válido. Recargue la página e inténtelo de nuevo."
+
+#: typography-stylist.php
+msgid "Remove this font replacement mapping?"
+msgstr "¿Quitar esta asignación de reemplazo de fuente?"
+
+#: typography-stylist.php
+msgid "Failed to remove replacement."
+msgstr "No se pudo quitar el reemplazo."
+
+#: typography-stylist.php
+msgid "Failed to update global load setting."
+msgstr "No se pudo actualizar el ajuste de carga global."
+
+#: typography-stylist.php
+msgid "Please select a deleted font ID."
+msgstr "Seleccione el ID de una fuente eliminada."
+
+#: typography-stylist.php
+msgid "Please select a replacement font."
+msgstr "Seleccione una fuente de reemplazo."
+
+#: typography-stylist.php
+msgid "Invalid font ID (0). Please select a valid ID."
+msgstr "ID de fuente no válido (0). Seleccione un ID válido."
+
+#: typography-stylist.php
+msgid "Replacement mapping added successfully!"
+msgstr "¡Asignación de reemplazo añadida correctamente!"
+
+#: typography-stylist.php
+msgid "Failed to add replacement mapping."
+msgstr "No se pudo añadir la asignación de reemplazo."
+

@@ -101,9 +101,25 @@ function shouldExplainConvertBlock(reason) {
 	return reason === CONVERT_BLOCKED.LOCKED || reason === CONVERT_BLOCKED.PARENT;
 }
 
+/**
+ * Whether the word-boundary notice should explain a missing Convert button.
+ *
+ * The notice itself recommends converting, so there an unsupported block
+ * type (a list item, a button) needs a sentence saying why no button follows
+ * (QA 2026-09 finding E-4); outside the notice that omission is not a missing
+ * action and shouldExplainConvertBlock() applies.
+ *
+ * @param {string} reason Reason code from resolveConvertCapability().
+ * @return {boolean} True when the notice should explain the omission.
+ */
+function shouldExplainInNotice(reason) {
+	return shouldExplainConvertBlock(reason) || reason === CONVERT_BLOCKED.UNSUPPORTED;
+}
+
 module.exports = {
 	CONVERTIBLE_BLOCKS: CONVERTIBLE_BLOCKS,
 	CONVERT_BLOCKED: CONVERT_BLOCKED,
 	resolveConvertCapability: resolveConvertCapability,
-	shouldExplainConvertBlock: shouldExplainConvertBlock
+	shouldExplainConvertBlock: shouldExplainConvertBlock,
+	shouldExplainInNotice: shouldExplainInNotice
 };

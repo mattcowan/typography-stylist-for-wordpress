@@ -64,11 +64,123 @@ function typostResolvePreviewSelection(currentValue, availableValues) {
     return '';
 }
 
+/**
+ * Add a dismiss button to every `.notice.is-dismissible` in `scope` (the
+ * scope element itself included) that does not have one yet.
+ *
+ * WordPress wires dismiss buttons once, at page load (common.js), so a
+ * notice rendered later — the refreshed fonts region, the deletion notice —
+ * carries the class but no button unless this runs for it.
+ *
+ * @param {Element|Document} scope     Container to scan.
+ * @param {string}           label     Screen-reader text for the button.
+ * @param {Function}         [dismiss] Called with the notice element on click;
+ *                                     defaults to removing the notice outright.
+ * @return {number} Number of buttons added.
+ */
+function typostAttachDismissButtons(scope, label, dismiss) {
+    if (!scope || typeof scope.querySelectorAll !== 'function') {
+        return 0;
+    }
+    var notices = Array.prototype.slice.call(scope.querySelectorAll('.notice.is-dismissible'));
+    if (typeof scope.matches === 'function' && scope.matches('.notice.is-dismissible')) {
+        notices.unshift(scope);
+    }
+    var added = 0;
+    notices.forEach(function(notice) {
+        if (notice.querySelector('.notice-dismiss')) {
+            return;
+        }
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'notice-dismiss';
+        var text = document.createElement('span');
+        text.className = 'screen-reader-text';
+        text.textContent = label || 'Dismiss this notice.';
+        button.appendChild(text);
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            if (typeof dismiss === 'function') {
+                dismiss(notice);
+            } else if (notice.parentNode) {
+                notice.parentNode.removeChild(notice);
+            }
+        });
+        notice.appendChild(button);
+        added++;
+    });
+    return added;
+}
+
+/**
+ * Cancel a pending auto-clear timer on a settings message container.
+ *
+ * @param {Element} container The `.typost-settings-ajax-message` element.
+ */
+function typostCancelMessageClear(container) {
+    if (container && container._typostClearTimer) {
+        clearTimeout(container._typostClearTimer);
+        container._typostClearTimer = null;
+    }
+}
+
+/**
+ * Empty every `.typost-settings-ajax-message` container under `root` except
+ * `keep`, so only one settings confirmation is on screen at a time. The
+ * containers are emptied rather than removed: each stays a registered
+ * role="status" live region, so its next message is still announced.
+ *
+ * @param {Element|Document} root   Where to look for message containers.
+ * @param {Element}          [keep] The container about to receive a message.
+ * @return {number} Number of containers cleared.
+ */
+function typostClearSettingsMessages(root, keep) {
+    if (!root || typeof root.querySelectorAll !== 'function') {
+        return 0;
+    }
+    var cleared = 0;
+    Array.prototype.forEach.call(root.querySelectorAll('.typost-settings-ajax-message'), function(el) {
+        if (el === keep) {
+            return;
+        }
+        typostCancelMessageClear(el);
+        el.textContent = '';
+        cleared++;
+    });
+    return cleared;
+}
+
+/**
+ * Auto-clear a success message after `delay` ms so stale confirmations do
+ * not linger. Error messages stay until the next submit. A timer left by
+ * the container's previous message is canceled first.
+ *
+ * @param {Element} container The `.typost-settings-ajax-message` element.
+ * @param {string}  type      'success' or 'error'.
+ * @param {number}  [delay]   Milliseconds before a success message clears (default 8000).
+ */
+function typostScheduleMessageClear(container, type, delay) {
+    if (!container) {
+        return;
+    }
+    typostCancelMessageClear(container);
+    if (type !== 'success') {
+        return;
+    }
+    container._typostClearTimer = setTimeout(function() {
+        container._typostClearTimer = null;
+        container.textContent = '';
+    }, typeof delay === 'number' ? delay : 8000);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
         mergeAdminRefreshData: typostMergeAdminRefreshData,
-        resolvePreviewSelection: typostResolvePreviewSelection
+        resolvePreviewSelection: typostResolvePreviewSelection,
+        attachDismissButtons: typostAttachDismissButtons,
+        clearSettingsMessages: typostClearSettingsMessages,
+        scheduleMessageClear: typostScheduleMessageClear
     };
 }
 
@@ -170,6 +282,52 @@ jQuery(document).ready(function($) {
     }
 
     /**
+     * Read a localized string from typostAdmin.strings, falling back to the
+     * English literal when the key is missing (the localized-data transient
+     * can lag a release by up to an hour).
+     *
+     * @param {string} key      Key in typostAdmin.strings.
+     * @param {string} fallback English text used when the key is absent.
+     * @return {string}
+     */
+    function adminString(key, fallback) {
+        return (typostAdmin.strings && typostAdmin.strings[key]) || fallback;
+    }
+
+    /**
+     * Fill the %s / %1$s / %2$s placeholders of a localized template.
+     * Function replacements keep `$` in the values literal.
+     *
+     * @param {string} template Localized template.
+     * @param {*}      value1   Value for %s / %1$s.
+     * @param {*}      [value2] Value for %2$s.
+     * @return {string}
+     */
+    function formatString(template, value1, value2) {
+        return String(template)
+            .replace('%1$s', function() { return String(value1); })
+            .replace('%2$s', function() { return String(value2); })
+            .replace('%s', function() { return String(value1); });
+    }
+
+    /**
+     * Wire dismiss buttons on the is-dismissible notices inside `scope`,
+     * fading a notice out on click the way WordPress core does.
+     *
+     * @param {Element} scope Container (or notice) to scan.
+     */
+    function attachDismissButtons(scope) {
+        typostAttachDismissButtons(scope, adminString('dismissNotice', 'Dismiss this notice.'), function(notice) {
+            var $el = $(notice);
+            $el.fadeTo(100, 0, function() {
+                $el.slideUp(100, function() {
+                    $el.remove();
+                });
+            });
+        });
+    }
+
+    /**
      * Ensure a <style> element with the given id exists in <head> and set
      * its content. Returns the element.
      */
@@ -200,23 +358,7 @@ jQuery(document).ready(function($) {
             // Re-attach dismiss buttons: WordPress only processes
             // .is-dismissible notices at page load, so re-rendered ones
             // would lose their button.
-            $region.find('.notice.is-dismissible').each(function() {
-                var $el = $(this);
-                if ($el.find('.notice-dismiss').length) {
-                    return;
-                }
-                var $button = $('<button type="button" class="notice-dismiss"></button>')
-                    .append($('<span class="screen-reader-text"></span>').text(typostAdmin.strings.dismissNotice || 'Dismiss this notice.'));
-                $button.on('click', function(event) {
-                    event.preventDefault();
-                    $el.fadeTo(100, 0, function() {
-                        $el.slideUp(100, function() {
-                            $el.remove();
-                        });
-                    });
-                });
-                $el.append($button);
-            });
+            attachDismissButtons($region[0]);
             // Keep keyboard users anchored: if focus lived inside the swapped
             // markup (or was dropped to <body>), move it to the region container.
             if (focusWasInRegion || document.activeElement === document.body) {
@@ -1583,10 +1725,14 @@ jQuery(document).ready(function($) {
                 success: function() {
                     closeDeletionModal();
 
-                    // Show success message
-                    var $message = $('<div class="notice notice-success is-dismissible" style="margin: 20px 0;"><p>' +
-                                    typostAdmin.strings.deleteFontSuccess + '</p></div>');
+                    // Show success message. Replace any earlier deletion
+                    // notice so repeated deletions do not stack, and wire
+                    // the dismiss button WordPress only adds at page load.
+                    $('.typost-font-deleted-notice').remove();
+                    var $message = $('<div class="notice notice-success is-dismissible typost-font-deleted-notice" style="margin: 20px 0;"><p></p></div>');
+                    $message.find('p').text(typostAdmin.strings.deleteFontSuccess);
                     $('.wrap h1').after($message);
+                    attachDismissButtons($message[0]);
 
                     // Refresh the font list in place after a brief delay.
                     // The h1 notice is not a live region, so the deletion is
@@ -1620,11 +1766,11 @@ jQuery(document).ready(function($) {
 
         for (var i = 0; i < allFonts.length; i++) {
             if (allFonts[i].font_id === fontId) {
-                return allFonts[i].name || 'Unknown Font';
+                return allFonts[i].name || adminString('unknownFont', 'Unknown Font');
             }
         }
 
-        return 'Deleted Font';
+        return adminString('deletedFont', 'Deleted Font');
     }
 
     function loadReplacementsList() {
@@ -1640,13 +1786,16 @@ jQuery(document).ready(function($) {
                 var globalLoad = data.global_load || [];
 
                 if (Object.keys(mappings).length === 0) {
-                    $list.html('<p class="typost-no-replacements">No font replacements configured.</p>');
+                    $list.html($('<p class="typost-no-replacements"></p>').text(adminString('noReplacements', 'No font replacements configured.')));
                     $('#typost-unassigned-fonts').hide();
                     return;
                 }
 
                 var html = '<table class="widefat"><thead><tr>';
-                html += '<th>Deleted Font</th><th>Replacement Font</th><th>Global Load</th><th>Actions</th>';
+                html += '<th>' + adminString('deletedFont', 'Deleted Font') + '</th>' +
+                        '<th>' + adminString('replacementFont', 'Replacement Font') + '</th>' +
+                        '<th>' + adminString('globalLoad', 'Global Load') + '</th>' +
+                        '<th>' + adminString('actions', 'Actions') + '</th>';
                 html += '</tr></thead><tbody>';
 
                 $.each(mappings, function(deletedId, replacementId) {
@@ -1655,14 +1804,14 @@ jQuery(document).ready(function($) {
                     var replacementName = getFontNameById(replacementId);
 
                     html += '<tr data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">';
-                    html += '<td><strong>' + deletedName + '</strong><br><small>ID: ' + deletedId + '</small></td>';
-                    html += '<td><strong>' + replacementName + '</strong><br><small>ID: ' + replacementId + '</small></td>';
+                    html += '<td><strong>' + deletedName + '</strong><br><small>' + formatString(adminString('fontIdLabel', 'ID: %s'), deletedId) + '</small></td>';
+                    html += '<td><strong>' + replacementName + '</strong><br><small>' + formatString(adminString('fontIdLabel', 'ID: %s'), replacementId) + '</small></td>';
                     html += '<td><input type="checkbox" class="typost-toggle-global-load" ' +
                            'data-deleted-id="' + deletedId + '"' +
                            (isGlobal ? ' checked' : '') + ' /></td>';
                     html += '<td>';
-                    html += '<button class="button typost-edit-replacement" data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">Edit</button> ';
-                    html += '<button class="button typost-delete-replacement" data-deleted-id="' + deletedId + '">Remove</button>';
+                    html += '<button class="button typost-edit-replacement" data-deleted-id="' + deletedId + '" data-replacement-id="' + replacementId + '">' + adminString('edit', 'Edit') + '</button> ';
+                    html += '<button class="button typost-delete-replacement" data-deleted-id="' + deletedId + '">' + adminString('remove', 'Remove') + '</button>';
                     html += '</td>';
                     html += '</tr>';
                 });
@@ -1688,7 +1837,7 @@ jQuery(document).ready(function($) {
             },
             success: function(data) {
                 if (data.orphaned_ids && data.orphaned_ids.length > 0) {
-                    var html = '<p>Unassigned IDs: ' + data.orphaned_ids.join(', ') + '</p>';
+                    var html = '<p>' + formatString(adminString('unassignedIds', 'Unassigned IDs: %s'), data.orphaned_ids.join(', ')) + '</p>';
                     $('#typost-unassigned-list').html(html);
                     $('#typost-unassigned-fonts').show();
                 } else {
@@ -1716,10 +1865,13 @@ jQuery(document).ready(function($) {
         $('#typost-replacement-font-select').val(currentReplacementId);
 
         // Change modal title and button text
-        $('#typost-delete-font-modal .typost-modal-header h2').text('Edit Font Replacement');
-        $('.typost-modal-confirm-delete').text('Update Replacement');
+        $('#typost-delete-font-modal .typost-modal-header h2').text(adminString('editReplacementTitle', 'Edit Font Replacement'));
+        $('.typost-modal-confirm-delete').text(adminString('updateReplacement', 'Update Replacement'));
         $('#typost-delete-font-modal .typost-modal-description').html(
-            '<p>Select a new replacement font for ID <strong>' + deletedId + '</strong>.</p>'
+            '<p>' + formatString(
+                adminString('editReplacementDescription', 'Select a new replacement font for ID %s.'),
+                '<strong>' + parseInt(deletedId, 10) + '</strong>'
+            ) + '</p>'
         );
     });
 
@@ -1729,11 +1881,11 @@ jQuery(document).ready(function($) {
 
         // Validate ID
         if (!deletedId || deletedId == 0 || deletedId === '0') {
-            alert('Invalid font ID. Please refresh the page and try again.');
+            alert(adminString('invalidFontId', 'Invalid font ID. Please refresh the page and try again.'));
             return;
         }
 
-        if (!confirm('Remove this font replacement mapping?')) return;
+        if (!confirm(adminString('confirmRemoveReplacement', 'Remove this font replacement mapping?'))) return;
 
         $.ajax({
             url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
@@ -1745,15 +1897,19 @@ jQuery(document).ready(function($) {
                 loadReplacementsList();
             },
             error: function() {
-                alert('Failed to remove replacement.');
+                alert(adminString('removeReplacementError', 'Failed to remove replacement.'));
             }
         });
     });
 
     // Toggle global load for replacement
     $(document).on('change', '.typost-toggle-global-load', function() {
-        var deletedId = $(this).data('deleted-id');
-        var globalLoad = $(this).is(':checked');
+        // Captured up front: inside jQuery's ajax callbacks `this` is the
+        // settings object, not the checkbox, so a `$(this)` revert there
+        // silently does nothing.
+        var $checkbox = $(this);
+        var deletedId = $checkbox.data('deleted-id');
+        var globalLoad = $checkbox.is(':checked');
 
         $.ajax({
             url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
@@ -1766,9 +1922,9 @@ jQuery(document).ready(function($) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             error: function() {
-                alert('Failed to update global load setting.');
+                alert(adminString('globalLoadUpdateError', 'Failed to update global load setting.'));
                 // Revert checkbox
-                $(this).prop('checked', !globalLoad);
+                $checkbox.prop('checked', !globalLoad);
             }
         });
     });
@@ -1830,8 +1986,8 @@ jQuery(document).ready(function($) {
                 $replacementSelect.find('option:not(:first)').remove();
                 allFonts.forEach(function(font) {
                     if (font.font_id) {
-                        var fontName = font.name || 'Unknown Font';
-                        $replacementSelect.append('<option value="' + font.font_id + '">' + fontName + ' (ID: ' + font.font_id + ')</option>');
+                        var fontName = font.name || adminString('unknownFont', 'Unknown Font');
+                        $replacementSelect.append('<option value="' + font.font_id + '">' + formatString(adminString('fontOptionWithId', '%1$s (ID: %2$s)'), fontName, font.font_id) + '</option>');
                     }
                 });
             }
@@ -1851,21 +2007,21 @@ jQuery(document).ready(function($) {
 
         // Validation
         if (!deletedId || deletedId === '') {
-            $message.html('<p class="notice notice-error">Please select a deleted font ID.</p>');
+            $message.html('<p class="notice notice-error">' + adminString('selectDeletedId', 'Please select a deleted font ID.') + '</p>');
             return;
         }
 
         if (!replacementId || replacementId === '') {
-            $message.html('<p class="notice notice-error">Please select a replacement font.</p>');
+            $message.html('<p class="notice notice-error">' + adminString('selectReplacementFont', 'Please select a replacement font.') + '</p>');
             return;
         }
 
         if (deletedId == 0 || deletedId === '0') {
-            $message.html('<p class="notice notice-error">Invalid font ID (0). Please select a valid ID.</p>');
+            $message.html('<p class="notice notice-error">' + adminString('invalidFontIdZero', 'Invalid font ID (0). Please select a valid ID.') + '</p>');
             return;
         }
 
-        $btn.prop('disabled', true).text('Adding...');
+        $btn.prop('disabled', true).text(adminString('adding', 'Adding...'));
 
         // Create the replacement mapping
         $.ajax({
@@ -1880,20 +2036,20 @@ jQuery(document).ready(function($) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             success: function() {
-                $message.html('<p class="notice notice-success">Replacement mapping added successfully!</p>');
+                $message.html('<p class="notice notice-success">' + adminString('replacementAdded', 'Replacement mapping added successfully!') + '</p>');
                 $('#typost-new-deleted-id').val('');
                 $('#typost-new-replacement-id').val('');
                 loadReplacementsList();
                 populateAddReplacementForm();
-                $btn.prop('disabled', false).text('Add Replacement');
+                $btn.prop('disabled', false).text(adminString('addReplacementButton', 'Add Replacement'));
             },
             error: function(xhr) {
-                var errorMsg = 'Failed to add replacement mapping.';
+                var errorMsg = adminString('addReplacementError', 'Failed to add replacement mapping.');
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<p class="notice notice-error">' + errorMsg + '</p>');
-                $btn.prop('disabled', false).text('Add Replacement');
+                $btn.prop('disabled', false).text(adminString('addReplacementButton', 'Add Replacement'));
             }
         });
     });
@@ -2017,7 +2173,15 @@ jQuery(document).ready(function($) {
     /**
      * Show an inline notice after a settings form's submit row.
      * The notice container is a polite live region of its own so sighted
-     * and screen reader users get the same message.
+     * and screen reader users get the same message. Only one settings
+     * message is on screen at a time: the other forms' containers are
+     * emptied first (they keep their role="status"), and a success message
+     * clears itself after 8 seconds while an error stays until the next
+     * submit.
+     *
+     * @param {jQuery} $form The settings form.
+     * @param {string} type  'success' or 'error'.
+     * @param {string} text  Message text.
      */
     function settingsFormMessage($form, type, text) {
         var $msg = $form.find('.typost-settings-ajax-message');
@@ -2025,8 +2189,10 @@ jQuery(document).ready(function($) {
             $msg = $('<div class="typost-settings-ajax-message" role="status" aria-live="polite" aria-atomic="true"></div>');
             $form.find('p.submit').first().after($msg);
         }
+        typostClearSettingsMessages(document, $msg[0]);
         var $notice = $('<div></div>').addClass('notice inline notice-' + type).append($('<p></p>').text(text));
         $msg.empty().append($notice);
+        typostScheduleMessageClear($msg[0], type);
     }
 
     /**

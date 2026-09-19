@@ -29,8 +29,9 @@ import {
 import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
+import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -215,6 +216,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
 	const [capturedSelection, setCapturedSelection] = useState(null);
+	// Warning shown in the QFT modal after an inline apply both strategies
+	// refused (null = none). See reportInlineApplyFailure().
+	const [inlineApplyNotice, setInlineApplyNotice] = useState(null);
 
 	// Modal position and size state
 	const [modalX, setModalX] = useState(() => {
@@ -1139,6 +1143,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	}, [isResizing, resizeStartX, resizeStartY, resizeStartWidth, resizeStartHeight, resizeStartModalX, resizeStartModalY, resizeDirection, modalWidth, modalHeight, modalX, modalY]);
 
+	// A refused inline apply leaves a warning in the modal (see
+	// reportInlineApplyFailure). A refused apply never changes the content,
+	// so any content change while the warning shows means a later apply,
+	// insert or reset went through and the warning has served its purpose.
+	useEffect(() => {
+		setInlineApplyNotice(null);
+	}, [content]);
+
 	// Re-detect inline styles when selection changes while popover is open
 	useEffect(() => {
 		if (!isPopoverOpen) return; // Only when popover is open
@@ -1294,6 +1306,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		setInlineFontSizeMin(16);
 		setInlineFontSizePreferred(32);
 		setInlineFontSizeMax(64);
+		// Drop any refused-apply warning with the modal
+		setInlineApplyNotice(null);
 		// Clear captured selection and close popover
 		setCapturedSelection(null);
 		setIsPopoverOpen(false);
@@ -1506,6 +1520,83 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
+	/**
+	 * Put one QFT control back to the value the selection actually carries.
+	 *
+	 * Called after an apply that both strategies refused: the content did
+	 * not change, so the control must not keep showing the value it never
+	 * applied. Mirrors populateControlsFromDetectedStyles() for that one
+	 * property (the detection is what filled the control in the first
+	 * place), which is why the fallbacks are the same defaults.
+	 *
+	 * @since 2.3.0
+	 * @param {string} property One of lineHeight, letterSpacing, fitScale,
+	 *   fitShift, fontWeight, fontStyle, fontFamily, fontSize
+	 */
+	const revertInlineControl = (property) => {
+		const detected = inlineStylesAtSelection || {};
+		const has = (key) => detected[key] !== null && detected[key] !== undefined;
+		switch (property) {
+			case 'lineHeight':
+				setInlineLineHeight(has('lineHeight') ? detected.lineHeight : 0);
+				break;
+			case 'letterSpacing':
+				setInlineLetterSpacing(has('letterSpacing') ? detected.letterSpacing : 0);
+				break;
+			case 'fitScale':
+				setInlineFitScale(has('fitScale') ? Math.round(detected.fitScale * 100) : 100);
+				break;
+			case 'fitShift':
+				setInlineFitShift(has('fitShift') ? detected.fitShift : 0);
+				break;
+			case 'fontWeight':
+				setInlineFontWeight(detected.fontWeight || 'inherit');
+				break;
+			case 'fontStyle':
+				setInlineFontStyle(detected.fontStyle || '');
+				break;
+			case 'fontFamily':
+				setInlineFontFamily(detected.fontId || '');
+				break;
+			case 'fontSize':
+				setInlineFontSize(detected.fontSize || 'inherit');
+				setInlineFontSizeMin(has('fontSizeMin') ? detected.fontSizeMin : 16);
+				setInlineFontSizePreferred(has('fontSizePreferred') ? detected.fontSizePreferred : 32);
+				setInlineFontSizeMax(has('fontSizeMax') ? detected.fontSizeMax : 64);
+				break;
+			default:
+				break;
+		}
+	};
+
+	/**
+	 * Report an inline apply that both strategies refused.
+	 *
+	 * Every apply path tries the Range method, then
+	 * applyStylingSafeStringMethod(); when that also fails (in practice the
+	 * nesting limit, see MAX_NESTING_DEPTH in utils.js) the content stays as
+	 * it was. That used to be a bare return: no message, no announcement,
+	 * and a control still showing the value it did not apply (QA finding
+	 * E-5). Now the modal shows a dismissible warning, a screen reader hears
+	 * it assertively (the author just acted, so it must not queue behind
+	 * other announcements), and the caller's revert puts its control back.
+	 *
+	 * The warning clears on the next content change (a later apply went
+	 * through) and when the modal closes.
+	 *
+	 * @since 2.3.0
+	 * @param {string|null|undefined} error Error from the apply helpers
+	 * @param {Function} [revert] Puts the control that triggered the apply back
+	 */
+	const reportInlineApplyFailure = (error, revert) => {
+		const { message } = describeInlineApplyFailure(error);
+		if (typeof revert === 'function') {
+			revert();
+		}
+		setInlineApplyNotice(message);
+		speak(message, 'assertive');
+	};
+
 	// Apply line height only (no feature)
 	const applyLineHeightOnly = () => {
 		if (!content || inlineLineHeight === 0) return;
@@ -1631,7 +1722,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it and put the control back
+						reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('lineHeight'));
 						return;
 					}
 				}
@@ -1892,7 +1984,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it and put the control back
+						reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('letterSpacing'));
 						return;
 					}
 				}
@@ -1912,7 +2005,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// applyLetterSpacingOnly: update-in-place at a collapsed cursor, split
 	// when the selection's span already has the property, else wrap/merge
 	// with the string-method fallback.
-	const applyFitSpanProperty = ({ dataAttr, attrValue, styleProperty, styleValue, hasExisting, postProcess }) => {
+	// `revert` puts the caller's control back when both strategies refuse
+	// (see reportInlineApplyFailure).
+	const applyFitSpanProperty = ({ dataAttr, attrValue, styleProperty, styleValue, hasExisting, postProcess, revert }) => {
 		if (!content || !resolvedApplyRange) return;
 
 		const start = resolvedApplyRange.start;
@@ -1993,7 +2088,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			if (fallbackResult.success) {
 				newContent = fallbackResult.content;
 			} else {
-				// Both methods failed - give up and don't update content
+				// Both methods failed - report it and put the control back
+				reportInlineApplyFailure(fallbackResult.error, revert);
 				return;
 			}
 		}
@@ -2014,7 +2110,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			hasExisting: !!(inlineStylesAtSelection && inlineStylesAtSelection.fitScale !== null),
 			// A span can't carry both data-fitscale and data-fontsize (one
 			// font-size declaration; the fit neutralization rule would win)
-			postProcess: stripRedundantFontSizeAttrs
+			postProcess: stripRedundantFontSizeAttrs,
+			revert: () => revertInlineControl('fitScale')
 		});
 	};
 
@@ -2029,7 +2126,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			attrValue: String(inlineFitShift),
 			styleProperty: 'vertical-align',
 			styleValue: `${inlineFitShift}em`,
-			hasExisting: !!(inlineStylesAtSelection && inlineStylesAtSelection.fitShift !== null)
+			hasExisting: !!(inlineStylesAtSelection && inlineStylesAtSelection.fitShift !== null),
+			revert: () => revertInlineControl('fitShift')
 		});
 	};
 
@@ -2133,27 +2231,22 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
-	// Apply font size to selected text only (inline)
-	const applyInlineFontSize = () => {
-		if (!content || inlineFontSize === 'inherit') return;
+	// Apply font size to selected text only (inline).
+	// `sizeOverride` lets the Font Size select apply the value it was just
+	// given — state has not updated in that closure yet (QA finding E-6);
+	// the debounced slider path passes nothing and reads state as before.
+	const applyInlineFontSize = (sizeOverride) => {
+		const size = sizeOverride !== undefined ? sizeOverride : inlineFontSize;
+		// Attributes and style for both collapsed and selection cases; null
+		// for 'inherit' (nothing to apply)
+		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax);
+		if (!content || !spanSpec) return;
 
 		if (resolvedApplyRange) {
 
 			const start = resolvedApplyRange.start;
 			const end = resolvedApplyRange.end;
-
-			// Prepare attributes and style for both collapsed and selection cases
-			const attributes = {
-				'data-fontsize': inlineFontSize
-			};
-
-			let styleString = '';
-			if (inlineFontSize === 'responsive') {
-				attributes['data-fontsize-min'] = inlineFontSizeMin.toString();
-				attributes['data-fontsize-preferred'] = inlineFontSizePreferred.toString();
-				attributes['data-fontsize-max'] = inlineFontSizeMax.toString();
-				styleString = `font-size: clamp(${inlineFontSizeMin}px, ${inlineFontSizePreferred / 16}rem + ${((inlineFontSizeMax - inlineFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${inlineFontSizeMax}px)`;
-			}
+			const { attributes, styleString } = spanSpec;
 
 			// COLLAPSED CURSOR: Update parent span in-place
 			if (start === end) {
@@ -2164,9 +2257,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					content,
 					start,
 					'data-fontsize',
-					inlineFontSize,
+					size,
 					'font-size',
-					styleString || inlineFontSize
+					spanSpec.fontSize
 				);
 
 				if (result.success) {
@@ -2185,7 +2278,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					end,
 					'data-fontsize',
 					attributes,
-					styleString || `font-size: ${inlineFontSize}`
+					styleString
 				);
 
 				if (result.success) {
@@ -2268,7 +2361,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it and put the control back
+						reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('fontSize'));
 						return;
 					}
 				}
@@ -2412,7 +2506,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it and put the control back
+						reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('fontWeight'));
 						return;
 					}
 				}
@@ -2573,6 +2668,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			if (fallbackResult.success) {
 				newContent = fallbackResult.content;
 			} else {
+				// Both methods failed - report it (the axis sliders belong to
+				// the Variable Fonts module, so there is no core control to
+				// put back)
+				reportInlineApplyFailure(fallbackResult.error);
 				return;
 			}
 		}
@@ -2771,6 +2870,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (fallbackResult.success) {
 					newContent = fallbackResult.content;
 				} else {
+					// Both methods failed - report it and put the control back
+					reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('fontStyle'));
 					return;
 				}
 			}
@@ -2931,7 +3032,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it and put the control back
+						reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('fontFamily'));
 						return;
 					}
 				}
@@ -3051,7 +3153,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					if (fallbackResult.success) {
 						newContent = fallbackResult.content;
 					} else {
-						// Both methods failed - give up and don't update content
+						// Both methods failed - report it (the feature checkbox
+						// state is derived from the selection, so nothing to revert)
+						reportInlineApplyFailure(fallbackResult.error);
 						return;
 					}
 				}
@@ -3673,6 +3777,21 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 								<div style={{ padding: '0 16px 16px 16px' }}>
 
+								{/* An inline apply both strategies refused (usually the nesting
+								    limit). spokenMessage '' because reportInlineApplyFailure()
+								    already announced it assertively; Notice's own polite
+								    announcement would read it a second time (QA finding E-5). */}
+								{inlineApplyNotice && (
+									<Notice
+										status="warning"
+										isDismissible={true}
+										spokenMessage=""
+										onRemove={() => setInlineApplyNotice(null)}
+									>
+										{inlineApplyNotice}
+									</Notice>
+								)}
+
 								{/* Extension hook point: top of QFT modal (e.g., Paragraph Styles dropdown) */}
 								<div className="typost-hook-point" data-hook="typost_qft_modal_top" ref={(el) => {
 									if (el && !el._hooked) {
@@ -3860,6 +3979,22 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 										value={inlineFontSize}
 										onChange={(value) => {
 											setInlineFontSize(value);
+											if (value === 'inherit') {
+												// Take the size off the selection, not just the
+												// control (a slider apply may still be pending).
+												// resetFontSize() reads inlineFontSize to decide
+												// there is anything to remove; in this closure
+												// that is still the old value, as intended.
+												debouncedApplyFontSize.cancel();
+												resetFontSize();
+												return;
+											}
+											// Apply now with the sliders' current values. The
+											// sliders only render once this state lands, so
+											// waiting for one to move left the selection
+											// unstyled (QA finding E-6). The value goes in
+											// explicitly: state has not updated here yet.
+											applyInlineFontSize(value);
 										}}
 										options={[
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },

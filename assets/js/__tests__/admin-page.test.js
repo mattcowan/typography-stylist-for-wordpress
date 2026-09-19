@@ -11,6 +11,9 @@ const {
 	formatDetectWeightsSummary,
 	mergeAdminRefreshData,
 	resolvePreviewSelection,
+	attachDismissButtons,
+	clearSettingsMessages,
+	scheduleMessageClear,
 } = require('../admin-page.js');
 
 describe('formatDetectWeightsSummary', () => {
@@ -117,5 +120,159 @@ describe('resolvePreviewSelection', () => {
 	test('returns the default when no fonts remain', () => {
 		expect(resolvePreviewSelection('Gopher', [''])).toBe('');
 		expect(resolvePreviewSelection('', [])).toBe('');
+	});
+});
+
+describe('attachDismissButtons', () => {
+	beforeEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	test('adds one button per is-dismissible notice without one, only inside the scope', () => {
+		document.body.innerHTML =
+			'<div id="scope">' +
+			'<div class="notice notice-success is-dismissible" id="a"><p>A</p></div>' +
+			'<div class="notice notice-info is-dismissible" id="b"><p>B</p><button type="button" class="notice-dismiss"></button></div>' +
+			'<div class="notice notice-warning" id="c"><p>C</p></div>' +
+			'</div>' +
+			'<div class="notice notice-error is-dismissible" id="outside"><p>D</p></div>';
+
+		const added = attachDismissButtons(document.getElementById('scope'), 'Dismiss this notice.');
+
+		expect(added).toBe(1);
+		expect(document.querySelectorAll('#a .notice-dismiss')).toHaveLength(1);
+		// Already had a button: not doubled
+		expect(document.querySelectorAll('#b .notice-dismiss')).toHaveLength(1);
+		// Not dismissible: untouched
+		expect(document.querySelectorAll('#c .notice-dismiss')).toHaveLength(0);
+		// Outside the scope: untouched
+		expect(document.querySelectorAll('#outside .notice-dismiss')).toHaveLength(0);
+
+		const button = document.querySelector('#a .notice-dismiss');
+		expect(button.getAttribute('type')).toBe('button');
+		expect(button.querySelector('.screen-reader-text').textContent).toBe('Dismiss this notice.');
+	});
+
+	test('treats a notice passed as the scope as its own target (the deletion notice case)', () => {
+		document.body.innerHTML = '<div class="notice notice-success is-dismissible" id="solo"><p>Font deleted successfully!</p></div>';
+		const notice = document.getElementById('solo');
+
+		expect(attachDismissButtons(notice, 'Dismiss this notice.')).toBe(1);
+		expect(notice.querySelectorAll('.notice-dismiss')).toHaveLength(1);
+		// Idempotent
+		expect(attachDismissButtons(notice, 'Dismiss this notice.')).toBe(0);
+		expect(notice.querySelectorAll('.notice-dismiss')).toHaveLength(1);
+	});
+
+	test('clicking the button removes the notice, or hands it to the dismiss callback', () => {
+		document.body.innerHTML =
+			'<div class="notice is-dismissible" id="plain"><p>x</p></div>' +
+			'<div class="notice is-dismissible" id="custom"><p>y</p></div>';
+
+		attachDismissButtons(document.getElementById('plain'), 'Dismiss');
+		document.querySelector('#plain .notice-dismiss').click();
+		expect(document.getElementById('plain')).toBeNull();
+
+		const dismiss = jest.fn();
+		const custom = document.getElementById('custom');
+		attachDismissButtons(custom, 'Dismiss', dismiss);
+		document.querySelector('#custom .notice-dismiss').click();
+		expect(dismiss).toHaveBeenCalledWith(custom);
+		// The callback owns removal
+		expect(document.getElementById('custom')).toBe(custom);
+	});
+
+	test('falls back to the English label and tolerates a missing scope', () => {
+		document.body.innerHTML = '<div class="notice is-dismissible" id="n"><p>x</p></div>';
+		attachDismissButtons(document.getElementById('n'), '');
+		expect(document.querySelector('#n .screen-reader-text').textContent).toBe('Dismiss this notice.');
+		expect(attachDismissButtons(null, 'Dismiss')).toBe(0);
+	});
+});
+
+describe('clearSettingsMessages', () => {
+	beforeEach(() => {
+		document.body.innerHTML =
+			'<form id="options"><div class="typost-settings-ajax-message" role="status" aria-live="polite"><div class="notice notice-success"><p>Options saved successfully.</p></div></div></form>' +
+			'<form id="a11y"><div class="typost-settings-ajax-message" role="status" aria-live="polite"><div class="notice notice-success"><p>Accessibility settings saved successfully.</p></div></div></form>' +
+			'<form id="cache"><div class="typost-settings-ajax-message" role="status" aria-live="polite"></div></form>';
+	});
+
+	test('empties every other message container but keeps the live-region wrappers', () => {
+		const keep = document.querySelector('#cache .typost-settings-ajax-message');
+
+		const cleared = clearSettingsMessages(document, keep);
+
+		expect(cleared).toBe(2);
+		expect(document.querySelector('#options .typost-settings-ajax-message').textContent).toBe('');
+		expect(document.querySelector('#a11y .typost-settings-ajax-message').textContent).toBe('');
+		// Containers stay in the DOM with their role so the next message is still announced
+		expect(document.querySelectorAll('.typost-settings-ajax-message[role="status"]')).toHaveLength(3);
+	});
+
+	test('leaves the kept container untouched', () => {
+		const keep = document.querySelector('#options .typost-settings-ajax-message');
+		clearSettingsMessages(document, keep);
+		expect(keep.textContent).toBe('Options saved successfully.');
+	});
+
+	test('clears all containers when nothing is kept, and tolerates a missing root', () => {
+		expect(clearSettingsMessages(document)).toBe(3);
+		expect(document.querySelector('#options .typost-settings-ajax-message').textContent).toBe('');
+		expect(clearSettingsMessages(null)).toBe(0);
+	});
+});
+
+describe('scheduleMessageClear', () => {
+	beforeEach(() => {
+		jest.useFakeTimers();
+		document.body.innerHTML = '<div id="m" class="typost-settings-ajax-message" role="status"><div class="notice"><p>Saved.</p></div></div>';
+	});
+
+	afterEach(() => {
+		jest.useRealTimers();
+	});
+
+	test('clears a success message after 8 seconds by default', () => {
+		const container = document.getElementById('m');
+		scheduleMessageClear(container, 'success');
+
+		jest.advanceTimersByTime(7999);
+		expect(container.textContent).toBe('Saved.');
+		jest.advanceTimersByTime(1);
+		expect(container.textContent).toBe('');
+	});
+
+	test('never clears an error message', () => {
+		const container = document.getElementById('m');
+		scheduleMessageClear(container, 'error');
+		jest.advanceTimersByTime(60000);
+		expect(container.textContent).toBe('Saved.');
+	});
+
+	test('a new message cancels the previous timer, and an error after a success cancels it too', () => {
+		const container = document.getElementById('m');
+		scheduleMessageClear(container, 'success', 1000);
+		jest.advanceTimersByTime(900);
+		scheduleMessageClear(container, 'success', 1000);
+		jest.advanceTimersByTime(900);
+		expect(container.textContent).toBe('Saved.');
+		jest.advanceTimersByTime(100);
+		expect(container.textContent).toBe('');
+
+		container.textContent = 'Error.';
+		scheduleMessageClear(container, 'success', 1000);
+		scheduleMessageClear(container, 'error');
+		jest.advanceTimersByTime(5000);
+		expect(container.textContent).toBe('Error.');
+	});
+
+	test('clearSettingsMessages cancels a pending timer on the containers it empties', () => {
+		const container = document.getElementById('m');
+		scheduleMessageClear(container, 'success', 1000);
+		clearSettingsMessages(document);
+		container.textContent = 'Refilled.';
+		jest.advanceTimersByTime(2000);
+		expect(container.textContent).toBe('Refilled.');
 	});
 });

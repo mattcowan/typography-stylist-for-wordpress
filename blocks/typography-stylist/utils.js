@@ -1000,8 +1000,18 @@ export function resolveBlockFontFamilyStyle(fontId, fontFamily) {
 }
 
 /**
+ * Maximum number of nested typost-styled spans (font size wrapping weight
+ * wrapping features, etc.). Conservative limit - can increase if the
+ * approach proves reliable. Single source for the validation below AND the
+ * message the editor shows when an apply hits it, so the two cannot drift.
+ *
+ * @since 2.3.0
+ */
+export const MAX_NESTING_DEPTH = 3;
+
+/**
  * Validate nesting depth before applying styling
- * Prevents creating excessive nesting (max 3 levels)
+ * Prevents creating excessive nesting (max MAX_NESTING_DEPTH levels)
  *
  * @param {Element} element - Starting element to check depth from
  * @return {Object} { valid: boolean, depth: number, error: string|null }
@@ -1009,21 +1019,66 @@ export function resolveBlockFontFamilyStyle(fontId, fontFamily) {
 export function validateNestingDepth(element) {
 	let depth = 0;
 	let current = element;
-	const MAX_DEPTH = 3; // Conservative limit - can increase if approach proves reliable
 
 	while (current && current.classList && current.classList.contains('typost-styled')) {
 		depth++;
-		if (depth > MAX_DEPTH) {
+		if (depth > MAX_NESTING_DEPTH) {
 			return {
 				valid: false,
 				depth: depth,
-				error: `Maximum nesting depth (${MAX_DEPTH}) exceeded`
+				error: `Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded`
 			};
 		}
 		current = current.parentElement;
 	}
 
 	return { valid: true, depth: depth, error: null };
+}
+
+/**
+ * Describe an inline apply that both application strategies refused, for
+ * the Quick Feature Toggles modal to show and announce.
+ *
+ * Every apply path in edit.js ends in applyStylingSafeStringMethod(), whose
+ * failure used to be a silent return: the content stayed as it was, the
+ * control kept the value it never applied, and nothing was announced (QA
+ * finding E-5). The nesting-limit error is the one an author can act on
+ * (select the whole styled text so the merge path runs instead of a
+ * fourth level), so it gets its own message; everything else gets a
+ * generic one.
+ *
+ * Strings resolve through wp.i18n when it is loaded (the editor) and fall
+ * back to the English source otherwise (Jest), matching the bundled
+ * modules' pattern — utils.js stays importable without the i18n package.
+ *
+ * @since 2.3.0
+ * @param {string|null|undefined} error Error string from the apply helpers
+ * @return {{message: string, isNestingLimit: boolean}}
+ */
+export function describeInlineApplyFailure(error) {
+	const i18n = (typeof window !== 'undefined' && window.wp && window.wp.i18n) || null;
+	const __ = i18n && typeof i18n.__ === 'function' ? i18n.__ : (text) => text;
+	const sprintf = i18n && typeof i18n.sprintf === 'function'
+		? i18n.sprintf
+		: (template, ...args) => template.replace(/%[ds]/g, () => String(args.shift()));
+
+	const isNestingLimit = typeof error === 'string' && /nesting depth/i.test(error);
+
+	if (isNestingLimit) {
+		return {
+			message: sprintf(
+				/* translators: %d: maximum number of nested styled spans */
+				__('Maximum nesting depth (%d) reached. Select the whole styled text to change it.', 'typography-stylist'),
+				MAX_NESTING_DEPTH
+			),
+			isNestingLimit: true
+		};
+	}
+
+	return {
+		message: __('The styling could not be applied to this selection.', 'typography-stylist'),
+		isNestingLimit: false
+	};
 }
 
 /**
@@ -1040,7 +1095,7 @@ export function validateNestingDepth(element) {
  */
 export function canCreateNestedSpan(element) {
 	const check = validateNestingDepth(element);
-	return check.valid && check.depth < 3;
+	return check.valid && check.depth < MAX_NESTING_DEPTH;
 }
 
 /**
@@ -3159,6 +3214,57 @@ export function stripRedundantFontSizeAttrs(content) {
  */
 export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax) {
 	return `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+}
+
+/**
+ * Build the span attributes and style for an inline (selection-scoped)
+ * font size, as applied by the Quick Feature Toggles "Font Size (for
+ * selected text)" control.
+ *
+ * 'responsive' carries the three breakpoint values as data attributes and
+ * renders through buildResponsiveClamp() — the same expression the block
+ * level uses, so the clamp() string (float artifacts included) is identical
+ * wherever the size is written. Any other size string (a fixed px value
+ * detected from a paragraph style saved in the inline editor) is emitted
+ * as-is. 'inherit' or an empty size means "no inline size": null.
+ *
+ * The caller passes the size explicitly rather than reading component state,
+ * so applying right when the select changes cannot see a stale value (QA
+ * finding E-6).
+ *
+ * @since 2.3.0
+ * @param {string} size 'responsive', 'inherit', '' or a CSS font-size value
+ * @param {number} fontSizeMin Mobile size (px)
+ * @param {number} fontSizePreferred Preferred size (px)
+ * @param {number} fontSizeMax Desktop size (px)
+ * @return {{attributes: Object, fontSize: string, styleString: string}|null}
+ *   `attributes` are the data attributes for the span, `fontSize` the CSS
+ *   value, `styleString` the full `font-size: …` declaration
+ */
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+	if (!size || size === 'inherit') {
+		return null;
+	}
+
+	if (size === 'responsive') {
+		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax);
+		return {
+			attributes: {
+				'data-fontsize': 'responsive',
+				'data-fontsize-min': String(fontSizeMin),
+				'data-fontsize-preferred': String(fontSizePreferred),
+				'data-fontsize-max': String(fontSizeMax)
+			},
+			fontSize,
+			styleString: `font-size: ${fontSize}`
+		};
+	}
+
+	return {
+		attributes: { 'data-fontsize': size },
+		fontSize: size,
+		styleString: `font-size: ${size}`
+	};
 }
 
 /**

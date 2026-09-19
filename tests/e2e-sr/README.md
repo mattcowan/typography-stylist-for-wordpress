@@ -7,7 +7,9 @@ These tests drive the block editor with a real NVDA screen reader and record wha
 Each file is one journey:
 
 - `glyphs-panel.sr.spec.js` — open the Glyphs panel from the block toolbar, Tab to the glyph grid, arrow to an alternate, insert it with Enter, close with Escape.
-- `paragraph-styles-browser.sr.spec.js` — open the Paragraph Styles browser from the block toolbar, Tab to a style row, apply it with Enter.
+- `paragraph-styles-browser.sr.spec.js` — open the Paragraph Styles browser from the block toolbar (focus lands on the style listbox), move the cursor with the arrow keys and first-letter type-ahead, apply the cursor row with Enter.
+- `admin-tabs.sr.spec.js` — Settings → Typography Stylist: arrow through the tablist, change the Admin Color Scheme select, save and clear the font cache with Enter, restore the scheme.
+- `inline-paragraph.sr.spec.js` — the Typography Stylist modal on a paragraph: Tab through the first controls, switch Font Size to Responsive with the arrow keys, cross the size sliders and record what is announced.
 - `inline-modal.sr.spec.js` — open the Typography Stylist modal on a heading, Tab through the first 16 controls, toggle Standard Ligatures with Space, close with Escape.
 
 Each run writes `tests/e2e-sr/logs/<journey>.json`. The file holds every phrase NVDA spoke and the DOM element that had focus at each Tab stop. Read these logs to see what a screen-reader user hears.
