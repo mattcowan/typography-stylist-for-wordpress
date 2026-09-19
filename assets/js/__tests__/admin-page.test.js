@@ -13,7 +13,6 @@ const {
 	resolvePreviewSelection,
 	attachDismissButtons,
 	clearSettingsMessages,
-	scheduleMessageClear,
 } = require('../admin-page.js');
 
 describe('formatDetectWeightsSummary', () => {
@@ -223,56 +222,70 @@ describe('clearSettingsMessages', () => {
 	});
 });
 
-describe('scheduleMessageClear', () => {
-	beforeEach(() => {
-		jest.useFakeTimers();
-		document.body.innerHTML = '<div id="m" class="typost-settings-ajax-message" role="status"><div class="notice"><p>Saved.</p></div></div>';
-	});
+describe('beginBusy / endBusy (E-17: busy controls keep focus)', () => {
+	const { beginBusy, endBusy } = require('../admin-page.js');
+
+	function button(text) {
+		const el = document.createElement('button');
+		el.type = 'button';
+		el.textContent = text;
+		document.body.appendChild(el);
+		return el;
+	}
 
 	afterEach(() => {
-		jest.useRealTimers();
+		document.body.innerHTML = '';
 	});
 
-	test('clears a success message after 8 seconds by default', () => {
-		const container = document.getElementById('m');
-		scheduleMessageClear(container, 'success');
-
-		jest.advanceTimersByTime(7999);
-		expect(container.textContent).toBe('Saved.');
-		jest.advanceTimersByTime(1);
-		expect(container.textContent).toBe('');
+	it('marks the control busy without setting the disabled property', () => {
+		const el = button('Save');
+		el.focus();
+		expect(beginBusy(el, 'Saving…')).toBe(true);
+		expect(el.disabled).toBe(false);
+		expect(el.getAttribute('aria-disabled')).toBe('true');
+		expect(el.getAttribute('aria-busy')).toBe('true');
+		expect(el.classList.contains('typost-busy')).toBe(true);
+		expect(el.textContent).toBe('Saving…');
+		expect(document.activeElement).toBe(el);
 	});
 
-	test('never clears an error message', () => {
-		const container = document.getElementById('m');
-		scheduleMessageClear(container, 'error');
-		jest.advanceTimersByTime(60000);
-		expect(container.textContent).toBe('Saved.');
+	it('refuses a second activation while busy', () => {
+		const el = button('Save');
+		expect(beginBusy(el, 'Saving…')).toBe(true);
+		expect(beginBusy(el, 'Saving…')).toBe(false);
 	});
 
-	test('a new message cancels the previous timer, and an error after a success cancels it too', () => {
-		const container = document.getElementById('m');
-		scheduleMessageClear(container, 'success', 1000);
-		jest.advanceTimersByTime(900);
-		scheduleMessageClear(container, 'success', 1000);
-		jest.advanceTimersByTime(900);
-		expect(container.textContent).toBe('Saved.');
-		jest.advanceTimersByTime(100);
-		expect(container.textContent).toBe('');
-
-		container.textContent = 'Error.';
-		scheduleMessageClear(container, 'success', 1000);
-		scheduleMessageClear(container, 'error');
-		jest.advanceTimersByTime(5000);
-		expect(container.textContent).toBe('Error.');
+	it('restores the saved label and clears the state', () => {
+		const el = button('Save');
+		beginBusy(el, 'Saving…');
+		endBusy(el);
+		expect(el.textContent).toBe('Save');
+		expect(el.hasAttribute('aria-disabled')).toBe(false);
+		expect(el.hasAttribute('aria-busy')).toBe(false);
+		expect(el.classList.contains('typost-busy')).toBe(false);
+		expect(beginBusy(el, 'Saving…')).toBe(true);
 	});
 
-	test('clearSettingsMessages cancels a pending timer on the containers it empties', () => {
-		const container = document.getElementById('m');
-		scheduleMessageClear(container, 'success', 1000);
-		clearSettingsMessages(document);
-		container.textContent = 'Refilled.';
-		jest.advanceTimersByTime(2000);
-		expect(container.textContent).toBe('Refilled.');
+	it('uses an explicit label when given and leaves checkbox text alone', () => {
+		const el = button('Save');
+		beginBusy(el, 'Saving…');
+		endBusy(el, 'Save Changes');
+		expect(el.textContent).toBe('Save Changes');
+		const box = document.createElement('input');
+		box.type = 'checkbox';
+		document.body.appendChild(box);
+		expect(beginBusy(box)).toBe(true);
+		expect(box.disabled).toBe(false);
+		expect(box.getAttribute('aria-disabled')).toBe('true');
+		endBusy(box);
+		expect(box.hasAttribute('aria-disabled')).toBe(false);
+	});
+
+	it('accepts a jQuery-like wrapper and tolerates nothing at all', () => {
+		const el = button('Go');
+		expect(beginBusy({ jquery: '3', 0: el, length: 1 }, 'Working')).toBe(true);
+		expect(el.textContent).toBe('Working');
+		expect(beginBusy(null)).toBe(true);
+		expect(() => endBusy(undefined)).not.toThrow();
 	});
 });

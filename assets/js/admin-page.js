@@ -113,15 +113,59 @@ function typostAttachDismissButtons(scope, label, dismiss) {
 }
 
 /**
- * Cancel a pending auto-clear timer on a settings message container.
+ * Mark a control busy for the length of a request without disabling it.
  *
- * @param {Element} container The `.typost-settings-ajax-message` element.
+ * Setting the `disabled` property on the focused button drops keyboard
+ * focus to the document (the browser blurs a control the moment it becomes
+ * disabled), so after every save a screen reader re-read the page title
+ * before the confirmation and a keyboard user had to Tab back in from the
+ * top (QA 2026-09 finding E-17). aria-disabled + a busy class keep the
+ * control focusable and announced as unavailable; the guard below refuses a
+ * second activation while the first request is in flight.
+ *
+ * @param {jQuery|Element} control  The button or checkbox.
+ * @param {string}         [busyText] Label to show while busy (buttons).
+ * @return {boolean} False when the control is already busy (caller returns).
  */
-function typostCancelMessageClear(container) {
-    if (container && container._typostClearTimer) {
-        clearTimeout(container._typostClearTimer);
-        container._typostClearTimer = null;
+function typostBeginBusy(control, busyText) {
+    var el = (control && control.jquery) ? control[0] : control;
+    if (!el || typeof el.setAttribute !== 'function') {
+        return true;
     }
+    if (el.getAttribute('aria-disabled') === 'true') {
+        return false;
+    }
+    el.setAttribute('aria-disabled', 'true');
+    el.setAttribute('aria-busy', 'true');
+    el.classList.add('typost-busy');
+    if (typeof busyText === 'string' && el.tagName !== 'INPUT') {
+        el.setAttribute('data-typost-label', el.textContent);
+        el.textContent = busyText;
+    }
+    return true;
+}
+
+/**
+ * Clear the busy state set by typostBeginBusy(); focus is untouched.
+ *
+ * @param {jQuery|Element} control The button or checkbox.
+ * @param {string}         [text]  Label to restore (default: the one saved).
+ */
+function typostEndBusy(control, text) {
+    var el = (control && control.jquery) ? control[0] : control;
+    if (!el || typeof el.removeAttribute !== 'function') {
+        return;
+    }
+    el.removeAttribute('aria-disabled');
+    el.removeAttribute('aria-busy');
+    el.classList.remove('typost-busy');
+    var saved = el.getAttribute('data-typost-label');
+    if (typeof text === 'string') {
+        el.textContent = text;
+    } else if (saved !== null) {
+        el.textContent = saved;
+    }
+    el.removeAttribute('data-typost-label');
 }
 
 /**
@@ -143,34 +187,10 @@ function typostClearSettingsMessages(root, keep) {
         if (el === keep) {
             return;
         }
-        typostCancelMessageClear(el);
         el.textContent = '';
         cleared++;
     });
     return cleared;
-}
-
-/**
- * Auto-clear a success message after `delay` ms so stale confirmations do
- * not linger. Error messages stay until the next submit. A timer left by
- * the container's previous message is canceled first.
- *
- * @param {Element} container The `.typost-settings-ajax-message` element.
- * @param {string}  type      'success' or 'error'.
- * @param {number}  [delay]   Milliseconds before a success message clears (default 8000).
- */
-function typostScheduleMessageClear(container, type, delay) {
-    if (!container) {
-        return;
-    }
-    typostCancelMessageClear(container);
-    if (type !== 'success') {
-        return;
-    }
-    container._typostClearTimer = setTimeout(function() {
-        container._typostClearTimer = null;
-        container.textContent = '';
-    }, typeof delay === 'number' ? delay : 8000);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -180,7 +200,8 @@ if (typeof module !== 'undefined' && module.exports) {
         resolvePreviewSelection: typostResolvePreviewSelection,
         attachDismissButtons: typostAttachDismissButtons,
         clearSettingsMessages: typostClearSettingsMessages,
-        scheduleMessageClear: typostScheduleMessageClear
+        beginBusy: typostBeginBusy,
+        endBusy: typostEndBusy
     };
 }
 
@@ -362,6 +383,11 @@ jQuery(document).ready(function($) {
             // Keep keyboard users anchored: if focus lived inside the swapped
             // markup (or was dropped to <body>), move it to the region container.
             if (focusWasInRegion || document.activeElement === document.body) {
+                // :focus-visible does not match a programmatic focus that
+                // follows <body>, which is exactly this rescue; the class
+                // paints the ring and leaves with the focus (review of E-12).
+                $region.addClass('typost-focus-ring');
+                $region.one('blur', function() { $region.removeClass('typost-focus-ring'); });
                 $region.trigger('focus');
             }
         }
@@ -525,7 +551,7 @@ jQuery(document).ready(function($) {
 
         // Disable button, show progress, and add aria-busy
         $('.typost-upload-form').attr('aria-busy', 'true');
-        $btn.prop('disabled', true).text(typostAdmin.strings.uploading);
+        if (!typostBeginBusy($btn, typostAdmin.strings.uploading)) { return; }
         $progress.show();
         $progressFill.css('width', '0%');
         $progressText.text(typostAdmin.strings.uploadingZip);
@@ -595,7 +621,7 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 $('.typost-upload-form').attr('aria-busy', 'false');
-                $btn.prop('disabled', false).text(typostAdmin.strings.uploadButton);
+                typostEndBusy($btn, typostAdmin.strings.uploadButton);
             }
         });
     });
@@ -1053,7 +1079,7 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(typostAdmin.strings.adding);
+        if (!typostBeginBusy($btn, typostAdmin.strings.adding)) { return; }
 
         // Add via REST API
         $.ajax({
@@ -1093,7 +1119,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typostAdmin.strings.addAdobeFontButton);
+                typostEndBusy($btn, typostAdmin.strings.addAdobeFontButton);
             }
         });
     });
@@ -1124,7 +1150,7 @@ jQuery(document).ready(function($) {
         var originalState = !loadOnAllPages; // Store original state for rollback
 
         // Disable checkbox while saving
-        $checkbox.prop('disabled', true);
+        if (!typostBeginBusy($checkbox)) { return; }
 
         // Update via REST API
         $.ajax({
@@ -1157,7 +1183,7 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 // Re-enable checkbox
-                $checkbox.prop('disabled', false);
+                typostEndBusy($checkbox);
             }
         });
     });
@@ -1196,7 +1222,7 @@ jQuery(document).ready(function($) {
         };
 
         // Disable button
-        $btn.prop('disabled', true).text(typostAdmin.strings.adding);
+        if (!typostBeginBusy($btn, typostAdmin.strings.adding)) { return; }
 
         // Add via REST API
         $.ajax({
@@ -1228,7 +1254,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typostAdmin.strings.addManualFontButton);
+                typostEndBusy($btn, typostAdmin.strings.addManualFontButton);
             }
         });
     });
@@ -1259,7 +1285,7 @@ jQuery(document).ready(function($) {
         var originalState = !loadOnAllPages; // Store original state for rollback
 
         // Disable checkbox while saving
-        $checkbox.prop('disabled', true);
+        if (!typostBeginBusy($checkbox)) { return; }
 
         // Update via REST API
         $.ajax({
@@ -1292,7 +1318,7 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 // Re-enable checkbox
-                $checkbox.prop('disabled', false);
+                typostEndBusy($checkbox);
             }
         });
     });
@@ -1341,7 +1367,7 @@ jQuery(document).ready(function($) {
         });
 
         $message.html('');
-        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
+        if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
             url: typostAdmin.restUrl + 'fonts/' + fontId + '/fallback',
@@ -1363,7 +1389,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostAdmin.strings.saveChanges);
             }
         });
     });
@@ -1437,7 +1463,7 @@ jQuery(document).ready(function($) {
         });
 
         $message.html('');
-        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
+        if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
             url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
@@ -1459,7 +1485,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostAdmin.strings.saveChanges);
             }
         });
     });
@@ -1487,7 +1513,7 @@ jQuery(document).ready(function($) {
         }
 
         $card.find('.typost-manual-font-family-input').attr('aria-invalid', 'false');
-        $btn.prop('disabled', true).text(typostAdmin.strings.saving);
+        if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
             url: typostAdmin.restUrl + 'manual-fonts/' + fontId,
@@ -1513,7 +1539,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                $btn.prop('disabled', false).text(typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostAdmin.strings.saveChanges);
             }
         });
     });
@@ -1683,7 +1709,7 @@ jQuery(document).ready(function($) {
         // ("Delete Font") and the edit-replacement flow ("Update Replacement")
         var originalLabel = $btn.text();
 
-        $btn.prop('disabled', true).text(typostAdmin.strings.deleting);
+        if (!typostBeginBusy($btn, typostAdmin.strings.deleting)) { return; }
 
         // First, create replacement mapping if selected
         var promises = [];
@@ -1709,7 +1735,7 @@ jQuery(document).ready(function($) {
         $.when.apply($, promises).done(function() {
             // If editing mode, just reload the replacements list
             if (deleteFontContext.editing) {
-                $btn.prop('disabled', false).text(originalLabel);
+                typostEndBusy($btn, originalLabel);
                 closeDeletionModal();
                 loadReplacementsList();
                 return;
@@ -1743,12 +1769,12 @@ jQuery(document).ready(function($) {
                 },
                 error: function() {
                     alert(typostAdmin.strings.deleteFontFailed);
-                    $btn.prop('disabled', false).text(originalLabel);
+                    typostEndBusy($btn, originalLabel);
                 }
             });
         }).fail(function() {
             alert(typostAdmin.strings.replacementFailed);
-            $btn.prop('disabled', false).text(originalLabel);
+            typostEndBusy($btn, originalLabel);
         });
     });
 
@@ -2021,7 +2047,7 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        $btn.prop('disabled', true).text(adminString('adding', 'Adding...'));
+        if (!typostBeginBusy($btn, adminString('adding', 'Adding...'))) { return; }
 
         // Create the replacement mapping
         $.ajax({
@@ -2041,7 +2067,7 @@ jQuery(document).ready(function($) {
                 $('#typost-new-replacement-id').val('');
                 loadReplacementsList();
                 populateAddReplacementForm();
-                $btn.prop('disabled', false).text(adminString('addReplacementButton', 'Add Replacement'));
+                typostEndBusy($btn, adminString('addReplacementButton', 'Add Replacement'));
             },
             error: function(xhr) {
                 var errorMsg = adminString('addReplacementError', 'Failed to add replacement mapping.');
@@ -2049,7 +2075,7 @@ jQuery(document).ready(function($) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<p class="notice notice-error">' + errorMsg + '</p>');
-                $btn.prop('disabled', false).text(adminString('addReplacementButton', 'Add Replacement'));
+                typostEndBusy($btn, adminString('addReplacementButton', 'Add Replacement'));
             }
         });
     });
@@ -2085,14 +2111,14 @@ jQuery(document).ready(function($) {
         var originalText = $btn.text();
         var $message = $btn.closest('.typost-font-details').find('.typost-font-edit-message');
 
-        $btn.prop('disabled', true).text(typostAdmin.strings.wplRegistering);
+        if (!typostBeginBusy($btn, typostAdmin.strings.wplRegistering)) { return; }
 
         wplRestCall('fonts/' + fontId + '/wp-library', 'POST', function() {
             $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRegisterSuccess + '</p></div>');
             setTimeout(function() { refreshAdminFontData(); }, 1200);
         }, function(xhr) {
             $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError) + '</p></div>');
-            $btn.prop('disabled', false).text(originalText);
+            typostEndBusy($btn, originalText);
         });
     });
 
@@ -2107,14 +2133,14 @@ jQuery(document).ready(function($) {
         var originalText = $btn.text();
         var $message = $btn.closest('.typost-font-details').find('.typost-font-edit-message');
 
-        $btn.prop('disabled', true).text(typostAdmin.strings.wplRemoving);
+        if (!typostBeginBusy($btn, typostAdmin.strings.wplRemoving)) { return; }
 
         wplRestCall('fonts/' + fontId + '/wp-library', 'DELETE', function() {
             $message.html('<div class="notice notice-success inline"><p>' + typostAdmin.strings.wplRemoveSuccess + '</p></div>');
             setTimeout(function() { refreshAdminFontData(); }, 1200);
         }, function(xhr) {
             $message.html('<div class="notice notice-error inline"><p>' + wplErrorMessage(xhr, typostAdmin.strings.wplRemoveError) + '</p></div>');
-            $btn.prop('disabled', false).text(originalText);
+            typostEndBusy($btn, originalText);
         });
     });
 
@@ -2123,7 +2149,7 @@ jQuery(document).ready(function($) {
         var $btn = $(this);
         var originalText = $btn.text();
 
-        $btn.prop('disabled', true).text(typostAdmin.strings.wplRegistering);
+        if (!typostBeginBusy($btn, typostAdmin.strings.wplRegistering)) { return; }
 
         wplRestCall('fonts/wp-library/bulk', 'POST', function(response) {
             var registered = (response.registered || []).length;
@@ -2135,7 +2161,7 @@ jQuery(document).ready(function($) {
             setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
             alert(wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError));
-            $btn.prop('disabled', false).text(originalText);
+            typostEndBusy($btn, originalText);
         });
     });
 
@@ -2150,7 +2176,7 @@ jQuery(document).ready(function($) {
         var originalText = $btn.text();
         var $message = $('#typost-detect-weights-message');
 
-        $btn.prop('disabled', true).text(typostAdmin.strings.detectWeightsRunning);
+        if (!typostBeginBusy($btn, typostAdmin.strings.detectWeightsRunning)) { return; }
 
         wplRestCall('fonts/detect-weights/bulk', 'POST', function(response) {
             var msg = typostFormatDetectWeightsSummary(response, typostAdmin.strings.detectWeightsDone);
@@ -2158,7 +2184,7 @@ jQuery(document).ready(function($) {
             setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
             $message.html($('<p></p>').text(wplErrorMessage(xhr, typostAdmin.strings.detectWeightsError)));
-            $btn.prop('disabled', false).text(originalText);
+            typostEndBusy($btn, originalText);
         });
     });
 
@@ -2175,9 +2201,9 @@ jQuery(document).ready(function($) {
      * The notice container is a polite live region of its own so sighted
      * and screen reader users get the same message. Only one settings
      * message is on screen at a time: the other forms' containers are
-     * emptied first (they keep their role="status"), and a success message
-     * clears itself after 8 seconds while an error stays until the next
-     * submit.
+     * emptied first (they keep their role="status"). Messages stay until
+     * the next submit replaces them: no timer, so WCAG 2.2.1 (Timing
+     * Adjustable) has nothing to adjust (review of E-13, Matt's call).
      *
      * @param {jQuery} $form The settings form.
      * @param {string} type  'success' or 'error'.
@@ -2192,7 +2218,6 @@ jQuery(document).ready(function($) {
         typostClearSettingsMessages(document, $msg[0]);
         var $notice = $('<div></div>').addClass('notice inline notice-' + type).append($('<p></p>').text(text));
         $msg.empty().append($notice);
-        typostScheduleMessageClear($msg[0], type);
     }
 
     /**
@@ -2217,7 +2242,7 @@ jQuery(document).ready(function($) {
         var $autoRegister = $('#typost_auto_register_wp_fonts');
         var $enterLineBreak = $('#typost_block_enter_line_break');
 
-        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+        if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
         // Checkbox rows added by modules/extensions on the
         // typost_admin_options_rows action. Collected by attribute rather than
@@ -2258,7 +2283,7 @@ jQuery(document).ready(function($) {
                 settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.optionsSaveError));
             },
             complete: function() {
-                $submit.prop('disabled', false).text(originalText);
+                typostEndBusy($submit, originalText);
             }
         });
     });
@@ -2271,7 +2296,7 @@ jQuery(document).ready(function($) {
         var $submit = $form.find('button[name="typost_save_accessibility_settings"]');
         var originalText = $submit.text();
 
-        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+        if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
         $.ajax({
             url: typostAdmin.restUrl + 'admin/accessibility',
@@ -2291,7 +2316,7 @@ jQuery(document).ready(function($) {
                 settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.accessibilitySaveError));
             },
             complete: function() {
-                $submit.prop('disabled', false).text(originalText);
+                typostEndBusy($submit, originalText);
             }
         });
     });
@@ -2304,7 +2329,7 @@ jQuery(document).ready(function($) {
         var $submit = $form.find('button[name="typost_clear_cache"]');
         var originalText = $submit.text();
 
-        $submit.prop('disabled', true).text(typostAdmin.strings.savingSettings);
+        if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
         $.ajax({
             url: typostAdmin.restUrl + 'admin/clear-cache',
@@ -2320,7 +2345,7 @@ jQuery(document).ready(function($) {
                 settingsFormMessage($form, 'error', wplErrorMessage(xhr, typostAdmin.strings.cacheClearError));
             },
             complete: function() {
-                $submit.prop('disabled', false).text(originalText);
+                typostEndBusy($submit, originalText);
             }
         });
     });

@@ -48,8 +48,9 @@ describe('resolveWeightToWrite (E-2)', () => {
 		expect(resolveWeightToWrite({ explicitWeight: '', authorPicked: false, stateWeight: '400' })).toBe('');
 	});
 
-	it('prefers the stored weight over a later pick', () => {
-		expect(resolveWeightToWrite({ explicitWeight: '300', authorPicked: true, stateWeight: '700' })).toBe('300');
+	it('lets a pick in this session replace the stored weight', () => {
+		// Changing the weight of already-weighted text must write the new value
+		expect(resolveWeightToWrite({ explicitWeight: '300', authorPicked: true, stateWeight: '700' })).toBe('700');
 	});
 
 	it('tolerates missing facts', () => {

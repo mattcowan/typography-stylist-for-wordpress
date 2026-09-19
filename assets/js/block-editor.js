@@ -672,7 +672,14 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         self._resetPendingChanges();
                     } else {
                         if (props.fontId !== undefined) { self._recordChange('font'); }
-                        if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
+                        if (props.fontWeight !== undefined) {
+                            self._recordChange('fontWeight');
+                            // An explicit weight from an extension (a paragraph style
+                            // detach hands back the state's weight) counts as picked, so
+                            // the apply writes it; a falsy value means "clear" and writes
+                            // nothing (review of E-2)
+                            self._authorPickedWeight = !!props.fontWeight;
+                        }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }

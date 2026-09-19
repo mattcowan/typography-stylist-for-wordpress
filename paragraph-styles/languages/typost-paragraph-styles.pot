@@ -263,6 +263,11 @@ msgstr ""
 msgid "Paragraph styles"
 msgstr ""
 
+#: assets/js/editor.js
+#: assets/js/lib/ps-utils.js
+msgid "Recently used"
+msgstr ""
+
 #. translators: 1: smallest font size, 2: largest font size.
 #: assets/js/lib/ps-utils.js
 #, php-format
@@ -297,4 +302,9 @@ msgstr ""
 
 #: assets/js/lib/ps-utils.js
 msgid "Inherited size"
+msgstr ""
+
+
+#: assets/js/lib/ps-utils.js
+msgid "Other styles"
 msgstr ""

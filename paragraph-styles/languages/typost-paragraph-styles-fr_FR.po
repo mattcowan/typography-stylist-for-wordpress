@@ -266,6 +266,11 @@ msgstr "Mode de taille"
 msgid "Paragraph styles"
 msgstr "Styles de paragraphe"
 
+#: assets/js/editor.js
+#: assets/js/lib/ps-utils.js
+msgid "Recently used"
+msgstr "Utilisés récemment"
+
 #. translators: 1: smallest font size, 2: largest font size.
 #: assets/js/lib/ps-utils.js
 #, php-format
@@ -301,3 +306,8 @@ msgstr "Ajusté à la largeur"
 #: assets/js/lib/ps-utils.js
 msgid "Inherited size"
 msgstr "Taille héritée"
+
+
+#: assets/js/lib/ps-utils.js
+msgid "Other styles"
+msgstr "Autres styles"

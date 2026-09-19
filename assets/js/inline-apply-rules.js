@@ -61,11 +61,14 @@ function isValidFontSizeRange(min, preferred, max) {
  */
 function resolveWeightToWrite(facts) {
 	var f = facts || {};
-	if (f.explicitWeight) {
-		return String(f.explicitWeight);
-	}
+	// A pick in this session wins over what the span already stores —
+	// otherwise changing the weight of already-weighted text would be a
+	// no-op that the select still displays as done (review of E-2).
 	if (f.authorPicked && f.stateWeight) {
 		return String(f.stateWeight);
+	}
+	if (f.explicitWeight) {
+		return String(f.explicitWeight);
 	}
 	return '';
 }

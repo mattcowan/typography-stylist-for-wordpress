@@ -320,39 +320,7 @@ You can also create and save your own custom presets from the Admin Settings.
 
 ## Admin Interface Guide
 
-Access via Settings → Typography Stylist
-
-### Presets Tab
-
-**View Default Presets:**
-- See all available quick presets
-- Each preset shows which features it includes
-- Description explains the intended use
-
-**Create Custom Presets:**
-1. Click "Create New Preset"
-2. Enter a name and description
-3. Select features to include
-4. Click "Save Preset"
-5. Your preset appears in the editor popover
-
-**Manage Presets:**
-- Edit preset names and features
-- Delete custom presets (default presets cannot be deleted)
-
-### Font Features Tab
-
-**Explore Available Features:**
-- View all OpenType features supported by the plugin
-- See feature codes (e.g., `liga`, `ss01`, `swsh`)
-- Read descriptions of what each feature does
-- Features are organized by category
-
-**Feature Categories:**
-- **Ligatures** - Connected letter pairs
-- **Stylistic Sets** - Alternative letter designs (ss01-ss20)
-- **Swashes** - Decorative flourishes
-- **Alternates** - Contextual and stylistic variations
+Access via Settings → Typography Stylist. The screen has eight tabs, in this order: Custom Fonts, Paragraph Styles, Font Features, Glyphs, Options, Accessibility, Replacement Fonts, Help. Every action on the screen updates the page in place; nothing reloads.
 
 ### Custom Fonts Tab
 
@@ -361,7 +329,8 @@ Access via Settings → Typography Stylist
 1. **Uploaded Webfont Kits**
    - View all uploaded font kits
    - See upload date and file count
-   - Set fallback fonts
+   - Set fallback fonts and available weights
+   - Register a kit in the WordPress Font Library (WordPress 6.5+), one kit at a time or all at once
    - Delete font kits (removes files from server)
 
 2. **Adobe Fonts (Typekit)**
@@ -376,11 +345,52 @@ Access via Settings → Typography Stylist
    - Edit fallback fonts
    - Remove definitions
 
+### Paragraph Styles Tab
+
+- Each saved style is shown rendered in its own typography, with its font, weight, size, spacing and features
+- Rename or delete a style
+- Styles are created in the editor: open the typography panel and click "Save Current Settings as Style"
+
+### Font Features Tab
+
+**Explore Available Features:**
+- View all OpenType features supported by the plugin
+- See feature codes (e.g., `liga`, `ss01`, `swsh`)
+- Read descriptions of what each feature does
+- Features are organized by category
+- Choose which features the editor panels show
+
+**Feature Categories:**
+- **Ligatures** - Connected letter pairs
+- **Stylistic Sets** - Alternative letter designs (ss01-ss20)
+- **Swashes** - Decorative flourishes
+- **Alternates** - Contextual and stylistic variations
+
+**Presets:**
+- See the default presets and which features each one includes
+- Create, edit and delete your own presets; they appear in the editor panels
+
 **Font Preview Tool:**
 - Select any font from the dropdown
 - Type custom preview text
 - Adjust font size
 - Toggle OpenType features to test support
+
+### Glyphs Tab
+
+- Browse every glyph of a font without editing a post
+- Shows the alternates a font offers for a character and the feature tags that produce them
+
+### Options Tab
+
+- **Admin Color Scheme** - the color scheme of this settings screen; changes apply at once
+- **Clear Button Confirmation** - ask before the "Clear" button in the editor panels removes styling
+- **Enter Key in Typography Stylist Blocks** - Enter adds a line break inside the block (default) or starts a new block, like a core heading
+- **Archive Page Font Detection** - scan full post content on archive pages so fonts load there too
+- **WordPress Font Library** - register new uploads in the Font Library automatically (WordPress 6.5+)
+- **Glyphs Toolbar Button** and **Paragraph Styles Toolbar Button** - add direct buttons to the block toolbar (both off by default)
+- **Clear Font Cache** - remove the cached font detection results; fonts are detected again on the next page load
+- **Show Editor Tips Again** - show the dismissed tips notice in the editor panels again, in this browser
 
 ### Accessibility Tab
 
@@ -398,9 +408,15 @@ Access via Settings → Typography Stylist
 - Smart selection warnings prevent text fragmentation
 - Configurable screen reader classes
 
+### Replacement Fonts Tab
+
+- Map a deleted font's ID to a replacement font, so content that still references the old ID keeps a font
+- Choose whether a replacement font loads on every page
+
 ### Help Tab
 
 **Quick Reference:**
+- The difference between a Typography Stylist block and a regular heading, including what the Enter key does in each
 - Links to documentation
 - Common questions and answers
 - Tips for using OpenType features

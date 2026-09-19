@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.2.3
+Stable tag: 2.3.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -142,7 +142,7 @@ Check the font's documentation or specimen to verify which OpenType features are
 3. Select the text you want to style
 4. Click the "Typography Stylist" button in the toolbar (a swashy "T" icon)
 5. Toggle features and adjust controls — changes apply instantly to your selected text, with live preview (press Ctrl+Z to undo)
-6. If your selection breaks a word boundary, a non-blocking notice appears with a one-click option to convert to the Typography Stylist Block for maximum accessibility (the conversion option is hidden when the block can't be converted, e.g. inside a locked pattern). The notice can be disabled in Settings → Typography Stylist → Accessibility.
+6. If your selection breaks a word boundary, a non-blocking notice appears with a one-click option to convert to the Typography Stylist Block for maximum accessibility. When the block cannot be converted (a locked pattern, a parent block that does not allow it, or a block type such as a list item or button), the notice says why. The notice can be disabled in Settings → Typography Stylist → Accessibility.
 
 = How It Works For Custom Blocks =
 
@@ -246,7 +246,7 @@ Yes! For any font source (uploaded, Adobe Fonts, or custom definitions), you can
 
 The plugin includes accessibility features for screen reader compatibility:
 
-* **Inline Format Notices**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a non-blocking notice with a one-click option to convert to an accessible Typography Stylist block. When the block cannot be converted (e.g., inside a locked pattern), the conversion option is hidden automatically. The notice can be disabled entirely via the "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility.
+* **Inline Format Notices**: For rich text blocks like headings, the plugin detects when you select partial words (which can fragment text for screen readers) and shows a non-blocking notice with a one-click option to convert to an accessible Typography Stylist block. When the block cannot be converted (a locked pattern, a parent block that does not allow it, or a block type with no conversion), the notice explains why instead of offering the button. The notice can be disabled entirely via the "Disable Word Boundary Warning" option in Settings → Typography Stylist → Accessibility.
 * **Typography Stylist Block**: Custom block designed for complex typography that includes markup with screen reader-accessible text
 * **ARIA Label Support**: Optional setting to add aria-label attributes to inline formatted text (Settings → Typography Stylist → Accessibility)
 * **Screen Reader Classes**: the Typography Stylist block uses configurable classes (visually-hidden, sr-only, or custom) to hide styled text from screen readers while providing clean text as an alternative
@@ -307,7 +307,7 @@ Yes. When you upload a variable font, its axes (weight, width, slant, optical si
 
 = How do paragraph styles work? =
 
-Configure your typography (font, weight, size, spacing, OpenType features, variable font axes) in either editor, then click "Save Current Settings as Style" at the top of the panel and give it a name. In the inline editor, "Browse styles…" opens a browser that renders each style in its own typeface, with a search box (style or font name) and the first 24 styles shown before "Show more"; the Quick Feature Toggles and the block sidebar list the styles in a dropdown. Pick a style to apply everything at once. If the selected text already carries styling of its own, both editors ask before replacing it. Styled text references a shared CSS class (`.typost-ps-1`, `.typost-ps-2`, …), so choosing "Update Style" later restyles every heading that uses it. Styles can be renamed and deleted from the Paragraph Styles tab in Settings → Typography Stylist, and "Detach Style" converts a selection back to independent inline styling.
+Configure your typography (font, weight, size, spacing, OpenType features, variable font axes) in either editor, then click "Save Current Settings as Style" at the top of the panel and give it a name. In the inline editor, "Browse styles…" opens a browser that renders each style in its own typeface, using your selected words as the sample text. It has a search box (style or font name), a "Group by" control (font family, size mode, or recently used), keyboard navigation with first-letter type-ahead, and shows the first 24 styles before "Show more". The Quick Feature Toggles and the block sidebar list the styles in a dropdown. Pick a style to apply everything at once. If the selected text already carries styling of its own, both editors ask before replacing it. Styled text references a shared CSS class (`.typost-ps-1`, `.typost-ps-2`, …), so choosing "Update Style" later restyles every heading that uses it. Styles can be renamed and deleted from the Paragraph Styles tab in Settings → Typography Stylist, and "Detach Style" converts a selection back to independent inline styling.
 
 = What does registering a font in the WordPress Font Library do? =
 
@@ -329,6 +329,18 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 8. The block's Accessibility panel — the screen-reader class behind the dual-heading pattern that keeps styled text accessible
 
 == Changelog ==
+
+= 2.3.0 =
+* **NEW: Paragraph Styles are built in.** Save the current typography as a named style and apply it anywhere. Styled text renders through a shared CSS class, so "Update Style" changes every use at once. Fit-to-width blocks save as styles too.
+* **NEW: a visual style browser.** "Browse styles…" in the inline editor (and an optional block toolbar button) shows every style rendered in its own typeface, with your selected words as the sample. Search, group by font family, size mode or recently used, and move through the list with the keyboard.
+* **NEW: optional Glyphs and Paragraph Styles buttons in the block toolbar, and a choice of what Enter does in a Typography Stylist block.** Both settings are in Options and off by default.
+* **Improved: the settings page updates in place.** Uploading, adding, editing, deleting and registering fonts, and every settings form, no longer reload the page. Buttons keep keyboard focus while a request runs.
+* **Improved: screen-reader and keyboard use of the editor panels.** Dialog names are read first, every control is named, the panels have fewer Tab stops, focus stays inside an open panel, and contrast meets WCAG AA.
+* **Fixed: styled text kept the wrong weight or font.** A feature toggle no longer makes a bold heading light; text styled only by the theme keeps its weight; a Font Library font that is installed but not activated now prints its @font-face; a font installed in the Library appears in the pickers on the next editor load.
+* **Fixed: conversion, nesting and sizing in the editors.** "Convert to Typography Stylist Block" keeps the selection's styling on the selection only; the block reports when styling cannot nest deeper; the inline editor warns when responsive sizes are out of order; "Responsive (fluid)" applies at once in the Quick Feature Toggles.
+* **Fixed: the Glyphs Panel** swapped or duplicated the wrong glyph, opened on the wrong font for theme-styled text, and refused `U+XXXX` input.
+* **Fixed: paragraph styles** dropped italic, went stale after in-session saves, lost to theme heading CSS, and did not load fonts for class-only content.
+* Full details are in changelog.txt.
 
 = 2.2.3 =
 * **NEW: Relative size and vertical shift for selected text in Fit-to-width blocks.** Select part of a fitted line — a single glyph like the ampersand in "April & Andy" — and scale it down relative to the line's fitted size or nudge it up and down. Because the adjustments are relative, the line still fills the block width exactly at every screen size, and the frontend stays zero-JavaScript. The two new sliders appear in the Quick Feature Toggles when the block uses Fit to width sizing.
@@ -373,6 +385,9 @@ Beta builds are published as pre-releases on the plugin's [GitHub Releases page]
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.0 =
+Adds built-in Paragraph Styles with a visual style browser, optional Glyphs and Paragraph Styles toolbar buttons, a no-reload settings page, and a round of screen-reader, keyboard and rendering fixes across both editors. No data migration.
 
 = 2.2.3 =
 Adds per-selection relative size and vertical shift inside Fit-to-width blocks — shrink a glyph relative to its fitted line and nudge it up or down, while every line keeps filling the block width exactly.

@@ -625,7 +625,67 @@
 	/**
 	 * Group-by modes the browser offers.
 	 */
-	var BROWSER_GROUP_MODES = ['none', 'font', 'size'];
+	var BROWSER_GROUP_MODES = ['none', 'font', 'size', 'recent'];
+
+	/** localStorage key holding the ids of the styles this author applied last. */
+	var RECENT_STYLES_KEY = 'typost_ps_recent_styles';
+
+	/** How many recently used style ids are remembered. */
+	var RECENT_STYLES_LIMIT = 8;
+
+	/**
+	 * Read the recently used style ids, most recent first.
+	 *
+	 * Browser storage is a per-viewer convenience: it can be missing, blocked
+	 * or hold garbage, so every failure reads as "nothing remembered".
+	 *
+	 * @param {Storage} storage window.localStorage (or a stand-in)
+	 * @return {number[]} Style ids, most recent first, deduplicated
+	 */
+	function readRecentStyleIds(storage) {
+		var raw;
+		try {
+			raw = storage && storage.getItem ? storage.getItem(RECENT_STYLES_KEY) : null;
+		} catch (e) {
+			return [];
+		}
+		if (!raw) return [];
+		var parsed;
+		try {
+			parsed = JSON.parse(raw);
+		} catch (e) {
+			return [];
+		}
+		if (!Array.isArray(parsed)) return [];
+		var seen = {};
+		return parsed.map(function (id) { return parseInt(id, 10); }).filter(function (id) {
+			if (!(id > 0) || seen[id]) return false;
+			seen[id] = true;
+			return true;
+		}).slice(0, RECENT_STYLES_LIMIT);
+	}
+
+	/**
+	 * Remember a style as the most recently used and return the new list.
+	 *
+	 * @param {Storage} storage window.localStorage (or a stand-in)
+	 * @param {number}  styleId Style just applied
+	 * @param {number}  [limit] Ids to keep (default RECENT_STYLES_LIMIT)
+	 * @return {number[]} The stored list, most recent first
+	 */
+	function recordRecentStyleId(storage, styleId, limit) {
+		var id = parseInt(styleId, 10);
+		var keep = parseInt(limit, 10) || RECENT_STYLES_LIMIT;
+		var list = readRecentStyleIds(storage);
+		if (!(id > 0)) return list;
+		list = [id].concat(list.filter(function (other) { return other !== id; })).slice(0, keep);
+		try {
+			if (storage && storage.setItem) storage.setItem(RECENT_STYLES_KEY, JSON.stringify(list));
+		} catch (e) {
+			// Storage blocked or full: the list still works for this open modal
+		}
+		return list;
+	}
 
 	/**
 	 * Which size bucket a style's fontSize falls in for the "Size mode" grouping.
@@ -655,16 +715,38 @@
 	 *   unset collect in a last "No font set" group.
 	 * - 'size': "Fixed size", "Responsive", "Fit to width", "Inherited size",
 	 *   in that fixed order, only when non-empty.
+	 * - 'recent': the styles in recentIds (most recent first) under "Recently
+	 *   used", the rest under "Other styles"; with nothing remembered among
+	 *   the list the flat list is returned.
 	 * - anything else: a single group with key 'all' and no label, which the
 	 *   browser renders as the flat list.
 	 *
 	 * @param {Array}    styles     Styles to group (already filtered)
-	 * @param {string}   mode       'none' | 'font' | 'size'
+	 * @param {string}   mode       'none' | 'font' | 'size' | 'recent'
 	 * @param {Function} fontNameOf style → font name ('' / null when none)
+	 * @param {number[]} [recentIds] Recently used style ids, most recent first
 	 * @return {Array} [{ key, label, styles }] in display order
 	 */
-	function groupParagraphStyles(styles, mode, fontNameOf) {
+	function groupParagraphStyles(styles, mode, fontNameOf, recentIds) {
 		var list = (styles || []).filter(function (style) { return !!style; });
+
+		if (mode === 'recent') {
+			var ids = (recentIds || []).map(function (id) { return String(id); });
+			var byId = {};
+			list.forEach(function (style) { byId[String(style.id)] = style; });
+			var recent = ids.map(function (id) { return byId[id]; }).filter(function (style) { return !!style; });
+			if (!recent.length) {
+				return [{ key: 'all', label: '', styles: list }];
+			}
+			var recentSet = {};
+			recent.forEach(function (style) { recentSet[String(style.id)] = true; });
+			var others = list.filter(function (style) { return !recentSet[String(style.id)]; });
+			var out = [{ key: 'recent', label: translate('Recently used'), styles: recent }];
+			if (others.length) {
+				out.push({ key: 'recent:others', label: translate('Other styles'), styles: others });
+			}
+			return out;
+		}
 
 		if (mode === 'font') {
 			var byName = {};
@@ -847,6 +929,10 @@
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
 		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
 		BROWSER_GROUP_MODES: BROWSER_GROUP_MODES,
+		RECENT_STYLES_KEY: RECENT_STYLES_KEY,
+		RECENT_STYLES_LIMIT: RECENT_STYLES_LIMIT,
+		readRecentStyleIds: readRecentStyleIds,
+		recordRecentStyleId: recordRecentStyleId,
 		filterParagraphStyles: filterParagraphStyles,
 		buildBrowserSampleText: buildBrowserSampleText,
 		groupParagraphStyles: groupParagraphStyles,

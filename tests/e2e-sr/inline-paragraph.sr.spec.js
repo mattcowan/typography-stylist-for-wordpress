@@ -5,10 +5,9 @@
  * block, walks the first Tab stops, then drives the Font Size select with the
  * arrow keys through NVDA: Inherit → Responsive (Fluid). That reveals the
  * three size sliders; the journey records how they are announced, then puts
- * the values out of order (Minimum 64, Maximum 16) and records whether NVDA
- * hears any warning. The block editor shows a Notice for that state; the
- * inline modal does not (QA finding E-1), so the recorded absence is the
- * evidence, not a hard assertion.
+ * the values out of order (Minimum 120, Maximum 8) through NVDA key presses
+ * and asserts that the out-of-order warning is announced: the block editor
+ * always showed one, the inline modal gained it with QA finding E-1.
  */
 const { nvdaTest: test } = require('@guidepup/playwright');
 const { expect } = require('@playwright/test');
@@ -53,18 +52,22 @@ test.describe('Inline editor modal on a paragraph with NVDA', () => {
     const sliders = await h.tabUntil(page, nvda, (el) => /Maximum Size/i.test(el.labelText || ''), 8);
     const sliderStops = sliders.filter((s) => s.el && s.el.type === 'range');
 
-    // Cross the values with Playwright (Minimum 64, Maximum 16), then let
-    // NVDA re-read the focused control: any warning the modal shows would be
-    // spoken on mount by core's Notice, so the log around these presses is
-    // where it would appear.
-    const numbers = page.locator(MODAL + ' .typost-fontsize-controls input[type="number"]');
-    await numbers.nth(0).fill('64');
-    await numbers.nth(0).press('Tab');
-    await h.delay(500);
-    await numbers.nth(2).fill('16');
-    await numbers.nth(2).press('Tab');
-    await h.delay(900);
-    await nvda.perform(nvda.keyboardCommands.reportCurrentFocus);
+    // Cross the values through NVDA itself: End on the Minimum slider (120)
+    // and Home on the Maximum slider (8). Guidepup only records speech that
+    // lands around its own key presses, so a Playwright fill would leave the
+    // Notice's mount announcement unrecorded even when NVDA spoke it (that is
+    // what the first run of this journey showed). The warning Notice mounts
+    // on the Home press and core speaks it in that window.
+    const ranges = page.locator(MODAL + ' .typost-fontsize-controls input[type="range"]');
+    await ranges.nth(0).focus();
+    await h.delay(300);
+    await nvda.press('End');
+    await h.delay(700);
+    const minCrossPhrase = await nvda.lastSpokenPhrase();
+    await ranges.nth(2).focus();
+    await h.delay(300);
+    await nvda.press('Home');
+    await h.delay(1500);
     const afterCrossPhrase = await nvda.lastSpokenPhrase();
     const crossed = await page.evaluate(({ id, MODAL }) => {
       const m = document.querySelector(MODAL);
@@ -80,14 +83,15 @@ test.describe('Inline editor modal on a paragraph with NVDA', () => {
 
     const log = await h.saveSpeechLog(nvda, 'inline-paragraph', {
       focusTitles, openPhrase, focusAtOpen, stops, sizePhrase, responsivePhrase, sizeValue, sliderStops,
-      afterCrossPhrase, crossed, close, focusAfterClose,
+      minCrossPhrase, afterCrossPhrase, crossed, close, focusAfterClose,
     });
     const orderWarningSpoken = h.spoke(log, /out of order|should be/i);
 
     // Product assertions.
     expect(sizeValue, 'ArrowDown should select Responsive').toBe('responsive');
     expect(sliderStops.length, 'the three size sliders should be reachable by Tab').toBeGreaterThanOrEqual(3);
-    expect(crossed.html, 'crossed values still write an inverted clamp() (E-1)').toMatch(/clamp\(64px/);
+    expect(crossed.html, 'crossed values still write the clamp() as typed (soft validation)').toMatch(/clamp\(120px/);
+    expect(crossed.notices.some((n) => /out of order/i.test(n)), 'the inline modal shows the out-of-order Notice (E-1)').toBe(true);
     expect(close.closed, 'Escape should close the modal').toBe(true);
 
     // Screen-reader assertions.
@@ -99,7 +103,6 @@ test.describe('Inline editor modal on a paragraph with NVDA', () => {
     }
     const unnamed = stops.filter((s) => s.el && /INPUT|SELECT|BUTTON/.test(s.el.tag) && s.phrase && !/[a-z]/i.test(s.phrase));
     expect(unnamed, 'no control should be announced without a name').toEqual([]);
-    // Recorded, not asserted: the inline modal has no out-of-order warning.
-    test.info().annotations.push({ type: 'E-1', description: `order warning spoken: ${orderWarningSpoken}; notices: ${JSON.stringify(crossed.notices)}` });
+    expect(orderWarningSpoken, `the out-of-order Notice must be spoken when it mounts (E-1); heard: ${afterCrossPhrase}`).toBe(true);
   });
 });

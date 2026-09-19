@@ -41,6 +41,8 @@
 	var filterParagraphStyles    = utils.filterParagraphStyles;
 	var BROWSER_PAGE_SIZE        = utils.BROWSER_PAGE_SIZE;
 	var buildBrowserSampleText   = utils.buildBrowserSampleText;
+	var readRecentStyleIds       = utils.readRecentStyleIds;
+	var recordRecentStyleId      = utils.recordRecentStyleId;
 	var groupParagraphStyles     = utils.groupParagraphStyles;
 	var paginateGroups           = utils.paginateGroups;
 	var flattenGroups            = utils.flattenGroups;
@@ -84,6 +86,15 @@
 	function rowDomId(styleId) {
 		return 'typost-ps-browser-row-' + String(styleId).replace(/[^A-Za-z0-9_-]/g, '');
 	}
+	/** window.localStorage when the browser allows it, else null. */
+	function storageOrNull() {
+		try {
+			return window.localStorage || null;
+		} catch (e) {
+			return null;
+		}
+	}
+
 	function groupDomId(index) {
 		return 'typost-ps-browser-group-' + index;
 	}
@@ -633,7 +644,12 @@
 		// cursor can land on it once it exists (-1: nothing pending)
 		var revealFromRef = useRef(-1);
 
-		// Group by: none / font family / size mode. Session-only, no persistence.
+		// Recently used style ids (per browser, localStorage), read once per
+		// open; onApply records the pick so the next open lists it first.
+		var recentState = useState(function() { return readRecentStyleIds(storageOrNull()); });
+		var recentIds = recentState[0];
+		var setRecentIds = recentState[1];
+		// Group by: none / font family / size mode / recently used. Session-only.
 		var groupState = useState('none');
 		var groupBy    = groupState[0];
 		var setGroupBy = groupState[1];
@@ -691,8 +707,8 @@
 		// Search → group → page: headings describe exactly the rows under them
 		// and are recomputed from whatever the page shows.
 		var groups = useMemo(function() {
-			return groupParagraphStyles(filtered, groupBy, groupFontNameOf);
-		}, [filtered, groupBy]);
+			return groupParagraphStyles(filtered, groupBy, groupFontNameOf, recentIds);
+		}, [filtered, groupBy, recentIds]);
 		var page = paginateGroups(groups, visibleCount);
 		var visibleGroups = page.groups;
 		var hiddenCount = page.hiddenCount;
@@ -815,6 +831,7 @@
 		var applyTo = props.hasSelection && editorSource !== 'inline' ? 'selection' : undefined;
 
 		var onApply = useCallback(function(style) {
+			setRecentIds(recordRecentStyleId(storageOrNull(), style.id));
 			setActiveStyleId(style.id);
 			// The launching panel first, so a cancel reported during the
 			// apply (typost-paragraph-style-apply-cancelled) lands after it
@@ -890,9 +907,12 @@
 		} else {
 			listChildren = visibleGroups.map(function(group, index) {
 				var headingId = groupDomId(index);
-				return el('li', { key: group.key, role: 'presentation', className: 'typost-ps-browser-group' },
+				// The listbox may only own option and group children, so the
+				// group is the <li> itself (named by its heading); the inner
+				// <ul> is presentational so the options belong to the group.
+				return el('li', { key: group.key, role: 'group', 'aria-labelledby': headingId, className: 'typost-ps-browser-group' },
 					el('div', { id: headingId, className: 'typost-ps-browser-group-heading' }, group.label),
-					el('ul', { role: 'group', 'aria-labelledby': headingId, className: 'typost-ps-browser-group-list' },
+					el('ul', { role: 'presentation', className: 'typost-ps-browser-group-list' },
 						group.styles.map(renderRow))
 				);
 			});
@@ -943,6 +963,7 @@
 						{ label: __('None', 'typost-paragraph-styles'), value: 'none' },
 						{ label: __('Font family', 'typost-paragraph-styles'), value: 'font' },
 						{ label: __('Size mode', 'typost-paragraph-styles'), value: 'size' },
+						{ label: __('Recently used', 'typost-paragraph-styles'), value: 'recent' },
 					],
 					onChange: onGroupByChange,
 					__nextHasNoMarginBottom: true,

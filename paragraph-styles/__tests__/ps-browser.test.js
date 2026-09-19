@@ -72,8 +72,8 @@ describe('groupParagraphStyles', () => {
 	];
 	const fontNameOf = (style) => ({ 1: 'bookmania', 37: 'EB Garamond', 40: 'Style Script' })[style.properties.fontId] || '';
 
-	test('the modes are none, font and size', () => {
-		expect(BROWSER_GROUP_MODES).toEqual(['none', 'font', 'size']);
+	test('the modes are none, font, size and recent', () => {
+		expect(BROWSER_GROUP_MODES).toEqual(['none', 'font', 'size', 'recent']);
 	});
 
 	test("'none' returns a single unlabeled group keyed 'all' in incoming order", () => {
@@ -260,5 +260,78 @@ describe('findTypeAheadMatch (first-letter type-ahead)', () => {
 		expect(findTypeAheadMatch(labels, '', 0)).toBe(-1);
 		expect(findTypeAheadMatch(labels, undefined, 0)).toBe(-1);
 		expect(findTypeAheadMatch([], 'd', 0)).toBe(-1);
+	});
+});
+
+describe('recently used styles (Group by: Recently used)', () => {
+	const utils = require('../assets/js/lib/ps-utils.js');
+	const { readRecentStyleIds, recordRecentStyleId, groupParagraphStyles, RECENT_STYLES_KEY, RECENT_STYLES_LIMIT } = utils;
+
+	function memoryStorage(initial) {
+		const store = {};
+		if (initial !== undefined) store[RECENT_STYLES_KEY] = initial;
+		return {
+			getItem: (k) => (k in store ? store[k] : null),
+			setItem: (k, v) => { store[k] = String(v); },
+			dump: () => store,
+		};
+	}
+	const styles = [2, 3, 4, 5].map((id) => ({ id, name: 'S' + id, properties: {} }));
+
+	it('reads nothing from missing, blocked or malformed storage', () => {
+		expect(readRecentStyleIds(null)).toEqual([]);
+		expect(readRecentStyleIds({ getItem: () => { throw new Error('blocked'); } })).toEqual([]);
+		expect(readRecentStyleIds(memoryStorage('not json'))).toEqual([]);
+		expect(readRecentStyleIds(memoryStorage('{"a":1}'))).toEqual([]);
+	});
+
+	it('normalizes stored ids: numbers only, deduplicated, capped', () => {
+		const s = memoryStorage(JSON.stringify(['3', 3, 'x', 0, -1, 5, 5, 2, 7, 8, 9, 10, 11, 12]));
+		const ids = readRecentStyleIds(s);
+		expect(ids.slice(0, 3)).toEqual([3, 5, 2]);
+		expect(ids.length).toBeLessThanOrEqual(RECENT_STYLES_LIMIT);
+	});
+
+	it('records the newest id first, moves a repeat to the front and caps the list', () => {
+		const s = memoryStorage();
+		expect(recordRecentStyleId(s, 4)).toEqual([4]);
+		expect(recordRecentStyleId(s, 2)).toEqual([2, 4]);
+		expect(recordRecentStyleId(s, 4)).toEqual([4, 2]);
+		expect(JSON.parse(s.dump()[RECENT_STYLES_KEY])).toEqual([4, 2]);
+		let last;
+		for (let i = 10; i < 30; i++) last = recordRecentStyleId(s, i);
+		expect(last.length).toBe(RECENT_STYLES_LIMIT);
+		expect(last[0]).toBe(29);
+	});
+
+	it('ignores an invalid id and survives a storage that refuses writes', () => {
+		const s = memoryStorage(JSON.stringify([3]));
+		expect(recordRecentStyleId(s, 'nope')).toEqual([3]);
+		const readOnly = { getItem: () => '[3]', setItem: () => { throw new Error('full'); } };
+		expect(recordRecentStyleId(readOnly, 5)).toEqual([5, 3]);
+	});
+
+	it('groups recently used styles first, in recency order, then the others', () => {
+		const groups = groupParagraphStyles(styles, 'recent', null, [4, 2, 99]);
+		expect(groups.map((g) => g.key)).toEqual(['recent', 'recent:others']);
+		expect(groups[0].label).toBe('Recently used');
+		expect(groups[0].styles.map((s) => s.id)).toEqual([4, 2]);
+		expect(groups[1].label).toBe('Other styles');
+		expect(groups[1].styles.map((s) => s.id)).toEqual([3, 5]);
+	});
+
+	it('falls back to the flat list when nothing remembered is in the list', () => {
+		expect(groupParagraphStyles(styles, 'recent', null, [99])).toEqual([{ key: 'all', label: '', styles }]);
+		expect(groupParagraphStyles(styles, 'recent', null, undefined)).toEqual([{ key: 'all', label: '', styles }]);
+	});
+
+	it('omits the "Other styles" group when every style is recent', () => {
+		const groups = groupParagraphStyles(styles.slice(0, 2), 'recent', null, [3, 2]);
+		expect(groups).toHaveLength(1);
+		expect(groups[0].styles.map((s) => s.id)).toEqual([3, 2]);
+	});
+
+	it('is a listed group mode', () => {
+		expect(utils.BROWSER_GROUP_MODES).toContain('recent');
 	});
 });

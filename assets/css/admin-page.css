@@ -1553,7 +1553,10 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 /* The fonts region takes focus after a no-reload refresh (tabindex="-1");
    the browser draws no ring on a focused div, so give it the same 2px
    scheme-colored outline as the other focus targets (QA finding E-12). */
-#typost-fonts-region:focus-visible {
+#typost-fonts-region:focus-visible,
+#typost-fonts-region.typost-focus-ring:focus {
+    /* .typost-focus-ring: the refresh's programmatic focus, which
+       :focus-visible ignores when focus had fallen to <body> */
     outline: 2px solid var(--typost-color-primary);
     outline-offset: 2px;
     border-radius: 3px;
@@ -2028,4 +2031,12 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     flex-basis: 100%;
     margin-top: 8px;
     margin-bottom: 0;
+}
+
+/* Busy controls stay focusable (see typostBeginBusy in admin-page.js) */
+.typost-admin-wrap .typost-busy,
+.typost-admin-wrap .typost-busy:hover {
+    cursor: progress;
+    opacity: 0.7;
+    pointer-events: none;
 }

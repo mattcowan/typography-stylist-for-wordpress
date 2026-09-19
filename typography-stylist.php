@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 2.2.3
+ * Version: 2.3.0
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '2.2.3');
+    define('TYPOST_VERSION', '2.3.0');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -1111,8 +1111,10 @@ class Typost {
         $key_input = serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings) . serialize($library_printed_ids);
         if (!empty($adopted_face_slugs)) {
             // Appended only when present so keys for pages without adopted
-            // fonts are unchanged from 2.2.x
-            $key_input .= serialize($adopted_face_slugs);
+            // fonts are unchanged from 2.2.x. The face version rotates every
+            // key that carries adopted faces when a wp_font_face post is saved
+            // (on_wp_font_face_saved()), instead of a wildcard delete + flush.
+            $key_input .= serialize($adopted_face_slugs) . '|' . (string) get_option('typost_font_face_version', '0');
         }
         return 'typost_font_css_' . md5($key_input);
     }
@@ -3442,8 +3444,12 @@ class Typost {
             );
             // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
-            // Flush object cache for transient group
-            wp_cache_flush();
+            // The row deletes do not reach a persistent object cache, where
+            // get_transient() would keep answering from the cached copy; without
+            // one the flush would only cost a cold cache (review of E-16).
+            if (wp_using_ext_object_cache()) {
+                wp_cache_flush();
+            }
         }
     }
 
@@ -3527,19 +3533,31 @@ class Typost {
      * @param bool    $update  Whether this is an update
      */
     public function on_wp_font_family_saved($post_id, $post = null, $update = false) {
-        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+        static $done = false;
+        if ($done || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
         if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
             return;
         }
+        // Once per request: a Library install saves the family more than once
+        $done = true;
         $this->invalidate_editor_data_cache();
     }
 
     /**
      * save_post_wp_font_face handler: a face added to or changed on a Library
      * family reaches the plugin-printed @font-face CSS (adopted families that
-     * WordPress does not print) and the editor data on the next request.
+     * WordPress does not print) on the next request.
+     *
+     * Face posts only feed the adopted-font CSS, so this is deliberately
+     * cheap: WordPress saves every variant of an installed family as its own
+     * wp_font_face post, and a full clear_cache() per face (wildcard row
+     * deletes plus an object-cache flush) would stampede a Redis/Memcached
+     * site during one install (review of E-16). The three static CSS
+     * transients are deleted by name (cache-safe), and the per-page frontend
+     * CSS keys are rotated through the face version folded into
+     * get_font_css_cache_key() whenever adopted faces are printed.
      *
      * @since 2.3.0
      * @param int     $post_id Post ID
@@ -3547,13 +3565,19 @@ class Typost {
      * @param bool    $update  Whether this is an update
      */
     public function on_wp_font_face_saved($post_id, $post = null, $update = false) {
-        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+        static $done = false;
+        if ($done || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
         if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
             return;
         }
-        $this->clear_cache();
+        $done = true;
+        delete_transient('typost_admin_font_css');
+        delete_transient('typost_editor_font_css');
+        delete_transient('typost_block_font_css');
+        update_option('typost_font_face_version', (string) time(), false);
+        $this->font_library_bridge()->clear_snapshot_cache();
     }
 
     /**
