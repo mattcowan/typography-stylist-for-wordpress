@@ -53,6 +53,11 @@ describe('resolveWeightToWrite (E-2)', () => {
 		expect(resolveWeightToWrite({ explicitWeight: '300', authorPicked: true, stateWeight: '700' })).toBe('700');
 	});
 
+	it('writes nothing on an explicit clear, even over a stored weight', () => {
+		expect(resolveWeightToWrite({ explicitWeight: '600', authorPicked: false, stateWeight: '400', clearWeight: true })).toBe('');
+		expect(resolveWeightToWrite({ explicitWeight: '', authorPicked: true, stateWeight: '700', clearWeight: true })).toBe('');
+	});
+
 	it('tolerates missing facts', () => {
 		expect(resolveWeightToWrite()).toBe('');
 		expect(resolveWeightToWrite({ authorPicked: true })).toBe('');

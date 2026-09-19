@@ -501,6 +501,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // selection already stores one) — never the display default, which
             // lightened theme-bold headings on every feature toggle (QA E-2).
             this._authorPickedWeight = false;
+            // An extension asked for the weight to be removed (a falsy
+            // fontWeight on typost-apply-block-properties): both apply paths
+            // strip data-fontweight/font-weight instead of writing '400'
+            this._clearWeight = false;
 
             this.state = {
                 isOpen: false,
@@ -674,11 +678,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         if (props.fontId !== undefined) { self._recordChange('font'); }
                         if (props.fontWeight !== undefined) {
                             self._recordChange('fontWeight');
-                            // An explicit weight from an extension (a paragraph style
-                            // detach hands back the state's weight) counts as picked, so
-                            // the apply writes it; a falsy value means "clear" and writes
-                            // nothing (review of E-2)
+                            // Three states (PR #194 review): a truthy weight from an
+                            // extension (a paragraph style detach hands back the
+                            // state's weight) counts as picked and is written; a falsy
+                            // one is an explicit clear, which strips the weight in
+                            // both apply paths; an absent key leaves it untouched.
                             self._authorPickedWeight = !!props.fontWeight;
+                            self._clearWeight = !props.fontWeight;
                         }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
@@ -1561,6 +1567,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Fresh popover session: no property changes recorded yet
             this._resetPendingChanges();
             this._authorPickedWeight = false;
+            this._clearWeight = false;
 
             this.setState(state => ({
                 isOpen: !state.isOpen,
@@ -1859,6 +1866,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         setFontWeight(value) {
             this._recordChange('fontWeight');
             this._authorPickedWeight = true;
+            this._clearWeight = false;
             this.setState({
                 fontWeight: value
             }, () => {
@@ -2171,6 +2179,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // '400', which save.js always emits, so a straight conversion
             // visibly lightens the heading.
             const convertFontWeight = this.getEffectiveFontWeight();
+            // With a partial selection the block itself keeps the weight it
+            // renders at; the author's pick stays on the span (PR #194 review)
+            const blockInheritedWeight = this.getBlockInheritedWeight() || this.getExplicitFontWeight() || '400';
             // The weight the span itself gets (same rule as an apply, QA E-2)
             const spanWeight = resolveWeightToWrite({
                 explicitWeight: this.getExplicitFontWeight(),
@@ -2288,7 +2299,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        effectiveWeight: convertFontWeight
+                        effectiveWeight: blockInheritedWeight
                     }));
 
                     // Replace current block
@@ -2397,8 +2408,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 styleDecls['font-variation-settings'] = null;
             }
             if (pending.keys.has('fontWeight')) {
-                dataAttrs['data-fontweight'] = fontWeight;
-                styleDecls['font-weight'] = fontWeight;
+                // An explicit clear removes the weight from every run
+                dataAttrs['data-fontweight'] = this._clearWeight ? null : fontWeight;
+                styleDecls['font-weight'] = this._clearWeight ? null : fontWeight;
             }
             if (pending.keys.has('fontStyle')) {
                 dataAttrs['data-fontstyle'] = fontStyle || null;
@@ -2520,7 +2532,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             const weightToWrite = resolveWeightToWrite({
                 explicitWeight: (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-fontweight']) || '',
                 authorPicked: this._authorPickedWeight,
-                stateWeight: fontWeight
+                stateWeight: fontWeight,
+                clearWeight: this._clearWeight
             });
 
             if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {

@@ -440,7 +440,7 @@ Splitting additionally needs the caret's `attributeKey`, which is why `edit.js` 
   - `typost_paragraph_styles` / `typost_paragraph_styles_next_id` - Paragraph style presets + their ID counter (v2.3+, bundled module)
   - `typost_block_enter_line_break` - Enter key behaviour in the Typography Stylist block (v2.3+, default `'1'` = line break)
   - `typost_glyphs_toolbar_button` / `typost_ps_toolbar_button` - Optional direct-access toolbar buttons for the Glyphs and Paragraph Styles modules (v2.3+, both default off)
-  - `typost_font_face_version` - Millisecond stamp written on every `wp_font_face` save; folded into the frontend font CSS cache key whenever adopted Library faces are printed, so a new face rotates those keys without a wildcard delete or an object-cache flush (v2.3+)
+  - `typost_font_face_version` - UUID written on every `wp_font_face` save or deletion (`invalidate_font_face_css()`); folded into the frontend font CSS cache key whenever adopted Library faces are printed, so a new face rotates those keys without a wildcard delete or an object-cache flush (v2.3+)
   - `typost_allow_variable_weights` - Read-only back-compat flag: lets `sanitize_font_faces()` accept kit weights 1-1000. It has **no admin UI and nothing in the plugin writes it** (the commented-out Options row and the no-JS POST write were removed 2026-09, QA finding E-14 — a no-JS save was resetting it to `'0'` with no control on the form). Default false; the Variable Fonts module does not depend on it.
 - Uploaded font files stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 - Frontend has zero JavaScript - purely CSS-based rendering

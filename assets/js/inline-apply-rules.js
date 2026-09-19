@@ -57,10 +57,16 @@ function isValidFontSizeRange(min, preferred, max) {
  * @param {string}  facts.explicitWeight `data-fontweight` on the selection, or ''.
  * @param {boolean} facts.authorPicked   Whether setFontWeight() ran this session.
  * @param {string}  facts.stateWeight    The modal's current weight value.
+ * @param {boolean} [facts.clearWeight]  An extension asked for the weight to be
+ *                                       removed: nothing is written even when
+ *                                       the span stores one.
  * @return {string} Weight to write, or '' to write none.
  */
 function resolveWeightToWrite(facts) {
 	var f = facts || {};
+	if (f.clearWeight) {
+		return '';
+	}
 	// A pick in this session wins over what the span already stores —
 	// otherwise changing the weight of already-weighted text would be a
 	// no-op that the select still displays as done (review of E-2).
@@ -89,7 +95,10 @@ function resolveWeightToWrite(facts) {
  * @param {boolean} args.isNewBlock       True when a typost/block is being created.
  * @param {string}  args.content          Block content HTML to store.
  * @param {string}  args.tagName          Tag for a new block (h2, p, ...).
- * @param {string}  args.effectiveWeight  Rendered weight (getEffectiveFontWeight()).
+ * @param {string}  args.effectiveWeight  Weight for the block: on a partial
+ *                                        conversion the weight the block itself
+ *                                        renders at (the pick stays on the span);
+ *                                        otherwise getEffectiveFontWeight().
  * @param {object}  args.state            Modal state (selectedFeatures, selectedFont,
  *                                        fontSize, fontSizeMin/Preferred/Max,
  *                                        fontWeight, letterSpacing, lineHeight).

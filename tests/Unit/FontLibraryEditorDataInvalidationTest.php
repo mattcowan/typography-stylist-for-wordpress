@@ -34,6 +34,10 @@ class FontLibraryEditorDataInvalidationTest extends TestCase {
         Functions\when('get_post_meta')->justReturn('');
         Functions\when('get_posts')->justReturn(array());
         Functions\when('do_action')->justReturn(null);
+        Functions\when('wp_generate_uuid4')->alias(function () {
+            static $n = 0;
+            return 'uuid-' . (++$n);
+        });
 
         // Every wildcard transient delete goes through $wpdb; capture the SQL.
         global $wpdb;
@@ -122,6 +126,46 @@ class FontLibraryEditorDataInvalidationTest extends TestCase {
         $this->assertArrayHasKey('typost_font_face_version', $updated);
         // … and nothing runs a wildcard delete (no stampede per face post).
         $this->assertSame(array(), $this->queries, 'a face save must not issue wildcard transient deletes');
+    }
+
+    public function test_deleting_a_font_face_rotates_the_css_caches_like_a_save() {
+        $deleted = array();
+        $updated = array();
+        Functions\when('delete_transient')->alias(function ($key) use (&$deleted) {
+            $deleted[] = $key;
+            return true;
+        });
+        Functions\when('update_option')->alias(function ($key, $value) use (&$updated) {
+            $updated[$key] = $value;
+            return true;
+        });
+        Functions\expect('wp_cache_flush')->never();
+
+        $plugin = $this->getPluginInstance();
+        $plugin->on_wp_font_family_deleted(908, $this->makePost('wp_font_face'));
+
+        foreach (array('typost_admin_font_css', 'typost_editor_font_css', 'typost_block_font_css') as $key) {
+            $this->assertContains($key, $deleted);
+        }
+        $this->assertArrayHasKey('typost_font_face_version', $updated);
+        $this->assertSame(array(), $this->editorDataDeletes(), 'a face deletion does not touch the editor data transients');
+        $this->assertSame(array(), $this->queries);
+    }
+
+    public function test_two_face_saves_get_different_versions() {
+        $versions = array();
+        Functions\when('update_option')->alias(function ($key, $value) use (&$versions) {
+            if ('typost_font_face_version' === $key) {
+                $versions[] = $value;
+            }
+            return true;
+        });
+        $plugin = $this->getPluginInstance();
+        $plugin->on_wp_font_face_saved(909, $this->makePost('wp_font_face'), false);
+        $plugin->on_wp_font_face_saved(910, $this->makePost('wp_font_face'), false);
+
+        $this->assertCount(2, $versions);
+        $this->assertNotSame($versions[0], $versions[1]);
     }
 
     public function test_the_editor_data_flush_is_gated_on_a_persistent_object_cache() {

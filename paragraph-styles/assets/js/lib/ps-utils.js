@@ -749,7 +749,8 @@
 		}
 
 		if (mode === 'font') {
-			var byName = {};
+			// Prototype-free: a family named "constructor" must be its own group
+			var byName = Object.create(null);
 			var order = [];
 			var noFont = [];
 			list.forEach(function (style) {

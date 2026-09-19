@@ -1,7 +1,7 @@
 /**
  * Tests for the canonical style-string helpers (parseStyleString /
  * buildStyleString) — the shared parser behind every span styling operation
- * (see todo/refactor-style-string-helpers.md).
+ * (see todo/archive/refactor-style-string-helpers.md).
  */
 
 import { parseStyleString, buildStyleString } from '../utils';

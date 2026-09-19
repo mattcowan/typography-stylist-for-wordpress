@@ -335,3 +335,17 @@ describe('recently used styles (Group by: Recently used)', () => {
 		expect(utils.BROWSER_GROUP_MODES).toContain('recent');
 	});
 });
+
+describe('groupParagraphStyles guards against prototype names', () => {
+	const { groupParagraphStyles } = require('../assets/js/lib/ps-utils.js');
+	test('a font family named like an Object property is its own group', () => {
+		const styles = [
+			{ id: 1, name: 'A', properties: { fontId: 1 } },
+			{ id: 2, name: 'B', properties: { fontId: 2 } },
+		];
+		const names = { 1: 'constructor', 2: '__proto__' };
+		const groups = groupParagraphStyles(styles, 'font', (s) => names[s.properties.fontId]);
+		expect(groups.map((g) => g.label)).toEqual(['__proto__', 'constructor']);
+		expect(groups.map((g) => g.styles.length)).toEqual([1, 1]);
+	});
+});

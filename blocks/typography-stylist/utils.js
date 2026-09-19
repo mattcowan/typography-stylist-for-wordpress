@@ -929,7 +929,7 @@ export function splitSpanAndApply(htmlContent, startOffset, endOffset, propertyD
  * Parse a CSS style string into a property→value object.
  *
  * The canonical style parser for the plugin (see
- * todo/refactor-style-string-helpers.md). Splits declarations on ';' and each
+ * todo/archive/refactor-style-string-helpers.md). Splits declarations on ';' and each
  * declaration on the FIRST ':' only — values containing colons survive intact.
  * Property names are trimmed and lowercased; malformed declarations are
  * skipped. Duplicate properties collapse to the last value at the first

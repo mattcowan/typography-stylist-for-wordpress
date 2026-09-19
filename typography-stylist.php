@@ -3516,7 +3516,33 @@ class Typost {
         // editor load rebuilds it.
         if ($post && isset($post->post_type) && 'wp_font_family' === $post->post_type) {
             $this->invalidate_editor_data_cache();
+            return;
         }
+        // A deleted face must leave the printed CSS the same way a saved one
+        // enters it (PR #194 review)
+        if ($post && isset($post->post_type) && 'wp_font_face' === $post->post_type) {
+            $this->invalidate_font_face_css();
+        }
+    }
+
+    /**
+     * Drop the caches that hold adopted Library faces.
+     *
+     * Shared by the wp_font_face save and delete handlers. Deliberately cheap
+     * (see on_wp_font_face_saved()): the three static CSS transients go by
+     * name, and the per-page frontend keys rotate through a fresh face
+     * version folded into get_font_css_cache_key().
+     *
+     * @since 2.3.0
+     */
+    private function invalidate_font_face_css() {
+        delete_transient('typost_admin_font_css');
+        delete_transient('typost_editor_font_css');
+        delete_transient('typost_block_font_css');
+        // A UUID rather than a timestamp: two saves in the same instant
+        // must not share a version (PR #194 review)
+        update_option('typost_font_face_version', wp_generate_uuid4(), false);
+        $this->font_library_bridge()->clear_snapshot_cache();
     }
 
     /**
@@ -3568,13 +3594,7 @@ class Typost {
         if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
             return;
         }
-        delete_transient('typost_admin_font_css');
-        delete_transient('typost_editor_font_css');
-        delete_transient('typost_block_font_css');
-        // Millisecond resolution: faces of one family are saved in quick
-        // succession and must not share a version (review F3)
-        update_option('typost_font_face_version', (string) round(microtime(true) * 1000), false);
-        $this->font_library_bridge()->clear_snapshot_cache();
+        $this->invalidate_font_face_css();
     }
 
     /**
