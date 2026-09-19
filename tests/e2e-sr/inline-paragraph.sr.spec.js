@@ -85,7 +85,8 @@ test.describe('Inline editor modal on a paragraph with NVDA', () => {
       focusTitles, openPhrase, focusAtOpen, stops, sizePhrase, responsivePhrase, sizeValue, sliderStops,
       minCrossPhrase, afterCrossPhrase, crossed, close, focusAfterClose,
     });
-    const orderWarningSpoken = h.spoke(log, /out of order|should be/i);
+    // Anchored to the two crossing presses, not the whole log
+    const orderWarningSpoken = /Font sizes are out of order/i.test(String(minCrossPhrase) + ' ' + String(afterCrossPhrase));
 
     // Product assertions.
     expect(sizeValue, 'ArrowDown should select Responsive').toBe('responsive');

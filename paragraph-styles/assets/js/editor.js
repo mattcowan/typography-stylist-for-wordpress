@@ -898,9 +898,8 @@
 		}
 
 		// Ungrouped: options straight under the listbox. Grouped: each group
-		// is a presentational item holding a visible heading (a div, not an
-		// h-tag — the modal already has its heading) and a role="group" list
-		// labelled by it, so a screen reader names the group on arrowing in.
+		// is a role="group" item named by its visible heading (a div, not an
+		// h-tag — the modal already has its heading); see renderGroup below.
 		var listChildren;
 		if (visibleGroups.length === 1 && visibleGroups[0].key === 'all') {
 			listChildren = rows.map(renderRow);
@@ -963,8 +962,12 @@
 						{ label: __('None', 'typost-paragraph-styles'), value: 'none' },
 						{ label: __('Font family', 'typost-paragraph-styles'), value: 'font' },
 						{ label: __('Size mode', 'typost-paragraph-styles'), value: 'size' },
+						// Offered only where the browser can remember picks; a blocked
+						// store would otherwise show a flat list that looks like
+						// "nothing used yet" (review F9)
+					].concat(storageOrNull() ? [
 						{ label: __('Recently used', 'typost-paragraph-styles'), value: 'recent' },
-					],
+					] : []),
 					onChange: onGroupByChange,
 					__nextHasNoMarginBottom: true,
 				})

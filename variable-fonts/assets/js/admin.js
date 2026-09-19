@@ -425,7 +425,13 @@
                 return;
             }
 
-            $button.prop('disabled', true);
+            // Keep focus on the button while the request runs (core's
+            // typostBeginBusy, aria-disabled); fall back if core is older
+            if (window.typostAdminBusy) {
+                if (!window.typostAdminBusy.begin($button)) { return; }
+            } else {
+                $button.prop('disabled', true);
+            }
             $status.text(__( 'Detecting axes…', 'typost-variable-fonts' ));
 
             var attempt;
@@ -460,11 +466,11 @@
                     result.axes.length
                 ));
             }).then(function() {
-                $button.prop('disabled', false);
+                if (window.typostAdminBusy) { window.typostAdminBusy.end($button); } else { $button.prop('disabled', false); }
             }, function() {
                 // Both detect paths resolve typed failures, so a rejection
                 // here is unexpected — recover the button and show an error.
-                $button.prop('disabled', false);
+                if (window.typostAdminBusy) { window.typostAdminBusy.end($button); } else { $button.prop('disabled', false); }
                 $status.text(detectFailureMessage('parse-failed'));
             });
         });

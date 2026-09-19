@@ -124,19 +124,6 @@ class FontLibraryEditorDataInvalidationTest extends TestCase {
         $this->assertSame(array(), $this->queries, 'a face save must not issue wildcard transient deletes');
     }
 
-    public function test_a_second_face_save_in_the_same_request_is_a_no_op() {
-        $updated = 0;
-        Functions\when('update_option')->alias(function () use (&$updated) {
-            $updated++;
-            return true;
-        });
-        $plugin = $this->getPluginInstance();
-        $plugin->on_wp_font_face_saved(905, $this->makePost('wp_font_face'), false);
-        $plugin->on_wp_font_face_saved(906, $this->makePost('wp_font_face'), false);
-
-        $this->assertLessThanOrEqual(1, $updated, 'the handler coalesces to one rotation per request');
-    }
-
     public function test_the_editor_data_flush_is_gated_on_a_persistent_object_cache() {
         Functions\when('wp_using_ext_object_cache')->justReturn(false);
         Functions\expect('wp_cache_flush')->never();

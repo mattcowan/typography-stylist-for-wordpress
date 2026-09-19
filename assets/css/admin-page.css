@@ -2033,10 +2033,10 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     margin-bottom: 0;
 }
 
-/* Busy controls stay focusable (see typostBeginBusy in admin-page.js) */
+/* Busy controls stay focusable (see typostBeginBusy in admin-page.js).
+   Mouse input is ignored; the label change ("Saving…") and aria-busy carry
+   the state, at full contrast (review F7/F8). */
 .typost-admin-wrap .typost-busy,
 .typost-admin-wrap .typost-busy:hover {
-    cursor: progress;
-    opacity: 0.7;
     pointer-events: none;
 }

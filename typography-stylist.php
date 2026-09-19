@@ -3533,15 +3533,12 @@ class Typost {
      * @param bool    $update  Whether this is an update
      */
     public function on_wp_font_family_saved($post_id, $post = null, $update = false) {
-        static $done = false;
-        if ($done || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
         if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
             return;
         }
-        // Once per request: a Library install saves the family more than once
-        $done = true;
         $this->invalidate_editor_data_cache();
     }
 
@@ -3565,18 +3562,18 @@ class Typost {
      * @param bool    $update  Whether this is an update
      */
     public function on_wp_font_face_saved($post_id, $post = null, $update = false) {
-        static $done = false;
-        if ($done || wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
             return;
         }
         if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
             return;
         }
-        $done = true;
         delete_transient('typost_admin_font_css');
         delete_transient('typost_editor_font_css');
         delete_transient('typost_block_font_css');
-        update_option('typost_font_face_version', (string) time(), false);
+        // Millisecond resolution: faces of one family are saved in quick
+        // succession and must not share a version (review F3)
+        update_option('typost_font_face_version', (string) round(microtime(true) * 1000), false);
         $this->font_library_bridge()->clear_snapshot_cache();
     }
 

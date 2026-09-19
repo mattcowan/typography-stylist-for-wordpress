@@ -168,6 +168,11 @@ function typostEndBusy(control, text) {
     el.removeAttribute('data-typost-label');
 }
 
+if (typeof window !== 'undefined') {
+    // Module admin scripts (variable-fonts) use the same busy state
+    window.typostAdminBusy = { begin: typostBeginBusy, end: typostEndBusy };
+}
+
 /**
  * Empty every `.typost-settings-ajax-message` container under `root` except
  * `keep`, so only one settings confirmation is on screen at a time. The
@@ -1150,7 +1155,13 @@ jQuery(document).ready(function($) {
         var originalState = !loadOnAllPages; // Store original state for rollback
 
         // Disable checkbox while saving
-        if (!typostBeginBusy($checkbox)) { return; }
+        if (!typostBeginBusy($checkbox)) {
+            // aria-disabled does not stop Space or a label click from
+            // flipping the box; show the value the running request is
+            // saving (review F2)
+            $checkbox.prop('checked', originalState);
+            return;
+        }
 
         // Update via REST API
         $.ajax({
@@ -1285,7 +1296,13 @@ jQuery(document).ready(function($) {
         var originalState = !loadOnAllPages; // Store original state for rollback
 
         // Disable checkbox while saving
-        if (!typostBeginBusy($checkbox)) { return; }
+        if (!typostBeginBusy($checkbox)) {
+            // aria-disabled does not stop Space or a label click from
+            // flipping the box; show the value the running request is
+            // saving (review F2)
+            $checkbox.prop('checked', originalState);
+            return;
+        }
 
         // Update via REST API
         $.ajax({
@@ -1570,9 +1587,7 @@ jQuery(document).ready(function($) {
         // Reset title and confirm button to their defaults; the
         // edit-replacement flow overrides them after this call.
         $modal.find('.typost-modal-header h2').text(deleteModalDefaults.title);
-        $modal.find('.typost-modal-confirm-delete')
-            .prop('disabled', false)
-            .text(deleteModalDefaults.confirmLabel);
+        typostEndBusy($modal.find('.typost-modal-confirm-delete'), deleteModalDefaults.confirmLabel);
 
         // Store currently focused element
         previouslyFocusedElement = document.activeElement;
@@ -1749,6 +1764,10 @@ jQuery(document).ready(function($) {
                     xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
                 },
                 success: function() {
+                    // The modal is outside the refreshed region, so the
+                    // button must leave its busy state here or the next
+                    // deletion finds it inert (review F1)
+                    typostEndBusy($btn, originalLabel);
                     closeDeletionModal();
 
                     // Show success message. Replace any earlier deletion
