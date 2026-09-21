@@ -58,6 +58,16 @@ describe('resolveWeightToWrite (E-2)', () => {
 		expect(resolveWeightToWrite({ explicitWeight: '', authorPicked: true, stateWeight: '700', clearWeight: true })).toBe('');
 	});
 
+	it('a clear followed by a conversion writes no span weight (PR #194 re-review)', () => {
+		// The bridge sets clearWeight on a falsy extension weight; the convert
+		// path passes the same flag to the span resolver, so the stale stored
+		// weight never reaches the converted block's span.
+		const facts = { explicitWeight: '600', authorPicked: false, stateWeight: '400', clearWeight: true };
+		expect(resolveWeightToWrite(facts)).toBe('');
+		const attrs = buildConvertBlockAttributes({ partialSelection: true, isNewBlock: true, content: 'x', tagName: 'p', effectiveWeight: '700' });
+		expect(attrs.fontWeight).toBe('700');
+	});
+
 	it('tolerates missing facts', () => {
 		expect(resolveWeightToWrite()).toBe('');
 		expect(resolveWeightToWrite({ authorPicked: true })).toBe('');

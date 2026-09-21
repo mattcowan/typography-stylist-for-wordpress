@@ -2178,15 +2178,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // anything stored says 700 — and the block's fontWeight defaults to
             // '400', which save.js always emits, so a straight conversion
             // visibly lightens the heading.
-            const convertFontWeight = this.getEffectiveFontWeight();
             // With a partial selection the block itself keeps the weight it
             // renders at; the author's pick stays on the span (PR #194 review)
-            const blockInheritedWeight = this.getBlockInheritedWeight() || this.getExplicitFontWeight() || '400';
+            const blockInheritedWeight = this.getBlockInheritedWeight() || (this._clearWeight ? '' : this.getExplicitFontWeight()) || '400';
+            // After an explicit clear the stored weight is stale, so a whole-
+            // block conversion takes the rendered weight instead of the value
+            // getEffectiveFontWeight() would read back off the span
+            const convertFontWeight = this._clearWeight
+                ? blockInheritedWeight
+                : this.getEffectiveFontWeight();
             // The weight the span itself gets (same rule as an apply, QA E-2)
             const spanWeight = resolveWeightToWrite({
                 explicitWeight: this.getExplicitFontWeight(),
                 authorPicked: this._authorPickedWeight,
-                stateWeight: this.state.fontWeight
+                stateWeight: this.state.fontWeight,
+                clearWeight: this._clearWeight
             });
 
             let contentForBlock;
