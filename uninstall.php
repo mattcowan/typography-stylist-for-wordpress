@@ -30,6 +30,7 @@ delete_option('typost_global_settings');
 // Paragraph Styles module (bundled in v2.3)
 delete_option('typost_paragraph_styles');
 delete_option('typost_paragraph_styles_next_id');
+delete_option('typost_font_face_version');
 delete_option('typost_ps_toolbar_button');
 
 // Glyphs Panel module (bundled in v2.0)

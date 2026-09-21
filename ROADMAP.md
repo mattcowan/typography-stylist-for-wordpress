@@ -6,8 +6,9 @@ This replaces the previous roadmap (last touched Dec 2025 at v1.0.6), whose
 items are all accounted for below — shipped, still planned, or explicitly
 parked. Items here are ideas and intentions, not committed features.
 
-Related planning docs: `todo/` holds per-item working docs; deferred infra
-work also lives in RELEASING.md § Future work.
+Related planning docs: `todo/` holds per-item working docs for open items and
+`todo/archive/` the docs of shipped or resolved ones (kept for their design
+history); deferred infra work also lives in RELEASING.md § Future work.
 
 ---
 
@@ -25,26 +26,23 @@ work also lives in RELEASING.md § Future work.
 | Font-only ZIP uploads (Google Fonts downloads) | 2.1.0 |
 | Automatic font-weight detection (uploads, Adobe, WP Library) + retrofit button | 2.1.2 |
 | wp.org Live Preview (Playground blueprint) | 2.1.2 asset cycle |
+| Fit-to-width font sizing (was "Planned") | 2.2.2 — third `fontSize` mode, WYSIWYG editing, container-query frontend; 2.2.3 added per-selection relative size and shift. Design notes: [todo/archive/feature-fit-to-width-sizing.md](todo/archive/feature-fit-to-width-sizing.md) |
+| Paragraph Styles (was the "Presets Library" remainder) | 2.3.0 — bundled module, visual style browser, optional toolbar button |
+| 2.2.0 editor-robustness batch (was "In progress") | 2.2.0 |
 
 ## In progress
 
 - **Playground demo upgrade** — wedding-invitation showcase content for the
   wp.org Live Preview blueprint (design in progress; blueprint templatizes
   font IDs at runtime).
-- **2.2.0 editor-robustness batch** (unreleased; entries parked in
-  changelog.txt) — mixed-selection per-run property application,
-  glyph-insertion styling preservation, Glyphs Panel auto-alternates and
-  context-driven italic-face browsing, QFT descendant-span override and
-  selection-resolver hardening, Font Style (visual italic) controls across
-  block/QFT/inline editors, variable-font axis-session fixes,
-  conversion-to-block styling preservation, and the style-string helper
-  refactor (see Shipped).
 
 ## Planned (next up)
 
-- **Fit-to-width font sizing** — per-line "scale text to fill 100% of the
-  row" block sizing mode. Starter prompt with full design notes:
-  [todo/feature-fit-to-width-sizing.md](todo/feature-fit-to-width-sizing.md).
+- **OpenType features for `core/site-title` and `core/site-tagline`** — both
+  blocks pass `allowedFormats: []`, so the inline format can never appear
+  there; the fix is block-level typography attributes on those two blocks.
+  Verified finding and design sketch:
+  [todo/site-title-tagline-opentype.md](todo/site-title-tagline-opentype.md).
 - **Per-font-family fallbacks** (High on the old roadmap; still open) —
   fallbacks per family instead of per kit/project. Cross-referenced from
   DOCUMENTATION.md. High complexity: data migration, UI, REST, CSS gen.
@@ -52,7 +50,7 @@ work also lives in RELEASING.md § Future work.
   canonical `parseStyleString`/`buildStyleString`, unified
   `mergeTypostSpanStyling`, shared QFT selection resolver, depth-guard
   enforcement). History:
-  [todo/refactor-style-string-helpers.md](todo/refactor-style-string-helpers.md).
+  [todo/archive/refactor-style-string-helpers.md](todo/archive/refactor-style-string-helpers.md).
 - **Automatic per-font feature detection** — the Glyphs Panel already parses
   GSUB and knows which features a font really has; surface that to
   auto-configure the per-font feature-visibility settings (manual visibility
@@ -70,7 +68,7 @@ work also lives in RELEASING.md § Future work.
   could run it. Deliberately skipped so far to keep the pipeline simple.
 - **Real 2× banner** — `.wordpress-org/banner-1544x500.png` is an upscaled
   copy, not true retina; regenerate from source art.
-- **Editor-iframe QA checklist** — [todo/editor-iframe-testing.md](todo/editor-iframe-testing.md)
+- **Editor-iframe QA checklist** — [todo/archive/editor-iframe-testing.md](todo/archive/editor-iframe-testing.md)
   (verified March 2026 against WP 7.0-beta2; re-run on major WP releases).
 - **Branch hygiene** — many merged issue branches were never pruned
   (`bugfix/#81…`, `feature/#76…`, `feature/#41-variable-fonts`, etc.).

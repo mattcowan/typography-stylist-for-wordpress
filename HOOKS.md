@@ -506,7 +506,8 @@ Descriptors without an `id` or a callable `onClick` are dropped.
 {
     wordBoundaryWarning: '',      // '' when the selection is fine, or off in Settings → Accessibility
     canConvert: false,            // whether the conversion is offered as the fix
-    convertBlockedMessage: '',    // why it isn't, when it is worth explaining
+    convertBlockedMessage: '',    // why it isn't: a lock, a restrictive parent, or (since the
+                                  // notice recommends converting) a block type with no mapping
     settingsUrl: '…&tab=accessibility',
 }
 ```

@@ -59,8 +59,9 @@ test.describe('Inline editor modal with NVDA', () => {
 
     // "Browse styles…" (Session B feature): focus the button, open the style
     // browser with Enter through NVDA, record what it announces and where
-    // focus lands (a style row, SR-6), then close it with Escape. The inline
-    // modal stays open underneath, so the final close below still applies.
+    // focus lands (the style listbox with a cursor row as its active
+    // descendant, SR-6), then close it with Escape. The inline modal stays
+    // open underneath, so the final close below still applies.
     const browseButton = page.locator('.components-modal__frame .typost-ps-browse-btn');
     let browse = null;
     if (await browseButton.count()) {
@@ -73,6 +74,13 @@ test.describe('Inline editor modal with NVDA', () => {
         openPhrase: await nvda.lastSpokenPhrase(),
         focusAtOpen: await h.describeFocus(page),
         rowCount: await page.locator('.typost-ps-browser-row').count(),
+        // The row the listbox points at through aria-activedescendant
+        activeDescendant: await page.evaluate(() => {
+          const a = document.activeElement;
+          const id = a && a.getAttribute('aria-activedescendant');
+          const row = id ? document.getElementById(id) : null;
+          return row ? { id, className: String(row.className || '') } : null;
+        }),
       };
       browse.close = await h.closeModalWithEscape(page, nvda, '.typost-ps-browser-modal');
       await h.delay(800);
@@ -95,12 +103,14 @@ test.describe('Inline editor modal with NVDA', () => {
 
     const log = await h.saveSpeechLog(nvda, 'inline-modal', { focusTitles, openPhrase, focusAtOpen, stops, toggled, browse, close, unnamedControls, silentStops, longestPhrase });
 
-    // Browse styles: the browser announces itself, opens on a style row, and
-    // Escape returns focus to the button that opened it.
+    // Browse styles: the browser announces itself, opens on the style listbox
+    // with a cursor row as its active descendant, and Escape returns focus to
+    // the button that opened it.
     expect(browse, 'the inline modal should offer "Browse styles…"').not.toBeNull();
     expect(browse.openPhrase, 'opening the browser should announce the dialog').toMatch(/Paragraph Styles/i);
     if (browse.rowCount > 0) {
-      expect(browse.focusAtOpen && browse.focusAtOpen.className, 'the browser should open on a style row (SR-6)').toContain('typost-ps-browser-row');
+      expect(browse.focusAtOpen && browse.focusAtOpen.role, 'the browser should open on the style listbox (SR-6)').toBe('listbox');
+      expect(browse.activeDescendant && browse.activeDescendant.className, 'the listbox should point at a style row').toContain('typost-ps-browser-row');
     }
     expect(browse.close.closed, 'Escape should close the browser').toBe(true);
     // Opening the browser makes WordPress close the inline modal (as with the

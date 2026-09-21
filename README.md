@@ -46,8 +46,8 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 ### Paragraph Styles (built in, v2.3+)
 - Save the current typography configuration (font, weight, size, spacing, OpenType features, variable font axes) as a named style — like paragraph styles in InDesign
 - Fit-to-width blocks save as styles too: fit mode, its maximum-size cap, and the fallback sizes are all captured; applying such a style switches the target block into fit mode (inline text renders the style's fluid fallback size instead)
-- Apply styles from a dropdown at the top of the inline editor, the Quick Feature Toggles, and the block sidebar
-- Optional style browser: enable "Paragraph Styles Toolbar Button" in Options to add a block toolbar button that shows every saved style rendered in its own typeface, so you can see a style before applying it (off by default)
+- Apply a style from the "Browse styles…" button at the top of the inline editor, or from the dropdown in the Quick Feature Toggles and the block sidebar
+- The style browser shows every saved style rendered in its own typeface, with your selected words as the sample text. It has a search box, a "Group by" control (font family, size mode, recently used), and keyboard navigation with first-letter type-ahead. Turn on "Paragraph Styles Toolbar Button" in Options to open it from the block toolbar (off by default)
 - Styled text renders through a shared CSS class (`.typost-ps-{id}` / `data-style-id`), so "Update Style" restyles every use at once; "Detach Style" converts back to independent inline styling
 - Manage (rename/delete) styles from the Paragraph Styles tab in Settings → Typography Stylist
 
@@ -396,6 +396,29 @@ The plugin is designed for the WordPress block editor (Gutenberg). Compatibility
 The plugin uses native CSS `font-feature-settings` which is hardware-accelerated in modern browsers. Performance impact depends on font file sizes and loading strategy. The plugin includes JavaScript in the block editor but uses only CSS for frontend rendering.
 
 ## Changelog
+
+### Version 2.3.0
+
+- **NEW: Paragraph Styles are built in.** Save the current typography as a named style and apply it anywhere. Styled text renders through a shared CSS class, so "Update Style" changes every use at once. Fit-to-width blocks save as styles too.
+- **NEW: a visual style browser.** "Browse styles…" in the inline editor (and an optional block toolbar button) shows every style rendered in its own typeface, with your selected words as the sample. Search, group by font family, size mode or recently used, and move through the list with the keyboard.
+- **NEW: optional Glyphs and Paragraph Styles buttons in the block toolbar, and a choice of what Enter does in a Typography Stylist block.** Both settings are in Options and off by default.
+- **Improved: the settings page updates in place.** Uploading, adding, editing, deleting and registering fonts, and every settings form, no longer reload the page. Buttons keep keyboard focus while a request runs.
+- **Improved: screen-reader and keyboard use of the editor panels.** Dialog names are read first, every control is named, the panels have fewer Tab stops, focus stays inside an open panel, and contrast meets WCAG AA.
+- **Fixed: styled text kept the wrong weight or font.** A feature toggle no longer makes a bold heading light; text styled only by the theme keeps its weight; a Font Library font that is installed but not activated now prints its @font-face; a font installed in the Library appears in the pickers on the next editor load.
+- **Fixed: conversion, nesting and sizing in the editors.** "Convert to Typography Stylist Block" keeps the selection's styling on the selection only; the block reports when styling cannot nest deeper; the inline editor warns when responsive sizes are out of order; "Responsive (fluid)" applies at once in the Quick Feature Toggles.
+- **Fixed: the Glyphs Panel** swapped or duplicated the wrong glyph, opened on the wrong font for theme-styled text, and refused `U+XXXX` input.
+- **Fixed: paragraph styles** dropped italic, went stale after in-session saves, lost to theme heading CSS, and did not load fonts for class-only content.
+- Full details are in changelog.txt.
+
+### Version 2.2.3
+
+- **NEW: Relative size and vertical shift for selected text in Fit-to-width blocks.** Select part of a fitted line and scale it relative to the line's fitted size or nudge it up and down; the line still fills the block width at every screen size, with no frontend JavaScript. The two sliders appear in the Quick Feature Toggles when the block uses Fit to width sizing.
+
+### Version 2.2.2
+
+- **NEW: Fit-to-width sizing.** A third font-size mode on the Typography Stylist block: each line is sized so its text spans the full block width. Editing is WYSIWYG, the frontend uses CSS container queries with an optional maximum-size cap and a responsive fallback. Existing blocks are untouched.
+- **Fixed: variable-font axis sliders in the Quick Feature Toggles change only the selected text**, and an axis change no longer leaks into other blocks.
+- **Fixed: fonts registered in the WP Font Library keep their webfont on the frontend.** The plugin prints its own @font-face whenever WordPress does not.
 
 ### Version 2.2.1
 

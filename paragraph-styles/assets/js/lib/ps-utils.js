@@ -590,13 +590,358 @@
 		});
 	}
 
+	/**
+	 * The text each browser row renders in its style: the author's selection,
+	 * so the preview shows the words about to be styled rather than the
+	 * style's name.
+	 *
+	 * Whitespace is collapsed (a selection can span line breaks), and the
+	 * result is capped: a long selection is cut on the last whitespace before
+	 * the limit when one sits past half the limit, else hard-cut, and gets a
+	 * single ellipsis. An empty or whitespace-only selection (or none at all,
+	 * as with a caret) falls back to the style name.
+	 *
+	 * @param {string} selectionText Selected text, or undefined
+	 * @param {string} styleName     Fallback
+	 * @param {number} maxChars      Cap before the ellipsis (default 40)
+	 * @return {string} Sample text
+	 */
+	function buildBrowserSampleText(selectionText, styleName, maxChars) {
+		var limit = parseInt(maxChars, 10) > 0 ? parseInt(maxChars, 10) : 40;
+		var text = String(selectionText || '').replace(/\s+/g, ' ').trim();
+		if (!text) {
+			return String(styleName || '');
+		}
+		if (text.length <= limit) {
+			return text;
+		}
+		var cut = text.lastIndexOf(' ', limit);
+		if (cut <= limit / 2) {
+			cut = limit;
+		}
+		return text.slice(0, cut).replace(/\s+$/, '') + '…';
+	}
+
+	/**
+	 * Group-by modes the browser offers.
+	 */
+	var BROWSER_GROUP_MODES = ['none', 'font', 'size', 'recent'];
+
+	/** localStorage key holding the ids of the styles this author applied last. */
+	var RECENT_STYLES_KEY = 'typost_ps_recent_styles';
+
+	/** How many recently used style ids are remembered. */
+	var RECENT_STYLES_LIMIT = 8;
+
+	/**
+	 * Read the recently used style ids, most recent first.
+	 *
+	 * Browser storage is a per-viewer convenience: it can be missing, blocked
+	 * or hold garbage, so every failure reads as "nothing remembered".
+	 *
+	 * @param {Storage} storage window.localStorage (or a stand-in)
+	 * @return {number[]} Style ids, most recent first, deduplicated
+	 */
+	function readRecentStyleIds(storage) {
+		var raw;
+		try {
+			raw = storage && storage.getItem ? storage.getItem(RECENT_STYLES_KEY) : null;
+		} catch (e) {
+			return [];
+		}
+		if (!raw) return [];
+		var parsed;
+		try {
+			parsed = JSON.parse(raw);
+		} catch (e) {
+			return [];
+		}
+		if (!Array.isArray(parsed)) return [];
+		var seen = {};
+		return parsed.map(function (id) { return parseInt(id, 10); }).filter(function (id) {
+			if (!(id > 0) || seen[id]) return false;
+			seen[id] = true;
+			return true;
+		}).slice(0, RECENT_STYLES_LIMIT);
+	}
+
+	/**
+	 * Remember a style as the most recently used and return the new list.
+	 *
+	 * @param {Storage} storage window.localStorage (or a stand-in)
+	 * @param {number}  styleId Style just applied
+	 * @param {number}  [limit] Ids to keep (default RECENT_STYLES_LIMIT)
+	 * @return {number[]} The stored list, most recent first
+	 */
+	function recordRecentStyleId(storage, styleId, limit) {
+		var id = parseInt(styleId, 10);
+		var keep = parseInt(limit, 10) || RECENT_STYLES_LIMIT;
+		var list = readRecentStyleIds(storage);
+		if (!(id > 0)) return list;
+		list = [id].concat(list.filter(function (other) { return other !== id; })).slice(0, keep);
+		try {
+			if (storage && storage.setItem) storage.setItem(RECENT_STYLES_KEY, JSON.stringify(list));
+		} catch (e) {
+			// Storage blocked or full: the list still works for this open modal
+		}
+		return list;
+	}
+
+	/**
+	 * Which size bucket a style's fontSize falls in for the "Size mode" grouping.
+	 *
+	 * @param {*} fontSize Stored fontSize property
+	 * @return {string} 'fixed' | 'responsive' | 'fit' | 'inherit'
+	 */
+	function sizeModeOf(fontSize) {
+		if (fontSize === 'responsive') return 'responsive';
+		if (fontSize === 'fit') return 'fit';
+		if (fontSize !== undefined && fontSize !== null && fontSize !== '' &&
+			isFinite(fontSize) && Number(fontSize) > 0) {
+			return 'fixed';
+		}
+		return 'inherit';
+	}
+
+	/**
+	 * Group styles for the browser list.
+	 *
+	 * Runs on the search-filtered list and before paging, so a group heading
+	 * describes exactly the rows under it. Styles keep their incoming order
+	 * inside a group.
+	 *
+	 * - 'font': one group per font name from fontNameOf(style), ordered
+	 *   alphabetically (case-insensitive); styles whose font is unknown or
+	 *   unset collect in a last "No font set" group.
+	 * - 'size': "Fixed size", "Responsive", "Fit to width", "Inherited size",
+	 *   in that fixed order, only when non-empty.
+	 * - 'recent': the styles in recentIds (most recent first) under "Recently
+	 *   used", the rest under "Other styles"; with nothing remembered among
+	 *   the list the flat list is returned.
+	 * - anything else: a single group with key 'all' and no label, which the
+	 *   browser renders as the flat list.
+	 *
+	 * @param {Array}    styles     Styles to group (already filtered)
+	 * @param {string}   mode       'none' | 'font' | 'size' | 'recent'
+	 * @param {Function} fontNameOf style → font name ('' / null when none)
+	 * @param {number[]} [recentIds] Recently used style ids, most recent first
+	 * @return {Array} [{ key, label, styles }] in display order
+	 */
+	function groupParagraphStyles(styles, mode, fontNameOf, recentIds) {
+		var list = (styles || []).filter(function (style) { return !!style; });
+
+		if (mode === 'recent') {
+			var ids = (recentIds || []).map(function (id) { return String(id); });
+			var byId = {};
+			list.forEach(function (style) { byId[String(style.id)] = style; });
+			var recent = ids.map(function (id) { return byId[id]; }).filter(function (style) { return !!style; });
+			if (!recent.length) {
+				return [{ key: 'all', label: '', styles: list }];
+			}
+			var recentSet = {};
+			recent.forEach(function (style) { recentSet[String(style.id)] = true; });
+			var others = list.filter(function (style) { return !recentSet[String(style.id)]; });
+			var out = [{ key: 'recent', label: translate('Recently used'), styles: recent }];
+			if (others.length) {
+				out.push({ key: 'recent:others', label: translate('Other styles'), styles: others });
+			}
+			return out;
+		}
+
+		if (mode === 'font') {
+			// Prototype-free: a family named "constructor" must be its own group
+			var byName = Object.create(null);
+			var order = [];
+			var noFont = [];
+			list.forEach(function (style) {
+				var name = fontNameOf ? String(fontNameOf(style) || '').trim() : '';
+				if (!name) {
+					noFont.push(style);
+					return;
+				}
+				if (!byName[name]) {
+					byName[name] = [];
+					order.push(name);
+				}
+				byName[name].push(style);
+			});
+			order.sort(function (a, b) {
+				var la = a.toLowerCase();
+				var lb = b.toLowerCase();
+				if (la < lb) return -1;
+				if (la > lb) return 1;
+				return a < b ? -1 : (a > b ? 1 : 0);
+			});
+			var groups = order.map(function (name) {
+				return { key: 'font:' + name, label: name, styles: byName[name] };
+			});
+			if (noFont.length) {
+				groups.push({ key: 'font:none', label: translate('No font set'), styles: noFont });
+			}
+			return groups;
+		}
+
+		if (mode === 'size') {
+			var buckets = { fixed: [], responsive: [], fit: [], inherit: [] };
+			list.forEach(function (style) {
+				buckets[sizeModeOf(style.properties && style.properties.fontSize)].push(style);
+			});
+			return [
+				{ key: 'size:fixed', label: translate('Fixed size'), styles: buckets.fixed },
+				{ key: 'size:responsive', label: translate('Responsive'), styles: buckets.responsive },
+				{ key: 'size:fit', label: translate('Fit to width'), styles: buckets.fit },
+				{ key: 'size:inherit', label: translate('Inherited size'), styles: buckets.inherit },
+			].filter(function (group) { return group.styles.length > 0; });
+		}
+
+		return [{ key: 'all', label: '', styles: list }];
+	}
+
+	/**
+	 * Cut grouped styles down to the first visibleCount rows in display order.
+	 *
+	 * Paging counts rows across groups, so "Show more" reveals the next page
+	 * wherever the previous one stopped — the boundary can fall inside a
+	 * group. Groups left with no visible rows are dropped, so no heading ever
+	 * stands over an empty list.
+	 *
+	 * @param {Array}  groups       Output of groupParagraphStyles
+	 * @param {number} visibleCount Rows to keep
+	 * @return {{groups: Array, hiddenCount: number}} Visible groups and how many rows are cut
+	 */
+	function paginateGroups(groups, visibleCount) {
+		var remaining = Math.max(0, parseInt(visibleCount, 10) || 0);
+		var visible = [];
+		var hidden = 0;
+		(groups || []).forEach(function (group) {
+			var rows = group.styles || [];
+			var take = Math.min(remaining, rows.length);
+			if (take > 0) {
+				visible.push({ key: group.key, label: group.label, styles: rows.slice(0, take) });
+			}
+			hidden += rows.length - take;
+			remaining -= take;
+		});
+		return { groups: visible, hiddenCount: hidden };
+	}
+
+	/**
+	 * Flatten paginated groups into the rows the listbox shows, in DOM order.
+	 *
+	 * @param {Array} groups Output of paginateGroups().groups
+	 * @return {Array} Styles in display order
+	 */
+	function flattenGroups(groups) {
+		var rows = [];
+		(groups || []).forEach(function (group) {
+			rows = rows.concat(group.styles || []);
+		});
+		return rows;
+	}
+
+	/**
+	 * Where the listbox cursor sits: the remembered style if it is still
+	 * shown, else the applied style's row, else the first row (-1 when the
+	 * list is empty). Keyed by style id rather than index so the cursor
+	 * survives search, grouping and paging re-renders.
+	 *
+	 * @param {Array}  rows          Visible styles in DOM order
+	 * @param {*}      cursorStyleId Remembered cursor style id (0 for none)
+	 * @param {*}      activeStyleId Applied style id (0 for none)
+	 * @return {number} Row index
+	 */
+	function resolveBrowserCursorIndex(rows, cursorStyleId, activeStyleId) {
+		var list = rows || [];
+		function indexOf(id) {
+			if (!id) return -1;
+			for (var i = 0; i < list.length; i++) {
+				if (list[i] && String(list[i].id) === String(id)) return i;
+			}
+			return -1;
+		}
+		var index = indexOf(cursorStyleId);
+		if (index === -1) index = indexOf(activeStyleId);
+		if (index === -1 && list.length) index = 0;
+		return index;
+	}
+
+	/**
+	 * The row a navigation key moves the listbox cursor to.
+	 *
+	 * ArrowDown/ArrowUp step within bounds (no wrap, per the listbox
+	 * pattern), Home/End jump. Returns -1 for any other key so the caller can
+	 * leave it alone (Escape belongs to the Modal, Enter/Space apply).
+	 *
+	 * @param {string} key         KeyboardEvent.key
+	 * @param {number} cursorIndex Current cursor row
+	 * @param {number} rowCount    Visible rows
+	 * @return {number} New cursor index, or -1 when the key is not a navigation key
+	 */
+	function resolveBrowserCursorKey(key, cursorIndex, rowCount) {
+		if (!rowCount) return -1;
+		var last = rowCount - 1;
+		var current = Math.max(0, Math.min(last, parseInt(cursorIndex, 10) || 0));
+		switch (key) {
+			case 'ArrowDown': return Math.min(last, current + 1);
+			case 'ArrowUp':   return Math.max(0, current - 1);
+			case 'Home':      return 0;
+			case 'End':       return last;
+			default:          return -1;
+		}
+	}
+
+	/**
+	 * First-letter type-ahead for the listbox.
+	 *
+	 * The search starts after the cursor and wraps around, ending on the
+	 * cursor row itself, so a repeated single character cycles through every
+	 * row starting with it, and a multi-character buffer matches the first
+	 * row whose label starts with the whole buffer.
+	 *
+	 * @param {Array}  labels      Row labels, lowercased, in DOM order
+	 * @param {string} typedBuffer Characters typed within the reset window
+	 * @param {number} cursorIndex Current cursor row (-1 for none)
+	 * @return {number} Matching row index, or -1
+	 */
+	function findTypeAheadMatch(labels, typedBuffer, cursorIndex) {
+		var list = labels || [];
+		var buffer = String(typedBuffer || '').toLowerCase();
+		if (!buffer || !list.length) return -1;
+		// "aaa" means "next row starting with a", not a row named "aaa"
+		var needle = buffer.length > 1 && buffer === new Array(buffer.length + 1).join(buffer.charAt(0))
+			? buffer.charAt(0)
+			: buffer;
+		var n = list.length;
+		var start = parseInt(cursorIndex, 10);
+		if (isNaN(start) || start < 0) start = -1;
+		for (var step = 1; step <= n; step++) {
+			var index = (start + step) % n;
+			if (String(list[index] || '').toLowerCase().indexOf(needle) === 0) {
+				return index;
+			}
+		}
+		return -1;
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
 		roundLineHeight: roundLineHeight,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
 		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
+		BROWSER_GROUP_MODES: BROWSER_GROUP_MODES,
+		RECENT_STYLES_KEY: RECENT_STYLES_KEY,
+		RECENT_STYLES_LIMIT: RECENT_STYLES_LIMIT,
+		readRecentStyleIds: readRecentStyleIds,
+		recordRecentStyleId: recordRecentStyleId,
 		filterParagraphStyles: filterParagraphStyles,
+		buildBrowserSampleText: buildBrowserSampleText,
+		groupParagraphStyles: groupParagraphStyles,
+		paginateGroups: paginateGroups,
+		flattenGroups: flattenGroups,
+		resolveBrowserCursorIndex: resolveBrowserCursorIndex,
+		resolveBrowserCursorKey: resolveBrowserCursorKey,
+		findTypeAheadMatch: findTypeAheadMatch,
 		buildPropertiesFromState: buildPropertiesFromState,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,

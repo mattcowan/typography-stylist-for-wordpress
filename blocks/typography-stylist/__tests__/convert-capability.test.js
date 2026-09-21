@@ -10,6 +10,7 @@ const {
 	CONVERTIBLE_BLOCKS,
 	resolveConvertCapability,
 	shouldExplainConvertBlock,
+	shouldExplainInNotice,
 } = require('../../../assets/js/convert-capability.js');
 
 const allowed = {
@@ -118,5 +119,21 @@ describe('shouldExplainConvertBlock', () => {
 		expect(shouldExplainConvertBlock(CONVERT_BLOCKED.NONE)).toBe(false);
 		expect(shouldExplainConvertBlock(CONVERT_BLOCKED.ALREADY)).toBe(false);
 		expect(shouldExplainConvertBlock(CONVERT_BLOCKED.UNSUPPORTED)).toBe(false);
+	});
+});
+
+describe('shouldExplainInNotice (QA E-4)', () => {
+	it('explains an unsupported block type inside the word-boundary notice', () => {
+		expect(shouldExplainInNotice(CONVERT_BLOCKED.UNSUPPORTED)).toBe(true);
+	});
+
+	it('still explains the two capability failures', () => {
+		expect(shouldExplainInNotice(CONVERT_BLOCKED.LOCKED)).toBe(true);
+		expect(shouldExplainInNotice(CONVERT_BLOCKED.PARENT)).toBe(true);
+	});
+
+	it('stays silent when the action is present or already done', () => {
+		expect(shouldExplainInNotice(CONVERT_BLOCKED.NONE)).toBe(false);
+		expect(shouldExplainInNotice(CONVERT_BLOCKED.ALREADY)).toBe(false);
 	});
 });

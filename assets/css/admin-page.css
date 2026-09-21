@@ -1550,6 +1550,18 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     box-shadow: none;
 }
 
+/* The fonts region takes focus after a no-reload refresh (tabindex="-1");
+   the browser draws no ring on a focused div, so give it the same 2px
+   scheme-colored outline as the other focus targets (QA finding E-12). */
+#typost-fonts-region:focus-visible,
+#typost-fonts-region.typost-focus-ring:focus {
+    /* .typost-focus-ring: the refresh's programmatic focus, which
+       :focus-visible ignores when focus had fallen to <body> */
+    outline: 2px solid var(--typost-color-primary);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
 /* ── Expand toggle button ─────────────────────────────────────────────── */
 .typost-font-header {
     display: flex;
@@ -1876,6 +1888,23 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     border-color: var(--typost-color-primary-dark);
 }
 
+/* Default scheme: WordPress 7 secondary buttons are transparent with the
+   admin theme color (#007cba) as text, which measures only 4.20-4.38:1 on
+   the tinted panel backgrounds (#fafafa, #f0f6fc, #faf9f6). Use the darker
+   primary token (#135e96, 6.29:1 or better on each of them) so the buttons
+   keep their link-styled look and pass AA (QA finding E-9). The dark,
+   alice-blue, and high-contrast schemes set their own .button colors below. */
+[data-color-scheme="default"] .button:not(.button-primary) {
+    color: var(--typost-color-primary-dark);
+    border-color: var(--typost-color-primary-dark);
+}
+
+[data-color-scheme="default"] .button:not(.button-primary):hover,
+[data-color-scheme="default"] .button:not(.button-primary):focus {
+    color: var(--typost-color-primary-dark);
+    border-color: var(--typost-color-primary-dark);
+}
+
 /* Alice blue: default WP button text (#007cba) drops below 4.5:1 on the
    tinted panel backgrounds — give buttons an explicit surface background
    and the darker scheme primary */
@@ -2002,4 +2031,12 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     flex-basis: 100%;
     margin-top: 8px;
     margin-bottom: 0;
+}
+
+/* Busy controls stay focusable (see typostBeginBusy in admin-page.js).
+   Mouse input is ignored; the label change ("Saving…") and aria-busy carry
+   the state, at full contrast (review F7/F8). */
+.typost-admin-wrap .typost-busy,
+.typost-admin-wrap .typost-busy:hover {
+    pointer-events: none;
 }

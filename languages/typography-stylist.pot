@@ -1873,3 +1873,129 @@ msgstr ""
 #: blocks/typography-stylist/edit.js
 msgid "Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?"
 msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior."
+msgstr ""
+
+#: assets/js/block-editor.js
+msgid "Conversion is available for heading and paragraph blocks."
+msgstr ""
+
+#. translators: %d: maximum number of nested styled spans
+#: blocks/typography-stylist/utils.js
+msgid "Maximum nesting depth (%d) reached. Select the whole styled text to change it."
+msgstr ""
+
+#: blocks/typography-stylist/utils.js
+msgid "The styling could not be applied to this selection."
+msgstr ""
+
+#: includes/admin-page.php
+msgid "Font list"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Unknown Font"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Deleted Font"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Replacement Font"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Global Load"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Actions"
+msgstr ""
+
+#. translators: %s: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "ID: %s"
+msgstr ""
+
+#. translators: 1: font name, 2: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "%1$s (ID: %2$s)"
+msgstr ""
+
+#: typography-stylist.php
+msgid "No font replacements configured."
+msgstr ""
+
+#. translators: %s: comma-separated list of font IDs
+#: typography-stylist.php
+#, php-format
+msgid "Unassigned IDs: %s"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Edit"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Remove"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Edit Font Replacement"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Update Replacement"
+msgstr ""
+
+#. translators: %s: numeric font ID
+#: typography-stylist.php
+#, php-format
+msgid "Select a new replacement font for ID %s."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Invalid font ID. Please refresh the page and try again."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Remove this font replacement mapping?"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to remove replacement."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to update global load setting."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Please select a deleted font ID."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Please select a replacement font."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Invalid font ID (0). Please select a valid ID."
+msgstr ""
+
+#: typography-stylist.php
+msgid "Add Replacement"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Replacement mapping added successfully!"
+msgstr ""
+
+#: typography-stylist.php
+msgid "Failed to add replacement mapping."
+msgstr ""
+

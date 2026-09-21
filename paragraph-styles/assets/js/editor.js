@@ -40,6 +40,15 @@
 	var resolveBrowserActiveStyleId = utils.resolveBrowserActiveStyleId;
 	var filterParagraphStyles    = utils.filterParagraphStyles;
 	var BROWSER_PAGE_SIZE        = utils.BROWSER_PAGE_SIZE;
+	var buildBrowserSampleText   = utils.buildBrowserSampleText;
+	var readRecentStyleIds       = utils.readRecentStyleIds;
+	var recordRecentStyleId      = utils.recordRecentStyleId;
+	var groupParagraphStyles     = utils.groupParagraphStyles;
+	var paginateGroups           = utils.paginateGroups;
+	var flattenGroups            = utils.flattenGroups;
+	var resolveBrowserCursorIndex = utils.resolveBrowserCursorIndex;
+	var resolveBrowserCursorKey  = utils.resolveBrowserCursorKey;
+	var findTypeAheadMatch       = utils.findTypeAheadMatch;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
@@ -69,6 +78,25 @@
 	// Get paragraph styles from localized data
 	function getStyles() {
 		return (window.typostData && window.typostData.paragraphStyles) || [];
+	}
+
+	// DOM ids for the browser's listbox rows and group headings. One browser
+	// is mounted at a time (openBrowser closes any previous one), so the
+	// style id / group index alone keeps them unique.
+	function rowDomId(styleId) {
+		return 'typost-ps-browser-row-' + String(styleId).replace(/[^A-Za-z0-9_-]/g, '');
+	}
+	/** window.localStorage when the browser allows it, else null. */
+	function storageOrNull() {
+		try {
+			return window.localStorage || null;
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function groupDomId(index) {
+		return 'typost-ps-browser-group-' + index;
 	}
 
 	// Whether the site has opted into the direct block toolbar button
@@ -198,6 +226,9 @@
 		// panel documents the same), so the host's saved selection range goes
 		// with the browser and comes back through typost_extension_panel_closed,
 		// which reopens the inline modal where the author left it.
+		// The host's selectedText (the selection sliced when the modal opened,
+		// or the whole text with a caret only) is read here, before the
+		// forced close resets it, so the browser rows can sample it.
 		function openBrowserFromPanel() {
 			var host = props.hostState || {};
 			var range = (typeof host.savedSelectionStart === 'number' && typeof host.savedSelectionEnd === 'number')
@@ -206,6 +237,7 @@
 			openBrowser({
 				editorSource: 'inline',
 				hasSelection: true,
+				selectedText: host.selectedText || '',
 				state: getCurrentState(),
 				onClosed: function() {
 					if (window.typostHooks) {
@@ -566,8 +598,25 @@
 	 * the block whose toolbar was clicked. ('qft' would be dropped: core only
 	 * accepts that source while the Quick Feature Toggle modal is open.)
 	 *
+	 * The list is a single-select listbox (roving aria-activedescendant, not
+	 * a button per row): one Tab stop, arrows move a cursor across every
+	 * visible row, Enter/Space apply the cursor row, printable characters do
+	 * first-letter type-ahead. Rows can be grouped by font family or size
+	 * mode; each group is an ARIA group with a visible heading so a screen
+	 * reader names the group when arrowing into it. Every decision the
+	 * keyboard layer makes lives in ps-utils (resolveBrowserCursorIndex,
+	 * resolveBrowserCursorKey, findTypeAheadMatch, groupParagraphStyles,
+	 * paginateGroups), where it is tested.
+	 *
 	 * Props:
-	 *   activeStyleId: number — style currently on the block (0 for none)
+	 *   activeStyleId: number — style currently applied (0 for none); its row
+	 *     is aria-selected and the cursor starts on it
+	 *   hasSelection: boolean — apply to the selected text, not the block
+	 *   sampleText: string — the selected text; each row renders it in the
+	 *     style instead of the style name (buildBrowserSampleText falls back
+	 *     to the name when empty)
+	 *   editorSource: 'inspector' | 'inline'
+	 *   onApplied: function(style|null) — optional, called before the apply
 	 *   onClose: function
 	 */
 	function ParagraphStylesBrowser(props) {
@@ -591,9 +640,26 @@
 		var visibleState = useState(BROWSER_PAGE_SIZE);
 		var visibleCount = visibleState[0];
 		var setVisibleCount = visibleState[1];
-		// Index of the first row revealed by the last "Show more", so focus
-		// can land on it once it exists (-1: nothing pending)
+		// Index of the first row revealed by the last "Show more", so the
+		// cursor can land on it once it exists (-1: nothing pending)
 		var revealFromRef = useRef(-1);
+
+		// Recently used style ids (per browser, localStorage), read once per
+		// open; onApply records the pick so the next open lists it first.
+		var recentState = useState(function() { return readRecentStyleIds(storageOrNull()); });
+		var recentIds = recentState[0];
+		var setRecentIds = recentState[1];
+		// Group by: none / font family / size mode / recently used. Session-only.
+		var groupState = useState('none');
+		var groupBy    = groupState[0];
+		var setGroupBy = groupState[1];
+
+		// The listbox cursor, keyed by style id so it survives search,
+		// grouping and paging re-renders (resolveBrowserCursorIndex falls
+		// back when the row is gone). 0 = not moved yet.
+		var cursorState      = useState(0);
+		var cursorStyleId    = cursorState[0];
+		var setCursorStyleId = cursorState[1];
 
 		useEffect(function() {
 			function onStylesUpdated() {
@@ -605,45 +671,127 @@
 			};
 		}, []);
 
-		// Open with focus on a style row — the active one, else the first —
-		// rather than on the dialog frame. From the frame, a keyboard user
-		// reached Modal's scroll wrapper (a silent stop) and then Close before
-		// any style (QA finding SR-6). Runs after Modal's own focus-on-mount,
-		// which fires from a child ref effect; the frame keeps focus when the
-		// list is empty.
+		// Open with focus on the listbox, cursor on the applied style's row
+		// (else the first), rather than on the dialog frame. From the frame,
+		// a keyboard user reached Modal's scroll wrapper (a silent stop) and
+		// then Close before any style (QA finding SR-6). Runs after Modal's
+		// own focus-on-mount, which fires from a child ref effect; the frame
+		// keeps focus when there is no list.
 		var listRef = useRef(null);
 		useEffect(function() {
 			var list = listRef.current;
-			if (!list) return;
-			var row = list.querySelector('.typost-ps-browser-row.is-active') ||
-				list.querySelector('.typost-ps-browser-row');
-			if (row && typeof row.focus === 'function') {
-				row.focus();
+			if (list && typeof list.focus === 'function') {
+				list.focus();
 			}
 		}, []);
+
+		// Font name for grouping: '' when the style's font cannot be resolved,
+		// so those styles land in the "No font set" group instead of one
+		// labelled with the "Default" placeholder.
+		function groupFontNameOf(style) {
+			var data = window.typostData || {};
+			var fonts = [].concat(
+				data.fonts || [],
+				data.adobeFonts || [],
+				data.manualFonts || [],
+				data.adoptedWpFonts || []
+			);
+			return findFontName(style.properties && style.properties.fontId, fonts) || '';
+		}
 
 		var filtered = useMemo(function() {
 			return filterParagraphStyles(currentStyles, query, function(style) {
 				return getFontName(style.properties && style.properties.fontId);
 			});
 		}, [currentStyles, query]);
-		var visible = filtered.slice(0, visibleCount);
-		var hiddenCount = filtered.length - visible.length;
+		// Search → group → page: headings describe exactly the rows under them
+		// and are recomputed from whatever the page shows.
+		var groups = useMemo(function() {
+			return groupParagraphStyles(filtered, groupBy, groupFontNameOf, recentIds);
+		}, [filtered, groupBy, recentIds]);
+		var page = paginateGroups(groups, visibleCount);
+		var visibleGroups = page.groups;
+		var hiddenCount = page.hiddenCount;
+		var rows = flattenGroups(visibleGroups);
 		// The button promises what one activation reveals: one page, or
 		// the remainder when fewer are left
 		var nextPageCount = Math.min(hiddenCount, BROWSER_PAGE_SIZE);
 
-		// After "Show more", focus the first newly revealed row so a keyboard
-		// user continues where the list grew instead of from the button.
+		var cursorIndex = resolveBrowserCursorIndex(rows, cursorStyleId, activeStyleId);
+		var cursorStyle = cursorIndex >= 0 ? rows[cursorIndex] : null;
+		var cursorRowId = cursorStyle ? rowDomId(cursorStyle.id) : undefined;
+
+		function moveCursor(index) {
+			if (index >= 0 && index < rows.length) {
+				setCursorStyleId(rows[index].id);
+			}
+		}
+
+		// Keep the cursor row in view as it moves (arrows, type-ahead, Show more).
+		useEffect(function() {
+			if (!cursorRowId) return;
+			var row = document.getElementById(cursorRowId);
+			if (row && typeof row.scrollIntoView === 'function') {
+				row.scrollIntoView({ block: 'nearest' });
+			}
+		}, [cursorRowId]);
+
+		// After "Show more", keep focus on the listbox and move the cursor to
+		// the first newly revealed row, so a keyboard user continues where the
+		// list grew instead of from the button. Rows are appended in flat
+		// order, so the index recorded before the reveal is that row.
 		useEffect(function() {
 			var index = revealFromRef.current;
-			if (index < 0 || !listRef.current) return;
+			if (index < 0) return;
 			revealFromRef.current = -1;
-			var rows = listRef.current.querySelectorAll('.typost-ps-browser-row');
-			if (rows[index] && typeof rows[index].focus === 'function') {
-				rows[index].focus();
+			moveCursor(Math.min(index, rows.length - 1));
+			if (listRef.current && typeof listRef.current.focus === 'function') {
+				listRef.current.focus();
 			}
-		}, [visibleCount]);
+		}, [visibleCount]); // eslint-disable-line react-hooks/exhaustive-deps -- runs once per reveal, with that render's rows
+
+		// First-letter type-ahead: characters typed within 500 ms of each
+		// other form one buffer (a repeated letter cycles, a prefix matches).
+		var typeAheadRef = useRef({ buffer: '', timer: null });
+		useEffect(function() {
+			return function() {
+				if (typeAheadRef.current.timer) {
+					clearTimeout(typeAheadRef.current.timer);
+				}
+			};
+		}, []);
+
+		function onListKeyDown(e) {
+			if (!rows.length) return;
+			var key = e.key;
+			var next = resolveBrowserCursorKey(key, cursorIndex, rows.length);
+			if (next !== -1) {
+				e.preventDefault();
+				moveCursor(next);
+				return;
+			}
+			if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+				// Space would otherwise scroll the modal
+				e.preventDefault();
+				if (cursorStyle) onApply(cursorStyle);
+				return;
+			}
+			// Escape stays with the Modal; modified keys stay with the browser
+			if (key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+			e.preventDefault();
+			var ta = typeAheadRef.current;
+			if (ta.timer) clearTimeout(ta.timer);
+			ta.buffer += key;
+			ta.timer = setTimeout(function() {
+				ta.buffer = '';
+				ta.timer = null;
+			}, 500);
+			var labels = rows.map(function(style) {
+				return String(style.name || '').toLowerCase();
+			});
+			var match = findTypeAheadMatch(labels, ta.buffer, cursorIndex);
+			if (match !== -1) moveCursor(match);
+		}
 
 		// Announce the match count as the author types: the list changes
 		// under a screen-reader user with no other signal.
@@ -662,8 +810,12 @@
 		}
 
 		function onShowMore() {
-			revealFromRef.current = visible.length;
+			revealFromRef.current = rows.length;
 			setVisibleCount(visibleCount + BROWSER_PAGE_SIZE);
+		}
+
+		function onGroupByChange(value) {
+			setGroupBy(utils.BROWSER_GROUP_MODES.indexOf(value) === -1 ? 'none' : value);
 		}
 
 		// Applying and detaching are both terminal: close afterwards so the
@@ -679,6 +831,7 @@
 		var applyTo = props.hasSelection && editorSource !== 'inline' ? 'selection' : undefined;
 
 		var onApply = useCallback(function(style) {
+			setRecentIds(recordRecentStyleId(storageOrNull(), style.id));
 			setActiveStyleId(style.id);
 			// The launching panel first, so a cancel reported during the
 			// apply (typost-paragraph-style-apply-cancelled) lands after it
@@ -703,9 +856,14 @@
 			props.onClose();
 		}, [props.onClose, props.onApplied, applyTo, editorSource, editorType]);
 
-		var rows = visible.map(function(style) {
+		// One listbox option per style. The row itself is the option (no
+		// inner button): the listbox owns focus and points at the cursor row
+		// through aria-activedescendant. aria-selected marks the applied
+		// style only; the cursor is a separate, visible class.
+		function renderRow(style) {
 			var preview = buildStylePreviewStyle(style.properties);
 			var isActive = String(style.id) === String(activeStyleId);
+			var isCursor = !!cursorStyle && String(style.id) === String(cursorStyle.id);
 			var fontName = getFontName(style.properties && style.properties.fontId);
 			var meta = [fontName];
 			if (style.properties && style.properties.fontWeight) {
@@ -715,28 +873,49 @@
 				meta.push(preview.sizeLabel);
 			}
 
-			return el('li', { key: style.id, className: 'typost-ps-browser-item' },
-				el('button', {
-					type: 'button',
-					className: 'typost-ps-browser-row' + (isActive ? ' is-active' : ''),
-					'aria-pressed': isActive,
-					onClick: function() { onApply(style); },
-				},
-					el('span', {
-						className: 'typost-ps-browser-sample typost-ps-' + style.id,
-						style: preview.style,
-						// Purely visual: the sample text is the style name, which
-						// the meta line below already announces along with the
-						// font, weight and size. Without this the name is read twice.
-						'aria-hidden': 'true',
-					}, style.name),
-					el('span', { className: 'typost-ps-browser-meta' },
-						el('span', { className: 'typost-ps-browser-name' }, style.name),
-						el('span', { className: 'typost-ps-browser-detail' }, meta.join(' · '))
-					)
+			return el('li', {
+				key: style.id,
+				id: rowDomId(style.id),
+				role: 'option',
+				'aria-selected': isActive,
+				tabIndex: -1,
+				className: 'typost-ps-browser-row' + (isActive ? ' is-active' : '') + (isCursor ? ' is-cursor' : ''),
+				onClick: function() { onApply(style); },
+			},
+				el('span', {
+					className: 'typost-ps-browser-sample typost-ps-' + style.id,
+					style: preview.style,
+					// Purely visual: the selected text (or the style name)
+					// rendered in the style. The meta line below carries the
+					// name, font, weight and size, so this is not read as well.
+					'aria-hidden': 'true',
+				}, buildBrowserSampleText(props.sampleText, style.name)),
+				el('span', { className: 'typost-ps-browser-meta' },
+					el('span', { className: 'typost-ps-browser-name' }, style.name),
+					el('span', { className: 'typost-ps-browser-detail' }, meta.join(' · '))
 				)
 			);
-		});
+		}
+
+		// Ungrouped: options straight under the listbox. Grouped: each group
+		// is a role="group" item named by its visible heading (a div, not an
+		// h-tag — the modal already has its heading); see renderGroup below.
+		var listChildren;
+		if (visibleGroups.length === 1 && visibleGroups[0].key === 'all') {
+			listChildren = rows.map(renderRow);
+		} else {
+			listChildren = visibleGroups.map(function(group, index) {
+				var headingId = groupDomId(index);
+				// The listbox may only own option and group children, so the
+				// group is the <li> itself (named by its heading); the inner
+				// <ul> is presentational so the options belong to the group.
+				return el('li', { key: group.key, role: 'group', 'aria-labelledby': headingId, className: 'typost-ps-browser-group' },
+					el('div', { id: headingId, className: 'typost-ps-browser-group-heading' }, group.label),
+					el('ul', { role: 'presentation', className: 'typost-ps-browser-group-list' },
+						group.styles.map(renderRow))
+				);
+			});
+		}
 
 		var body;
 		if (currentStyles.length === 0) {
@@ -746,7 +925,15 @@
 			body = el('p', { className: 'typost-ps-browser-empty', role: 'status' },
 				sprintf(/* translators: %s: search text */ __('No styles match "%s".', 'typost-paragraph-styles'), query));
 		} else {
-			body = el('ul', { className: 'typost-ps-browser-list', ref: listRef }, rows);
+			body = el('ul', {
+				className: 'typost-ps-browser-list' + (cursorRowId ? ' has-cursor' : ''),
+				ref: listRef,
+				role: 'listbox',
+				tabIndex: 0,
+				'aria-label': __('Paragraph styles', 'typost-paragraph-styles'),
+				'aria-activedescendant': cursorRowId,
+				onKeyDown: onListKeyDown,
+			}, listChildren);
 		}
 
 		return el(Modal, {
@@ -766,6 +953,22 @@
 					value: query,
 					onChange: onQueryChange,
 					placeholder: __('Style or font name', 'typost-paragraph-styles'),
+					__nextHasNoMarginBottom: true,
+				}),
+				el(SelectControl, {
+					label: __('Group by', 'typost-paragraph-styles'),
+					value: groupBy,
+					options: [
+						{ label: __('None', 'typost-paragraph-styles'), value: 'none' },
+						{ label: __('Font family', 'typost-paragraph-styles'), value: 'font' },
+						{ label: __('Size mode', 'typost-paragraph-styles'), value: 'size' },
+						// Offered only where the browser can remember picks; a blocked
+						// store would otherwise show a flat list that looks like
+						// "nothing used yet" (review F9)
+					].concat(storageOrNull() ? [
+						{ label: __('Recently used', 'typost-paragraph-styles'), value: 'recent' },
+					] : []),
+					onChange: onGroupByChange,
 					__nextHasNoMarginBottom: true,
 				})
 			),
@@ -833,12 +1036,22 @@
 			? !!context.hasSelection
 			: !!(captured && captured.start !== captured.end);
 
+		// The text the rows render in each style. Both launchers hand it
+		// over: the block toolbar's click context carries selectedText (the
+		// text of capturedSelection, '' with a caret) and the inline panel
+		// passes its host's selectedText. capturedSelection.text is the
+		// fallback for a caller that sends only the snapshot.
+		var sampleText = (context && typeof context.selectedText === 'string')
+			? context.selectedText
+			: ((captured && captured.text) || '');
+
 		wp.element.render(
 			el(ParagraphStylesBrowser, {
 				// In selection scope the pressed row and Detach must describe
 				// the selection's own style, not the block's (see the helper).
 				activeStyleId: resolveBrowserActiveStyleId(state, hasSelection),
 				hasSelection: hasSelection,
+				sampleText: sampleText,
 				// 'inline' when launched from the inline modal's panel; the
 				// toolbar button (block) keeps the 'inspector' route
 				editorSource: (context && context.editorSource) || 'inspector',
@@ -982,19 +1195,28 @@
 			'[data-hook="typost_inspector_top"] .typost-ps-panel-label { margin-bottom: 8px; }',
 			// Style browser (toolbar button)
 			'.typost-ps-browser-modal { max-width: 720px; width: 90vw; }',
-			'.typost-ps-browser-list { list-style: none; margin: 0; padding: 0; }',
-			'.typost-ps-browser-item + .typost-ps-browser-item { border-top: 1px solid #e0e0e0; }',
-			'.typost-ps-browser-row { display: flex; flex-direction: column; gap: 6px; width: 100%; padding: 14px 12px; background: none; border: 0; border-radius: 4px; cursor: pointer; text-align: left; }',
+			'.typost-ps-browser-list, .typost-ps-browser-group-list { list-style: none; margin: 0; padding: 0; }',
+			// The listbox is the Tab stop; the cursor row carries the ring while
+			// a row exists, so the list itself shows one only when it has none
+			'.typost-ps-browser-list:focus-visible { outline: 2px solid #007cba; outline-offset: -2px; }',
+			'.typost-ps-browser-list.has-cursor:focus, .typost-ps-browser-list.has-cursor:focus-visible { outline: none; }',
+			'.typost-ps-browser-row + .typost-ps-browser-row { border-top: 1px solid #e0e0e0; }',
+			'.typost-ps-browser-row { display: flex; flex-direction: column; gap: 6px; width: 100%; box-sizing: border-box; padding: 14px 12px; background: none; border: 0; border-radius: 4px; cursor: pointer; text-align: left; }',
 			'.typost-ps-browser-row:hover { background: #f0f0f0; }',
-			'.typost-ps-browser-row:focus-visible { outline: 2px solid #007cba; outline-offset: -2px; }',
+			'.typost-ps-browser-list:focus .typost-ps-browser-row.is-cursor { outline: 2px solid #007cba; outline-offset: -2px; }',
 			'.typost-ps-browser-row.is-active { background: #f0f6fc; box-shadow: inset 3px 0 0 #007cba; }',
+			// Group headings (Group by: font family / size mode)
+			'.typost-ps-browser-group + .typost-ps-browser-group { margin-top: 8px; }',
+			'.typost-ps-browser-group-heading { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #50575e; margin: 12px 0 4px; padding: 0 12px; }',
+			'.typost-ps-browser-group:first-child .typost-ps-browser-group-heading { margin-top: 0; }',
 			// Long sample text must not push the modal wide
 			'.typost-ps-browser-sample { display: block; color: #1e1e1e; overflow-wrap: anywhere; }',
 			'.typost-ps-browser-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }',
 			'.typost-ps-browser-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
 			// #50575e is 6.4:1 on the #f0f0f0 hover background; #757575 at 11px was 4.0:1 (QA finding A11Y-3)
 			'.typost-ps-browser-detail { font-size: 12px; color: #50575e; }',
-			'.typost-ps-browser-search { margin: 0 0 12px 0; }',
+			'.typost-ps-browser-search { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin: 0 0 12px 0; }',
+			'.typost-ps-browser-search > .components-base-control:first-child { flex: 1 1 200px; }',
 			'.typost-ps-browser-more { margin-top: 12px; text-align: center; }',
 			'.typost-ps-browse-btn { width: 100%; justify-content: center; }',
 			'.typost-ps-browser-empty { color: #757575; margin: 0; }',

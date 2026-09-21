@@ -445,9 +445,15 @@ class Typost_Font_Library_Bridge {
      * Clears the wp_slug/wp_post_id fields on the matching entry so CSS
      * emission falls back to the plugin-managed path on the next request.
      *
+     * Also reports true (without touching the entry) when the deleted
+     * family's slug is an ADOPTED Library font: the adopted entry keeps its
+     * canonical font_id, but the cached @font-face CSS the plugin built from
+     * the family's face posts is now stale and the caller must clear it.
+     *
      * @param int          $post_id Deleted post ID
      * @param WP_Post|null $post    Deleted post object
-     * @return bool Whether any entry was updated
+     * @return bool Whether plugin font data depended on the deleted family
+     *              (an entry was updated, or an adopted font lost its faces)
      */
     public function handle_deleted_post($post_id, $post = null) {
         if (!$post || !isset($post->post_type) || 'wp_font_family' !== $post->post_type) {
@@ -464,6 +470,10 @@ class Typost_Font_Library_Bridge {
                 ));
                 $changed = true;
             }
+        }
+
+        if (!$changed && !empty($post->post_name) && $this->sources->find_adopted_wp_font_by_slug($post->post_name)) {
+            $changed = true;
         }
 
         if ($changed) {
@@ -521,30 +531,250 @@ class Typost_Font_Library_Bridge {
         }
 
         // Source 2: wp_font_face child posts of the matching wp_font_family post
-        if (empty($faces) && post_type_exists('wp_font_family')) {
-            $family_posts = get_posts(array(
-                'post_type'      => 'wp_font_family',
-                'name'           => $slug,
-                'posts_per_page' => 1,
-                'post_status'    => 'publish',
-            ));
-            if (!empty($family_posts)) {
-                $face_posts = get_posts(array(
-                    'post_type'      => 'wp_font_face',
-                    'post_parent'    => $family_posts[0]->ID,
-                    'posts_per_page' => -1,
-                    'post_status'    => 'publish',
-                ));
-                foreach ($face_posts as $face_post) {
-                    $data = json_decode($face_post->post_content, true);
-                    if (is_array($data) && isset($data['fontWeight'])) {
-                        $faces[] = array('weight' => (string) $data['fontWeight']);
-                    }
+        if (empty($faces)) {
+            foreach ($this->get_library_font_face_settings($slug) as $data) {
+                if (isset($data['fontWeight'])) {
+                    $faces[] = array('weight' => (string) $data['fontWeight']);
                 }
             }
         }
 
         return $faces;
+    }
+
+    /**
+     * Decoded font_face_settings of every published wp_font_face child of
+     * a Library family, looked up by family slug
+     *
+     * Returns the raw camelCase payloads WordPress stores in post_content
+     * ({fontFamily, fontStyle, fontWeight, src, fontDisplay, ...}), unsanitized;
+     * build_font_face_rule() is the sanitizing consumer. Empty when the Font
+     * Library is unavailable, the family does not exist, or it has no faces.
+     *
+     * @since 2.3.0
+     * @param string $slug Library font slug
+     * @return array[] Decoded face settings, in post order
+     */
+    public function get_library_font_face_settings($slug) {
+        $slug = sanitize_title($slug);
+        if ('' === $slug || !post_type_exists('wp_font_family')) {
+            return array();
+        }
+
+        $family_posts = get_posts(array(
+            'post_type'      => 'wp_font_family',
+            'name'           => $slug,
+            'posts_per_page' => 1,
+            'post_status'    => 'publish',
+        ));
+        if (empty($family_posts)) {
+            return array();
+        }
+
+        $face_posts = get_posts(array(
+            'post_type'      => 'wp_font_face',
+            'post_parent'    => $family_posts[0]->ID,
+            'posts_per_page' => -1,
+            'post_status'    => 'publish',
+        ));
+
+        $settings = array();
+        foreach ((array) $face_posts as $face_post) {
+            if (empty($face_post->post_content)) {
+                continue;
+            }
+            $data = json_decode($face_post->post_content, true);
+            if (is_array($data)) {
+                $settings[] = $data;
+            }
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Build sanitized @font-face CSS for a Library family from its
+     * wp_font_face posts
+     *
+     * This is how an adopted Library font that is installed but NOT activated
+     * in global styles gets its faces onto the page: wp_print_font_faces()
+     * prints nothing for it, so without this the --font-N variable resolves
+     * to a family no @font-face declares and the browser silently falls back.
+     * Faces without a usable src are skipped.
+     *
+     * @since 2.3.0
+     * @param string $slug Library font slug
+     * @return string Concatenated @font-face rules ('' when none)
+     */
+    public function build_font_face_css_for_family($slug) {
+        $rules = array();
+        foreach ($this->get_library_font_face_settings($slug) as $settings) {
+            $rule = $this->build_font_face_rule($settings);
+            if ('' !== $rule) {
+                $rules[] = $rule;
+            }
+        }
+        return implode("\n", $rules);
+    }
+
+    /**
+     * Build one sanitized @font-face rule from a face's font_face_settings
+     *
+     * Pure: no option or post reads. Mirrors the property set core's
+     * WP_Font_Face prints (family, style, weight, display, src, stretch,
+     * unicode-range) and sanitizes each the way sanitize_font_faces() does
+     * for uploaded kits — family via sanitize_text_field, src URLs via
+     * esc_url_raw, weights/styles/keywords against allow-lists. A Library
+     * face may be a variable font, so weight ranges ("100 900") and any
+     * weight 1-1000 are accepted here regardless of the
+     * typost_allow_variable_weights option, which only governs kit uploads.
+     *
+     * @since 2.3.0
+     * @param array $settings Decoded wp_font_face post_content
+     *                        ({fontFamily, fontStyle, fontWeight, src, ...})
+     * @return string A single "@font-face{...}" rule, or '' when the face has
+     *                no family or no usable src
+     */
+    public function build_font_face_rule(array $settings) {
+        $family = isset($settings['fontFamily']) ? sanitize_text_field((string) $settings['fontFamily']) : '';
+        $family = trim($family, " \t\"'");
+        $family = str_replace(array('"', ';', '{', '}', '\\'), '', $family);
+        if ('' === $family) {
+            return '';
+        }
+
+        $src_entries = array();
+        $raw_src = isset($settings['src']) ? $settings['src'] : array();
+        foreach ((array) $raw_src as $url) {
+            if (!is_string($url)) {
+                continue;
+            }
+            $url = esc_url_raw(trim($url));
+            if ('' === $url || preg_match('/[\s"\'()]/', $url)) {
+                continue;
+            }
+            $format = $this->font_format_from_url($url);
+            $src_entries[] = 'url("' . $url . '")' . ('' !== $format ? ' format("' . $format . '")' : '');
+        }
+        if (empty($src_entries)) {
+            return '';
+        }
+
+        $weight = isset($settings['fontWeight']) ? strtolower(trim((string) $settings['fontWeight'])) : '';
+        if (!preg_match('/^(normal|bold|\d{1,4}(\s+\d{1,4})?)$/', $weight) || !$this->weight_tokens_in_range($weight)) {
+            $weight = '400';
+        }
+        $weight = preg_replace('/\s+/', ' ', $weight);
+
+        $style = isset($settings['fontStyle']) ? strtolower(trim((string) $settings['fontStyle'])) : '';
+        if (!preg_match('/^(normal|italic|oblique(\s+-?\d+(\.\d+)?deg)?)$/', $style)) {
+            $style = 'normal';
+        }
+        $style = preg_replace('/\s+/', ' ', $style);
+
+        $declarations = array(
+            'font-family:"' . $family . '"',
+            'font-style:' . $style,
+            'font-weight:' . $weight,
+        );
+
+        $display = isset($settings['fontDisplay']) ? strtolower(trim((string) $settings['fontDisplay'])) : '';
+        if (in_array($display, array('auto', 'block', 'swap', 'fallback', 'optional'), true)) {
+            $declarations[] = 'font-display:' . $display;
+        }
+
+        $stretch = isset($settings['fontStretch']) ? strtolower(trim((string) $settings['fontStretch'])) : '';
+        if ('' !== $stretch && preg_match('/^(normal|(ultra|extra|semi)?-?(condensed|expanded)|\d+(\.\d+)?%(\s+\d+(\.\d+)?%)?)$/', $stretch)) {
+            $declarations[] = 'font-stretch:' . preg_replace('/\s+/', ' ', $stretch);
+        }
+
+        $unicode_range = isset($settings['unicodeRange']) ? strtoupper(preg_replace('/\s+/', '', (string) $settings['unicodeRange'])) : '';
+        if ('' !== $unicode_range && preg_match('/^U\+[0-9A-F?]{1,6}(-[0-9A-F]{1,6})?(,U\+[0-9A-F?]{1,6}(-[0-9A-F]{1,6})?)*$/', $unicode_range)) {
+            $declarations[] = 'unicode-range:' . $unicode_range;
+        }
+
+        $declarations[] = 'src:' . implode(', ', $src_entries);
+
+        return '@font-face{' . implode(';', $declarations) . ';}';
+    }
+
+    /**
+     * Whether every numeric token of a validated weight value is 1-1000
+     *
+     * @param string $weight Weight already matched against the shape regex
+     * @return bool
+     */
+    private function weight_tokens_in_range($weight) {
+        foreach (preg_split('/\s+/', $weight) as $token) {
+            if (ctype_digit($token) && ((int) $token < 1 || (int) $token > 1000)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Map a font file URL to its @font-face format() hint (same table core's
+     * WP_Font_Face uses); '' when the extension is unknown
+     *
+     * @param string $url Font file URL
+     * @return string
+     */
+    private function font_format_from_url($url) {
+        $path = preg_replace('/[?#].*$/', '', $url);
+        $extension = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+        $formats = array(
+            'woff2' => 'woff2',
+            'woff'  => 'woff',
+            'ttf'   => 'truetype',
+            'otf'   => 'opentype',
+            'eot'   => 'embedded-opentype',
+            'svg'   => 'svg',
+        );
+        return isset($formats[$extension]) ? $formats[$extension] : '';
+    }
+
+    /**
+     * Whether WordPress itself prints @font-face rules for an adopted
+     * Library font on the current page load
+     *
+     * The adopted-entry counterpart of entry_faces_printed_by_wordpress():
+     * adopted entries carry no font_faces, so the family name comes from the
+     * entry's font_family (first family of the stack) and name. Same rule:
+     * only a family present in the merged theme.json data — theme fonts plus
+     * Library fonts ACTIVATED in global styles — counts as printed. An
+     * adopted font that is merely installed gets nothing from WordPress and
+     * the plugin prints its faces (build_font_face_css_for_family()).
+     *
+     * @since 2.3.0
+     * @param array $entry Adopted Library font entry ({wp_slug, font_family, name, ...})
+     * @return bool
+     */
+    public function adopted_entry_faces_printed_by_wordpress(array $entry) {
+        if (!$this->entry_has_live_registration($entry)) {
+            return false;
+        }
+
+        $candidates = array();
+        if (!empty($entry['font_family'])) {
+            $stack = explode(',', (string) $entry['font_family']);
+            $candidates[] = $this->normalize_family_name($stack[0]);
+        }
+        if (!empty($entry['name'])) {
+            $candidates[] = $this->normalize_family_name($entry['name']);
+        }
+        $candidates = array_filter(array_unique($candidates), 'strlen');
+        if (empty($candidates)) {
+            return false;
+        }
+
+        $printed = $this->get_wordpress_printed_families();
+        foreach ($candidates as $candidate) {
+            if (in_array($candidate, $printed, true)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

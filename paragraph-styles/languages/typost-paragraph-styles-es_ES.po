@@ -56,6 +56,7 @@ msgid "Fit to width (fallback %1$s–%2$spx)"
 msgstr "Ajustado al ancho (alternativa %1$s–%2$spx)"
 
 #: includes/admin-tab.php:84
+#: assets/js/lib/ps-utils.js
 #, php-format
 msgid "%spx"
 msgstr "%spx"
@@ -245,6 +246,31 @@ msgid_plural "Show %d more styles"
 msgstr[0] "Mostrar %d estilo más"
 msgstr[1] "Mostrar %d estilos más"
 
+#: assets/js/editor.js
+msgid "Group by"
+msgstr "Agrupar por"
+
+#: assets/js/editor.js
+msgid "None"
+msgstr "Ninguno"
+
+#: assets/js/editor.js
+msgid "Font family"
+msgstr "Familia tipográfica"
+
+#: assets/js/editor.js
+msgid "Size mode"
+msgstr "Modo de tamaño"
+
+#: assets/js/editor.js
+msgid "Paragraph styles"
+msgstr "Estilos de párrafo"
+
+#: assets/js/editor.js
+#: assets/js/lib/ps-utils.js
+msgid "Recently used"
+msgstr "Usados recientemente"
+
 #. translators: 1: smallest font size, 2: largest font size.
 #: assets/js/lib/ps-utils.js
 #, php-format
@@ -260,3 +286,28 @@ msgstr "Ajustado ≤ %spx"
 #: assets/js/lib/ps-utils.js
 msgid "Fit"
 msgstr "Ajustado"
+
+#: assets/js/lib/ps-utils.js
+msgid "No font set"
+msgstr "Sin fuente definida"
+
+#: assets/js/lib/ps-utils.js
+msgid "Fixed size"
+msgstr "Tamaño fijo"
+
+#: assets/js/lib/ps-utils.js
+msgid "Responsive"
+msgstr "Adaptable"
+
+#: assets/js/lib/ps-utils.js
+msgid "Fit to width"
+msgstr "Ajustado al ancho"
+
+#: assets/js/lib/ps-utils.js
+msgid "Inherited size"
+msgstr "Tamaño heredado"
+
+
+#: assets/js/lib/ps-utils.js
+msgid "Other styles"
+msgstr "Otros estilos"

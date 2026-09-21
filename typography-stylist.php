@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 2.2.3
+ * Version: 2.3.0
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '2.2.3');
+    define('TYPOST_VERSION', '2.3.0');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -154,6 +154,13 @@ class Typost {
         // Silent rollback when a plugin-registered wp_font_family post is
         // deleted (e.g. through the Appearance > Font Library UI)
         add_action('deleted_post', array($this, 'on_wp_font_family_deleted'), 10, 2);
+
+        // A family installed or edited in the Font Library must reach the
+        // editor picker on the next load, not when the hourly localized-data
+        // transient expires (QA 2026-09 E-16); a face added to an adopted
+        // family must reach the printed @font-face CSS the same way.
+        add_action('save_post_wp_font_family', array($this, 'on_wp_font_family_saved'), 10, 3);
+        add_action('save_post_wp_font_face', array($this, 'on_wp_font_face_saved'), 10, 3);
 
         // Output CSS variables for fonts
         add_action('wp_head', array($this, 'output_font_css_variables'), 5);
@@ -917,16 +924,23 @@ class Typost {
 
     /**
      * Optimized font enqueuing with caching - only loads fonts used on current page
+     *
+     * Covers uploaded kits and adopted WP Font Library fonts. An adopted
+     * font is always conditional (loaded only when its font_id is used or
+     * forced), and its @font-face is printed by the plugin only when
+     * WordPress will not print it (installed but not activated in global
+     * styles) — see get_adopted_fonts_to_print().
      */
     public function enqueue_custom_fonts_optimized() {
         $all_fonts = $this->get_custom_fonts();
+        $adopted_fonts = $this->get_adopted_fonts_for_face_printing();
 
-        if (empty($all_fonts)) {
+        if (empty($all_fonts) && empty($adopted_fonts)) {
             return;
         }
 
         // Check if we need to scan content for used fonts
-        $has_conditional_fonts = false;
+        $has_conditional_fonts = !empty($adopted_fonts);
         foreach ($all_fonts as $font) {
             if (empty($font['load_on_all_pages'])) {
                 $has_conditional_fonts = true;
@@ -994,17 +1008,29 @@ class Typost {
             }
         }
 
+        // Adopted Library fonts in use on this page whose faces WordPress
+        // will NOT print (installed, not activated): the plugin builds their
+        // @font-face from the family's wp_font_face posts. Their slugs are
+        // part of the cache key so activating one later can't serve stale CSS.
+        $adopted_to_print = $this->get_adopted_fonts_to_print($adopted_fonts, $used_font_ids);
+        $adopted_face_slugs = wp_list_pluck($adopted_to_print, 'wp_slug');
+
         // Build cache key including load_on_all_pages settings
         $load_settings = array();
         foreach ($all_fonts as $font) {
             $font_id = isset($font['id']) ? $font['id'] : '';
             $load_settings[$font_id] = !empty($font['load_on_all_pages']);
         }
-        $cache_key = $this->get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids);
+        $cache_key = $this->get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids, $adopted_face_slugs);
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
             $combined_css = '';
+
+            // Adopted Library fonts first: their rules are already sanitized
+            // and their src URLs may live outside this site, so they skip the
+            // kit-only ensure_relative_font_urls() pass below.
+            $combined_css .= $this->get_adopted_font_face_css($adopted_to_print);
 
             // Only include fonts that are actually used OR set to load on all pages
             foreach ($all_fonts as $font) {
@@ -1067,16 +1093,135 @@ class Typost {
      * @param array $used_font_ids        Numeric font IDs used on the page
      * @param array $load_settings        Per-font load_on_all_pages flags
      * @param array $library_printed_ids  Font IDs whose @font-face WP prints
+     * @param array $adopted_face_slugs   Slugs of adopted Library fonts whose
+     *                                    @font-face the plugin prints itself
+     *                                    (in use on the page and not printed
+     *                                    by WordPress); since 2.3.0
      * @return string Transient key
      */
-    private function get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids = array()) {
+    private function get_font_css_cache_key($used_font_families, $used_font_ids, $load_settings, $library_printed_ids = array(), $adopted_face_slugs = array()) {
         $used_font_ids = array_map('intval', (array) $used_font_ids);
         sort($used_font_ids);
         $used_font_families = array_map('strval', (array) $used_font_families);
         sort($used_font_families);
         $library_printed_ids = array_map('intval', (array) $library_printed_ids);
         sort($library_printed_ids);
-        return 'typost_font_css_' . md5(serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings) . serialize($library_printed_ids));
+        $adopted_face_slugs = array_values(array_unique(array_map('strval', (array) $adopted_face_slugs)));
+        sort($adopted_face_slugs);
+        $key_input = serialize($used_font_families) . serialize($used_font_ids) . serialize($load_settings) . serialize($library_printed_ids);
+        if (!empty($adopted_face_slugs)) {
+            // Appended only when present so keys for pages without adopted
+            // fonts are unchanged from 2.2.x. The face version rotates every
+            // key that carries adopted faces when a wp_font_face post is saved
+            // (on_wp_font_face_saved()), instead of a wildcard delete + flush.
+            $key_input .= serialize($adopted_face_slugs) . '|' . (string) get_option('typost_font_face_version', '0');
+        }
+        return 'typost_font_css_' . md5($key_input);
+    }
+
+    /**
+     * Adopted WP Font Library fonts whose @font-face the plugin may need to
+     * print itself
+     *
+     * Excludes adopted entries that share a font_id or slug with an uploaded
+     * kit: adopt_library_font() reuses the kit's font_id when the slug
+     * belongs to a plugin-registered family, and those faces already print
+     * through the kit path (double-printing would be harmless but wasteful).
+     * Entries without a slug cannot be resolved to face posts and are
+     * skipped too.
+     *
+     * @since 2.3.0
+     * @return array[] Adopted entries ({id, name, wp_slug, font_id, font_family, ...})
+     */
+    private function get_adopted_fonts_for_face_printing() {
+        $adopted = $this->font_sources()->get_adopted_wp_fonts();
+        if (empty($adopted)) {
+            return array();
+        }
+
+        $kit_font_ids = array();
+        $kit_slugs = array();
+        foreach ($this->get_custom_fonts() as $font) {
+            if (isset($font['font_id'])) {
+                $kit_font_ids[(int) $font['font_id']] = true;
+            }
+            if (!empty($font['wp_slug'])) {
+                $kit_slugs[$font['wp_slug']] = true;
+            }
+        }
+
+        $result = array();
+        foreach ($adopted as $entry) {
+            if (!isset($entry['font_id']) || empty($entry['wp_slug'])) {
+                continue;
+            }
+            if (isset($kit_font_ids[(int) $entry['font_id']]) || isset($kit_slugs[$entry['wp_slug']])) {
+                continue;
+            }
+            $result[] = $entry;
+        }
+        return $result;
+    }
+
+    /**
+     * Narrow adopted fonts to those in use on the page whose faces
+     * WordPress will not print
+     *
+     * "In use" is the same signal that drives the uploaded kits: the entry's
+     * font_id appears in the detected/forced (replacement-resolved) IDs. A
+     * family present in the merged theme.json data (theme font, or a Library
+     * font activated in global styles) is printed by wp_print_font_faces()
+     * and is left to WordPress.
+     *
+     * @since 2.3.0
+     * @param array[] $adopted_fonts From get_adopted_fonts_for_face_printing()
+     * @param array   $used_font_ids Numeric font IDs used or forced on the page
+     * @return array[] Adopted entries the plugin must print faces for
+     */
+    private function get_adopted_fonts_to_print(array $adopted_fonts, array $used_font_ids) {
+        if (empty($adopted_fonts) || empty($used_font_ids)) {
+            return array();
+        }
+
+        $used = array_map('intval', $used_font_ids);
+        $to_print = array();
+        foreach ($adopted_fonts as $entry) {
+            if (!in_array((int) $entry['font_id'], $used, true)) {
+                continue;
+            }
+            if ($this->font_library_bridge()->adopted_entry_faces_printed_by_wordpress($entry)) {
+                continue;
+            }
+            $to_print[] = $entry;
+        }
+        return $to_print;
+    }
+
+    /**
+     * Concatenated @font-face CSS for adopted Library fonts, built from
+     * their wp_font_face posts
+     *
+     * Output is already sanitized rule-by-rule by
+     * Typost_Font_Library_Bridge::build_font_face_rule(); callers append it
+     * to a combined stylesheet as-is (no ensure_relative_font_urls() pass,
+     * since Library faces may reference files outside this site).
+     *
+     * @since 2.3.0
+     * @param array[] $adopted_fonts Adopted entries with a wp_slug
+     * @return string CSS (may be empty), newline-prefixed per family
+     */
+    private function get_adopted_font_face_css(array $adopted_fonts) {
+        $css = '';
+        foreach ($adopted_fonts as $entry) {
+            if (empty($entry['wp_slug'])) {
+                continue;
+            }
+            $family_css = $this->font_library_bridge()->build_font_face_css_for_family($entry['wp_slug']);
+            if ('' !== $family_css) {
+                $css .= "\n" . $family_css;
+            }
+        }
+        return $css;
     }
 
     /**
@@ -1240,7 +1385,36 @@ class Typost {
                 'cacheCleared' => esc_html__('Font cache cleared successfully. Fonts will be re-detected on the next page load.', 'typography-stylist'),
                 'cacheClearError' => esc_html__('Failed to clear the font cache.', 'typography-stylist'),
                 'tipsReset' => esc_html__('Editor tips will show again the next time you open a Typography Stylist panel in this browser.', 'typography-stylist'),
-                'tipsResetError' => esc_html__('Could not reset the editor tips. Your browser blocks site storage.', 'typography-stylist')
+                'tipsResetError' => esc_html__('Could not reset the editor tips. Your browser blocks site storage.', 'typography-stylist'),
+                // Replacement Fonts tab strings (rendered by admin-page.js)
+                'unknownFont' => esc_html__('Unknown Font', 'typography-stylist'),
+                'deletedFont' => esc_html__('Deleted Font', 'typography-stylist'),
+                'replacementFont' => esc_html__('Replacement Font', 'typography-stylist'),
+                'globalLoad' => esc_html__('Global Load', 'typography-stylist'),
+                'actions' => esc_html__('Actions', 'typography-stylist'),
+                /* translators: %s: numeric font ID */
+                'fontIdLabel' => esc_html__('ID: %s', 'typography-stylist'),
+                /* translators: 1: font name, 2: numeric font ID */
+                'fontOptionWithId' => esc_html__('%1$s (ID: %2$s)', 'typography-stylist'),
+                'noReplacements' => esc_html__('No font replacements configured.', 'typography-stylist'),
+                /* translators: %s: comma-separated list of font IDs */
+                'unassignedIds' => esc_html__('Unassigned IDs: %s', 'typography-stylist'),
+                'edit' => esc_html__('Edit', 'typography-stylist'),
+                'remove' => esc_html__('Remove', 'typography-stylist'),
+                'editReplacementTitle' => esc_html__('Edit Font Replacement', 'typography-stylist'),
+                'updateReplacement' => esc_html__('Update Replacement', 'typography-stylist'),
+                /* translators: %s: numeric font ID */
+                'editReplacementDescription' => esc_html__('Select a new replacement font for ID %s.', 'typography-stylist'),
+                'invalidFontId' => esc_html__('Invalid font ID. Please refresh the page and try again.', 'typography-stylist'),
+                'confirmRemoveReplacement' => esc_html__('Remove this font replacement mapping?', 'typography-stylist'),
+                'removeReplacementError' => esc_html__('Failed to remove replacement.', 'typography-stylist'),
+                'globalLoadUpdateError' => esc_html__('Failed to update global load setting.', 'typography-stylist'),
+                'selectDeletedId' => esc_html__('Please select a deleted font ID.', 'typography-stylist'),
+                'selectReplacementFont' => esc_html__('Please select a replacement font.', 'typography-stylist'),
+                'invalidFontIdZero' => esc_html__('Invalid font ID (0). Please select a valid ID.', 'typography-stylist'),
+                'addReplacementButton' => esc_html__('Add Replacement', 'typography-stylist'),
+                'replacementAdded' => esc_html__('Replacement mapping added successfully!', 'typography-stylist'),
+                'addReplacementError' => esc_html__('Failed to add replacement mapping.', 'typography-stylist')
             )
         );
 
@@ -1557,17 +1731,23 @@ class Typost {
     }
 
     /**
-     * Get the combined @font-face CSS for uploaded font kits on admin pages.
+     * Get the combined @font-face CSS for uploaded font kits and adopted
+     * WP Font Library fonts on admin pages.
      *
      * Public so the admin refresh REST endpoint can return updated font CSS
-     * after fonts are added or removed without a page reload.
+     * after fonts are added or removed without a page reload. Adopted
+     * Library fonts are included unconditionally (like the kits, and unlike
+     * the frontend): admin pages only get WordPress's own @font-face for
+     * activated families, and this transient is cleared by clear_cache()
+     * rather than keyed on activation state.
      *
      * @return string Combined, sanitized, minified CSS (may be empty).
      */
     public function get_admin_font_css() {
         $fonts = $this->get_custom_fonts();
+        $adopted_fonts = $this->get_adopted_fonts_for_face_printing();
 
-        if (empty($fonts)) {
+        if (empty($fonts) && empty($adopted_fonts)) {
             return '';
         }
 
@@ -1576,7 +1756,7 @@ class Typost {
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
-            $combined_css = '';
+            $combined_css = $this->get_adopted_font_face_css($adopted_fonts);
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
                     // Sanitize CSS before adding and ensure URLs are relative
@@ -1615,17 +1795,21 @@ class Typost {
         }
 
         $fonts = $this->get_custom_fonts();
+        $adopted_fonts = $this->get_adopted_fonts_for_face_printing();
 
-        if (empty($fonts)) {
+        if (empty($fonts) && empty($adopted_fonts)) {
             return;
         }
 
-        // Cache combined font CSS
+        // Cache combined font CSS. Adopted Library fonts are included
+        // unconditionally here (the iframe only receives WordPress's own
+        // @font-face for ACTIVATED families; a duplicate for one that is
+        // activated is harmless), so the static cache key stays valid.
         $cache_key = 'typost_block_font_css';
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
-            $combined_css = '';
+            $combined_css = $this->get_adopted_font_face_css($adopted_fonts);
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
                     // Sanitize CSS before adding and ensure URLs are relative
@@ -1649,11 +1833,16 @@ class Typost {
 
     /**
      * Enqueue custom fonts for block editor (deprecated - keeping for popover preview)
+     *
+     * Serves the editor PARENT document (toolbar popover previews), which
+     * enqueue_custom_fonts_for_blocks() does not reach. Includes adopted
+     * WP Font Library fonts on the same unconditional basis.
      */
     public function enqueue_custom_fonts_for_editor() {
         $fonts = $this->get_custom_fonts();
+        $adopted_fonts = $this->get_adopted_fonts_for_face_printing();
 
-        if (empty($fonts)) {
+        if (empty($fonts) && empty($adopted_fonts)) {
             return;
         }
 
@@ -1662,7 +1851,7 @@ class Typost {
         $combined_css = get_transient($cache_key);
 
         if (false === $combined_css) {
-            $combined_css = '';
+            $combined_css = $this->get_adopted_font_face_css($adopted_fonts);
             foreach ($fonts as $font) {
                 if (!empty($font['css_content'])) {
                     // Sanitize CSS before adding and ensure URLs are relative
@@ -3255,8 +3444,12 @@ class Typost {
             );
             // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
-            // Flush object cache for transient group
-            wp_cache_flush();
+            // The row deletes do not reach a persistent object cache, where
+            // get_transient() would keep answering from the cached copy; without
+            // one the flush would only cost a cold cache (review of E-16).
+            if (wp_using_ext_object_cache()) {
+                wp_cache_flush();
+            }
         }
     }
 
@@ -3316,7 +3509,92 @@ class Typost {
     public function on_wp_font_family_deleted($post_id, $post = null) {
         if ($this->font_library_bridge()->handle_deleted_post($post_id, $post)) {
             $this->clear_cache();
+            return;
         }
+        // Any other deleted family still leaves the picker list stale for an
+        // hour (QA 2026-09 E-16): drop the localized editor data so the next
+        // editor load rebuilds it.
+        if ($post && isset($post->post_type) && 'wp_font_family' === $post->post_type) {
+            $this->invalidate_editor_data_cache();
+            return;
+        }
+        // A deleted face must leave the printed CSS the same way a saved one
+        // enters it (PR #194 review)
+        if ($post && isset($post->post_type) && 'wp_font_face' === $post->post_type) {
+            $this->invalidate_font_face_css();
+        }
+    }
+
+    /**
+     * Drop the caches that hold adopted Library faces.
+     *
+     * Shared by the wp_font_face save and delete handlers. Deliberately cheap
+     * (see on_wp_font_face_saved()): the three static CSS transients go by
+     * name, and the per-page frontend keys rotate through a fresh face
+     * version folded into get_font_css_cache_key().
+     *
+     * @since 2.3.0
+     */
+    private function invalidate_font_face_css() {
+        delete_transient('typost_admin_font_css');
+        delete_transient('typost_editor_font_css');
+        delete_transient('typost_block_font_css');
+        // A UUID rather than a timestamp: two saves in the same instant
+        // must not share a version (PR #194 review)
+        update_option('typost_font_face_version', wp_generate_uuid4(), false);
+        $this->font_library_bridge()->clear_snapshot_cache();
+    }
+
+    /**
+     * save_post_wp_font_family handler: a family installed or edited in the
+     * Font Library appears in the editor picker on the next load.
+     *
+     * The picker reads `wpFontLibraryFonts` from the per-user localized-data
+     * transient (typost_editor_data_{user}, one hour), which nothing else
+     * invalidated on a Library install (QA 2026-09 finding E-16).
+     *
+     * @since 2.3.0
+     * @param int     $post_id Post ID
+     * @param WP_Post $post    Post object
+     * @param bool    $update  Whether this is an update
+     */
+    public function on_wp_font_family_saved($post_id, $post = null, $update = false) {
+        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+            return;
+        }
+        if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
+            return;
+        }
+        $this->invalidate_editor_data_cache();
+    }
+
+    /**
+     * save_post_wp_font_face handler: a face added to or changed on a Library
+     * family reaches the plugin-printed @font-face CSS (adopted families that
+     * WordPress does not print) on the next request.
+     *
+     * Face posts only feed the adopted-font CSS, so this is deliberately
+     * cheap: WordPress saves every variant of an installed family as its own
+     * wp_font_face post, and a full clear_cache() per face (wildcard row
+     * deletes plus an object-cache flush) would stampede a Redis/Memcached
+     * site during one install (review of E-16). The three static CSS
+     * transients are deleted by name (cache-safe), and the per-page frontend
+     * CSS keys are rotated through the face version folded into
+     * get_font_css_cache_key() whenever adopted faces are printed.
+     *
+     * @since 2.3.0
+     * @param int     $post_id Post ID
+     * @param WP_Post $post    Post object
+     * @param bool    $update  Whether this is an update
+     */
+    public function on_wp_font_face_saved($post_id, $post = null, $update = false) {
+        if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id)) {
+            return;
+        }
+        if ($post && isset($post->post_status) && 'auto-draft' === $post->post_status) {
+            return;
+        }
+        $this->invalidate_font_face_css();
     }
 
     /**
@@ -3541,6 +3819,14 @@ class Typost {
      *
      * Ensures all fields in font face definitions are properly sanitized
      * to prevent XSS when displayed in admin interface.
+     *
+     * Weights outside the 100-900 hundreds are accepted (1-1000, for
+     * variable fonts) only when the `typost_allow_variable_weights` option
+     * is truthy. That option has NO admin UI and nothing in the plugin
+     * writes it; it is kept, default false, so a site that set it directly
+     * (wp-config, WP-CLI, a filter on `option_typost_allow_variable_weights`)
+     * keeps its behavior. The Variable Fonts module handles variable weights
+     * through its own axis definitions and does not depend on it.
      *
      * @param array $font_faces Array of font face definitions
      * @return array Sanitized font faces
@@ -6599,9 +6885,9 @@ class Typost {
             $show_clear_confirmation = isset($_POST['typost_show_clear_confirmation']) ? '1' : '0';
             update_option('typost_show_clear_confirmation', $show_clear_confirmation);
 
-            // Save variable weight setting
-            $allow_variable = isset($_POST['typost_allow_variable_weights']) ? '1' : '0';
-            update_option('typost_allow_variable_weights', $allow_variable);
+            // typost_allow_variable_weights is deliberately NOT written here:
+            // the Options tab renders no control for it, and a no-JS save must
+            // not reset an option that has no checkbox (see sanitize_font_faces()).
 
             // Save archive full content check setting
             $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';

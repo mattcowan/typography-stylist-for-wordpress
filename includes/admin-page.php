@@ -1022,7 +1022,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
 
             <p><?php esc_html_e('Manage all fonts available in the block editor. Drag items to reorder them — the order here determines the order in the editor font selector.', 'typography-stylist'); ?></p>
 
-            <div id="typost-fonts-region" tabindex="-1">
+            <div id="typost-fonts-region" tabindex="-1" role="region" aria-label="<?php esc_attr_e('Font list', 'typography-stylist'); ?>">
                 <?php typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts, $manual_fonts); ?>
             </div>
 
@@ -1341,36 +1341,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             </td>
                         </tr>
                         <?php endif; ?>
-                        <?php
-                        /*
-                         * Variable Font Weights option - commented out for future version
-                         * Backend functionality remains in place, UI option hidden until ready for release
-                         */
-                        ?>
-                        <?php /* ?>
-                        <tr>
-                            <th scope="row">
-                                <label for="typost_allow_variable_weights">
-                                    <?php esc_html_e('Variable Font Weights', 'typography-stylist'); ?>
-                                </label>
-                            </th>
-                            <td>
-                                <input
-                                    type="checkbox"
-                                    id="typost_allow_variable_weights"
-                                    name="typost_allow_variable_weights"
-                                    value="1"
-                                    <?php checked(get_option('typography_stylist_allow_variable_weights', false)); ?>
-                                />
-                                <label for="typost_allow_variable_weights">
-                                    <?php esc_html_e('Allow custom font-weight values (1-1000) for variable fonts', 'typography-stylist'); ?>
-                                </label>
-                                <p class="description">
-                                    <?php esc_html_e('When enabled, allows font-weight values from 1-1000 instead of just standard weights (100, 200, ..., 900). Enable this if you are using variable fonts that support intermediate weights like 450 or 350. Disabled by default for compatibility with standard fonts.', 'typography-stylist'); ?>
-                                </p>
-                            </td>
-                        </tr>
-                        <?php */ ?>
                         <?php
                         /**
                          * Fires inside the Options tab settings table, after the core rows.
@@ -1734,11 +1704,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
     </div>
 
     <!-- Font Deletion Modal -->
-    <div id="typost-delete-font-modal" class="typost-modal" style="display:none;">
+    <div id="typost-delete-font-modal" class="typost-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="typost-delete-font-modal-title">
         <div class="typost-modal-overlay"></div>
         <div class="typost-modal-content">
             <div class="typost-modal-header">
-                <h2><?php esc_html_e('Delete Font', 'typography-stylist'); ?></h2>
+                <h2 id="typost-delete-font-modal-title"><?php esc_html_e('Delete Font', 'typography-stylist'); ?></h2>
                 <button class="typost-modal-close" aria-label="<?php esc_attr_e('Close', 'typography-stylist'); ?>">&times;</button>
             </div>
             <div class="typost-modal-body">

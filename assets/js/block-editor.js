@@ -11,7 +11,8 @@ const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolv
 const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
-const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock } = require('./convert-capability.js');
+const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
+const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes } = require('./inline-apply-rules.js');
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -495,6 +496,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // is mixed (multiple distinct typost formats), only these changes are
             // applied per-run — the rest of each run's formatting is preserved.
             this._pendingChanges = { keys: new Set(), featureToggles: [] };
+            // Whether setFontWeight() ran in this popover session. A weight is
+            // written onto the span only when the author picked one (or the
+            // selection already stores one) — never the display default, which
+            // lightened theme-bold headings on every feature toggle (QA E-2).
+            this._authorPickedWeight = false;
+            // An extension asked for the weight to be removed (a falsy
+            // fontWeight on typost-apply-block-properties): both apply paths
+            // strip data-fontweight/font-weight instead of writing '400'
+            this._clearWeight = false;
 
             this.state = {
                 isOpen: false,
@@ -666,7 +676,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         self._resetPendingChanges();
                     } else {
                         if (props.fontId !== undefined) { self._recordChange('font'); }
-                        if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
+                        if (props.fontWeight !== undefined) {
+                            self._recordChange('fontWeight');
+                            // Three states (PR #194 review): a truthy weight from an
+                            // extension (a paragraph style detach hands back the
+                            // state's weight) counts as picked and is written; a falsy
+                            // one is an explicit clear, which strips the weight in
+                            // both apply paths; an absent key leaves it untouched.
+                            self._authorPickedWeight = !!props.fontWeight;
+                            self._clearWeight = !props.fontWeight;
+                        }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
@@ -1547,6 +1566,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
             // Fresh popover session: no property changes recorded yet
             this._resetPendingChanges();
+            this._authorPickedWeight = false;
+            this._clearWeight = false;
 
             this.setState(state => ({
                 isOpen: !state.isOpen,
@@ -1557,7 +1578,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontSizeMin: this.getActiveFontSizeMin() || 16,
                 fontSizePreferred: this.getActiveFontSizePreferred() || 24,
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
-                fontWeight: this.getActiveFontWeight() || '400',
+                // The rendered weight, so the select shows what the author sees
+                // (700 on a theme-bold heading); it is written only when picked
+                fontWeight: this.getEffectiveFontWeight() || '400',
                 fontStyle: this.getActiveFontStyle() || '',
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
@@ -1842,6 +1865,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         setFontWeight(value) {
             this._recordChange('fontWeight');
+            this._authorPickedWeight = true;
+            this._clearWeight = false;
             this.setState({
                 fontWeight: value
             }, () => {
@@ -1988,12 +2013,20 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          *
          * @return {string} Explanation, or '' when none applies.
          */
-        getConvertBlockedMessage(reason, parentTitle) {
+        getConvertBlockedMessage(reason, parentTitle, inNotice = false) {
             const convertBlockedReason = reason !== undefined ? reason : this.state.convertBlockedReason;
             const convertParentTitle = parentTitle !== undefined ? parentTitle : this.state.convertParentTitle;
 
-            if (!shouldExplainConvertBlock(convertBlockedReason)) {
+            // Inside the word-boundary notice the conversion was just
+            // recommended, so an unsupported block type says why there is no
+            // button (QA E-4); elsewhere that omission needs no explanation.
+            const explains = inNotice ? shouldExplainInNotice(convertBlockedReason) : shouldExplainConvertBlock(convertBlockedReason);
+            if (!explains) {
                 return '';
+            }
+
+            if (convertBlockedReason === CONVERT_BLOCKED.UNSUPPORTED) {
+                return __('Conversion is available for heading and paragraph blocks.', 'typography-stylist');
             }
 
             if (convertBlockedReason === CONVERT_BLOCKED.LOCKED) {
@@ -2056,7 +2089,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 result.canConvert = capability.canConvert;
                 result.convertBlockedMessage = capability.canConvert
                     ? ''
-                    : this.getConvertBlockedMessage(capability.reason, capability.parentTitle);
+                    : this.getConvertBlockedMessage(capability.reason, capability.parentTitle, true);
             }
 
             return result;
@@ -2145,7 +2178,22 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // anything stored says 700 — and the block's fontWeight defaults to
             // '400', which save.js always emits, so a straight conversion
             // visibly lightens the heading.
-            const convertFontWeight = this.getEffectiveFontWeight();
+            // With a partial selection the block itself keeps the weight it
+            // renders at; the author's pick stays on the span (PR #194 review)
+            const blockInheritedWeight = this.getBlockInheritedWeight() || (this._clearWeight ? '' : this.getExplicitFontWeight()) || '400';
+            // After an explicit clear the stored weight is stale, so a whole-
+            // block conversion takes the rendered weight instead of the value
+            // getEffectiveFontWeight() would read back off the span
+            const convertFontWeight = this._clearWeight
+                ? blockInheritedWeight
+                : this.getEffectiveFontWeight();
+            // The weight the span itself gets (same rule as an apply, QA E-2)
+            const spanWeight = resolveWeightToWrite({
+                explicitWeight: this.getExplicitFontWeight(),
+                authorPicked: this._authorPickedWeight,
+                stateWeight: this.state.fontWeight,
+                clearWeight: this._clearWeight
+            });
 
             let contentForBlock;
 
@@ -2179,8 +2227,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const sanitizedFont = sanitizeFontFamily(selectedFont);
                     styleArray.push(`font-family: ${sanitizedFont}`);
                 }
-                if (fontWeight && fontWeight !== '400') {
-                    const sanitizedWeight = sanitizeCSSValue(fontWeight);
+                if (spanWeight) {
+                    const sanitizedWeight = sanitizeCSSValue(spanWeight);
                     styleArray.push(`font-weight: ${sanitizedWeight}`);
                 }
                 if (letterSpacing !== 0) {
@@ -2213,8 +2261,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     if (this.state.selectedFontId) {
                         spanAttributes['data-font-id'] = String(this.state.selectedFontId);
                     }
-                    if (fontWeight && fontWeight !== '400') {
-                        spanAttributes['data-fontweight'] = String(fontWeight);
+                    if (spanWeight) {
+                        spanAttributes['data-fontweight'] = String(spanWeight);
                     }
 
                     // Apply over the existing HTML with the shared span-preserving
@@ -2223,13 +2271,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     // surroundContents call threw on ANY cross-span selection and
                     // fell back to a plain-text rebuild that destroyed all existing
                     // styling — exactly the selections the convert button exists for)
+                    // An explicit clear (a falsy fontWeight from an extension)
+                    // must reach the enclosing span too: the applier only wraps
+                    // a new span and never strips a property from the span
+                    // around it, so the old weight would stay in force
+                    // (PR #194 re-review)
+                    let convertSource = existingContent;
+                    if (this._clearWeight && window.typostSharedUtils && window.typostSharedUtils.removePropertyFromSelection) {
+                        const cleared = window.typostSharedUtils.removePropertyFromSelection(existingContent, effectiveStart, effectiveEnd, 'data-fontweight', 'font-weight');
+                        if (cleared.success) {
+                            convertSource = cleared.content;
+                        }
+                    }
                     const applied = (window.typostSharedUtils && window.typostSharedUtils.applyStylingSafeStringMethod)
-                        ? window.typostSharedUtils.applyStylingSafeStringMethod(existingContent, effectiveStart, effectiveEnd, spanAttributes, styleString)
+                        ? window.typostSharedUtils.applyStylingSafeStringMethod(convertSource, effectiveStart, effectiveEnd, spanAttributes, styleString)
                         : { success: false };
 
                     // On failure, convert with the content untouched rather than
                     // ever rebuilding from plain text — no styling is worth losing
-                    contentForBlock = applied.success ? applied.content : existingContent;
+                    contentForBlock = applied.success ? applied.content : convertSource;
                 } else {
                     // No existing HTML, use simple text replacement
                     const beforeText = fullText.substring(0, effectiveStart);
@@ -2240,37 +2300,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         escapeHTML(afterText);
                 }
 
-                // If already an Typography Stylist block, just update its attributes
+                // The span carries the selection's typography; the block itself
+                // takes inherit defaults so the rest of the text is not restyled
+                // (QA E-3). An existing block keeps its settings and gets the
+                // new content only.
                 if (isAlreadyTypostBlock) {
-                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, buildConvertBlockAttributes({
+                        partialSelection: true,
+                        isNewBlock: false,
                         content: contentForBlock,
-                        // Preserve existing block-level features, don't apply inline features globally
-                        features: currentBlock.attributes.features || [],
-                        fontFamily: this.state.selectedFont,
-                        fontSize: this.state.fontSize,
-                        fontSizeMin: this.state.fontSizeMin,
-                        fontSizePreferred: this.state.fontSizePreferred,
-                        fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing,
-                        lineHeight: this.state.lineHeight
-                    });
+                        existingFeatures: currentBlock.attributes.features || []
+                    }));
                 } else {
-                    // Create new Typography Stylist block preserving user's settings from inline editor
-                    // Don't apply inline features globally - they're only for the selection
-                    const typostBlock = createBlock('typost/block', {
+                    const typostBlock = createBlock('typost/block', buildConvertBlockAttributes({
+                        partialSelection: true,
+                        isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        features: [],
-                        fontFamily: this.state.selectedFont,
-                        fontSize: this.state.fontSize,
-                        fontSizeMin: this.state.fontSizeMin,
-                        fontSizePreferred: this.state.fontSizePreferred,
-                        fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: convertFontWeight,
-                        letterSpacing: this.state.letterSpacing,
-                        lineHeight: this.state.lineHeight
-                    });
+                        effectiveWeight: blockInheritedWeight
+                    }));
 
                     // Replace current block
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
@@ -2305,32 +2353,21 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                 // If already an Typography Stylist block, just update its attributes
                 if (isAlreadyTypostBlock) {
-                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, {
+                    dispatch('core/block-editor').updateBlockAttributes(selectedBlockClientId, buildConvertBlockAttributes({
+                        partialSelection: false,
+                        isNewBlock: false,
                         content: textContent,
-                        features: this.state.selectedFeatures,
-                        fontFamily: this.state.selectedFont,
-                        fontSize: this.state.fontSize,
-                        fontSizeMin: this.state.fontSizeMin,
-                        fontSizePreferred: this.state.fontSizePreferred,
-                        fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: this.state.fontWeight,
-                        letterSpacing: this.state.letterSpacing,
-                        lineHeight: this.state.lineHeight
-                    });
+                        state: this.state
+                    }));
                 } else {
-                    const typostBlock = createBlock('typost/block', {
+                    const typostBlock = createBlock('typost/block', buildConvertBlockAttributes({
+                        partialSelection: false,
+                        isNewBlock: true,
                         content: textContent,
                         tagName: tagName,
-                        features: this.state.selectedFeatures,
-                        fontFamily: this.state.selectedFont,
-                        fontSize: this.state.fontSize,
-                        fontSizeMin: this.state.fontSizeMin,
-                        fontSizePreferred: this.state.fontSizePreferred,
-                        fontSizeMax: this.state.fontSizeMax,
-                        fontWeight: convertFontWeight,
-                        letterSpacing: this.state.letterSpacing,
-                        lineHeight: this.state.lineHeight
-                    });
+                        effectiveWeight: convertFontWeight,
+                        state: this.state
+                    }));
 
                     // Replace current block
                     dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, typostBlock);
@@ -2389,8 +2426,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 styleDecls['font-variation-settings'] = null;
             }
             if (pending.keys.has('fontWeight')) {
-                dataAttrs['data-fontweight'] = fontWeight;
-                styleDecls['font-weight'] = fontWeight;
+                // An explicit clear removes the weight from every run
+                dataAttrs['data-fontweight'] = this._clearWeight ? null : fontWeight;
+                styleDecls['font-weight'] = this._clearWeight ? null : fontWeight;
             }
             if (pending.keys.has('fontStyle')) {
                 dataAttrs['data-fontstyle'] = fontStyle || null;
@@ -2507,7 +2545,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 this._resetPendingChanges();
             }
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && fontWeight === '400' && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
+            // QA E-2: the weight actually written — the selection's own, or the
+            // author's pick; never the display default / inherited value
+            const weightToWrite = resolveWeightToWrite({
+                explicitWeight: (activeFormatForRaw && activeFormatForRaw.attributes && activeFormatForRaw.attributes['data-fontweight']) || '',
+                authorPicked: this._authorPickedWeight,
+                stateWeight: fontWeight,
+                clearWeight: this._clearWeight
+            });
+
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -2568,11 +2615,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }
                 }
 
-                // Add font weight (always apply, default to normal)
-                attributes['data-fontweight'] = fontWeight;
-                if (!hasActiveStyle) {
-                    if (styleString) styleString += '; ';
-                    styleString += `font-weight: ${fontWeight}`;
+                // Add font weight — only a stored or author-picked one (QA E-2)
+                if (weightToWrite) {
+                    attributes['data-fontweight'] = weightToWrite;
+                    if (!hasActiveStyle) {
+                        if (styleString) styleString += '; ';
+                        styleString += `font-weight: ${weightToWrite}`;
+                    }
                 }
 
                 // Add font style (visual italic — semantic emphasis stays <em>)
@@ -3159,6 +3208,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // '' when the omission needs no explanation (already a Typography
             // Stylist block, or a block type with no conversion mapping).
             const convertBlockedMessage = canConvert ? '' : this.getConvertBlockedMessage();
+            // The notice recommends converting, so there it also explains an
+            // unsupported block type (QA E-4)
+            const noticeBlockedMessage = canConvert ? '' : this.getConvertBlockedMessage(undefined, undefined, true);
             // Extension-registered toolbar buttons (v2.3.0). Rendered as real
             // ToolbarButtons so they join the toolbar's roving tabindex.
             const extensionButtons = filterToolbarButtons(
@@ -3338,8 +3390,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 {__('Convert to Typography Stylist Block', 'typography-stylist')}
                                             </Button>
                                         )}
-                                        {!canConvert && convertBlockedMessage && (
-                                            <p className="typost-convert-blocked">{convertBlockedMessage}</p>
+                                        {!canConvert && noticeBlockedMessage && (
+                                            <p className="typost-convert-blocked">{noticeBlockedMessage}</p>
                                         )}
                                         <p className="typost-warning-settings-link">
                                             <a href={typostData.settingsUrl + '&tab=accessibility'} target="_blank" rel="noopener noreferrer">
@@ -3522,6 +3574,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 step={1}
                                                 help={`${fontSizeMax}px`}
                                             />
+                                            {/* Same soft validation as the block (QA E-1): the
+                                                clamp() is still written as typed, so the author
+                                                is told instead of silently corrected. Core's
+                                                Notice speaks its text on mount. */}
+                                            {!isValidFontSizeRange(fontSizeMin, fontSizePreferred, fontSizeMax) && (
+                                                <Notice status="warning" isDismissible={false} className="typost-size-order-notice">
+                                                    {__('Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior.', 'typography-stylist')}
+                                                </Notice>
+                                            )}
                                         </div>
                                     )}
                                 </div>
