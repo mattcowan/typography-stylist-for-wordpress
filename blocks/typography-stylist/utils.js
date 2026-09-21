@@ -2374,8 +2374,13 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
 	const container = doc.body.firstChild;
 
-	// Build text offset map (accounts for <br> line breaks)
+	// Text and <br> entries share one coordinate space (a break is one
+	// position, as in a RichText value). A span holding only a <br> has no
+	// text entry, so the break entries are needed to find it at all —
+	// the same gap the PR #193 rounds closed in the finder and the applier.
 	const textNodeMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
+	const offsetEntries = textNodeMap.concat(breakMap);
 	const spansAtSelection = new Set();
 
 	if (startOffset === endOffset) {
@@ -2388,7 +2393,7 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 		let targetSize = Infinity;
 		container.querySelectorAll('span.typost-styled').forEach(span => {
 			let spanStart = Infinity, spanEnd = -1;
-			textNodeMap.forEach(({ node, start, end }) => {
+			offsetEntries.forEach(({ node, start, end }) => {
 				if (span.contains(node)) {
 					spanStart = Math.min(spanStart, start);
 					spanEnd = Math.max(spanEnd, end);
@@ -2407,11 +2412,12 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 			spansAtSelection.add(current);
 		}
 	} else {
-		// Walk through text nodes and find spans that overlap with selection
-		for (const entry of textNodeMap) {
-			// Check if this text node overlaps with selection
+		// Walk through text and break entries and find spans that overlap
+		// with the selection
+		for (const entry of offsetEntries) {
+			// Check if this entry overlaps with selection
 			if (entry.end > startOffset && entry.start < endOffset) {
-				// Find typost-styled spans containing this text node
+				// Find typost-styled spans containing this node
 				let parent = entry.node.parentElement;
 				while (parent && parent !== container) {
 					if (parent.classList && parent.classList.contains('typost-styled')) {
