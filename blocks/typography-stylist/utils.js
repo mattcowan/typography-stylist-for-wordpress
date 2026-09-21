@@ -4009,6 +4009,7 @@ if (typeof window !== 'undefined') {
 		pruneRawFeatureSettings,
 		parseStyleString,
 		buildStyleString,
-		applyStylingSafeStringMethod
+		applyStylingSafeStringMethod,
+		removePropertyFromSelection
 	};
 }

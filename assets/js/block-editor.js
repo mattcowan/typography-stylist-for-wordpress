@@ -2271,13 +2271,25 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     // surroundContents call threw on ANY cross-span selection and
                     // fell back to a plain-text rebuild that destroyed all existing
                     // styling — exactly the selections the convert button exists for)
+                    // An explicit clear (a falsy fontWeight from an extension)
+                    // must reach the enclosing span too: the applier only wraps
+                    // a new span and never strips a property from the span
+                    // around it, so the old weight would stay in force
+                    // (PR #194 re-review)
+                    let convertSource = existingContent;
+                    if (this._clearWeight && window.typostSharedUtils && window.typostSharedUtils.removePropertyFromSelection) {
+                        const cleared = window.typostSharedUtils.removePropertyFromSelection(existingContent, effectiveStart, effectiveEnd, 'data-fontweight', 'font-weight');
+                        if (cleared.success) {
+                            convertSource = cleared.content;
+                        }
+                    }
                     const applied = (window.typostSharedUtils && window.typostSharedUtils.applyStylingSafeStringMethod)
-                        ? window.typostSharedUtils.applyStylingSafeStringMethod(existingContent, effectiveStart, effectiveEnd, spanAttributes, styleString)
+                        ? window.typostSharedUtils.applyStylingSafeStringMethod(convertSource, effectiveStart, effectiveEnd, spanAttributes, styleString)
                         : { success: false };
 
                     // On failure, convert with the content untouched rather than
                     // ever rebuilding from plain text — no styling is worth losing
-                    contentForBlock = applied.success ? applied.content : existingContent;
+                    contentForBlock = applied.success ? applied.content : convertSource;
                 } else {
                     // No existing HTML, use simple text replacement
                     const beforeText = fullText.substring(0, effectiveStart);
