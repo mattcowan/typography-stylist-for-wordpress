@@ -7,6 +7,10 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 
 == Changelog ==
 
+= 2.3.1 =
+* **Fixed: translations did not load on WordPress 5.8 to 6.4.** The French and Spanish translation files had a format error. WordPress 6.5 and later ignored the error, but earlier versions rejected each file and showed the plugin in English. The files now load on every supported WordPress version.
+* **Fixed: French used the plural form for zero.** French uses the singular form for 0. The translation files had no plural rule, or the English rule, so the settings page and the Paragraph Styles browser showed the plural form for 0. They now show the singular form.
+
 = 2.3.0 =
 * **NEW: the style browser shows your own words.** When you open the Paragraph Styles browser with text selected, each row now renders the selected words in that style instead of the style name. The name stays in the row's detail line. Long selections are cut at 40 characters.
 * **NEW: group the style browser by font family, size mode, or recently used.** A "Group by" control sorts the styles under headings. "Recently used" lists the styles you applied last, most recent first, and remembers them in this browser. Groups keep working with the search box and with "Show more".
