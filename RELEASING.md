@@ -19,6 +19,9 @@ WordPress.org SVN  (https://plugins.svn.wordpress.org/typography-stylist)
    ├─ tags/X.Y.Z/   ← snapshot copied from trunk
    └─ assets/       ← synced from .wordpress-org/ (banners, icons, screenshots)
    ▼
+wp.org release confirmation  ← email to committers; the new tag is held
+   │                           until a committer confirms it
+   ▼
 wp.org serves the version named by readme.txt's `Stable tag`
 ```
 
@@ -128,7 +131,33 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    `main`, title it, write the release notes (users see these — the
    changelog entry is a good start). Leave "Set as a pre-release" UNCHECKED.
 6. **Publish.** Watch the **Release Deploy** run in the Actions tab.
-7. Verify: wp.org listing shows the new version; `typography-stylist.zip` is
+7. **Confirm the release on wp.org.** A green deploy only means the tag is
+   in SVN. wp.org then emails the plugin committers, and the listing and
+   the download zip do not change until a committer confirms the release —
+   from the link in that email, or at
+   https://wordpress.org/plugins/developers/releases/ (log in first). This
+   is not instant: for 2.3.0 the tag was committed at 13:49 UTC and the zip
+   went live at 15:39 UTC, during a directory-wide delay that other
+   developers reported in the Make WordPress Slack #pluginreview channel.
+   Until then the API
+   (`api.wordpress.org/plugins/info/1.2/?action=plugin_information&request[slug]=typography-stylist`)
+   keeps reporting the previous version and
+   `downloads.wordpress.org/plugin/typography-stylist.X.Y.Z.zip` returns
+   404. That is the expected waiting state, not a failed deploy — do not
+   re-tag, bump to the next patch version, or touch `tags/X.Y.Z/` while
+   the release is waiting.
+8. **Expect a separate delay on auto-updates.** After confirmation, the
+   "Protect the Shire" review holds each new release back from
+   **auto-updates** for a cooldown while it is scanned
+   ([announcement](https://wordpress.org/news/2026/06/pts/), June 2026: up
+   to 24 hours; later cut to 6 hours in a Slack post, and the plugin page
+   shows the current delay). A release that scores as high risk is blocked
+   from the update API. This is a different gate from step 7: confirmation
+   decides when the release exists on wp.org at all, and the cooldown decides
+   when sites start updating to it on their own. Which other surfaces the
+   cooldown holds is not documented, so to verify during it, install the
+   zip from the listing rather than waiting for a test site to auto-update.
+9. Verify: wp.org listing shows the new version; `typography-stylist.zip` is
    attached to the GitHub Release; install/update on a test site works.
 
 Tag format is always `vX.Y.Z` (the workflow strips the `v` when comparing
