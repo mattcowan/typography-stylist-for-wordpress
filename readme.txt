@@ -295,7 +295,7 @@ Yes. When you upload a variable font, the plugin reads its axes from the font fi
 
 = What does "register in the WordPress Font Library" do? =
 
-On WordPress 6.5+, you can add uploaded fonts to the WordPress Font Library (Appearance → Editor), one at a time or all together, from the Custom Fonts tab. The site editor can then use them like any Library font. The font files stay where they are, and your existing content does not change. You can remove a font from the Library again. Adobe Fonts and custom font definitions stay in the plugin, because Adobe fonts load from Adobe's servers.
+On WordPress 6.5+, the plugin adds new uploaded fonts to the WordPress Font Library automatically. You can turn this off in Options. To add older fonts, use the Custom Fonts tab, one font at a time or all together. WordPress can then use them like any Library font. In WordPress 7.1, the Font Library is at Appearance → Fonts. In earlier versions, open it from the Site Editor, in Styles → Typography. The font files stay where they are, and your existing content does not change. You can remove a font from the Library again. Adobe Fonts and custom font definitions stay in the plugin, because Adobe fonts load from Adobe's servers.
 
 = Where can I get beta versions or report bugs? =
 
@@ -320,6 +320,7 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 * **NEW: a visual style browser.** "Browse styles…" in the inline editor (and an optional block toolbar button) shows every style rendered in its own typeface, with your selected words as the sample. Search, group by font family, size mode or recently used, and move through the list with the keyboard.
 * **NEW: optional Glyphs and Paragraph Styles buttons in the block toolbar, and a choice of what Enter does in a Typography Stylist block.** All three settings are in Options. The toolbar buttons are off by default, and Enter keeps its line-break behavior until you change it.
 * **Improved: the settings page updates in place.** Uploading, adding, editing, deleting and registering fonts, and every settings form, no longer reload the page. Buttons keep keyboard focus while a request runs.
+* **Improved: the font menus are searchable.** Type any part of a font name to narrow the list, in the sidebar, the Quick Feature Toggles and the inline editor.
 * **Improved: screen-reader and keyboard use of the editor panels.** Dialog names are read first, every control is named, the panels have fewer Tab stops, focus stays inside an open panel, and contrast meets WCAG AA.
 * **Fixed: styled text kept the wrong weight or font.** A feature toggle no longer makes a bold heading light; text styled only by the theme keeps its weight; a Font Library font that is installed but not activated now prints its @font-face; a font installed in the Library appears in the pickers on the next editor load.
 * **Fixed: conversion, nesting and sizing in the editors.** "Convert to Typography Stylist Block" keeps the selection's styling on the selection only; the block reports when styling cannot nest deeper; the inline editor warns when responsive sizes are out of order; "Responsive (fluid)" applies at once in the Quick Feature Toggles.

@@ -222,7 +222,7 @@ This helps you:
 
 ### WordPress Font Library Integration (WordPress 6.5+)
 
-On WordPress 6.5 or later, uploaded webfont kits can also be registered in the **WordPress Font Library** (Appearance → Editor), making them available to the whole site through WordPress's own font system.
+On WordPress 6.5 or later, uploaded webfont kits can also be registered in the **WordPress Font Library** (Appearance → Fonts in WordPress 7.1; the Site Editor's Styles → Typography in earlier versions), making them available to the whole site through WordPress's own font system.
 
 - **New uploads register automatically** — controlled by the "WordPress Font Library" toggle in the Options tab (on by default).
 - **Existing fonts are opt-in** — each uploaded font card on the Custom Fonts tab shows its status ("Registered as *slug*" or "Plugin-managed") with a **Register in Font Library** / **Remove from Font Library** button, and a notice offers one-click bulk registration.
