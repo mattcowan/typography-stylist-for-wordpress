@@ -785,8 +785,11 @@ final class Typost_Paragraph_Styles {
 		);
 
 		// Core fires typost_admin_assets from both admin_print_styles-{hook}
-		// and admin_print_scripts-{hook}; wp_add_inline_style() appends on
-		// every call, so add the style CSS once.
+		// and admin_print_scripts-{hook}. The stylesheets print between the
+		// two (print_admin_styles() runs on admin_print_styles), so CSS added
+		// on the second call never reaches the page and cannot duplicate.
+		// The flag is a precaution: it skips building the CSS a second time
+		// and keeps one copy if the hook ever fires twice before printing.
 		if ( ! $this->admin_style_css_added ) {
 			$css = $this->get_all_css();
 			if ( ! empty( $css ) ) {
@@ -816,19 +819,24 @@ final class Typost_Paragraph_Styles {
 	 * @param array $font_lookup Numeric font ID => display name, every source.
 	 * @param array $mappings    Deleted font ID => replacement font ID.
 	 * @return array {
-	 *     @type string $status 'default' (no font set), 'found', 'replaced', or 'missing'.
-	 *     @type string $name   Font name for 'found' and 'replaced'; '' otherwise.
+	 *     @type string $status  'default' (no font set), 'found', 'replaced', or 'missing'.
+	 *     @type string $name    Font name for 'found' and 'replaced'; '' otherwise.
+	 *     @type int    $font_id The font the style renders in: the saved ID for
+	 *                           'found', the end of the replacement chain for
+	 *                           'replaced', 0 otherwise. A check on the font's
+	 *                           source (a manual definition) must use this ID,
+	 *                           not the saved one.
 	 * }
 	 */
 	public static function resolve_font_label( $font_id, $font_lookup, $mappings ) {
 		$font_id = absint( $font_id );
 		if ( 0 === $font_id ) {
-			return array( 'status' => 'default', 'name' => '' );
+			return array( 'status' => 'default', 'name' => '', 'font_id' => 0 );
 		}
 
 		$font_lookup = is_array( $font_lookup ) ? $font_lookup : array();
 		if ( isset( $font_lookup[ $font_id ] ) ) {
-			return array( 'status' => 'found', 'name' => (string) $font_lookup[ $font_id ] );
+			return array( 'status' => 'found', 'name' => (string) $font_lookup[ $font_id ], 'font_id' => $font_id );
 		}
 
 		$mappings = is_array( $mappings ) ? $mappings : array();
@@ -840,12 +848,12 @@ final class Typost_Paragraph_Styles {
 				break;
 			}
 			if ( isset( $font_lookup[ $current ] ) ) {
-				return array( 'status' => 'replaced', 'name' => (string) $font_lookup[ $current ] );
+				return array( 'status' => 'replaced', 'name' => (string) $font_lookup[ $current ], 'font_id' => $current );
 			}
 			$visited[ $current ] = true;
 		}
 
-		return array( 'status' => 'missing', 'name' => '' );
+		return array( 'status' => 'missing', 'name' => '', 'font_id' => 0 );
 	}
 
 	// -------------------------------------------------------------------------

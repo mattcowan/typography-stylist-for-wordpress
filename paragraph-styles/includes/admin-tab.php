@@ -232,7 +232,8 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 					<?php // `hidden` until the Preview button opens it: a browser fetches no font file for text that is not rendered. ?>
 					<div class="typost-ps-preview" id="<?php echo esc_attr( $preview_id ); ?>" hidden>
 						<p class="typost-ps-preview-sample <?php echo esc_attr( $css_class ); ?>" lang="<?php echo esc_attr( $preview_lang ); ?>"><?php echo esc_html( $preview_text ); ?></p>
-						<?php if ( 'found' === $font['status'] && isset( $manual_font_ids[ $font_id ] ) ) : ?>
+						<?php // Check the font the style renders in: a deleted font can be replaced by a manual one. ?>
+						<?php if ( isset( $manual_font_ids[ $font['font_id'] ] ) ) : ?>
 							<p class="typost-ps-preview-note"><?php esc_html_e( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ); ?></p>
 						<?php endif; ?>
 					</div>

@@ -34,7 +34,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_no_font_set_is_default() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'default', 'name' => ''),
+            array('status' => 'default', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label(0, array(36 => 'Fraunces'), array())
         );
     }
@@ -42,7 +42,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_existing_font_is_found_by_name() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'found', 'name' => 'Fraunces'),
+            array('status' => 'found', 'name' => 'Fraunces', 'font_id' => 36),
             \Typost_Paragraph_Styles::resolve_font_label(36, array(36 => 'Fraunces'), array())
         );
     }
@@ -50,7 +50,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_deleted_font_with_replacement_names_the_replacement() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'replaced', 'name' => 'EB Garamond'),
+            array('status' => 'replaced', 'name' => 'EB Garamond', 'font_id' => 37),
             \Typost_Paragraph_Styles::resolve_font_label(16, array(37 => 'EB Garamond'), array(16 => 37))
         );
     }
@@ -59,15 +59,24 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
         $this->freshInstance();
         // 16 was replaced by 29, then 29 was deleted and replaced by 37.
         $this->assertSame(
-            array('status' => 'replaced', 'name' => 'EB Garamond'),
+            array('status' => 'replaced', 'name' => 'EB Garamond', 'font_id' => 37),
             \Typost_Paragraph_Styles::resolve_font_label(16, array(37 => 'EB Garamond'), array(16 => 29, 29 => 37))
         );
+    }
+
+    public function test_replaced_result_carries_the_replacement_id_not_the_saved_one() {
+        $this->freshInstance();
+        // Deleted font 16 replaced by manual font 40: the admin tab checks the
+        // returned font_id against the manual-font set to show its note.
+        $result = \Typost_Paragraph_Styles::resolve_font_label(16, array(40 => 'Theme Serif'), array(16 => 40));
+        $this->assertSame('replaced', $result['status']);
+        $this->assertSame(40, $result['font_id']);
     }
 
     public function test_deleted_font_without_replacement_is_missing() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'missing', 'name' => ''),
+            array('status' => 'missing', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label(99, array(36 => 'Fraunces'), array())
         );
     }
@@ -75,7 +84,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_replacement_that_was_also_deleted_is_missing() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'missing', 'name' => ''),
+            array('status' => 'missing', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label(16, array(36 => 'Fraunces'), array(16 => 29))
         );
     }
@@ -83,7 +92,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_cyclic_mapping_terminates_as_missing() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'missing', 'name' => ''),
+            array('status' => 'missing', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label(16, array(), array(16 => 29, 29 => 16))
         );
     }
@@ -91,11 +100,11 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_non_array_inputs_and_string_ids_are_tolerated() {
         $this->freshInstance();
         $this->assertSame(
-            array('status' => 'missing', 'name' => ''),
+            array('status' => 'missing', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label('12', null, 'not-an-array')
         );
         $this->assertSame(
-            array('status' => 'default', 'name' => ''),
+            array('status' => 'default', 'name' => '', 'font_id' => 0),
             \Typost_Paragraph_Styles::resolve_font_label('', array(), array())
         );
     }
@@ -125,13 +134,27 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
         return $calls;
     }
 
-    public function test_style_css_is_added_to_the_admin_page_once_across_both_hook_calls() {
+    public function test_style_css_is_added_to_the_admin_style_handle() {
         $module = $this->freshInstance();
         $calls  = $this->stubAdminEnqueue();
         Functions\when('get_transient')->justReturn('.typost-ps-3 { font-weight: 700; }');
 
-        // Core fires typost_admin_assets from admin_print_styles-{hook} and
-        // again from admin_print_scripts-{hook}.
+        $module->enqueue_admin_assets();
+
+        $this->assertSame(
+            array(array('typost-paragraph-styles-admin', '.typost-ps-3 { font-weight: 700; }')),
+            $calls->getArrayCopy()
+        );
+    }
+
+    public function test_repeat_calls_do_not_add_the_style_css_again() {
+        $module = $this->freshInstance();
+        $calls  = $this->stubAdminEnqueue();
+        Functions\when('get_transient')->justReturn('.typost-ps-3 { font-weight: 700; }');
+
+        // A precaution, not a live bug: WordPress prints the stylesheets
+        // between the admin_print_styles-{hook} and admin_print_scripts-{hook}
+        // calls, so CSS added on the second call could never print anyway.
         $module->enqueue_admin_assets();
         $module->enqueue_admin_assets();
 
