@@ -311,3 +311,26 @@ msgstr "Taille héritée"
 #: assets/js/lib/ps-utils.js
 msgid "Other styles"
 msgstr "Autres styles"
+
+#. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
+#: includes/admin-tab.php:82
+msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
+msgstr "Portez ce vieux whisky au juge blond qui fume. Affluence officielle, fin d’été : 1/2 prix, 0123456789."
+
+#. translators: %s: name of the font that replaces the style's deleted font
+#: includes/admin-tab.php:114
+#, php-format
+msgid "%s (replaces a deleted font)"
+msgstr "%s (remplace une police supprimée)"
+
+#: includes/admin-tab.php:117
+msgid "Deleted font, shown in the default font"
+msgstr "Police supprimée, affichée dans la police par défaut"
+
+#: includes/admin-tab.php:182
+msgid "Preview"
+msgstr "Aperçu"
+
+#: includes/admin-tab.php:236
+msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
+msgstr "Votre thème ou une autre extension charge cette police sur le site. Cette page ne peut pas la charger, l’aperçu peut donc afficher une police de secours."
