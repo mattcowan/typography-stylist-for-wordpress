@@ -66,7 +66,7 @@ flush to the same width.
 > fixtures/tests, run `npm test` and `npm run build`, add the new
 > user-facing strings to the pot + fr/es catalogs, update readme feature
 > list, and park a changelog entry in changelog.txt. Verify in the editor
-> AND on the frontend at 320/768/1920px via Playwright on mnc4.local
+> AND on the frontend at 320/768/1920px via Playwright on the local test site
 > (post 253), including a 4-line block where every line lands flush to the
 > container width.
 

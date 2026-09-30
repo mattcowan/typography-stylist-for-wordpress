@@ -27,7 +27,7 @@ module.exports = defineConfig({
 
   use: {
     ...screenReaderConfig.use,
-    baseURL: process.env.WP_BASE_URL || 'http://mnc4.local',
+    baseURL: process.env.WP_BASE_URL || 'http://localhost:8080',
     storageState: 'tests/e2e-sr/auth.json',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

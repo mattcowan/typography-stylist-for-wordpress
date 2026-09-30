@@ -87,10 +87,18 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
 }
 
 /**
- * Render feature visibility checkboxes for a font edit form.
+ * Render the feature visibility section of a font edit form.
+ *
+ * Only the section shell is rendered here. admin-page.js builds the
+ * category fieldsets and checkboxes (from typostAdmin.features,
+ * .featureCategoryTitles and .fontFeatureVisibility) the first time the
+ * section opens: rendered in PHP they were ~24 KB per font and 3.2 MB of the
+ * settings page on a site with 134 fonts (#226). Saving already required
+ * JavaScript, so there is no no-JS path to keep.
  *
  * @param array  $font     The font data array (must include 'font_id' numeric key).
- * @param object $instance The Typost plugin instance.
+ * @param object $instance The Typost plugin instance (unused since 2.3.1; kept
+ *                         for the signature).
  *
  * @since 2.0.0
  */
@@ -99,32 +107,6 @@ function typost_render_feature_visibility_checkboxes($font, $instance) {
     if (!$font_numeric_id) {
         return;
     }
-
-    $available_features = $instance->get_available_features();
-    $visibility_map     = $instance->get_font_feature_visibility();
-    $entry              = isset($visibility_map[$font_numeric_id]) ? $visibility_map[$font_numeric_id] : array();
-    $disabled_features  = (!empty($entry['disabled_features']) && is_array($entry['disabled_features']))
-                          ? $entry['disabled_features']
-                          : array();
-
-    // Group features by category
-    $grouped = array();
-    foreach ($available_features as $feature) {
-        $cat = isset($feature['category']) ? $feature['category'] : 'other';
-        $grouped[$cat][] = $feature;
-    }
-
-    $category_titles = array(
-        'ligatures'     => __('Ligatures', 'typography-stylist'),
-        'stylistic-sets'=> __('Stylistic Sets', 'typography-stylist'),
-        'alternates'    => __('Swashes & Alternates', 'typography-stylist'),
-        'decorative'    => __('Decorative', 'typography-stylist'),
-        'numerals'      => __('Numerals & Figures', 'typography-stylist'),
-        'capitals'      => __('Capitals & Case', 'typography-stylist'),
-        'positional'    => __('Positional Forms', 'typography-stylist'),
-        'super-sub'     => __('Superscript & Ordinals', 'typography-stylist'),
-        'other'         => __('Other Features', 'typography-stylist'),
-    );
     ?>
     <details class="typost-form-field typost-feature-visibility-section" data-font-numeric-id="<?php echo esc_attr($font_numeric_id); ?>">
         <summary class="typost-feature-visibility-summary">
@@ -141,24 +123,7 @@ function typost_render_feature_visibility_checkboxes($font, $instance) {
                 </button>
                 <span class="typost-form-visibility-save-indicator typost-visibility-save-indicator" aria-live="polite"></span>
             </div>
-            <?php foreach ($grouped as $cat => $features): ?>
-            <fieldset class="typost-form-visibility-category">
-                <legend><?php echo esc_html(isset($category_titles[$cat]) ? $category_titles[$cat] : ucfirst($cat)); ?></legend>
-                <div class="typost-form-visibility-checkboxes">
-                    <?php foreach ($features as $feature): ?>
-                    <label class="typost-form-visibility-label">
-                        <input
-                            type="checkbox"
-                            class="typost-font-form-visibility-checkbox"
-                            data-feature-id="<?php echo esc_attr($feature['id']); ?>"
-                            <?php checked(!in_array($feature['id'], $disabled_features, true)); ?> />
-                        <span class="typost-form-visibility-feature-name"><?php echo esc_html($feature['name']); ?></span>
-                        <code class="typost-form-visibility-feature-code"><?php echo esc_html($feature['id']); ?></code>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-            </fieldset>
-            <?php endforeach; ?>
+            <div class="typost-form-visibility-categories"></div>
         </div>
     </details>
     <?php
@@ -239,6 +204,44 @@ function typost_render_preview_font_options($instance, $custom_fonts, $adobe_fon
         }
         echo '</optgroup>';
     }
+}
+
+/**
+ * Number of font cards whose heading gets its font in the HTML.
+ *
+ * Roughly one screen of cards. A browser downloads the font of every
+ * rendered heading, on screen or not (#226: 133 downloads for 7 visible
+ * cards), so later cards carry the font in data-typost-font-family and
+ * admin-page.js applies it when the card comes into view. A site with a
+ * handful of fonts renders exactly as before, without waiting for JS.
+ */
+const TYPOST_ADMIN_EAGER_FONT_CARDS = 12;
+
+/**
+ * Attributes that give a font card heading its font.
+ *
+ * @since 2.3.1
+ * @param string $font_family CSS font-family value ('' for none).
+ * @param int    $font_id     Numeric font ID (0 for none). Lets admin-page.js
+ *                            load the Adobe Fonts kit stylesheet for it.
+ * @param int    $card_index  Zero-based position of the card in the list.
+ * @return string Attribute string with a leading space, or ''.
+ */
+function typost_font_heading_attributes($font_family, $font_id, $card_index) {
+    $attrs   = '';
+    $font_id = (int) $font_id;
+    if ($font_id > 0) {
+        $attrs .= ' data-typost-font-id="' . esc_attr($font_id) . '"';
+    }
+    if ('' === (string) $font_family) {
+        return $attrs;
+    }
+    if ((int) $card_index < TYPOST_ADMIN_EAGER_FONT_CARDS) {
+        $attrs .= ' style="font-family: ' . esc_attr($font_family) . '"';
+    } else {
+        $attrs .= ' data-typost-font-family="' . esc_attr($font_family) . '"';
+    }
+    return $attrs;
 }
 
 /**
@@ -402,7 +405,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
             <?php if (!empty($all_fonts_list)): ?>
             <ul id="typost-unified-font-list" class="typost-unified-font-list" aria-label="<?php esc_attr_e('Font list — drag to reorder', 'typography-stylist'); ?>">
 
-            <?php foreach ($all_fonts_list as $unified): ?>
+            <?php foreach ($all_fonts_list as $card_index => $unified): ?>
             <?php
                 $u_key    = $unified['key'];
                 $u_type   = $unified['type'];
@@ -437,7 +440,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
+                                <h3<?php echo typost_font_heading_attributes($css_var, $u_fid, $card_index); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- values escaped in the helper ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'uploaded')); // Extension badges (e.g. Variable) lead, before the source pills ?>
                             <span class="typost-font-type-badge typost-badge-uploaded"><?php echo esc_html($badge_labels['uploaded']); ?></span>
@@ -531,7 +534,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
+                                <h3<?php echo typost_font_heading_attributes($css_var, $u_fid, $card_index); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- values escaped in the helper ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'adobe')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-adobe"><?php echo esc_html($badge_labels['adobe']); ?></span>
@@ -593,7 +596,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                             <button class="typost-font-expand-toggle"
                                 aria-expanded="false"
                                 aria-controls="<?php echo esc_attr($details_id); ?>">
-                                <h3 <?php echo $css_var ? 'style="font-family: ' . esc_attr($css_var) . '"' : ''; ?>><?php echo esc_html($font['name']); ?></h3>
+                                <h3<?php echo typost_font_heading_attributes($css_var, $u_fid, $card_index); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- values escaped in the helper ?>><?php echo esc_html($font['name']); ?></h3>
                             </button>
                             <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $font, 'manual')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-manual"><?php echo esc_html($badge_labels['manual']); ?></span>
@@ -634,7 +637,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                     <div class="typost-font-card typost-wpl-card">
                         <div class="typost-font-header">
                             <span class="typost-drag-handle dashicons dashicons-menu" aria-hidden="true" title="<?php esc_attr_e('Drag to reorder', 'typography-stylist'); ?>"></span>
-                            <h3 <?php echo !empty($wpl['font_family']) ? 'style="font-family: ' . esc_attr($wpl['font_family']) . '"' : ''; ?>><?php echo esc_html($wpl['name']); ?></h3>
+                            <h3<?php echo typost_font_heading_attributes(!empty($wpl['font_family']) ? $wpl['font_family'] : '', 0, $card_index); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- values escaped in the helper ?>><?php echo esc_html($wpl['name']); ?></h3>
                             <?php if (!empty($wpl['font_family'])): ?>
                             <code class="typost-wpl-family"><?php echo esc_html($wpl['font_family']); ?></code>
                             <?php endif; ?>
@@ -894,17 +897,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 $grouped_features[$category][] = $feature;
             }
 
-            $category_titles = array(
-                'ligatures' => esc_html__('Ligatures', 'typography-stylist'),
-                'stylistic-sets' => esc_html__('Stylistic Sets', 'typography-stylist'),
-                'alternates' => esc_html__('Swashes & Alternates', 'typography-stylist'),
-                'decorative' => esc_html__('Decorative', 'typography-stylist'),
-                'numerals' => esc_html__('Numerals & Figures', 'typography-stylist'),
-                'capitals' => esc_html__('Capitals & Case', 'typography-stylist'),
-                'positional' => esc_html__('Positional Forms', 'typography-stylist'),
-                'super-sub' => esc_html__('Superscript & Ordinals', 'typography-stylist'),
-                'other' => esc_html__('Other Features', 'typography-stylist')
-            );
+            // Shared with the font cards' Feature Visibility fieldsets
+            // (typostAdmin.featureCategoryTitles); escaped at output below.
+            $category_titles = $instance->get_feature_category_titles();
             ?>
 
             <?php foreach ($grouped_features as $category => $features): ?>

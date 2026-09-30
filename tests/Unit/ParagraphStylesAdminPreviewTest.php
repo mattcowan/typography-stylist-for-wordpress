@@ -152,9 +152,8 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
         $calls  = $this->stubAdminEnqueue();
         Functions\when('get_transient')->justReturn('.typost-ps-3 { font-weight: 700; }');
 
-        // A precaution, not a live bug: WordPress prints the stylesheets
-        // between the admin_print_styles-{hook} and admin_print_scripts-{hook}
-        // calls, so CSS added on the second call could never print anyway.
+        // A precaution, not a live bug: core fires typost_admin_assets once
+        // per page load (admin_enqueue_scripts, #226).
         $module->enqueue_admin_assets();
         $module->enqueue_admin_assets();
 

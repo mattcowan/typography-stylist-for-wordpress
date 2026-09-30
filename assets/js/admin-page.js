@@ -198,6 +198,226 @@ function typostClearSettingsMessages(root, keep) {
     return cleared;
 }
 
+/**
+ * Adobe Fonts kit stylesheet URLs for a numeric font ID.
+ *
+ * Several entries can share one kit (one project, several families), and
+ * only https URLs are returned (PHP enqueued kits with the same restriction).
+ *
+ * @param {Array}         adobeFonts typostAdmin.adobeFonts.
+ * @param {number|string} fontId     Numeric font ID.
+ * @return {string[]} Unique stylesheet URLs (empty when none match).
+ */
+function typostAdobeCssUrlsForFontId(adobeFonts, fontId) {
+    var id = parseInt(fontId, 10);
+    var urls = [];
+    if (!id || !Array.isArray(adobeFonts)) {
+        return urls;
+    }
+    adobeFonts.forEach(function(font) {
+        if (!font || parseInt(font.font_id, 10) !== id) {
+            return;
+        }
+        var url = typeof font.css_url === 'string' ? font.css_url : '';
+        if (/^https:\/\//i.test(url) && urls.indexOf(url) === -1) {
+            urls.push(url);
+        }
+    });
+    return urls;
+}
+
+/**
+ * Loads fonts on the settings page for opted-in elements when they are on
+ * screen. (Uploaded and adopted fonts in other text still download when
+ * the text renders, e.g. as soon as its tab opens.)
+ *
+ * A browser downloads the font of every rendered element, on screen or not,
+ * and the settings page used to enqueue every Adobe Fonts kit up front
+ * (#226: 133 font files and 77 kit stylesheets on one visit). Elements opt
+ * in with two attributes, handled when the element comes into view:
+ *
+ * - `data-typost-font-family`: a CSS font-family value, applied as the
+ *   element's inline font-family (then the attribute is removed).
+ * - `data-typost-font-id`: a numeric font ID; the Adobe Fonts kit stylesheet
+ *   for it is added once (other font sources need nothing).
+ *
+ * An element inside a hidden tab is not intersecting, so it waits until its
+ * tab opens. Without IntersectionObserver every element is handled at once.
+ *
+ * @param {Object}   options
+ * @param {Document} options.doc                  Document to work in.
+ * @param {Function} options.getAdobeFonts        Returns the current adobeFonts array.
+ * @param {Function} [options.IntersectionObserver] Observer constructor (null = none).
+ * @return {{scan: Function, watch: Function, ensureFontId: Function}}
+ */
+function typostCreateAdminFontLoader(options) {
+    var doc = options.doc;
+    var getAdobeFonts = options.getAdobeFonts;
+    var Observer = options.IntersectionObserver || null;
+    var SELECTOR = '[data-typost-font-family], [data-typost-font-id]';
+    var requested = {};
+
+    function hasStylesheet(url) {
+        if (requested[url]) {
+            return true;
+        }
+        var links = doc.querySelectorAll('link[rel="stylesheet"]');
+        for (var i = 0; i < links.length; i++) {
+            if (links[i].href === url) {
+                requested[url] = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function ensureFontId(fontId) {
+        var added = 0;
+        typostAdobeCssUrlsForFontId(getAdobeFonts() || [], fontId).forEach(function(url) {
+            if (hasStylesheet(url)) {
+                return;
+            }
+            var link = doc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = url;
+            link.setAttribute('data-typost-adobe-kit', '');
+            doc.head.appendChild(link);
+            requested[url] = true;
+            added++;
+        });
+        return added;
+    }
+
+    function apply(el) {
+        var family = el.getAttribute('data-typost-font-family');
+        if (family) {
+            el.style.fontFamily = family;
+            el.removeAttribute('data-typost-font-family');
+        }
+        var fontId = el.getAttribute('data-typost-font-id');
+        if (fontId) {
+            ensureFontId(fontId);
+        }
+    }
+
+    var observer = Observer ? new Observer(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                observer.unobserve(entry.target);
+                apply(entry.target);
+            }
+        });
+    }, { rootMargin: '200px 0px' }) : null;
+
+    function watch(el) {
+        if (!el || typeof el.getAttribute !== 'function') {
+            return;
+        }
+        if (!observer) {
+            apply(el);
+            return;
+        }
+        // Unobserve first: observe() on a watched element is a no-op, and a
+        // fresh observe() reports the element's current state, so a changed
+        // attribute on an element already on screen is handled right away.
+        observer.unobserve(el);
+        observer.observe(el);
+    }
+
+    function scan(root) {
+        var scope = root || doc;
+        if (typeof scope.querySelectorAll !== 'function') {
+            return 0;
+        }
+        var els = Array.prototype.slice.call(scope.querySelectorAll(SELECTOR));
+        if (typeof scope.matches === 'function' && scope.matches(SELECTOR)) {
+            els.unshift(scope);
+        }
+        els.forEach(watch);
+        return els.length;
+    }
+
+    return { scan: scan, watch: watch, ensureFontId: ensureFontId };
+}
+
+/**
+ * Build the Feature Visibility fieldsets for one font card.
+ *
+ * Rendered in the browser the first time the section opens (#226): as PHP
+ * markup it was ~24 KB per font. Mirrors the old PHP output — one fieldset
+ * per category in first-seen order, one checkbox per feature, checked unless
+ * the feature is disabled for the font.
+ *
+ * @param {Document} doc              Document to create nodes in.
+ * @param {Array}    features         typostAdmin.features ({id, name, category}).
+ * @param {Object}   categoryTitles   Category slug => title.
+ * @param {Array}    disabledFeatures Feature IDs disabled for this font.
+ * @return {DocumentFragment}
+ */
+function typostBuildFeatureVisibilityFieldsets(doc, features, categoryTitles, disabledFeatures) {
+    var fragment = doc.createDocumentFragment();
+    var titles = categoryTitles || {};
+    var disabled = Array.isArray(disabledFeatures) ? disabledFeatures : [];
+    var order = [];
+    var grouped = {};
+
+    (Array.isArray(features) ? features : []).forEach(function(feature) {
+        if (!feature || !feature.id) {
+            return;
+        }
+        var cat = feature.category || 'other';
+        if (!grouped[cat]) {
+            grouped[cat] = [];
+            order.push(cat);
+        }
+        grouped[cat].push(feature);
+    });
+
+    order.forEach(function(cat) {
+        var fieldset = doc.createElement('fieldset');
+        fieldset.className = 'typost-form-visibility-category';
+        var legend = doc.createElement('legend');
+        legend.textContent = titles[cat] || (cat.charAt(0).toUpperCase() + cat.slice(1));
+        fieldset.appendChild(legend);
+
+        var list = doc.createElement('div');
+        list.className = 'typost-form-visibility-checkboxes';
+        grouped[cat].forEach(function(feature) {
+            var label = doc.createElement('label');
+            label.className = 'typost-form-visibility-label';
+            var input = doc.createElement('input');
+            input.type = 'checkbox';
+            input.className = 'typost-font-form-visibility-checkbox';
+            input.setAttribute('data-feature-id', feature.id);
+            input.checked = disabled.indexOf(feature.id) === -1;
+            var name = doc.createElement('span');
+            name.className = 'typost-form-visibility-feature-name';
+            name.textContent = feature.name || feature.id;
+            var code = doc.createElement('code');
+            code.className = 'typost-form-visibility-feature-code';
+            code.textContent = feature.id;
+            label.appendChild(input);
+            label.appendChild(name);
+            label.appendChild(code);
+            list.appendChild(label);
+        });
+        fieldset.appendChild(list);
+        fragment.appendChild(fieldset);
+    });
+
+    return fragment;
+}
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof typostAdmin !== 'undefined') {
+    // Created before DOM ready so module scripts (the Glyphs panel) can
+    // request a kit at any time; core scans the page on DOM ready.
+    window.typostAdminFonts = typostCreateAdminFontLoader({
+        doc: document,
+        getAdobeFonts: function() { return typostAdmin.adobeFonts || []; },
+        IntersectionObserver: typeof window.IntersectionObserver === 'function' ? window.IntersectionObserver : null
+    });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
@@ -206,7 +426,10 @@ if (typeof module !== 'undefined' && module.exports) {
         attachDismissButtons: typostAttachDismissButtons,
         clearSettingsMessages: typostClearSettingsMessages,
         beginBusy: typostBeginBusy,
-        endBusy: typostEndBusy
+        endBusy: typostEndBusy,
+        adobeCssUrlsForFontId: typostAdobeCssUrlsForFontId,
+        createAdminFontLoader: typostCreateAdminFontLoader,
+        buildFeatureVisibilityFieldsets: typostBuildFeatureVisibilityFieldsets
     };
 }
 
@@ -251,6 +474,12 @@ jQuery(document).ready(function($) {
             $tabs.last().click().focus();
         }
     });
+
+    // Load fonts only for elements on screen (#226). Hidden tabs wait until
+    // they open; the observer reports them then.
+    if (window.typostAdminFonts) {
+        window.typostAdminFonts.scan(document);
+    }
 
     // Handle URL parameters for deep linking to specific tabs and settings
     (function() {
@@ -422,14 +651,11 @@ jQuery(document).ready(function($) {
         if (typeof response.adminFontCss === 'string') {
             setStyleElement('typost-ajax-font-css', response.adminFontCss);
         }
-        (response.adobeCssUrls || []).forEach(function(url) {
-            var loaded = $('link[rel="stylesheet"]').filter(function() {
-                return this.href === url;
-            }).length;
-            if (!loaded) {
-                $('<link>', { rel: 'stylesheet', href: url }).appendTo('head');
-            }
-        });
+        // Headings in the swapped region load their font (and Adobe kit, from
+        // the adobeFonts data merged above) as they come into view (#226).
+        if (window.typostAdminFonts && $region.length) {
+            window.typostAdminFonts.scan($region[0]);
+        }
 
         // 5. The Replacement Fonts tab lists fonts by name — rebuild it if
         //    the user is currently looking at it (it reloads on tab open
@@ -437,6 +663,13 @@ jQuery(document).ready(function($) {
         if ($('#typost-tab-replacements').hasClass('active')) {
             loadReplacementsList();
             populateAddReplacementForm();
+        }
+
+        // 6. Tell extensions the font list markup is new: anything they set
+        //    up on it at page load (e.g. the Variable Fonts module hiding
+        //    weight checkboxes) must run again for the swapped-in cards.
+        if ($region.length) {
+            $(document).trigger('typost:font-list-refreshed', { region: $region[0] });
         }
     }
 
@@ -754,6 +987,18 @@ jQuery(document).ready(function($) {
             $('#typost-baseline-preview').css('font-family', 'Georgia, serif');
         }
 
+        // An Adobe font needs its kit stylesheet; load it when the preview is
+        // on screen (the auto-selection below runs on every tab, #226)
+        var $baseline = $('#typost-baseline-preview');
+        if (selectedFontId) {
+            $baseline.attr('data-typost-font-id', selectedFontId);
+        } else {
+            $baseline.removeAttr('data-typost-font-id');
+        }
+        if (window.typostAdminFonts && $baseline.length) {
+            window.typostAdminFonts.watch($baseline[0]);
+        }
+
         // Update feature visibility checkboxes for this font
         updateFeatureVisibilityState(selectedFont ? selectedFontId : null);
     });
@@ -838,6 +1083,29 @@ jQuery(document).ready(function($) {
             }
         });
     }
+
+    // Font edit form: build the Feature Visibility checkboxes the first time
+    // the section opens (#226). `toggle` does not bubble, so listen in the
+    // capture phase; sections swapped in by a refresh are covered too.
+    document.addEventListener('toggle', function(event) {
+        var section = event.target;
+        if (!section || !section.open || typeof section.matches !== 'function' ||
+            !section.matches('.typost-feature-visibility-section')) {
+            return;
+        }
+        var container = section.querySelector('.typost-form-visibility-categories');
+        if (!container || container.childNodes.length) {
+            return;
+        }
+        var fontNumericId = section.getAttribute('data-font-numeric-id');
+        var entry = (typostAdmin.fontFeatureVisibility || {})[fontNumericId] || {};
+        container.appendChild(typostBuildFeatureVisibilityFieldsets(
+            document,
+            typostAdmin.features,
+            typostAdmin.featureCategoryTitles,
+            entry.disabled_features
+        ));
+    }, true);
 
     // Font edit form: visibility checkbox change → auto-save (debounced)
     $(document).on('change', '.typost-font-form-visibility-checkbox', function() {

@@ -49,7 +49,7 @@ A WordPress plugin that adds advanced OpenType typography features to headlines 
 - Apply a style from the "Browse styles…" button at the top of the inline editor, or from the dropdown in the Quick Feature Toggles and the block sidebar
 - The style browser shows every saved style rendered in its own typeface, with your selected words as the sample text. It has a search box, a "Group by" control (font family, size mode, recently used), and keyboard navigation with first-letter type-ahead. Turn on "Paragraph Styles Toolbar Button" in Options to open it from the block toolbar (off by default)
 - Styled text renders through a shared CSS class (`.typost-ps-{id}` / `data-style-id`), so "Update Style" restyles every use at once; "Detach Style" converts back to independent inline styling
-- Manage (preview, rename, delete) styles from the Paragraph Styles tab in Settings → Typography Stylist. The Preview button on each style shows sample text in that style. The page loads a style's font files only when you open its preview
+- Manage (rename, delete) styles from the Paragraph Styles tab in Settings → Typography Stylist. Each style shows sample text in that style. The page loads a style's font files only when you open that tab. An Adobe Fonts kit loads when a sample that uses it is on screen
 
 ### WordPress Font Library Integration (WP 6.5+)
 - Register uploaded font kits into the Font Library per font or in bulk — opt-in, reversible, and existing content never breaks (the plugin's `--font-N` variables alias to WordPress presets with a literal fallback)

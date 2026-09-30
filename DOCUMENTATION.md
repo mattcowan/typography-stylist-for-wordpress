@@ -348,7 +348,7 @@ Access via Settings → Typography Stylist. The screen has eight tabs, in this o
 ### Paragraph Styles Tab
 
 - Each saved style is listed with its font, weight, size, spacing and features
-- Click "Preview" on a style to show sample text in that style: its font, weight, italic, size, letter spacing, line height and OpenType features. Responsive and fit-to-width styles show their fallback size range. The page loads a style's font files only when you open its preview
+- Each style shows sample text in that style: its font, weight, italic, size, letter spacing, line height and OpenType features. Responsive and fit-to-width styles show their fallback size range. The page loads a style's font files only when you open that tab. An Adobe Fonts kit loads when a sample that uses it is on screen
 - If the style's font was deleted, the style shows the replacement font, or the default font when there is no replacement
 - Fonts from a custom font definition are loaded by your theme on the site, not on this page, so their preview can show a fallback font
 - Rename or delete a style

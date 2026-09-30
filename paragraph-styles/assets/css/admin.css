@@ -98,9 +98,8 @@
 	color: #1d2327;
 }
 
-/* Preview. Never give .typost-ps-preview a `display` value: it would
-   override the `hidden` attribute, render the sample while closed, and
-   download its font on page load.
+/* Preview, always shown (#226). Its font downloads only while the tab is
+   open: inactive tabs are display:none.
    The sample carries the style's own .typost-ps-N class (0,1,0), which
    must win every property the style sets. So the defaults sit on the
    container (inherited) or in :where() (specificity 0,0,1 — enough to beat

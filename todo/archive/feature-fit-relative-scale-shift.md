@@ -102,7 +102,7 @@ stays neutralized in fit mode):
 >   editing value must carry the new spans verbatim); `npm test` +
 >   `npm run build`; new strings → pot + fr/es (CRLF quirk — see memory)
 >   and recompile .mo; changelog under the NEXT version, not 2.2.2.
-> - Verify with Playwright on mnc4.local (admin/pass), post 367: shrink
+> - Verify with Playwright on the local test site, post 367: shrink
 >   the "&" to ~0.6 and shift it up ~0.3em; the line re-measures and
 >   re-flushes to full width with the small raised ampersand; save →
 >   reload → validates; frontend matches the editor at multiple viewport

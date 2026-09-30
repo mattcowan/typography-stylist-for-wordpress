@@ -58,6 +58,15 @@ add_action('typost_admin_assets', function() {
 });
 ```
 
+**Since 2.3.1** the action fires once per page load, from `admin_enqueue_scripts`. Before 2.3.1 it fired twice (from `admin_print_styles-{hook}` and `admin_print_scripts-{hook}`), so data passed to `wp_localize_script()` here printed twice.
+
+**Fonts on the settings page (since 2.3.1).** The settings page no longer enqueues Adobe Fonts kit stylesheets up front, and font card headings past the first screen get their font only when they scroll into view. An extension that shows text in a plugin font on this page opts in with attributes on the element:
+
+- `data-typost-font-id="N"` — core loads the Adobe Fonts kit stylesheet for font N when the element comes into view. Uploaded fonts and adopted Font Library fonts need nothing: their `@font-face` rules are already on the page. Custom font definitions (manual fonts) are not loaded on this page — the theme or another plugin loads them on the site — so text in one shows a fallback font here.
+- `data-typost-font-family="…"` — core sets this CSS `font-family` on the element when it comes into view.
+
+Core scans the page once on DOM ready and again after each font list refresh. For markup you add later, or when you change the attribute, call `window.typostAdminFonts.scan(element)` (checks the element and its descendants) or `window.typostAdminFonts.watch(element)`. To load a kit directly, call `window.typostAdminFonts.ensureFontId(fontId)`; the bundled Glyphs panel does this when a font is selected. Guard the calls with `if (window.typostAdminFonts)` — the object exists only on the settings page, and it is defined only after `typost-admin` loads, so depend on that handle.
+
 #### `typost_register_rest_routes`
 
 Fired at the end of `register_rest_routes()`. Register your extension's REST API endpoints under the `typost/v1` namespace.
@@ -654,6 +663,19 @@ $(document).on('typost:fonts-added', function(e, data) {
 ```
 
 **`waitUntil`:** same contract as `typost:font-saved`, but with a 15-second cap — listeners here may download and parse font binaries, which takes longer than a settings save. The refresh also waits a minimum delay so the success notice stays readable.
+
+#### `typost:font-list-refreshed`
+
+jQuery event triggered on `$(document)` after core swaps the Custom Fonts list in place (after a font save, add or delete — since 2.3 the page does not reload). The new cards are in the DOM and `typostAdmin` holds the refreshed data. Run here any setup your extension does on the font cards at page load; the old markup, and anything you set on it, is gone. Since 2.3.1.
+
+```javascript
+$(document).on('typost:font-list-refreshed', function(e, data) {
+    // data.region — the #typost-fonts-region element that was re-rendered
+    $(data.region).find('.my-extension-font-options').each(initMyOptions);
+});
+```
+
+The bundled Variable Fonts module uses this to hide the weight checkboxes again for fonts set to "hide weights", and the Detect axes button for Adobe and custom fonts when the browser font parser is not available.
 
 ### Lifecycle Hooks
 
