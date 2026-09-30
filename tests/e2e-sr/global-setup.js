@@ -78,7 +78,7 @@ module.exports = async () => {
   // Required here, not at load: the policy functions above are unit-tested
   // under Jest, where @playwright/test cannot be loaded.
   const { chromium } = require('@playwright/test');
-  const baseURL = process.env.WP_BASE_URL || 'http://mnc4.local';
+  const baseURL = process.env.WP_BASE_URL || 'http://localhost:8080';
   const username = process.env.WP_USERNAME;
   const password = process.env.WP_PASSWORD;
   if (!username || !password) {

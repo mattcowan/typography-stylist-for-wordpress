@@ -2,8 +2,8 @@
 
 This file extends [acf-integration-extension.md](acf-integration-extension.md) with the
 results of the live spike that the original study (§8) said needed a real ACF install.
-Run on mnc4: ACF Pro **6.8.7**, WP 7.0.2, Typography Stylist 2.3.0-dev, spike block
-`bgcandy/typost-acf-spike` in the `backgroundcandy-child` theme (temporary, uncommitted).
+Run on a local test site: ACF Pro **6.8.7**, WP 7.0.2, Typography Stylist 2.3.0-dev,
+spike block `typost-acf-spike` in a child theme (temporary, uncommitted).
 
 ## Verdict
 

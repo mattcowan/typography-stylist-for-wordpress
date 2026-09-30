@@ -178,9 +178,6 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 						<h3 class="typost-ps-style-name"><?php echo esc_html( $style['name'] ); ?></h3>
 						<code class="typost-ps-css-class">.<?php echo esc_html( $css_class ); ?></code>
 						<div class="typost-ps-style-actions">
-							<button type="button" class="button typost-ps-preview-btn" aria-expanded="false" aria-controls="<?php echo esc_attr( $preview_id ); ?>">
-								<?php esc_html_e( 'Preview', 'typost-paragraph-styles' ); ?>
-							</button>
 							<button type="button" class="button typost-ps-edit-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 								<?php esc_html_e( 'Edit', 'typost-paragraph-styles' ); ?>
 							</button>
@@ -229,9 +226,15 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 						<?php endif; ?>
 					</div>
 
-					<?php // `hidden` until the Preview button opens it: a browser fetches no font file for text that is not rendered. ?>
-					<div class="typost-ps-preview" id="<?php echo esc_attr( $preview_id ); ?>" hidden>
-						<p class="typost-ps-preview-sample <?php echo esc_attr( $css_class ); ?>" lang="<?php echo esc_attr( $preview_lang ); ?>"><?php echo esc_html( $preview_text ); ?></p>
+					<?php
+					// Always shown (#226). A font file downloads only while this
+					// tab is open, and core's admin-page.js loads an Adobe Fonts
+					// kit when a sample that needs it comes into view, from
+					// data-typost-font-id (the font the style renders in, after
+					// replacements).
+					?>
+					<div class="typost-ps-preview" id="<?php echo esc_attr( $preview_id ); ?>">
+						<p class="typost-ps-preview-sample <?php echo esc_attr( $css_class ); ?>" lang="<?php echo esc_attr( $preview_lang ); ?>"<?php echo $font['font_id'] ? ' data-typost-font-id="' . esc_attr( $font['font_id'] ) . '"' : ''; ?>><?php echo esc_html( $preview_text ); ?></p>
 						<?php // Check the font the style renders in: a deleted font can be replaced by a manual one. ?>
 						<?php if ( isset( $manual_font_ids[ $font['font_id'] ] ) ) : ?>
 							<p class="typost-ps-preview-note"><?php esc_html_e( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ); ?></p>

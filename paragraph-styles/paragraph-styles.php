@@ -759,11 +759,12 @@ final class Typost_Paragraph_Styles {
 	 * Enqueue admin JavaScript and CSS for the Paragraph Styles tab.
 	 *
 	 * Also prints the generated style CSS, so each card's preview renders
-	 * through the style's own `.typost-ps-{id}` rule. The page already
-	 * declares every font (`--font-N` variables, kit and adopted @font-face,
-	 * Adobe stylesheets), and a browser fetches a font file only when visible
-	 * text uses it — the previews are `hidden` until opened, so the page
-	 * downloads no extra font until the admin opens one.
+	 * through the style's own `.typost-ps-{id}` rule. The page declares the
+	 * kit and adopted fonts (`--font-N` variables, @font-face), and a browser
+	 * fetches a font file only when rendered text uses it, so the previews
+	 * (always shown since #226) download fonts only while this tab is open.
+	 * Adobe Fonts kits are not on the page up front: core's admin-page.js
+	 * loads a kit when a sample's `data-typost-font-id` comes into view.
 	 */
 	public function enqueue_admin_assets() {
 		wp_enqueue_script(
@@ -784,10 +785,8 @@ final class Typost_Paragraph_Styles {
 			TYPOST_PS_VERSION
 		);
 
-		// Core fires typost_admin_assets from both admin_print_styles-{hook}
-		// and admin_print_scripts-{hook}. The stylesheets print between the
-		// two (print_admin_styles() runs on admin_print_styles), so CSS added
-		// on the second call never reaches the page and cannot duplicate.
+		// Core fires typost_admin_assets once per page load (from
+		// admin_enqueue_scripts since #226; before that it fired twice).
 		// The flag is a precaution: it skips building the CSS a second time
 		// and keeps one copy if the hook ever fires twice before printing.
 		if ( ! $this->admin_style_css_added ) {

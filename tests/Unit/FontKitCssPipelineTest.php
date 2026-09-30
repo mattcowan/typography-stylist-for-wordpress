@@ -60,7 +60,7 @@ class FontKitCssPipelineTest extends TestCase {
 
     public function test_generated_css_urls_rewritten_to_root_relative() {
         $plugin = $this->getPluginInstance();
-        $base = 'http://mnc4.local/wp-content/uploads/typography-stylist/fonts/kit-x';
+        $base = 'http://example.test/wp-content/uploads/typography-stylist/fonts/kit-x';
         $rewritten = $plugin->rewrite_css_urls($this->generatedVariableCss(), $base);
 
         $this->assertStringContainsString(
@@ -71,7 +71,7 @@ class FontKitCssPipelineTest extends TestCase {
 
     public function test_generated_css_survives_sanitize_font_css() {
         $plugin = $this->getPluginInstance();
-        $base = 'http://mnc4.local/wp-content/uploads/typography-stylist/fonts/kit-x';
+        $base = 'http://example.test/wp-content/uploads/typography-stylist/fonts/kit-x';
         $rewritten = $plugin->rewrite_css_urls($this->generatedVariableCss(), $base);
         $sanitized = $this->invokePrivate($plugin, 'sanitize_font_css', $rewritten);
 

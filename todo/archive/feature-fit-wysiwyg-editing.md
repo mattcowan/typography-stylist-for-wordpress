@@ -14,7 +14,7 @@ the real `<br>`s do the line breaking; empty lines are never wrapped (a
 zero-length span becomes an object-replacement character in the record).
 The uniform-size editing surface (`computeFitEditingFontSize`) and the
 deselected preview branch were removed. Verified end-to-end with Playwright
-on mnc4 post 367 (typing/caret through re-measure, Enter/Backspace merges,
+on the test site's post 367 (typing/caret through re-measure, Enter/Backspace merges,
 QFT line-height + letter-spacing on a line-3 selection, native bold, glyph
 insertion, multi-line paste, undo, save→reload validation, empty-block
 first-keystroke swap, cross-block arrow nav). IME composition was not
@@ -129,7 +129,7 @@ effect vanishes exactly when you're working on it.
 > catalogs (CRLF quirk — see memory) and recompile .mo; extend the existing
 > `= 2.2.2 =` changelog entries (both changelog.txt and the readme.txt
 > summary) — do NOT bump versions, 2.2.2 is already staged everywhere.
-> Verify with Playwright on mnc4.local (admin/pass): post 367 is a published
+> Verify with Playwright on the local test site: post 367 is a published
 > fit-to-width demo (3 lines: Fraunces / Style Script with aalt alternates /
 > Fraunces, `fitLineSizes` baked). Verification must include: typing in each
 > line at its true size; caret behavior across line boundaries; QFT

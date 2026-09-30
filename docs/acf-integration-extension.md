@@ -28,7 +28,7 @@ Read from source rather than documentation, on 2026-08-09:
 | WordPress | 7.0.2 | `wp-includes/js/dist/block-editor.js` |
 | Typography Stylist | 2.3.0-dev | this repo |
 
-ACF is **not installed** on the mnc4 development site, so nothing below has been
+ACF is **not installed** on the local development site, so nothing below has been
 exercised in a browser. Every claim about ACF is from reading its PHP and its built
 JS bundle; every claim about Typography Stylist is from this codebase. Items that
 still need live confirmation are collected in §8.

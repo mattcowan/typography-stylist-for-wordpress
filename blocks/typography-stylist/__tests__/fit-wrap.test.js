@@ -196,7 +196,7 @@ describe('Typography Stylist - fit editing value transforms', () => {
 
 	describe('rich-text round-trip fixture (WP 7.0.2 spike)', () => {
 		it('emits the exact wrapper serialization wp.richText.toHTMLString() reproduces byte-identically', () => {
-			// Frozen from the Phase 0 spike on mnc4 (WP 7.0.2):
+			// Frozen from the Phase 0 spike on a test site (WP 7.0.2):
 			// toHTMLString(create({html: wrapped})) === wrapped for this shape —
 			// class attribute first, then style, font-size only, no trailing
 			// semicolon, single spaces inside calc()/min().

@@ -11,7 +11,7 @@ use Brain\Monkey\Filters;
  *
  * The filter lets themes/extensions force @font-face + --font-N variable
  * loading for fonts referenced only from theme CSS (invisible to the
- * content scan), e.g. Background Candy's per-scheme font assignments.
+ * content scan), e.g. a theme's per-scheme font assignments.
  */
 class ForceEnqueueFontIdsTest extends TestCase {
 

@@ -361,13 +361,30 @@
         }
     }
 
-    $(function() {
-        // On page load: apply initial weight visibility from server-rendered state.
-        $('.typost-vf-settings').each(function() {
+    /**
+     * Apply the server-rendered weight visibility to every settings
+     * container under `scope`. The PHP renders the weight checkboxes
+     * visible; only this hides them for "hide weights" fonts.
+     *
+     * @param {Element|Document} scope Where to look for containers.
+     */
+    function applyInitialWeightVisibility(scope) {
+        $(scope).find('.typost-vf-settings').each(function() {
             var $container = $(this);
             if ($container.attr('data-hide-weights') === '1') {
                 applyWeightVisibility($container, false);
             }
+        });
+    }
+
+    $(function() {
+        // On page load: apply initial weight visibility from server-rendered state.
+        applyInitialWeightVisibility(document);
+
+        // Core swaps the font list in place after a font save, add or delete
+        // (no reload since core 2.3), so the fresh cards need the same setup.
+        $(document).on('typost:font-list-refreshed', function(e, data) {
+            applyInitialWeightVisibility((data && data.region) || document);
         });
 
         // Toggle axes section visibility.

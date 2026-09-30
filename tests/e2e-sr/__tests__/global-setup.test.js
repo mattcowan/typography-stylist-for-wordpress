@@ -26,10 +26,10 @@ describe('screen-reader login HTTP policy', () => {
 	});
 
 	test('a hosts-file dev name that resolves to loopback passes and is pinned to that address', async () => {
-		const lookup = lookupTable({ 'mnc4.local': ['127.0.0.1'], 'typography-stylist': ['127.0.0.1'] });
-		await expect(assertSafeBaseUrl('http://mnc4.local', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
+		const lookup = lookupTable({ 'wp.test': ['127.0.0.1'], 'typography-stylist': ['127.0.0.1'] });
+		await expect(assertSafeBaseUrl('http://wp.test', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
 		await expect(assertSafeBaseUrl('http://typography-stylist:8080', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
-		expect(buildChromiumArgs('mnc4.local', '127.0.0.1')).toEqual(['--host-resolver-rules=MAP mnc4.local 127.0.0.1']);
+		expect(buildChromiumArgs('wp.test', '127.0.0.1')).toEqual(['--host-resolver-rules=MAP wp.test 127.0.0.1']);
 	});
 
 	test('a LAN or public address is refused over plain HTTP', async () => {
@@ -58,13 +58,13 @@ describe('screen-reader login HTTP policy', () => {
 	});
 
 	test('a name mapped to both loopback families pins the IPv4 one; a v6-only name is bracketed for Chromium', async () => {
-		const lookup = lookupTable({ 'mnc4.local': ['::1', '127.0.0.1'], 'six.local': ['::1'] });
-		await expect(assertSafeBaseUrl('http://mnc4.local', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
+		const lookup = lookupTable({ 'wp.test': ['::1', '127.0.0.1'], 'six.local': ['::1'] });
+		await expect(assertSafeBaseUrl('http://wp.test', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
 		await expect(assertSafeBaseUrl('http://six.local', lookup)).resolves.toEqual({ pinned: '::1' });
 		expect(buildChromiumArgs('six.local', '::1')).toEqual(['--host-resolver-rules=MAP six.local [::1]']);
 	});
 
 	test('no pin means no extra Chromium args', () => {
-		expect(buildChromiumArgs('mnc4.local', null)).toEqual([]);
+		expect(buildChromiumArgs('wp.test', null)).toEqual([]);
 	});
 });

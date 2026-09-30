@@ -89,6 +89,13 @@ class Typost {
     private $forced_font_ids = null;
 
     /**
+     * Hook suffix of the Settings → Typography Stylist page (set in
+     * add_admin_menu(), matched in maybe_enqueue_admin_assets()).
+     * @since 2.3.1
+     */
+    private $admin_page_hook = '';
+
+    /**
      * Get instance
      */
     public static function get_instance() {
@@ -1236,9 +1243,25 @@ class Typost {
             array($this, 'render_admin_page')
         );
 
-        // Enqueue admin assets only on plugin page
-        add_action('admin_print_styles-' . $hook, array($this, 'enqueue_admin_assets'));
-        add_action('admin_print_scripts-' . $hook, array($this, 'enqueue_admin_assets'));
+        // Enqueue admin assets only on plugin page. One hook, so the assets,
+        // the localized data and typost_admin_assets run once per page load
+        // (#226: the old admin_print_styles-/admin_print_scripts- pair ran
+        // them twice, and every localized object printed twice).
+        $this->admin_page_hook = $hook ? $hook : '';
+        add_action('admin_enqueue_scripts', array($this, 'maybe_enqueue_admin_assets'));
+    }
+
+    /**
+     * Enqueue the settings page assets when the current screen is the
+     * settings page.
+     *
+     * @since 2.3.1
+     * @param string $hook_suffix The current admin page hook suffix.
+     */
+    public function maybe_enqueue_admin_assets($hook_suffix) {
+        if ('' !== $this->admin_page_hook && $hook_suffix === $this->admin_page_hook) {
+            $this->enqueue_admin_assets();
+        }
     }
 
     /**
@@ -1288,9 +1311,12 @@ class Typost {
             true
         );
 
-        // Enqueue custom fonts for preview
+        // Enqueue custom fonts for preview. The @font-face rules cost nothing
+        // until text uses them. Adobe Fonts kit stylesheets are NOT enqueued
+        // here: admin-page.js adds a kit's <link> when an element that uses
+        // one of its fonts comes into view (#226 — the settings page loaded
+        // every kit, 77 on a large site, on every visit and every tab).
         $this->enqueue_custom_fonts_for_admin();
-        $this->enqueue_adobe_fonts();
 
         // Localize script for translations and data
         $admin_data = array(
@@ -1302,6 +1328,7 @@ class Typost {
             'replacements' => $this->get_font_replacements(),
             'fontFeatureVisibility' => $this->get_font_feature_visibility(),
             'features' => $this->get_available_features(),
+            'featureCategoryTitles' => $this->get_feature_category_titles(),
             'fontOrder' => $this->get_font_order(),
             'wpFontLibraryFonts' => $this->get_wp_font_library_fonts(),
             'strings' => array(
@@ -2458,6 +2485,31 @@ class Typost {
     }
 
     /**
+     * Display titles for the feature categories used by get_available_features().
+     *
+     * Passed to admin-page.js as typostAdmin.featureCategoryTitles: the font
+     * cards' Feature Visibility checkboxes are built in the browser when the
+     * section is first opened (#226 — rendered in PHP they were ~24 KB per
+     * font, 3.2 MB of the page on a site with 134 fonts).
+     *
+     * @since 2.3.1
+     * @return array Category slug => translated title.
+     */
+    public function get_feature_category_titles() {
+        return array(
+            'ligatures'      => __('Ligatures', 'typography-stylist'),
+            'stylistic-sets' => __('Stylistic Sets', 'typography-stylist'),
+            'alternates'     => __('Swashes & Alternates', 'typography-stylist'),
+            'decorative'     => __('Decorative', 'typography-stylist'),
+            'numerals'       => __('Numerals & Figures', 'typography-stylist'),
+            'capitals'       => __('Capitals & Case', 'typography-stylist'),
+            'positional'     => __('Positional Forms', 'typography-stylist'),
+            'super-sub'      => __('Superscript & Ordinals', 'typography-stylist'),
+            'other'          => __('Other Features', 'typography-stylist'),
+        );
+    }
+
+    /**
      * Get available OpenType features with object caching
      */
     public function get_available_features() {
@@ -3145,13 +3197,8 @@ class Typost {
         typost_render_preview_font_options($this, $custom_fonts, $adobe_fonts, $manual_fonts);
         $preview_options_html = ob_get_clean();
 
-        $adobe_css_urls = array();
-        foreach ($adobe_fonts as $adobe_font) {
-            if (!empty($adobe_font['css_url'])) {
-                $adobe_css_urls[] = $adobe_font['css_url'];
-            }
-        }
-
+        // No Adobe kit URLs: the page loads a kit when an element that uses
+        // it comes into view, from the refreshed adobeFonts data (#226).
         return rest_ensure_response(array(
             'fontListHtml'          => $font_list_html,
             'previewOptionsHtml'    => $preview_options_html,
@@ -3163,7 +3210,6 @@ class Typost {
             'wpFontLibraryFonts'    => $this->get_wp_font_library_fonts(),
             'fontVariablesCss'      => $this->get_font_css_variables(),
             'adminFontCss'          => $this->get_admin_font_css(),
-            'adobeCssUrls'          => array_values(array_unique($adobe_css_urls)),
         ));
     }
 

@@ -425,6 +425,14 @@
 			if (!selectedFont) {
 				return;
 			}
+			// On the settings page core loads an Adobe Fonts kit stylesheet
+			// only on request (#226), and the cells render by family name, so
+			// ask for the kit. In the editor there is no loader: every kit is
+			// already on the page.
+			if (selectedFont.source === 'adobe' && selectedFont.fontId &&
+				window.typostAdminFonts && typeof window.typostAdminFonts.ensureFontId === 'function') {
+				window.typostAdminFonts.ensureFontId(selectedFont.fontId);
+			}
 			// Server-side precheck: when the vendor files are missing on disk,
 			// report that honestly instead of a generic parse failure. A
 			// user-initiated retry (forceRefresh) still attempts the real load
