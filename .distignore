@@ -52,8 +52,6 @@ __mocks__
 # Every Playwright config (playwright.nvda.config.js shipped in 2.3.0)
 /playwright*.config.js
 /.gitattributes
-# Stray root image, referenced by nothing (not an asset of the plugin)
-/cabinet-hero.png
 
 # --- docs that live on GitHub, not in the distributed plugin ---
 # (readme.txt, changelog.txt, BUILD.txt, and SOURCE.md DO ship: readme.txt is
