@@ -163,7 +163,13 @@ class PO_to_MO_Compiler {
                 $translation = $entry['msgstr'];
             }
 
-            if (!empty($original) && !empty($translation)) {
+            // Keep the header entry. Its msgid is always empty and it carries
+            // Content-Type, Language and Plural-Forms; without it WordPress
+            // falls back to the default plural rule (n != 1), which is wrong
+            // for French (n > 1).
+            $is_header = ('' === $original);
+
+            if (($is_header || !empty($original)) && !empty($translation)) {
                 $originals[] = $original;
                 $translations[] = $translation;
             }
@@ -190,8 +196,12 @@ class PO_to_MO_Compiler {
         // Hash table size (we use 0 for no hash table)
         $mo .= pack('V', 0);
 
-        // Offset of hash table (we use 0)
-        $mo .= pack('V', 0);
+        // Offset of hash table: directly after the translations table, even
+        // with no hash table. WordPress's legacy MO reader (used before 6.5)
+        // sizes the translations table as hash_addr - translations_addr and
+        // rejects the whole file when that is not count * 8, so an offset of
+        // 0 made every catalog fail to load there.
+        $mo .= pack('V', 28 + $count * 16);
 
         // Calculate string offsets
         $original_offset = 28 + $count * 8 + $count * 8;

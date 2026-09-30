@@ -98,6 +98,36 @@
 	color: #1d2327;
 }
 
+/* Preview. Never give .typost-ps-preview a `display` value: it would
+   override the `hidden` attribute, render the sample while closed, and
+   download its font on page load.
+   The sample carries the style's own .typost-ps-N class (0,1,0), which
+   must win every property the style sets. So the defaults sit on the
+   container (inherited) or in :where() (specificity 0,0,1 — enough to beat
+   the admin's bare `p` rule by source order, never the style's class). */
+.typost-ps-preview {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid #dcdcde;
+	color: #1d2327;
+	font-size: 20px;
+	line-height: 1.4;
+	overflow-wrap: break-word;
+}
+
+:where(.typost-ps-preview) p {
+	margin: 0;
+	font-size: inherit;
+	line-height: inherit;
+}
+
+.typost-ps-preview .typost-ps-preview-note {
+	margin-top: 8px;
+	font-size: 12px;
+	line-height: 1.5;
+	color: #50575e;
+}
+
 /* Edit form */
 .typost-ps-edit-form {
 	margin-top: 12px;

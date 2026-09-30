@@ -1,8 +1,8 @@
 /**
  * Typography Stylist - Paragraph Styles: Admin Tab JavaScript
  *
- * Handles inline editing and deletion of paragraph styles in the
- * Typography Stylist settings page.
+ * Handles style previews, inline editing and deletion of paragraph styles
+ * in the Typography Stylist settings page.
  *
  * Focus and announcements (QA finding ADM-2): opening the edit form moves
  * focus to the name field, saving or cancelling returns it to the card's
@@ -89,11 +89,35 @@
 		return null;
 	}
 
+	/**
+	 * Show or hide a card's style preview (disclosure pattern).
+	 *
+	 * The region stays `hidden` until opened: a browser fetches no font file
+	 * for text that is not rendered, so a closed preview costs nothing.
+	 * The button label stays "Preview"; aria-expanded carries the state.
+	 *
+	 * @param {Element|null} button .typost-ps-preview-btn element
+	 * @return {boolean|null} The new expanded state, or null when the
+	 *                        button or its region is missing
+	 */
+	function togglePreview(button) {
+		var id = button ? button.getAttribute('aria-controls') : '';
+		var region = id ? document.getElementById(id) : null;
+		if (!region) {
+			return null;
+		}
+		var expanded = button.getAttribute('aria-expanded') !== 'true';
+		button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+		region.hidden = !expanded;
+		return expanded;
+	}
+
 	var helpers = {
 		announce: announce,
 		focusEditName: focusEditName,
 		focusEditButton: focusEditButton,
-		focusTargetAfterDelete: focusTargetAfterDelete
+		focusTargetAfterDelete: focusTargetAfterDelete,
+		togglePreview: togglePreview
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -106,6 +130,14 @@
 
 	var restUrl = typostPSAdmin.restUrl;
 	var nonce   = typostPSAdmin.nonce;
+
+	// -------------------------------------------------------------------------
+	// Preview Style
+	// -------------------------------------------------------------------------
+
+	$(document).on('click', '.typost-ps-preview-btn', function() {
+		togglePreview(this);
+	});
 
 	// -------------------------------------------------------------------------
 	// Edit Style

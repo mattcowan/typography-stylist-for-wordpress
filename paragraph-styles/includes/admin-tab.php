@@ -45,8 +45,14 @@ foreach ( $instance->get_adobe_fonts() as $project ) {
 		}
 	}
 }
+// Manual definitions name a font that the theme or another plugin loads on
+// the site. Nothing loads it on this page, so its preview gets a note.
+$manual_font_ids = array();
 foreach ( $instance->get_manual_fonts() as $font ) {
 	$add_font( $font );
+	if ( isset( $font['font_id'] ) ) {
+		$manual_font_ids[ absint( $font['font_id'] ) ] = true;
+	}
 }
 // Adopted WP Font Library fonts carry their numeric ID in font_id
 // (their string id is "wpl-{slug}").
@@ -55,6 +61,26 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 		$font_lookup[ $font['font_id'] ] = $font['name'];
 	}
 }
+
+// Deleted font ID => replacement font ID, so a card names the font the
+// style actually renders in (see Typost_Paragraph_Styles::resolve_font_label()).
+$font_mappings = array();
+if ( method_exists( $instance, 'font_sources' ) ) {
+	$replacements = $instance->font_sources()->get_font_replacements();
+	if ( isset( $replacements['mappings'] ) && is_array( $replacements['mappings'] ) ) {
+		$font_mappings = $replacements['mappings'];
+	}
+}
+
+// Preview sample: fixed text, rendered here so a later render-time rule
+// engine can style it the same way it styles content. It carries ligature
+// pairs, a fraction and figures so OpenType features show. `lang` drives
+// hyphenation, so it names the admin locale only when the text is actually
+// translated.
+$preview_source = 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.';
+/* translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show. */
+$preview_text = __( 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.', 'typost-paragraph-styles' );
+$preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-', get_user_locale() );
 ?>
 
 <div class="typost-ps-admin-tab">
@@ -78,7 +104,22 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 				$props    = isset( $style['properties'] ) ? $style['properties'] : array();
 				$style_id = isset( $style['id'] ) ? intval( $style['id'] ) : 0;
 				$font_id  = isset( $props['fontId'] ) ? absint( $props['fontId'] ) : 0;
-				$font_name = $font_id && isset( $font_lookup[ $font_id ] ) ? $font_lookup[ $font_id ] : __( 'Default', 'typost-paragraph-styles' );
+				$font     = Typost_Paragraph_Styles::resolve_font_label( $font_id, $font_lookup, $font_mappings );
+				switch ( $font['status'] ) {
+					case 'found':
+						$font_name = $font['name'];
+						break;
+					case 'replaced':
+						/* translators: %s: name of the font that replaces the style's deleted font */
+						$font_name = sprintf( __( '%s (replaces a deleted font)', 'typost-paragraph-styles' ), $font['name'] );
+						break;
+					case 'missing':
+						$font_name = __( 'Deleted font, shown in the default font', 'typost-paragraph-styles' );
+						break;
+					default:
+						$font_name = __( 'Default', 'typost-paragraph-styles' );
+				}
+				$preview_id = 'typost-ps-preview-' . $style_id;
 				$weight   = ! empty( $props['fontWeight'] ) ? $props['fontWeight'] : '400';
 				$features = isset( $props['features'] ) && is_array( $props['features'] ) ? $props['features'] : array();
 
@@ -137,6 +178,9 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 						<h3 class="typost-ps-style-name"><?php echo esc_html( $style['name'] ); ?></h3>
 						<code class="typost-ps-css-class">.<?php echo esc_html( $css_class ); ?></code>
 						<div class="typost-ps-style-actions">
+							<button type="button" class="button typost-ps-preview-btn" aria-expanded="false" aria-controls="<?php echo esc_attr( $preview_id ); ?>">
+								<?php esc_html_e( 'Preview', 'typost-paragraph-styles' ); ?>
+							</button>
 							<button type="button" class="button typost-ps-edit-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 								<?php esc_html_e( 'Edit', 'typost-paragraph-styles' ); ?>
 							</button>
@@ -182,6 +226,15 @@ foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
 									<?php echo esc_html( $line_height_display ); ?>
 								<?php endif; ?>
 							</span>
+						<?php endif; ?>
+					</div>
+
+					<?php // `hidden` until the Preview button opens it: a browser fetches no font file for text that is not rendered. ?>
+					<div class="typost-ps-preview" id="<?php echo esc_attr( $preview_id ); ?>" hidden>
+						<p class="typost-ps-preview-sample <?php echo esc_attr( $css_class ); ?>" lang="<?php echo esc_attr( $preview_lang ); ?>"><?php echo esc_html( $preview_text ); ?></p>
+						<?php // Check the font the style renders in: a deleted font can be replaced by a manual one. ?>
+						<?php if ( isset( $manual_font_ids[ $font['font_id'] ] ) ) : ?>
+							<p class="typost-ps-preview-note"><?php esc_html_e( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ); ?></p>
 						<?php endif; ?>
 					</div>
 

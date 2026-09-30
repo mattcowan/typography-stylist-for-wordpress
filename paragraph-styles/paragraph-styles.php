@@ -39,6 +39,9 @@ final class Typost_Paragraph_Styles {
 	/** @var self|null */
 	private static $instance = null;
 
+	/** @var bool Whether the style CSS was already added to the admin page */
+	private $admin_style_css_added = false;
+
 	/** @var string Option key for storing paragraph styles */
 	const OPTION_KEY = 'typost_paragraph_styles';
 
@@ -754,6 +757,13 @@ final class Typost_Paragraph_Styles {
 
 	/**
 	 * Enqueue admin JavaScript and CSS for the Paragraph Styles tab.
+	 *
+	 * Also prints the generated style CSS, so each card's preview renders
+	 * through the style's own `.typost-ps-{id}` rule. The page already
+	 * declares every font (`--font-N` variables, kit and adopted @font-face,
+	 * Adobe stylesheets), and a browser fetches a font file only when visible
+	 * text uses it — the previews are `hidden` until opened, so the page
+	 * downloads no extra font until the admin opens one.
 	 */
 	public function enqueue_admin_assets() {
 		wp_enqueue_script(
@@ -774,10 +784,76 @@ final class Typost_Paragraph_Styles {
 			TYPOST_PS_VERSION
 		);
 
+		// Core fires typost_admin_assets from both admin_print_styles-{hook}
+		// and admin_print_scripts-{hook}. The stylesheets print between the
+		// two (print_admin_styles() runs on admin_print_styles), so CSS added
+		// on the second call never reaches the page and cannot duplicate.
+		// The flag is a precaution: it skips building the CSS a second time
+		// and keeps one copy if the hook ever fires twice before printing.
+		if ( ! $this->admin_style_css_added ) {
+			$css = $this->get_all_css();
+			if ( ! empty( $css ) ) {
+				wp_add_inline_style( 'typost-paragraph-styles-admin', $css );
+			}
+			$this->admin_style_css_added = true;
+		}
+
 		wp_localize_script( 'typost-paragraph-styles-admin', 'typostPSAdmin', array(
 			'restUrl' => rest_url( self::REST_NAMESPACE . '/paragraph-styles' ),
 			'nonce'   => wp_create_nonce( 'wp_rest' ),
 		) );
+	}
+
+	/**
+	 * Resolve the font an admin style card names.
+	 *
+	 * A style keeps its numeric `fontId` after the font is deleted. When a
+	 * replacement is mapped, `--font-{deleted}` aliases the replacement's
+	 * variable, so the style renders in the replacement; with no mapping the
+	 * variable is undefined, `font-family` falls back to the inherited font,
+	 * and the card must not name a font that no longer exists. Replacement
+	 * chains are followed (a replacement can itself be deleted and replaced),
+	 * with a visited set so a cyclic mapping cannot loop.
+	 *
+	 * @param int   $font_id     The style's `fontId` (0 = none set).
+	 * @param array $font_lookup Numeric font ID => display name, every source.
+	 * @param array $mappings    Deleted font ID => replacement font ID.
+	 * @return array {
+	 *     @type string $status  'default' (no font set), 'found', 'replaced', or 'missing'.
+	 *     @type string $name    Font name for 'found' and 'replaced'; '' otherwise.
+	 *     @type int    $font_id The font the style renders in: the saved ID for
+	 *                           'found', the end of the replacement chain for
+	 *                           'replaced', 0 otherwise. A check on the font's
+	 *                           source (a manual definition) must use this ID,
+	 *                           not the saved one.
+	 * }
+	 */
+	public static function resolve_font_label( $font_id, $font_lookup, $mappings ) {
+		$font_id = absint( $font_id );
+		if ( 0 === $font_id ) {
+			return array( 'status' => 'default', 'name' => '', 'font_id' => 0 );
+		}
+
+		$font_lookup = is_array( $font_lookup ) ? $font_lookup : array();
+		if ( isset( $font_lookup[ $font_id ] ) ) {
+			return array( 'status' => 'found', 'name' => (string) $font_lookup[ $font_id ], 'font_id' => $font_id );
+		}
+
+		$mappings = is_array( $mappings ) ? $mappings : array();
+		$visited  = array( $font_id => true );
+		$current  = $font_id;
+		while ( isset( $mappings[ $current ] ) ) {
+			$current = absint( $mappings[ $current ] );
+			if ( 0 === $current || isset( $visited[ $current ] ) ) {
+				break;
+			}
+			if ( isset( $font_lookup[ $current ] ) ) {
+				return array( 'status' => 'replaced', 'name' => (string) $font_lookup[ $current ], 'font_id' => $current );
+			}
+			$visited[ $current ] = true;
+		}
+
+		return array( 'status' => 'missing', 'name' => '', 'font_id' => 0 );
 	}
 
 	// -------------------------------------------------------------------------
