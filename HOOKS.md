@@ -675,7 +675,7 @@ $(document).on('typost:font-list-refreshed', function(e, data) {
 });
 ```
 
-The bundled Variable Fonts module uses this to hide the weight checkboxes again for fonts set to "hide weights".
+The bundled Variable Fonts module uses this to hide the weight checkboxes again for fonts set to "hide weights", and the Detect axes button for Adobe and custom fonts when the browser font parser is not available.
 
 ### Lifecycle Hooks
 

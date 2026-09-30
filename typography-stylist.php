@@ -1295,13 +1295,9 @@ class Typost {
             TYPOST_VERSION
         );
 
-        // Output color scheme CSS variable overrides only once per request
-        static $color_scheme_output = false;
-
-        if (!$color_scheme_output) {
-            $this->output_admin_color_scheme();
-            $color_scheme_output = true;
-        }
+        // Color scheme CSS variable overrides. (The once-per-request guard
+        // went with the old admin_print_* double hook, #226.)
+        $this->output_admin_color_scheme();
 
         wp_enqueue_script(
             'typost-admin',

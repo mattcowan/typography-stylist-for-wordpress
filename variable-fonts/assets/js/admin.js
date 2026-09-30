@@ -362,29 +362,39 @@
     }
 
     /**
-     * Apply the server-rendered weight visibility to every settings
-     * container under `scope`. The PHP renders the weight checkboxes
-     * visible; only this hides them for "hide weights" fonts.
+     * One-time setup for every settings container under `scope`. The PHP
+     * renders the weight checkboxes and the Detect axes field visible; only
+     * this hides them. Runs at page load and again after core swaps the
+     * font list in place, or the fresh cards lose the setup.
+     *
+     * - Weight checkboxes: hidden for "hide weights" fonts.
+     * - Detect axes: hidden for remote sources (Adobe, manual) when the
+     *   browser parsing pipeline failed to load. Uploaded kits re-detect
+     *   server-side and need no browser pipeline.
      *
      * @param {Element|Document} scope Where to look for containers.
      */
-    function applyInitialWeightVisibility(scope) {
-        $(scope).find('.typost-vf-settings').each(function() {
+    function setUpSettingsContainers(scope) {
+        var $containers = $(scope).find('.typost-vf-settings');
+        $containers.each(function() {
             var $container = $(this);
             if ($container.attr('data-hide-weights') === '1') {
                 applyWeightVisibility($container, false);
             }
         });
+        if (!canDetect()) {
+            $containers.not('[data-font-type="font"]').find('.typost-vf-detect-field').hide();
+        }
     }
 
     $(function() {
-        // On page load: apply initial weight visibility from server-rendered state.
-        applyInitialWeightVisibility(document);
+        // On page load: apply the server-rendered state.
+        setUpSettingsContainers(document);
 
         // Core swaps the font list in place after a font save, add or delete
         // (no reload since core 2.3), so the fresh cards need the same setup.
         $(document).on('typost:font-list-refreshed', function(e, data) {
-            applyInitialWeightVisibility((data && data.region) || document);
+            setUpSettingsContainers((data && data.region) || document);
         });
 
         // Toggle axes section visibility.
@@ -409,13 +419,6 @@
             var $list = $(this).closest('.typost-vf-axes-section').find('.typost-vf-axes-list');
             $list.append(createAxisRowHtml());
         });
-
-        // Uploaded kits re-detect server-side and need no browser pipeline;
-        // remote sources (Adobe, manual) can only be parsed in the browser, so
-        // hide their button when that pipeline failed to load.
-        if (!canDetect()) {
-            $('.typost-vf-settings').not('[data-font-type="font"]').find('.typost-vf-detect-field').hide();
-        }
 
         // Detect axes from the font binary (fvar table). Rows are only
         // populated for review — nothing persists until Save Changes.
