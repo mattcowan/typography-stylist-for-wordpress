@@ -9,6 +9,8 @@ const {
 	referencesFromHtml,
 	attributeText,
 	collectFontIdsFromBlocks,
+	collectFontIdsFromAttributes,
+	listsDiffer,
 	withReplacements,
 	createKitLoader,
 } = require('../editor-font-kits.js');
@@ -72,11 +74,115 @@ describe('attributeText', () => {
 		expect(attributeText(richText)).toBe('<span data-font-id="9">x</span>');
 	});
 
-	test('skips plain objects, arrays, numbers and a throwing toString()', () => {
-		expect(attributeText({ a: 1 })).toBe('');
-		expect(attributeText([1, 2])).toBe('');
+	test('reads plain objects and arrays as JSON', () => {
+		expect(attributeText({ typography: { fontFamily: 'var(--font-12)' } })).toBe('{"typography":{"fontFamily":"var(--font-12)"}}');
+		expect(attributeText([1, 2])).toBe('[1,2]');
+	});
+
+	test('returns nothing for numbers, a throwing toString() and a circular object', () => {
+		const circular = {};
+		circular.self = circular;
 		expect(attributeText(42)).toBe('');
 		expect(attributeText({ toString: () => { throw new Error('x'); } })).toBe('');
+		expect(attributeText(circular)).toBe('');
+	});
+});
+
+describe('collectFontIdsFromAttributes', () => {
+	test('reads a flat list of attribute objects, style objects included', () => {
+		const list = [
+			{ fontId: 5 },
+			{ content: '<span data-font-id="12">x</span>' },
+			{ style: { typography: { fontFamily: 'var(--font-40)' } } },
+			null,
+			'not an object',
+		];
+		expect(collectFontIdsFromAttributes(list, STYLES)).toEqual([5, 12, 40]);
+	});
+
+	test('handles missing input', () => {
+		expect(collectFontIdsFromAttributes(null, null)).toEqual([]);
+	});
+});
+
+describe('listsDiffer', () => {
+	const a = { fontId: 1 };
+	const b = { fontId: 2 };
+
+	test('is true on the first tick and on a length change', () => {
+		expect(listsDiffer(null, [a])).toBe(true);
+		expect(listsDiffer([a], [a, b])).toBe(true);
+	});
+
+	test('compares items by reference', () => {
+		expect(listsDiffer([a, b], [a, b])).toBe(false);
+		expect(listsDiffer([a, b], [a, { fontId: 2 }])).toBe(true);
+	});
+});
+
+describe('editor wiring', () => {
+	afterEach(() => {
+		jest.useRealTimers();
+		delete global.wp;
+		delete global.typostData;
+		delete window.typostFontKits;
+		delete window.typostAdminFonts;
+		document.head.innerHTML = '';
+	});
+
+	test('loads the kit for a font inside a synced pattern, which getBlocks() does not include', () => {
+		jest.useFakeTimers();
+		// The post holds one synced pattern. Its child uses font 6. getBlocks()
+		// shows the pattern with no inner blocks (it manages its own children);
+		// getClientIdsWithDescendants() includes the child.
+		const attributes = { pattern: { ref: 13 }, child: { content: '<span data-font-id="6">x</span>' } };
+		let listener = null;
+		const editor = {
+			getBlocks: () => [{ clientId: 'pattern', name: 'core/block', attributes: attributes.pattern, innerBlocks: [] }],
+			getClientIdsWithDescendants: () => ['pattern', 'child'],
+			getBlockAttributes: (id) => attributes[id],
+		};
+		global.wp = { data: { select: () => editor, subscribe: (fn) => { listener = fn; } } };
+		global.typostData = { adobeFonts: ADOBE, paragraphStyles: [], fontReplacements: {} };
+
+		jest.isolateModules(() => {
+			require('../editor-font-kits.js');
+		});
+		listener();
+		jest.advanceTimersByTime(300);
+
+		const links = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]')).map((l) => l.getAttribute('href'));
+		expect(links).toEqual(['https://use.typekit.net/abc.css', 'https://use.typekit.net/xyz.css']);
+		expect(typeof window.typostFontKits.ensureFontId).toBe('function');
+		expect(typeof window.typostAdminFonts.ensureFontId).toBe('function');
+	});
+
+	test('rescans when a block inside a pattern changes', () => {
+		jest.useFakeTimers();
+		const attributes = { pattern: { ref: 13 }, child: { content: 'plain' } };
+		let listener = null;
+		const editor = {
+			getBlocks: () => [],
+			getClientIdsWithDescendants: () => ['pattern', 'child'],
+			getBlockAttributes: (id) => attributes[id],
+		};
+		global.wp = { data: { select: () => editor, subscribe: (fn) => { listener = fn; } } };
+		global.typostData = { adobeFonts: ADOBE, paragraphStyles: [], fontReplacements: { 16: 29 } };
+
+		jest.isolateModules(() => {
+			require('../editor-font-kits.js');
+		});
+		listener();
+		jest.advanceTimersByTime(300);
+		expect(document.head.querySelectorAll('link').length).toBe(0);
+
+		// Only the child's attributes object changes (a new reference)
+		attributes.child = { content: '<span style="font-family: var(--font-16)">x</span>' };
+		listener();
+		jest.advanceTimersByTime(300);
+
+		const links = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]')).map((l) => l.getAttribute('href'));
+		expect(links).toEqual(['https://use.typekit.net/rep.css']);
 	});
 });
 

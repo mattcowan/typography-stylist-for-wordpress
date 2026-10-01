@@ -5919,10 +5919,12 @@ class Typost {
      *
      * Reads the raw post content only: no the_content filters or block
      * rendering in the editor request. Inline spans, --font-N variables and
-     * block attributes are all in the raw content; paragraph style
-     * references go through the typost_content_font_ids filter. The site
-     * editor and the widgets editor have no single post, so they get none —
-     * editor-font-kits.js loads their kits from the blocks.
+     * block attributes are all in the raw content; synced patterns are read
+     * from their own wp_block posts (get_synced_pattern_content()); paragraph
+     * style references go through the typost_content_font_ids filter. The
+     * site editor and the widgets editor have no single post, so they get
+     * none — editor-font-kits.js loads their kits once the blocks (template
+     * parts included) are in the block editor store.
      *
      * @since 2.3.1
      * @return array Font references (may be empty).
@@ -5937,6 +5939,11 @@ class Typost {
         $raw   = ($post && isset($post->post_content) && is_string($post->post_content)) ? $post->post_content : '';
 
         if ('' !== $raw) {
+            // A synced pattern is saved as <!-- wp:block {"ref":N} /--> only,
+            // so add each referenced pattern's own content to the scan.
+            $visited = array();
+            $raw    .= $this->get_synced_pattern_content($raw, $visited);
+
             if (function_exists('parse_blocks')) {
                 $this->extract_fonts_from_blocks(parse_blocks($raw), $fonts);
             }
@@ -5958,6 +5965,62 @@ class Typost {
 
         $this->editor_used_fonts = array_values(array_filter(array_unique($fonts)));
         return $this->editor_used_fonts;
+    }
+
+    /**
+     * The saved content of every synced pattern (core/block) that a piece of
+     * content references, nested patterns included.
+     *
+     * @since 2.3.1
+     * @param string $content  Block content.
+     * @param array  $visited  Pattern IDs already read (by reference), so a
+     *                         pattern that references itself cannot loop.
+     * @param int    $depth    Nesting depth (stops at 5).
+     * @return string The patterns' content, newline-separated ('' if none).
+     */
+    private function get_synced_pattern_content($content, array &$visited, $depth = 0) {
+        if ($depth > 5 || !is_string($content) || false === strpos($content, 'wp:block') || !function_exists('parse_blocks')) {
+            return '';
+        }
+
+        $refs = array();
+        $this->collect_synced_pattern_refs(parse_blocks($content), $refs);
+
+        $out = '';
+        foreach ($refs as $ref) {
+            if (isset($visited[$ref])) {
+                continue;
+            }
+            $visited[$ref] = true;
+            $pattern = get_post($ref);
+            if (!$pattern || !isset($pattern->post_type) || 'wp_block' !== $pattern->post_type || !is_string($pattern->post_content)) {
+                continue;
+            }
+            $out .= "\n" . $pattern->post_content;
+            $out .= $this->get_synced_pattern_content($pattern->post_content, $visited, $depth + 1);
+        }
+        return $out;
+    }
+
+    /**
+     * Collect the `ref` IDs of core/block (synced pattern) blocks.
+     *
+     * @since 2.3.1
+     * @param array $blocks Parsed blocks.
+     * @param array $refs   Positive pattern IDs (by reference).
+     */
+    private function collect_synced_pattern_refs($blocks, array &$refs) {
+        foreach ((array) $blocks as $block) {
+            if (isset($block['blockName']) && 'core/block' === $block['blockName'] && !empty($block['attrs']['ref'])) {
+                $ref = absint($block['attrs']['ref']);
+                if ($ref > 0) {
+                    $refs[] = $ref;
+                }
+            }
+            if (!empty($block['innerBlocks'])) {
+                $this->collect_synced_pattern_refs($block['innerBlocks'], $refs);
+            }
+        }
     }
 
     /**

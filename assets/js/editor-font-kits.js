@@ -8,8 +8,9 @@
  * the rest on demand:
  *
  * - fonts that the blocks use, read from the block editor store (attributes,
- *   inline spans, paragraph style references), so picking a font, pasting,
- *   undo and inserting a pattern all load their kit;
+ *   inline spans, paragraph style references) for every block, including
+ *   the children of synced patterns, template parts and post content, so
+ *   picking a font, pasting, undo and inserting a pattern all load their kit;
  * - fonts that a preview shows before they are applied, through
  *   window.typostFontKits.ensureFontId() (the inline modal, the Paragraph
  *   Styles browser, the Glyphs panel).
@@ -28,7 +29,7 @@
      * Adobe Fonts kit stylesheet URLs for a numeric font ID.
      *
      * Twin of typostAdobeCssUrlsForFontId() in admin-page.js (separate page,
-     * separate script); admin-font-loader.test.js checks both give the same
+     * separate script); editor-font-kits.test.js checks both give the same
      * result, so they cannot drift apart.
      *
      * @param {Array}         adobeFonts typostData.adobeFonts.
@@ -90,10 +91,12 @@
     }
 
     /**
-     * An attribute value as a string, when it can hold markup.
+     * An attribute value as text that can be searched for font references.
      *
      * RichText attributes are RichTextData objects since WordPress 6.5; their
-     * toString() returns the HTML. Plain objects and arrays are skipped.
+     * toString() returns the HTML. Plain objects and arrays (a block's
+     * `style` object, an extension's settings) are read as JSON, so a
+     * `var(--font-N)` inside them is found too.
      *
      * @param {*} value Attribute value.
      * @return {string}
@@ -102,31 +105,62 @@
         if (typeof value === 'string') {
             return value;
         }
-        if (value && typeof value === 'object' && !Array.isArray(value) &&
-            typeof value.toString === 'function' && value.toString !== Object.prototype.toString) {
-            try {
+        if (!value || typeof value !== 'object') {
+            return '';
+        }
+        try {
+            if (!Array.isArray(value) && typeof value.toString === 'function' &&
+                value.toString !== Object.prototype.toString) {
                 var text = value.toString();
                 return typeof text === 'string' ? text : '';
-            } catch (e) {
-                return '';
             }
+            return JSON.stringify(value) || '';
+        } catch (e) {
+            // A throwing toString(), or a circular object
+            return '';
         }
-        return '';
     }
 
     /**
      * Every font ID that a block tree uses.
      *
-     * Reads the block-level `fontId`, a `paragraphStyleId`, and every
-     * string-like attribute (inline spans in `content`, the `styleClass`
-     * class). Paragraph style references resolve to the style's `fontId`,
-     * matching a style by its ID or its legacy ID.
+     * Flattens the tree and reads it with collectFontIdsFromAttributes().
+     * The editor itself does not use this: getBlocks() leaves out the
+     * children of synced patterns, template parts and post content, so the
+     * editor wiring reads every block's attributes from the store instead.
      *
-     * @param {Array} blocks          Block tree (getBlocks()).
+     * @param {Array} blocks          Block tree.
      * @param {Array} paragraphStyles typostData.paragraphStyles.
      * @return {number[]} Unique positive font IDs.
      */
     function collectFontIdsFromBlocks(blocks, paragraphStyles) {
+        var list = [];
+        (function walk(blocksList) {
+            (Array.isArray(blocksList) ? blocksList : []).forEach(function(block) {
+                if (!block) {
+                    return;
+                }
+                list.push(block.attributes);
+                walk(block.innerBlocks);
+            });
+        })(blocks);
+        return collectFontIdsFromAttributes(list, paragraphStyles);
+    }
+
+    /**
+     * Every font ID that a list of block attribute objects uses.
+     *
+     * Reads each block's `fontId`, its `paragraphStyleId`, and font and style
+     * references in every attribute (inline spans in `content`, the
+     * `styleClass` class, `var(--font-N)` in a `style` object). Paragraph
+     * style references resolve to the style's `fontId`, matching a style by
+     * its ID or its legacy ID.
+     *
+     * @param {Array} attributesList  One attributes object per block.
+     * @param {Array} paragraphStyles typostData.paragraphStyles.
+     * @return {number[]} Unique positive font IDs.
+     */
+    function collectFontIdsFromAttributes(attributesList, paragraphStyles) {
         var ids = [];
         var styleRefs = [];
 
@@ -144,26 +178,20 @@
             }
         }
 
-        function walk(list) {
-            (Array.isArray(list) ? list : []).forEach(function(block) {
-                if (!block) {
-                    return;
-                }
-                var attrs = block.attributes || {};
-                addId(attrs.fontId);
-                if (attrs.paragraphStyleId) {
-                    addStyleRef(attrs.paragraphStyleId);
-                }
-                Object.keys(attrs).forEach(function(key) {
-                    var refs = referencesFromHtml(attributeText(attrs[key]));
-                    refs.fontIds.forEach(addId);
-                    refs.styleRefs.forEach(addStyleRef);
-                });
-                walk(block.innerBlocks);
+        (Array.isArray(attributesList) ? attributesList : []).forEach(function(attrs) {
+            if (!attrs || typeof attrs !== 'object') {
+                return;
+            }
+            addId(attrs.fontId);
+            if (attrs.paragraphStyleId) {
+                addStyleRef(attrs.paragraphStyleId);
+            }
+            Object.keys(attrs).forEach(function(key) {
+                var refs = referencesFromHtml(attributeText(attrs[key]));
+                refs.fontIds.forEach(addId);
+                refs.styleRefs.forEach(addStyleRef);
             });
-        }
-
-        walk(blocks);
+        });
 
         if (styleRefs.length && Array.isArray(paragraphStyles)) {
             paragraphStyles.forEach(function(style) {
@@ -299,11 +327,36 @@
         };
     }
 
+    /**
+     * Whether two lists differ in length or in any item (by reference).
+     *
+     * The store keeps a block's attributes object until that block changes,
+     * so comparing the per-block attribute references finds an edit anywhere,
+     * inside synced patterns and template parts too, without reading text.
+     *
+     * @param {Array|null} previous Last list seen (null on the first tick).
+     * @param {Array}      next     Current list.
+     * @return {boolean}
+     */
+    function listsDiffer(previous, next) {
+        if (!previous || !next || previous.length !== next.length) {
+            return true;
+        }
+        for (var i = 0; i < next.length; i++) {
+            if (previous[i] !== next[i]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     var api = {
         adobeCssUrlsForFontId: adobeCssUrlsForFontId,
         referencesFromHtml: referencesFromHtml,
         attributeText: attributeText,
         collectFontIdsFromBlocks: collectFontIdsFromBlocks,
+        collectFontIdsFromAttributes: collectFontIdsFromAttributes,
+        listsDiffer: listsDiffer,
         withReplacements: withReplacements,
         createKitLoader: createKitLoader
     };
@@ -366,33 +419,49 @@
         root.typostAdminFonts = { ensureFontId: ensureFontId };
     }
 
-    var lastBlocks = null;
+    var lastAttributes = null;
     var pending = null;
+
+    /**
+     * One attributes object per block in the editor, in order.
+     *
+     * getBlocks() is not enough: it leaves out the children of blocks that
+     * manage their own (synced patterns, template parts, post content in
+     * the template view). getClientIdsWithDescendants() includes them.
+     *
+     * @param {Object} editor select('core/block-editor').
+     * @return {Array}
+     */
+    function allBlockAttributes(editor) {
+        var clientIds = editor.getClientIdsWithDescendants() || [];
+        var list = new Array(clientIds.length);
+        for (var i = 0; i < clientIds.length; i++) {
+            list[i] = editor.getBlockAttributes(clientIds[i]);
+        }
+        return list;
+    }
 
     function scanBlocks() {
         pending = null;
-        var editor = root.wp.data.select('core/block-editor');
-        if (!editor || typeof editor.getBlocks !== 'function') {
-            return;
-        }
-        var ids = collectFontIdsFromBlocks(editor.getBlocks(), data().paragraphStyles);
+        var ids = collectFontIdsFromAttributes(lastAttributes, data().paragraphStyles);
         loader.ensureFontIds(withReplacements(ids, data().fontReplacements));
     }
 
     root.wp.data.subscribe(function() {
         var editor = root.wp.data.select('core/block-editor');
-        if (!editor || typeof editor.getBlocks !== 'function') {
+        if (!editor || typeof editor.getClientIdsWithDescendants !== 'function' ||
+            typeof editor.getBlockAttributes !== 'function') {
             return;
         }
         // Cheap on every tick: a rebuilt canvas has a fresh <head> without
         // the kits. sync() adds nothing when every document has them.
         loader.sync();
-        var blocks = editor.getBlocks();
-        if (blocks === lastBlocks) {
+        var attributes = allBlockAttributes(editor);
+        if (!listsDiffer(lastAttributes, attributes)) {
             return;
         }
-        lastBlocks = blocks;
-        // Typing changes the block tree on every key; scan after a pause.
+        lastAttributes = attributes;
+        // Typing changes a block's attributes on every key; scan after a pause.
         if (pending) {
             clearTimeout(pending);
         }

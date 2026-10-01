@@ -130,6 +130,66 @@ class EditorAdobeKitsTest extends TestCase {
         $this->assertSame(1, $calls);
     }
 
+    /**
+     * Stub parse_blocks() to report core/block refs found in the content,
+     * and get_post() to return the edited post (no argument) or a pattern.
+     *
+     * @param string $post_content Saved content of the edited post.
+     * @param array  $patterns     Pattern ID => saved content.
+     */
+    private function editPostWithPatterns($post_content, array $patterns) {
+        Functions\when('parse_blocks')->alias(function ($content) {
+            $blocks = array();
+            if (preg_match_all('/wp:block \{"ref":(\d+)\}/', $content, $m)) {
+                foreach ($m[1] as $ref) {
+                    $blocks[] = array('blockName' => 'core/block', 'attrs' => array('ref' => (int) $ref), 'innerBlocks' => array());
+                }
+            }
+            return $blocks;
+        });
+        Functions\when('get_post')->alias(function ($id = null) use ($post_content, $patterns) {
+            if (null === $id) {
+                return (object) array('ID' => 253, 'post_type' => 'page', 'post_content' => $post_content);
+            }
+            return isset($patterns[$id])
+                ? (object) array('ID' => $id, 'post_type' => 'wp_block', 'post_content' => $patterns[$id])
+                : null;
+        });
+    }
+
+    public function test_editor_reads_fonts_inside_a_synced_pattern() {
+        $this->editPostWithPatterns('<!-- wp:block {"ref":42} /-->', array(
+            42 => '<p><span data-font-id="6" style="font-family: var(--font-6)">x</span></p>',
+        ));
+        $this->plugin()->enqueue_adobe_fonts();
+
+        $this->assertContains('typost-adobe-xyz', $this->enqueued);
+    }
+
+    public function test_editor_follows_nested_patterns_and_stops_on_a_cycle() {
+        $this->editPostWithPatterns('<!-- wp:block {"ref":42} /-->', array(
+            42 => '<!-- wp:block {"ref":43} /-->',
+            43 => '<span data-font-id="5">x</span><!-- wp:block {"ref":42} /-->',
+        ));
+        $this->plugin()->enqueue_adobe_fonts();
+
+        $this->assertContains('typost-adobe-abc', $this->enqueued);
+    }
+
+    public function test_editor_ignores_a_ref_that_is_not_a_pattern() {
+        Functions\when('parse_blocks')->justReturn(array(
+            array('blockName' => 'core/block', 'attrs' => array('ref' => 7), 'innerBlocks' => array()),
+        ));
+        Functions\when('get_post')->alias(function ($id = null) {
+            return null === $id
+                ? (object) array('ID' => 253, 'post_content' => '<!-- wp:block {"ref":7} /-->')
+                : (object) array('ID' => 7, 'post_type' => 'post', 'post_content' => '<span data-font-id="6">x</span>');
+        });
+        $this->plugin()->enqueue_adobe_fonts();
+
+        $this->assertNotContains('typost-adobe-xyz', $this->enqueued);
+    }
+
     public function test_replacement_mappings_for_the_editor_are_positive_integers() {
         $plugin = $this->plugin(array(), array('16' => '29', 0 => 5, 7 => 0, 'x' => 3));
         $method = new \ReflectionMethod($plugin, 'get_replacement_mappings_for_editor');

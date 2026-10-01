@@ -425,10 +425,10 @@
 			if (!selectedFont) {
 				return;
 			}
-			// On the settings page core loads an Adobe Fonts kit stylesheet
-			// only on request (#226), and the cells render by family name, so
-			// ask for the kit. In the editor there is no loader: every kit is
-			// already on the page.
+			// Core loads an Adobe Fonts kit stylesheet only on request, on the
+			// settings page (#226, admin-page.js) and in the block editor
+			// (#230, editor-font-kits.js, which defines the same name). The
+			// cells render by family name, so ask for the kit.
 			if (selectedFont.source === 'adobe' && selectedFont.fontId &&
 				window.typostAdminFonts && typeof window.typostAdminFonts.ensureFontId === 'function') {
 				window.typostAdminFonts.ensureFontId(selectedFont.fontId);
