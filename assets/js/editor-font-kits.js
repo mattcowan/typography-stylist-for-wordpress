@@ -441,30 +441,47 @@
         return list;
     }
 
-    function scanBlocks() {
-        pending = null;
-        var ids = collectFontIdsFromAttributes(lastAttributes, data().paragraphStyles);
-        loader.ensureFontIds(withReplacements(ids, data().fontReplacements));
-    }
-
-    root.wp.data.subscribe(function() {
+    function blockEditor() {
         var editor = root.wp.data.select('core/block-editor');
         if (!editor || typeof editor.getClientIdsWithDescendants !== 'function' ||
             typeof editor.getBlockAttributes !== 'function') {
+            return null;
+        }
+        return editor;
+    }
+
+    /**
+     * Read every block's attributes and, when any changed, load the kits.
+     * Runs from the throttle timer, never on each store dispatch.
+     */
+    function scanBlocks() {
+        pending = null;
+        var editor = blockEditor();
+        if (!editor) {
             return;
         }
-        // Cheap on every tick: a rebuilt canvas has a fresh <head> without
-        // the kits. sync() adds nothing when every document has them.
-        loader.sync();
         var attributes = allBlockAttributes(editor);
         if (!listsDiffer(lastAttributes, attributes)) {
             return;
         }
         lastAttributes = attributes;
-        // Typing changes a block's attributes on every key; scan after a pause.
-        if (pending) {
-            clearTimeout(pending);
+        var ids = collectFontIdsFromAttributes(attributes, data().paragraphStyles);
+        loader.ensureFontIds(withReplacements(ids, data().fontReplacements));
+    }
+
+    root.wp.data.subscribe(function() {
+        if (!blockEditor()) {
+            return;
         }
-        pending = setTimeout(scanBlocks, 250);
+        // Cheap on every tick: a rebuilt canvas has a fresh <head> without
+        // the kits. sync() adds nothing when every document has them.
+        loader.sync();
+        // The subscription fires on every dispatch to any store. Reading
+        // every block's attributes costs one lookup per block, so it runs at
+        // most once per 250 ms. The timer is not reset on later dispatches,
+        // so a steady stream of them cannot postpone the scan forever.
+        if (!pending) {
+            pending = setTimeout(scanBlocks, 250);
+        }
     });
 })(typeof window !== 'undefined' ? window : this);

@@ -157,6 +157,39 @@ describe('editor wiring', () => {
 		expect(typeof window.typostAdminFonts.ensureFontId).toBe('function');
 	});
 
+	test('reads block attributes at most once per 250 ms, and a dispatch stream cannot postpone it', () => {
+		jest.useFakeTimers();
+		const attributes = { a: { content: 'plain' }, b: { content: 'plain' } };
+		let listener = null;
+		let reads = 0;
+		const editor = {
+			getBlocks: () => [],
+			getClientIdsWithDescendants: () => ['a', 'b'],
+			getBlockAttributes: (id) => { reads++; return attributes[id]; },
+		};
+		global.wp = { data: { select: () => editor, subscribe: (fn) => { listener = fn; } } };
+		global.typostData = { adobeFonts: ADOBE, paragraphStyles: [], fontReplacements: {} };
+
+		jest.isolateModules(() => {
+			require('../editor-font-kits.js');
+		});
+
+		// 50 dispatches, 10 ms apart (500 ms): unrelated store updates
+		for (let i = 0; i < 50; i++) {
+			listener();
+			jest.advanceTimersByTime(10);
+		}
+		// Two scans (at 250 and 500 ms), two blocks each: not 50 x 2
+		expect(reads).toBe(4);
+
+		// A font applied mid-stream is picked up by the next scan
+		attributes.b = { content: '<span data-font-id="5">x</span>' };
+		listener();
+		jest.advanceTimersByTime(250);
+		const links = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]')).map((l) => l.getAttribute('href'));
+		expect(links).toEqual(['https://use.typekit.net/abc.css']);
+	});
+
 	test('rescans when a block inside a pattern changes', () => {
 		jest.useFakeTimers();
 		const attributes = { pattern: { ref: 13 }, child: { content: 'plain' } };
