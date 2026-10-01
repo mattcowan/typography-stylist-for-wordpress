@@ -650,6 +650,8 @@ describe('Typography Stylist - Save Component (fixed px font size, #218)', () =>
 	it.each([
 		['inherit'],
 		[''],
+		['0'],
+		['0.0'],
 		['24px'],
 		['-24'],
 		['abc'],

@@ -110,10 +110,11 @@ export default function save({ attributes }) {
 		// Fixed px size (kept from a paragraph style saved in the inline
 		// editor, after Detach or after a deleted style's class is cleared).
 		// Same test as buildStyle() in edit.js, so both sides render it.
+		// Zero means "no size", as in the paragraph style CSS generators.
 		// Blocks saved before this branch existed carry no font-size and
 		// validate through the v1 deprecation and are upgraded the next time
 		// the post is saved after a block edit.
-		if (/^\d+(\.\d+)?$/.test(String(fontSize))) {
+		if (/^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
 			styleArray.push(`font-size: ${fontSize}px`);
 		}
 
@@ -169,7 +170,8 @@ export default function save({ attributes }) {
 	// span.typost-line carrying its cqi font-size. The typost-fit class
 	// establishes the container (container-type: inline-size in style.css)
 	// and the rule that neutralizes inline data-fontsize spans. Non-fit
-	// output below is byte-identical to the pre-fit save (block validation).
+	// output below is byte-identical to the pre-fit save (block validation),
+	// except the fixed px font-size above, which v1 never wrote (#218).
 	const isFit = fontSize === 'fit';
 	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize) : content;
 	const visualClassName = (isFit ? 'typost-styled typost-fit' : 'typost-styled') + (styleClass ? ` ${styleClass}` : '');

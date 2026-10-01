@@ -42,7 +42,11 @@ const sanitizeFontVariationSettings = (value) => {
 	return validEntries.join(', ');
 };
 
-// Attribute schema at the time of v1 (no fitLineSizes/fitMaxSize)
+// Attribute schema at the time of v1, plus the two fit keys. Core keeps only
+// the attributes in this schema when a block validates through v1, so
+// without them a fixed px block (#218) that still stores a fit cap or fit
+// line sizes from earlier fit use lost both on the next save. v1Save never
+// reads them, so they change no output.
 const v1Attributes = {
 	content: { type: 'string', default: '' },
 	tagName: { type: 'string', default: 'h2' },
@@ -62,7 +66,9 @@ const v1Attributes = {
 	styleClass: { type: 'string', default: '' },
 	fontVariationSettings: { type: 'string', default: '' },
 	layeredConfigId: { type: 'number', default: 0 },
-	animationConfigId: { type: 'number', default: 0 }
+	animationConfigId: { type: 'number', default: 0 },
+	fitLineSizes: { type: 'array', default: [] },
+	fitMaxSize: { type: 'number', default: 0 }
 };
 
 const v1Supports = {

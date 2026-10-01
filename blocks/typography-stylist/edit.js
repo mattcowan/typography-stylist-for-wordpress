@@ -3510,8 +3510,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// block-native control; render it inline when it is not coming from
 		// the style's class (an edit in progress, or a detached block that
 		// kept the size — an orphaned styleClass is cleared above). save.js
-		// emits the same inline size once the block has no styleClass.
-		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize))) {
+		// emits the same inline size once the block has no styleClass. Zero
+		// means "no size" (save.js and the style CSS generators agree).
+		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
 			styles.fontSize = `${fontSize}px`;
 		}
 

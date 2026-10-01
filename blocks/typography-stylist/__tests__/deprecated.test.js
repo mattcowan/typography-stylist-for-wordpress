@@ -8,8 +8,9 @@
  * 2. A fixed px size with no styleClass is the exception (#218): the
  *    current save writes the size and v1 does not, so blocks saved before
  *    the fix validate through v1 and are upgraded on the next save.
- * 3. The v1 attribute schema carries no fit keys (matching what blocks
- *    saved before the feature actually stored).
+ * 3. The v1 attribute schema carries the fit keys. v1Save never reads
+ *    them, but core drops attributes missing from the schema, so a fixed
+ *    px block upgraded through v1 would lose a stored fit cap.
  */
 
 import { create } from 'react-test-renderer';
@@ -76,6 +77,20 @@ describe('Typography Stylist - deprecated save (v1, pre-fit)', () => {
 			}
 		},
 		{
+			label: 'fixed size "0" with no styleClass (zero means no size)',
+			attributes: {
+				content: 'Zero size',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: '0',
+				fontWeight: '400',
+				letterSpacing: 0,
+				lineHeight: 0,
+				styleClass: ''
+			}
+		},
+		{
 			label: 'styleClass block with a fixed px size (the class renders the size)',
 			attributes: {
 				content: 'Styled by class',
@@ -139,9 +154,12 @@ describe('Typography Stylist - deprecated save (v1, pre-fit)', () => {
 		expect(v1.apiVersion).toBe(blockJson.apiVersion);
 	});
 
-	it('v1 attributes contain no fit keys', () => {
-		expect(v1.attributes.fitLineSizes).toBeUndefined();
-		expect(v1.attributes.fitMaxSize).toBeUndefined();
+	// Core keeps only the attributes in a deprecation's schema. A fixed px
+	// block that validates through v1 must keep any stored fit keys.
+	it('v1 attributes carry the fit keys with the block.json schema', () => {
+		const blockJson = require('../block.json');
+		expect(v1.attributes.fitLineSizes).toEqual(blockJson.attributes.fitLineSizes);
+		expect(v1.attributes.fitMaxSize).toEqual(blockJson.attributes.fitMaxSize);
 		// Sanity: the schema still covers the long-standing attributes
 		expect(v1.attributes.fontSize).toEqual({ type: 'string', default: 'inherit' });
 		expect(v1.attributes.content).toEqual({ type: 'string', default: '' });
