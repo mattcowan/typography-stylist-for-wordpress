@@ -3153,6 +3153,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._isMounted = true;
         }
 
+        componentDidUpdate(prevProps, prevState) {
+            // The feature previews render in the picked font before it is
+            // applied, so its Adobe Fonts kit must load now (#230: the editor
+            // no longer loads every kit up front).
+            const fontId = this.state.selectedFontId;
+            if (this.state.isOpen && fontId && (fontId !== prevState.selectedFontId || !prevState.isOpen) &&
+                window.typostFontKits && typeof window.typostFontKits.ensureFontId === 'function') {
+                window.typostFontKits.ensureFontId(fontId);
+            }
+        }
+
         componentWillUnmount() {
             this._isMounted = false;
             this.cancelWordBoundaryAnnouncement();

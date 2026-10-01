@@ -47,6 +47,12 @@ add_action('typost_editor_assets', function() {
 
 **Important:** Use `typost-block-editor` as a script dependency to ensure your script loads after Typography Stylist's editor scripts and `window.typostHooks` is available.
 
+**Adobe Fonts kits in the block editor (since 2.3.1).** The editor no longer loads every Adobe Fonts kit stylesheet. PHP enqueues the kits that the edited post's saved content uses, plus "Load on all pages" fonts and `typost_force_enqueue_font_ids` fonts. `window.typostFontKits` (script handle `typost-editor-font-kits`, a dependency of `typost-block-editor`) adds any other kit to the editor page and to the canvas iframe:
+
+- Fonts in blocks load automatically. The loader watches the block editor store and reads a block's `fontId`, a `paragraphStyleId`, and `data-font-id`, `var(--font-N)`, `data-style-id` and `typost-ps-*` in any attribute.
+- Text that your extension shows in a font that is not yet in a block (a preview, a picker, a panel) must ask for the kit: `window.typostFontKits.ensureFontId(fontId)` or `ensureFontIds([ids])`. Both follow font replacements. Guard the call with `if (window.typostFontKits)`.
+- On the settings page, use `window.typostAdminFonts` instead (see `typost_admin_assets`). The editor also defines `window.typostAdminFonts.ensureFontId`, so code that runs in both places can call that name.
+
 #### `typost_admin_assets`
 
 Fired at the end of `enqueue_admin_assets()`. Use this to enqueue scripts and styles for the Typography Stylist settings page.

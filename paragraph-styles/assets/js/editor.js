@@ -671,6 +671,18 @@
 			};
 		}, []);
 
+		// Each row renders in its style's font. Core no longer loads every
+		// Adobe Fonts kit in the editor (#230), so ask for the styles' kits.
+		useEffect(function() {
+			var kits = window.typostFontKits;
+			if (!kits || typeof kits.ensureFontIds !== 'function') {
+				return;
+			}
+			kits.ensureFontIds((currentStyles || []).map(function(style) {
+				return style && style.properties ? style.properties.fontId : 0;
+			}));
+		}, [currentStyles]);
+
 		// Open with focus on the listbox, cursor on the applied style's row
 		// (else the first), rather than on the dialog frame. From the frame,
 		// a keyboard user reached Modal's scroll wrapper (a silent stop) and
