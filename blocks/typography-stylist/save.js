@@ -107,6 +107,16 @@ export default function save({ attributes }) {
 			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
 		}
 
+		// Fixed px size (kept from a paragraph style saved in the inline
+		// editor, after Detach or after a deleted style's class is cleared).
+		// Same test as buildStyle() in edit.js, so both sides render it.
+		// Blocks saved before this branch existed carry no font-size and
+		// validate through the v1 deprecation and are upgraded the next time
+		// the post is saved after a block edit.
+		if (/^\d+(\.\d+)?$/.test(String(fontSize))) {
+			styleArray.push(`font-size: ${fontSize}px`);
+		}
+
 		if (fontVariationSettings) {
 			const safeFVS = sanitizeFontVariationSettings(fontVariationSettings);
 			if (safeFVS) {

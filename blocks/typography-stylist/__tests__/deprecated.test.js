@@ -1,11 +1,14 @@
 /**
  * Typography Stylist Block - Deprecation Tests
  *
- * v1 is the frozen pre-fit-to-width save. Two guarantees:
- * 1. For every non-fit attribute set, the CURRENT save renders output
- *    identical to v1 — existing published blocks validate against the
- *    current save directly and never need the deprecation.
- * 2. The v1 attribute schema carries no fit keys (matching what blocks
+ * v1 is the frozen pre-fit-to-width save. Three guarantees:
+ * 1. For inherit and responsive sizes, and for any block with a
+ *    styleClass, the CURRENT save renders output identical to v1 —
+ *    those published blocks validate against the current save directly.
+ * 2. A fixed px size with no styleClass is the exception (#218): the
+ *    current save writes the size and v1 does not, so blocks saved before
+ *    the fix validate through v1 and are upgraded on the next save.
+ * 3. The v1 attribute schema carries no fit keys (matching what blocks
  *    saved before the feature actually stored).
  */
 
@@ -71,6 +74,20 @@ describe('Typography Stylist - deprecated save (v1, pre-fit)', () => {
 				layeredConfigId: 2,
 				animationConfigId: 1
 			}
+		},
+		{
+			label: 'styleClass block with a fixed px size (the class renders the size)',
+			attributes: {
+				content: 'Styled by class',
+				tagName: 'h2',
+				features: [],
+				screenReaderClass: 'visually-hidden',
+				fontSize: '24',
+				fontWeight: '400',
+				letterSpacing: 0,
+				lineHeight: 0,
+				styleClass: 'typost-ps-4'
+			}
 		}
 	];
 
@@ -78,6 +95,48 @@ describe('Typography Stylist - deprecated save (v1, pre-fit)', () => {
 		const current = create(save({ attributes })).toJSON();
 		const legacy = create(v1.save({ attributes })).toJSON();
 		expect(JSON.stringify(current)).toBe(JSON.stringify(legacy));
+	});
+
+	// A paragraph style saved in the inline editor stores a fixed px size.
+	// After Detach (or after a deleted style's class is cleared) the block
+	// keeps that size with no styleClass.
+	const fixedPxAttributes = {
+		content: 'Detached headline',
+		tagName: 'h2',
+		features: [],
+		screenReaderClass: 'visually-hidden',
+		fontSize: '24',
+		fontWeight: '400',
+		letterSpacing: 0,
+		lineHeight: 0,
+		styleClass: ''
+	};
+
+	it('current save differs from v1 save for a fixed px block (#218)', () => {
+		const current = create(save({ attributes: fixedPxAttributes })).toJSON();
+		const legacy = create(v1.save({ attributes: fixedPxAttributes })).toJSON();
+		expect(JSON.stringify(current)).not.toBe(JSON.stringify(legacy));
+		expect(current.children[1].props.style.fontSize).toBe('24px');
+	});
+
+	it('v1 save keeps the pre-fix output for a fixed px block (validation path for old posts)', () => {
+		const current = create(save({ attributes: fixedPxAttributes })).toJSON();
+		const legacy = create(v1.save({ attributes: fixedPxAttributes })).toJSON();
+		expect(legacy.children[1].props.style.fontSize).toBeUndefined();
+		// Removing the new declaration from the current output gives exactly
+		// what v1 renders, so stored pre-fix HTML still matches v1.
+		const { fontSize, ...currentWithoutSize } = current.children[1].props.style;
+		expect(currentWithoutSize).toEqual(legacy.children[1].props.style);
+		expect(JSON.stringify({ ...current, children: [current.children[0], { ...current.children[1], props: { ...current.children[1].props, style: currentWithoutSize } }] }))
+			.toBe(JSON.stringify(legacy));
+	});
+
+	// Core does not carry the current apiVersion into a deprecated entry.
+	// Without it, core treats v1 as API version 1, adds the generated
+	// `wp-block-typost-block` root class, and v1 never matches stored HTML.
+	it('v1 declares the same apiVersion as block.json', () => {
+		const blockJson = require('../block.json');
+		expect(v1.apiVersion).toBe(blockJson.apiVersion);
 	});
 
 	it('v1 attributes contain no fit keys', () => {

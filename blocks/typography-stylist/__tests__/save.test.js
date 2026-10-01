@@ -621,3 +621,40 @@ describe('Fit-to-width sizing (fontSize: "fit")', () => {
 		}
 	});
 });
+
+describe('Typography Stylist - Save Component (fixed px font size, #218)', () => {
+	const baseAttributes = {
+		content: 'Detached headline',
+		tagName: 'h2',
+		features: [],
+		screenReaderClass: 'visually-hidden',
+		fontWeight: '400',
+		letterSpacing: 0,
+		lineHeight: 0
+	};
+
+	const visualStyleOf = (attributes) => create(save({ attributes })).toJSON().children[1].props.style;
+
+	it.each([
+		['24', '24px'],
+		['36.5', '36.5px']
+	])('writes font-size for fixed size %s when there is no styleClass', (fontSize, expected) => {
+		expect(visualStyleOf({ ...baseAttributes, fontSize, styleClass: '' }).fontSize).toBe(expected);
+	});
+
+	it('writes no inline font-size when a styleClass provides the size', () => {
+		const style = visualStyleOf({ ...baseAttributes, fontSize: '24', styleClass: 'typost-ps-3' });
+		expect(style.fontSize).toBeUndefined();
+	});
+
+	it.each([
+		['inherit'],
+		[''],
+		['24px'],
+		['-24'],
+		['abc'],
+		[undefined]
+	])('writes no font-size for non-fixed value %p', (fontSize) => {
+		expect(visualStyleOf({ ...baseAttributes, fontSize }).fontSize).toBeUndefined();
+	});
+});
