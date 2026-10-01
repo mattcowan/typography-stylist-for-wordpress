@@ -3,10 +3,18 @@
  *
  * v1: the save format before fit-to-width sizing. Frozen verbatim copy of
  * the pre-fit save() (including its local helpers) — never edit this copy;
- * add a new deprecation entry instead. For fontSize values other than
- * "fit" the current save output is byte-identical to this one, so existing
- * published blocks validate against the current save directly and this
- * entry is a pure safety net.
+ * add a new deprecation entry instead. For "inherit" and "responsive"
+ * sizes, and for any block with a styleClass, the current save output is
+ * byte-identical to this one, so those blocks validate against the current
+ * save directly.
+ *
+ * Fixed px sizes (a numeric fontSize such as "24" with no styleClass) are
+ * the exception: this copy writes no font-size for them, while the current
+ * save writes `font-size: 24px` (#218). Blocks saved before that fix match
+ * this entry, not the current save, so this entry is the live validation
+ * path for them. The upgrade does not mark the post as changed: the new
+ * markup is stored only when the author edits any block and saves (a
+ * title-only save keeps the stored content).
  */
 
 import { RichText } from '@wordpress/block-editor';
@@ -34,7 +42,11 @@ const sanitizeFontVariationSettings = (value) => {
 	return validEntries.join(', ');
 };
 
-// Attribute schema at the time of v1 (no fitLineSizes/fitMaxSize)
+// Attribute schema at the time of v1, plus the two fit keys. Core keeps only
+// the attributes in this schema when a block validates through v1, so
+// without them a fixed px block (#218) that still stores a fit cap or fit
+// line sizes from earlier fit use lost both on the next save. v1Save never
+// reads them, so they change no output.
 const v1Attributes = {
 	content: { type: 'string', default: '' },
 	tagName: { type: 'string', default: 'h2' },
@@ -54,7 +66,9 @@ const v1Attributes = {
 	styleClass: { type: 'string', default: '' },
 	fontVariationSettings: { type: 'string', default: '' },
 	layeredConfigId: { type: 'number', default: 0 },
-	animationConfigId: { type: 'number', default: 0 }
+	animationConfigId: { type: 'number', default: 0 },
+	fitLineSizes: { type: 'array', default: [] },
+	fitMaxSize: { type: 'number', default: 0 }
 };
 
 const v1Supports = {
@@ -220,7 +234,14 @@ function v1Save({ attributes }) {
 	);
 }
 
+// apiVersion is required. Core builds a deprecated block type without the
+// current apiVersion (it is a deprecated-entry key), so an entry that omits
+// it is treated as API version 1, and core adds the generated
+// `wp-block-typost-block` class to the root element. The output then never
+// matches stored HTML, and this entry validated nothing until #218 found it.
+// The block has been apiVersion 3 since before v1 was the live save.
 const v1 = {
+	apiVersion: 3,
 	attributes: v1Attributes,
 	supports: v1Supports,
 	save: v1Save
