@@ -96,6 +96,13 @@ class Typost {
     private $admin_page_hook = '';
 
     /**
+     * Font references in the post open in the block editor (memoized per
+     * request: enqueue_adobe_fonts() runs for the canvas and the editor page).
+     * @since 2.3.1
+     */
+    private $editor_used_fonts = null;
+
+    /**
      * Get instance
      */
     public static function get_instance() {
@@ -279,11 +286,23 @@ class Typost {
             TYPOST_VERSION
         );
 
+        // Adobe Fonts kits on demand (#230). Hand-written ES5, no build step.
+        // A dependency of the editor script, so window.typostFontKits exists
+        // before any editor code asks it for a kit.
+        wp_register_script(
+            'typost-editor-font-kits',
+            TYPOST_PLUGIN_URL . 'assets/js/editor-font-kits.js',
+            array('wp-data'),
+            TYPOST_VERSION,
+            true
+        );
+
         // Editor JavaScript
         wp_enqueue_script(
             'typost-block-editor',
             TYPOST_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
             array(
+                'typost-editor-font-kits',
                 'wp-blocks',
                 'wp-element',
                 'wp-components',
@@ -331,6 +350,11 @@ class Typost {
                 'wpFontLibraryFonts' => $this->get_wp_font_library_fonts(),
                 'adoptedWpFonts' => $this->get_adopted_wp_fonts_by_slug(),
                 'pluginRegisteredSlugs' => $this->get_plugin_registered_slugs(),
+                // Deleted font ID => replacement font ID. editor-font-kits.js
+                // loads the replacement's Adobe kit for content that still
+                // names the deleted ID (clear_cache() drops this transient
+                // whenever a mapping changes).
+                'fontReplacements' => (object) $this->get_replacement_mappings_for_editor(),
                 'restUrl' => rest_url('typost/v1/'),
                 // Cast every flag: these options are stored as '1'/'0' strings,
                 // and wp_localize_script() stringifies whatever it is given —
@@ -5759,11 +5783,17 @@ class Typost {
     /**
      * Enqueue Adobe Fonts scripts in editor and frontend
      *
-     * Loads Adobe Fonts (Typekit) CSS stylesheets for configured projects.
-     * In editor contexts: loads all fonts for preview.
-     * On frontend: only loads fonts that are either:
-     *   - Set to "load on all pages" OR
-     *   - Actually used on the current page
+     * Loads Adobe Fonts (Typekit) CSS stylesheets for configured projects,
+     * only for fonts that are either:
+     *   - Set to "load on all pages", OR
+     *   - Forced by the typost_force_enqueue_font_ids filter, OR
+     *   - Actually used: on the frontend, by the current page; in the block
+     *     editor (since 2.3.1), by the saved content of the post being
+     *     edited (get_editor_used_fonts()). editor-font-kits.js adds the kit
+     *     for any other font the author uses or previews.
+     *
+     * Not called on the settings page (since 2.3.1): admin-page.js loads
+     * kits there on demand.
      *
      * @since 1.0.0
      *
@@ -5776,52 +5806,53 @@ class Typost {
             return;
         }
 
-        // In admin/editor, always load all fonts for preview
+        // The block editor (canvas and editor page) uses the same rules as
+        // the frontend, with the edited post's saved content as "the page".
+        // editor-font-kits.js adds any other kit on demand (#230: the editor
+        // loaded every kit, twice — 154 requests on a site with 77 kits).
         $is_editor = is_admin();
 
         // Only get used fonts if at least one font is set to load conditionally
         $used_font_families = array();
         $used_font_ids = array();
         $has_conditional_fonts = false;
-        if (!$is_editor) {
-            foreach ($adobe_fonts as $font) {
-                if (empty($font['load_on_all_pages'])) {
-                    $has_conditional_fonts = true;
-                    break;
-                }
+        foreach ($adobe_fonts as $font) {
+            if (empty($font['load_on_all_pages'])) {
+                $has_conditional_fonts = true;
+                break;
             }
-            if ($has_conditional_fonts) {
-                $used_fonts_raw = $this->get_used_fonts_in_content();
+        }
+        if ($has_conditional_fonts) {
+            $used_fonts_raw = $is_editor ? $this->get_editor_used_fonts() : $this->get_used_fonts_in_content();
 
-                // Separate font IDs from font family names
-                foreach ($used_fonts_raw as $font_ref) {
-                    if (strpos($font_ref, 'id:') === 0) {
-                        $used_font_ids[] = (int) substr($font_ref, 3);
-                    } else {
-                        $used_font_families[] = $font_ref;
-                    }
-                }
-
-                // Resolve font IDs through replacement chain
-                // If content uses font 16 which was replaced by font 29, we need to load font 29
-                $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
-
-                // Parse font families from CSS font-family values
-                if (!empty($used_font_families)) {
-                    $individual_font_families = $this->parse_font_family_list($used_font_families);
-                    $used_font_families = array_unique($individual_font_families);
+            // Separate font IDs from font family names
+            foreach ($used_fonts_raw as $font_ref) {
+                if (strpos($font_ref, 'id:') === 0) {
+                    $used_font_ids[] = (int) substr($font_ref, 3);
+                } else {
+                    $used_font_families[] = $font_ref;
                 }
             }
 
-            // Merge fonts forced by the typost_force_enqueue_font_ids filter
-            // (theme CSS may reference an Adobe font's --font-N variable)
-            $forced_font_ids = $this->get_forced_font_ids();
-            if (!empty($forced_font_ids)) {
-                $used_font_ids = array_values(array_unique(array_merge(
-                    $used_font_ids,
-                    $this->resolve_used_font_replacements($forced_font_ids)
-                )));
+            // Resolve font IDs through replacement chain
+            // If content uses font 16 which was replaced by font 29, we need to load font 29
+            $used_font_ids = $this->resolve_used_font_replacements($used_font_ids);
+
+            // Parse font families from CSS font-family values
+            if (!empty($used_font_families)) {
+                $individual_font_families = $this->parse_font_family_list($used_font_families);
+                $used_font_families = array_unique($individual_font_families);
             }
+        }
+
+        // Merge fonts forced by the typost_force_enqueue_font_ids filter
+        // (theme CSS may reference an Adobe font's --font-N variable)
+        $forced_font_ids = $this->get_forced_font_ids();
+        if (!empty($forced_font_ids)) {
+            $used_font_ids = array_values(array_unique(array_merge(
+                $used_font_ids,
+                $this->resolve_used_font_replacements($forced_font_ids)
+            )));
         }
 
         // Track which CSS URLs should be loaded (to avoid duplicates when fonts are from same kit)
@@ -5835,33 +5866,29 @@ class Typost {
             // Determine if this font should be loaded
             $should_load = false;
 
-            if ($is_editor) {
-                // Always load in editor for preview
+            // Check load_on_all_pages setting (in the editor too: theme CSS
+            // can use the font anywhere in the canvas)
+            if (!empty($font['load_on_all_pages'])) {
                 $should_load = true;
             } else {
-                // On frontend, check load_on_all_pages setting
-                if (!empty($font['load_on_all_pages'])) {
+                // Check if font ID is used
+                if (isset($font['font_id']) && in_array($font['font_id'], $used_font_ids)) {
                     $should_load = true;
-                } else {
-                    // Check if font ID is used
-                    if (isset($font['font_id']) && in_array($font['font_id'], $used_font_ids)) {
+                }
+
+                // Check if font_family is used (new structure: single string)
+                if (!$should_load && !empty($font['font_family'])) {
+                    if (in_array($font['font_family'], $used_font_families)) {
                         $should_load = true;
                     }
+                }
 
-                    // Check if font_family is used (new structure: single string)
-                    if (!$should_load && !empty($font['font_family'])) {
-                        if (in_array($font['font_family'], $used_font_families)) {
+                // Check if any of font_families are used (legacy structure: array)
+                if (!$should_load && !empty($font['font_families'])) {
+                    foreach ($font['font_families'] as $family) {
+                        if (in_array($family, $used_font_families)) {
                             $should_load = true;
-                        }
-                    }
-
-                    // Check if any of font_families are used (legacy structure: array)
-                    if (!$should_load && !empty($font['font_families'])) {
-                        foreach ($font['font_families'] as $family) {
-                            if (in_array($family, $used_font_families)) {
-                                $should_load = true;
-                                break;
-                            }
+                            break;
                         }
                     }
                 }
@@ -5882,6 +5909,117 @@ class Typost {
                 array(),
                 $handle_id  // Use kit ID as version for cache busting when Adobe updates fonts
             );
+        }
+    }
+
+    /**
+     * Font references in the saved content of the post open in the block
+     * editor, in the get_used_fonts_in_content() shape ('id:N' strings and
+     * family names).
+     *
+     * Reads the raw post content only: no the_content filters or block
+     * rendering in the editor request. Inline spans, --font-N variables and
+     * block attributes are all in the raw content; synced patterns are read
+     * from their own wp_block posts (get_synced_pattern_content()); paragraph
+     * style references go through the typost_content_font_ids filter. The
+     * site editor and the widgets editor have no single post, so they get
+     * none — editor-font-kits.js loads their kits once the blocks (template
+     * parts included) are in the block editor store.
+     *
+     * @since 2.3.1
+     * @return array Font references (may be empty).
+     */
+    private function get_editor_used_fonts() {
+        if (null !== $this->editor_used_fonts) {
+            return $this->editor_used_fonts;
+        }
+
+        $fonts = array();
+        $post  = function_exists('get_post') ? get_post() : null;
+        $raw   = ($post && isset($post->post_content) && is_string($post->post_content)) ? $post->post_content : '';
+
+        if ('' !== $raw) {
+            // A synced pattern is saved as <!-- wp:block {"ref":N} /--> only,
+            // so add each referenced pattern's own content to the scan.
+            $visited = array();
+            $raw    .= $this->get_synced_pattern_content($raw, $visited);
+
+            if (function_exists('parse_blocks')) {
+                $this->extract_fonts_from_blocks(parse_blocks($raw), $fonts);
+            }
+            if (preg_match_all('/data-font=["\']([^"\']+)["\']/', $raw, $matches)) {
+                $fonts = array_merge($fonts, $matches[1]);
+            }
+            if (preg_match_all('/--font-(\d+)/', $raw, $matches)) {
+                foreach ($matches[1] as $font_id) {
+                    $fonts[] = 'id:' . $font_id;
+                }
+            }
+            if (preg_match_all('/data-font-id=["\'](\d+)["\']/', $raw, $matches)) {
+                foreach ($matches[1] as $font_id) {
+                    $fonts[] = 'id:' . $font_id;
+                }
+            }
+            $this->collect_extension_font_ids($raw, $fonts);
+        }
+
+        $this->editor_used_fonts = array_values(array_filter(array_unique($fonts)));
+        return $this->editor_used_fonts;
+    }
+
+    /**
+     * The saved content of every synced pattern (core/block) that a piece of
+     * content references, nested patterns included.
+     *
+     * @since 2.3.1
+     * @param string $content  Block content.
+     * @param array  $visited  Pattern IDs already read (by reference), so a
+     *                         pattern that references itself cannot loop.
+     * @param int    $depth    Nesting depth (stops at 5).
+     * @return string The patterns' content, newline-separated ('' if none).
+     */
+    private function get_synced_pattern_content($content, array &$visited, $depth = 0) {
+        if ($depth > 5 || !is_string($content) || false === strpos($content, 'wp:block') || !function_exists('parse_blocks')) {
+            return '';
+        }
+
+        $refs = array();
+        $this->collect_synced_pattern_refs(parse_blocks($content), $refs);
+
+        $out = '';
+        foreach ($refs as $ref) {
+            if (isset($visited[$ref])) {
+                continue;
+            }
+            $visited[$ref] = true;
+            $pattern = get_post($ref);
+            if (!$pattern || !isset($pattern->post_type) || 'wp_block' !== $pattern->post_type || !is_string($pattern->post_content)) {
+                continue;
+            }
+            $out .= "\n" . $pattern->post_content;
+            $out .= $this->get_synced_pattern_content($pattern->post_content, $visited, $depth + 1);
+        }
+        return $out;
+    }
+
+    /**
+     * Collect the `ref` IDs of core/block (synced pattern) blocks.
+     *
+     * @since 2.3.1
+     * @param array $blocks Parsed blocks.
+     * @param array $refs   Positive pattern IDs (by reference).
+     */
+    private function collect_synced_pattern_refs($blocks, array &$refs) {
+        foreach ((array) $blocks as $block) {
+            if (isset($block['blockName']) && 'core/block' === $block['blockName'] && !empty($block['attrs']['ref'])) {
+                $ref = absint($block['attrs']['ref']);
+                if ($ref > 0) {
+                    $refs[] = $ref;
+                }
+            }
+            if (!empty($block['innerBlocks'])) {
+                $this->collect_synced_pattern_refs($block['innerBlocks'], $refs);
+            }
         }
     }
 
@@ -5983,6 +6121,26 @@ class Typost {
      */
     private function get_font_replacements() {
         return $this->font_sources()->get_font_replacements();
+    }
+
+    /**
+     * Replacement mappings as positive integer pairs, for typostData.
+     *
+     * @since 2.3.1
+     * @return array Deleted font ID => replacement font ID.
+     */
+    private function get_replacement_mappings_for_editor() {
+        $replacements = $this->get_font_replacements();
+        $mappings     = (isset($replacements['mappings']) && is_array($replacements['mappings'])) ? $replacements['mappings'] : array();
+        $out          = array();
+        foreach ($mappings as $deleted_id => $replacement_id) {
+            $deleted_id     = (int) $deleted_id;
+            $replacement_id = (int) $replacement_id;
+            if ($deleted_id > 0 && $replacement_id > 0) {
+                $out[$deleted_id] = $replacement_id;
+            }
+        }
+        return $out;
     }
 
     /**
