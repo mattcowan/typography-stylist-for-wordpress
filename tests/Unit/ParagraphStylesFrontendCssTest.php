@@ -22,6 +22,12 @@ class ParagraphStylesFrontendCssTest extends TestCase {
         ['id' => 9, 'legacyId' => 'ps_1709312345_123', 'name' => 'Migrated', 'properties' => ['fontWeight' => '600']],
     ];
 
+    /** The `widget_block` option: block widgets, keyed by number. */
+    private $widgets = [];
+
+    /** What wp_is_block_theme() reports. */
+    private $blockTheme = false;
+
     protected function tearDown(): void {
         unset($GLOBALS['wp_query']);
         parent::tearDown();
@@ -40,7 +46,15 @@ class ParagraphStylesFrontendCssTest extends TestCase {
         }
         Functions\when('get_transient')->justReturn(false);
         Functions\when('set_transient')->justReturn(true);
-        Functions\when('get_option')->justReturn($this->styles);
+        Functions\when('wp_is_block_theme')->alias(function () {
+            return $this->blockTheme;
+        });
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            if ('widget_block' === $key) {
+                return $this->widgets;
+            }
+            return $this->styles;
+        });
 
         $reflection = new \ReflectionClass(\Typost_Paragraph_Styles::class);
         return $reflection->newInstanceWithoutConstructor();
@@ -70,6 +84,14 @@ class ParagraphStylesFrontendCssTest extends TestCase {
         ob_start();
         $module->output_late_style_css();
         return ob_get_clean();
+    }
+
+    /**
+     * Replace each %Q with the quote escape saved block comments use
+     * (backslash-u0022). Built from chr(92) so no editor tool can decode it.
+     */
+    private static function storedQuotes($content) {
+        return str_replace('%Q', chr(92) . 'u0022', $content);
     }
 
     /** Numeric style ids whose plain `.typost-ps-N` selector appears in the output, in order. */
@@ -113,31 +135,60 @@ class ParagraphStylesFrontendCssTest extends TestCase {
         $this->assertStringContainsString('.typost-ps-ps_1709312345_123', $css);
     }
 
-    public function test_escaped_block_attribute_json_is_matched() {
-        $this->singular('<!-- wp:typost/block {"content":"a <span class=\"typost-styled\" data-style-id=\"4\">b</span>"} -->');
+    public function test_quotes_as_saved_block_comment_json_stores_them_are_matched() {
+        // serialize_block_attributes() and the JS serializer store a quote as
+        // backslash-u0022. Pattern-override text lives only here, with no
+        // rendered HTML beside it.
+        $content = self::storedQuotes('<!-- wp:block {"ref":0,"content":{"t":{"content":"a <span class=%Qtypost-styled%Q data-style-id=%Q4%Q>b</span>"}}} /-->');
+        $this->assertStringContainsString('data-style-id=' . chr(92) . 'u00224', $content);
+        $this->singular($content);
         $this->assertSame(['4'], $this->printedIds($this->head($this->freshInstance())));
     }
 
-    public function test_an_archive_prints_the_rules_for_every_post_in_the_loop() {
+    public function test_backslash_escaped_quotes_are_matched_too() {
+        $this->singular('{"content":"a <span class=\"typost-styled\" data-style-id=\"ps_1709312345_123\">b</span>"}');
+        $this->assertSame(['9'], $this->printedIds($this->head($this->freshInstance())));
+    }
+
+    public function test_classic_theme_block_widgets_print_in_the_head() {
+        $this->singular('<p>no styles</p>');
+        $this->widgets = [
+            2 => ['content' => '<!-- wp:heading --><h2 class="wp-block-heading"><span class="typost-styled" data-style-id="5">Header widget</span></h2><!-- /wp:heading -->'],
+            '_multiwidget' => 1,
+        ];
+        $this->assertSame(['5'], $this->printedIds($this->head($this->freshInstance())));
+    }
+
+    public function test_block_themes_skip_the_widget_option() {
+        // A block theme renders its widgets before wp_head; the collector sees those it shows.
+        $this->blockTheme = true;
+        $this->singular('<p>no styles</p>');
+        $this->widgets = [2 => ['content' => '<span data-style-id="5">stale widget</span>']];
+        $this->assertSame('', $this->head($this->freshInstance()));
+    }
+
+    public function test_a_page_that_lists_posts_prints_every_style() {
+        // A "load more" request returns post HTML without wp_head or wp_footer,
+        // so the posts it adds can use only the rules the first page printed.
         $this->archive([
             '<span data-style-id="5">first post</span>',
             '<p>no styles</p>',
-            '<h2 class="typost-styled typost-ps-3">third post</h2>',
         ]);
-        $this->assertSame(['3', '5'], $this->printedIds($this->head($this->freshInstance())));
+        $module = $this->freshInstance();
+
+        $this->assertSame(['3', '4', '5', '9'], $this->printedIds($this->head($module)));
+        $this->assertSame('', $this->footer($module));
     }
 
-    public function test_an_archive_reads_manual_excerpts() {
-        Functions\when('is_singular')->justReturn(false);
-        $GLOBALS['wp_query'] = (object) ['posts' => [
-            (object) ['ID' => 1, 'post_content' => '<p>body</p>', 'post_excerpt' => '<span data-style-id="4">teaser</span>'],
-        ]];
-        $this->assertSame(['4'], $this->printedIds($this->head($this->freshInstance())));
-    }
-
-    public function test_an_empty_archive_prints_nothing() {
+    public function test_an_empty_archive_or_404_prints_nothing() {
         $this->archive([]);
         $this->assertSame('', $this->head($this->freshInstance()));
+    }
+
+    public function test_a_singular_page_reads_its_excerpt() {
+        Functions\when('is_singular')->justReturn(true);
+        Functions\when('get_queried_object')->justReturn((object) ['ID' => 1, 'post_content' => '<p>body</p>', 'post_excerpt' => '<span data-style-id="4">lede</span>']);
+        $this->assertSame(['4'], $this->printedIds($this->head($this->freshInstance())));
     }
 
     public function test_synced_patterns_in_the_content_are_scanned() {

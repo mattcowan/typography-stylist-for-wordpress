@@ -57,6 +57,14 @@ class ParagraphStylesContentFontIdsTest extends TestCase {
         $this->assertSame([40], $ids);
     }
 
+    public function test_unicode_escaped_quotes_from_saved_block_comments_are_matched() {
+        // The form serialize_block_attributes() actually stores: a quote
+        // becomes backslash-u0022. Built from chr(92) so no tool decodes it.
+        $content = str_replace('%Q', chr(92) . 'u0022', '<!-- wp:typost/block {"content":"Typography <span class=%Qtypost-styled%Q data-style-id=%Q5%Q>Stylist</span>"} /-->');
+        $module = $this->freshInstance();
+        $this->assertSame([40], $module->font_ids_from_content([], $content));
+    }
+
     public function test_legacy_ids_are_matched_against_legacyId() {
         $module = $this->freshInstance();
         $ids = $module->font_ids_from_content([], '<span class="typost-styled" data-style-id="ps_1709312345_123">Old</span>');

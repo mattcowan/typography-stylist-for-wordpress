@@ -134,7 +134,8 @@ final class Typost_Paragraph_Styles {
 		// after the head (classic-theme widgets, custom query loops).
 		add_filter( 'render_block', array( $this, 'collect_rendered_style_refs' ) );
 		add_action( 'wp_head', array( $this, 'output_style_css' ), 6 );
-		add_action( 'wp_footer', array( $this, 'output_late_style_css' ) );
+		// Last, so blocks a popup or modal plugin renders in wp_footer count.
+		add_action( 'wp_footer', array( $this, 'output_late_style_css' ), PHP_INT_MAX );
 
 		// CSS output — block editor (including iframed editors in WP 6.x+)
 		add_action( 'enqueue_block_assets', array( $this, 'enqueue_editor_style_css' ) );
@@ -409,11 +410,14 @@ final class Typost_Paragraph_Styles {
 	 * every style on every page cost about 330 bytes per style, on pages
 	 * with no styled text too. A style is printed when:
 	 *  - the displayed content references it: the queried post on a
-	 *    singular page, every post in the main loop on an archive (the main
-	 *    query has run by wp_head), and the synced patterns they reference;
+	 *    singular page and the synced patterns it references;
 	 *  - a block that already rendered references it. A block theme renders
 	 *    its whole template, template parts included, before wp_head;
 	 *  - `typost_force_enqueue_paragraph_style_ids` names it;
+	 *  - the page lists posts (an archive, the blog page, search results):
+	 *    every style. A "load more" or infinite-scroll request returns post
+	 *    HTML without running wp_head or wp_footer, so the posts it adds can
+	 *    only use rules that the first page printed;
 	 *  - the editor scripts are on this frontend page (every style, like the
 	 *    editor in wp-admin).
 	 * Blocks that render after the head print through output_late_style_css().
@@ -424,10 +428,24 @@ final class Typost_Paragraph_Styles {
 			$this->rendered_style_refs,
 			$this->get_forced_style_refs()
 		);
-		if ( $this->editor_on_frontend ) {
+		if ( $this->editor_on_frontend || $this->page_lists_posts() ) {
 			$refs = array_merge( $refs, $this->get_all_style_refs() );
 		}
 		$this->print_style_rules( $refs, 'typost-paragraph-styles-css' );
+	}
+
+	/**
+	 * Whether this request is a page that lists posts in its main loop.
+	 *
+	 * True for archives, the blog page and search results that have posts.
+	 * False for singular pages, and for a 404 or an empty result, which have
+	 * nothing to load more of.
+	 *
+	 * @return bool
+	 */
+	private function page_lists_posts() {
+		global $wp_query;
+		return ! is_singular() && isset( $wp_query->posts ) && is_array( $wp_query->posts ) && ! empty( $wp_query->posts );
 	}
 
 	/**
@@ -501,32 +519,40 @@ final class Typost_Paragraph_Styles {
 	 * Style references in the content this request displays.
 	 *
 	 * Raw post content carries every reference: the block's `typost-ps-N`
-	 * class and `styleClass` attribute, and the inline `data-style-id`. Post
-	 * excerpts are read too, because an archive can show them.
+	 * class and `styleClass` attribute, and the inline `data-style-id`. The
+	 * excerpt is read too, because a theme can show it on a singular page.
+	 *
+	 * A classic theme renders its block widgets after wp_head, often in the
+	 * header, so their stored content is read here too: otherwise their
+	 * rules would print only in the footer pass, after the text they style.
+	 * The option holds every block widget, inactive ones included, so this
+	 * can print a rule no widget on the page uses. A block theme renders its
+	 * widgets before wp_head, where the render_block collector sees them.
 	 *
 	 * @return string[]
 	 */
 	private function get_page_style_refs() {
-		global $wp_query;
-
-		$posts = array();
-		if ( is_singular() ) {
-			$posts[] = get_queried_object();
-		} elseif ( isset( $wp_query->posts ) && is_array( $wp_query->posts ) ) {
-			$posts = $wp_query->posts;
-		}
-
 		$content = '';
-		foreach ( $posts as $post ) {
-			if ( ! is_object( $post ) ) {
-				continue;
-			}
+		// A page that lists posts prints every style (page_lists_posts()),
+		// so only a singular page's own post needs reading.
+		$post = is_singular() ? get_queried_object() : null;
+		if ( is_object( $post ) ) {
 			foreach ( array( 'post_content', 'post_excerpt' ) as $field ) {
 				if ( isset( $post->$field ) && is_string( $post->$field ) ) {
 					$content .= "\n" . $post->$field;
 				}
 			}
 		}
+
+		if ( ! function_exists( 'wp_is_block_theme' ) || ! wp_is_block_theme() ) {
+			$widgets = get_option( 'widget_block', array() );
+			foreach ( is_array( $widgets ) ? $widgets : array() as $widget ) {
+				if ( is_array( $widget ) && isset( $widget['content'] ) && is_string( $widget['content'] ) ) {
+					$content .= "\n" . $widget['content'];
+				}
+			}
+		}
+
 		if ( '' === $content ) {
 			return array();
 		}
@@ -647,10 +673,12 @@ final class Typost_Paragraph_Styles {
 	 * Style references (ids or legacy ids) in a piece of content.
 	 *
 	 * Matches `data-style-id` on inline spans and `typost-ps-N` on blocks.
-	 * Block attribute JSON escapes the quotes (`data-style-id=\"5\"`), so the
-	 * quote is optional in the pattern. The token class is the same as
-	 * findParagraphStyleByClass() and the legacyId validators use: a
-	 * hyphenated legacy id must not truncate at the hyphen.
+	 * Saved block comment JSON stores a quote as `\u0022`
+	 * (`data-style-id=\u00225\u0022`: serialize_block_attributes() and the JS
+	 * serializer both do this), and other JSON escapes it as `\"`, so the
+	 * pattern accepts any of those quote forms, or none. The token class is
+	 * the same as findParagraphStyleByClass() and the legacyId validators
+	 * use: a hyphenated legacy id must not truncate at the hyphen.
 	 *
 	 * @param string $content Content to scan.
 	 * @return string[] Unique references, as strings.
@@ -660,7 +688,7 @@ final class Typost_Paragraph_Styles {
 			return array();
 		}
 		$refs = array();
-		if ( preg_match_all( '/data-style-id=["\'\\\\]*([A-Za-z0-9_-]+)/', $content, $matches ) ) {
+		if ( preg_match_all( '/data-style-id=(?:\\\\u0022|["\'\\\\])*([A-Za-z0-9_-]+)/', $content, $matches ) ) {
 			$refs = $matches[1];
 		}
 		if ( preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', $content, $matches ) ) {
