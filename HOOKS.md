@@ -369,6 +369,25 @@ add_filter('typost_content_font_ids', function($ids, $content) {
 - Results are cached per post for 12 hours with the rest of the detection. When the data behind your IDs changes, call `Typost::get_instance()->clear_font_detection_cache()`. Call it on saves, not on every request: under a persistent object cache (Redis, Memcached) it flushes the whole object cache, because the wildcard transient deletes cannot reach the cached copies.
 - Unlike `typost_force_enqueue_font_ids`, this loads fonts only on pages whose content references them.
 
+#### `typost_force_enqueue_paragraph_style_ids`
+
+*Since 2.3.1.* Print the CSS rules of specific paragraph styles on every frontend page. A single post or page prints the rules only for the styles that it uses. A page that lists posts (an archive, the blog page, search results) prints every style. Use this filter when your theme or extension puts a `typost-ps-N` class or a `data-style-id` attribute in markup that the plugin does not scan.
+
+```php
+add_filter('typost_force_enqueue_paragraph_style_ids', function($ids) {
+    // e.g. a theme template that puts typost-ps-3 on the site title
+    $ids[] = 3;
+    return $ids;
+});
+```
+
+**Details:**
+- Return an array of style IDs. Integers and legacy `ps_…` IDs are accepted. Other entries are discarded.
+- The fonts of these styles load on every page too, through `typost_force_enqueue_font_ids`.
+- The result is memoized per request. Callbacks must return stable output for a given request.
+- You do not need this filter for blocks. The plugin scans the queried post, the synced patterns in it, and, on a classic theme, the block widgets. It also records the styles of every block as it renders. A block theme renders its template parts before `wp_head`, so their styles print in the head. A block that renders after `wp_head` (for example a block in a custom query loop) gets its rules in a second `<style>` element at the end of `wp_footer`. Markup that is not a block, such as a classic text widget or a template file, needs this filter.
+- Content loaded by AJAX does not run `wp_head` or `wp_footer`, so it can use only the rules that the page that loads it printed. A "load more" button on an archive is safe, because archives print every style. If a single post or page loads content by AJAX (for example related posts), add the style IDs of that content with this filter. The core Query Loop block's own pagination is not affected: it copies the `<style>` elements of the page it loads.
+
 ---
 
 ## JavaScript Hooks

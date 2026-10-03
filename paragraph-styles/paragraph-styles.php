@@ -42,6 +42,18 @@ final class Typost_Paragraph_Styles {
 	/** @var bool Whether the style CSS was already added to the admin page */
 	private $admin_style_css_added = false;
 
+	/** @var array<string,bool> Ids of the styles whose frontend rules this request printed, as keys */
+	private $printed_style_ids = array();
+
+	/** @var string[] Style references found in blocks as they rendered */
+	private $rendered_style_refs = array();
+
+	/** @var bool Whether the editor scripts were enqueued on a frontend page */
+	private $editor_on_frontend = false;
+
+	/** @var string[]|null Memoized typost_force_enqueue_paragraph_style_ids result */
+	private $forced_style_refs = null;
+
 	/** @var string Option key for storing paragraph styles */
 	const OPTION_KEY = 'typost_paragraph_styles';
 
@@ -104,6 +116,8 @@ final class Typost_Paragraph_Styles {
 		// Content styled only through a style class names no font; tell core's
 		// frontend font detection which fonts those classes stand for.
 		add_filter( 'typost_content_font_ids', array( $this, 'font_ids_from_content' ), 10, 2 );
+		// Styles forced onto every page need their fonts on every page too.
+		add_filter( 'typost_force_enqueue_font_ids', array( $this, 'font_ids_from_forced_styles' ) );
 
 		// REST routes
 		add_action( 'typost_register_rest_routes', array( $this, 'register_rest_routes' ) );
@@ -115,8 +129,13 @@ final class Typost_Paragraph_Styles {
 		// Cache clear
 		add_action( 'typost_cache_clear', array( $this, 'clear_cache' ) );
 
-		// CSS output — frontend
+		// CSS output — frontend: the rules for the styles the page uses, in
+		// the head; a footer pass prints the styles that blocks rendered
+		// after the head (classic-theme widgets, custom query loops).
+		add_filter( 'render_block', array( $this, 'collect_rendered_style_refs' ) );
 		add_action( 'wp_head', array( $this, 'output_style_css' ), 6 );
+		// Last, so blocks a popup or modal plugin renders in wp_footer count.
+		add_action( 'wp_footer', array( $this, 'output_late_style_css' ), PHP_INT_MAX );
 
 		// CSS output — block editor (including iframed editors in WP 6.x+)
 		add_action( 'enqueue_block_assets', array( $this, 'enqueue_editor_style_css' ) );
@@ -385,17 +404,323 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Output paragraph style CSS in <style> block.
+	 * Print the rules for the paragraph styles this page uses (#227).
 	 *
-	 * Hooked to wp_head (priority 6, after font variables at 5).
+	 * Hooked to wp_head (priority 6, after font variables at 5). Printing
+	 * every style on every page cost about 330 bytes per style, on pages
+	 * with no styled text too. A style is printed when:
+	 *  - the displayed content references it: the queried post on a
+	 *    singular page and the synced patterns it references;
+	 *  - a block that already rendered references it. A block theme renders
+	 *    its whole template, template parts included, before wp_head;
+	 *  - `typost_force_enqueue_paragraph_style_ids` names it;
+	 *  - the page lists posts (an archive, the blog page, search results):
+	 *    every style. A "load more" or infinite-scroll request returns post
+	 *    HTML without running wp_head or wp_footer, so the posts it adds can
+	 *    only use rules that the first page printed;
+	 *  - the editor scripts are on this frontend page (every style, like the
+	 *    editor in wp-admin).
+	 * Blocks that render after the head print through output_late_style_css().
 	 */
 	public function output_style_css() {
-		$css = $this->get_all_css();
-		if ( empty( $css ) ) {
+		$refs = array_merge(
+			$this->get_page_style_refs(),
+			$this->rendered_style_refs,
+			$this->get_forced_style_refs()
+		);
+		if ( $this->editor_on_frontend || $this->page_lists_posts() ) {
+			$refs = array_merge( $refs, $this->get_all_style_refs() );
+		}
+		$this->print_style_rules( $refs, 'typost-paragraph-styles-css' );
+	}
+
+	/**
+	 * Whether this request is a page that lists posts in its main loop.
+	 *
+	 * True for archives, the blog page and search results that have posts.
+	 * False for singular pages, and for a 404 or an empty result, which have
+	 * nothing to load more of.
+	 *
+	 * @return bool
+	 */
+	private function page_lists_posts() {
+		global $wp_query;
+		return ! is_singular() && isset( $wp_query->posts ) && is_array( $wp_query->posts ) && ! empty( $wp_query->posts );
+	}
+
+	/**
+	 * Print the rules for styles that blocks referenced after wp_head.
+	 *
+	 * Hooked to wp_footer. A classic theme renders widgets, footers and
+	 * custom query loops after the head, so the head scan cannot see them.
+	 * The rules print once: a style the head printed is skipped. The editor
+	 * mounted on a frontend page (a shortcode enqueues it while the content
+	 * renders) gets every remaining style here.
+	 */
+	public function output_late_style_css() {
+		$refs = $this->rendered_style_refs;
+		if ( $this->editor_on_frontend ) {
+			$refs = array_merge( $refs, $this->get_all_style_refs() );
+		}
+		$this->print_style_rules( $refs, 'typost-paragraph-styles-late-css' );
+	}
+
+	/**
+	 * Record the style references in a block's rendered HTML.
+	 *
+	 * Hooked to the `render_block` filter, which runs for every block, nested
+	 * blocks included. The strpos() checks keep the cost low for blocks with
+	 * no style reference.
+	 *
+	 * @param string $block_content The rendered block.
+	 * @return string The block, unchanged.
+	 */
+	public function collect_rendered_style_refs( $block_content ) {
+		if ( is_string( $block_content )
+			&& ( false !== strpos( $block_content, 'typost-ps-' ) || false !== strpos( $block_content, 'data-style-id' ) ) ) {
+			$this->rendered_style_refs = array_values( array_unique( array_merge(
+				$this->rendered_style_refs,
+				$this->style_refs_from_content( $block_content )
+			) ) );
+		}
+		return $block_content;
+	}
+
+	/**
+	 * Print one <style> element with the rules for the referenced styles.
+	 *
+	 * Rules keep the order of the stored styles (the order get_all_css()
+	 * uses), and each style prints at most once per request.
+	 *
+	 * @param array  $refs       Style references (ids or legacy ids).
+	 * @param string $element_id A fixed id for the <style> element.
+	 */
+	private function print_style_rules( array $refs, $element_id ) {
+		$blocks = array();
+		foreach ( $this->styles_for_refs( $refs ) as $style ) {
+			$key = isset( $style['id'] ) ? (string) $style['id'] : '';
+			if ( '' === $key || isset( $this->printed_style_ids[ $key ] ) ) {
+				continue;
+			}
+			$this->printed_style_ids[ $key ] = true;
+			$block                           = $this->generate_style_css( $style );
+			if ( '' !== $block ) {
+				$blocks[] = $block;
+			}
+		}
+		if ( empty( $blocks ) ) {
 			return;
 		}
 
-		echo "\n<style id=\"typost-paragraph-styles-css\">\n" . $css . "\n</style>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSS is generated exclusively from sanitized numeric/whitelisted values in generate_style_css().
+		echo "\n<style id=\"" . $element_id . "\">\n" . implode( "\n\n", $blocks ) . "\n</style>\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $element_id is a literal from this class; the CSS is generated exclusively from sanitized numeric/whitelisted values in generate_style_css().
+	}
+
+	/**
+	 * Style references in the content this request displays.
+	 *
+	 * Raw post content carries every reference: the block's `typost-ps-N`
+	 * class and `styleClass` attribute, and the inline `data-style-id`. The
+	 * excerpt is read too, because a theme can show it on a singular page.
+	 *
+	 * A classic theme renders its block widgets after wp_head, often in the
+	 * header, so their stored content is read here too: otherwise their
+	 * rules would print only in the footer pass, after the text they style.
+	 * The option holds every block widget, inactive ones included, so this
+	 * can print a rule no widget on the page uses. A block theme renders its
+	 * widgets before wp_head, where the render_block collector sees them.
+	 *
+	 * @return string[]
+	 */
+	private function get_page_style_refs() {
+		$content = '';
+		// A page that lists posts prints every style (page_lists_posts()),
+		// so only a singular page's own post needs reading.
+		$post = is_singular() ? get_queried_object() : null;
+		if ( is_object( $post ) ) {
+			foreach ( array( 'post_content', 'post_excerpt' ) as $field ) {
+				if ( isset( $post->$field ) && is_string( $post->$field ) ) {
+					$content .= "\n" . $post->$field;
+				}
+			}
+		}
+
+		if ( ! function_exists( 'wp_is_block_theme' ) || ! wp_is_block_theme() ) {
+			$widgets = get_option( 'widget_block', array() );
+			foreach ( is_array( $widgets ) ? $widgets : array() as $widget ) {
+				if ( is_array( $widget ) && isset( $widget['content'] ) && is_string( $widget['content'] ) ) {
+					$content .= "\n" . $widget['content'];
+				}
+			}
+		}
+
+		if ( '' === $content ) {
+			return array();
+		}
+
+		$visited  = array();
+		$content .= $this->get_synced_pattern_content( $content, $visited );
+		return $this->style_refs_from_content( $content );
+	}
+
+	/**
+	 * The saved content of every synced pattern that content references.
+	 *
+	 * A synced pattern is saved as `<!-- wp:block {"ref":N} /-->` only. Core
+	 * reads patterns the same way for the editor kit scan; that helper is
+	 * private, and this module uses core's public API only. Block comment
+	 * attributes escape `<` and `>`, so the attribute JSON holds no `>`.
+	 *
+	 * @param string $content Block content.
+	 * @param array  $visited Pattern ids already read (by reference), so a
+	 *                        pattern that references itself cannot loop.
+	 * @param int    $depth   Nesting depth (stops at 5).
+	 * @return string The patterns' content, newline-separated ('' if none).
+	 */
+	private function get_synced_pattern_content( $content, array &$visited, $depth = 0 ) {
+		if ( $depth > 5 || false === strpos( $content, 'wp:block ' ) ) {
+			return '';
+		}
+		if ( ! preg_match_all( '/<!--\s+wp:block\s+\{[^>]*?"ref":(\d+)/', $content, $matches ) ) {
+			return '';
+		}
+
+		$out = '';
+		foreach ( array_unique( array_map( 'intval', $matches[1] ) ) as $ref ) {
+			if ( $ref <= 0 || isset( $visited[ $ref ] ) ) {
+				continue;
+			}
+			$visited[ $ref ] = true;
+			$pattern         = get_post( $ref );
+			if ( ! $pattern || ! isset( $pattern->post_type ) || 'wp_block' !== $pattern->post_type || ! is_string( $pattern->post_content ) ) {
+				continue;
+			}
+			$out .= "\n" . $pattern->post_content;
+			$out .= $this->get_synced_pattern_content( $pattern->post_content, $visited, $depth + 1 );
+		}
+		return $out;
+	}
+
+	/**
+	 * Style ids that theme or extension CSS needs on every frontend page.
+	 *
+	 * Memoized for the request: the result also feeds core's
+	 * `typost_force_enqueue_font_ids`, whose output must stay stable within
+	 * a request.
+	 *
+	 * @return string[] Style ids and legacy ids, as strings.
+	 */
+	public function get_forced_style_refs() {
+		if ( null === $this->forced_style_refs ) {
+			/**
+			 * Filters the paragraph styles whose CSS prints on every frontend page.
+			 *
+			 * Use it when a theme or extension puts a `typost-ps-N` class or a
+			 * `data-style-id` in markup that the content scan cannot see.
+			 * The fonts of these styles load on every page too.
+			 *
+			 * @since 2.3.1
+			 * @param array $ids Style ids (integers, or legacy `ps_…` strings).
+			 */
+			$ids  = apply_filters( 'typost_force_enqueue_paragraph_style_ids', array() );
+			$refs = array();
+			foreach ( is_array( $ids ) ? $ids : array() as $id ) {
+				if ( ( is_int( $id ) || is_string( $id ) ) && preg_match( '/^[A-Za-z0-9_-]+$/', (string) $id ) ) {
+					$refs[] = (string) $id;
+				}
+			}
+			$this->forced_style_refs = array_values( array_unique( $refs ) );
+		}
+		return $this->forced_style_refs;
+	}
+
+	/**
+	 * Add the fonts of the forced styles to core's forced font ids.
+	 *
+	 * Hooked to `typost_force_enqueue_font_ids`.
+	 *
+	 * @param int[] $font_ids Font ids forced so far.
+	 * @return int[]
+	 */
+	public function font_ids_from_forced_styles( $font_ids ) {
+		if ( ! is_array( $font_ids ) ) {
+			$font_ids = array();
+		}
+		foreach ( $this->styles_for_refs( $this->get_forced_style_refs() ) as $style ) {
+			$font_id = isset( $style['properties']['fontId'] ) ? intval( $style['properties']['fontId'] ) : 0;
+			if ( $font_id > 0 ) {
+				$font_ids[] = $font_id;
+			}
+		}
+		return $font_ids;
+	}
+
+	/**
+	 * The id of every stored style, as strings.
+	 *
+	 * @return string[]
+	 */
+	private function get_all_style_refs() {
+		$refs = array();
+		foreach ( $this->get_styles() as $style ) {
+			if ( isset( $style['id'] ) ) {
+				$refs[] = (string) $style['id'];
+			}
+		}
+		return $refs;
+	}
+
+	/**
+	 * Style references (ids or legacy ids) in a piece of content.
+	 *
+	 * Matches `data-style-id` on inline spans and `typost-ps-N` on blocks.
+	 * Saved block comment JSON stores a quote as `\u0022`
+	 * (`data-style-id=\u00225\u0022`: serialize_block_attributes() and the JS
+	 * serializer both do this), and other JSON escapes it as `\"`, so the
+	 * pattern accepts any of those quote forms, or none. The token class is
+	 * the same as findParagraphStyleByClass() and the legacyId validators
+	 * use: a hyphenated legacy id must not truncate at the hyphen.
+	 *
+	 * @param string $content Content to scan.
+	 * @return string[] Unique references, as strings.
+	 */
+	public function style_refs_from_content( $content ) {
+		if ( ! is_string( $content ) || '' === $content ) {
+			return array();
+		}
+		$refs = array();
+		if ( preg_match_all( '/data-style-id=(?:\\\\u0022|["\'\\\\])*([A-Za-z0-9_-]+)/', $content, $matches ) ) {
+			$refs = $matches[1];
+		}
+		if ( preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', $content, $matches ) ) {
+			$refs = array_merge( $refs, $matches[1] );
+		}
+		return array_values( array_unique( array_map( 'strval', $refs ) ) );
+	}
+
+	/**
+	 * The stored styles that references point to, in stored order.
+	 *
+	 * A reference matches a style's `id` or its `legacyId` (old content
+	 * still carries `ps_1709…` ids). Unknown references match nothing.
+	 *
+	 * @param array $refs Style references.
+	 * @return array Matching style records.
+	 */
+	private function styles_for_refs( array $refs ) {
+		if ( empty( $refs ) ) {
+			return array();
+		}
+		$lookup = array_flip( array_map( 'strval', $refs ) );
+
+		$matched = array();
+		foreach ( $this->get_styles() as $style ) {
+			$style_id  = isset( $style['id'] ) ? (string) $style['id'] : '';
+			$legacy_id = isset( $style['legacyId'] ) ? (string) $style['legacyId'] : '';
+			if ( ( '' !== $style_id && isset( $lookup[ $style_id ] ) ) || ( '' !== $legacy_id && isset( $lookup[ $legacy_id ] ) ) ) {
+				$matched[] = $style;
+			}
+		}
+		return $matched;
 	}
 
 	/**
@@ -462,8 +787,8 @@ final class Typost_Paragraph_Styles {
 	 * fallback face. Hooked to `typost_content_font_ids`.
 	 *
 	 * Legacy timestamp ids (`ps_1709…`) still appear in old content; they are
-	 * matched against each style's `legacyId`. Block attribute JSON escapes the
-	 * quotes (`data-style-id=\"5\"`), so the quote is optional in the pattern.
+	 * matched against each style's `legacyId`. The scan is
+	 * style_refs_from_content(), which also decides the frontend style CSS.
 	 *
 	 * @param int[]  $ids     Font IDs collected so far.
 	 * @param string $content Content being scanned.
@@ -473,30 +798,13 @@ final class Typost_Paragraph_Styles {
 		if ( ! is_array( $ids ) ) {
 			$ids = array();
 		}
-		if ( ! is_string( $content ) || '' === $content ) {
-			return $ids;
-		}
 
-		$style_refs = array();
-		// Same token class as findParagraphStyleByClass() and the legacyId
-		// validators: a hyphenated legacy id must not truncate at the hyphen.
-		if ( preg_match_all( '/data-style-id=["\'\\\\]*([A-Za-z0-9_-]+)/', $content, $matches ) ) {
-			$style_refs = $matches[1];
-		}
-		if ( preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', $content, $matches ) ) {
-			$style_refs = array_merge( $style_refs, $matches[1] );
-		}
+		$style_refs = $this->style_refs_from_content( $content );
 		if ( empty( $style_refs ) ) {
 			return $ids;
 		}
-		$style_refs = array_unique( array_map( 'strval', $style_refs ) );
 
-		foreach ( $this->get_styles() as $style ) {
-			$style_id  = isset( $style['id'] ) ? (string) $style['id'] : '';
-			$legacy_id = isset( $style['legacyId'] ) ? (string) $style['legacyId'] : '';
-			if ( ! in_array( $style_id, $style_refs, true ) && ( '' === $legacy_id || ! in_array( $legacy_id, $style_refs, true ) ) ) {
-				continue;
-			}
+		foreach ( $this->styles_for_refs( $style_refs ) as $style ) {
 			$font_id = isset( $style['properties']['fontId'] ) ? intval( $style['properties']['fontId'] ) : 0;
 			if ( $font_id > 0 ) {
 				$ids[] = $font_id;
@@ -730,6 +1038,12 @@ final class Typost_Paragraph_Styles {
 	 * Enqueue editor JavaScript for both inline and block editors.
 	 */
 	public function enqueue_editor_assets() {
+		// An editor mounted on a frontend page needs every style, as in
+		// wp-admin, where enqueue_editor_style_css() prints them.
+		if ( ! is_admin() ) {
+			$this->editor_on_frontend = true;
+		}
+
 		// Pure logic shared with Jest tests (UMD-lite, exposed as window.typostPSUtils)
 		// wp-i18n: the size labels this file builds are translatable, so the
 		// handle needs its own script translations — they are not inherited
