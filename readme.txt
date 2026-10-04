@@ -385,7 +385,7 @@ Older releases are documented in changelog.txt (bundled with the plugin) and on 
 == Upgrade Notice ==
 
 = 2.3.1 =
-Loads only the fonts, Adobe Fonts kits and paragraph style CSS that a page uses, adds style previews to the Paragraph Styles tab, and fixes translations on WordPress 5.8 to 6.4. No data migration.
+The settings page loads only the fonts it shows, and the editor loads only the Adobe Fonts kits a post uses. A single post or page prints only the paragraph style CSS it uses. Adds style previews to the Paragraph Styles tab and fixes translations on WordPress 5.8 to 6.4. No data migration.
 
 = 2.3.0 =
 Adds built-in Paragraph Styles with a visual style browser, optional Glyphs and Paragraph Styles toolbar buttons, a no-reload settings page, and a round of screen-reader, keyboard and rendering fixes across both editors. No data migration.
