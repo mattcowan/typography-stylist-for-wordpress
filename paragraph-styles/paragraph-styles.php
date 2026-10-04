@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Guarded like the other bundled modules, so re-entry can never redefine these.
 if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
-	define( 'TYPOST_PS_VERSION', '1.2.0' );
+	define( 'TYPOST_PS_VERSION', '1.2.1' );
 	define( 'TYPOST_PS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_PS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
