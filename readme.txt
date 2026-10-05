@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.0
+Stable tag: 2.3.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -315,6 +315,18 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.1 =
+* **NEW: the Paragraph Styles tab shows a preview of each style.** Each card shows sample text in the style's own font, weight, spacing and OpenType features, and says when a style's font was deleted and replaced.
+* **Improved: the settings page loads only the fonts it shows.** Fonts load only for the open tab, and on the Custom Fonts tab only when a card comes into view. On a test site with 148 fonts, the Custom Fonts tab went from 133 font downloads to 12, and the page HTML from 5.97 MB to 1.84 MB.
+* **Improved: the block editor loads only the Adobe Fonts kits that the post uses.** Another kit loads when you use or preview its font. On a test site with 77 kits, opening a post went from 154 kit requests to 9.
+* **Improved: a single post or page prints CSS only for the paragraph styles it uses.** Archive pages, the blog page and search results still print every style, so posts that a "load more" button adds keep their styles. The block editor still gets every style.
+* **Fixed: translations did not load on WordPress 5.8 to 6.4.** The French and Spanish files had a format error that earlier versions rejected.
+* **Fixed: French used the plural form for zero.**
+* **Fixed: a fixed font size showed in the editor but not on the page.** The Typography Stylist block now saves the size. For a block saved before this fix, edit any block in the post and save the post.
+* **Fixed: the weight checkboxes came back for variable fonts** after you saved, added or deleted a font, and **the settings page printed its data two times.**
+* Developers: the new `typost_force_enqueue_paragraph_style_ids` filter prints the CSS and loads the fonts of the styles you name on every page. See HOOKS.md.
+* Full details are in changelog.txt.
+
 = 2.3.0 =
 * **NEW: Paragraph Styles are built in.** Save the current typography as a named style and apply it anywhere. Styled text renders through a shared CSS class, so "Update Style" changes every use at once. Fit-to-width blocks save as styles too.
 * **NEW: a visual style browser.** "Browse styles…" in the inline editor (and an optional block toolbar button) shows every style rendered in its own typeface, with your selected words as the sample. Search, group by font family, size mode or recently used, and move through the list with the keyboard.
@@ -371,6 +383,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.1 =
+The settings page loads only the fonts it shows, and the editor loads only the Adobe Fonts kits a post uses. A single post or page prints only the paragraph style CSS it uses. Adds style previews to the Paragraph Styles tab and fixes translations on WordPress 5.8 to 6.4. No data migration.
 
 = 2.3.0 =
 Adds built-in Paragraph Styles with a visual style browser, optional Glyphs and Paragraph Styles toolbar buttons, a no-reload settings page, and a round of screen-reader, keyboard and rendering fixes across both editors. No data migration.
