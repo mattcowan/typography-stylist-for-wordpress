@@ -2036,12 +2036,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (convertParentTitle) {
                 /* translators: %s: Title of the parent block, e.g. "Group". */
                 return sprintf(
-                    __('This block can’t be converted here — the parent %s block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist'),
+                    __('This block can’t be converted here. The parent %s block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist'),
                     convertParentTitle
                 );
             }
 
-            return __('This block can’t be converted here — its parent block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist');
+            return __('This block can’t be converted here. Its parent block only allows certain blocks inside it. Move the block out of it to convert.', 'typography-stylist');
         }
 
         /**
@@ -2135,7 +2135,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (breaksWordStart || breaksWordEnd) {
                 return {
                     valid: false,
-                    message: __('Your selection breaks a word boundary. Screen readers generally handle inline spans well, but for the best accessibility, consider converting to a Typography Stylist block which provides dedicated screen reader text.', 'typography-stylist')
+                    message: __('Your selection breaks a word boundary. Screen readers usually read inline spans correctly. For the best accessibility, convert this block to a Typography Stylist block, which adds dedicated screen reader text.', 'typography-stylist')
                 };
             }
 
@@ -2682,18 +2682,6 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     attributes['style'] = styleString;
                 }
 
-                // Add aria-label if enabled for accessibility
-                if (isFlagEnabled(typostData.enableAriaLabels) && value) {
-                    const effectiveStart = selectionLost ? savedSelectionStart : value.start;
-                    const effectiveEnd = selectionLost ? savedSelectionEnd : value.end;
-                    const selectedText = effectiveStart !== effectiveEnd
-                        ? getTextContent(slice(value, effectiveStart, effectiveEnd))
-                        : getTextContent(value);
-                    if (selectedText) {
-                        attributes['aria-label'] = selectedText;
-                    }
-                }
-
                 if (selectionLost) {
                     onChange(applyFormat(value, {
                         type: FORMAT_TYPE,
@@ -2856,15 +2844,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         getFilteredWeightOptions(fontId) {
             const ALL_WEIGHTS = [
-                { label: __('100 - Thin', 'typography-stylist'), value: '100' },
-                { label: __('200 - Extra Light', 'typography-stylist'), value: '200' },
-                { label: __('300 - Light', 'typography-stylist'), value: '300' },
-                { label: __('400 - Normal', 'typography-stylist'), value: '400' },
-                { label: __('500 - Medium', 'typography-stylist'), value: '500' },
-                { label: __('600 - Semi Bold', 'typography-stylist'), value: '600' },
-                { label: __('700 - Bold', 'typography-stylist'), value: '700' },
-                { label: __('800 - Extra Bold', 'typography-stylist'), value: '800' },
-                { label: __('900 - Black', 'typography-stylist'), value: '900' }
+                { label: __('100 (Thin)', 'typography-stylist'), value: '100' },
+                { label: __('200 (Extra Light)', 'typography-stylist'), value: '200' },
+                { label: __('300 (Light)', 'typography-stylist'), value: '300' },
+                { label: __('400 (Normal)', 'typography-stylist'), value: '400' },
+                { label: __('500 (Medium)', 'typography-stylist'), value: '500' },
+                { label: __('600 (Semi Bold)', 'typography-stylist'), value: '600' },
+                { label: __('700 (Bold)', 'typography-stylist'), value: '700' },
+                { label: __('800 (Extra Bold)', 'typography-stylist'), value: '800' },
+                { label: __('900 (Black)', 'typography-stylist'), value: '900' }
             ];
 
             if (!fontId || !this.fontIdMap || !this.fontIdMap[fontId]) {
@@ -2962,8 +2950,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             className="typost-feature-preview-on typost-feature-apply-btn"
                             onClick={() => this.applyFeatureFromPreview(feature.id)}
                             style={previewStyle}
-                            aria-label={sprintf(__('Click to apply %s feature', 'typography-stylist'), feature.name)}
-                            title={sprintf(__('Click to apply %s', 'typography-stylist'), feature.name)}
+                            aria-label={sprintf(/* translators: %s: OpenType feature name. */ __('Apply the %s feature', 'typography-stylist'), feature.name)}
+                            title={sprintf(/* translators: %s: OpenType feature name. */ __('Click to apply %s', 'typography-stylist'), feature.name)}
                         >
                             {previewText}
                         </Button>
@@ -3363,7 +3351,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                     '💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')
                                                 ),
                                                 wp.element.createElement('p', { style: { margin: '4px 0 0' } },
-                                                    __('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')
+                                                    __('Changes apply instantly. Press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')
                                                 )
                                             ),
                                             wp.element.createElement(Button, {
@@ -3528,7 +3516,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             { label: __('Italic', 'typography-stylist'), value: 'italic' }
                                         ]}
                                         onChange={this.setFontStyle}
-                                        help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+                                        help={__('Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead.', 'typography-stylist')}
                                     />
                                 </div>
 
@@ -3552,7 +3540,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                         help={fontSize === 'responsive'
                                             ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist')
                                             : (fontSize === 'fit'
-                                                ? __('This paragraph style fits text to the block width — inline text renders the style’s fluid fallback size instead.', 'typography-stylist')
+                                                ? __('This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead.', 'typography-stylist')
                                                 : undefined)}
                                     />
 
@@ -3874,6 +3862,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // Animations extension; rendered via its render_block transform)
             'data-animation-id': 'data-animation-id',
             'style': 'style',
+            // Written by the removed "Add aria-label Attributes" option. Kept
+            // so spans saved with it still parse as this format.
             'aria-label': 'aria-label'
         },
         edit: compose(

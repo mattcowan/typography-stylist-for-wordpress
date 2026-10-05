@@ -51,8 +51,8 @@ All in [paragraph-styles/](../paragraph-styles/):
 
 ## 7. i18n
 
-- [ ] Core strings → [languages/typography-stylist.pot](../languages/typography-stylist.pot) + fr/es .po, compile with `php scripts/compile-po.php`.
-- [ ] Module strings → the module's own catalog (e.g. `paragraph-styles/languages/typost-paragraph-styles.*`, its own text domain). The core compile script does **not** cover modules; point the `PO_to_MO_Compiler` class at the module dir. JS-facing strings additionally need the JED .json (filename hashes the plugin-relative script path).
+- [ ] Core strings → [languages/typography-stylist.pot](../languages/typography-stylist.pot) + fr/es .po, compile with `wp i18n make-mo languages languages` (see [languages/README.md](../languages/README.md)).
+- [ ] Module strings → the module's own catalog (e.g. `paragraph-styles/languages/typost-paragraph-styles.*`, its own text domain). Compile it with `wp i18n make-mo <module>/languages <module>/languages`. JS-facing strings additionally need the JED .json (filename hashes the plugin-relative script path, so a module file made by `make-json` must be renamed; see languages/README.md).
 - [ ] The .po/.pot files are CRLF — scripts that split on `\n\n` must normalize first.
 
 ## 8. Tests and docs

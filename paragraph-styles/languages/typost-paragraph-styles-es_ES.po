@@ -1,321 +1,28 @@
-# Translation of Typography Stylist - Paragraph Styles module (Spanish).
-# Copyright (C) 2026 Matt Cowan
-# This file is distributed under the GPL-2.0-or-later license.
+# Spanish (Spain) translation for Typography Stylist.
+# This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr ""
-"Project-Id-Version: Typography Stylist - Paragraph Styles 1.1.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-04T22:08:49+00:00\n"
-"PO-Revision-Date: 2026-08-04 22:08+0000\n"
-"Language: es_ES\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Domain: typost-paragraph-styles\n"
-
-#: paragraph-styles.php:379
-msgid "Paragraph Styles"
-msgstr "Estilos de párrafo"
-
-#: paragraph-styles.php:473
-msgid "Style name is required."
-msgstr "El nombre del estilo es obligatorio."
-
-#: paragraph-styles.php:506
-#: paragraph-styles.php:541
-msgid "Style not found."
-msgstr "Estilo no encontrado."
-
-#: paragraph-styles.php:513
-msgid "Style name cannot be empty."
-msgstr "El nombre del estilo no puede estar vacío."
-
-#: includes/admin-tab.php:50
-msgid "Manage your saved paragraph styles. These appear in the Typography Stylist editor for quick application to text."
-msgstr "Gestiona tus estilos de párrafo guardados. Aparecen en el editor de Typography Stylist para aplicarlos rápidamente al texto."
-
-#: includes/admin-tab.php:56
-#: assets/js/admin.js
-msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
-msgstr "Aún no hay estilos de párrafo guardados. Crea estilos desde el editor de Typography Stylist al editar una entrada."
-
-#: includes/admin-tab.php:66
-#: assets/js/editor.js
-msgid "Default"
-msgstr "Predeterminado"
-
-#: includes/admin-tab.php:81
-#, php-format
-msgid "Responsive (%1$s/%2$s/%3$spx)"
-msgstr "Adaptable (%1$s/%2$s/%3$spx)"
-
-#: includes/admin-tab.php:87
-#, php-format
-msgid "Fit to width (fallback %1$s–%2$spx)"
-msgstr "Ajustado al ancho (alternativa %1$s–%2$spx)"
-
-#: includes/admin-tab.php:84
-#: assets/js/lib/ps-utils.js
-#, php-format
-msgid "%spx"
-msgstr "%spx"
-
-#: includes/admin-tab.php:93
-#, php-format
-msgid "%sem"
-msgstr "%sem"
-
-#: includes/admin-tab.php:108
-msgid "Edit"
-msgstr "Editar"
-
-#: includes/admin-tab.php:111
-msgid "Delete"
-msgstr "Eliminar"
-
-#: includes/admin-tab.php:74
-msgid "Italic"
-msgstr "Cursiva"
-
-#: includes/admin-tab.php:75
-msgid "Oblique"
-msgstr "Oblicua"
-
-#: includes/admin-tab.php:76
-msgid "Normal (upright)"
-msgstr "Normal (recto)"
-
-#: includes/admin-tab.php:117
-msgid "Font:"
-msgstr "Fuente:"
-
-#: includes/admin-tab.php:140
-msgid "Style:"
-msgstr "Estilo:"
-
-#: includes/admin-tab.php:122
-msgid "Size:"
-msgstr "Tamaño:"
-
-#: includes/admin-tab.php:128
-msgid "Features:"
-msgstr "Características:"
-
-#: includes/admin-tab.php:135
-msgid "Spacing:"
-msgstr "Espaciado:"
-
-#: includes/admin-tab.php:142
-msgid "Line Height:"
-msgstr "Altura de línea:"
-
-#: includes/admin-tab.php:152
-msgid "Name:"
-msgstr "Nombre:"
-
-#: includes/admin-tab.php:157
-#: assets/js/editor.js
-msgid "Save"
-msgstr "Guardar"
-
-#: includes/admin-tab.php:160
-#: assets/js/editor.js
-msgid "Cancel"
-msgstr "Cancelar"
-
-#: assets/js/editor.js
-msgid "— Select a style —"
-msgstr "— Selecciona un estilo —"
-
-#: assets/js/editor.js
-msgid "(modified)"
-msgstr "(modificado)"
-
-#: assets/js/editor.js
-msgid "Paragraph Style"
-msgstr "Estilo de párrafo"
-
-#: assets/js/editor.js
-msgid "Update Style"
-msgstr "Actualizar estilo"
-
-#: assets/js/editor.js
-msgid "Save as New"
-msgstr "Guardar como nuevo"
-
-#: assets/js/editor.js
-msgid "Detach Style"
-msgstr "Desvincular estilo"
-
-#: assets/js/editor.js
-msgid "New style name..."
-msgstr "Nombre del nuevo estilo..."
-
-#: assets/js/editor.js
-msgid "Save Current Settings as Style"
-msgstr "Guardar los ajustes actuales como estilo"
-
-#: assets/js/editor.js
-msgid "Style name..."
-msgstr "Nombre del estilo..."
-
-#: assets/js/editor.js
-msgid "Saving..."
-msgstr "Guardando..."
-
-#: assets/js/admin.js
-msgid "Failed to update style. Please try again."
-msgstr "No se pudo actualizar el estilo. Inténtalo de nuevo."
-
-#: assets/js/admin.js
-msgid "Are you sure you want to delete \"%s\"? This cannot be undone."
-msgstr "¿Seguro que quieres eliminar «%s»? Esta acción no se puede deshacer."
-
-#: assets/js/admin.js
-msgid "Failed to delete style. Please try again."
-msgstr "No se pudo eliminar el estilo. Inténtalo de nuevo."
-
-#. translators: %s: style name
-#: assets/js/admin.js
-#, js-format
-msgid "Style renamed to \"%s\"."
-msgstr "Estilo renombrado a «%s»."
-
-#. translators: %s: style name
-#: assets/js/admin.js
-#, js-format
-msgid "Style \"%s\" deleted."
-msgstr "Estilo «%s» eliminado."
-
-#: paragraph-styles.php
-msgid "Paragraph Styles Toolbar Button"
-msgstr "Botón de estilos de párrafo en la barra de herramientas"
-
-#: paragraph-styles.php
-msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
-msgstr "Añadir un botón de estilos de párrafo a la barra de herramientas del bloque Typography Stylist"
-
-#: paragraph-styles.php
-msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
-msgstr "Abre un explorador que muestra cada estilo de párrafo guardado representado con su propia tipografía, para que puedas ver un estilo antes de aplicarlo. La lista desplegable de estilos en la barra lateral y los paneles del editor no cambia."
-
-#: assets/js/editor.js
-msgid "No paragraph styles saved yet. Set up the typography you want, then use \"Save Current Settings as Style\" in the sidebar."
-msgstr "Todavía no hay estilos de párrafo guardados. Configura la tipografía que quieras y luego usa «Guardar los ajustes actuales como estilo» en la barra lateral."
-
-#: assets/js/editor.js
-msgid "Applies to the selected text."
-msgstr "Se aplica al texto seleccionado."
-
-#: assets/js/editor.js
-msgid "Applies to the whole block."
-msgstr "Se aplica a todo el bloque."
-
-#: assets/js/editor.js
-msgid "Browse styles…"
-msgstr "Explorar estilos…"
-
-#: assets/js/editor.js
-msgid "Search styles"
-msgstr "Buscar estilos"
-
-#: assets/js/editor.js
-msgid "Style or font name"
-msgstr "Nombre del estilo o de la fuente"
-
-#. translators: %s: search text
-#: assets/js/editor.js
-#, js-format
-msgid "No styles match \"%s\"."
-msgstr "Ningún estilo coincide con «%s»."
-
-#. translators: %d: number of matching styles
-#: assets/js/editor.js
-#, js-format
-msgid "%d style matches."
-msgid_plural "%d styles match."
-msgstr[0] "%d estilo coincide."
-msgstr[1] "%d estilos coinciden."
-
-#. translators: %d: number of styles the button reveals
-#: assets/js/editor.js
-#, js-format
-msgid "Show %d more style"
-msgid_plural "Show %d more styles"
-msgstr[0] "Mostrar %d estilo más"
-msgstr[1] "Mostrar %d estilos más"
-
-#: assets/js/editor.js
-msgid "Group by"
-msgstr "Agrupar por"
-
-#: assets/js/editor.js
-msgid "None"
-msgstr "Ninguno"
-
-#: assets/js/editor.js
-msgid "Font family"
-msgstr "Familia tipográfica"
-
-#: assets/js/editor.js
-msgid "Size mode"
-msgstr "Modo de tamaño"
-
-#: assets/js/editor.js
-msgid "Paragraph styles"
-msgstr "Estilos de párrafo"
-
-#: assets/js/editor.js
-#: assets/js/lib/ps-utils.js
-msgid "Recently used"
-msgstr "Usados recientemente"
-
-#. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js
-#, php-format
-msgid "Fluid %1$s–%2$s"
-msgstr "Fluido %1$s–%2$s"
-
-#. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js
-#, php-format
-msgid "Fit ≤ %spx"
-msgstr "Ajustado ≤ %spx"
-
-#: assets/js/lib/ps-utils.js
-msgid "Fit"
-msgstr "Ajustado"
-
-#: assets/js/lib/ps-utils.js
-msgid "No font set"
-msgstr "Sin fuente definida"
-
-#: assets/js/lib/ps-utils.js
-msgid "Fixed size"
-msgstr "Tamaño fijo"
-
-#: assets/js/lib/ps-utils.js
-msgid "Responsive"
-msgstr "Adaptable"
-
-#: assets/js/lib/ps-utils.js
-msgid "Fit to width"
-msgstr "Ajustado al ancho"
-
-#: assets/js/lib/ps-utils.js
-msgid "Inherited size"
-msgstr "Tamaño heredado"
-
-
-#: assets/js/lib/ps-utils.js
-msgid "Other styles"
-msgstr "Otros estilos"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLanguage: es_ES\nPlural-Forms: nplurals=2; plural=(n != 1);\nX-Domain: typost-paragraph-styles\n"
 
 #. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
 #: includes/admin-tab.php:82
 msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
 msgstr "El veloz murciélago hindú comía feliz cardillo y kiwi. Afluencia en oficinas, fiesta: 1/2 precio, 0123456789."
+
+#: includes/admin-tab.php:89
+#: paragraph-styles.php:761
+#: assets/js/editor.js:952
+#: assets/js/editor.js:1309
+msgid "Paragraph Styles"
+msgstr "Estilos de párrafo"
+
+#: includes/admin-tab.php:91
+msgid "Manage your saved paragraph styles. These appear in the Typography Stylist editor for quick application to text."
+msgstr "Gestiona tus estilos de párrafo guardados. Aparecen en el editor de Typography Stylist para aplicarlos rápidamente al texto."
+
+#: includes/admin-tab.php:97
+#: assets/js/admin.js:199
+msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
+msgstr "Aún no hay estilos de párrafo guardados. Crea estilos desde el editor de Typography Stylist al editar una entrada."
 
 #. translators: %s: name of the font that replaces the style's deleted font
 #: includes/admin-tab.php:114
@@ -327,10 +34,302 @@ msgstr "%s (reemplaza una fuente eliminada)"
 msgid "Deleted font, shown in the default font"
 msgstr "Fuente eliminada, se muestra con la fuente predeterminada"
 
-#: includes/admin-tab.php:182
-msgid "Preview"
-msgstr "Vista previa"
+#: includes/admin-tab.php:120
+#: assets/js/editor.js:120
+msgid "Default"
+msgstr "Predeterminado"
 
-#: includes/admin-tab.php:236
+#: includes/admin-tab.php:130
+msgid "Italic"
+msgstr "Cursiva"
+
+#: includes/admin-tab.php:131
+msgid "Oblique"
+msgstr "Oblicua"
+
+#: includes/admin-tab.php:132
+msgid "Normal (upright)"
+msgstr "Normal (recto)"
+
+#. translators: %1$s: min size, %2$s: preferred size, %3$s: max size
+#: includes/admin-tab.php:150
+#, php-format
+msgid "Responsive (%1$s/%2$s/%3$spx)"
+msgstr "Adaptable (%1$s/%2$s/%3$spx)"
+
+#. translators: %1$s: fallback min size, %2$s: fallback max size
+#: includes/admin-tab.php:155
+#, php-format
+msgid "Fit to width (fallback %1$s–%2$spx)"
+msgstr "Ajustado al ancho (alternativa %1$s–%2$spx)"
+
+#. translators: %s: font size in pixels
+#. translators: %s: font size in pixels.
+#: includes/admin-tab.php:158
+#: assets/js/lib/ps-utils.js:369
+#, php-format,js-format
+msgid "%spx"
+msgstr "%spx"
+
+#. translators: %s: letter spacing in em
+#: includes/admin-tab.php:167
+#, php-format
+msgid "%sem"
+msgstr "%sem"
+
+#: includes/admin-tab.php:182
+msgid "Edit"
+msgstr "Editar"
+
+#: includes/admin-tab.php:185
+msgid "Delete"
+msgstr "Eliminar"
+
+#: includes/admin-tab.php:191
+msgid "Font:"
+msgstr "Fuente:"
+
+#: includes/admin-tab.php:196
+msgid "Style:"
+msgstr "Estilo:"
+
+#: includes/admin-tab.php:202
+msgid "Size:"
+msgstr "Tamaño:"
+
+#: includes/admin-tab.php:208
+msgid "Features:"
+msgstr "Características:"
+
+#: includes/admin-tab.php:215
+msgid "Spacing:"
+msgstr "Espaciado:"
+
+#: includes/admin-tab.php:222
+msgid "Line Height:"
+msgstr "Altura de línea:"
+
+#: includes/admin-tab.php:240
 msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
 msgstr "Tu tema u otro plugin carga esta fuente en el sitio. Esta página no puede cargarla, así que la vista previa puede mostrar una fuente alternativa."
+
+#: includes/admin-tab.php:247
+msgid "Name:"
+msgstr "Nombre:"
+
+#: includes/admin-tab.php:252
+#: assets/js/editor.js:512
+#: assets/js/editor.js:572
+msgid "Save"
+msgstr "Guardar"
+
+#: includes/admin-tab.php:255
+#: assets/js/editor.js:520
+#: assets/js/editor.js:580
+msgid "Cancel"
+msgstr "Cancelar"
+
+#: paragraph-styles.php:858
+msgid "Paragraph Styles Toolbar Button"
+msgstr "Botón de estilos de párrafo en la barra de herramientas"
+
+#: paragraph-styles.php:870
+msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
+msgstr "Añadir un botón de estilos de párrafo a la barra de herramientas del bloque Typography Stylist"
+
+#: paragraph-styles.php:873
+msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
+msgstr "Abre un explorador que muestra cada estilo de párrafo guardado representado con su propia tipografía, para que puedas ver un estilo antes de aplicarlo. La lista desplegable de estilos en la barra lateral y los paneles del editor no cambia."
+
+#: paragraph-styles.php:956
+msgid "Style name is required."
+msgstr "El nombre del estilo es obligatorio."
+
+#: paragraph-styles.php:989
+#: paragraph-styles.php:1024
+msgid "Style not found."
+msgstr "Estilo no encontrado."
+
+#: paragraph-styles.php:996
+msgid "Style name cannot be empty."
+msgstr "El nombre del estilo no puede estar vacío."
+
+#. translators: %s: style name
+#: assets/js/admin.js:155
+#, js-format
+msgid "Style renamed to “%s”."
+msgstr "Estilo renombrado a «%s»."
+
+#: assets/js/admin.js:159
+msgid "Failed to update style. Please try again."
+msgstr "No se pudo actualizar el estilo. Inténtalo de nuevo."
+
+#: assets/js/admin.js:176
+#, js-format
+msgid "Are you sure you want to delete “%s”? This cannot be undone."
+msgstr "¿Seguro que quieres eliminar «%s»? Esta acción no se puede deshacer."
+
+#. translators: %s: style name
+#: assets/js/admin.js:207
+#, js-format
+msgid "Style “%s” deleted."
+msgstr "Estilo «%s» eliminado."
+
+#: assets/js/admin.js:212
+msgid "Failed to delete style. Please try again."
+msgstr "No se pudo eliminar el estilo. Inténtalo de nuevo."
+
+#: assets/js/editor.js:314
+msgid "Select a style…"
+msgstr "Selecciona un estilo…"
+
+#: assets/js/editor.js:458
+msgid "(modified)"
+msgstr "(modificado)"
+
+#: assets/js/editor.js:464
+#: assets/js/editor.js:531
+#: assets/js/editor.js:545
+msgid "Paragraph Style"
+msgstr "Estilo de párrafo"
+
+#: assets/js/editor.js:477
+#: assets/js/editor.js:540
+msgid "Browse styles…"
+msgstr "Explorar estilos…"
+
+#: assets/js/editor.js:484
+msgid "Update Style"
+msgstr "Actualizar estilo"
+
+#: assets/js/editor.js:489
+msgid "Save as New"
+msgstr "Guardar como nuevo"
+
+#: assets/js/editor.js:495
+#: assets/js/editor.js:1003
+msgid "Detach Style"
+msgstr "Desvincular estilo"
+
+#: assets/js/editor.js:500
+msgid "New style name…"
+msgstr "Nombre del nuevo estilo…"
+
+#: assets/js/editor.js:557
+msgid "Save Current Settings as Style"
+msgstr "Guardar los ajustes actuales como estilo"
+
+#: assets/js/editor.js:560
+msgid "Style name…"
+msgstr "Nombre del estilo…"
+
+#: assets/js/editor.js:572
+msgid "Saving…"
+msgstr "Guardando…"
+
+#. translators: %d: number of matching styles
+#: assets/js/editor.js:814
+#, js-format
+msgid "%d style matches."
+msgid_plural "%d styles match."
+msgstr[0] "%d estilo coincide."
+msgstr[1] "%d estilos coinciden."
+
+#: assets/js/editor.js:935
+msgid "No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel."
+msgstr "Todavía no hay estilos de párrafo guardados. Configura la tipografía que quieras y luego haz clic en «Guardar los ajustes actuales como estilo» en el panel Estilo de párrafo."
+
+#. translators: %s: search text
+#: assets/js/editor.js:938
+#, js-format
+msgid "No styles match “%s”."
+msgstr "Ningún estilo coincide con «%s»."
+
+#: assets/js/editor.js:945
+msgid "Paragraph styles"
+msgstr "Estilos de párrafo"
+
+#: assets/js/editor.js:958
+msgid "Applies to the selected text."
+msgstr "Se aplica al texto seleccionado."
+
+#: assets/js/editor.js:959
+msgid "Applies to the whole block."
+msgstr "Se aplica a todo el bloque."
+
+#: assets/js/editor.js:963
+msgid "Search styles"
+msgstr "Buscar estilos"
+
+#: assets/js/editor.js:967
+msgid "Style or font name"
+msgstr "Nombre del estilo o de la fuente"
+
+#: assets/js/editor.js:971
+msgid "Group by"
+msgstr "Agrupar por"
+
+#: assets/js/editor.js:974
+msgid "None"
+msgstr "Ninguno"
+
+#: assets/js/editor.js:975
+msgid "Font family"
+msgstr "Familia tipográfica"
+
+#: assets/js/editor.js:976
+msgid "Size mode"
+msgstr "Modo de tamaño"
+
+#: assets/js/editor.js:981
+#: assets/js/lib/ps-utils.js:753
+msgid "Recently used"
+msgstr "Usados recientemente"
+
+#. translators: %d: number of styles the button reveals
+#: assets/js/editor.js:994
+#, js-format
+msgid "Show %d more style"
+msgid_plural "Show %d more styles"
+msgstr[0] "Mostrar %d estilo más"
+msgstr[1] "Mostrar %d estilos más"
+
+#. translators: 1: smallest font size, 2: largest font size.
+#: assets/js/lib/ps-utils.js:357
+#, js-format
+msgid "Fluid %1$s–%2$s"
+msgstr "Fluido %1$s–%2$s"
+
+#. translators: %s: maximum font size in pixels.
+#: assets/js/lib/ps-utils.js:365
+#, js-format
+msgid "Fit ≤ %spx"
+msgstr "Ajustado ≤ %spx"
+
+#: assets/js/lib/ps-utils.js:366
+msgid "Fit"
+msgstr "Ajustado"
+
+#: assets/js/lib/ps-utils.js:755
+msgid "Other styles"
+msgstr "Otros estilos"
+
+#: assets/js/lib/ps-utils.js:788
+msgid "No font set"
+msgstr "Sin fuente definida"
+
+#: assets/js/lib/ps-utils.js:799
+msgid "Fixed size"
+msgstr "Tamaño fijo"
+
+#: assets/js/lib/ps-utils.js:800
+msgid "Responsive"
+msgstr "Adaptable"
+
+#: assets/js/lib/ps-utils.js:801
+msgid "Fit to width"
+msgstr "Ajustado al ancho"
+
+#: assets/js/lib/ps-utils.js:802
+msgid "Inherited size"
+msgstr "Tamaño heredado"

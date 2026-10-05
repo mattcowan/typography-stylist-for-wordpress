@@ -63,7 +63,6 @@ terser assets/js/admin-page.js --compress --mangle --output assets/js/admin-page
 - [`blocks/typography-stylist/edit.js`](blocks/typography-stylist/edit.js) - Editor component (React)
 - [`blocks/typography-stylist/save.js`](blocks/typography-stylist/save.js) - Frontend save/render function
 - [`blocks/typography-stylist/utils.js`](blocks/typography-stylist/utils.js) - Utility functions
-- [`blocks/typography-stylist/view.js`](blocks/typography-stylist/view.js) - Frontend interactive script
 - [`blocks/typography-stylist/block.json`](blocks/typography-stylist/block.json) - Block metadata
 
 **Purpose:** Custom Gutenberg block that provides advanced typography controls with accessibility features. Allows block-level OpenType settings and inline text styling within the block.
@@ -313,7 +312,6 @@ opentype-stylist/
 │       ├── edit.js                  [SOURCE]
 │       ├── save.js                  [SOURCE]
 │       ├── utils.js                 [SOURCE]
-│       ├── view.js                  [SOURCE]
 │       ├── block.json               [CONFIG]
 │       ├── style.css                [SOURCE]
 │       ├── editor.css               [SOURCE]

@@ -44,6 +44,18 @@
 	}
 
 	/**
+	 * Named __ so WP-CLI make-pot extracts the literals passed to it; it
+	 * delegates to translate() so Jest still works without a wp global.
+	 *
+	 * @param {string} text Source string. The domain argument at each call
+	 *                      site is read only by make-pot.
+	 * @return {string} Translated string.
+	 */
+	function __(text) {
+		return translate(text);
+	}
+
+	/**
 	 * Fill %s / %1$s placeholders in a (translated) string.
 	 *
 	 * Uses wp.i18n.sprintf when available so translators get the usual
@@ -342,8 +354,7 @@
 			// Represent the fluid range by its preferred (mid) size
 			realSize = parseFloat(props.fontSizePreferred) || parseFloat(props.fontSizeMax) || null;
 			sizeLabel = format(
-				/* translators: 1: smallest font size, 2: largest font size. */
-				translate('Fluid %1$s–%2$s'),
+				/* translators: 1: smallest font size, 2: largest font size. */ __('Fluid %1$s–%2$s', 'typost-paragraph-styles'),
 				[props.fontSizeMin || '?', props.fontSizeMax || '?']
 			);
 		} else if (fontSize === 'fit') {
@@ -351,13 +362,11 @@
 			// only number the style itself knows.
 			realSize = parseFloat(props.fitMaxSize) || null;
 			sizeLabel = props.fitMaxSize
-				/* translators: %s: maximum font size in pixels. */
-				? format(translate('Fit ≤ %spx'), [props.fitMaxSize])
-				: translate('Fit');
+				? format(/* translators: %s: maximum font size in pixels. */ __('Fit ≤ %spx', 'typost-paragraph-styles'), [props.fitMaxSize])
+				: __('Fit', 'typost-paragraph-styles');
 		} else if (fontSize && fontSize !== 'inherit') {
 			realSize = parseFloat(fontSize);
-			/* translators: %s: font size in pixels. */
-			sizeLabel = isNaN(realSize) ? '' : format(translate('%spx'), [realSize]);
+			sizeLabel = isNaN(realSize) ? '' : format(/* translators: %s: font size in pixels. */ __('%spx', 'typost-paragraph-styles'), [realSize]);
 		}
 
 		var previewSize;
@@ -741,9 +750,9 @@
 			var recentSet = {};
 			recent.forEach(function (style) { recentSet[String(style.id)] = true; });
 			var others = list.filter(function (style) { return !recentSet[String(style.id)]; });
-			var out = [{ key: 'recent', label: translate('Recently used'), styles: recent }];
+			var out = [{ key: 'recent', label: __('Recently used', 'typost-paragraph-styles'), styles: recent }];
 			if (others.length) {
-				out.push({ key: 'recent:others', label: translate('Other styles'), styles: others });
+				out.push({ key: 'recent:others', label: __('Other styles', 'typost-paragraph-styles'), styles: others });
 			}
 			return out;
 		}
@@ -776,7 +785,7 @@
 				return { key: 'font:' + name, label: name, styles: byName[name] };
 			});
 			if (noFont.length) {
-				groups.push({ key: 'font:none', label: translate('No font set'), styles: noFont });
+				groups.push({ key: 'font:none', label: __('No font set', 'typost-paragraph-styles'), styles: noFont });
 			}
 			return groups;
 		}
@@ -787,10 +796,10 @@
 				buckets[sizeModeOf(style.properties && style.properties.fontSize)].push(style);
 			});
 			return [
-				{ key: 'size:fixed', label: translate('Fixed size'), styles: buckets.fixed },
-				{ key: 'size:responsive', label: translate('Responsive'), styles: buckets.responsive },
-				{ key: 'size:fit', label: translate('Fit to width'), styles: buckets.fit },
-				{ key: 'size:inherit', label: translate('Inherited size'), styles: buckets.inherit },
+				{ key: 'size:fixed', label: __('Fixed size', 'typost-paragraph-styles'), styles: buckets.fixed },
+				{ key: 'size:responsive', label: __('Responsive', 'typost-paragraph-styles'), styles: buckets.responsive },
+				{ key: 'size:fit', label: __('Fit to width', 'typost-paragraph-styles'), styles: buckets.fit },
+				{ key: 'size:inherit', label: __('Inherited size', 'typost-paragraph-styles'), styles: buckets.inherit },
 			].filter(function (group) { return group.styles.length > 0; });
 		}
 

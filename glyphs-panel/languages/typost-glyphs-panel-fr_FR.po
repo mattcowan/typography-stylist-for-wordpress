@@ -1,257 +1,264 @@
-# Copyright (C) 2026 Matt Cowan
-# This file is distributed under the GPL-2.0-or-later.
+# French (France) translation for Typography Stylist.
+# This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr ""
-"Project-Id-Version: Typography Stylist - Glyphs Panel 1.1.2\n"
-"Report-Msgid-Bugs-To: https://developer.suspended.suspended/typography-stylist\n"
-"POT-Creation-Date: 2026-06-10 12:00+0000\n"
-"PO-Revision-Date: 2026-06-10 12:00+0000\n"
-"Last-Translator: Matt Cowan\n"
-"Language-Team: French (France)\n"
-"Language: fr_FR\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"X-Domain: typost-glyphs-panel\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLast-Translator: Matt Cowan\nLanguage-Team: French (France)\nLanguage: fr_FR\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nX-Domain: typost-glyphs-panel\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: glyphs-panel/glyphs-panel.php:214
-msgid "Glyphs"
-msgstr "Glyphes"
-
-#: glyphs-panel/glyphs-panel.php:227
-msgid "Glyph Browser"
-msgstr "Navigateur de glyphes"
-
-#: glyphs-panel/glyphs-panel.php:228
-msgid "Explore every character and OpenType feature in your fonts. Click a glyph to copy it to the clipboard. To insert glyphs into content, use the Glyphs button inside the editor."
-msgstr "Explorez tous les caractères et fonctionnalités OpenType de vos polices. Cliquez sur un glyphe pour le copier dans le presse-papiers. Pour insérer des glyphes dans le contenu, utilisez le bouton Glyphes dans l’éditeur."
-
-#: glyphs-panel/glyphs-panel.php:231
-msgid "Open Glyph Browser"
-msgstr "Ouvrir le navigateur de glyphes"
-
-#: glyphs-panel/glyphs-panel.php:234
-msgid "Font data is read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored."
-msgstr "Les données de police sont lues dans votre navigateur, à la demande, pour les métadonnées uniquement — aucun contour de glyphe n’est jamais extrait ni stocké."
-
-#: glyphs-panel/glyphs-panel.php:281
-msgid "Typography Stylist - Glyphs Panel requires the Typography Stylist plugin to be installed and activated."
-msgstr "Typography Stylist - Glyphs Panel nécessite que l’extension Typography Stylist soit installée et activée."
-
-#: glyphs-panel/assets/js/editor.js:128
-msgid "Glyphs…"
-msgstr "Glyphes…"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:170
-msgid "No readable font file is available for this font source. Glyph browsing works best with uploaded webfont kits."
-msgstr "Aucun fichier de police lisible n’est disponible pour cette source. La navigation de glyphes fonctionne mieux avec les kits de polices web téléversés."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:171
-msgid "The font file could not be fetched (cross-origin restriction). Glyph browsing is unavailable for this font."
-msgstr "Le fichier de police n’a pas pu être récupéré (restriction cross-origin). La navigation de glyphes est indisponible pour cette police."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:172
-msgid "The font file could not be downloaded. Please try again."
-msgstr "Le fichier de police n’a pas pu être téléchargé. Veuillez réessayer."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:173
-msgid "This font kit only contains formats that cannot be read for glyph browsing (e.g. EOT)."
-msgstr "Ce kit de polices ne contient que des formats illisibles pour la navigation de glyphes (ex. EOT)."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:174
-msgid "The font file could not be read. It may be malformed or use unsupported features."
-msgstr "Le fichier de police n’a pas pu être lu. Il est peut-être mal formé ou utilise des fonctionnalités non prises en charge."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:189
-msgid "The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font — the plugin's vendor files may be missing. Try reinstalling the plugin."
-msgstr "Les bibliothèques d’analyse de polices fournies avec l’extension n’ont pas pu être chargées. Il s’agit d’un problème d’installation, pas d’un problème de police — les fichiers « vendor » de l’extension sont peut-être manquants. Essayez de réinstaller l’extension."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:190
-msgid "The font file could not be decompressed. The file may be damaged."
-msgstr "Le fichier de police n’a pas pu être décompressé. Le fichier est peut-être endommagé."
-
-#. translators: %s: comma-separated file paths
-#: glyphs-panel/assets/js/glyphs-modal.js:299
-#, javascript-format
-msgid "Missing files: %s"
-msgstr "Fichiers manquants : %s"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:672
-msgid "Try again"
-msgstr "Réessayer"
-
-#: glyphs-panel/glyphs-panel.php:277
-msgid "The Glyph Browser cannot work on this installation: the bundled font-parsing libraries are missing. Reinstall the plugin to restore them."
-msgstr "Le navigateur de glyphes ne peut pas fonctionner sur cette installation : les bibliothèques d’analyse de polices fournies sont manquantes. Réinstallez l’extension pour les restaurer."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:106
-msgid "WP Font Library"
-msgstr "Bibliothèque de polices WP"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:432
-msgid "Font"
-msgstr "Police"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:444
-msgid "No fonts are configured in Typography Stylist. Upload a webfont kit to browse glyphs."
-msgstr "Aucune police n’est configurée dans Typography Stylist. Téléversez un kit de polices web pour parcourir les glyphes."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:446
-msgid "Reading font data…"
-msgstr "Lecture des données de police…"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:450
-msgid "Adobe Fonts serves dynamically subset files — this glyph list may be incomplete."
-msgstr "Adobe Fonts sert des fichiers partiels dynamiques — cette liste de glyphes peut être incomplète."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:462
-msgid "Search"
-msgstr "Rechercher"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:408
-msgid "Search: character, U+0041, or glyph name"
-msgstr "Rechercher : caractère, U+0041 ou nom de glyphe"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:409
-msgid "Search: character or U+0041"
-msgstr "Rechercher : caractère ou U+0041"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:470
-msgid "Unicode block"
-msgstr "Bloc Unicode"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:391
-#, javascript-format
-msgid "All blocks (%d)"
-msgstr "Tous les blocs (%d)"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:399
-msgid "Other"
-msgstr "Autre"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:478
-msgid "OpenType feature"
-msgstr "Fonctionnalité OpenType"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:376
-msgid "All glyphs"
-msgstr "Tous les glyphes"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:495
-msgid "Alternates for character"
-msgstr "Alternatives pour le caractère"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:497
-msgid "Alternates for…"
-msgstr "Alternatives pour…"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:511
-#, javascript-format
-msgid "Use \"%s\""
-msgstr "Utiliser « %s »"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:280
-msgid "ligature"
-msgstr "ligature"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:289
-#, javascript-format
-msgid "#%1$d of %2$d"
-msgstr "n°%1$d sur %2$d"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:293
-msgid "base glyph"
-msgstr "glyphe de base"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:306
-#, javascript-format
-msgid "Copied \"%s\" to clipboard"
-msgstr "« %s » copié dans le presse-papiers"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:310
-msgid "Could not copy to clipboard."
-msgstr "Impossible de copier dans le presse-papiers."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:338
-#, javascript-format
-msgid "Inserted \"%1$s\" (%2$s)"
-msgstr "« %1$s » inséré (%2$s)"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:339
-#, javascript-format
-msgid "Inserted \"%s\""
-msgstr "« %s » inséré"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:556
-msgid "This character is not available in the selected font."
-msgstr "Ce caractère n’est pas disponible dans la police sélectionnée."
-
-#. translators: %s: the characters typed
-#: glyphs-panel/assets/js/glyphs-modal.js
-#, js-format
-msgid "This font has no ligature for \"%s\". Type one character to browse its alternates."
-msgstr "Cette police n’a pas de ligature pour « %s ». Saisissez un seul caractère pour parcourir ses variantes."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:557
-msgid "No glyphs match the current search and filters."
-msgstr "Aucun glyphe ne correspond à la recherche et aux filtres actuels."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:582
-msgid "Hover a glyph for details. Click to insert."
-msgstr "Survolez un glyphe pour les détails. Cliquez pour insérer."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:589
-msgid "Re-read font"
-msgstr "Relire la police"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:591
-#, javascript-format
-msgid "%d contextual substitution rules are not browsable."
-msgstr "%d règles de substitution contextuelle ne sont pas consultables."
-
-#: glyphs-panel/assets/js/glyphs-modal.js:593
-#, javascript-format
-msgid "%d glyphs"
-msgstr "%d glyphes"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:577
-#, javascript-format
-msgid "%d alternates"
-msgstr "%d alternatives"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:415
-msgid "Browse only — click a glyph to copy it"
-msgstr "Consultation seule — cliquez sur un glyphe pour le copier"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:417
-#, javascript-format
-msgid "Replaces selection: \"%s\""
-msgstr "Remplace la sélection : « %s »"
-
-#: glyphs-panel/assets/js/glyphs-modal.js:419
-msgid "Inserts at cursor"
-msgstr "Insère au curseur"
-
-#: glyphs-panel.php
+#: glyphs-panel.php:185
 msgid "Glyphs Toolbar Button"
 msgstr "Bouton Glyphes dans la barre d’outils"
 
-#: glyphs-panel.php
+#: glyphs-panel.php:197
 msgid "Add a Glyphs button to the block toolbar"
 msgstr "Ajouter un bouton Glyphes à la barre d’outils du bloc"
 
-#: glyphs-panel.php
-msgid "Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way."
-msgstr "Place un bouton Glyphes à côté du bouton Typography Stylist dans la barre d’outils du bloc, afin d’ouvrir le navigateur de glyphes en un clic plutôt qu’en passant par le panneau Typography Stylist. Le bouton situé dans ce panneau reste en place dans les deux cas."
+#: glyphs-panel.php:200
+msgid "Puts a Glyphs button next to the “Typography Stylist Features” button in the block toolbar. The glyph browser then opens in one click, not through the Typography Stylist panel. The Glyphs button inside that panel does not change."
+msgstr "Place un bouton Glyphes à côté du bouton « Fonctionnalités de Typography Stylist » dans la barre d’outils du bloc. Le navigateur de glyphes s’ouvre alors en un clic, sans passer par le panneau Typography Stylist. Le bouton Glyphes de ce panneau ne change pas."
 
-#: assets/js/glyphs-modal.js
+#: glyphs-panel.php:327
+#: assets/js/editor.js:214
+#: assets/js/glyphs-modal.js:883
+#: assets/js/glyphs-modal.js:1053
+msgid "Glyphs"
+msgstr "Glyphes"
+
+#: glyphs-panel.php:341
+msgid "Glyph Browser"
+msgstr "Navigateur de glyphes"
+
+#: glyphs-panel.php:345
+msgid "The Glyph Browser cannot work on this installation: the bundled font-parsing libraries are missing. Reinstall the plugin to restore them."
+msgstr "Le navigateur de glyphes ne peut pas fonctionner sur cette installation : les bibliothèques d’analyse de polices fournies sont manquantes. Réinstallez l’extension pour les restaurer."
+
+#: glyphs-panel.php:351
+msgid "Explore every character and OpenType feature in your fonts. Click a glyph to copy it to the clipboard. To insert glyphs into content, use the Glyphs button inside the editor."
+msgstr "Explorez tous les caractères et fonctionnalités OpenType de vos polices. Cliquez sur un glyphe pour le copier dans le presse-papiers. Pour insérer des glyphes dans le contenu, utilisez le bouton Glyphes dans l’éditeur."
+
+#: glyphs-panel.php:354
+msgid "Open Glyph Browser"
+msgstr "Ouvrir le navigateur de glyphes"
+
+#: glyphs-panel.php:357
+msgid "Your browser reads the font data when you need it, and reads only the metadata. No glyph outlines are extracted or stored."
+msgstr "Votre navigateur lit les données de police quand vous en avez besoin, et ne lit que les métadonnées. Aucun contour de glyphe n’est extrait ni stocké."
+
+#: assets/js/editor.js:182
+msgid "Glyphs…"
+msgstr "Glyphes…"
+
+#: assets/js/glyphs-modal.js:109
+msgid "WP Font Library"
+msgstr "Bibliothèque de polices WP"
+
+#: assets/js/glyphs-modal.js:195
+msgid "No readable font file is available for this font source. Glyph browsing works best with uploaded webfont kits."
+msgstr "Aucun fichier de police lisible n’est disponible pour cette source. La navigation de glyphes fonctionne mieux avec les kits de polices web téléversés."
+
+#: assets/js/glyphs-modal.js:196
+msgid "The font file could not be fetched (cross-origin restriction). Glyph browsing is unavailable for this font."
+msgstr "Le fichier de police n’a pas pu être récupéré (restriction cross-origin). La navigation de glyphes est indisponible pour cette police."
+
+#: assets/js/glyphs-modal.js:197
+msgid "The font file could not be downloaded. Please try again."
+msgstr "Le fichier de police n’a pas pu être téléchargé. Veuillez réessayer."
+
+#: assets/js/glyphs-modal.js:198
+msgid "This font kit only contains formats that cannot be read for glyph browsing (for example, EOT)."
+msgstr "Ce kit de polices ne contient que des formats illisibles pour la navigation de glyphes (par exemple, EOT)."
+
+#: assets/js/glyphs-modal.js:199
+msgid "The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font. The plugin’s vendor files may be missing. Try reinstalling the plugin."
+msgstr "Les bibliothèques d’analyse de polices fournies avec l’extension n’ont pas pu être chargées. Il s’agit d’un problème d’installation, pas d’un problème de police. Les fichiers « vendor » de l’extension sont peut-être manquants. Essayez de réinstaller l’extension."
+
+#: assets/js/glyphs-modal.js:200
+msgid "The font file could not be decompressed. The file may be damaged."
+msgstr "Le fichier de police n’a pas pu être décompressé. Le fichier est peut-être endommagé."
+
+#: assets/js/glyphs-modal.js:201
+msgid "The font file could not be read. It may be malformed or use unsupported features."
+msgstr "Le fichier de police n’a pas pu être lu. Il est peut-être mal formé ou utilise des fonctionnalités non prises en charge."
+
+#: assets/js/glyphs-modal.js:240
+#: assets/js/glyphs-modal.js:907
 msgid "Accessibility Notice"
 msgstr "Avis d’accessibilité"
 
-#: assets/js/glyphs-modal.js
+#. translators: %s: comma-separated file paths
+#: assets/js/glyphs-modal.js:446
+#, js-format
+msgid "Missing files: %s"
+msgstr "Fichiers manquants : %s"
+
+#. translators: %d: glyph count
+#: assets/js/glyphs-modal.js:605
+#: assets/js/glyphs-modal.js:1149
+#, js-format
+msgid "%d glyph"
+msgid_plural "%d glyphs"
+msgstr[0] "%d glyphe"
+msgstr[1] "%d glyphes"
+
+#: assets/js/glyphs-modal.js:645
+msgid "ligature"
+msgstr "ligature"
+
+#. translators: 1: alternate number, 2: total alternates
+#: assets/js/glyphs-modal.js:656
+#, js-format
+msgid "#%1$d of %2$d"
+msgstr "n°%1$d sur %2$d"
+
+#: assets/js/glyphs-modal.js:660
+msgid "base glyph"
+msgstr "glyphe de base"
+
+#. translators: %s: character
+#: assets/js/glyphs-modal.js:681
+#, js-format
+msgid "Copied “%s” to clipboard"
+msgstr "« %s » copié dans le presse-papiers"
+
+#: assets/js/glyphs-modal.js:684
+msgid "Could not copy to clipboard."
+msgstr "Impossible de copier dans le presse-papiers."
+
+#. translators: 1: character, 2: OpenType feature tag
+#: assets/js/glyphs-modal.js:763
+#, js-format
+msgid "Inserted “%1$s” (%2$s)"
+msgstr "« %1$s » inséré (%2$s)"
+
+#. translators: %s: character
+#: assets/js/glyphs-modal.js:764
+#, js-format
+msgid "Inserted “%s”"
+msgstr "« %s » inséré"
+
+#: assets/js/glyphs-modal.js:768
+#: assets/js/glyphs-modal.js:1004
+msgid "All glyphs"
+msgstr "Tous les glyphes"
+
+#. translators: %d: glyph count
+#: assets/js/glyphs-modal.js:785
+#, js-format
+msgid "All blocks (%d)"
+msgstr "Tous les blocs (%d)"
+
+#: assets/js/glyphs-modal.js:793
+msgid "Other"
+msgstr "Autre"
+
+#: assets/js/glyphs-modal.js:870
+msgid "Search: character, U+0041, or glyph name"
+msgstr "Rechercher : caractère, U+0041 ou nom de glyphe"
+
+#: assets/js/glyphs-modal.js:871
+msgid "Search: character or U+0041"
+msgstr "Rechercher : caractère ou U+0041"
+
+#: assets/js/glyphs-modal.js:875
+msgid "Browse only: click a glyph to copy it"
+msgstr "Consultation seule : cliquez sur un glyphe pour le copier"
+
+#. translators: %s: selected text
+#: assets/js/glyphs-modal.js:877
+#, js-format
+msgid "Replaces selection: “%s”"
+msgstr "Remplace la sélection : « %s »"
+
+#: assets/js/glyphs-modal.js:879
+msgid "Inserts at cursor"
+msgstr "Insère au curseur"
+
+#: assets/js/glyphs-modal.js:917
 msgid "Convert to Typography Stylist Block"
 msgstr "Convertir en bloc Typography Stylist"
 
-#: assets/js/glyphs-modal.js
+#: assets/js/glyphs-modal.js:925
 msgid "Manage accessibility settings"
 msgstr "Gérer les réglages d’accessibilité"
+
+#: assets/js/glyphs-modal.js:932
+msgid "Font"
+msgstr "Police"
+
+#: assets/js/glyphs-modal.js:946
+msgid "No fonts are configured in Typography Stylist. Upload a webfont kit to browse glyphs."
+msgstr "Aucune police n’est configurée dans Typography Stylist. Téléversez un kit de polices web pour parcourir les glyphes."
+
+#: assets/js/glyphs-modal.js:948
+msgid "Reading font data…"
+msgstr "Lecture des données de police…"
+
+#: assets/js/glyphs-modal.js:953
+msgid "Try again"
+msgstr "Réessayer"
+
+#: assets/js/glyphs-modal.js:961
+msgid "Adobe Fonts serves dynamically subset files, so this glyph list may be incomplete."
+msgstr "Adobe Fonts sert des fichiers partiels dynamiques, donc cette liste de glyphes peut être incomplète."
+
+#: assets/js/glyphs-modal.js:974
+msgid "Alternates for character"
+msgstr "Alternatives pour le caractère"
+
+#: assets/js/glyphs-modal.js:977
+msgid "Alternates for…"
+msgstr "Alternatives pour…"
+
+#. translators: %s: character(s)
+#: assets/js/glyphs-modal.js:997
+#, js-format
+msgid "Use “%s”"
+msgstr "Utiliser « %s »"
+
+#: assets/js/glyphs-modal.js:1008
+msgid "Search"
+msgstr "Rechercher"
+
+#: assets/js/glyphs-modal.js:1018
+msgid "OpenType feature"
+msgstr "Fonctionnalité OpenType"
+
+#: assets/js/glyphs-modal.js:1035
+msgid "Unicode block"
+msgstr "Bloc Unicode"
+
+#. translators: %s: the characters typed
+#: assets/js/glyphs-modal.js:1110
+#, js-format
+msgid "This font has no ligature for “%s”. Type one character to browse its alternates."
+msgstr "Cette police n’a pas de ligature pour « %s ». Saisissez un seul caractère pour parcourir ses variantes."
+
+#: assets/js/glyphs-modal.js:1112
+msgid "This character is not available in the selected font."
+msgstr "Ce caractère n’est pas disponible dans la police sélectionnée."
+
+#: assets/js/glyphs-modal.js:1113
+msgid "No glyphs match the current search and filters."
+msgstr "Aucun glyphe ne correspond à la recherche et aux filtres actuels."
+
+#. translators: %d: number of alternates
+#: assets/js/glyphs-modal.js:1134
+#, js-format
+msgid "%d alternate"
+msgid_plural "%d alternates"
+msgstr[0] "%d variante"
+msgstr[1] "%d variantes"
+
+#: assets/js/glyphs-modal.js:1137
+msgid "Hover over a glyph, or move to it with the arrow keys, to see its details."
+msgstr "Survolez un glyphe, ou atteignez-le avec les touches fléchées, pour voir ses détails."
+
+#: assets/js/glyphs-modal.js:1145
+msgid "Re-read font"
+msgstr "Relire la police"
+
+#. translators: %d: number of skipped lookups
+#: assets/js/glyphs-modal.js:1147
+#, js-format
+msgid "%d contextual substitution rule is not browsable."
+msgid_plural "%d contextual substitution rules are not browsable."
+msgstr[0] "%d règle de substitution contextuelle n’est pas consultable."
+msgstr[1] "%d règles de substitution contextuelle ne sont pas consultables."

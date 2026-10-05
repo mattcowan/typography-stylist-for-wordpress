@@ -22,7 +22,7 @@ delete_option('typost_font_replacements');
 delete_option('typost_font_feature_visibility');
 delete_option('typost_font_order');
 delete_option('typost_htaccess_verified');
-delete_option('typost_enable_aria_labels');
+delete_option('typost_enable_aria_labels'); // Removed option; sites that used it may still store it.
 delete_option('typost_disable_accessibility_warning');
 delete_option('typost_show_clear_confirmation');
 delete_option('typost_global_settings');

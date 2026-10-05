@@ -33,6 +33,7 @@
 	var Notice = wp.components.Notice;
 	var __ = wp.i18n.__;
 	var sprintf = wp.i18n.sprintf;
+	var _n = wp.i18n._n;
 
 	var CELL_SIZE = 56;
 	var OVERSCAN_ROWS = 3;
@@ -194,8 +195,8 @@
 			'no-file': __('No readable font file is available for this font source. Glyph browsing works best with uploaded webfont kits.', 'typost-glyphs-panel'),
 			'cors': __('The font file could not be fetched (cross-origin restriction). Glyph browsing is unavailable for this font.', 'typost-glyphs-panel'),
 			'fetch-failed': __('The font file could not be downloaded. Please try again.', 'typost-glyphs-panel'),
-			'unsupported-format': __('This font kit only contains formats that cannot be read for glyph browsing (e.g. EOT).', 'typost-glyphs-panel'),
-			'vendor-load-failed': __('The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font — the plugin\'s vendor files may be missing. Try reinstalling the plugin.', 'typost-glyphs-panel'),
+			'unsupported-format': __('This font kit only contains formats that cannot be read for glyph browsing (for example, EOT).', 'typost-glyphs-panel'),
+			'vendor-load-failed': __('The font-parsing libraries bundled with the plugin could not be loaded. This is an installation problem, not a problem with the font. The plugin’s vendor files may be missing. Try reinstalling the plugin.', 'typost-glyphs-panel'),
 			'decompress-failed': __('The font file could not be decompressed. The file may be damaged.', 'typost-glyphs-panel'),
 			'parse-failed': __('The font file could not be read. It may be malformed or use unsupported features.', 'typost-glyphs-panel')
 		};
@@ -601,7 +602,7 @@
 			}
 			var timer = setTimeout(function() {
 				if (window.wp && window.wp.a11y && window.wp.a11y.speak) {
-					window.wp.a11y.speak(sprintf(/* translators: %d: glyph count */ __('%d glyphs', 'typost-glyphs-panel'), items.length));
+					window.wp.a11y.speak(sprintf(/* translators: %d: glyph count */ _n('%d glyph', '%d glyphs', items.length, 'typost-glyphs-panel'), items.length));
 				}
 			}, 600);
 			return function() { clearTimeout(timer); };
@@ -677,7 +678,7 @@
 			// Admin browse mode: copy the character instead of inserting
 			if (source === 'admin') {
 				var copied = function() {
-					announce(sprintf(/* translators: %s: character */ __('Copied "%s" to clipboard', 'typost-glyphs-panel'), text));
+					announce(sprintf(/* translators: %s: character */ __('Copied “%s” to clipboard', 'typost-glyphs-panel'), text));
 				};
 				var failed = function() {
 					announce(__('Could not copy to clipboard.', 'typost-glyphs-panel'));
@@ -759,8 +760,8 @@
 			});
 			var detail = tag ? (item.altIndex > 1 ? tag + ' ' + item.altIndex : tag) : null;
 			announce(detail
-				? sprintf(/* translators: 1: character, 2: OpenType feature tag */ __('Inserted "%1$s" (%2$s)', 'typost-glyphs-panel'), text, detail)
-				: sprintf(/* translators: %s: character */ __('Inserted "%s"', 'typost-glyphs-panel'), text));
+				? sprintf(/* translators: 1: character, 2: OpenType feature tag */ __('Inserted “%1$s” (%2$s)', 'typost-glyphs-panel'), text, detail)
+				: sprintf(/* translators: %s: character */ __('Inserted “%s”', 'typost-glyphs-panel'), text));
 		}
 
 		// Feature filter options
@@ -871,9 +872,9 @@
 
 		var targetText;
 		if (source === 'admin') {
-			targetText = __('Browse only — click a glyph to copy it', 'typost-glyphs-panel');
+			targetText = __('Browse only: click a glyph to copy it', 'typost-glyphs-panel');
 		} else if (context.selectionText) {
-			targetText = sprintf(/* translators: %s: selected text */ __('Replaces selection: "%s"', 'typost-glyphs-panel'), context.selectionText.length > 20 ? context.selectionText.slice(0, 20) + '…' : context.selectionText);
+			targetText = sprintf(/* translators: %s: selected text */ __('Replaces selection: “%s”', 'typost-glyphs-panel'), context.selectionText.length > 20 ? context.selectionText.slice(0, 20) + '…' : context.selectionText);
 		} else {
 			targetText = __('Inserts at cursor', 'typost-glyphs-panel');
 		}
@@ -957,7 +958,7 @@
 				reasonMessage(status.reason),
 				status.detail && el('div', { className: 'typost-glyphs-error-detail' }, status.detail)),
 			meta && meta.partialCoverage && el(Notice, { status: 'info', isDismissible: false },
-				__('Adobe Fonts serves dynamically subset files — this glyph list may be incomplete.', 'typost-glyphs-panel')),
+				__('Adobe Fonts serves dynamically subset files, so this glyph list may be incomplete.', 'typost-glyphs-panel')),
 			insertedMsg && el(Notice, {
 				status: 'success',
 				isDismissible: true,
@@ -993,7 +994,7 @@
 									Array.from(context.selectionText)[0] || ''
 								);
 							}
-						}, sprintf(/* translators: %s: character(s) */ __('Use "%s"', 'typost-glyphs-panel'),
+						}, sprintf(/* translators: %s: character(s) */ __('Use “%s”', 'typost-glyphs-panel'),
 							lib.initialAltCharFromSelection(context.selectionText) ||
 							Array.from(context.selectionText)[0] || '')),
 						altChar && el(Button, {
@@ -1106,7 +1107,7 @@
 					),
 					items.length === 0 && el('p', { className: 'typost-glyphs-empty', role: 'status' },
 						altCps !== null && altCps.length > 1
-							? sprintf(/* translators: %s: the characters typed */ __('This font has no ligature for "%s". Type one character to browse its alternates.', 'typost-glyphs-panel'), String.fromCodePoint.apply(null, altCps))
+							? sprintf(/* translators: %s: the characters typed */ __('This font has no ligature for “%s”. Type one character to browse its alternates.', 'typost-glyphs-panel'), String.fromCodePoint.apply(null, altCps))
 							: altCps !== null
 								? __('This character is not available in the selected font.', 'typost-glyphs-panel')
 								: __('No glyphs match the current search and filters.', 'typost-glyphs-panel'))
@@ -1130,10 +1131,10 @@
 							hovered.type !== 'lig' && meta.names && meta.names[String(hovered.cp)]
 								? ' · ' + meta.names[String(hovered.cp)]
 								: '',
-							hovered.altCount ? ' · ' + sprintf(/* translators: %d: number of alternates */ __('%d alternates', 'typost-glyphs-panel'), hovered.altCount) : ''
+							hovered.altCount ? ' · ' + sprintf(/* translators: %d: number of alternates */ _n('%d alternate', '%d alternates', hovered.altCount, 'typost-glyphs-panel'), hovered.altCount) : ''
 						)
 					) : el('span', { className: 'typost-glyphs-detail-hint' },
-						__('Hover a glyph for details. Click to insert.', 'typost-glyphs-panel'))
+						__('Hover over a glyph, or move to it with the arrow keys, to see its details.', 'typost-glyphs-panel'))
 				),
 
 				// Footer
@@ -1143,9 +1144,9 @@
 						onClick: function() { startLoad(true); }
 					}, __('Re-read font', 'typost-glyphs-panel')),
 					meta.skippedLookups > 0 && el('span', { className: 'typost-glyphs-footnote' },
-						sprintf(/* translators: %d: number of skipped lookups */ __('%d contextual substitution rules are not browsable.', 'typost-glyphs-panel'), meta.skippedLookups)),
+						sprintf(/* translators: %d: number of skipped lookups */ _n('%d contextual substitution rule is not browsable.', '%d contextual substitution rules are not browsable.', meta.skippedLookups, 'typost-glyphs-panel'), meta.skippedLookups)),
 					el('span', { className: 'typost-glyphs-count' },
-						sprintf(/* translators: %d: glyph count */ __('%d glyphs', 'typost-glyphs-panel'), items.length))
+						sprintf(/* translators: %d: glyph count */ _n('%d glyph', '%d glyphs', items.length, 'typost-glyphs-panel'), items.length))
 				)
 			)
 		);

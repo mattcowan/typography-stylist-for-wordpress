@@ -9,7 +9,10 @@
 /* Screen reader only classes - ensure they exist and prevent layout impact */
 .wp-block-typost .visually-hidden,
 .wp-block-typost .sr-only,
-.wp-block-typost .screen-reader-text {
+.wp-block-typost .screen-reader-text,
+/* The "Custom" option once saved the literal class "custom" on the screen
+   reader copy; changing save() would invalidate those blocks. */
+.wp-block-typost > .custom {
 	position: absolute;
 	top: 0;
 	left: 0;

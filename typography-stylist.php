@@ -361,7 +361,6 @@ class Typost {
                 // so an uncast '0' reaches JavaScript as the string "0", which
                 // is truthy. Every one of these settings silently did nothing
                 // when switched off until 2.3.0. (A bool becomes "" / "1".)
-                'enableAriaLabels' => (bool) get_option('typost_enable_aria_labels', false),
                 'disableAccessibilityWarning' => (bool) get_option('typost_disable_accessibility_warning', false),
                 'showClearConfirmation' => (bool) get_option('typost_show_clear_confirmation', true),
                 // When true (default), Enter inside a Typography Stylist block
@@ -1361,18 +1360,20 @@ class Typost {
                 'deleteFontSuccess' => esc_html__('Font deleted successfully!', 'typography-stylist'),
                 'deleteFontFailed' => esc_html__('Failed to delete font.', 'typography-stylist'),
                 'replacementFailed' => esc_html__('Failed to create font replacement.', 'typography-stylist'),
-                'deleting' => esc_html__('Deleting...', 'typography-stylist'),
+                'deleting' => esc_html__('Deleting…', 'typography-stylist'),
                 'noFonts' => esc_html__('No custom fonts uploaded yet.', 'typography-stylist'),
                 'uploadPrompt' => esc_html__('Upload a webfont kit using the form below to add custom fonts with OpenType features.', 'typography-stylist'),
                 'uploading' => esc_html__('Uploading', 'typography-stylist'),
-                'uploadingZip' => esc_html__('Uploading ZIP file...', 'typography-stylist'),
-                'processing' => esc_html__('Processing...', 'typography-stylist'),
+                'uploadingZip' => esc_html__('Uploading ZIP file…', 'typography-stylist'),
+                'processing' => esc_html__('Processing…', 'typography-stylist'),
                 'uploadButton' => esc_html__('Upload Font Kit', 'typography-stylist'),
                 // Adobe Fonts strings
                 'enterAdobeEmbedCode' => esc_html__('Please paste the Adobe Fonts embed code.', 'typography-stylist'),
                 'enterAdobeFontFamilies' => esc_html__('Please enter at least one font family name.', 'typography-stylist'),
-                'adding' => esc_html__('Adding...', 'typography-stylist'),
-                'adobeFontSuccess' => esc_html__('Adobe Fonts project added successfully!', 'typography-stylist'),
+                'adding' => esc_html__('Adding…', 'typography-stylist'),
+                'adobeFontSuccess' => esc_html__('Adobe Fonts project added.', 'typography-stylist'),
+                /* translators: %d: number of fonts in the project (two or more). Worded as "Fonts: %d" so no plural form is needed; the admin script has no _n(). */
+                'adobeFontsSuccessCount' => esc_html__('Adobe Fonts project added. Fonts: %d.', 'typography-stylist'),
                 'addAdobeFontError' => esc_html__('Failed to add Adobe Fonts project.', 'typography-stylist'),
                 'addAdobeFontButton' => esc_html__('Add Adobe Fonts Project', 'typography-stylist'),
                 'confirmDeleteAdobeFont' => esc_html__('Are you sure you want to delete this Adobe Fonts project?', 'typography-stylist'),
@@ -1388,7 +1389,7 @@ class Typost {
                 // Font loading setting strings
                 'updateSettingError' => esc_html__('Failed to update font loading setting.', 'typography-stylist'),
                 // Edit font strings
-                'saving' => esc_html__('Saving...', 'typography-stylist'),
+                'saving' => esc_html__('Saving…', 'typography-stylist'),
                 'saveChanges' => esc_html__('Save Changes', 'typography-stylist'),
                 'fallbacksUpdated' => esc_html__('Fallback fonts updated successfully!', 'typography-stylist'),
                 'updateFallbacksError' => esc_html__('Failed to update fallback fonts.', 'typography-stylist'),
@@ -1405,17 +1406,17 @@ class Typost {
                 'wpLibraryBadge' => esc_html__('WP Library', 'typography-stylist'),
                 'manageInEditor' => esc_html__('Manage in Appearance → Editor', 'typography-stylist'),
                 // WP Font Library registration strings
-                'wplRegistering' => esc_html__('Registering...', 'typography-stylist'),
+                'wplRegistering' => esc_html__('Registering…', 'typography-stylist'),
                 'wplRegisterSuccess' => esc_html__('Font registered in the Font Library!', 'typography-stylist'),
                 'wplRegisterError' => esc_html__('Failed to register the font in the Font Library.', 'typography-stylist'),
-                'wplRemoving' => esc_html__('Removing...', 'typography-stylist'),
+                'wplRemoving' => esc_html__('Removing…', 'typography-stylist'),
                 'wplRemoveSuccess' => esc_html__('Font removed from the Font Library!', 'typography-stylist'),
                 'wplRemoveError' => esc_html__('Failed to remove the font from the Font Library.', 'typography-stylist'),
-                'wplConfirmRemove' => esc_html__('Remove this font from the WordPress Font Library? Existing content keeps rendering — the plugin resumes serving the font files itself.', 'typography-stylist'),
+                'wplConfirmRemove' => esc_html__('Remove this font from the WordPress Font Library? Existing content does not change, because the plugin then loads the font files itself.', 'typography-stylist'),
                 /* translators: 1: number of registered fonts, 2: number of failed fonts */
                 'wplBulkDone' => esc_html__('Registered %1$s font(s) in the Font Library (%2$s failed).', 'typography-stylist'),
                 // Weight auto-detection strings
-                'detectWeightsRunning' => esc_html__('Detecting weights...', 'typography-stylist'),
+                'detectWeightsRunning' => esc_html__('Detecting weights…', 'typography-stylist'),
                 /* translators: 1: fonts with detected weights, 2: fonts left with all weights, 3: fonts that could not be checked */
                 'detectWeightsDone' => esc_html__('Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.', 'typography-stylist'),
                 'detectWeightsError' => esc_html__('Weight detection failed. Please try again.', 'typography-stylist'),
@@ -1424,7 +1425,7 @@ class Typost {
                 'refreshError' => esc_html__('Could not refresh the font list. Reloading the page instead.', 'typography-stylist'),
                 'dismissNotice' => esc_html__('Dismiss this notice.', 'typography-stylist'),
                 // Settings forms AJAX strings
-                'savingSettings' => esc_html__('Saving...', 'typography-stylist'),
+                'savingSettings' => esc_html__('Saving…', 'typography-stylist'),
                 'optionsSaved' => esc_html__('Options saved successfully.', 'typography-stylist'),
                 'optionsSaveError' => esc_html__('Failed to save options.', 'typography-stylist'),
                 'accessibilitySaved' => esc_html__('Accessibility settings saved successfully.', 'typography-stylist'),
@@ -3335,7 +3336,6 @@ class Typost {
     public function rest_save_accessibility_options(WP_REST_Request $request) {
         // rest_sanitize_boolean(): clients may send real booleans (JSON) or
         // strings like "false"/"0" (form-encoded), which are truthy in PHP.
-        update_option('typost_enable_aria_labels', rest_sanitize_boolean($request->get_param('enable_aria_labels')) ? '1' : '0');
         update_option('typost_disable_accessibility_warning', rest_sanitize_boolean($request->get_param('disable_accessibility_warning')) ? '1' : '0');
 
         // Clear cache when accessibility settings change
@@ -4594,13 +4594,13 @@ class Typost {
             if (isset($warning['code']) && $warning['code'] === 'woff2_filename_guess') {
                 $warnings[] = sprintf(
                     /* translators: %s: font file name */
-                    esc_html__('%s is a WOFF2 file, whose metadata cannot be read on the server — its font family and weight were guessed from the filename. Please review the generated font styles.', 'typography-stylist'),
+                    esc_html__('%s is a WOFF2 file. The server cannot read WOFF2 metadata, so the plugin guessed the font family and weight from the filename. Please review the generated font styles.', 'typography-stylist'),
                     $file
                 );
             } else {
                 $warnings[] = sprintf(
                     /* translators: %s: font file name */
-                    esc_html__('Could not read font metadata from %s — its font family and weight were guessed from the filename. Please review the generated font styles.', 'typography-stylist'),
+                    esc_html__('Could not read the font metadata from %s, so the plugin guessed the font family and weight from the filename. Please review the generated font styles.', 'typography-stylist'),
                     $file
                 );
             }
@@ -7132,9 +7132,6 @@ class Typost {
             current_user_can('manage_options')) {
 
             // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
-            $enable_aria = isset($_POST['typost_enable_aria_labels']) ? '1' : '0';
-            update_option('typost_enable_aria_labels', $enable_aria);
-
             $disable_warning = isset($_POST['typost_disable_accessibility_warning']) ? '1' : '0';
             update_option('typost_disable_accessibility_warning', $disable_warning);
 

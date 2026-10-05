@@ -343,7 +343,7 @@ final class Typost_Variable_Fonts {
 		$tags   = implode( ', ', array_filter( wp_list_pluck( $axes, 'tag' ) ) );
 		$title  = $tags
 			/* translators: %s: comma-separated list of variable font axis tags. */
-			? sprintf( __( 'Variable font — axes: %s', 'typost-variable-fonts' ), $tags )
+			? sprintf( __( 'Variable font (axes: %s)', 'typost-variable-fonts' ), $tags )
 			: __( 'Configured as a variable font', 'typost-variable-fonts' );
 
 		$badges .= sprintf(
@@ -424,7 +424,7 @@ final class Typost_Variable_Fonts {
 						</button>
 						<span class="typost-vf-detect-status" role="status" aria-live="polite"></span>
 						<p class="description">
-							<?php esc_html_e( 'Reads the axes back out of the font file and replaces every axis row above — any axis names, ranges, or defaults you set by hand are discarded. Nothing is stored until you save.', 'typost-variable-fonts' ); ?>
+							<?php esc_html_e( 'Reads the axes from the font file and replaces all the axis rows above. Axis names, ranges, and defaults that you set by hand are lost. Nothing is saved until you click “Save Changes”.', 'typost-variable-fonts' ); ?>
 						</p>
 					</div>
 				<?php endif; ?>
@@ -437,7 +437,7 @@ final class Typost_Variable_Fonts {
 						/>
 						<?php esc_html_e( 'Hide weight selection', 'typost-variable-fonts' ); ?>
 					</label>
-					<p class="description"><?php esc_html_e( 'Hide the standard weight checkboxes above. Auto-enabled when no wght axis is defined.', 'typost-variable-fonts' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Hide the standard weight checkboxes above. This is on by default for a variable font.', 'typost-variable-fonts' ); ?></p>
 				</div>
 			</div>
 		</div>
