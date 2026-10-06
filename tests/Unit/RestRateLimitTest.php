@@ -108,7 +108,48 @@ class RestRateLimitTest extends TestCase {
         $this->assertTrue($plugin->check_permissions($request));
         $this->assertNull($plugin->enforce_rest_rate_limit(null, $request, '/typost/v1/presets', array()));
 
-        $this->assertSame(1, $this->transients['typost_rate_limit_7']);
+        $this->assertSame(1, $this->transients['typost_rate_limit_7']['count']);
+    }
+
+    public function test_the_window_is_fixed_so_later_writes_do_not_extend_it() {
+        $plugin = $this->getPluginInstance();
+        $expirations = [];
+        $transients = &$this->transients;
+        Functions\when('set_transient')->alias(function ($key, $value, $expiration) use (&$transients, &$expirations) {
+            $transients[$key] = $value;
+            $expirations[] = $expiration;
+            return true;
+        });
+
+        // A window that started 50 seconds ago with 10 writes in it.
+        $this->transients['typost_rate_limit_7'] = array('count' => 10, 'start' => time() - 50);
+
+        $this->assertNull($plugin->enforce_rest_rate_limit(null, $this->makeRequest('POST'), '/typost/v1/fonts', array()));
+
+        $this->assertSame(11, $this->transients['typost_rate_limit_7']['count']);
+        $this->assertLessThanOrEqual(10, end($expirations), 'Expiry must be the time left in the window, not a fresh 60 seconds');
+        $this->assertGreaterThanOrEqual(1, end($expirations));
+    }
+
+    public function test_a_steady_rate_under_the_limit_is_never_refused() {
+        $plugin = $this->getPluginInstance();
+
+        // 50 writes in a window that has already ended: the next write
+        // starts a new window instead of adding to the old count.
+        $this->transients['typost_rate_limit_7'] = array('count' => 50, 'start' => time() - 61);
+
+        $this->assertNull($plugin->enforce_rest_rate_limit(null, $this->makeRequest('POST'), '/typost/v1/fonts', array()));
+        $this->assertSame(1, $this->transients['typost_rate_limit_7']['count']);
+    }
+
+    public function test_an_old_integer_counter_starts_a_new_window() {
+        $plugin = $this->getPluginInstance();
+
+        // Stored by the limiter before the window had a start time.
+        $this->transients['typost_rate_limit_7'] = 49;
+
+        $this->assertNull($plugin->enforce_rest_rate_limit(null, $this->makeRequest('POST'), '/typost/v1/fonts', array()));
+        $this->assertSame(1, $this->transients['typost_rate_limit_7']['count']);
     }
 
     public function test_an_earlier_dispatch_result_is_passed_through_unchanged() {

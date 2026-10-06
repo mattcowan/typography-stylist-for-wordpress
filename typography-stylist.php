@@ -2431,6 +2431,14 @@ class Typost {
      * GET and other read methods are not counted. A request object is counted
      * at most once (see $rate_limited_requests).
      *
+     * The window is fixed: it starts with the first write and ends 60 seconds
+     * later, and the transient expires when the window ends. Writing the
+     * transient with a fresh 60-second expiry on every request (the old
+     * behavior) let the count grow for as long as writes kept coming, so a
+     * steady 30 writes a minute reached 50 after about 100 seconds and was
+     * refused. The limit is best-effort: transients have no atomic
+     * increment, so two concurrent requests can read the same count.
+     *
      * @param WP_REST_Request|null $request Request.
      * @return true|WP_Error True when allowed, a 429 WP_Error when over the limit.
      */
@@ -2450,16 +2458,17 @@ class Typost {
 
         $user_id = get_current_user_id();
         $rate_limit_key = 'typost_rate_limit_' . $user_id;
-        $requests = get_transient($rate_limit_key);
+        $window = get_transient($rate_limit_key);
+        $now = time();
 
-        if (false === $requests) {
-            $requests = 1;
-        } else {
-            $requests++;
+        // A missing, expired, or pre-2.3.2 integer counter starts a new window.
+        if (!is_array($window) || !isset($window['count'], $window['start'])
+            || ($now - (int) $window['start']) >= MINUTE_IN_SECONDS) {
+            $window = array('count' => 0, 'start' => $now);
         }
 
         // Max 50 requests per minute
-        if ($requests > 50) {
+        if ($window['count'] >= 50) {
             return new WP_Error(
                 'rate_limit_exceeded',
                 esc_html__('Too many requests. Please try again later.', 'typography-stylist'),
@@ -2467,7 +2476,9 @@ class Typost {
             );
         }
 
-        set_transient($rate_limit_key, $requests, MINUTE_IN_SECONDS);
+        $window['count']++;
+        $remaining = MINUTE_IN_SECONDS - ($now - (int) $window['start']);
+        set_transient($rate_limit_key, $window, max(1, $remaining));
 
         return true;
     }
