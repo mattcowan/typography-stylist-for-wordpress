@@ -1,7 +1,7 @@
 # French (France) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLast-Translator: \nLanguage-Team: French (France)\nLanguage: fr_FR\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n > 1);\nX-Domain: typography-stylist\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLast-Translator: \nLanguage-Team: French (France)\nLanguage: fr_FR\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n > 1);\nX-Domain: typography-stylist\n"
 
 #. Plugin Name of the plugin
 #: typography-stylist.php
@@ -88,7 +88,7 @@ msgstr "900 (Noir)"
 
 #: includes/admin-page.php:48
 msgid "Available Font Weights:"
-msgstr "Graisses de police disponibles :"
+msgstr "Graisses de police disponibles :"
 
 #: includes/admin-page.php:50
 msgid "Clear the weights that this font does not include. The editor then does not offer them. For a variable font, you can keep all weights selected."
@@ -207,7 +207,7 @@ msgstr "Dans la bibliothèque WP"
 
 #: includes/admin-page.php:453
 msgid "Font Families:"
-msgstr "Familles de Polices :"
+msgstr "Familles de Polices :"
 
 #: includes/admin-page.php:456
 #: includes/admin-page.php:547
@@ -236,7 +236,7 @@ msgstr "Si cette case est décochée, cette police se charge uniquement sur les 
 
 #: includes/admin-page.php:481
 msgid "WordPress Font Library:"
-msgstr "Bibliothèque de polices WordPress :"
+msgstr "Bibliothèque de polices WordPress :"
 
 #. translators: %s: font family slug in the WP Font Library
 #: includes/admin-page.php:487
@@ -280,7 +280,7 @@ msgstr "Annuler"
 #: includes/admin-page.php:576
 #, php-format
 msgid "Delete font: %s"
-msgstr "Supprimer la police : %s"
+msgstr "Supprimer la police : %s"
 
 #: includes/admin-page.php:514
 #: includes/admin-page.php:578
@@ -290,7 +290,7 @@ msgstr "Supprimer"
 
 #: includes/admin-page.php:544
 msgid "Font Family:"
-msgstr "Famille de Polices :"
+msgstr "Famille de Polices :"
 
 #: includes/admin-page.php:607
 #: includes/admin-page.php:1172
@@ -320,7 +320,7 @@ msgstr "Saisissez la valeur CSS font-family exacte, avec les éventuelles police
 #: includes/admin-page.php:632
 #, php-format
 msgid "Delete custom font: %s"
-msgstr "Supprimer la police personnalisée : %s"
+msgstr "Supprimer la police personnalisée : %s"
 
 #: includes/admin-page.php:659
 msgid "Manage fonts in the WordPress Font Library (opens in a new tab)"
@@ -400,7 +400,7 @@ msgstr "Explorez les fonctionnalités OpenType avec des aperçus en direct. Sais
 
 #: includes/admin-page.php:799
 msgid "Preview with Font:"
-msgstr "Aperçu avec la police :"
+msgstr "Aperçu avec la police :"
 
 #: includes/admin-page.php:805
 msgid "Select a custom font to preview how features will look with that font."
@@ -416,7 +416,7 @@ msgstr "Désactiver toutes les fonctionnalités"
 
 #: includes/admin-page.php:820
 msgid "Preview Size:"
-msgstr "Taille de l'aperçu :"
+msgstr "Taille de l'aperçu :"
 
 #: includes/admin-page.php:831
 msgid "Adjust preview text size"
@@ -428,7 +428,7 @@ msgstr "Ajustez la taille du texte d'aperçu pour mieux voir les fonctionnalité
 
 #: includes/admin-page.php:843
 msgid "Custom Preview Text:"
-msgstr "Texte d'Aperçu Personnalisé :"
+msgstr "Texte d'Aperçu Personnalisé :"
 
 #: includes/admin-page.php:849
 msgid "Type your own text to preview features…"
@@ -448,7 +448,7 @@ msgstr "Saisissez votre propre texte pour voir comment chaque fonctionnalité l'
 
 #: includes/admin-page.php:865
 msgid "Card Width:"
-msgstr "Largeur des cartes :"
+msgstr "Largeur des cartes :"
 
 #: includes/admin-page.php:876
 msgid "Adjust feature card width"
@@ -476,7 +476,7 @@ msgstr[1] "%d fonctionnalités"
 
 #: includes/admin-page.php:943
 msgid "With Feature:"
-msgstr "Avec la fonctionnalité :"
+msgstr "Avec la fonctionnalité :"
 
 #. translators: %s: OpenType feature name e.g. "Standard Ligatures"
 #: includes/admin-page.php:962
@@ -494,7 +494,7 @@ msgstr "Ces préréglages sont enregistrés sur ce site. L’éditeur les affich
 
 #: includes/admin-page.php:985
 msgid "Features:"
-msgstr "Fonctionnalités :"
+msgstr "Fonctionnalités :"
 
 #: includes/admin-page.php:1018
 msgid "Why & How to Use Custom Fonts"
@@ -502,7 +502,7 @@ msgstr "Pourquoi et comment utiliser des polices personnalisées"
 
 #: includes/admin-page.php:1020
 msgid "Why use custom fonts?"
-msgstr "Pourquoi utiliser des polices personnalisées ?"
+msgstr "Pourquoi utiliser des polices personnalisées ?"
 
 #: includes/admin-page.php:1020
 msgid "OpenType features, such as ligatures, swashes, and stylistic sets, are built into the font files. System fonts and many web fonts have few OpenType features. Fonts from sources such as MyFonts, Adobe Fonts, or Font Squirrel often include many more."
@@ -510,7 +510,7 @@ msgstr "Les fonctionnalités OpenType, comme les ligatures, les ornements callig
 
 #: includes/admin-page.php:1021
 msgid "Performance benefit:"
-msgstr "Avantage de performance :"
+msgstr "Avantage de performance :"
 
 #: includes/admin-page.php:1021
 msgid "By default, a font that you add here loads only on the pages that use it. If you use a decorative font on one page, it does not make the other pages on your site slower."
@@ -518,7 +518,7 @@ msgstr "Par défaut, une police que vous ajoutez ici se charge uniquement sur le
 
 #: includes/admin-page.php:1022
 msgid "Three ways to add fonts:"
-msgstr "Trois façons d'ajouter des polices :"
+msgstr "Trois façons d'ajouter des polices :"
 
 #: includes/admin-page.php:1024
 msgid "Upload Font Kit:"
@@ -568,7 +568,7 @@ msgstr "Téléversez un kit de polices web complet sous forme de fichier ZIP, pa
 
 #: includes/admin-page.php:1053
 msgid "ZIP File:"
-msgstr "Fichier ZIP :"
+msgstr "Fichier ZIP :"
 
 #: includes/admin-page.php:1055
 msgid "Choose ZIP file containing webfont kit"
@@ -592,7 +592,7 @@ msgstr "Téléversement…"
 
 #: includes/admin-page.php:1091
 msgid "How to use:"
-msgstr "Comment utiliser :"
+msgstr "Comment utiliser :"
 
 #: includes/admin-page.php:1093
 msgid "Download your webfont kit from your font provider."
@@ -616,7 +616,7 @@ msgstr "L’extension extrait le ZIP, traite les polices et les ajoute à l’é
 
 #: includes/admin-page.php:1099
 msgid "Compatibility Note:"
-msgstr "Note de Compatibilité :"
+msgstr "Note de Compatibilité :"
 
 #: includes/admin-page.php:1099
 msgid "This plugin was tested with webfont kits from MyFonts and with font-only downloads from Google Fonts. Kits from other providers should also work. If a kit has a CSS file, the plugin uses it. For a ZIP of font files only, the plugin makes a stylesheet. The server cannot read WOFF2 metadata. For a ZIP of WOFF2 files only, the plugin gets the family and weight from the filenames. Check the result, and upload TTF files instead if something is wrong."
@@ -675,7 +675,7 @@ msgstr "Collez le code d’intégration ci-dessus, puis saisissez les noms des f
 #: includes/admin-page.php:1148
 #: includes/admin-page.php:1201
 msgid "Note:"
-msgstr "Remarque :"
+msgstr "Remarque :"
 
 #: includes/admin-page.php:1148
 msgid "Adobe Fonts loads directly from Adobe’s servers. Make sure that your domain is authorized in your Adobe Fonts project settings."
@@ -736,7 +736,7 @@ msgstr "Ces paramètres contrôlent le comportement de l'extension sur votre sit
 
 #: includes/admin-page.php:1232
 msgid "Clear confirmation:"
-msgstr "Confirmation de suppression :"
+msgstr "Confirmation de suppression :"
 
 #: includes/admin-page.php:1232
 msgid "Controls whether a confirmation dialog appears when clearing typography formatting in the editor."
@@ -744,7 +744,7 @@ msgstr "Contrôle si une boîte de dialogue de confirmation apparaît lors de la
 
 #: includes/admin-page.php:1233
 msgid "Archive font detection:"
-msgstr "Détection des polices sur les archives :"
+msgstr "Détection des polices sur les archives :"
 
 #: includes/admin-page.php:1233
 msgid "When enabled, the plugin scans full post content on archive pages to detect fonts. This ensures fonts load correctly but may impact performance on sites with many posts per page."
@@ -752,7 +752,7 @@ msgstr "Lorsque activé, l'extension analyse le contenu complet des articles sur
 
 #: includes/admin-page.php:1234
 msgid "Cache management:"
-msgstr "Gestion du cache :"
+msgstr "Gestion du cache :"
 
 #: includes/admin-page.php:1234
 msgid "The plugin caches font detection results for performance. Clear the cache after making significant changes to fonts or content."
@@ -812,7 +812,7 @@ msgstr "Entrée insère un saut de ligne dans le bloc"
 
 #: includes/admin-page.php:1312
 msgid "When enabled (the default), pressing Enter inside a Typography Stylist block adds a line break to the same block, so a multi-line headline stays one block with one set of typography settings. Turn this off to match the rest of the editor, where Enter starts a new block. Shift+Enter always adds a line break either way. Existing content is not changed by this setting."
-msgstr "Lorsque cette option est activée (par défaut), appuyer sur Entrée dans un bloc Typography Stylist insère un saut de ligne dans le même bloc : un titre sur plusieurs lignes reste un seul bloc avec un seul jeu de réglages typographiques. Désactivez-la pour retrouver le comportement du reste de l’éditeur, où Entrée crée un nouveau bloc. Maj+Entrée insère toujours un saut de ligne dans les deux cas. Ce réglage ne modifie pas le contenu existant."
+msgstr "Lorsque cette option est activée (par défaut), appuyer sur Entrée dans un bloc Typography Stylist insère un saut de ligne dans le même bloc : un titre sur plusieurs lignes reste un seul bloc avec un seul jeu de réglages typographiques. Désactivez-la pour retrouver le comportement du reste de l’éditeur, où Entrée crée un nouveau bloc. Maj+Entrée insère toujours un saut de ligne dans les deux cas. Ce réglage ne modifie pas le contenu existant."
 
 #: includes/admin-page.php:1318
 msgid "Archive Page Font Detection"
@@ -983,7 +983,7 @@ msgstr "Créer manuellement un mappage de remplacement pour un ID de police pré
 
 #: includes/admin-page.php:1534
 msgid "Deleted Font ID:"
-msgstr "ID de Police Supprimée :"
+msgstr "ID de Police Supprimée :"
 
 #: includes/admin-page.php:1537
 msgid "Select a deleted font ID…"
@@ -996,7 +996,7 @@ msgstr "Sélectionnez l’ID d’une police supprimée. La liste affiche uniquem
 #: includes/admin-page.php:1547
 #: includes/admin-page.php:1719
 msgid "Replacement Font:"
-msgstr "Police de Remplacement :"
+msgstr "Police de Remplacement :"
 
 #: includes/admin-page.php:1550
 msgid "Select a replacement font…"
@@ -1025,7 +1025,7 @@ msgstr "Comment utiliser"
 
 #: includes/admin-page.php:1589
 msgid "Method 1: Inline Format (Quick Styling)"
-msgstr "Méthode 1 : Format en ligne (Style rapide)"
+msgstr "Méthode 1 : Format en ligne (Style rapide)"
 
 #: includes/admin-page.php:1590
 msgid "Use the inline format to style complete words or phrases in a heading, paragraph, or other text block."
@@ -1053,7 +1053,7 @@ msgstr "Le texte change à mesure que vous travaillez. Cliquez sur « Fermer �
 
 #: includes/admin-page.php:1599
 msgid "Method 2: Typography Stylist Block (Advanced)"
-msgstr "Méthode 2 : Bloc Typography Stylist (Avancé)"
+msgstr "Méthode 2 : Bloc Typography Stylist (Avancé)"
 
 #: includes/admin-page.php:1600
 msgid "Use the block for complex typography, for styling single letters, or when you need its built-in accessibility features."
@@ -1085,15 +1085,15 @@ msgstr "La touche Entrée fonctionne différemment dans un bloc Typography Styli
 
 #: includes/admin-page.php:1613
 msgid "In a Typography Stylist block:"
-msgstr "Dans un bloc Typography Stylist :"
+msgstr "Dans un bloc Typography Stylist :"
 
 #: includes/admin-page.php:1613
 msgid "Enter adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. You can change this on the Options tab so Enter starts a new block instead."
-msgstr "Entrée insère un saut de ligne et vous laisse dans le même bloc : un titre sur plusieurs lignes partage donc un seul jeu de réglages typographiques. Vous pouvez modifier ce comportement dans l’onglet Options pour qu’Entrée crée un nouveau bloc."
+msgstr "Entrée insère un saut de ligne et vous laisse dans le même bloc : un titre sur plusieurs lignes partage donc un seul jeu de réglages typographiques. Vous pouvez modifier ce comportement dans l’onglet Options pour qu’Entrée crée un nouveau bloc."
 
 #: includes/admin-page.php:1614
 msgid "In a regular heading or paragraph:"
-msgstr "Dans un titre ou un paragraphe classique :"
+msgstr "Dans un titre ou un paragraphe classique :"
 
 #: includes/admin-page.php:1614
 msgid "Enter ends the block and starts a new paragraph. This is standard WordPress behavior, and the plugin does not change it."
@@ -1205,11 +1205,11 @@ msgstr "Les pages que voient les visiteurs utilisent uniquement du CSS. L’exte
 
 #: includes/admin-page.php:1657
 msgid "Looking for high-fidelity implementation?"
-msgstr "Vous recherchez une mise en œuvre haute fidélité ?"
+msgstr "Vous recherchez une mise en œuvre haute fidélité ?"
 
 #: includes/admin-page.php:1659
 msgid "Beyond this plugin, I specialize in pixel-perfect WordPress builds that strictly adhere to accessibility standards and advanced typographic systems. If you need a partner for custom block development or complex design integration:"
-msgstr "Au-delà de ce plugin, je me spécialise dans les constructions WordPress au pixel près qui respectent strictement les normes d'accessibilité et les systèmes typographiques avancés. Si vous avez besoin d'un partenaire pour le développement de blocs personnalisés ou l'intégration de designs complexes :"
+msgstr "Au-delà de ce plugin, je me spécialise dans les constructions WordPress au pixel près qui respectent strictement les normes d'accessibilité et les systèmes typographiques avancés. Si vous avez besoin d'un partenaire pour le développement de blocs personnalisés ou l'intégration de designs complexes :"
 
 #: includes/admin-page.php:1663
 msgid "Contact me at matt@mnc4.com"
@@ -1257,7 +1257,7 @@ msgstr "Réglages"
 
 #: typography-stylist.php:1354
 msgid "Are you sure you want to delete this font kit?"
-msgstr "Êtes-vous sûr de vouloir supprimer ce kit de polices ?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce kit de polices ?"
 
 #: typography-stylist.php:1355
 msgid "Failed to upload font kit."
@@ -1273,7 +1273,7 @@ msgstr "Veuillez sélectionner un fichier ZIP."
 
 #: typography-stylist.php:1358
 msgid "Font kit uploaded and processed successfully!"
-msgstr "Kit de polices téléversé et traité avec succès !"
+msgstr "Kit de polices téléversé et traité avec succès !"
 
 #: typography-stylist.php:1359
 msgid "Failed to delete font kit."
@@ -1281,7 +1281,7 @@ msgstr "Échec de la suppression du kit de polices."
 
 #: typography-stylist.php:1360
 msgid "Font deleted successfully!"
-msgstr "Police supprimée avec succès !"
+msgstr "Police supprimée avec succès !"
 
 #: typography-stylist.php:1361
 msgid "Failed to delete font."
@@ -1343,7 +1343,7 @@ msgstr "Échec de l'ajout du projet Adobe Fonts."
 
 #: typography-stylist.php:1379
 msgid "Are you sure you want to delete this Adobe Fonts project?"
-msgstr "Êtes-vous sûr de vouloir supprimer ce projet Adobe Fonts ?"
+msgstr "Êtes-vous sûr de vouloir supprimer ce projet Adobe Fonts ?"
 
 #: typography-stylist.php:1380
 msgid "Failed to delete Adobe Fonts project."
@@ -1359,7 +1359,7 @@ msgstr "Veuillez saisir une valeur CSS font-family."
 
 #: typography-stylist.php:1384
 msgid "Custom font added successfully!"
-msgstr "Police personnalisée ajoutée avec succès !"
+msgstr "Police personnalisée ajoutée avec succès !"
 
 #: typography-stylist.php:1385
 msgid "Failed to add custom font."
@@ -1367,7 +1367,7 @@ msgstr "Échec de l'ajout de la police personnalisée."
 
 #: typography-stylist.php:1387
 msgid "Are you sure you want to delete this custom font?"
-msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
+msgstr "Êtes-vous sûr de vouloir supprimer cette police personnalisée ?"
 
 #: typography-stylist.php:1388
 msgid "Failed to delete custom font."
@@ -1384,7 +1384,7 @@ msgstr "Enregistrement…"
 
 #: typography-stylist.php:1394
 msgid "Fallback fonts updated successfully!"
-msgstr "Polices de secours mises à jour avec succès !"
+msgstr "Polices de secours mises à jour avec succès !"
 
 #: typography-stylist.php:1395
 msgid "Failed to update fallback fonts."
@@ -1392,7 +1392,7 @@ msgstr "Échec de la mise à jour des polices de secours."
 
 #: typography-stylist.php:1396
 msgid "Font updated successfully!"
-msgstr "Police mise à jour avec succès !"
+msgstr "Police mise à jour avec succès !"
 
 #: typography-stylist.php:1397
 msgid "Failed to update font."
@@ -1420,7 +1420,7 @@ msgstr "Ajout à la bibliothèque…"
 
 #: typography-stylist.php:1410
 msgid "Font registered in the Font Library!"
-msgstr "Police enregistrée dans la bibliothèque de polices !"
+msgstr "Police enregistrée dans la bibliothèque de polices !"
 
 #: typography-stylist.php:1411
 msgid "Failed to register the font in the Font Library."
@@ -1432,7 +1432,7 @@ msgstr "Retrait…"
 
 #: typography-stylist.php:1413
 msgid "Font removed from the Font Library!"
-msgstr "Police retirée de la bibliothèque de polices !"
+msgstr "Police retirée de la bibliothèque de polices !"
 
 #: typography-stylist.php:1414
 msgid "Failed to remove the font from the Font Library."
@@ -1456,7 +1456,7 @@ msgstr "Détection des graisses…"
 #: typography-stylist.php:1421
 #, php-format
 msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked."
-msgstr "Graisses détectées pour %1$s police(s) ; %2$s ont conservé toutes les graisses ; %3$s n'ont pas pu être vérifiées."
+msgstr "Graisses détectées pour %1$s police(s) ; %2$s ont conservé toutes les graisses ; %3$s n'ont pas pu être vérifiées."
 
 #: typography-stylist.php:1422
 msgid "Weight detection failed. Please try again."
@@ -1533,19 +1533,19 @@ msgstr "Actions"
 #: typography-stylist.php:1444
 #, php-format
 msgid "ID: %s"
-msgstr "ID : %s"
+msgstr "ID : %s"
 
 #. translators: 1: font name, 2: numeric font ID
 #: typography-stylist.php:1446
 #, php-format
 msgid "%1$s (ID: %2$s)"
-msgstr "%1$s (ID : %2$s)"
+msgstr "%1$s (ID : %2$s)"
 
 #. translators: %s: comma-separated list of font IDs
 #: typography-stylist.php:1449
 #, php-format
 msgid "Unassigned IDs: %s"
-msgstr "ID non attribués : %s"
+msgstr "ID non attribués : %s"
 
 #: typography-stylist.php:1450
 msgid "Edit"
@@ -1575,7 +1575,7 @@ msgstr "ID de police non valide. Rechargez la page et réessayez."
 
 #: typography-stylist.php:1457
 msgid "Remove this font replacement mapping?"
-msgstr "Retirer cette correspondance de remplacement de police ?"
+msgstr "Retirer cette correspondance de remplacement de police ?"
 
 #: typography-stylist.php:1458
 msgid "Failed to remove replacement."
@@ -1599,7 +1599,7 @@ msgstr "ID de police non valide (0). Sélectionnez un ID valide."
 
 #: typography-stylist.php:1464
 msgid "Replacement mapping added successfully!"
-msgstr "Correspondance de remplacement ajoutée avec succès !"
+msgstr "Correspondance de remplacement ajoutée avec succès !"
 
 #: typography-stylist.php:1465
 msgid "Failed to add replacement mapping."
@@ -2026,7 +2026,7 @@ msgstr "Les fonctionnalités doivent être un tableau non vide"
 #: typography-stylist.php:2984
 #, php-format
 msgid "Invalid feature ID: %s"
-msgstr "ID de fonctionnalité invalide : %s"
+msgstr "ID de fonctionnalité invalide : %s"
 
 #: typography-stylist.php:3025
 msgid "Preset not found"
@@ -2241,7 +2241,7 @@ msgstr "Avis d'accessibilité"
 #: assets/js/block-editor.js:1674
 #: blocks/typography-stylist/build/index.js:2
 msgid "Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?"
-msgstr "Une partie du texte sélectionné possède sa propre mise en forme (police, graisse, taille, espacement ou fonctionnalités). L’application du style de paragraphe remplace cette mise en forme afin que toute la sélection corresponde au style. Continuer ?"
+msgstr "Une partie du texte sélectionné possède sa propre mise en forme (police, graisse, taille, espacement ou fonctionnalités). L’application du style de paragraphe remplace cette mise en forme afin que toute la sélection corresponde au style. Continuer ?"
 
 #: assets/js/block-editor.js:2029
 msgid "Conversion is available for heading and paragraph blocks."
@@ -2294,7 +2294,7 @@ msgstr "Déplacer le panneau, utilisez les flèches"
 #: assets/js/block-editor.js:3351
 #: blocks/typography-stylist/build/index.js:2
 msgid "Tip: Drag the title bar to reposition this panel."
-msgstr "Astuce : faites glisser la barre de titre pour repositionner ce panneau."
+msgstr "Astuce : faites glisser la barre de titre pour repositionner ce panneau."
 
 #: assets/js/block-editor.js:3354
 #: blocks/typography-stylist/build/index.js:2
@@ -2309,7 +2309,7 @@ msgstr "Ignorer l’astuce"
 #: assets/js/block-editor.js:3389
 #: assets/js/block-editor.js:3680
 msgid "Convert to Typography Stylist Block"
-msgstr "Convertir en Bloc Styliste OpenType"
+msgstr "Convertir en bloc Typography Stylist"
 
 #: assets/js/block-editor.js:3397
 msgid "Manage accessibility settings"
@@ -2408,7 +2408,7 @@ msgstr "Taille Maximale (ordinateur)"
 
 #: assets/js/block-editor.js:3582
 msgid "Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior."
-msgstr "Remarque : Les tailles de police sont dans le désordre. Minimum doit être ≤ Préférée ≤ Maximum pour un comportement attendu."
+msgstr "Remarque : Les tailles de police sont dans le désordre. Minimum doit être ≤ Préférée ≤ Maximum pour un comportement attendu."
 
 #: assets/js/block-editor.js:3591
 #: assets/js/block-editor.js:3593
@@ -2451,7 +2451,7 @@ msgstr "Convertit ce titre ou ce paragraphe en bloc Typography Stylist, qui ajou
 
 #: assets/js/block-editor.js:3701
 msgid "Clear All Typography Settings?"
-msgstr "Effacer Tous les Paramètres Typographiques ?"
+msgstr "Effacer Tous les Paramètres Typographiques ?"
 
 #: assets/js/block-editor.js:3704
 msgid "This will remove all typography features, font selections, and styling."
@@ -2566,7 +2566,7 @@ msgstr "Grand (1920px)"
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior."
-msgstr "Remarque : Les tailles de police sont dans le désordre. Mobile doit être ≤ Intermédiaire ≤ Grand pour un comportement attendu."
+msgstr "Remarque : Les tailles de police sont dans le désordre. Mobile doit être ≤ Intermédiaire ≤ Grand pour un comportement attendu."
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Reset Font Size"
@@ -2630,7 +2630,7 @@ msgstr "Aide et conseils"
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "The Typography Stylist block provides two levels of control:"
-msgstr "Le bloc Typography Stylist offre deux niveaux de contrôle :"
+msgstr "Le bloc Typography Stylist offre deux niveaux de contrôle :"
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Sidebar controls:"
@@ -2682,7 +2682,7 @@ msgstr "Taille maximale (px)"
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Fallback size for browsers without container query support:"
-msgstr "Taille de repli pour les navigateurs sans prise en charge des requêtes de conteneur :"
+msgstr "Taille de repli pour les navigateurs sans prise en charge des requêtes de conteneur :"
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Mobile (320px and up)"

@@ -1,12 +1,12 @@
 # French (France) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLanguage: fr_FR\nPlural-Forms: nplurals=2; plural=(n > 1);\nX-Domain: typost-paragraph-styles\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: fr_FR\nPlural-Forms: nplurals=2; plural=(n > 1);\nX-Domain: typost-paragraph-styles\n"
 
 #. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
 #: includes/admin-tab.php:82
 msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
-msgstr "Portez ce vieux whisky au juge blond qui fume. Affluence officielle, fin d’été : 1/2 prix, 0123456789."
+msgstr "Portez ce vieux whisky au juge blond qui fume. Thomas est à la poste : affluence officielle en fin d’été, 1/2 prix, 0123456789."
 
 #: includes/admin-tab.php:89
 #: paragraph-styles.php:761
@@ -87,27 +87,27 @@ msgstr "Supprimer"
 
 #: includes/admin-tab.php:191
 msgid "Font:"
-msgstr "Police :"
+msgstr "Police :"
 
 #: includes/admin-tab.php:196
 msgid "Style:"
-msgstr "Style :"
+msgstr "Style :"
 
 #: includes/admin-tab.php:202
 msgid "Size:"
-msgstr "Taille :"
+msgstr "Taille :"
 
 #: includes/admin-tab.php:208
 msgid "Features:"
-msgstr "Fonctionnalités :"
+msgstr "Fonctionnalités :"
 
 #: includes/admin-tab.php:215
 msgid "Spacing:"
-msgstr "Espacement :"
+msgstr "Espacement :"
 
 #: includes/admin-tab.php:222
 msgid "Line Height:"
-msgstr "Hauteur de ligne :"
+msgstr "Hauteur de ligne :"
 
 #: includes/admin-tab.php:240
 msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
@@ -115,7 +115,7 @@ msgstr "Votre thème ou une autre extension charge cette police sur le site. Cet
 
 #: includes/admin-tab.php:247
 msgid "Name:"
-msgstr "Nom :"
+msgstr "Nom :"
 
 #: includes/admin-tab.php:252
 #: assets/js/editor.js:512

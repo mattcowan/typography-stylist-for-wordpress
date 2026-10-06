@@ -849,9 +849,9 @@ add_filter('typost_presets', function($presets) {
 
 ### General Security
 
-- **Nonce verification:** All REST API requests need a valid nonce.
-- **Capability checks:** Each endpoint checks the WordPress capability of the user. For example, upload and delete need `edit_posts`, and the Font Library registration needs `manage_options`.
-- **Rate limits:** Each user can send 50 REST API requests per minute at most.
+- **Nonce verification:** A REST API request that uses the WordPress login cookie needs a valid `wp_rest` nonce. WordPress checks it. Requests that use Application Passwords do not need a nonce.
+- **Capability checks:** Each endpoint checks the WordPress capability of the user. For example, font kit and Adobe Fonts changes need `upload_files`, custom font definitions and presets need `edit_posts`, and Font Library registration needs `manage_options`.
+- **Rate limits:** Each user can send at most 50 write requests (POST, PUT, PATCH, DELETE) per minute to the plugin’s REST API. Read requests are not limited.
 - **Input sanitization:** The plugin sanitizes all user input with WordPress functions.
 
 ## License

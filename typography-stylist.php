@@ -56,6 +56,17 @@ class Typost {
     private $features_cache = null;
 
     /**
+     * Requests already counted by the REST write limit. A route that uses
+     * check_permissions() reaches the counter twice (permission callback,
+     * then rest_dispatch_request) and must be counted once. SplObjectStorage
+     * holds each request, so a freed request cannot pass its object ID on to
+     * a later one (spl_object_id() values are reused, e.g. in /batch/v1).
+     *
+     * @var SplObjectStorage|null
+     */
+    private $rate_limited_requests = null;
+
+    /**
      * Non-fatal warnings produced by the most recent process_font_kit_zip()
      * run (e.g. "@font-face CSS was generated from filename guesses").
      * Kept out of the method's return value so its array-of-entries|WP_Error
@@ -195,6 +206,7 @@ class Typost {
 
         // Add REST API endpoints
         add_action('rest_api_init', array($this, 'register_rest_routes'));
+        add_filter('rest_dispatch_request', array($this, 'enforce_rest_rate_limit'), 10, 4);
 
         // Register custom block
         add_action('init', array($this, 'register_block'));
@@ -2367,6 +2379,13 @@ class Typost {
 
     /**
      * Check REST API permissions with rate limiting
+     *
+     * Extensions can still use this callback in their own namespace and get
+     * the write limit; routes in typost/v1 are also limited centrally by
+     * enforce_rest_rate_limit(), and a request is never counted twice.
+     *
+     * @param WP_REST_Request|null $request Request, or null for a plain capability check.
+     * @return true|false|WP_Error
      */
     public function check_permissions($request = null) {
         // Check capability
@@ -2374,29 +2393,81 @@ class Typost {
             return false;
         }
 
-        // Rate limiting for write operations
-        if ($request && in_array($request->get_method(), array('POST', 'DELETE', 'PUT', 'PATCH'))) {
-            $user_id = get_current_user_id();
-            $rate_limit_key = 'typost_rate_limit_' . $user_id;
-            $requests = get_transient($rate_limit_key);
+        return $this->consume_rate_limit($request);
+    }
 
-            if (false === $requests) {
-                $requests = 1;
-            } else {
-                $requests++;
-            }
-
-            // Max 50 requests per minute
-            if ($requests > 50) {
-                return new WP_Error(
-                    'rate_limit_exceeded',
-                    esc_html__('Too many requests. Please try again later.', 'typography-stylist'),
-                    array('status' => 429)
-                );
-            }
-
-            set_transient($rate_limit_key, $requests, MINUTE_IN_SECONDS);
+    /**
+     * Apply the REST write limit to every route in the typost/v1 namespace.
+     *
+     * Hooked to rest_dispatch_request, which WordPress runs only after the
+     * route's permission callback has passed. So it counts authorized write
+     * requests only, whatever capability the route checks (edit_posts,
+     * upload_files, manage_options). Before this, only routes that used
+     * check_permissions() were limited, which left font uploads, Adobe
+     * projects, custom fonts, replacements and the Font Library routes
+     * without a limit.
+     *
+     * @since 2.3.2
+     * @param mixed           $result  Dispatch result from an earlier filter; null to continue.
+     * @param WP_REST_Request $request Request.
+     * @param string          $route   Matched route, e.g. /typost/v1/fonts.
+     * @param array           $handler Route handler (unused).
+     * @return mixed The earlier result, null to continue, or a 429 WP_Error.
+     */
+    public function enforce_rest_rate_limit($result, $request, $route, $handler) {
+        unset($handler);
+        if (null !== $result || !is_string($route) || 0 !== strpos($route, '/typost/v1/')) {
+            return $result;
         }
+
+        $limited = $this->consume_rate_limit($request);
+
+        return is_wp_error($limited) ? $limited : $result;
+    }
+
+    /**
+     * Count one write request for the current user: at most 50 per minute.
+     *
+     * GET and other read methods are not counted. A request object is counted
+     * at most once (see $rate_limited_requests).
+     *
+     * @param WP_REST_Request|null $request Request.
+     * @return true|WP_Error True when allowed, a 429 WP_Error when over the limit.
+     */
+    private function consume_rate_limit($request) {
+        if (!$request || !is_object($request) || !method_exists($request, 'get_method')
+            || !in_array($request->get_method(), array('POST', 'DELETE', 'PUT', 'PATCH'), true)) {
+            return true;
+        }
+
+        if (null === $this->rate_limited_requests) {
+            $this->rate_limited_requests = new SplObjectStorage();
+        }
+        if ($this->rate_limited_requests->contains($request)) {
+            return true;
+        }
+        $this->rate_limited_requests->attach($request);
+
+        $user_id = get_current_user_id();
+        $rate_limit_key = 'typost_rate_limit_' . $user_id;
+        $requests = get_transient($rate_limit_key);
+
+        if (false === $requests) {
+            $requests = 1;
+        } else {
+            $requests++;
+        }
+
+        // Max 50 requests per minute
+        if ($requests > 50) {
+            return new WP_Error(
+                'rate_limit_exceeded',
+                esc_html__('Too many requests. Please try again later.', 'typography-stylist'),
+                array('status' => 429)
+            );
+        }
+
+        set_transient($rate_limit_key, $requests, MINUTE_IN_SECONDS);
 
         return true;
     }

@@ -1,7 +1,7 @@
 # French (France) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLanguage: fr\nX-Domain: typost-variable-fonts\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: fr\nX-Domain: typost-variable-fonts\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #. translators: %s: comma-separated list of variable font axis tags.
 #: variable-fonts.php:346
@@ -95,7 +95,7 @@ msgstr "Le tableau d'axes est requis"
 
 #: variable-fonts.php:794
 msgid "Settings saved successfully!"
-msgstr "Réglages enregistrés !"
+msgstr "Réglages enregistrés !"
 
 #: assets/js/admin.js:200
 msgid "No variable axes found in the resolved font file (no fvar table)."
@@ -132,7 +132,7 @@ msgstr "Le fichier de police n'a pas pu être lu."
 
 #: assets/js/admin.js:445
 msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
-msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
+msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
 
 #: assets/js/admin.js:456
 msgid "Detecting axes…"

@@ -1,7 +1,7 @@
 # French (France) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-05 19:53+0000\nPO-Revision-Date: 2026-10-05 19:53+0000\nLast-Translator: Matt Cowan\nLanguage-Team: French (France)\nLanguage: fr_FR\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nX-Domain: typost-glyphs-panel\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLast-Translator: Matt Cowan\nLanguage-Team: French (France)\nLanguage: fr_FR\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nX-Domain: typost-glyphs-panel\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: glyphs-panel.php:185
 msgid "Glyphs Toolbar Button"
@@ -28,7 +28,7 @@ msgstr "Navigateur de glyphes"
 
 #: glyphs-panel.php:345
 msgid "The Glyph Browser cannot work on this installation: the bundled font-parsing libraries are missing. Reinstall the plugin to restore them."
-msgstr "Le navigateur de glyphes ne peut pas fonctionner sur cette installation : les bibliothèques d’analyse de polices fournies sont manquantes. Réinstallez l’extension pour les restaurer."
+msgstr "Le navigateur de glyphes ne peut pas fonctionner sur cette installation : les bibliothèques d’analyse de polices fournies sont manquantes. Réinstallez l’extension pour les restaurer."
 
 #: glyphs-panel.php:351
 msgid "Explore every character and OpenType feature in your fonts. Click a glyph to copy it to the clipboard. To insert glyphs into content, use the Glyphs button inside the editor."
@@ -87,7 +87,7 @@ msgstr "Avis d’accessibilité"
 #: assets/js/glyphs-modal.js:446
 #, js-format
 msgid "Missing files: %s"
-msgstr "Fichiers manquants : %s"
+msgstr "Fichiers manquants : %s"
 
 #. translators: %d: glyph count
 #: assets/js/glyphs-modal.js:605
@@ -151,11 +151,11 @@ msgstr "Autre"
 
 #: assets/js/glyphs-modal.js:870
 msgid "Search: character, U+0041, or glyph name"
-msgstr "Rechercher : caractère, U+0041 ou nom de glyphe"
+msgstr "Rechercher : caractère, U+0041 ou nom de glyphe"
 
 #: assets/js/glyphs-modal.js:871
 msgid "Search: character or U+0041"
-msgstr "Rechercher : caractère ou U+0041"
+msgstr "Rechercher : caractère ou U+0041"
 
 #: assets/js/glyphs-modal.js:875
 msgid "Browse only: click a glyph to copy it"

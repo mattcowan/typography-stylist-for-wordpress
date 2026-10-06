@@ -208,15 +208,15 @@ The Paragraph Styles panel (save/load named typography presets, applied via drop
 
 **Custom Fonts (Uploaded Webfont Kits):**
 - `GET /wp-json/typost/v1/fonts` - Get uploaded font kits
-- `POST /wp-json/typost/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `edit_posts`)
-- `DELETE /wp-json/typost/v1/fonts/{id}` - Delete font kit and files (requires `edit_posts`)
-- `PATCH /wp-json/typost/v1/fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `POST /wp-json/typost/v1/fonts` - Upload font kit ZIP file (multipart/form-data, requires `upload_files`)
+- `DELETE /wp-json/typost/v1/fonts/{id}` - Delete font kit and files (requires `upload_files`)
+- `PATCH /wp-json/typost/v1/fonts/{id}/fallback` - Update fallback fonts (requires `upload_files`)
 
 **Adobe Fonts (Typekit):**
 - `GET /wp-json/typost/v1/adobe-fonts` - Get Adobe Fonts projects
-- `POST /wp-json/typost/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `edit_posts`)
-- `DELETE /wp-json/typost/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `edit_posts`)
-- `PATCH /wp-json/typost/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `edit_posts`)
+- `POST /wp-json/typost/v1/adobe-fonts` - Add Adobe Fonts project via embed code (requires `upload_files`)
+- `DELETE /wp-json/typost/v1/adobe-fonts/{id}` - Delete Adobe Fonts project (requires `upload_files`)
+- `PATCH /wp-json/typost/v1/adobe-fonts/{id}/fallback` - Update fallback fonts (requires `upload_files`)
 
 **Custom Font Definitions (Theme/Plugin/CDN Fonts):**
 - `GET /wp-json/typost/v1/manual-fonts` - Get custom font definitions
@@ -238,8 +238,8 @@ The Paragraph Styles panel (save/load named typography presets, applied via drop
 - `PATCH|DELETE /wp-json/typost/v1/paragraph-styles/{id}` - Rename/update properties / delete (requires `edit_posts`)
 
 All endpoints include:
-- Rate limiting (50 requests/minute per user)
-- Nonce verification
+- Rate limiting: 50 write requests (POST/PUT/PATCH/DELETE) per minute per user across every `typost/v1` route, modules included. `enforce_rest_rate_limit()` on `rest_dispatch_request` counts a request only after its permission callback passes; `check_permissions()` shares the counter (`consume_rate_limit()`) so extensions in their own namespace stay limited, and an `SplObjectStorage` guard counts each request once (2026-10, PR #239 review: inline `current_user_can()` routes had no limit before). Admin bursts must stay under it: feature-visibility saves are debounced for this reason.
+- Nonce verification by WordPress core for cookie-authenticated requests (the plugin does not check nonces itself on REST routes)
 - Transient caching where appropriate
 
 ### Available OpenType Features
