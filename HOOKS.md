@@ -747,7 +747,7 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 
 The returned state object includes:
 - **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `layeredConfigId`, `content`, `tagName`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `initialHang`, `layeredConfigId`, `content`, `tagName`
 
 *Since 2.3.0* both editors report the font style on two channels (`''` inherit, `'normal'`, `'italic'`, or `'oblique'` — the built-in Font Style controls only offer the first three, but `'oblique'` set by an extension through the apply event round-trips the full pipeline: span serialization, state reporting, and paragraph-style persistence/CSS). `fontStyle` is the *rendered* style at the selection — text italicized by an enclosing `<em>`/`<i>` reports `'italic'` even without its own setting; use it to render the right face (previews, the Glyphs panel's face pick). `explicitFontStyle` is only what was *set* — a `data-fontstyle` span, the popover's Font Style choice, or the block attribute — and is what consumers that persist the value must read: the bundled Paragraph Styles module captures it into saved styles, so semantic emphasis can't be baked into a style whose CSS could neither reproduce nor reset it.
 
@@ -756,6 +756,8 @@ The `paragraphStyleId` field contains the active paragraph style ID (integer), o
 The `layeredConfigId` field contains the active layered font configuration ID (integer), or `0` if no layered font is applied. The `content` and `tagName` fields provide the block's current text content (HTML) and heading tag (e.g., `h2`) for use by extensions that need to render previews.
 
 *Since 2.1.0* the QFT/inspector state also includes `animationConfigId` (integer, `0` when unset) — the active animation configuration ID used by the Animations extension.
+
+*Since 2.3.2* the QFT/inspector state also includes `initialHang` (number in em, `0` when off): how far the block moves its first letter into the margin (First Letter Hang). The inline editor does not report it, because the hang works through `::first-letter`, which cannot reach an inline span. Treat an absent key as "not supported here", not as 0. The per-line values of a fit-to-width block are content, like its line sizes, and are not in the state.
 
 #### Writing Editor State
 
@@ -771,6 +773,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
             letterSpacing: 50,
             features: ['liga', 'dlig', 'ss01'],
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes
+            initialHang: 0.15, // Optional (since 2.3.2): first letter hang in em; 'qft'/'inspector' only
         },
         source: 'inline', // or 'qft' or 'inspector'
         // Optional: class-based styling (used by the bundled Paragraph Styles module)

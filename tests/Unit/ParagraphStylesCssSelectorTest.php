@@ -55,6 +55,30 @@ class ParagraphStylesCssSelectorTest extends TestCase {
         $this->assertSame($expected, $css);
     }
 
+    public function test_hanging_initial_matches_the_js_generator_byte_for_byte() {
+        $module = $this->freshInstance();
+        $css = $module->generate_style_css([
+            'id' => 5,
+            'properties' => [
+                'fontId' => 9,
+                'initialHang' => 0.12,
+            ],
+        ]);
+
+        // Expected string shared with ps-utils.test.js ("hanging initial (#242)")
+        $expected = ".typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id=\"5\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n"
+            . "    font-family: var(--font-9);\n"
+            . "    --typost-hang: 0.12;\n"
+            . "}";
+        $this->assertSame($expected, $css);
+
+        $whole = $module->generate_style_css(['id' => 5, 'properties' => ['initialHang' => 1]]);
+        $this->assertStringContainsString('--typost-hang: 1;', $whole);
+
+        $off = $module->generate_style_css(['id' => 5, 'properties' => ['fontId' => 9, 'initialHang' => 0]]);
+        $this->assertStringNotContainsString('--typost-hang', $off);
+    }
+
     public function test_legacy_ids_get_the_same_boosted_variants() {
         $module = $this->freshInstance();
         $css = $module->generate_style_css([

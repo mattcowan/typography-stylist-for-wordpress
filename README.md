@@ -37,6 +37,13 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - The panel groups the features by category. Each feature has its own preview.
 - You can search the font menus. Type any part of a font name to make the list shorter. This works in the sidebar, the Quick Feature Toggles, and the inline editor.
 
+### First Letter Hang (v2.3.2+)
+
+- In the Typography Stylist block, move the first letter into the margin by a value in em. A swash capital then hangs outside the text edge, and the main shape of the letter aligns with the edge.
+- Only the first line hangs. In fit-to-width mode, each line has its own value.
+- The plugin does not wrap the letter in an element, so screen readers read the word as one word.
+- A paragraph style can keep the value.
+
 ### Glyphs Panel (built in)
 
 - The Glyphs Panel shows every character and every OpenType feature of a font, like the Glyphs panel in Adobe Illustrator.

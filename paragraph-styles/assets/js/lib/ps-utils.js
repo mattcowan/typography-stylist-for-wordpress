@@ -126,6 +126,26 @@
 		return Number(Math.round(Number(n + 'e3')) + 'e-3');
 	}
 
+	// Largest hanging-initial value, in em. Mirrors INITIAL_HANG_MAX in core
+	// utils.js and HANG_MAX in paragraph-styles.php.
+	var INITIAL_HANG_MAX = 1;
+
+	/**
+	 * Normalize a hanging-initial value (#242): 0 when off or invalid,
+	 * otherwise capped at INITIAL_HANG_MAX and rounded to three decimals.
+	 * Mirrors normalizeHang() in core utils.js and the PHP sanitizer, so the
+	 * stored value and both CSS generators agree.
+	 */
+	function normalizeHang(value) {
+		// Accept what PHP is_numeric() accepts: Number() alone would read
+		// '0x1A' as 26 and true as 1, and the CSS would no longer match PHP's.
+		if (typeof value === 'string' ? !/^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) : typeof value !== 'number') return 0;
+		var n = Number(value);
+		// Below 0.0005 rounds to 0; String() would also print it as '1e-7'
+		if (!isFinite(n) || n < 0.0005) return 0;
+		return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
+	}
+
 	/**
 	 * Compare current editor state against a stored style's properties.
 	 * Returns true if any property differs.
@@ -184,6 +204,12 @@
 
 		// Compare fontVariationSettings
 		if ((state.fontVariationSettings || '') !== (styleProps.fontVariationSettings || '')) return true;
+
+		// Compare the hanging initial (#242) only when the editor reports it.
+		// It is block-level (::first-letter cannot reach an inline span), so
+		// the inline editor never sends the key — comparing there would pin
+		// "(modified)" on every use of a style that has a hang.
+		if (state.initialHang !== undefined && normalizeHang(state.initialHang) !== normalizeHang(styleProps.initialHang)) return true;
 
 		return false;
 	}
@@ -244,6 +270,35 @@
 		if (state.fontVariationSettings) {
 			properties.fontVariationSettings = state.fontVariationSettings;
 		}
+		// 0 = no hang, never stored (absent and 0 render the same)
+		if (normalizeHang(state.initialHang) > 0) {
+			properties.initialHang = normalizeHang(state.initialHang);
+		}
+		return properties;
+	}
+
+	/**
+	 * Properties to store when an editor saves over an existing style
+	 * (Update Style) or saves a variant of it (Save as New).
+	 *
+	 * Some properties are block-level only, and the inline editor does not
+	 * report them in its state: initialHang (#242) works through
+	 * ::first-letter, which cannot reach an inline span. The REST update
+	 * replaces the whole properties object, so building from the inline
+	 * state alone deleted the style's hang from every block that used it
+	 * (PR review). A key the editor does not report is carried from the
+	 * base style; a key it reports, including 0, is the editor's value.
+	 *
+	 * @param {Object} state          Editor state from typost_current_editor_state.
+	 * @param {Object} baseProperties The active style's stored properties.
+	 * @return {Object} Properties for the REST request.
+	 */
+	function buildPropertiesForStyleSave(state, baseProperties) {
+		var properties = buildPropertiesFromState(state);
+		var base = baseProperties || {};
+		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
+			properties.initialHang = normalizeHang(base.initialHang);
+		}
 		return properties;
 	}
 
@@ -266,6 +321,10 @@
 	 *   not defaulted when absent for the same reason as min/pref/max.
 	 * - Extension-owned keys (layeredConfigId, animationConfigId).
 	 *
+	 * initialHang IS normalized (to 0): a style without a hang must remove a
+	 * lingering hang on apply. The inline editor ignores the key, because a
+	 * hang has no effect on an inline span.
+	 *
 	 * fontStyle IS normalized (to '' = inherit): styles express italic as a
 	 * first-class property now, so a style saved without one must reset a
 	 * lingering italic on apply — the applied result has to look like the
@@ -283,6 +342,7 @@
 			lineHeight: 0,
 			features: [],
 			fontVariationSettings: '',
+			initialHang: 0,
 		};
 		if (!properties) return normalized;
 		for (var key in properties) {
@@ -526,6 +586,14 @@
 			var max = phpInt(props.fontSizeMax);
 			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
 			rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
+		}
+
+		// Hanging initial (#242): a custom property that core's block
+		// style.css reads in its ::first-letter rule. Same clamp and rounding
+		// as the PHP twin.
+		var hang = normalizeHang(props.initialHang);
+		if (hang > 0) {
+			rules.push('--typost-hang: ' + phpFloatStr(hang));
 		}
 
 		if (!rules.length) return '';
@@ -936,6 +1004,7 @@
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
 		roundLineHeight: roundLineHeight,
+		normalizeHang: normalizeHang,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
 		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
 		BROWSER_GROUP_MODES: BROWSER_GROUP_MODES,
@@ -952,6 +1021,7 @@
 		resolveBrowserCursorKey: resolveBrowserCursorKey,
 		findTypeAheadMatch: findTypeAheadMatch,
 		buildPropertiesFromState: buildPropertiesFromState,
+		buildPropertiesForStyleSave: buildPropertiesForStyleSave,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,
