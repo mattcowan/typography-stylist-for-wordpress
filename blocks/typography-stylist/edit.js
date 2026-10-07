@@ -3565,8 +3565,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			styles.textAlign = textAlign;
 		}
 
-		// Hanging initial (#242): a custom property, read by the
-		// ::first-letter rule in style.css. With a paragraph style active the
+		// Hanging initial (#242): a custom property. In the editor it drives
+		// the text-indent rule in editor.css and, in fit mode, the line-1
+		// margin in style.css (the frontend's ::first-letter rule never
+		// reaches the RichText). With a paragraph style active the
 		// class supplies it; an override is written even at 0, so turning the
 		// hang off on one block cancels the style's value while previewing.
 		if (rendersInline('initialHang') && (styleOverrides || normalizeHang(initialHang) > 0)) {
