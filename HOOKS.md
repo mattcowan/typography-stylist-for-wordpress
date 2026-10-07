@@ -326,10 +326,15 @@ add_filter('typost_presets', function($presets) {
         'id'       => 'my-preset',
         'name'     => 'Custom Preset',
         'features' => array('liga', 'dlig', 'ss01'),
+        // Optional. A font-family stack; the inline format resolves it to the
+        // matching plugin font and writes var(--font-N). Since 2.3.2.
+        'fontFamily' => 'Fraunces',
     );
     return $presets;
 });
 ```
+
+A preset without `fontFamily` keeps the font of the selected text.
 
 #### `typost_force_enqueue_font_ids`
 

@@ -141,8 +141,46 @@ function buildConvertBlockAttributes(args) {
 	return attrs;
 }
 
+var resolveFontIdFromFamily = require('./font-options.js').resolveFontIdFromFamily;
+
+/**
+ * The font state a preset leaves in the inline modal.
+ *
+ * A preset that names a font sets both the family and the font ID, so the
+ * apply path (which prefers the ID) writes the preset font. A preset with no
+ * font keeps the selection font. Variable font axes belong to one font, so they
+ * are cleared when the preset changes the font and kept when it does not.
+ *
+ * @param {Object|null} preset    Preset ({ fontFamily?, features, ... }).
+ * @param {Object}      current   Current { selectedFont, selectedFontId, fontVariationSettings }.
+ * @param {Object}      fontIdMap Map of font_id -> { family, ... } from buildFontOptions().
+ * @return {{selectedFont: string, selectedFontId: number, fontVariationSettings: string}} Font state to set.
+ */
+function resolvePresetFontState(preset, current, fontIdMap) {
+	var state = current || {};
+	var keep = {
+		selectedFont: state.selectedFont || '',
+		selectedFontId: state.selectedFontId || 0,
+		fontVariationSettings: state.fontVariationSettings || ''
+	};
+	var family = preset && preset.fontFamily ? String(preset.fontFamily) : '';
+	if (!family) {
+		return keep;
+	}
+	var fontId = resolveFontIdFromFamily(family, fontIdMap);
+	var next = fontId && fontIdMap[fontId]
+		? { selectedFont: fontIdMap[fontId].family, selectedFontId: fontId }
+		: { selectedFont: family, selectedFontId: 0 };
+	var sameFont = next.selectedFontId
+		? next.selectedFontId === keep.selectedFontId
+		: !keep.selectedFontId && next.selectedFont === keep.selectedFont;
+	next.fontVariationSettings = sameFont ? keep.fontVariationSettings : '';
+	return next;
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
-	buildConvertBlockAttributes: buildConvertBlockAttributes
+	buildConvertBlockAttributes: buildConvertBlockAttributes,
+	resolvePresetFontState: resolvePresetFontState
 };
