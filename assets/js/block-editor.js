@@ -2710,6 +2710,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 selectedFeatures: preset.features,
                 selectedFont: fontState.selectedFont,
                 selectedFontId: fontState.selectedFontId,
+                fontVariationSettings: fontState.fontVariationSettings,
                 activePreset: preset.id
             }, () => {
                 this._doApplyFeatures(); // instant apply, no debounce for presets

@@ -155,33 +155,44 @@ describe('resolvePresetFontState (presets, #240)', () => {
 	it('applies the preset font over a font the selection already has', () => {
 		const current = { selectedFont: 'bookmania', selectedFontId: 1 };
 		expect(resolvePresetFontState({ fontFamily: 'gratitude-smooth-script-pro' }, current, fontIdMap))
-			.toEqual({ selectedFont: 'gratitude-smooth-script-pro', selectedFontId: 2 });
+			.toEqual({ selectedFont: 'gratitude-smooth-script-pro', selectedFontId: 2, fontVariationSettings: '' });
 	});
 
 	it('resolves a known family on plain text to its font ID', () => {
 		const current = { selectedFont: '', selectedFontId: 0 };
 		expect(resolvePresetFontState({ fontFamily: "'Gratitude-Smooth-Script-Pro', cursive" }, current, fontIdMap))
-			.toEqual({ selectedFont: 'gratitude-smooth-script-pro', selectedFontId: 2 });
+			.toEqual({ selectedFont: 'gratitude-smooth-script-pro', selectedFontId: 2, fontVariationSettings: '' });
 	});
 
 	it('keeps an unknown family as a name with no font ID', () => {
 		const current = { selectedFont: 'bookmania', selectedFontId: 1 };
 		expect(resolvePresetFontState({ fontFamily: 'Comic Neue' }, current, fontIdMap))
-			.toEqual({ selectedFont: 'Comic Neue', selectedFontId: 0 });
+			.toEqual({ selectedFont: 'Comic Neue', selectedFontId: 0, fontVariationSettings: '' });
 	});
 
 	it('keeps the selection font when the preset names no font', () => {
 		const current = { selectedFont: 'bookmania', selectedFontId: 1 };
 		expect(resolvePresetFontState({ features: ['liga'] }, current, fontIdMap))
-			.toEqual({ selectedFont: 'bookmania', selectedFontId: 1 });
+			.toEqual({ selectedFont: 'bookmania', selectedFontId: 1, fontVariationSettings: '' });
 		expect(resolvePresetFontState({ fontFamily: '' }, current, fontIdMap))
-			.toEqual({ selectedFont: 'bookmania', selectedFontId: 1 });
+			.toEqual({ selectedFont: 'bookmania', selectedFontId: 1, fontVariationSettings: '' });
+	});
+
+	it('clears variable font axes when the preset changes the font', () => {
+		const current = { selectedFont: 'bookmania', selectedFontId: 1, fontVariationSettings: '"wght" 650' };
+		expect(resolvePresetFontState({ fontFamily: 'gratitude-smooth-script-pro' }, current, fontIdMap).fontVariationSettings).toBe('');
+	});
+
+	it('keeps variable font axes when the font stays the same', () => {
+		const current = { selectedFont: 'bookmania', selectedFontId: 1, fontVariationSettings: '"wght" 650' };
+		expect(resolvePresetFontState({ fontFamily: 'bookmania' }, current, fontIdMap).fontVariationSettings).toBe('"wght" 650');
+		expect(resolvePresetFontState({ features: ['liga'] }, current, fontIdMap).fontVariationSettings).toBe('"wght" 650');
 	});
 
 	it('handles a missing font map and missing current state', () => {
 		expect(resolvePresetFontState({ fontFamily: 'bookmania' }, undefined, undefined))
-			.toEqual({ selectedFont: 'bookmania', selectedFontId: 0 });
+			.toEqual({ selectedFont: 'bookmania', selectedFontId: 0, fontVariationSettings: '' });
 		expect(resolvePresetFontState(null, undefined, fontIdMap))
-			.toEqual({ selectedFont: '', selectedFontId: 0 });
+			.toEqual({ selectedFont: '', selectedFontId: 0, fontVariationSettings: '' });
 	});
 });
