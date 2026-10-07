@@ -118,26 +118,39 @@
  * mishandles the caret around ::first-letter in an editable element: Home
  * stops after the first letter and Shift+Home leaves it unselected (core's
  * drop cap turns its ::first-letter off on :focus for the same reason).
- * editor.css renders the same hang there with text-indent and a line
- * margin instead. Inline .typost-styled spans never get a ::first-letter.
+ * editor.css renders the same hang there with text-indent instead.
+ * Inline .typost-styled spans never get a ::first-letter.
  *
- * Fit-to-width lines 2+ carry --typost-line-hang on their own typost-line
- * wrapper and hang through a start margin there: each wrapper is a
- * block-level line on the frontend and an inline run in the editor, and a
- * start margin moves the whole line in both. Line 1 hangs through the
- * block's ::first-letter only (the builders never write a line-1 value).
+ * Fit-to-width blocks use no ::first-letter at all. Every line hangs
+ * through a start margin on its own typost-line wrapper: line 1 from the
+ * block value (--typost-hang, inherited, so a paragraph style drives it),
+ * lines 2+ from --typost-line-hang on the wrapper (the builders never write
+ * a line-1 value). Firefox does not carry a block's ::first-letter into a
+ * block-level child, and frontend lines are display: block, so line 1 got no
+ * hang there while fit measurement still sized it as hung and the line ran
+ * past the right edge (PR review, Firefox 146). A start margin moves the
+ * whole line in every browser, and the same rules serve the editor, where
+ * the wrappers are inline runs. The margin's em is the line's own size, which
+ * is what measureFitLines() subtracts.
  *
  * --typost-hang-on turns both off for centered text and for text aligned to
  * the end side, where moving the first letter would only shift the line.
  * The block writes its alignment as an inline text-align (with a space in
  * the editor's React style, without one in saved markup). Mirrored in JS by
  * initialHangApplies() in utils.js, which fit measurement uses. */
-.wp-block-typost > .typost-styled:not(.typost-block-content)::first-letter {
+.wp-block-typost > .typost-styled:not(.typost-block-content, .typost-fit)::first-letter {
 	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
 }
 
 .wp-block-typost .typost-fit .typost-line {
 	margin-inline-start: calc(var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * -1em);
+}
+
+/* Line 1 is always the first child: save wraps every line, and the editing
+ * value leaves an empty line 1 unwrapped (its <br> is then the first child,
+ * so no other line takes line 1's value). */
+.wp-block-typost .typost-fit > .typost-line:first-child {
+	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
 }
 
 .wp-block-typost > :is(.typost-styled, .typost-block-content):is([style*="text-align:center"], [style*="text-align: center"]) {

@@ -76,21 +76,17 @@
 }
 
 /* Hanging initial (#242) in the editor. style.css hangs the first letter
- * through ::first-letter on the frontend; that pseudo-element is kept off
- * the RichText because Chromium then stops Home after the first letter and
- * leaves it out of Shift+Home. The same hang without it:
- *  - a negative text-indent, which moves only the first line, like the
- *    ::first-letter margin (em is the block's size here and the letter's
- *    size there; they differ only when an inline size wraps the letter);
- *  - in fit-to-width editing, a start margin on line 1's wrapper, the
- *    mechanism lines 2+ already use, so the em is the line's own size.
+ * of a non-fit block through ::first-letter on the frontend; that
+ * pseudo-element is kept off the RichText because Chromium then stops Home
+ * after the first letter and leaves it out of Shift+Home. The same hang
+ * without it is a negative text-indent, which moves only the first line,
+ * like the ::first-letter margin (em is the block's size here and the
+ * letter's size there; they differ only when an inline size wraps the
+ * letter). Fit-to-width lines need nothing here: style.css hangs every line
+ * with a start margin on its wrapper, in the editor and on the frontend.
  * Gated on .typost-hang, which edit.js adds only when the block hangs, so a
  * theme's own text-indent on other blocks is left alone. --typost-hang-on
  * comes from the alignment rules in style.css. */
 .wp-block-typost > .typost-block-content.typost-hang:not(.typost-fit) {
 	text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
-}
-
-.wp-block-typost > .typost-block-content.typost-hang.typost-fit-editing > .typost-line:first-child {
-	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
 }

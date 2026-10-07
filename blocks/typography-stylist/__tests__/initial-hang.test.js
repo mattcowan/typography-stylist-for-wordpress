@@ -60,6 +60,11 @@ describe('normalizeHang', () => {
 		expect(normalizeHang(5)).toBe(INITIAL_HANG_MAX);
 		expect(normalizeHang('1e3')).toBe(INITIAL_HANG_MAX);
 	});
+
+	test('matches the PHP twin on overflow and surrounding whitespace', () => {
+		expect(normalizeHang('1e999')).toBe(0);
+		expect(normalizeHang(' 0.15 ')).toBe(0.15);
+	});
 });
 
 describe('initialHangApplies', () => {

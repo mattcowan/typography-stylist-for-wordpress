@@ -278,6 +278,31 @@
 	}
 
 	/**
+	 * Properties to store when an editor saves over an existing style
+	 * (Update Style) or saves a variant of it (Save as New).
+	 *
+	 * Some properties are block-level only, and the inline editor does not
+	 * report them in its state: initialHang (#242) works through
+	 * ::first-letter, which cannot reach an inline span. The REST update
+	 * replaces the whole properties object, so building from the inline
+	 * state alone deleted the style's hang from every block that used it
+	 * (PR review). A key the editor does not report is carried from the
+	 * base style; a key it reports, including 0, is the editor's value.
+	 *
+	 * @param {Object} state          Editor state from typost_current_editor_state.
+	 * @param {Object} baseProperties The active style's stored properties.
+	 * @return {Object} Properties for the REST request.
+	 */
+	function buildPropertiesForStyleSave(state, baseProperties) {
+		var properties = buildPropertiesFromState(state);
+		var base = baseProperties || {};
+		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
+			properties.initialHang = normalizeHang(base.initialHang);
+		}
+		return properties;
+	}
+
+	/**
 	 * Normalize a stored style's properties for the apply event.
 	 *
 	 * Core's typost-apply-block-properties handlers only update properties
@@ -996,6 +1021,7 @@
 		resolveBrowserCursorKey: resolveBrowserCursorKey,
 		findTypeAheadMatch: findTypeAheadMatch,
 		buildPropertiesFromState: buildPropertiesFromState,
+		buildPropertiesForStyleSave: buildPropertiesForStyleSave,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,

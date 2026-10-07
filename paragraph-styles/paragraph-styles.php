@@ -1349,11 +1349,17 @@ final class Typost_Paragraph_Styles {
 	 * @return float Hang in em, 0 when off.
 	 */
 	public static function normalize_hang( $value ) {
+		// Trim first: PHP 7.4's is_numeric() rejects trailing whitespace,
+		// PHP 8 and the JS twins accept it.
+		if ( is_string( $value ) ) {
+			$value = trim( $value );
+		}
 		if ( ! is_numeric( $value ) ) {
 			return 0;
 		}
 		$hang = (float) $value;
-		if ( $hang <= 0 || is_nan( $hang ) ) {
+		// is_finite: '1e999' is INF here but Infinity (→ 0) in the JS twins
+		if ( $hang <= 0 || ! is_finite( $hang ) ) {
 			return 0;
 		}
 		return round( min( $hang, self::HANG_MAX ), 3 );

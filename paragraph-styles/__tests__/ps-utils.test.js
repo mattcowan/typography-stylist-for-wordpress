@@ -12,6 +12,7 @@ const {
 	filterParagraphStyles,
 	BROWSER_PAGE_SIZE,
 	buildPropertiesFromState,
+	buildPropertiesForStyleSave,
 	buildApplyEventDetail,
 	normalizeApplyProperties,
 	buildStylePreviewStyle,
@@ -881,5 +882,25 @@ describe('hanging initial (#242)', () => {
 		);
 		expect(buildStyleCssBlock({ id: 5, properties: { initialHang: 1 } })).toContain('--typost-hang: 1;');
 		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, initialHang: 0 } })).not.toContain('--typost-hang');
+	});
+});
+
+describe('buildPropertiesForStyleSave (Update Style / Save as New, #242 review)', () => {
+	const base = { fontId: 1, fontWeight: '400', initialHang: 0.2 };
+
+	test('an editor without the key (inline) keeps the style hang', () => {
+		const props = buildPropertiesForStyleSave({ fontId: 1, fontWeight: '700' }, base);
+		expect(props.initialHang).toBe(0.2);
+		expect(props.fontWeight).toBe('700');
+	});
+
+	test('an editor that reports the key wins, including 0', () => {
+		expect(buildPropertiesForStyleSave({ fontId: 1, initialHang: 0.35 }, base).initialHang).toBe(0.35);
+		expect(buildPropertiesForStyleSave({ fontId: 1, initialHang: 0 }, base)).not.toHaveProperty('initialHang');
+	});
+
+	test('no base style, or a base without a hang, adds nothing', () => {
+		expect(buildPropertiesForStyleSave({ fontId: 1 }, null)).not.toHaveProperty('initialHang');
+		expect(buildPropertiesForStyleSave({ fontId: 1 }, { fontId: 1 })).not.toHaveProperty('initialHang');
 	});
 });

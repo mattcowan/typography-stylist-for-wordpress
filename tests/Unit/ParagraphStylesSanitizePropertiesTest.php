@@ -95,10 +95,12 @@ class ParagraphStylesSanitizePropertiesTest extends TestCase {
         $this->assertSame(0.124, $this->sanitize(['initialHang' => 0.1235])['initialHang']);
         $this->assertSame(1.0, $this->sanitize(['initialHang' => 5])['initialHang']);
         $this->assertSame(0.001, $this->sanitize(['initialHang' => 0.0005])['initialHang']);
+        // Trailing whitespace is accepted on PHP 7.4 too, like PHP 8 and the JS twins
+        $this->assertSame(0.15, $this->sanitize(['initialHang' => ' 0.15 '])['initialHang']);
     }
 
     public function test_no_hang_is_never_stored() {
-        foreach (['', 0, '0', -0.2, 'abc', '0x1A', 0.0004, true, null] as $raw) {
+        foreach (['', 0, '0', -0.2, 'abc', '0x1A', 0.0004, true, null, '1e999'] as $raw) {
             $this->assertArrayNotHasKey('initialHang', $this->sanitize(['initialHang' => $raw]), var_export($raw, true));
         }
     }

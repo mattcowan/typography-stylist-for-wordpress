@@ -50,6 +50,7 @@
 	var resolveBrowserCursorKey  = utils.resolveBrowserCursorKey;
 	var findTypeAheadMatch       = utils.findTypeAheadMatch;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
+	var buildPropertiesForStyleSave = utils.buildPropertiesForStyleSave;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
 
@@ -383,7 +384,8 @@
 			setIsSaving(true);
 
 			var state = getCurrentState();
-			var properties = buildPropertiesFromState(state);
+			// Keeps block-only properties (the hang) the inline editor cannot report
+			var properties = buildPropertiesForStyleSave(state, activeStyle.properties);
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
@@ -410,7 +412,8 @@
 			setIsSaving(true);
 
 			var state = getCurrentState();
-			var properties = buildPropertiesFromState(state);
+			// A variant of the active style keeps its block-only properties too
+			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null);
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',
@@ -437,7 +440,7 @@
 			}).catch(function() {
 				setIsSaving(false);
 			});
-		}, [saveAsNewName, currentStyles, editorSource]);
+		}, [saveAsNewName, currentStyles, editorSource, activeStyle]);
 
 		// Handle "Detach Style" — remove class association, keep inline styles
 		var onDetachStyle = useCallback(function() {
