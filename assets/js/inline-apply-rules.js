@@ -141,8 +141,36 @@ function buildConvertBlockAttributes(args) {
 	return attrs;
 }
 
+var resolveFontIdFromFamily = require('./font-options.js').resolveFontIdFromFamily;
+
+/**
+ * The font state a preset leaves in the inline modal.
+ *
+ * A preset that names a font sets both the family and the font ID, so the
+ * apply path (which prefers the ID) writes the preset font. A preset with no
+ * font keeps the selection font.
+ *
+ * @param {Object|null} preset    Preset ({ fontFamily?, features, ... }).
+ * @param {Object}      current   Current { selectedFont, selectedFontId }.
+ * @param {Object}      fontIdMap Map of font_id -> { family, ... } from buildFontOptions().
+ * @return {{selectedFont: string, selectedFontId: number}} Font state to set.
+ */
+function resolvePresetFontState(preset, current, fontIdMap) {
+	var state = current || {};
+	var family = preset && preset.fontFamily ? String(preset.fontFamily) : '';
+	if (!family) {
+		return { selectedFont: state.selectedFont || '', selectedFontId: state.selectedFontId || 0 };
+	}
+	var fontId = resolveFontIdFromFamily(family, fontIdMap);
+	if (fontId && fontIdMap[fontId]) {
+		return { selectedFont: fontIdMap[fontId].family, selectedFontId: fontId };
+	}
+	return { selectedFont: family, selectedFontId: 0 };
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
-	buildConvertBlockAttributes: buildConvertBlockAttributes
+	buildConvertBlockAttributes: buildConvertBlockAttributes,
+	resolvePresetFontState: resolvePresetFontState
 };

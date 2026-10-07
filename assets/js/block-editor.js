@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -2705,9 +2705,11 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         applyPreset(preset) {
             // Presets define a complete look — wholesale apply is intended
             this._resetPendingChanges();
+            const fontState = resolvePresetFontState(preset, this.state, this.getFontIdMap());
             this.setState({
                 selectedFeatures: preset.features,
-                selectedFont: preset.fontFamily || '',
+                selectedFont: fontState.selectedFont,
+                selectedFontId: fontState.selectedFontId,
                 activePreset: preset.id
             }, () => {
                 this._doApplyFeatures(); // instant apply, no debounce for presets
