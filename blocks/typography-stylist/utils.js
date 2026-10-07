@@ -2222,6 +2222,10 @@ export function buildQftEditorState(s) {
 		// report the block's style as "active" for text that carries none.
 		selectionParagraphStyleId: parseInt(source.selectionStyleId, 10) || 0,
 		fontVariationSettings: source.fontVariationSettings || '',
+		// Hanging initial (#242), block-level only: ::first-letter cannot
+		// reach an inline span, so the inline editor never reports this key
+		// and the Paragraph Styles diff skips it when absent.
+		initialHang: normalizeHang(source.initialHang),
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,
 		content: source.content || '',
@@ -3136,18 +3140,199 @@ export function buildFitFontSize(ratio, fitMaxSize) {
  * @param {string} content - Serialized RichText content
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {number[]} [fitLineHangs] - Per-line hangs in em (index = visual line; index 0 is unused, see buildFitLineOpenTag)
  * @return {string} HTML with each line wrapped in span.typost-line
  */
-export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize) {
+export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs) {
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
 
-	return lines.map((lineHtml, i) => {
-		const size = buildFitFontSize(sizes[i], fitMaxSize);
-		return size
-			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
-			: `<span class="typost-line">${lineHtml}</span>`;
-	}).join('');
+	return lines.map((lineHtml, i) => (
+		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`
+	)).join('');
+}
+
+/**
+ * Largest hanging-initial value the controls and the sanitizers accept, in
+ * em. A swash rarely reaches past half the letter's size; one full em leaves
+ * room for script capitals without letting a typo throw the text off screen.
+ */
+export const INITIAL_HANG_MAX = 1;
+
+// Decimal number string, as PHP is_numeric() reads one (surrounding whitespace allowed)
+const NUMERIC_STRING = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/;
+
+/**
+ * Normalize a hanging-initial value (#242) to a number in em.
+ *
+ * Non-numeric, negative and empty input means "no hang" (0). Values are
+ * capped at INITIAL_HANG_MAX and rounded to three decimals, so the value
+ * written into markup and paragraph-style CSS is byte-stable (the PHP
+ * sanitizer and CSS generator apply the same rounding).
+ *
+ * @param {*} value - Raw value (attribute, style property, control input)
+ * @return {number} Hang in em, 0 when off
+ */
+export function normalizeHang(value) {
+	// Accept what PHP is_numeric() accepts (the PHP sanitizer is the twin):
+	// Number() alone would read '0x1A' as 26 and true as 1.
+	if (typeof value === 'string' ? !NUMERIC_STRING.test(value) : typeof value !== 'number') {
+		return 0;
+	}
+	const n = Number(value);
+	// Below 0.0005 rounds to 0, and String() would print such a value in
+	// exponent form ('1e-7'), which the textual shift below cannot read.
+	if (!isFinite(n) || n < 0.0005) {
+		return 0;
+	}
+	// Shift the decimal point textually rather than multiplying by 1000, so
+	// a half-step such as 0.1235 rounds up as PHP's round() does (the
+	// multiplication gives 123.49999…). Same form as roundLineHeight() in
+	// the Paragraph Styles module.
+	return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
+}
+
+/**
+ * Whether a hanging initial shows for a given text alignment.
+ *
+ * The hang moves the first letter past the start edge, which only reads as
+ * optical alignment when the text is aligned to that edge. style.css turns
+ * it off (--typost-hang-on: 0) for centered text and for text aligned to
+ * the end side; this is the JS mirror, used so fit-to-width measurement
+ * subtracts the hang only when the CSS actually applies it.
+ *
+ * @param {string} textAlign - Block textAlign attribute ('' / undefined = start)
+ * @param {boolean} isRtl - Whether the editor is right-to-left
+ * @return {boolean} True when the hang applies
+ */
+export function initialHangApplies(textAlign, isRtl) {
+	if (textAlign === 'center') {
+		return false;
+	}
+	return textAlign !== (isRtl ? 'left' : 'right');
+}
+
+/**
+ * The hang that applies to one fit-to-width line, in em.
+ *
+ * Line 1 hangs through ::first-letter on the block element, from the block
+ * value (initialHang, the same value a paragraph style carries). Lines 2+
+ * hang through a margin on their own typost-line wrapper, from fitLineHangs.
+ * Entry 0 of fitLineHangs is ignored, so line 1 has one source only.
+ *
+ * @param {number} index - Visual line index
+ * @param {number} initialHang - Block hang (line 1)
+ * @param {number[]} fitLineHangs - Per-line hangs (lines 2+)
+ * @param {boolean} applies - Result of initialHangApplies()
+ * @return {number} Hang in em, 0 when none
+ */
+export function resolveFitLineHang(index, initialHang, fitLineHangs, applies) {
+	if (!applies) {
+		return 0;
+	}
+	if (index === 0) {
+		return normalizeHang(initialHang);
+	}
+	return normalizeHang(Array.isArray(fitLineHangs) ? fitLineHangs[index] : 0);
+}
+
+/**
+ * Fit-to-width ratio for a line that hangs its first letter.
+ *
+ * A hang of h em pulls the line start left by h × font size, so the line
+ * must be (width − h × size) wide at the reference size for its ink to end
+ * at the right edge while the letter stems align with the left edge.
+ *
+ * @param {number} referenceSize - Font size the line was measured at (px)
+ * @param {number} measuredWidth - Natural width of the line at that size (px)
+ * @param {number} hang - Hang in em (0 = none)
+ * @return {number|null} Ratio as computeFitRatio() returns it
+ */
+export function computeHungFitRatio(referenceSize, measuredWidth, hang) {
+	return computeFitRatio(referenceSize, measuredWidth - (normalizeHang(hang) * referenceSize));
+}
+
+/**
+ * Return a copy of fitLineHangs with one line's hang changed.
+ *
+ * Entries are normalized, index 0 stays 0 (line 1 uses initialHang), and
+ * trailing zeros are dropped so a block whose hangs are all reset stores the
+ * attribute default ([]) instead of a row of zeros.
+ *
+ * @param {number[]} fitLineHangs - Current per-line hangs
+ * @param {number} index - Visual line index to change
+ * @param {*} value - New hang in em
+ * @return {number[]} New array
+ */
+export function setFitLineHang(fitLineHangs, index, value) {
+	const next = Array.isArray(fitLineHangs) ? fitLineHangs.map(normalizeHang) : [];
+	if (!(index >= 0)) {
+		return next;
+	}
+	while (next.length <= index) {
+		next.push(0);
+	}
+	next[index] = index > 0 ? normalizeHang(value) : 0;
+	next[0] = 0;
+	while (next.length && next[next.length - 1] === 0) {
+		next.pop();
+	}
+	return next;
+}
+
+/**
+ * Short plain-text start of each visual line, for the per-line hang
+ * controls' labels ("Line 2: Moonlit…"). Empty lines give ''.
+ *
+ * @param {string} content - Serialized RichText content (br-model)
+ * @param {number} [maxChars=16] - Characters kept before the ellipsis
+ * @return {string[]} One label fragment per visual line
+ */
+export function buildFitLinePreviews(content, maxChars) {
+	const limit = maxChars > 0 ? maxChars : 16;
+	return splitContentIntoLines(content).map((lineHtml) => {
+		let text;
+		try {
+			const doc = new DOMParser().parseFromString(`<div>${lineHtml}</div>`, 'text/html');
+			text = doc.body.textContent || '';
+		} catch (error) {
+			text = String(lineHtml).replace(/<[^>]*>/g, '');
+		}
+		text = text.replace(/\s+/g, ' ').trim();
+		return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text;
+	});
+}
+
+/**
+ * Opening tag for one typost-line wrapper, shared by the frontend markup
+ * (buildFitLinesHtml) and the editing value (wrapFitLines) so the two can
+ * never drift apart.
+ *
+ * Lines without a usable ratio and without a hang keep the bare tag, and a
+ * line with a ratio but no hang keeps exactly `style="font-size:…"`, so fit
+ * blocks saved before hangs existed serialize byte-identically (block
+ * validation). Line 1 (index 0) never carries a hang here; it hangs through
+ * ::first-letter on the block element.
+ *
+ * @param {number} ratio - Per-line ratio (fitLineSizes entry)
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {number[]} fitLineHangs - Per-line hangs in em
+ * @param {number} index - Visual line index
+ * @return {string} Opening span tag
+ */
+export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index) {
+	const declarations = [];
+	const size = buildFitFontSize(ratio, fitMaxSize);
+	if (size) {
+		declarations.push(`font-size:${size}`);
+	}
+	const hang = index > 0 && Array.isArray(fitLineHangs) ? normalizeHang(fitLineHangs[index]) : 0;
+	if (hang > 0) {
+		declarations.push(`--typost-line-hang:${hang}`);
+	}
+	return declarations.length
+		? `<span class="typost-line" style="${declarations.join(';')}">`
+		: '<span class="typost-line">';
 }
 
 /**
@@ -3167,9 +3352,10 @@ export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize) {
  * @param {string} content - Flat serialized RichText content (br-model)
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {number[]} [fitLineHangs] - Per-line hangs in em (lines 2+)
  * @return {string} Wrapped editing value for RichText
  */
-export function wrapFitLines(content, fitLineSizes, fitMaxSize) {
+export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) {
 	if (!content) {
 		return '';
 	}
@@ -3180,10 +3366,7 @@ export function wrapFitLines(content, fitLineSizes, fitMaxSize) {
 		if (!lineHtml) {
 			return '';
 		}
-		const size = buildFitFontSize(sizes[i], fitMaxSize);
-		return size
-			? `<span class="typost-line" style="font-size:${size}">${lineHtml}</span>`
-			: `<span class="typost-line">${lineHtml}</span>`;
+		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`;
 	}).join('<br>');
 }
 
@@ -3819,6 +4002,9 @@ export function stylePropertyOverrides(attrs, styleProps) {
 	}
 	if ((a.fontVariationSettings || '') !== (s.fontVariationSettings || '')) {
 		overrides.fontVariationSettings = true;
+	}
+	if (normalizeHang(a.initialHang) !== normalizeHang(s.initialHang)) {
+		overrides.initialHang = true;
 	}
 	return overrides;
 }

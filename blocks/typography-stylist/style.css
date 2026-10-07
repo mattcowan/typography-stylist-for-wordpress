@@ -103,3 +103,52 @@
 .wp-block-typost .typost-fit .typost-line [data-fontsize] {
 	font-size: inherit !important;
 }
+
+/* Hanging initial (#242)
+ * Moves the first letter past the start edge by --typost-hang em, so a
+ * swash hangs into the margin while the letter's main shape aligns with the
+ * text edge. The value comes from the block's inline style or from a
+ * paragraph style's class; an inline style cannot reach ::first-letter,
+ * which is why both write a custom property. ::first-letter adds no
+ * element, so the word is never split.
+ *
+ * Frontend only: the visible copy is the direct .typost-styled child. The
+ * editor's RichText (.typost-block-content, which also carries
+ * .typost-styled under a paragraph style) is excluded because Chromium
+ * mishandles the caret around ::first-letter in an editable element: Home
+ * stops after the first letter and Shift+Home leaves it unselected (core's
+ * drop cap turns its ::first-letter off on :focus for the same reason).
+ * editor.css renders the same hang there with text-indent and a line
+ * margin instead. Inline .typost-styled spans never get a ::first-letter.
+ *
+ * Fit-to-width lines 2+ carry --typost-line-hang on their own typost-line
+ * wrapper and hang through a start margin there: each wrapper is a
+ * block-level line on the frontend and an inline run in the editor, and a
+ * start margin moves the whole line in both. Line 1 hangs through the
+ * block's ::first-letter only (the builders never write a line-1 value).
+ *
+ * --typost-hang-on turns both off for centered text and for text aligned to
+ * the end side, where moving the first letter would only shift the line.
+ * The block writes its alignment as an inline text-align (with a space in
+ * the editor's React style, without one in saved markup). Mirrored in JS by
+ * initialHangApplies() in utils.js, which fit measurement uses. */
+.wp-block-typost > .typost-styled:not(.typost-block-content)::first-letter {
+	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
+}
+
+.wp-block-typost .typost-fit .typost-line {
+	margin-inline-start: calc(var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * -1em);
+}
+
+.wp-block-typost > :is(.typost-styled, .typost-block-content):is([style*="text-align:center"], [style*="text-align: center"]) {
+	--typost-hang-on: 0;
+}
+
+/* Separate rules: a browser without :dir() drops only these two. */
+.wp-block-typost > :is(.typost-styled, .typost-block-content):dir(ltr):is([style*="text-align:right"], [style*="text-align: right"]) {
+	--typost-hang-on: 0;
+}
+
+.wp-block-typost > :is(.typost-styled, .typost-block-content):dir(rtl):is([style*="text-align:left"], [style*="text-align: left"]) {
+	--typost-hang-on: 0;
+}

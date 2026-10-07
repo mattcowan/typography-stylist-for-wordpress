@@ -7,6 +7,7 @@ const {
 	findFontName,
 	isStyleModified,
 	roundLineHeight,
+	normalizeHang,
 	resolveBrowserActiveStyleId,
 	filterParagraphStyles,
 	BROWSER_PAGE_SIZE,
@@ -286,6 +287,7 @@ describe('normalizeApplyProperties', () => {
 			lineHeight: 0,
 			features: [],
 			fontVariationSettings: '',
+			initialHang: 0,
 		});
 	});
 
@@ -309,6 +311,7 @@ describe('normalizeApplyProperties', () => {
 			lineHeight: 1.4,
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
+			initialHang: 0.2,
 		})).toEqual({
 			fontId: 15,
 			fontWeight: 'bold',
@@ -321,6 +324,7 @@ describe('normalizeApplyProperties', () => {
 			lineHeight: 1.4,
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
+			initialHang: 0.2,
 		});
 	});
 
@@ -341,6 +345,7 @@ describe('normalizeApplyProperties', () => {
 			lineHeight: 0,
 			features: [],
 			fontVariationSettings: '',
+			initialHang: 0,
 		});
 	});
 
@@ -365,6 +370,7 @@ describe('buildApplyEventDetail', () => {
 				lineHeight: 0,
 				features: [],
 				fontVariationSettings: '',
+				initialHang: 0,
 			},
 			paragraphStyleId: 3,
 			styleClass: 'typost-ps-3',
@@ -830,5 +836,50 @@ describe('filterParagraphStyles (browser search)', () => {
 
 	test('the page size is 24', () => {
 		expect(BROWSER_PAGE_SIZE).toBe(24);
+	});
+});
+
+describe('hanging initial (#242)', () => {
+	test('normalizeHang matches the core helper and PHP is_numeric()/round()', () => {
+		expect(normalizeHang(0.12)).toBe(0.12);
+		expect(normalizeHang(0.1235)).toBe(0.124);
+		expect(normalizeHang('0.25')).toBe(0.25);
+		expect(normalizeHang(5)).toBe(1);
+		[undefined, null, '', 0, -1, 'abc', '0x1A', true, 1e-7].forEach((value) => {
+			expect(normalizeHang(value)).toBe(0);
+		});
+	});
+
+	test('capture stores a hang and leaves out 0', () => {
+		expect(buildPropertiesFromState({ initialHang: 0.15 }).initialHang).toBe(0.15);
+		expect(buildPropertiesFromState({ initialHang: 0 })).not.toHaveProperty('initialHang');
+		expect(buildPropertiesFromState({})).not.toHaveProperty('initialHang');
+	});
+
+	test('a different hang marks the style modified', () => {
+		expect(isStyleModified({ initialHang: 0.2 }, { initialHang: 0.1 })).toBe(true);
+		expect(isStyleModified({ initialHang: 0 }, { initialHang: 0.1 })).toBe(true);
+		expect(isStyleModified({ initialHang: 0.1 }, { initialHang: 0.1 })).toBe(false);
+	});
+
+	test('an editor that does not report a hang (the inline editor) is not modified by it', () => {
+		expect(isStyleModified({}, { initialHang: 0.1 })).toBe(false);
+	});
+
+	test('apply resets a lingering hang when the style has none', () => {
+		expect(normalizeApplyProperties({}).initialHang).toBe(0);
+		expect(normalizeApplyProperties({ initialHang: 0.3 }).initialHang).toBe(0.3);
+	});
+
+	test('the CSS block carries the hang as a custom property, PHP-formatted', () => {
+		// Expected string shared with ParagraphStylesCssSelectorTest.php
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, initialHang: 0.12 } })).toBe(
+			'.typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id="5"][data-style-id][data-style-id][data-style-id][data-style-id] {\n' +
+			'    font-family: var(--font-9);\n' +
+			'    --typost-hang: 0.12;\n' +
+			'}'
+		);
+		expect(buildStyleCssBlock({ id: 5, properties: { initialHang: 1 } })).toContain('--typost-hang: 1;');
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, initialHang: 0 } })).not.toContain('--typost-hang');
 	});
 });

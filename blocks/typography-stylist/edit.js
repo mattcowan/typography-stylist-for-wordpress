@@ -2,7 +2,7 @@
  * Typography Stylist Block - Editor Component
  */
 
-import { __ } from '@wordpress/i18n';
+import { __, sprintf, isRTL } from '@wordpress/i18n';
 import {
 	useBlockProps,
 	InspectorControls,
@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -160,6 +160,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		fontSizeMax,
 		fitLineSizes,
 		fitMaxSize,
+		initialHang,
+		fitLineHangs,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -437,6 +439,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// fitLineSizes is deliberately NOT settable here: it's
 				// content-specific and re-measured by the receiving block
 				if (props.fitMaxSize !== undefined) newAttrs.fitMaxSize = props.fitMaxSize;
+				// fitLineHangs is content-specific like fitLineSizes and never set here
+				if (props.initialHang !== undefined) newAttrs.initialHang = normalizeHang(props.initialHang);
 				if (props.letterSpacing !== undefined) newAttrs.letterSpacing = props.letterSpacing;
 				if (props.lineHeight !== undefined) newAttrs.lineHeight = props.lineHeight;
 				if (props.features !== undefined) newAttrs.features = props.features;
@@ -581,7 +585,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	qftStateRef.current = {
 		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, styleClass,
-		fontVariationSettings, layeredConfigId: attributes.layeredConfigId || 0,
+		fontVariationSettings, initialHang, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
 		// inheritedFontId is filled in below, once fontIdMap exists
@@ -685,7 +689,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const measureFitPropsRef = useRef({});
 	measureFitPropsRef.current = {
 		content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing,
-		features, fontVariationSettings, fitLineSizes, setAttributes
+		features, fontVariationSettings, fitLineSizes, setAttributes,
+		initialHang, fitLineHangs, textAlign
 	};
 
 	const measureFitLines = () => {
@@ -726,7 +731,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 		try {
 			const lines = splitContentIntoLines(p.content);
-			const ratios = lines.map(lineHtml => {
+			const ratios = lines.map((lineHtml, i) => {
 				node.innerHTML = lineHtml;
 				// Inline font sizes are ignored in fit mode — mirror the
 				// frontend neutralization rule so measured widths match.
@@ -734,7 +739,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// features and variation settings all affect the width.
 				node.querySelectorAll('[data-fontsize]').forEach(s => { s.style.fontSize = ''; });
 				const width = node.getBoundingClientRect().width;
-				return computeFitRatio(100, width);
+				// A hung line starts left of the edge, so it must fill the
+				// width plus its hang (#242). Same alignment test as the CSS.
+				const hang = resolveFitLineHang(i, p.initialHang, p.fitLineHangs, initialHangApplies(p.textAlign, isRTL()));
+				return computeHungFitRatio(100, width, hang);
 			});
 
 			// Skip-when-equal: prevents effect loops and undo churn
@@ -773,7 +781,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	useEffect(() => {
 		if (fontSize !== 'fit') return;
 		debouncedMeasureFit();
-	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
 
 	// Measure after fonts are ready, and re-measure on late font loads
 	useEffect(() => {
@@ -810,8 +818,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
 	// the render branch ever sees the wrapped form.
 	const wrappedFitValue = useMemo(
-		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize) : ''),
-		[fontSize, content, fitLineSizes, fitMaxSize]
+		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) : ''),
+		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs]
+	);
+
+	// Labels for the per-line hang controls (fit-to-width only)
+	const hangLinePreviews = useMemo(
+		() => (fontSize === 'fit' ? buildFitLinePreviews(content) : []),
+		[fontSize, content]
 	);
 
 	// The range QFT property applies operate on: the LIVE selection when it's
@@ -3399,7 +3413,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			fontSizeMin: 16,
 			fontSizePreferred: 32,
 			fontSizeMax: 64,
-			fitMaxSize: 0
+			fitMaxSize: 0,
+			initialHang: 0,
+			fitLineHangs: []
 		});
 
 		setShowInlineResetConfirm(false);
@@ -3440,7 +3456,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			const props = psUtils && psUtils.normalizeApplyProperties ? psUtils.normalizeApplyProperties(style.properties) : style.properties;
 			const { fontIdMap: idMap } = blockPropsRef.current || {};
 			const synced = {};
-			['fontId', 'fontWeight', 'fontStyle', 'fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize', 'letterSpacing', 'lineHeight', 'features', 'fontVariationSettings'].forEach((key) => {
+			['fontId', 'fontWeight', 'fontStyle', 'fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize', 'letterSpacing', 'lineHeight', 'features', 'fontVariationSettings', 'initialHang'].forEach((key) => {
 				if (props[key] !== undefined) {
 					synced[key] = props[key];
 				}
@@ -3474,12 +3490,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	}, [styleClass, paragraphStylesVersion, setAttributes]);
 	const styleOverrides = useMemo(
 		() => activeParagraphStyle
-			? stylePropertyOverrides({ fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings }, activeParagraphStyle.properties)
+			? stylePropertyOverrides({ fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang }, activeParagraphStyle.properties)
 			: null,
-		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings]
+		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang]
 	);
 	const rendersInline = (key) => !styleOverrides || !!styleOverrides[key];
-	const contentClassName = 'typost-block-content' + (activeParagraphStyle ? ` typost-styled ${styleClass}` : '');
+	// typost-hang gates the editor-only hang rules in editor.css (#242). The
+	// attribute is the working copy, equal to the style's value unless edited.
+	const hangClass = normalizeHang(initialHang) > 0 ? ' typost-hang' : '';
+	const contentClassName = 'typost-block-content' + (activeParagraphStyle ? ` typost-styled ${styleClass}` : '') + hangClass;
 
 	// Build inline style for preview
 	const buildStyle = () => {
@@ -3544,6 +3563,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 		if (textAlign) {
 			styles.textAlign = textAlign;
+		}
+
+		// Hanging initial (#242): a custom property, read by the
+		// ::first-letter rule in style.css. With a paragraph style active the
+		// class supplies it; an override is written even at 0, so turning the
+		// hang off on one block cancels the style's value while previewing.
+		if (rendersInline('initialHang') && (styleOverrides || normalizeHang(initialHang) > 0)) {
+			styles['--typost-hang'] = String(normalizeHang(initialHang));
 		}
 
 		return styles;
@@ -4682,6 +4709,64 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					/>
 				</PanelBody>
 
+				<PanelBody title={__('First Letter Hang', 'typography-stylist')} initialOpen={false}>
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px' }}>
+						{fontSize === 'fit'
+							? __('Moves the first letter of a line into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Each line has its own value.', 'typography-stylist')
+							: __('Moves the first letter into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Only the first line hangs.', 'typography-stylist')}
+					</p>
+					<RangeControl
+						label={fontSize === 'fit' ? sprintf(
+							/* translators: 1: line number, 2: start of the line's text. */
+							__('Line %1$d: %2$s', 'typography-stylist'),
+							1,
+							hangLinePreviews[0] || ''
+						) : __('First letter', 'typography-stylist')}
+						value={normalizeHang(initialHang)}
+						onChange={(value) => setAttributes({ initialHang: normalizeHang(value) })}
+						min={0}
+						max={INITIAL_HANG_MAX}
+						step={0.01}
+						help={normalizeHang(initialHang) === 0 ? __('Off', 'typography-stylist') : `${normalizeHang(initialHang)}em`}
+						allowReset
+						resetFallbackValue={0}
+					/>
+					{fontSize === 'fit' && hangLinePreviews.map((preview, i) => {
+						// Line 1 is the control above; empty lines have no letter to hang
+						if (i === 0 || !preview) {
+							return null;
+						}
+						const lineHang = normalizeHang(Array.isArray(fitLineHangs) ? fitLineHangs[i] : 0);
+						return (
+							<RangeControl
+								key={i}
+								label={sprintf(
+									/* translators: 1: line number, 2: start of the line's text. */
+									__('Line %1$d: %2$s', 'typography-stylist'),
+									i + 1,
+									preview
+								)}
+								value={lineHang}
+								onChange={(value) => setAttributes({ fitLineHangs: setFitLineHang(fitLineHangs, i, value) })}
+								min={0}
+								max={INITIAL_HANG_MAX}
+								step={0.01}
+								help={lineHang === 0 ? __('Off', 'typography-stylist') : `${lineHang}em`}
+								allowReset
+								resetFallbackValue={0}
+							/>
+						);
+					})}
+					{!initialHangApplies(textAlign, isRTL()) && (
+						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
+							{__('The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it.', 'typography-stylist')}
+						</p>
+					)}
+					<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: 0 }}>
+						{__('The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page.', 'typography-stylist')}
+					</p>
+				</PanelBody>
+
 				{/* Extension hook point: before features (e.g., Glyphs panel) */}
 				<div className="typost-hook-point" data-hook="typost_inspector_before_features" ref={(el) => {
 					if (el && !el._hooked) {
@@ -4791,7 +4876,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
 						placeholder={__('Add text with advanced typography…', 'typography-stylist')}
 						style={buildStyle()}
-						className={`typost-block-content typost-styled typost-fit typost-fit-editing${activeParagraphStyle ? ` ${styleClass}` : ''}`}
+						className={`typost-block-content typost-styled typost-fit typost-fit-editing${activeParagraphStyle ? ` ${styleClass}` : ''}${hangClass}`}
 					/>
 				) : (
 					<RichText

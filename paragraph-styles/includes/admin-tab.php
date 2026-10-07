@@ -172,6 +172,14 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 				if ( ! empty( $props['lineHeight'] ) ) {
 					$line_height_display = (string) $props['lineHeight'];
 				}
+
+				// First letter hang (#242)
+				$hang_display = '';
+				$hang_value   = isset( $props['initialHang'] ) ? Typost_Paragraph_Styles::normalize_hang( $props['initialHang'] ) : 0;
+				if ( $hang_value > 0 ) {
+					/* translators: %s: hang in em */
+					$hang_display = sprintf( __( '%sem', 'typost-paragraph-styles' ), $hang_value );
+				}
 			?>
 				<div class="typost-ps-style-card" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 					<div class="typost-ps-style-card-header">
@@ -222,6 +230,12 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 									<strong><?php esc_html_e( 'Line Height:', 'typost-paragraph-styles' ); ?></strong>
 									<?php echo esc_html( $line_height_display ); ?>
 								<?php endif; ?>
+							</span>
+						<?php endif; ?>
+						<?php if ( $hang_display ) : ?>
+							<span class="typost-ps-detail">
+								<strong><?php esc_html_e( 'First Letter Hang:', 'typost-paragraph-styles' ); ?></strong>
+								<?php echo esc_html( $hang_display ); ?>
 							</span>
 						<?php endif; ?>
 					</div>

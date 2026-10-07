@@ -7,7 +7,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-05T19:53:10+00:00\n"
+"POT-Creation-Date: 2026-10-07T19:47:42+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-paragraph-styles\n"
@@ -18,7 +18,7 @@ msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 
 msgstr ""
 
 #: includes/admin-tab.php:89
-#: paragraph-styles.php:761
+#: paragraph-styles.php:773
 #: assets/js/editor.js:952
 #: assets/js/editor.js:1309
 msgid "Paragraph Styles"
@@ -75,91 +75,97 @@ msgstr ""
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
 #: includes/admin-tab.php:158
-#: assets/js/lib/ps-utils.js:369
+#: assets/js/lib/ps-utils.js:404
 #, php-format,js-format
 msgid "%spx"
 msgstr ""
 
 #. translators: %s: letter spacing in em
+#. translators: %s: hang in em
 #: includes/admin-tab.php:167
+#: includes/admin-tab.php:181
 #, php-format
 msgid "%sem"
 msgstr ""
 
-#: includes/admin-tab.php:182
+#: includes/admin-tab.php:190
 msgid "Edit"
 msgstr ""
 
-#: includes/admin-tab.php:185
+#: includes/admin-tab.php:193
 msgid "Delete"
 msgstr ""
 
-#: includes/admin-tab.php:191
+#: includes/admin-tab.php:199
 msgid "Font:"
 msgstr ""
 
-#: includes/admin-tab.php:196
+#: includes/admin-tab.php:204
 msgid "Style:"
 msgstr ""
 
-#: includes/admin-tab.php:202
+#: includes/admin-tab.php:210
 msgid "Size:"
 msgstr ""
 
-#: includes/admin-tab.php:208
+#: includes/admin-tab.php:216
 msgid "Features:"
 msgstr ""
 
-#: includes/admin-tab.php:215
+#: includes/admin-tab.php:223
 msgid "Spacing:"
 msgstr ""
 
-#: includes/admin-tab.php:222
+#: includes/admin-tab.php:230
 msgid "Line Height:"
 msgstr ""
 
-#: includes/admin-tab.php:240
+#: includes/admin-tab.php:237
+msgid "First Letter Hang:"
+msgstr ""
+
+#: includes/admin-tab.php:254
 msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
 msgstr ""
 
-#: includes/admin-tab.php:247
+#: includes/admin-tab.php:261
 msgid "Name:"
 msgstr ""
 
-#: includes/admin-tab.php:252
+#: includes/admin-tab.php:266
 #: assets/js/editor.js:512
 #: assets/js/editor.js:572
 msgid "Save"
 msgstr ""
 
-#: includes/admin-tab.php:255
+#: includes/admin-tab.php:269
 #: assets/js/editor.js:520
 #: assets/js/editor.js:580
 msgid "Cancel"
 msgstr ""
 
-#: paragraph-styles.php:858
+#: paragraph-styles.php:870
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""
 
-#: paragraph-styles.php:870
+#: paragraph-styles.php:882
 msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
 msgstr ""
 
-#: paragraph-styles.php:873
+#: paragraph-styles.php:885
 msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
 msgstr ""
 
-#: paragraph-styles.php:956
+#: paragraph-styles.php:968
 msgid "Style name is required."
 msgstr ""
 
-#: paragraph-styles.php:989
-#: paragraph-styles.php:1024
+#: paragraph-styles.php:1001
+#: paragraph-styles.php:1036
 msgid "Style not found."
 msgstr ""
 
-#: paragraph-styles.php:996
+#: paragraph-styles.php:1008
 msgid "Style name cannot be empty."
 msgstr ""
 
@@ -291,7 +297,7 @@ msgid "Size mode"
 msgstr ""
 
 #: assets/js/editor.js:981
-#: assets/js/lib/ps-utils.js:753
+#: assets/js/lib/ps-utils.js:796
 msgid "Recently used"
 msgstr ""
 
@@ -304,41 +310,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js:357
+#: assets/js/lib/ps-utils.js:392
 #, js-format
 msgid "Fluid %1$s–%2$s"
 msgstr ""
 
 #. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js:365
+#: assets/js/lib/ps-utils.js:400
 #, js-format
 msgid "Fit ≤ %spx"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:366
+#: assets/js/lib/ps-utils.js:401
 msgid "Fit"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:755
+#: assets/js/lib/ps-utils.js:798
 msgid "Other styles"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:788
+#: assets/js/lib/ps-utils.js:831
 msgid "No font set"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:799
+#: assets/js/lib/ps-utils.js:842
 msgid "Fixed size"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:800
+#: assets/js/lib/ps-utils.js:843
 msgid "Responsive"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:801
+#: assets/js/lib/ps-utils.js:844
 msgid "Fit to width"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:802
+#: assets/js/lib/ps-utils.js:845
 msgid "Inherited size"
 msgstr ""

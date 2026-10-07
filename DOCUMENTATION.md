@@ -255,6 +255,7 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
 - **Font Size:** “Inherit”, “Responsive (Fluid)”, or “Fit to width”. A responsive size has three values: “Mobile (320px and up)”, “Intermediate”, and “Large (up to 1920px)”. Fit to width makes each line fill the width of the block.
 - **Line Height:** Set the line height.
 - **Letter Spacing:** Change the spacing in steps of 1/1000 em.
+- **First Letter Hang:** Move the first letter into the left margin by a value in em, from 0 to 1. Use it for a swash capital: the swash goes into the margin, and the main shape of the letter aligns with the text edge. 0 turns it off. Only the first line hangs. In fit-to-width mode, each line has its own value. The hang has no effect when the text is centered or aligned to the end. Some themes cut off content that goes outside its container. If the swash is cut off, examine the published page.
 - **OpenType Features:** Turn on features for the whole block. The features are in groups: ligatures, stylistic sets, swashes and alternates, decorative, numerals and figures, capitals and case, positional forms, superscript and ordinals, and other features.
 - **Accessibility:** Choose the screen reader class: `visually-hidden`, `sr-only`, `screen-reader-text`, or a custom class name.
 

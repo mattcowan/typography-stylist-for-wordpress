@@ -74,6 +74,14 @@
 			"type": "number",
 			"default": 0
 		},
+		"initialHang": {
+			"type": "number",
+			"default": 0
+		},
+		"fitLineHangs": {
+			"type": "array",
+			"default": []
+		},
 		"fontWeight": {
 			"type": "string",
 			"default": "400"

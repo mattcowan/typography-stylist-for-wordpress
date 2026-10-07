@@ -1,7 +1,19 @@
 # French (France) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: fr_FR\nPlural-Forms: nplurals=2; plural=(n > 1);\nX-Domain: typost-paragraph-styles\n"
+msgstr ""
+"Project-Id-Version: Typography Stylist 2.3.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-06 15:00+0000\n"
+"PO-Revision-Date: 2026-10-06 15:00+0000\n"
+"Language: fr_FR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Domain: typost-paragraph-styles\n"
 
 #. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
 #: includes/admin-tab.php:82
@@ -9,7 +21,7 @@ msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 
 msgstr "Portez ce vieux whisky au juge blond qui fume. Thomas est à la poste : affluence officielle en fin d’été, 1/2 prix, 0123456789."
 
 #: includes/admin-tab.php:89
-#: paragraph-styles.php:761
+#: paragraph-styles.php:773
 #: assets/js/editor.js:952
 #: assets/js/editor.js:1309
 msgid "Paragraph Styles"
@@ -66,91 +78,93 @@ msgstr "Ajusté à la largeur (repli %1$s–%2$spx)"
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
 #: includes/admin-tab.php:158
-#: assets/js/lib/ps-utils.js:369
+#: assets/js/lib/ps-utils.js:404
 #, php-format,js-format
 msgid "%spx"
 msgstr "%spx"
 
 #. translators: %s: letter spacing in em
+#. translators: %s: hang in em
 #: includes/admin-tab.php:167
+#: includes/admin-tab.php:181
 #, php-format
 msgid "%sem"
 msgstr "%sem"
 
-#: includes/admin-tab.php:182
+#: includes/admin-tab.php:190
 msgid "Edit"
 msgstr "Modifier"
 
-#: includes/admin-tab.php:185
+#: includes/admin-tab.php:193
 msgid "Delete"
 msgstr "Supprimer"
 
-#: includes/admin-tab.php:191
+#: includes/admin-tab.php:199
 msgid "Font:"
 msgstr "Police :"
 
-#: includes/admin-tab.php:196
+#: includes/admin-tab.php:204
 msgid "Style:"
 msgstr "Style :"
 
-#: includes/admin-tab.php:202
+#: includes/admin-tab.php:210
 msgid "Size:"
 msgstr "Taille :"
 
-#: includes/admin-tab.php:208
+#: includes/admin-tab.php:216
 msgid "Features:"
 msgstr "Fonctionnalités :"
 
-#: includes/admin-tab.php:215
+#: includes/admin-tab.php:223
 msgid "Spacing:"
 msgstr "Espacement :"
 
-#: includes/admin-tab.php:222
+#: includes/admin-tab.php:230
 msgid "Line Height:"
 msgstr "Hauteur de ligne :"
 
-#: includes/admin-tab.php:240
+#: includes/admin-tab.php:254
 msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
 msgstr "Votre thème ou une autre extension charge cette police sur le site. Cette page ne peut pas la charger, l’aperçu peut donc afficher une police de secours."
 
-#: includes/admin-tab.php:247
+#: includes/admin-tab.php:261
 msgid "Name:"
 msgstr "Nom :"
 
-#: includes/admin-tab.php:252
+#: includes/admin-tab.php:266
 #: assets/js/editor.js:512
 #: assets/js/editor.js:572
 msgid "Save"
 msgstr "Enregistrer"
 
-#: includes/admin-tab.php:255
+#: includes/admin-tab.php:269
 #: assets/js/editor.js:520
 #: assets/js/editor.js:580
 msgid "Cancel"
 msgstr "Annuler"
 
-#: paragraph-styles.php:858
+#: paragraph-styles.php:870
 msgid "Paragraph Styles Toolbar Button"
 msgstr "Bouton Styles de paragraphe dans la barre d’outils"
 
-#: paragraph-styles.php:870
+#: paragraph-styles.php:882
 msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
 msgstr "Ajouter un bouton Styles de paragraphe à la barre d’outils du bloc Typography Stylist"
 
-#: paragraph-styles.php:873
+#: paragraph-styles.php:885
 msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
 msgstr "Ouvre un navigateur affichant chaque style de paragraphe enregistré dans sa propre police, afin de voir un style avant de l’appliquer. La liste déroulante des styles dans la colonne latérale et les panneaux de l’éditeur reste inchangée."
 
-#: paragraph-styles.php:956
+#: paragraph-styles.php:968
 msgid "Style name is required."
 msgstr "Le nom du style est requis."
 
-#: paragraph-styles.php:989
-#: paragraph-styles.php:1024
+#: paragraph-styles.php:1001
+#: paragraph-styles.php:1036
 msgid "Style not found."
 msgstr "Style introuvable."
 
-#: paragraph-styles.php:996
+#: paragraph-styles.php:1008
 msgid "Style name cannot be empty."
 msgstr "Le nom du style ne peut pas être vide."
 
@@ -282,7 +296,7 @@ msgid "Size mode"
 msgstr "Mode de taille"
 
 #: assets/js/editor.js:981
-#: assets/js/lib/ps-utils.js:753
+#: assets/js/lib/ps-utils.js:796
 msgid "Recently used"
 msgstr "Utilisés récemment"
 
@@ -295,41 +309,45 @@ msgstr[0] "Afficher %d style de plus"
 msgstr[1] "Afficher %d styles de plus"
 
 #. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js:357
+#: assets/js/lib/ps-utils.js:392
 #, js-format
 msgid "Fluid %1$s–%2$s"
 msgstr "Fluide %1$s–%2$s"
 
 #. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js:365
+#: assets/js/lib/ps-utils.js:400
 #, js-format
 msgid "Fit ≤ %spx"
 msgstr "Ajusté ≤ %spx"
 
-#: assets/js/lib/ps-utils.js:366
+#: assets/js/lib/ps-utils.js:401
 msgid "Fit"
 msgstr "Ajusté"
 
-#: assets/js/lib/ps-utils.js:755
+#: assets/js/lib/ps-utils.js:798
 msgid "Other styles"
 msgstr "Autres styles"
 
-#: assets/js/lib/ps-utils.js:788
+#: assets/js/lib/ps-utils.js:831
 msgid "No font set"
 msgstr "Aucune police définie"
 
-#: assets/js/lib/ps-utils.js:799
+#: assets/js/lib/ps-utils.js:842
 msgid "Fixed size"
 msgstr "Taille fixe"
 
-#: assets/js/lib/ps-utils.js:800
+#: assets/js/lib/ps-utils.js:843
 msgid "Responsive"
 msgstr "Adaptative"
 
-#: assets/js/lib/ps-utils.js:801
+#: assets/js/lib/ps-utils.js:844
 msgid "Fit to width"
 msgstr "Ajusté à la largeur"
 
-#: assets/js/lib/ps-utils.js:802
+#: assets/js/lib/ps-utils.js:845
 msgid "Inherited size"
 msgstr "Taille héritée"
+
+#: includes/admin-tab.php:237
+msgid "First Letter Hang:"
+msgstr "Débord de la première lettre :"

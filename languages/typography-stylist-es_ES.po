@@ -1,14 +1,26 @@
 # Spanish (Spain) translation for Typography Stylist.
 # This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLast-Translator: \nLanguage-Team: Spanish (Spain)\nLanguage: es_ES\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPlural-Forms: nplurals=2; plural=(n != 1);\nX-Domain: typography-stylist\n"
+msgstr ""
+"Project-Id-Version: Typography Stylist 2.3.1\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Last-Translator: \n"
+"Language-Team: Spanish (Spain)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-06 15:00+0000\n"
+"PO-Revision-Date: 2026-10-06 15:00+0000\n"
+"Language: es_ES\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Domain: typography-stylist\n"
 
 #. Plugin Name of the plugin
 #: typography-stylist.php
-#: typography-stylist.php:1262
-#: typography-stylist.php:1263
-#: assets/js/block-editor.js:3304
-#: assets/js/block-editor.js:3841
+#: typography-stylist.php:1274
+#: typography-stylist.php:1275
+#: assets/js/block-editor.js:3307
+#: assets/js/block-editor.js:3844
 msgid "Typography Stylist"
 msgstr "Typography Stylist"
 
@@ -33,55 +45,55 @@ msgid "https://mnc4.com"
 msgstr "https://mnc4.com"
 
 #: includes/admin-page.php:34
-#: assets/js/block-editor.js:2847
+#: assets/js/block-editor.js:2850
 #: blocks/typography-stylist/build/index.js:2
 msgid "100 (Thin)"
 msgstr "100 (Fina)"
 
 #: includes/admin-page.php:35
-#: assets/js/block-editor.js:2848
+#: assets/js/block-editor.js:2851
 #: blocks/typography-stylist/build/index.js:2
 msgid "200 (Extra Light)"
 msgstr "200 (Extra Ligera)"
 
 #: includes/admin-page.php:36
-#: assets/js/block-editor.js:2849
+#: assets/js/block-editor.js:2852
 #: blocks/typography-stylist/build/index.js:2
 msgid "300 (Light)"
 msgstr "300 (Ligera)"
 
 #: includes/admin-page.php:37
-#: assets/js/block-editor.js:2850
+#: assets/js/block-editor.js:2853
 #: blocks/typography-stylist/build/index.js:2
 msgid "400 (Normal)"
 msgstr "400 (Normal)"
 
 #: includes/admin-page.php:38
-#: assets/js/block-editor.js:2851
+#: assets/js/block-editor.js:2854
 #: blocks/typography-stylist/build/index.js:2
 msgid "500 (Medium)"
 msgstr "500 (Media)"
 
 #: includes/admin-page.php:39
-#: assets/js/block-editor.js:2852
+#: assets/js/block-editor.js:2855
 #: blocks/typography-stylist/build/index.js:2
 msgid "600 (Semi Bold)"
 msgstr "600 (Semi Negrita)"
 
 #: includes/admin-page.php:40
-#: assets/js/block-editor.js:2853
+#: assets/js/block-editor.js:2856
 #: blocks/typography-stylist/build/index.js:2
 msgid "700 (Bold)"
 msgstr "700 (Negrita)"
 
 #: includes/admin-page.php:41
-#: assets/js/block-editor.js:2854
+#: assets/js/block-editor.js:2857
 #: blocks/typography-stylist/build/index.js:2
 msgid "800 (Extra Bold)"
 msgstr "800 (Extra Negrita)"
 
 #: includes/admin-page.php:42
-#: assets/js/block-editor.js:2855
+#: assets/js/block-editor.js:2858
 #: blocks/typography-stylist/build/index.js:2
 msgid "900 (Black)"
 msgstr "900 (Negra)"
@@ -111,12 +123,12 @@ msgid "Control which features appear in the editor for this font"
 msgstr "Controlar qué características aparecen en el editor para esta fuente"
 
 #: includes/admin-page.php:119
-#: typography-stylist.php:1401
+#: typography-stylist.php:1413
 msgid "Enable All"
 msgstr "Activar todo"
 
 #: includes/admin-page.php:122
-#: typography-stylist.php:1402
+#: typography-stylist.php:1414
 msgid "Disable All"
 msgstr "Desactivar todo"
 
@@ -141,7 +153,7 @@ msgstr "Fuentes Personalizadas"
 
 #: includes/admin-page.php:201
 #: includes/admin-page.php:419
-#: typography-stylist.php:1406
+#: typography-stylist.php:1418
 msgid "WP Library"
 msgstr "Biblioteca de WP"
 
@@ -186,7 +198,7 @@ msgid "Uploaded"
 msgstr "Subida"
 
 #: includes/admin-page.php:418
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Custom"
 msgstr "Personalizada"
 
@@ -263,7 +275,7 @@ msgstr "Las fuentes registradas aparecen en la Biblioteca de fuentes de WordPres
 #: includes/admin-page.php:509
 #: includes/admin-page.php:573
 #: includes/admin-page.php:629
-#: typography-stylist.php:1393
+#: typography-stylist.php:1405
 msgid "Save Changes"
 msgstr "Guardar los cambios"
 
@@ -271,8 +283,8 @@ msgstr "Guardar los cambios"
 #: includes/admin-page.php:574
 #: includes/admin-page.php:630
 #: includes/admin-page.php:1736
-#: assets/js/block-editor.js:3719
-#: blocks/typography-stylist/build/index.js:2
+#: assets/js/block-editor.js:3722
+#: blocks/typography-stylist/build/index.js:4
 msgid "Cancel"
 msgstr "Cancelar"
 
@@ -353,7 +365,7 @@ msgid "Options"
 msgstr "Opciones"
 
 #: includes/admin-page.php:713
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Accessibility"
 msgstr "Accesibilidad"
 
@@ -558,7 +570,7 @@ msgstr "Añadir fuente"
 
 #: includes/admin-page.php:1047
 #: includes/admin-page.php:1078
-#: typography-stylist.php:1369
+#: typography-stylist.php:1381
 msgid "Upload Font Kit"
 msgstr "Subir kit de fuentes"
 
@@ -624,7 +636,7 @@ msgstr "Este plugin se ha probado con kits de fuentes web de MyFonts y con desca
 
 #: includes/admin-page.php:1107
 #: includes/admin-page.php:1136
-#: typography-stylist.php:1378
+#: typography-stylist.php:1390
 msgid "Add Adobe Fonts Project"
 msgstr "Añadir Proyecto de Adobe Fonts"
 
@@ -698,7 +710,7 @@ msgid "Enter a display name for this font."
 msgstr "Introduce un nombre visible para esta fuente."
 
 #: includes/admin-page.php:1189
-#: typography-stylist.php:1386
+#: typography-stylist.php:1398
 msgid "Add Custom Font"
 msgstr "Añadir Fuente Personalizada"
 
@@ -969,7 +981,7 @@ msgid "When a font is deleted, you can map it to a replacement font. Content usi
 msgstr "Cuando se elimina una fuente, puedes asignarle una fuente de reemplazo. El contenido que usa la fuente eliminada se mostrará automáticamente con la fuente de reemplazo."
 
 #: includes/admin-page.php:1524
-#: typography-stylist.php:1447
+#: typography-stylist.php:1459
 msgid "No font replacements configured."
 msgstr "No hay reemplazos de fuente configurados."
 
@@ -1007,7 +1019,7 @@ msgid "Select the active font that replaces the deleted font."
 msgstr "Selecciona la fuente activa que reemplaza a la fuente eliminada."
 
 #: includes/admin-page.php:1560
-#: typography-stylist.php:1463
+#: typography-stylist.php:1475
 msgid "Add Replacement"
 msgstr "Agregar Reemplazo"
 
@@ -1225,8 +1237,8 @@ msgid "Delete Font"
 msgstr "Eliminar fuente"
 
 #: includes/admin-page.php:1711
-#: assets/js/block-editor.js:3313
-#: assets/js/block-editor.js:3747
+#: assets/js/block-editor.js:3316
+#: assets/js/block-editor.js:3750
 #: blocks/typography-stylist/build/index.js:2
 msgid "Close"
 msgstr "Cerrar"
@@ -1251,990 +1263,990 @@ msgstr "Cargar el reemplazo en todo el sitio"
 msgid "Forces this replacement to load on all pages, even if the deleted font is not detected."
 msgstr "Obliga a cargar este reemplazo en todas las páginas, aunque no se detecte la fuente eliminada."
 
-#: typography-stylist.php:1300
+#: typography-stylist.php:1312
 msgid "Settings"
 msgstr "Ajustes"
 
-#: typography-stylist.php:1354
+#: typography-stylist.php:1366
 msgid "Are you sure you want to delete this font kit?"
 msgstr "¿Estás seguro de que quieres eliminar este kit de fuentes?"
 
-#: typography-stylist.php:1355
+#: typography-stylist.php:1367
 msgid "Failed to upload font kit."
 msgstr "Error al cargar el kit de fuentes."
 
-#: typography-stylist.php:1356
+#: typography-stylist.php:1368
 msgid "Please select a ZIP file (.zip)"
 msgstr "Por favor, selecciona un archivo ZIP (.zip)"
 
-#: typography-stylist.php:1357
+#: typography-stylist.php:1369
 msgid "Please select a ZIP file."
 msgstr "Por favor, selecciona un archivo ZIP."
 
-#: typography-stylist.php:1358
+#: typography-stylist.php:1370
 msgid "Font kit uploaded and processed successfully!"
 msgstr "¡Kit de fuentes cargado y procesado correctamente!"
 
-#: typography-stylist.php:1359
+#: typography-stylist.php:1371
 msgid "Failed to delete font kit."
 msgstr "Error al eliminar el kit de fuentes."
 
-#: typography-stylist.php:1360
+#: typography-stylist.php:1372
 msgid "Font deleted successfully!"
 msgstr "¡Fuente eliminada con éxito!"
 
-#: typography-stylist.php:1361
+#: typography-stylist.php:1373
 msgid "Failed to delete font."
 msgstr "Error al eliminar la fuente."
 
-#: typography-stylist.php:1362
+#: typography-stylist.php:1374
 msgid "Failed to create font replacement."
 msgstr "Error al crear el reemplazo de fuente."
 
-#: typography-stylist.php:1363
+#: typography-stylist.php:1375
 msgid "Deleting…"
 msgstr "Eliminando…"
 
-#: typography-stylist.php:1364
+#: typography-stylist.php:1376
 msgid "No custom fonts uploaded yet."
 msgstr "Aún no se han cargado fuentes personalizadas."
 
-#: typography-stylist.php:1365
+#: typography-stylist.php:1377
 msgid "Upload a webfont kit using the form below to add custom fonts with OpenType features."
 msgstr "Carga un kit de fuentes web usando el formulario a continuación para añadir fuentes personalizadas con características OpenType."
 
-#: typography-stylist.php:1366
+#: typography-stylist.php:1378
 msgid "Uploading"
 msgstr "Cargando"
 
-#: typography-stylist.php:1367
+#: typography-stylist.php:1379
 msgid "Uploading ZIP file…"
 msgstr "Subiendo archivo ZIP…"
 
-#: typography-stylist.php:1368
+#: typography-stylist.php:1380
 msgid "Processing…"
 msgstr "Procesando…"
 
-#: typography-stylist.php:1371
+#: typography-stylist.php:1383
 msgid "Please paste the Adobe Fonts embed code."
 msgstr "Por favor, pega el código de inserción de Adobe Fonts."
 
-#: typography-stylist.php:1372
+#: typography-stylist.php:1384
 msgid "Please enter at least one font family name."
 msgstr "Introduce al menos un nombre de familia de fuentes."
 
-#: typography-stylist.php:1373
+#: typography-stylist.php:1385
 msgid "Adding…"
 msgstr "Añadiendo…"
 
-#: typography-stylist.php:1374
+#: typography-stylist.php:1386
 msgid "Adobe Fonts project added."
 msgstr "Proyecto de Adobe Fonts añadido."
 
 #. translators: %d: number of fonts in the project (two or more). Worded as "Fonts: %d" so no plural form is needed; the admin script has no _n().
-#: typography-stylist.php:1376
+#: typography-stylist.php:1388
 #, php-format
 msgid "Adobe Fonts project added. Fonts: %d."
 msgstr "Proyecto de Adobe Fonts añadido. Fuentes: %d."
 
-#: typography-stylist.php:1377
+#: typography-stylist.php:1389
 msgid "Failed to add Adobe Fonts project."
 msgstr "Error al añadir el proyecto de Adobe Fonts."
 
-#: typography-stylist.php:1379
+#: typography-stylist.php:1391
 msgid "Are you sure you want to delete this Adobe Fonts project?"
 msgstr "¿Estás seguro de que quieres eliminar este proyecto de Adobe Fonts?"
 
-#: typography-stylist.php:1380
+#: typography-stylist.php:1392
 msgid "Failed to delete Adobe Fonts project."
 msgstr "Error al eliminar el proyecto de Adobe Fonts."
 
-#: typography-stylist.php:1382
+#: typography-stylist.php:1394
 msgid "Please enter a font name."
 msgstr "Por favor, introduce un nombre de fuente."
 
-#: typography-stylist.php:1383
+#: typography-stylist.php:1395
 msgid "Please enter a CSS font-family value."
 msgstr "Por favor, introduce un valor CSS font-family."
 
-#: typography-stylist.php:1384
+#: typography-stylist.php:1396
 msgid "Custom font added successfully!"
 msgstr "¡Fuente personalizada añadida con éxito!"
 
-#: typography-stylist.php:1385
+#: typography-stylist.php:1397
 msgid "Failed to add custom font."
 msgstr "Error al añadir la fuente personalizada."
 
-#: typography-stylist.php:1387
+#: typography-stylist.php:1399
 msgid "Are you sure you want to delete this custom font?"
 msgstr "¿Estás seguro de que quieres eliminar esta fuente personalizada?"
 
-#: typography-stylist.php:1388
+#: typography-stylist.php:1400
 msgid "Failed to delete custom font."
 msgstr "Error al eliminar la fuente personalizada."
 
-#: typography-stylist.php:1390
+#: typography-stylist.php:1402
 msgid "Failed to update font loading setting."
 msgstr "Error al actualizar la configuración de carga de fuentes."
 
-#: typography-stylist.php:1392
-#: typography-stylist.php:1428
+#: typography-stylist.php:1404
+#: typography-stylist.php:1440
 msgid "Saving…"
 msgstr "Guardando…"
 
-#: typography-stylist.php:1394
+#: typography-stylist.php:1406
 msgid "Fallback fonts updated successfully!"
 msgstr "¡Fuentes de respaldo actualizadas con éxito!"
 
-#: typography-stylist.php:1395
+#: typography-stylist.php:1407
 msgid "Failed to update fallback fonts."
 msgstr "No se han podido actualizar las fuentes de respaldo."
 
-#: typography-stylist.php:1396
+#: typography-stylist.php:1408
 msgid "Font updated successfully!"
 msgstr "¡Fuente actualizada con éxito!"
 
-#: typography-stylist.php:1397
+#: typography-stylist.php:1409
 msgid "Failed to update font."
 msgstr "No se ha podido actualizar la fuente."
 
-#: typography-stylist.php:1399
+#: typography-stylist.php:1411
 msgid "Saved"
 msgstr "Guardado"
 
-#: typography-stylist.php:1400
+#: typography-stylist.php:1412
 msgid "Failed to save feature visibility."
 msgstr "Error al guardar la visibilidad de características."
 
-#: typography-stylist.php:1404
+#: typography-stylist.php:1416
 msgid "Failed to save font order."
 msgstr "Error al guardar el orden de las fuentes."
 
-#: typography-stylist.php:1407
+#: typography-stylist.php:1419
 msgid "Manage in Appearance → Editor"
 msgstr "Gestionar en Apariencia → Editor"
 
-#: typography-stylist.php:1409
+#: typography-stylist.php:1421
 msgid "Registering…"
 msgstr "Registrando…"
 
-#: typography-stylist.php:1410
+#: typography-stylist.php:1422
 msgid "Font registered in the Font Library!"
 msgstr "¡Fuente registrada en la biblioteca de fuentes!"
 
-#: typography-stylist.php:1411
+#: typography-stylist.php:1423
 msgid "Failed to register the font in the Font Library."
 msgstr "No se pudo registrar la fuente en la biblioteca de fuentes."
 
-#: typography-stylist.php:1412
+#: typography-stylist.php:1424
 msgid "Removing…"
 msgstr "Quitando…"
 
-#: typography-stylist.php:1413
+#: typography-stylist.php:1425
 msgid "Font removed from the Font Library!"
 msgstr "¡Fuente quitada de la biblioteca de fuentes!"
 
-#: typography-stylist.php:1414
+#: typography-stylist.php:1426
 msgid "Failed to remove the font from the Font Library."
 msgstr "No se pudo quitar la fuente de la biblioteca de fuentes."
 
-#: typography-stylist.php:1415
+#: typography-stylist.php:1427
 msgid "Remove this font from the WordPress Font Library? Existing content does not change, because the plugin then loads the font files itself."
 msgstr "¿Quitar esta fuente de la Biblioteca de fuentes de WordPress? El contenido existente no cambia, porque el plugin carga entonces los archivos de la fuente por sí mismo."
 
 #. translators: 1: number of registered fonts, 2: number of failed fonts
-#: typography-stylist.php:1417
+#: typography-stylist.php:1429
 #, php-format
 msgid "Registered %1$s font(s) in the Font Library (%2$s failed)."
 msgstr "%1$s fuente(s) registrada(s) en la biblioteca de fuentes (%2$s con errores)."
 
-#: typography-stylist.php:1419
+#: typography-stylist.php:1431
 msgid "Detecting weights…"
 msgstr "Detectando pesos…"
 
 #. translators: 1: fonts with detected weights, 2: fonts left with all weights, 3: fonts that could not be checked
-#: typography-stylist.php:1421
+#: typography-stylist.php:1433
 #, php-format
 msgid "Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked."
 msgstr "Pesos detectados para %1$s fuente(s); %2$s conservaron todos los pesos; %3$s no se pudieron comprobar."
 
-#: typography-stylist.php:1422
+#: typography-stylist.php:1434
 msgid "Weight detection failed. Please try again."
 msgstr "Falló la detección de pesos. Inténtalo de nuevo."
 
-#: typography-stylist.php:1424
+#: typography-stylist.php:1436
 msgid "Font list updated."
 msgstr "Lista de fuentes actualizada."
 
-#: typography-stylist.php:1425
+#: typography-stylist.php:1437
 msgid "Could not refresh the font list. Reloading the page instead."
 msgstr "No se pudo actualizar la lista de fuentes. Recargando la página en su lugar."
 
-#: typography-stylist.php:1426
+#: typography-stylist.php:1438
 msgid "Dismiss this notice."
 msgstr "Descartar este aviso."
 
-#: typography-stylist.php:1429
-#: typography-stylist.php:7125
+#: typography-stylist.php:1441
+#: typography-stylist.php:7216
 msgid "Options saved successfully."
 msgstr "Opciones guardadas correctamente."
 
-#: typography-stylist.php:1430
+#: typography-stylist.php:1442
 msgid "Failed to save options."
 msgstr "Error al guardar las opciones."
 
-#: typography-stylist.php:1431
-#: typography-stylist.php:7142
+#: typography-stylist.php:1443
+#: typography-stylist.php:7233
 msgid "Accessibility settings saved successfully."
 msgstr "Configuración de accesibilidad guardada correctamente."
 
-#: typography-stylist.php:1432
+#: typography-stylist.php:1444
 msgid "Failed to save accessibility settings."
 msgstr "Error al guardar los ajustes de accesibilidad."
 
-#: typography-stylist.php:1433
-#: typography-stylist.php:7074
+#: typography-stylist.php:1445
+#: typography-stylist.php:7165
 msgid "Font cache cleared successfully. Fonts will be re-detected on the next page load."
 msgstr "Caché de fuentes borrado correctamente. Las fuentes se volverán a detectar en la próxima carga de página."
 
-#: typography-stylist.php:1434
+#: typography-stylist.php:1446
 msgid "Failed to clear the font cache."
 msgstr "Error al vaciar la caché de fuentes."
 
-#: typography-stylist.php:1435
+#: typography-stylist.php:1447
 msgid "Editor tips will show again the next time you open a Typography Stylist panel in this browser."
 msgstr "Los consejos del editor volverán a mostrarse la próxima vez que abras un panel de Typography Stylist en este navegador."
 
-#: typography-stylist.php:1436
+#: typography-stylist.php:1448
 msgid "Could not reset the editor tips. Your browser blocks site storage."
 msgstr "No se pudieron restablecer los consejos del editor. Tu navegador bloquea el almacenamiento del sitio."
 
-#: typography-stylist.php:1438
+#: typography-stylist.php:1450
 msgid "Unknown Font"
 msgstr "Fuente desconocida"
 
-#: typography-stylist.php:1439
+#: typography-stylist.php:1451
 msgid "Deleted Font"
 msgstr "Fuente eliminada"
 
-#: typography-stylist.php:1440
+#: typography-stylist.php:1452
 msgid "Replacement Font"
 msgstr "Fuente de reemplazo"
 
-#: typography-stylist.php:1441
+#: typography-stylist.php:1453
 msgid "Global Load"
 msgstr "Carga global"
 
-#: typography-stylist.php:1442
+#: typography-stylist.php:1454
 msgid "Actions"
 msgstr "Acciones"
 
 #. translators: %s: numeric font ID
-#: typography-stylist.php:1444
+#: typography-stylist.php:1456
 #, php-format
 msgid "ID: %s"
 msgstr "ID: %s"
 
 #. translators: 1: font name, 2: numeric font ID
-#: typography-stylist.php:1446
+#: typography-stylist.php:1458
 #, php-format
 msgid "%1$s (ID: %2$s)"
 msgstr "%1$s (ID: %2$s)"
 
 #. translators: %s: comma-separated list of font IDs
-#: typography-stylist.php:1449
+#: typography-stylist.php:1461
 #, php-format
 msgid "Unassigned IDs: %s"
 msgstr "ID sin asignar: %s"
 
-#: typography-stylist.php:1450
+#: typography-stylist.php:1462
 msgid "Edit"
 msgstr "Editar"
 
-#: typography-stylist.php:1451
+#: typography-stylist.php:1463
 msgid "Remove"
 msgstr "Quitar"
 
-#: typography-stylist.php:1452
+#: typography-stylist.php:1464
 msgid "Edit Font Replacement"
 msgstr "Editar reemplazo de fuente"
 
-#: typography-stylist.php:1453
+#: typography-stylist.php:1465
 msgid "Update Replacement"
 msgstr "Actualizar reemplazo"
 
 #. translators: %s: numeric font ID
-#: typography-stylist.php:1455
+#: typography-stylist.php:1467
 #, php-format
 msgid "Select a new replacement font for ID %s."
 msgstr "Seleccione una nueva fuente de reemplazo para el ID %s."
 
-#: typography-stylist.php:1456
+#: typography-stylist.php:1468
 msgid "Invalid font ID. Please refresh the page and try again."
 msgstr "ID de fuente no válido. Recargue la página e inténtelo de nuevo."
 
-#: typography-stylist.php:1457
+#: typography-stylist.php:1469
 msgid "Remove this font replacement mapping?"
 msgstr "¿Quitar esta asignación de reemplazo de fuente?"
 
-#: typography-stylist.php:1458
+#: typography-stylist.php:1470
 msgid "Failed to remove replacement."
 msgstr "No se pudo quitar el reemplazo."
 
-#: typography-stylist.php:1459
+#: typography-stylist.php:1471
 msgid "Failed to update global load setting."
 msgstr "No se pudo actualizar el ajuste de carga global."
 
-#: typography-stylist.php:1460
+#: typography-stylist.php:1472
 msgid "Please select a deleted font ID."
 msgstr "Seleccione el ID de una fuente eliminada."
 
-#: typography-stylist.php:1461
+#: typography-stylist.php:1473
 msgid "Please select a replacement font."
 msgstr "Seleccione una fuente de reemplazo."
 
-#: typography-stylist.php:1462
+#: typography-stylist.php:1474
 msgid "Invalid font ID (0). Please select a valid ID."
 msgstr "ID de fuente no válido (0). Seleccione un ID válido."
 
-#: typography-stylist.php:1464
+#: typography-stylist.php:1476
 msgid "Replacement mapping added successfully!"
 msgstr "¡Asignación de reemplazo añadida correctamente!"
 
-#: typography-stylist.php:1465
+#: typography-stylist.php:1477
 msgid "Failed to add replacement mapping."
 msgstr "No se pudo añadir la asignación de reemplazo."
 
-#: typography-stylist.php:2393
+#: typography-stylist.php:2484
 msgid "Too many requests. Please try again later."
 msgstr "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde."
 
-#: typography-stylist.php:2521
-#: assets/js/block-editor.js:3822
+#: typography-stylist.php:2612
+#: assets/js/block-editor.js:3825
 #: blocks/typography-stylist/build/index.js:2
 msgid "Ligatures"
 msgstr "Ligaduras"
 
-#: typography-stylist.php:2522
-#: assets/js/block-editor.js:3823
+#: typography-stylist.php:2613
+#: assets/js/block-editor.js:3826
 #: blocks/typography-stylist/build/index.js:2
 msgid "Stylistic Sets"
 msgstr "Conjuntos Estilísticos"
 
-#: typography-stylist.php:2523
-#: assets/js/block-editor.js:3824
+#: typography-stylist.php:2614
+#: assets/js/block-editor.js:3827
 #: blocks/typography-stylist/build/index.js:2
 msgid "Swashes & Alternates"
 msgstr "Florituras y Alternativas"
 
-#: typography-stylist.php:2524
-#: assets/js/block-editor.js:3825
+#: typography-stylist.php:2615
+#: assets/js/block-editor.js:3828
 #: blocks/typography-stylist/build/index.js:2
 msgid "Decorative"
 msgstr "Decorativo"
 
-#: typography-stylist.php:2525
-#: assets/js/block-editor.js:3826
+#: typography-stylist.php:2616
+#: assets/js/block-editor.js:3829
 #: blocks/typography-stylist/build/index.js:2
 msgid "Numerals & Figures"
 msgstr "Números y cifras"
 
-#: typography-stylist.php:2526
-#: assets/js/block-editor.js:3827
+#: typography-stylist.php:2617
+#: assets/js/block-editor.js:3830
 #: blocks/typography-stylist/build/index.js:2
 msgid "Capitals & Case"
 msgstr "Capitales y caja"
 
-#: typography-stylist.php:2527
-#: assets/js/block-editor.js:3828
+#: typography-stylist.php:2618
+#: assets/js/block-editor.js:3831
 #: blocks/typography-stylist/build/index.js:2
 msgid "Positional Forms"
 msgstr "Formas posicionales"
 
-#: typography-stylist.php:2528
-#: assets/js/block-editor.js:3829
+#: typography-stylist.php:2619
+#: assets/js/block-editor.js:3832
 #: blocks/typography-stylist/build/index.js:2
 msgid "Superscript & Ordinals"
 msgstr "Superíndices y ordinales"
 
-#: typography-stylist.php:2529
-#: assets/js/block-editor.js:3830
+#: typography-stylist.php:2620
+#: assets/js/block-editor.js:3833
 #: blocks/typography-stylist/build/index.js:2
 msgid "Other Features"
 msgstr "Otras Características"
 
-#: typography-stylist.php:2541
+#: typography-stylist.php:2632
 msgid "Standard Ligatures"
 msgstr "Ligaduras Estándar"
 
-#: typography-stylist.php:2543
+#: typography-stylist.php:2634
 msgid "Common letter combinations like fi, fl"
 msgstr "Combinaciones comunes de letras como fi, fl"
 
-#: typography-stylist.php:2547
+#: typography-stylist.php:2638
 msgid "Discretionary Ligatures"
 msgstr "Ligaduras Discrecionales"
 
-#: typography-stylist.php:2549
+#: typography-stylist.php:2640
 msgid "Optional decorative ligatures"
 msgstr "Ligaduras decorativas opcionales"
 
-#: typography-stylist.php:2553
+#: typography-stylist.php:2644
 msgid "Contextual Alternates"
 msgstr "Alternativas Contextuales"
 
-#: typography-stylist.php:2555
+#: typography-stylist.php:2646
 msgid "Context-aware letter forms"
 msgstr "Formas de letras según el contexto"
 
-#: typography-stylist.php:2559
+#: typography-stylist.php:2650
 msgid "Contextual Ligatures"
 msgstr "Ligaduras contextuales"
 
-#: typography-stylist.php:2561
+#: typography-stylist.php:2652
 msgid "Context-dependent ligature substitutions"
 msgstr "Sustituciones de ligaduras dependientes del contexto"
 
-#: typography-stylist.php:2565
+#: typography-stylist.php:2656
 msgid "Historical Ligatures"
 msgstr "Ligaduras históricas"
 
-#: typography-stylist.php:2567
+#: typography-stylist.php:2658
 msgid "Archaic and historical ligature forms"
 msgstr "Formas de ligaduras arcaicas e históricas"
 
-#: typography-stylist.php:2571
+#: typography-stylist.php:2662
 msgid "Stylistic Set 1"
 msgstr "Conjunto Estilístico 1"
 
-#: typography-stylist.php:2573
-#: typography-stylist.php:2579
-#: typography-stylist.php:2585
-#: typography-stylist.php:2591
-#: typography-stylist.php:2597
-#: typography-stylist.php:2603
-#: typography-stylist.php:2609
-#: typography-stylist.php:2615
-#: typography-stylist.php:2621
-#: typography-stylist.php:2627
-#: typography-stylist.php:2633
-#: typography-stylist.php:2639
-#: typography-stylist.php:2645
-#: typography-stylist.php:2651
-#: typography-stylist.php:2657
-#: typography-stylist.php:2663
-#: typography-stylist.php:2669
-#: typography-stylist.php:2675
-#: typography-stylist.php:2681
-#: typography-stylist.php:2687
+#: typography-stylist.php:2664
+#: typography-stylist.php:2670
+#: typography-stylist.php:2676
+#: typography-stylist.php:2682
+#: typography-stylist.php:2688
+#: typography-stylist.php:2694
+#: typography-stylist.php:2700
+#: typography-stylist.php:2706
+#: typography-stylist.php:2712
+#: typography-stylist.php:2718
+#: typography-stylist.php:2724
+#: typography-stylist.php:2730
+#: typography-stylist.php:2736
+#: typography-stylist.php:2742
+#: typography-stylist.php:2748
+#: typography-stylist.php:2754
+#: typography-stylist.php:2760
+#: typography-stylist.php:2766
+#: typography-stylist.php:2772
+#: typography-stylist.php:2778
 msgid "Alternate character designs"
 msgstr "Diseños alternativos de caracteres"
 
-#: typography-stylist.php:2577
+#: typography-stylist.php:2668
 msgid "Stylistic Set 2"
 msgstr "Conjunto Estilístico 2"
 
-#: typography-stylist.php:2583
+#: typography-stylist.php:2674
 msgid "Stylistic Set 3"
 msgstr "Conjunto Estilístico 3"
 
-#: typography-stylist.php:2589
+#: typography-stylist.php:2680
 msgid "Stylistic Set 4"
 msgstr "Conjunto Estilístico 4"
 
-#: typography-stylist.php:2595
+#: typography-stylist.php:2686
 msgid "Stylistic Set 5"
 msgstr "Conjunto Estilístico 5"
 
-#: typography-stylist.php:2601
+#: typography-stylist.php:2692
 msgid "Stylistic Set 6"
 msgstr "Conjunto Estilístico 6"
 
-#: typography-stylist.php:2607
+#: typography-stylist.php:2698
 msgid "Stylistic Set 7"
 msgstr "Conjunto Estilístico 7"
 
-#: typography-stylist.php:2613
+#: typography-stylist.php:2704
 msgid "Stylistic Set 8"
 msgstr "Conjunto Estilístico 8"
 
-#: typography-stylist.php:2619
+#: typography-stylist.php:2710
 msgid "Stylistic Set 9"
 msgstr "Conjunto Estilístico 9"
 
-#: typography-stylist.php:2625
+#: typography-stylist.php:2716
 msgid "Stylistic Set 10"
 msgstr "Conjunto Estilístico 10"
 
-#: typography-stylist.php:2631
+#: typography-stylist.php:2722
 msgid "Stylistic Set 11"
 msgstr "Conjunto Estilístico 11"
 
-#: typography-stylist.php:2637
+#: typography-stylist.php:2728
 msgid "Stylistic Set 12"
 msgstr "Conjunto Estilístico 12"
 
-#: typography-stylist.php:2643
+#: typography-stylist.php:2734
 msgid "Stylistic Set 13"
 msgstr "Conjunto Estilístico 13"
 
-#: typography-stylist.php:2649
+#: typography-stylist.php:2740
 msgid "Stylistic Set 14"
 msgstr "Conjunto Estilístico 14"
 
-#: typography-stylist.php:2655
+#: typography-stylist.php:2746
 msgid "Stylistic Set 15"
 msgstr "Conjunto Estilístico 15"
 
-#: typography-stylist.php:2661
+#: typography-stylist.php:2752
 msgid "Stylistic Set 16"
 msgstr "Conjunto Estilístico 16"
 
-#: typography-stylist.php:2667
+#: typography-stylist.php:2758
 msgid "Stylistic Set 17"
 msgstr "Conjunto Estilístico 17"
 
-#: typography-stylist.php:2673
+#: typography-stylist.php:2764
 msgid "Stylistic Set 18"
 msgstr "Conjunto Estilístico 18"
 
-#: typography-stylist.php:2679
+#: typography-stylist.php:2770
 msgid "Stylistic Set 19"
 msgstr "Conjunto Estilístico 19"
 
-#: typography-stylist.php:2685
+#: typography-stylist.php:2776
 msgid "Stylistic Set 20"
 msgstr "Conjunto Estilístico 20"
 
-#: typography-stylist.php:2691
+#: typography-stylist.php:2782
 msgid "Swashes"
 msgstr "Florituras"
 
-#: typography-stylist.php:2693
+#: typography-stylist.php:2784
 msgid "Decorative flourishes"
 msgstr "Adornos decorativos"
 
-#: typography-stylist.php:2697
+#: typography-stylist.php:2788
 msgid "Contextual Swashes"
 msgstr "Florituras Contextuales"
 
-#: typography-stylist.php:2699
+#: typography-stylist.php:2790
 msgid "Context-aware decorative flourishes"
 msgstr "Adornos decorativos según el contexto"
 
-#: typography-stylist.php:2703
+#: typography-stylist.php:2794
 msgid "Stylistic Alternates"
 msgstr "Alternativas Estilísticas"
 
-#: typography-stylist.php:2705
+#: typography-stylist.php:2796
 msgid "Alternative character forms"
 msgstr "Formas alternativas de caracteres"
 
-#: typography-stylist.php:2709
+#: typography-stylist.php:2800
 msgid "Titling"
 msgstr "Titulares"
 
-#: typography-stylist.php:2711
+#: typography-stylist.php:2802
 msgid "Optimized for large titles"
 msgstr "Optimizado para títulos grandes"
 
-#: typography-stylist.php:2715
+#: typography-stylist.php:2806
 msgid "Historical Forms"
 msgstr "Formas históricas"
 
-#: typography-stylist.php:2717
+#: typography-stylist.php:2808
 msgid "Archaic and historical letterforms"
 msgstr "Formas de letras arcaicas e históricas"
 
-#: typography-stylist.php:2721
+#: typography-stylist.php:2812
 msgid "Ornaments"
 msgstr "Ornamentos"
 
-#: typography-stylist.php:2723
+#: typography-stylist.php:2814
 msgid "Decorative ornaments"
 msgstr "Ornamentos decorativos"
 
-#: typography-stylist.php:2728
+#: typography-stylist.php:2819
 msgid "Proportional Figures"
 msgstr "Cifras proporcionales"
 
-#: typography-stylist.php:2730
+#: typography-stylist.php:2821
 msgid "Variable-width number spacing"
 msgstr "Espaciado de números de ancho variable"
 
-#: typography-stylist.php:2734
+#: typography-stylist.php:2825
 msgid "Tabular Figures"
 msgstr "Cifras tabulares"
 
-#: typography-stylist.php:2736
+#: typography-stylist.php:2827
 msgid "Fixed-width number spacing for alignment"
 msgstr "Espaciado de números de ancho fijo para alineación"
 
-#: typography-stylist.php:2740
+#: typography-stylist.php:2831
 msgid "Lining Figures"
 msgstr "Cifras alineadas"
 
-#: typography-stylist.php:2742
+#: typography-stylist.php:2833
 msgid "Numbers aligned to the baseline"
 msgstr "Números alineados a la línea base"
 
-#: typography-stylist.php:2746
+#: typography-stylist.php:2837
 msgid "Oldstyle Figures"
 msgstr "Cifras de estilo antiguo"
 
-#: typography-stylist.php:2748
+#: typography-stylist.php:2839
 msgid "Numbers with varying heights and descenders"
 msgstr "Números con alturas variables y descendentes"
 
-#: typography-stylist.php:2752
+#: typography-stylist.php:2843
 msgid "Fractions"
 msgstr "Fracciones"
 
-#: typography-stylist.php:2754
+#: typography-stylist.php:2845
 msgid "Automatic fraction formation"
 msgstr "Formación automática de fracciones"
 
-#: typography-stylist.php:2758
+#: typography-stylist.php:2849
 msgid "Slashed Zero"
 msgstr "Cero con barra"
 
-#: typography-stylist.php:2760
+#: typography-stylist.php:2851
 msgid "Zero with slash to distinguish from letter O"
 msgstr "Cero con barra para distinguirlo de la letra O"
 
-#: typography-stylist.php:2765
+#: typography-stylist.php:2856
 msgid "Small Capitals"
 msgstr "Versalitas"
 
-#: typography-stylist.php:2767
+#: typography-stylist.php:2858
 msgid "Lowercase letters as small capital forms"
 msgstr "Letras minúsculas como versalitas"
 
-#: typography-stylist.php:2771
+#: typography-stylist.php:2862
 msgid "Capitals to Small Caps"
 msgstr "Mayúsculas a versalitas"
 
-#: typography-stylist.php:2773
+#: typography-stylist.php:2864
 msgid "Convert uppercase letters to small capitals"
 msgstr "Convertir letras mayúsculas a versalitas"
 
-#: typography-stylist.php:2777
+#: typography-stylist.php:2868
 msgid "Petite Capitals"
 msgstr "Capitales pequeñas"
 
-#: typography-stylist.php:2779
+#: typography-stylist.php:2870
 msgid "Smaller than small capitals, matching x-height"
 msgstr "Más pequeñas que las versalitas, coincidiendo con la altura de x"
 
-#: typography-stylist.php:2783
+#: typography-stylist.php:2874
 msgid "Case-Sensitive Forms"
 msgstr "Formas sensibles a mayúsculas"
 
-#: typography-stylist.php:2785
+#: typography-stylist.php:2876
 msgid "Punctuation and symbols adjusted for all-caps text"
 msgstr "Puntuación y símbolos ajustados para texto en mayúsculas"
 
-#: typography-stylist.php:2790
+#: typography-stylist.php:2881
 msgid "Initial Forms"
 msgstr "Formas iniciales"
 
-#: typography-stylist.php:2792
+#: typography-stylist.php:2883
 msgid "Letterforms used at the beginning of a word"
 msgstr "Formas de letras usadas al inicio de una palabra"
 
-#: typography-stylist.php:2796
+#: typography-stylist.php:2887
 msgid "Medial Forms"
 msgstr "Formas mediales"
 
-#: typography-stylist.php:2798
+#: typography-stylist.php:2889
 msgid "Letterforms used in the middle of a word"
 msgstr "Formas de letras usadas en el medio de una palabra"
 
-#: typography-stylist.php:2802
+#: typography-stylist.php:2893
 msgid "Terminal Forms"
 msgstr "Formas terminales"
 
-#: typography-stylist.php:2804
+#: typography-stylist.php:2895
 msgid "Letterforms used at the end of a word"
 msgstr "Formas de letras usadas al final de una palabra"
 
-#: typography-stylist.php:2808
+#: typography-stylist.php:2899
 msgid "Isolated Forms"
 msgstr "Formas aisladas"
 
-#: typography-stylist.php:2810
+#: typography-stylist.php:2901
 msgid "Standalone letterforms not connected to adjacent characters"
 msgstr "Formas de letras independientes no conectadas a caracteres adyacentes"
 
-#: typography-stylist.php:2815
+#: typography-stylist.php:2906
 msgid "Superscript"
 msgstr "Superíndice"
 
-#: typography-stylist.php:2817
+#: typography-stylist.php:2908
 msgid "Raised characters for footnotes and exponents"
 msgstr "Caracteres elevados para notas al pie y exponentes"
 
-#: typography-stylist.php:2821
+#: typography-stylist.php:2912
 msgid "Subscript"
 msgstr "Subíndice"
 
-#: typography-stylist.php:2823
+#: typography-stylist.php:2914
 msgid "Lowered characters for chemical formulas and indices"
 msgstr "Caracteres reducidos para fórmulas químicas e índices"
 
-#: typography-stylist.php:2827
+#: typography-stylist.php:2918
 msgid "Ordinals"
 msgstr "Ordinales"
 
-#: typography-stylist.php:2829
+#: typography-stylist.php:2920
 msgid "Ordinal indicators like 1st, 2nd, 3rd"
 msgstr "Indicadores ordinales como 1.º, 2.º, 3.º"
 
-#: typography-stylist.php:2834
+#: typography-stylist.php:2925
 msgid "Kerning"
 msgstr "Interletraje"
 
-#: typography-stylist.php:2836
+#: typography-stylist.php:2927
 msgid "Fine-tuned letter spacing adjustments"
 msgstr "Ajustes finos del espaciado entre letras"
 
-#: typography-stylist.php:2840
+#: typography-stylist.php:2931
 msgid "Localized Forms"
 msgstr "Formas localizadas"
 
-#: typography-stylist.php:2842
+#: typography-stylist.php:2933
 msgid "Script and language-specific character variants"
 msgstr "Variantes de caracteres específicas del idioma y la escritura"
 
-#: typography-stylist.php:2846
+#: typography-stylist.php:2937
 msgid "Randomize"
 msgstr "Aleatorizar"
 
-#: typography-stylist.php:2848
+#: typography-stylist.php:2939
 msgid "Randomized glyph variants for handwriting and calligraphic fonts"
 msgstr "Variantes de glifos aleatorias para fuentes manuscritas y caligráficas"
 
-#: typography-stylist.php:2972
+#: typography-stylist.php:3063
 msgid "Missing required parameters"
 msgstr "Faltan parámetros requeridos"
 
-#: typography-stylist.php:2976
+#: typography-stylist.php:3067
 msgid "Features must be a non-empty array"
 msgstr "Las características deben ser un array no vacío"
 
 #. translators: %s: The invalid OpenType feature ID
-#: typography-stylist.php:2984
+#: typography-stylist.php:3075
 #, php-format
 msgid "Invalid feature ID: %s"
 msgstr "ID de característica inválido: %s"
 
-#: typography-stylist.php:3025
+#: typography-stylist.php:3116
 msgid "Preset not found"
 msgstr "Preajuste no encontrado"
 
-#: typography-stylist.php:3104
+#: typography-stylist.php:3195
 msgid "disabled_features must be an array."
 msgstr "disabled_features debe ser un array."
 
-#: typography-stylist.php:3169
+#: typography-stylist.php:3260
 msgid "order must be an array."
 msgstr "order debe ser un array."
 
-#: typography-stylist.php:3994
+#: typography-stylist.php:4085
 msgid "Missing required font data"
 msgstr "Faltan datos de fuente requeridos"
 
-#: typography-stylist.php:4012
+#: typography-stylist.php:4103
 msgid "Invalid file type"
 msgstr "Tipo de archivo inválido"
 
-#: typography-stylist.php:4016
+#: typography-stylist.php:4107
 msgid "Please upload a valid ZIP file"
 msgstr "Por favor, carga un archivo ZIP válido"
 
 #. translators: %s: The maximum allowed file size in human-readable format (e.g., "10 MB")
-#: typography-stylist.php:4023
+#: typography-stylist.php:4114
 #, php-format
 msgid "File size exceeds maximum allowed (%s)"
 msgstr "El tamaño del archivo excede el máximo permitido (%s)"
 
-#: typography-stylist.php:4028
+#: typography-stylist.php:4119
 msgid "File upload error"
 msgstr "Error al cargar el archivo"
 
-#: typography-stylist.php:4096
+#: typography-stylist.php:4187
 msgid "Upload failed due to an internal error. Please try again or contact support."
 msgstr "La subida ha fallado por un error interno. Inténtalo de nuevo o contacta con soporte."
 
-#: typography-stylist.php:4119
-#: typography-stylist.php:5391
-#: typography-stylist.php:5433
-#: typography-stylist.php:5480
-#: typography-stylist.php:5525
+#: typography-stylist.php:4210
+#: typography-stylist.php:5482
+#: typography-stylist.php:5524
+#: typography-stylist.php:5571
+#: typography-stylist.php:5616
 msgid "Font not found"
 msgstr "Fuente no encontrada"
 
-#: typography-stylist.php:4211
+#: typography-stylist.php:4302
 msgid "Failed to create upload directory"
 msgstr "Error al crear el directorio de carga"
 
-#: typography-stylist.php:4226
+#: typography-stylist.php:4317
 msgid "Failed to extract ZIP file. Please ensure the file is a valid ZIP archive."
 msgstr "Error al extraer el archivo ZIP. Por favor, asegúrate de que el archivo es un archivo ZIP válido."
 
-#: typography-stylist.php:4280
-#: typography-stylist.php:4564
+#: typography-stylist.php:4371
+#: typography-stylist.php:4655
 msgid "Failed to process font kit. The archive may be corrupted."
 msgstr "No se ha podido procesar el kit de fuentes. Es posible que el archivo esté dañado."
 
-#: typography-stylist.php:4322
+#: typography-stylist.php:4413
 msgid "Invalid CSS file"
 msgstr "Archivo CSS inválido"
 
-#: typography-stylist.php:4329
+#: typography-stylist.php:4420
 msgid "CSS file is too large (max 1MB)"
 msgstr "El archivo CSS es demasiado grande (máx. 1MB)"
 
-#: typography-stylist.php:4337
+#: typography-stylist.php:4428
 msgid "Could not read CSS file"
 msgstr "No se pudo leer el archivo CSS"
 
-#: typography-stylist.php:4343
+#: typography-stylist.php:4434
 msgid "CSS file does not contain @font-face declarations"
 msgstr "El archivo CSS no contiene declaraciones @font-face"
 
-#: typography-stylist.php:4364
+#: typography-stylist.php:4455
 msgid "No valid @font-face declarations found after sanitization"
 msgstr "No se han encontrado declaraciones @font-face válidas tras la limpieza"
 
-#: typography-stylist.php:4373
+#: typography-stylist.php:4464
 msgid "No valid @font-face rules found in CSS"
 msgstr "No se encontraron reglas @font-face válidas en el CSS"
 
 #. translators: %d: number of CSS files found
-#: typography-stylist.php:4525
+#: typography-stylist.php:4616
 #, php-format
 msgid "Found %d CSS file(s) in the font kit, but none contain valid @font-face declarations. Please ensure the ZIP file contains a proper webfont stylesheet."
 msgstr "Se encontraron %d archivo(s) CSS en el kit de fuentes, pero ninguno contiene declaraciones @font-face válidas. Por favor, asegúrate de que el archivo ZIP contiene una hoja de estilo webfont adecuada."
 
-#: typography-stylist.php:4575
+#: typography-stylist.php:4666
 msgid "No CSS file was found in the font kit, and no usable font files were found to generate one from."
 msgstr "No se encontró ningún archivo CSS en el kit de fuentes, y no se encontraron archivos de fuente utilizables para generar uno."
 
-#: typography-stylist.php:4584
+#: typography-stylist.php:4675
 msgid "Could not write the generated stylesheet to the font kit directory."
 msgstr "No se pudo escribir la hoja de estilos generada en el directorio del kit de fuentes."
 
 #. translators: %s: font file name
-#: typography-stylist.php:4597
+#: typography-stylist.php:4688
 #, php-format
 msgid "%s is a WOFF2 file. The server cannot read WOFF2 metadata, so the plugin guessed the font family and weight from the filename. Please review the generated font styles."
 msgstr "%s es un archivo WOFF2. El servidor no puede leer los metadatos WOFF2, así que el plugin ha deducido la familia y el peso de la fuente a partir del nombre del archivo. Revisa los estilos de fuente generados."
 
 #. translators: %s: font file name
-#: typography-stylist.php:4603
+#: typography-stylist.php:4694
 #, php-format
 msgid "Could not read the font metadata from %s, so the plugin guessed the font family and weight from the filename. Please review the generated font styles."
 msgstr "No se han podido leer los metadatos de fuente de %s, así que el plugin ha deducido la familia y el peso de la fuente a partir del nombre del archivo. Revisa los estilos de fuente generados."
 
-#: typography-stylist.php:5144
+#: typography-stylist.php:5235
 msgid "Embed code is required"
 msgstr "El código de inserción es obligatorio"
 
-#: typography-stylist.php:5151
+#: typography-stylist.php:5242
 msgid "Invalid Adobe Fonts embed code. Please paste the complete <link> or <script> tag from Adobe Fonts."
 msgstr "Código de inserción de Adobe Fonts no válido. Pega la etiqueta <link> o <script> completa de Adobe Fonts."
 
-#: typography-stylist.php:5160
+#: typography-stylist.php:5251
 msgid "At least one font family is required"
 msgstr "Se necesita al menos una familia de fuentes"
 
-#: typography-stylist.php:5173
+#: typography-stylist.php:5264
 msgid "This Adobe Fonts kit has already been added. Please use a different kit or remove the existing one first."
 msgstr "Este kit de Adobe Fonts ya se ha añadido. Usa un kit diferente o elimina primero el existente."
 
-#: typography-stylist.php:5249
-#: typography-stylist.php:5296
-#: typography-stylist.php:5345
+#: typography-stylist.php:5340
+#: typography-stylist.php:5387
+#: typography-stylist.php:5436
 msgid "Adobe Font not found"
 msgstr "Fuente de Adobe no encontrada"
 
-#: typography-stylist.php:5276
-#: typography-stylist.php:5371
+#: typography-stylist.php:5367
+#: typography-stylist.php:5462
 msgid "Either fallbacks or available_weights parameter is required"
 msgstr "Se requiere el parámetro fallbacks o available_weights"
 
-#: typography-stylist.php:5330
-#: typography-stylist.php:5418
+#: typography-stylist.php:5421
+#: typography-stylist.php:5509
 msgid "load_on_all_pages parameter is required"
 msgstr "El parámetro load_on_all_pages es obligatorio"
 
-#: typography-stylist.php:5471
-#: typography-stylist.php:5558
+#: typography-stylist.php:5562
+#: typography-stylist.php:5649
 msgid "The WordPress Font Library requires WordPress 6.5 or later."
 msgstr "La biblioteca de fuentes de WordPress requiere WordPress 6.5 o posterior."
 
-#: typography-stylist.php:5488
+#: typography-stylist.php:5579
 msgid "The font could not be registered in the Font Library. It remains fully functional as a plugin-managed font."
 msgstr "La fuente no se pudo registrar en la biblioteca de fuentes. Sigue siendo totalmente funcional como fuente gestionada por el plugin."
 
-#: typography-stylist.php:5613
+#: typography-stylist.php:5704
 msgid "slug parameter is required"
 msgstr "El parámetro slug es obligatorio"
 
-#: typography-stylist.php:5619
+#: typography-stylist.php:5710
 msgid "Font not found in the WordPress Font Library."
 msgstr "Fuente no encontrada en la biblioteca de fuentes de WordPress."
 
-#: typography-stylist.php:5670
+#: typography-stylist.php:5761
 msgid "Name and font family are required"
 msgstr "El nombre y la familia de fuentes son obligatorios"
 
-#: typography-stylist.php:5721
-#: typography-stylist.php:5771
+#: typography-stylist.php:5812
+#: typography-stylist.php:5862
 msgid "Manual font not found"
 msgstr "Fuente manual no encontrada"
 
-#: typography-stylist.php:5748
+#: typography-stylist.php:5839
 msgid "Either font_family or available_weights parameter is required"
 msgstr "Se requiere el parámetro font_family o available_weights"
 
-#: typography-stylist.php:6049
+#: typography-stylist.php:6140
 msgid "Missing required parameters."
 msgstr "Faltan parámetros obligatorios."
 
-#: typography-stylist.php:6055
-#: typography-stylist.php:6080
+#: typography-stylist.php:6146
+#: typography-stylist.php:6171
 msgid "Invalid font ID (0). Font IDs must be greater than 0."
 msgstr "ID de fuente inválido (0). Los IDs de fuente deben ser mayores que 0."
 
-#: typography-stylist.php:6062
+#: typography-stylist.php:6153
 msgid "Failed to add font replacement."
 msgstr "No se ha podido añadir el reemplazo de fuente."
 
-#: typography-stylist.php:6074
-#: typography-stylist.php:6097
+#: typography-stylist.php:6165
+#: typography-stylist.php:6188
 msgid "Missing font ID."
 msgstr "Falta el ID de fuente."
 
-#: typography-stylist.php:6087
+#: typography-stylist.php:6178
 msgid "Failed to update font replacement."
 msgstr "No se ha podido actualizar el reemplazo de fuente."
 
-#: typography-stylist.php:6106
+#: typography-stylist.php:6197
 msgid "Failed to delete font replacement."
 msgstr "No se ha podido eliminar el reemplazo de fuente."
 
-#: typography-stylist.php:7044
+#: typography-stylist.php:7135
 msgid "You do not have sufficient permissions to access this page."
 msgstr "No tienes permisos suficientes para acceder a esta página."
 
-#: typography-stylist.php:7061
+#: typography-stylist.php:7152
 msgid "Settings saved successfully."
 msgstr "Configuración guardada correctamente."
 
 #: assets/js/block-editor.js:1640
-#: assets/js/block-editor.js:3385
+#: assets/js/block-editor.js:3388
 msgid "Accessibility Notice"
 msgstr "Aviso de accesibilidad"
 
@@ -2270,202 +2282,202 @@ msgid "Block could not be converted. Features were applied directly."
 msgstr "El bloque no pudo ser convertido. Las características se aplicaron directamente."
 
 #. translators: %s: OpenType feature name.
-#: assets/js/block-editor.js:2953
+#: assets/js/block-editor.js:2956
 #, js-format
 msgid "Apply the %s feature"
 msgstr "Aplicar la función %s"
 
 #. translators: %s: OpenType feature name.
-#: assets/js/block-editor.js:2954
+#: assets/js/block-editor.js:2957
 #, js-format
 msgid "Click to apply %s"
 msgstr "Haz clic para aplicar %s"
 
-#: assets/js/block-editor.js:3232
+#: assets/js/block-editor.js:3235
 #: blocks/typography-stylist/build/index.js:2
 msgid "Typography Stylist Features"
 msgstr "Funciones de Typography Stylist"
 
-#: assets/js/block-editor.js:3307
+#: assets/js/block-editor.js:3310
 #: blocks/typography-stylist/build/index.js:2
 msgid "Move panel, use arrow keys"
 msgstr "Mover el panel, usa las flechas"
 
-#: assets/js/block-editor.js:3351
+#: assets/js/block-editor.js:3354
 #: blocks/typography-stylist/build/index.js:2
 msgid "Tip: Drag the title bar to reposition this panel."
 msgstr "Consejo: arrastra la barra de título para reposicionar este panel."
 
-#: assets/js/block-editor.js:3354
+#: assets/js/block-editor.js:3357
 #: blocks/typography-stylist/build/index.js:2
 msgid "Changes apply instantly. Press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr "Los cambios se aplican al instante. Pulsa Ctrl+Z (Cmd+Z en Mac) para deshacer."
 
-#: assets/js/block-editor.js:3359
+#: assets/js/block-editor.js:3362
 #: blocks/typography-stylist/build/index.js:2
 msgid "Dismiss tip"
 msgstr "Descartar el consejo"
 
-#: assets/js/block-editor.js:3389
-#: assets/js/block-editor.js:3680
+#: assets/js/block-editor.js:3392
+#: assets/js/block-editor.js:3683
 msgid "Convert to Typography Stylist Block"
 msgstr "Convertir a bloque Typography Stylist"
 
-#: assets/js/block-editor.js:3397
+#: assets/js/block-editor.js:3400
 msgid "Manage accessibility settings"
 msgstr "Gestionar configuración de accesibilidad"
 
-#: assets/js/block-editor.js:3419
+#: assets/js/block-editor.js:3422
 msgid "Font could not be detected for this block type."
 msgstr "No se pudo detectar la fuente para este tipo de bloque."
 
-#: assets/js/block-editor.js:3422
+#: assets/js/block-editor.js:3425
 msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
 msgstr "Para obtener la mejor experiencia con las funciones OpenType, considere usar el bloque Typography Stylist en lugar de la barra de herramientas en línea."
 
-#: assets/js/block-editor.js:3430
-#: assets/js/block-editor.js:3434
+#: assets/js/block-editor.js:3433
+#: assets/js/block-editor.js:3437
 #: blocks/typography-stylist/build/index.js:2
 msgid "Font Family"
 msgstr "Familia de Fuentes"
 
-#: assets/js/block-editor.js:3436
+#: assets/js/block-editor.js:3439
 #: blocks/typography-stylist/build/index.js:2
 msgid "(Default)"
 msgstr "(Predeterminada)"
 
-#: assets/js/block-editor.js:3447
+#: assets/js/block-editor.js:3450
 msgid "This WordPress Font Library font could not be added. Please try again."
 msgstr "No se pudo añadir esta fuente de la biblioteca de WordPress. Inténtalo de nuevo."
 
-#: assets/js/block-editor.js:3480
-#: assets/js/block-editor.js:3485
+#: assets/js/block-editor.js:3483
+#: assets/js/block-editor.js:3488
 #: blocks/typography-stylist/build/index.js:2
 msgid "Font Weight"
 msgstr "Peso de Fuente"
 
-#: assets/js/block-editor.js:3508
-#: assets/js/block-editor.js:3510
+#: assets/js/block-editor.js:3511
+#: assets/js/block-editor.js:3513
 #: blocks/typography-stylist/build/index.js:2
 msgid "Font Style"
 msgstr "Estilo de fuente"
 
-#: assets/js/block-editor.js:3514
-#: assets/js/block-editor.js:3531
+#: assets/js/block-editor.js:3517
+#: assets/js/block-editor.js:3534
 #: blocks/typography-stylist/build/index.js:2
 msgid "Inherit"
 msgstr "Heredar"
 
-#: assets/js/block-editor.js:3515
+#: assets/js/block-editor.js:3518
 #: blocks/typography-stylist/build/index.js:2
 msgid "Normal (upright)"
 msgstr "Normal (recto)"
 
-#: assets/js/block-editor.js:3516
+#: assets/js/block-editor.js:3519
 #: blocks/typography-stylist/build/index.js:2
 msgid "Italic"
 msgstr "Cursiva"
 
-#: assets/js/block-editor.js:3519
+#: assets/js/block-editor.js:3522
 #: blocks/typography-stylist/build/index.js:2
 msgid "Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead."
 msgstr "Solo estilo visual. Usa la variante cursiva de la fuente y no añade énfasis. Para añadir un énfasis semántico que los lectores de pantalla puedan anunciar, usa en su lugar el botón Cursiva del editor."
 
-#: assets/js/block-editor.js:3525
-#: assets/js/block-editor.js:3527
+#: assets/js/block-editor.js:3528
+#: assets/js/block-editor.js:3530
 #: blocks/typography-stylist/build/index.js:2
 msgid "Font Size"
 msgstr "Tamaño de Fuente"
 
-#: assets/js/block-editor.js:3532
+#: assets/js/block-editor.js:3535
 #: blocks/typography-stylist/build/index.js:2
 msgid "Responsive (Fluid)"
 msgstr "Responsivo (Fluido)"
 
-#: assets/js/block-editor.js:3537
+#: assets/js/block-editor.js:3540
 msgid "Fit to Width (blocks only)"
 msgstr "Ajustar al ancho (solo bloques)"
 
-#: assets/js/block-editor.js:3541
+#: assets/js/block-editor.js:3544
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr "El modo responsivo usa CSS clamp() para un dimensionamiento fluido entre pantallas."
 
-#: assets/js/block-editor.js:3543
+#: assets/js/block-editor.js:3546
 msgid "This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead."
 msgstr "Este estilo de párrafo ajusta el texto al ancho del bloque. El texto en línea usa en su lugar el tamaño fluido alternativo del estilo."
 
-#: assets/js/block-editor.js:3550
+#: assets/js/block-editor.js:3553
 msgid "Minimum Size (mobile)"
 msgstr "Tamaño Mínimo (móvil)"
 
-#: assets/js/block-editor.js:3559
+#: assets/js/block-editor.js:3562
 msgid "Preferred Size (tablet)"
 msgstr "Tamaño Preferido (tablet)"
 
-#: assets/js/block-editor.js:3568
+#: assets/js/block-editor.js:3571
 msgid "Maximum Size (desktop)"
 msgstr "Tamaño Máximo (escritorio)"
 
-#: assets/js/block-editor.js:3582
+#: assets/js/block-editor.js:3585
 msgid "Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior."
 msgstr "Nota: Los tamaños de fuente están desordenados. Mínimo debe ser ≤ Preferido ≤ Máximo para el comportamiento esperado."
 
-#: assets/js/block-editor.js:3591
-#: assets/js/block-editor.js:3593
+#: assets/js/block-editor.js:3594
+#: assets/js/block-editor.js:3596
 #: blocks/typography-stylist/build/index.js:2
 msgid "Line Height"
 msgstr "Altura de Línea"
 
-#: assets/js/block-editor.js:3600
+#: assets/js/block-editor.js:3603
 #: blocks/typography-stylist/build/index.js:2
 msgid "Currently using browser default"
 msgstr "Utilizando actualmente el valor predeterminado del navegador"
 
-#: assets/js/block-editor.js:3606
+#: assets/js/block-editor.js:3609
 #: blocks/typography-stylist/build/index.js:2
 msgid "Browser default"
 msgstr "Predeterminado del navegador"
 
-#: assets/js/block-editor.js:3612
-#: assets/js/block-editor.js:3614
+#: assets/js/block-editor.js:3615
+#: assets/js/block-editor.js:3617
 #: blocks/typography-stylist/build/index.js:2
 msgid "Letter Spacing"
 msgstr "Espaciado de Letras"
 
-#: assets/js/block-editor.js:3621
+#: assets/js/block-editor.js:3624
 #: blocks/typography-stylist/build/index.js:2
 msgid "Normal"
 msgstr "Normal"
 
-#: assets/js/block-editor.js:3630
+#: assets/js/block-editor.js:3633
 msgid "Quick Presets"
 msgstr "Preajustes Rápidos"
 
-#: assets/js/block-editor.js:3647
+#: assets/js/block-editor.js:3650
 msgid "Individual Features"
 msgstr "Características Individuales"
 
-#: assets/js/block-editor.js:3683
+#: assets/js/block-editor.js:3686
 msgid "Converts this heading or paragraph into a Typography Stylist block, which adds screen reader text and block-level typography controls."
 msgstr "Convierte este encabezado o párrafo en un bloque Typography Stylist, que añade texto para lectores de pantalla y controles tipográficos a nivel de bloque."
 
-#: assets/js/block-editor.js:3701
+#: assets/js/block-editor.js:3704
 msgid "Clear All Typography Settings?"
 msgstr "¿Borrar Todas las Configuraciones Tipográficas?"
 
-#: assets/js/block-editor.js:3704
+#: assets/js/block-editor.js:3707
 msgid "This will remove all typography features, font selections, and styling."
 msgstr "Esto eliminará todas las funciones tipográficas, selecciones de fuentes y estilos."
 
-#: assets/js/block-editor.js:3707
+#: assets/js/block-editor.js:3710
 msgid "Do not show this warning again (this session)"
 msgstr "No volver a mostrar esta advertencia (esta sesión)"
 
-#: assets/js/block-editor.js:3715
+#: assets/js/block-editor.js:3718
 msgid "Clear All Settings"
 msgstr "Borrar Todas las Configuraciones"
 
-#: assets/js/block-editor.js:3741
+#: assets/js/block-editor.js:3744
 #: blocks/typography-stylist/build/index.js:2
 msgid "Clear"
 msgstr "Limpiar"
@@ -2700,83 +2712,83 @@ msgstr "Este control aplica la altura de línea a todo el bloque. Para cambiar l
 msgid "This control applies letter spacing to the entire block. To change the letter spacing of selected text, select it and click “Typography Stylist Features” in the block toolbar."
 msgstr "Este control aplica el espaciado de letras a todo el bloque. Para cambiar el espaciado de letras de un texto, selecciónalo y haz clic en «Funciones de Typography Stylist» en la barra de herramientas del bloque."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "OpenType Features"
 msgstr "Características OpenType"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features."
 msgstr "Las características OpenType son capacidades tipográficas avanzadas integradas en los archivos de fuentes, como ligaduras y alternativas estilísticas. No todas las fuentes admiten todas las características."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "These controls apply features to the entire block. To apply features to selected text, select it and click “Typography Stylist Features” in the block toolbar."
 msgstr "Estos controles aplican las funciones a todo el bloque. Para aplicar funciones a un texto, selecciónalo y haz clic en «Funciones de Typography Stylist» en la barra de herramientas del bloque."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Screen Reader Class"
 msgstr "Clase de Lector de Pantalla"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Custom Class Name"
 msgstr "Nombre de Clase Personalizado"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Enter your theme’s screen reader class."
 msgstr "Introduce la clase de lector de pantalla de tu tema."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "The selected class hides the screen reader copy of the text from view. The plugin includes styles for visually-hidden, sr-only, and screen-reader-text. For a custom class, make sure your theme defines it."
 msgstr "La clase seleccionada oculta a la vista la copia del texto para lectores de pantalla. El plugin incluye estilos para visually-hidden, sr-only y screen-reader-text. Para una clase personalizada, asegúrate de que tu tema la define."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Reset Features"
 msgstr "Restablecer las Funciones"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Clear features and styling applied to this block."
 msgstr "Borrar las funciones y el estilo aplicados a este bloque."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Are you sure?"
 msgstr "¿Seguro?"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "This will remove all inline features (typost-styled spans) from this block. Block-level settings will remain."
 msgstr "Esto eliminará todas las funciones en línea (spans typost-styled) de este bloque. Los ajustes del bloque se mantendrán."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Yes, Clear"
 msgstr "Sí, borrar"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Reset Entire Block?"
 msgstr "¿Restablecer todo el Bloque?"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac)."
 msgstr "Esto restablece todo el bloque. Elimina las funciones en línea y todos los ajustes del bloque (fuente, funciones, espaciado y más). Para deshacer, pulsa Ctrl+Z (Cmd+Z en Mac)."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Yes, Reset All"
 msgstr "Sí, restablecer todo"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Clear Individual Features"
 msgstr "Borrar las Funciones Individuales"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Removes all inline features (typost-styled spans) but keeps block-level settings."
 msgstr "Elimina todas las funciones en línea (spans typost-styled) pero mantiene los ajustes del bloque."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Reset Entire Block"
 msgstr "Restablecer todo el Bloque"
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Clears the inline features and the block-level settings (font, features, spacing, and more)."
 msgstr "Borra las funciones en línea y los ajustes del bloque (fuente, funciones, espaciado y más)."
 
-#: blocks/typography-stylist/build/index.js:2
+#: blocks/typography-stylist/build/index.js:4
 msgid "Add text with advanced typography…"
 msgstr "Añade texto con tipografía avanzada…"
 
@@ -2814,3 +2826,39 @@ msgstr "encabezado"
 msgctxt "block keyword"
 msgid "accessibility"
 msgstr "accesibilidad"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "First Letter Hang"
+msgstr "Desborde de la Primera Letra"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Moves the first letter of a line into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Each line has its own value."
+msgstr "Mueve la primera letra de una línea hacia el margen, para que la floritura sobresalga del borde del texto y la forma principal de la letra se alinee con el borde. El valor está en em: 0,1 es una décima parte del tamaño de fuente, por lo que el desborde se ajusta al texto. Cada línea tiene su propio valor."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Moves the first letter into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Only the first line hangs."
+msgstr "Mueve la primera letra hacia el margen, para que la floritura sobresalga del borde del texto y la forma principal de la letra se alinee con el borde. El valor está en em: 0,1 es una décima parte del tamaño de fuente, por lo que el desborde se ajusta al texto. Solo se desborda la primera línea."
+
+#. translators: 1: line number, 2: start of the line's text.
+#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:4
+#, js-format
+msgid "Line %1$d: %2$s"
+msgstr "Línea %1$d: %2$s"
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "First letter"
+msgstr "Primera letra"
+
+#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:4
+msgid "Off"
+msgstr "Desactivado"
+
+#: blocks/typography-stylist/build/index.js:4
+msgid "The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it."
+msgstr "El desborde no tiene efecto mientras el texto está centrado o alineado al final. Alinea el texto al inicio para usarlo."
+
+#: blocks/typography-stylist/build/index.js:4
+msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
+msgstr "La floritura se dibuja fuera del bloque. Algunos temas recortan el contenido que sale de su contenedor, y entonces la floritura aparece recortada en el sitio. Revisa la página publicada."

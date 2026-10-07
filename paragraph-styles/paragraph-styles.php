@@ -76,6 +76,9 @@ final class Typost_Paragraph_Styles {
 	const RESPONSIVE_FONT_MIN_VIEWPORT = 320;
 	const RESPONSIVE_FONT_MAX_VIEWPORT = 1920;
 
+	/** @var int Largest hanging-initial value in em (INITIAL_HANG_MAX in core utils.js) */
+	const HANG_MAX = 1;
+
 	/**
 	 * Get singleton instance.
 	 *
@@ -323,6 +326,15 @@ final class Typost_Paragraph_Styles {
 				round( $vw, 4 ),
 				$max
 			);
+		}
+
+		// Hanging initial (#242): a custom property that core's block
+		// style.css reads in its ::first-letter rule. An inline style cannot
+		// reach a pseudo-element, so the style sets the value and the shared
+		// rule applies it. buildStyleCssBlock() in ps-utils.js emits the same.
+		$hang = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;
+		if ( $hang > 0 ) {
+			$css_rules[] = '--typost-hang: ' . $hang;
 		}
 
 		if ( empty( $css_rules ) ) {
@@ -1314,6 +1326,36 @@ final class Typost_Paragraph_Styles {
 			$clean['fontVariationSettings'] = sanitize_text_field( $raw['fontVariationSettings'] );
 		}
 
+		// 0 = no hang, never stored (absent and 0 render the same)
+		if ( isset( $raw['initialHang'] ) ) {
+			$hang = self::normalize_hang( $raw['initialHang'] );
+			if ( $hang > 0 ) {
+				$clean['initialHang'] = $hang;
+			}
+		}
+
 		return $clean;
+	}
+
+	/**
+	 * Normalize a hanging-initial value (#242) to em.
+	 *
+	 * Non-numeric, negative and empty input gives 0 (no hang). Values are
+	 * capped at HANG_MAX and rounded to three decimals. Mirrors
+	 * normalizeHang() in core utils.js and in ps-utils.js, so the stored
+	 * value and both CSS generators agree.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return float Hang in em, 0 when off.
+	 */
+	public static function normalize_hang( $value ) {
+		if ( ! is_numeric( $value ) ) {
+			return 0;
+		}
+		$hang = (float) $value;
+		if ( $hang <= 0 || is_nan( $hang ) ) {
+			return 0;
+		}
+		return round( min( $hang, self::HANG_MAX ), 3 );
 	}
 }

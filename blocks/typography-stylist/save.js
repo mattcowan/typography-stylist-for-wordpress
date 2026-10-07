@@ -3,7 +3,7 @@
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml } from './utils';
+import { buildFitLinesHtml, normalizeHang } from './utils';
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -41,6 +41,8 @@ export default function save({ attributes }) {
 		fontSizeMax,
 		fitLineSizes,
 		fitMaxSize,
+		initialHang,
+		fitLineHangs,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -159,6 +161,17 @@ export default function save({ attributes }) {
 		});
 	}
 
+	// Hanging initial (#242). A custom property, read by the ::first-letter
+	// rule in style.css, because an inline style cannot reach a
+	// pseudo-element. Set on the object directly: the camelCase parse above
+	// would mangle a leading '--'. Under a styleClass the style's CSS class
+	// supplies the value, like every other typography property. Absent at
+	// 0, so blocks saved before this attribute existed serialize unchanged.
+	const hang = normalizeHang(initialHang);
+	if (!styleClass && hang > 0) {
+		styleObj['--typost-hang'] = String(hang);
+	}
+
 	// Derive style ID from styleClass.
 	// Expected format: styleClass contains a token "typost-ps-<number>" (e.g., "typost-ps-1"),
 	// and the numeric part is used as the styleId. If the pattern is not present, styleId
@@ -173,7 +186,7 @@ export default function save({ attributes }) {
 	// output below is byte-identical to the pre-fit save (block validation),
 	// except the fixed px font-size above, which v1 never wrote (#218).
 	const isFit = fontSize === 'fit';
-	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize) : content;
+	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs) : content;
 	const visualClassName = (isFit ? 'typost-styled typost-fit' : 'typost-styled') + (styleClass ? ` ${styleClass}` : '');
 
 	return (
