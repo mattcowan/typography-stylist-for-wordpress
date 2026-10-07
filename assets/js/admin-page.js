@@ -1368,7 +1368,7 @@ jQuery(document).ready(function($) {
                 var count = response.count || (response.fonts ? response.fonts.length : 1);
                 var successMsg = count === 1
                     ? typostAdmin.strings.adobeFontSuccess
-                    : typostAdmin.strings.adobeFontSuccess.replace('added', 'Added ' + count + ' fonts from');
+                    : typostAdmin.strings.adobeFontsSuccessCount.replace('%d', count);
 
                 $message.html('<div class="notice notice-success inline"><p>' + successMsg + '</p></div>');
 
@@ -2334,7 +2334,7 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        if (!typostBeginBusy($btn, adminString('adding', 'Adding...'))) { return; }
+        if (!typostBeginBusy($btn, adminString('adding', 'Adding…'))) { return; }
 
         // Create the replacement mapping
         $.ajax({
@@ -2590,7 +2590,6 @@ jQuery(document).ready(function($) {
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                enable_aria_labels: $('#typost_enable_aria_labels').is(':checked'),
                 disable_accessibility_warning: $('#typost_disable_accessibility_warning').is(':checked')
             }),
             beforeSend: function(xhr) {

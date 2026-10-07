@@ -31,15 +31,15 @@ if (!defined('ABSPATH')) {
  */
 function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
     $weights = array(
-        '100' => __('100 - Thin', 'typography-stylist'),
-        '200' => __('200 - Extra Light', 'typography-stylist'),
-        '300' => __('300 - Light', 'typography-stylist'),
-        '400' => __('400 - Normal', 'typography-stylist'),
-        '500' => __('500 - Medium', 'typography-stylist'),
-        '600' => __('600 - Semi Bold', 'typography-stylist'),
-        '700' => __('700 - Bold', 'typography-stylist'),
-        '800' => __('800 - Extra Bold', 'typography-stylist'),
-        '900' => __('900 - Black', 'typography-stylist'),
+        '100' => __('100 (Thin)', 'typography-stylist'),
+        '200' => __('200 (Extra Light)', 'typography-stylist'),
+        '300' => __('300 (Light)', 'typography-stylist'),
+        '400' => __('400 (Normal)', 'typography-stylist'),
+        '500' => __('500 (Medium)', 'typography-stylist'),
+        '600' => __('600 (Semi Bold)', 'typography-stylist'),
+        '700' => __('700 (Bold)', 'typography-stylist'),
+        '800' => __('800 (Extra Bold)', 'typography-stylist'),
+        '900' => __('900 (Black)', 'typography-stylist'),
     );
     $available = !empty($font['available_weights']) ? $font['available_weights'] : array();
     $all_available = empty($available); // Empty array = all weights available
@@ -47,7 +47,7 @@ function typost_render_weight_checkboxes($font, $prefix, $show_auto = false) {
     <fieldset class="typost-form-field typost-weight-fieldset">
         <legend><?php esc_html_e('Available Font Weights:', 'typography-stylist'); ?></legend>
         <p class="description" id="typost-<?php echo esc_attr($prefix); ?>-weights-desc-<?php echo esc_attr($font['id']); ?>">
-            <?php esc_html_e('Uncheck weights this font doesn\'t include to exclude them from being selected. You can leave all checked for variable fonts.', 'typography-stylist'); ?>
+            <?php esc_html_e('Clear the weights that this font does not include. The editor then does not offer them. For a variable font, you can keep all weights selected.', 'typography-stylist'); ?>
             <?php if ($show_auto && !empty($font['available_weights'])): ?>
                 <br><em><?php
                 if ('adobe' === $prefix) {
@@ -280,8 +280,8 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                     printf(
                         /* translators: %d: number of uploaded fonts not yet registered */
                         esc_html(_n(
-                            '%d uploaded font is not yet registered in the WordPress Font Library. Registering makes it available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time.',
-                            '%d uploaded fonts are not yet registered in the WordPress Font Library. Registering makes them available site-wide (Appearance → Editor) while everything keeps working exactly as before — existing content is never affected, and you can undo per font at any time.',
+                            '%d uploaded font is not registered in the WordPress Font Library. When you register it, WordPress can use it like any other Library font. Existing content does not change, and you can undo the registration for each font at any time.',
+                            '%d uploaded fonts are not registered in the WordPress Font Library. When you register them, WordPress can use them like any other Library font. Existing content does not change, and you can undo the registration for each font at any time.',
                             $wpl_unregistered_count,
                             'typography-stylist'
                         )),
@@ -322,8 +322,8 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                     printf(
                         /* translators: %d: number of fonts without detected weights */
                         esc_html(_n(
-                            '%d font was added before weight detection existed, so all nine weights are enabled for it. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time.',
-                            '%d fonts were added before weight detection existed, so all nine weights are enabled for them. Auto-detection checks only the weights each font actually includes — uploaded fonts are read from their font files, Adobe Fonts from their kit stylesheet. You can adjust the checkboxes afterwards at any time.',
+                            '%d font was added before weight detection existed, so all nine weights are turned on for it. Auto-detection selects only the weights that each font includes. It reads uploaded fonts from their font files, and Adobe Fonts from their kit stylesheet. You can change the selected weights at any time.',
+                            '%d fonts were added before weight detection existed, so all nine weights are turned on for them. Auto-detection selects only the weights that each font includes. It reads uploaded fonts from their font files, and Adobe Fonts from their kit stylesheet. You can change the selected weights at any time.',
                             $weight_detect_candidates,
                             'typography-stylist'
                         )),
@@ -403,7 +403,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
             ?>
 
             <?php if (!empty($all_fonts_list)): ?>
-            <ul id="typost-unified-font-list" class="typost-unified-font-list" aria-label="<?php esc_attr_e('Font list — drag to reorder', 'typography-stylist'); ?>">
+            <ul id="typost-unified-font-list" class="typost-unified-font-list" aria-label="<?php esc_attr_e('Font list (drag to reorder)', 'typography-stylist'); ?>">
 
             <?php foreach ($all_fonts_list as $card_index => $unified): ?>
             <?php
@@ -460,7 +460,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                                     placeholder="<?php esc_attr_e('e.g., Georgia, serif', 'typography-stylist'); ?>"
                                     aria-describedby="typost-font-fallback-desc-<?php echo esc_attr($font['id']); ?>" />
                                 <p id="typost-font-fallback-desc-<?php echo esc_attr($font['id']); ?>" class="description">
-                                    <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Enter fallback fonts, separated by commas. The browser uses them if this font does not load.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <div class="typost-font-loading-option">
@@ -499,7 +499,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                                     </button>
                                 <?php endif; ?>
                                 <p class="description">
-                                    <?php esc_html_e('Registered fonts appear in the WordPress Font Library (Appearance → Editor) and WordPress serves their font files. Either way the plugin\'s --font-N variables keep working, so existing content is never affected.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Registered fonts appear in the WordPress Font Library. The font files stay in the plugin’s upload folder. Either way, the plugin’s --font-N variables keep working, so existing content does not change.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <?php endif; ?>
@@ -551,7 +551,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                                     placeholder="<?php esc_attr_e('e.g., Georgia, serif', 'typography-stylist'); ?>"
                                     aria-describedby="typost-adobe-font-fallback-desc-<?php echo esc_attr($font['id']); ?>" />
                                 <p id="typost-adobe-font-fallback-desc-<?php echo esc_attr($font['id']); ?>" class="description">
-                                    <?php esc_html_e('Enter fallback fonts separated by commas (these will be used if the primary font fails to load)', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Enter fallback fonts, separated by commas. The browser uses them if this font does not load.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <div class="typost-font-loading-option">
@@ -614,7 +614,13 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                                     aria-required="true"
                                     aria-describedby="typost-manual-font-family-edit-desc-<?php echo esc_attr($font['id']); ?>" />
                                 <p id="typost-manual-font-family-edit-desc-<?php echo esc_attr($font['id']); ?>" class="description">
-                                    <?php esc_html_e('Enter the exact CSS font-family value including any fallback fonts (e.g., \'Playfair Display\', Georgia, serif)', 'typography-stylist'); ?>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: an example CSS font-family value, shown as code. */
+                                        esc_html__('Enter the exact CSS font-family value, with any fallback fonts. For example: %s', 'typography-stylist'),
+                                        '<code>\'Playfair Display\', Georgia, serif</code>'
+                                    );
+                                    ?>
                                 </p>
                             </div>
                             <?php typost_render_weight_checkboxes($font, 'manual', false); ?>
@@ -641,11 +647,18 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
                             <?php if (!empty($wpl['font_family'])): ?>
                             <code class="typost-wpl-family"><?php echo esc_html($wpl['font_family']); ?></code>
                             <?php endif; ?>
-                            <a href="<?php echo esc_url(admin_url('themes.php?page=gutenberg-edit-site')); ?>"
+                            <?php
+                            // WordPress 7.1 added Appearance → Fonts; before that the
+                            // Font Library opens from the Site Editor.
+                            $typost_font_library_url = file_exists(ABSPATH . 'wp-admin/font-library.php')
+                                ? admin_url('font-library.php')
+                                : admin_url('site-editor.php');
+                            ?>
+                            <a href="<?php echo esc_url($typost_font_library_url); ?>"
                                 class="button typost-wpl-manage-btn" target="_blank"
-                                aria-label="<?php esc_attr_e('Manage fonts in Appearance Editor (opens in new tab)', 'typography-stylist'); ?>">
+                                aria-label="<?php esc_attr_e('Manage fonts in the WordPress Font Library (opens in a new tab)', 'typography-stylist'); ?>">
                                 <span aria-hidden="true" class="dashicons dashicons-external"></span>
-                                <?php esc_html_e('Manage in Editor', 'typography-stylist'); ?>
+                                <?php esc_html_e('Manage in Font Library', 'typography-stylist'); ?>
                             </a>
                             <?php echo wp_kses_post(apply_filters('typost_font_card_badges', '', $wpl, 'wplibrary')); // Extension badges (e.g. Variable) lead, before the source pill ?>
                             <span class="typost-font-type-badge typost-badge-wplibrary"><?php echo esc_html($badge_labels['wplibrary']); ?></span>
@@ -661,7 +674,7 @@ function typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts,
             <?php else: ?>
             <div class="typost-empty-state" role="status">
                 <p><strong><?php esc_html_e('No fonts added yet.', 'typography-stylist'); ?></strong></p>
-                <p><?php esc_html_e('Use the "Add Font" section below to upload a font kit, add an Adobe Fonts project, or define a custom font.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Use the “Add Font” section below to upload a font kit, add an Adobe Fonts project, or define a custom font.', 'typography-stylist'); ?></p>
             </div>
             <?php endif; ?>
     <?php
@@ -763,11 +776,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 <summary><?php esc_html_e('About Font Features', 'typography-stylist'); ?></summary>
                 <div class="typost-tab-help-content">
                     <p><?php esc_html_e('OpenType features are advanced typographic capabilities built into font files. They include ligatures (connected letter pairs), stylistic sets (alternate character designs), swashes, small caps, and more.', 'typography-stylist'); ?></p>
-                    <p><?php esc_html_e('Use this page to preview how each feature affects your fonts. Select a custom font from the dropdown to see real results — different fonts support different features.', 'typography-stylist'); ?></p>
+                    <p><?php esc_html_e('Use this page to preview how each feature changes your fonts. Select one of your fonts from the list to see real results. Different fonts support different features.', 'typography-stylist'); ?></p>
                     <ul>
-                        <li><?php esc_html_e('Features are grouped by category (ligatures, stylistic sets, numerals, etc.)', 'typography-stylist'); ?></li>
-                        <li><?php esc_html_e('Use the card width slider to adjust preview size for easier comparison', 'typography-stylist'); ?></li>
-                        <li><?php esc_html_e('When a font is selected, you can enable or disable individual features for that font in the editor', 'typography-stylist'); ?></li>
+                        <li><?php esc_html_e('The features are grouped by category, such as ligatures, stylistic sets, and numerals.', 'typography-stylist'); ?></li>
+                        <li><?php esc_html_e('Use the “Card Width” slider to change the width of the preview cards, so you can compare them more easily.', 'typography-stylist'); ?></li>
+                        <li><?php esc_html_e('When you select a font, you can choose which features the editor shows for that font.', 'typography-stylist'); ?></li>
                     </ul>
                 </div>
             </details>
@@ -833,7 +846,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         type="text"
                         id="typost-preview-custom-text"
                         class="regular-text"
-                        placeholder="<?php esc_attr_e('Type your own text to preview features...', 'typography-stylist'); ?>"
+                        placeholder="<?php esc_attr_e('Type your own text to preview features…', 'typography-stylist'); ?>"
                         aria-label="<?php esc_attr_e('Enter custom text to preview features', 'typography-stylist'); ?>" />
                     <button
                         type="button"
@@ -961,7 +974,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <?php if (!empty($presets)): ?>
             <div class="typost-user-presets-section">
                 <h3><?php esc_html_e('Your Saved Presets', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('These are presets you have created in the block editor.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('These presets are saved on this site. The editor shows them under “Quick Presets” in the Typography Stylist panel.', 'typography-stylist'); ?></p>
 
                 <div class="typost-presets-grid">
                     <?php foreach ($presets as $preset): ?>
@@ -1004,18 +1017,18 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <details class="typost-tab-help">
                 <summary><?php esc_html_e('Why & How to Use Custom Fonts', 'typography-stylist'); ?></summary>
                 <div class="typost-tab-help-content">
-                    <p><strong><?php esc_html_e('Why use custom fonts?', 'typography-stylist'); ?></strong> <?php esc_html_e('OpenType features (ligatures, swashes, stylistic sets) are built into specific font files. Standard system fonts and many web fonts have limited OpenType support. Specialty fonts from foundries like MyFonts, Adobe Fonts, or Font Squirrel often include rich OpenType feature tables that unlock the full potential of this plugin.', 'typography-stylist'); ?></p>
-                    <p><strong><?php esc_html_e('Performance benefit:', 'typography-stylist'); ?></strong> <?php esc_html_e('Fonts added here only load on pages where they are actually used. If you need a particular decorative font on just one page, it will not slow down any other pages on your site.', 'typography-stylist'); ?></p>
+                    <p><strong><?php esc_html_e('Why use custom fonts?', 'typography-stylist'); ?></strong> <?php esc_html_e('OpenType features, such as ligatures, swashes, and stylistic sets, are built into the font files. System fonts and many web fonts have few OpenType features. Fonts from sources such as MyFonts, Adobe Fonts, or Font Squirrel often include many more.', 'typography-stylist'); ?></p>
+                    <p><strong><?php esc_html_e('Performance benefit:', 'typography-stylist'); ?></strong> <?php esc_html_e('By default, a font that you add here loads only on the pages that use it. If you use a decorative font on one page, it does not make the other pages on your site slower.', 'typography-stylist'); ?></p>
                     <p><strong><?php esc_html_e('Three ways to add fonts:', 'typography-stylist'); ?></strong></p>
                     <ol>
-                        <li><strong><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></strong> — <?php esc_html_e('Upload a ZIP file from font providers like MyFonts, Fontspring, or Google Fonts. Best for fonts you have purchased and downloaded.', 'typography-stylist'); ?></li>
-                        <li><strong><?php esc_html_e('Adobe Fonts', 'typography-stylist'); ?></strong> — <?php esc_html_e('Paste the embed code from your Adobe Fonts (Typekit) project. Best for Adobe Creative Cloud subscribers.', 'typography-stylist'); ?></li>
-                        <li><strong><?php esc_html_e('Custom Font Definition', 'typography-stylist'); ?></strong> — <?php esc_html_e('Reference fonts already loaded by your theme, a plugin, or a CDN. Best when you already have a font available and just need Typography Stylist to recognize it.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Upload Font Kit:', 'typography-stylist'); ?></strong> <?php esc_html_e('Upload a ZIP file from a font provider, such as MyFonts, Fontspring, or Google Fonts. Use this for font files that you have downloaded.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Adobe Fonts:', 'typography-stylist'); ?></strong> <?php esc_html_e('Paste the embed code from your Adobe Fonts (Typekit) project. Use this if you have an Adobe Creative Cloud subscription.', 'typography-stylist'); ?></li>
+                        <li><strong><?php esc_html_e('Custom Font Definition:', 'typography-stylist'); ?></strong> <?php esc_html_e('Use a font that your theme, a plugin, or a CDN already loads. Typography Stylist then shows it in the editor font list.', 'typography-stylist'); ?></li>
                     </ol>
                 </div>
             </details>
 
-            <p><?php esc_html_e('Manage all fonts available in the block editor. Drag items to reorder them — the order here determines the order in the editor font selector.', 'typography-stylist'); ?></p>
+            <p><?php esc_html_e('Manage the fonts that the block editor can use. Drag a font to change its position. The editor font list uses the same order.', 'typography-stylist'); ?></p>
 
             <div id="typost-fonts-region" tabindex="-1" role="region" aria-label="<?php esc_attr_e('Font list', 'typography-stylist'); ?>">
                 <?php typost_render_font_list_section($instance, $custom_fonts, $adobe_fonts, $manual_fonts); ?>
@@ -1033,7 +1046,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                     <details class="typost-add-font-subsection">
                         <summary><?php esc_html_e('Upload Font Kit', 'typography-stylist'); ?></summary>
                         <div class="typost-add-font-subsection-body">
-                        <p><?php esc_html_e('Upload a complete webfont kit as a ZIP file (e.g., MyWebfontsKit.zip). The ZIP can contain a CSS file and font files, or just the font files themselves (such as a Google Fonts download) — if no stylesheet is included, one is generated automatically from the fonts\' built-in metadata.', 'typography-stylist'); ?></p>
+                        <p><?php esc_html_e('Upload a complete webfont kit as a ZIP file, for example MyWebfontsKit.zip. The ZIP can contain a CSS file and font files, or only font files (for example, a Google Fonts download). If the ZIP has no stylesheet, the plugin makes one from the metadata in the font files.', 'typography-stylist'); ?></p>
                         <div class="typost-upload-font-section" id="typost-upload-font-section">
                         <div class="typost-upload-form">
                             <div class="typost-form-field">
@@ -1069,7 +1082,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <div class="typost-progress-fill" style="width: 0%;"></div>
                                 </div>
                                 <div id="typost-progress-label" class="typost-progress-text" role="status" aria-live="polite">
-                                    <?php esc_html_e('Uploading...', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Uploading…', 'typography-stylist'); ?>
                                 </div>
                             </div>
                             <div id="typost-font-message" role="alert" aria-live="assertive" aria-atomic="true" style="margin-top: 10px;"></div>
@@ -1077,13 +1090,13 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <div class="typost-font-help">
                             <h4><?php esc_html_e('How to use:', 'typography-stylist'); ?></h4>
                             <ol>
-                                <li><?php esc_html_e('Download your webfont kit from your font provider', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('If the kit is not already zipped, create a ZIP file containing the entire kit folder. A CSS file is recommended but not required — a ZIP of bare font files also works', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Click "Choose ZIP File" and select your webfont kit ZIP file', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Click "Upload Font Kit" — the font names are read from the kit itself', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('The plugin will extract the ZIP, process the fonts, and make them available in the block editor', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Download your webfont kit from your font provider.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('If the kit is not a ZIP file, make a ZIP file of the whole kit folder. A CSS file is recommended, but not necessary. A ZIP of font files only also works.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Click “Choose ZIP File”, then select the ZIP file of your webfont kit.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Click “Upload Font Kit”. The plugin reads the font names from the kit.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('The plugin extracts the ZIP, processes the fonts, and adds them to the block editor.', 'typography-stylist'); ?></li>
                             </ol>
-                            <p><strong><?php esc_html_e('Compatibility Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin has been tested with webfont kits from MyFonts and with bare-font downloads from Google Fonts. Other providers should work too: kits with a CSS file are used as-is, and font-only ZIPs get a generated stylesheet. For WOFF2-only ZIPs the family and weight are detected from the filenames (the server cannot read WOFF2 metadata), so review the result and re-upload as TTF if something looks wrong.', 'typography-stylist'); ?></p>
+                            <p><strong><?php esc_html_e('Compatibility Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin was tested with webfont kits from MyFonts and with font-only downloads from Google Fonts. Kits from other providers should also work. If a kit has a CSS file, the plugin uses it. For a ZIP of font files only, the plugin makes a stylesheet. The server cannot read WOFF2 metadata. For a ZIP of WOFF2 files only, the plugin gets the family and weight from the filenames. Check the result, and upload TTF files instead if something is wrong.', 'typography-stylist'); ?></p>
                         </div>
                         </div><!-- .typost-upload-font-section -->
                         </div>
@@ -1104,7 +1117,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     placeholder="<?php esc_attr_e('<link rel=&quot;stylesheet&quot; href=&quot;https://use.typekit.net/abc1234.css&quot;>', 'typography-stylist'); ?>"
                                     aria-required="true" aria-describedby="typost-adobe-embed-desc"></textarea>
                                 <p id="typost-adobe-embed-desc" class="description">
-                                    <?php esc_html_e('Paste the complete embed code from your Adobe Fonts project (including <link> tags)', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Paste the complete embed code from your Adobe Fonts project, including the <link> tag.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <div class="typost-form-field">
@@ -1116,7 +1129,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     placeholder="<?php esc_attr_e('e.g., proxima-nova, futura-pt', 'typography-stylist'); ?>"
                                     aria-required="true" aria-describedby="typost-adobe-families-desc" />
                                 <p id="typost-adobe-families-desc" class="description">
-                                    <?php esc_html_e('Enter the exact font family names separated by commas (find these in your Adobe Fonts project settings)', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Enter the exact font family names, separated by commas. You can find them in your Adobe Fonts project settings.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <button type="button" id="typost-add-adobe-font-btn" class="button button-primary">
@@ -1127,12 +1140,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <div class="typost-adobe-help">
                             <h4><?php esc_html_e('How to use Adobe Fonts:', 'typography-stylist'); ?></h4>
                             <ol>
-                                <li><?php esc_html_e('Go to fonts.adobe.com and create or open your Web Project', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Add the fonts you want to use to your project', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Copy the embed code (the <link> tag) from the project', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Paste it above and give your project a name', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Go to fonts.adobe.com, then create or open your web project.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Add the fonts that you want to use to your project.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Copy the embed code (the <link> tag) from the project.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Paste the embed code above, then enter the font family names.', 'typography-stylist'); ?></li>
                             </ol>
-                            <p><strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('Adobe Fonts loads directly from Adobe\'s servers. Make sure your domain is authorized in your Adobe Fonts project settings.', 'typography-stylist'); ?></p>
+                            <p><strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('Adobe Fonts loads directly from Adobe’s servers. Make sure that your domain is authorized in your Adobe Fonts project settings.', 'typography-stylist'); ?></p>
                         </div>
                         </div>
                     </details>
@@ -1151,7 +1164,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     placeholder="<?php esc_attr_e('e.g., Playfair Display', 'typography-stylist'); ?>"
                                     aria-required="true" aria-describedby="typost-manual-font-name-desc" />
                                 <p id="typost-manual-font-name-desc" class="description">
-                                    <?php esc_html_e('Enter a display name for this font', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Enter a display name for this font.', 'typography-stylist'); ?>
                                 </p>
                             </div>
                             <div class="typost-form-field">
@@ -1163,7 +1176,13 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     placeholder="<?php esc_attr_e('e.g., \'Playfair Display\', Georgia, serif', 'typography-stylist'); ?>"
                                     aria-required="true" aria-describedby="typost-manual-font-family-desc" />
                                 <p id="typost-manual-font-family-desc" class="description">
-                                    <?php esc_html_e('Enter the exact CSS font-family value including any fallback fonts (e.g., \'Playfair Display\', Georgia, serif)', 'typography-stylist'); ?>
+                                    <?php
+                                    printf(
+                                        /* translators: %s: an example CSS font-family value, shown as code. */
+                                        esc_html__('Enter the exact CSS font-family value, with any fallback fonts. For example: %s', 'typography-stylist'),
+                                        '<code>\'Playfair Display\', Georgia, serif</code>'
+                                    );
+                                    ?>
                                 </p>
                             </div>
                             <button type="button" id="typost-add-manual-font-btn" class="button button-primary">
@@ -1174,12 +1193,12 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <div class="typost-manual-help">
                             <h4><?php esc_html_e('How to use custom font definitions:', 'typography-stylist'); ?></h4>
                             <ol>
-                                <li><?php esc_html_e('Make sure your font is already loaded on your site (via theme, plugin, or @font-face)', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Find the exact font-family name used in CSS (check your theme\'s stylesheet or browser developer tools)', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('Enter the font name and CSS font-family value above (including any fallback fonts)', 'typography-stylist'); ?></li>
-                                <li><?php esc_html_e('The font will be available in the block editor font selector', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Make sure that your site already loads the font, for example through your theme, a plugin, or an @font-face rule.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Find the exact font-family name that the CSS uses. Look in your theme’s stylesheet, or use the browser developer tools.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('Enter the font name and the CSS font-family value above, with any fallback fonts.', 'typography-stylist'); ?></li>
+                                <li><?php esc_html_e('The font then appears in the block editor font list.', 'typography-stylist'); ?></li>
                             </ol>
-                            <p><strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This plugin does not load fonts for you - it only applies OpenType features to fonts already loaded on your site.', 'typography-stylist'); ?></p>
+                            <p><strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('The plugin does not load these fonts. It can style only fonts that your site already loads.', 'typography-stylist'); ?></p>
                         </div>
                         </div>
                     </details>
@@ -1250,7 +1269,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     </option>
                                 </select>
                                 <p class="description">
-                                    <?php esc_html_e('Choose a color scheme for the Typography Stylist admin page. "Match Admin Theme" adapts to your WordPress admin color palette.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('Choose a color scheme for the Typography Stylist admin page. “Match Admin Theme” uses the colors of your WordPress admin color scheme.', 'typography-stylist'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -1310,7 +1329,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Check full post content on archive pages (recommended)', 'typography-stylist'); ?>
                                 </label>
                                 <p class="description">
-                                    <?php esc_html_e('When enabled, the plugin checks full post content on blog archives, category pages, and tag pages to detect custom fonts. This ensures fonts load correctly even when posts don\'t have manual excerpts or "Read More" tags. Performance impact is minimal due to 12-hour caching (approximately 250-600ms on first page load, then < 1ms for subsequent loads). Disable this only if you have a specific performance concern or your theme uses plain text excerpts.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('When enabled, the plugin checks the full post content on blog archives, category pages, and tag pages to find custom fonts. The fonts then load correctly, even when posts do not have manual excerpts or “Read More” tags. The results are cached for 12 hours, so the cost is small: approximately 250–600 ms on the first page load, then less than 1 ms. Turn this off only if you have a specific performance problem, or if your theme shows plain text excerpts.', 'typography-stylist'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -1331,7 +1350,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Automatically register newly uploaded fonts in the WordPress Font Library (recommended)', 'typography-stylist'); ?>
                                 </label>
                                 <p class="description">
-                                    <?php esc_html_e('When enabled, fonts from newly uploaded webfont kits are also registered in the WordPress Font Library (Appearance → Editor), so they can be used site-wide and share WordPress\'s font system. The plugin\'s --font-N variables keep working either way, so existing content is never affected. Previously uploaded fonts can be registered individually or in bulk from the Custom Fonts tab.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('When enabled, the plugin also registers fonts from new webfont kits in the WordPress Font Library, so WordPress can use them like any other Library font. Either way, the plugin’s --font-N variables keep working, so existing content does not change. To register fonts that you uploaded before, go to the Custom Fonts tab. You can register them one at a time or all together.', 'typography-stylist'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -1368,7 +1387,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <hr style="margin: 30px 0;">
 
             <h3><?php esc_html_e('Cache Management', 'typography-stylist'); ?></h3>
-            <p><?php esc_html_e('Typography Stylist caches font detection data for 12-24 hours to improve performance. If fonts aren\'t loading correctly after making changes, you can manually clear the cache here.', 'typography-stylist'); ?></p>
+            <p><?php esc_html_e('Typography Stylist caches font detection data for 12–24 hours to make pages faster. If fonts do not load correctly after you make changes, clear the cache here.', 'typography-stylist'); ?></p>
 
             <form method="post" action="">
                 <?php wp_nonce_field('typography_stylist_clear_cache_nonce'); ?>
@@ -1409,49 +1428,34 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <details class="typost-tab-help">
                 <summary><?php esc_html_e('About Accessibility', 'typography-stylist'); ?></summary>
                 <div class="typost-tab-help-content">
-                    <p><?php esc_html_e('Typography Stylist is designed with accessibility in mind. The Typography Stylist block automatically creates dual headings — a clean text version for screen readers and a visually styled version for sighted users.', 'typography-stylist'); ?></p>
-                    <p><?php esc_html_e('The settings below let you fine-tune how assistive technologies interact with styled content. The default settings work well for most sites — only change them if you have specific accessibility requirements.', 'typography-stylist'); ?></p>
+                    <p><?php esc_html_e('The Typography Stylist block is built for accessibility. It makes two versions of each heading: a plain text version for screen readers and a styled version for sighted readers.', 'typography-stylist'); ?></p>
+                    <p><?php esc_html_e('The settings below control how screen readers and other assistive technologies handle styled text. The defaults suit most sites. Change them only if your site has specific accessibility requirements.', 'typography-stylist'); ?></p>
                 </div>
             </details>
 
-            <div class="notice notice-info inline" style="margin: 20px 0;">
+            <div class="notice notice-info inline typost-builtin-a11y">
                 <h3><?php esc_html_e('Built-in Accessibility Features', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('This plugin includes accessibility features by default:', 'typography-stylist'); ?></p>
-                <ul style="list-style: disc; margin-left: 20px;">
-                    <li><strong><?php esc_html_e('Typography Stylist Block:', 'typography-stylist'); ?></strong> <?php esc_html_e('Automatically creates dual semantic headings - a clean text version for screen readers (hidden visually) and a styled version for sighted users (hidden from screen readers with aria-hidden="true"). No configuration needed.', 'typography-stylist'); ?></li>
-                    <li><strong><?php esc_html_e('Inline Format (Rich Text Blocks):', 'typography-stylist'); ?></strong> <?php esc_html_e('By default, applies styling directly to text. Enable the optional setting below to add aria-label attributes for enhanced screen reader support.', 'typography-stylist'); ?></li>
+                <p><?php esc_html_e('These features work with no setup:', 'typography-stylist'); ?></p>
+                <ul>
+                    <li><strong><?php esc_html_e('Typography Stylist Block:', 'typography-stylist'); ?></strong> <?php
+                        printf(
+                            /* translators: %s: the attribute aria-hidden="true", shown as code. */
+                            esc_html__('Makes two headings. Screen readers get a plain text version that is visually hidden. Sighted readers get the styled version, which %s hides from screen readers.', 'typography-stylist'),
+                            '<code>aria-hidden="true"</code>'
+                        );
+                    ?></li>
+                    <li><strong><?php esc_html_e('Inline Format (Rich Text Blocks):', 'typography-stylist'); ?></strong> <?php esc_html_e('Applies the styling directly to the text. Screen readers read the text as it is.', 'typography-stylist'); ?></li>
                 </ul>
             </div>
 
             <form method="post" action="">
                 <?php wp_nonce_field('typography_stylist_accessibility_settings_nonce'); ?>
 
-                <h3><?php esc_html_e('Optional Screen Reader Enhancement', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('Configure aria-label support for inline formatted text (standard heading blocks, paragraph blocks, etc.).', 'typography-stylist'); ?></p>
+                <h3><?php esc_html_e('Inline Format Settings', 'typography-stylist'); ?></h3>
+                <p><?php esc_html_e('This setting applies to text styled with the inline format in standard blocks, such as headings and paragraphs.', 'typography-stylist'); ?></p>
 
                 <table class="form-table" role="presentation">
                     <tbody>
-                        <tr>
-                            <th scope="row">
-                                <?php esc_html_e('Inline Format: Add aria-label Attributes', 'typography-stylist'); ?>
-                            </th>
-                            <td>
-                                <input
-                                    type="checkbox"
-                                    id="typost_enable_aria_labels"
-                                    name="typost_enable_aria_labels"
-                                    value="1"
-                                    <?php checked(get_option('typost_enable_aria_labels', false)); ?>
-                                />
-                                <label for="typost_enable_aria_labels">
-                                    <?php esc_html_e('Add aria-label with original text to inline styled spans', 'typography-stylist'); ?>
-                                </label>
-                                <p class="description">
-                                    <?php esc_html_e('When enabled, text styled with the inline format toolbar button will include aria-label attributes containing the original, unmodified text. This helps prevent screen reader mispronunciation of OpenType ligatures (e.g., "fi" rendered as "ﬁ").', 'typography-stylist'); ?>
-                                    <strong><?php esc_html_e('Note:', 'typography-stylist'); ?></strong> <?php esc_html_e('This setting only affects inline formats. The Typography Stylist block already includes full accessibility features by default.', 'typography-stylist'); ?>
-                                </p>
-                            </td>
-                        </tr>
                         <tr>
                             <th scope="row">
                                 <?php esc_html_e('Disable Word Boundary Warning', 'typography-stylist'); ?>
@@ -1468,7 +1472,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                     <?php esc_html_e('Skip the warning when applying features to partial words', 'typography-stylist'); ?>
                                 </label>
                                 <p class="description">
-                                    <?php esc_html_e('When applying inline typography features to a partial word (e.g., a single letter), the editor normally shows a warning recommending conversion to a Typography Stylist block. Enable this option to skip the warning and apply features directly. Screen readers handle inline spans well, so this is safe for most use cases.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('When you style part of a word (for example, one letter) with the inline format, the editor shows a warning and offers to convert the text to a Typography Stylist block. Turn this on to skip the warning and apply the styling directly.', 'typography-stylist'); ?>
                                 </p>
                             </td>
                         </tr>
@@ -1486,10 +1490,10 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
             <div class="typost-accessibility-recommendations">
                 <h3><?php esc_html_e('Accessibility Best Practices', 'typography-stylist'); ?></h3>
                 <ul>
-                    <li><?php esc_html_e('For complex typography with partial word styling, use the Typography Stylist block instead of inline formats.', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Always select complete words or phrases when applying inline formats to avoid fragmenting text for screen readers.', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Test your styled headings with screen readers like NVDA (Windows) or VoiceOver (macOS) to ensure they read correctly.', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('The plugin will warn you if you attempt to apply formatting to partial words and offer to convert to an accessible block.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('To style part of a word, use the Typography Stylist block, not the inline format.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('With the inline format, select complete words or phrases. A styled part of a word can make a screen reader read the word in pieces.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Test styled headings with a screen reader, such as NVDA on Windows or VoiceOver on macOS.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('If you style part of a word with the inline format, the editor warns you and offers to convert the text to a Typography Stylist block. You can turn off this warning above.', 'typography-stylist'); ?></li>
                 </ul>
             </div>
             <?php do_action('typost_admin_tab_after_accessibility', $instance); ?>
@@ -1530,11 +1534,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <?php esc_html_e('Deleted Font ID:', 'typography-stylist'); ?>
                         </label>
                         <select id="typost-new-deleted-id" class="regular-text" aria-describedby="typost-new-deleted-id-desc">
-                            <option value=""><?php esc_html_e('Select a deleted font ID...', 'typography-stylist'); ?></option>
+                            <option value=""><?php esc_html_e('Select a deleted font ID…', 'typography-stylist'); ?></option>
                             <!-- Populated by JavaScript -->
                         </select>
                         <p id="typost-new-deleted-id-desc" class="description">
-                            <?php esc_html_e('Select a font ID that was previously deleted (available IDs shown)', 'typography-stylist'); ?>
+                            <?php esc_html_e('Select the ID of a deleted font. The list shows only the IDs that do not have a replacement yet.', 'typography-stylist'); ?>
                         </p>
                     </div>
 
@@ -1543,11 +1547,11 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                             <?php esc_html_e('Replacement Font:', 'typography-stylist'); ?>
                         </label>
                         <select id="typost-new-replacement-id" class="regular-text" aria-describedby="typost-new-replacement-id-desc">
-                            <option value=""><?php esc_html_e('Select a replacement font...', 'typography-stylist'); ?></option>
+                            <option value=""><?php esc_html_e('Select a replacement font…', 'typography-stylist'); ?></option>
                             <!-- Populated by JavaScript -->
                         </select>
                         <p id="typost-new-replacement-id-desc" class="description">
-                            <?php esc_html_e('Select which active font should replace the deleted font', 'typography-stylist'); ?>
+                            <?php esc_html_e('Select the active font that replaces the deleted font.', 'typography-stylist'); ?>
                         </p>
                     </div>
 
@@ -1583,69 +1587,69 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
 
             <div class="typost-help-section">
                 <h3><?php esc_html_e('Method 1: Inline Format (Quick Styling)', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('Use this method for applying features to complete words or phrases in any heading or paragraph block.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Use the inline format to style complete words or phrases in a heading, paragraph, or other text block.', 'typography-stylist'); ?></p>
                 <ol>
-                    <li><?php esc_html_e('Create or edit a heading (H1-H6) or paragraph block', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Select the complete word(s) you want to style', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Click the "Typography Features" button in the toolbar', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Choose a preset or toggle individual features', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Preview the changes and click Apply', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Add or select a heading or paragraph block.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Select the complete words that you want to style.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Click “Typography Stylist Features” in the block toolbar.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Choose a preset, or turn on individual features.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('The text changes as you work. Click “Close” when you are done.', 'typography-stylist'); ?></li>
                 </ol>
 
                 <h3><?php esc_html_e('Method 2: Typography Stylist Block (Advanced)', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('Use this method for complex typography, letter-by-letter styling, or when accessibility features are needed.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Use the block for complex typography, for styling single letters, or when you need its built-in accessibility features.', 'typography-stylist'); ?></p>
                 <ol>
-                    <li><?php esc_html_e('Add the "Typography Stylist" block from the block inserter', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Choose heading level (H1-H6) in the sidebar', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Use sidebar controls for font family, size, and OpenType features', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('For inline text styling, select text to show the quick feature popover', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Add the “Typography Stylist” block from the block inserter.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Choose the heading level (H1–H6) in the block toolbar.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Use the sidebar controls to set the font family, size, and OpenType features for the whole block.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('To style only part of the text, select it, then click “Typography Stylist Features” in the block toolbar.', 'typography-stylist'); ?></li>
                 </ol>
             </div>
 
             <div class="typost-help-section">
                 <h3><?php esc_html_e('Line Breaks and the Enter Key', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('The Enter key does different things in a Typography Stylist block than it does in a regular heading or paragraph, which catches people out.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('The Enter key works differently in a Typography Stylist block than in a regular heading or paragraph.', 'typography-stylist'); ?></p>
                 <ul>
                     <li><strong><?php esc_html_e('In a Typography Stylist block:', 'typography-stylist'); ?></strong> <?php esc_html_e('Enter adds a line break and keeps you in the same block, so a multi-line headline shares one set of typography settings. You can change this on the Options tab so Enter starts a new block instead.', 'typography-stylist'); ?></li>
-                    <li><strong><?php esc_html_e('In a regular heading or paragraph:', 'typography-stylist'); ?></strong> <?php esc_html_e('Enter ends the block and starts a new paragraph. This is standard WordPress behaviour and the plugin does not change it.', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('In a regular heading or paragraph:', 'typography-stylist'); ?></strong> <?php esc_html_e('Enter ends the block and starts a new paragraph. This is standard WordPress behavior, and the plugin does not change it.', 'typography-stylist'); ?></li>
                 </ul>
-                <p><?php esc_html_e('To add a line break inside a regular heading without splitting it, press Shift+Enter. If a heading has already split in two, put the cursor at the very start of the paragraph below and press Backspace to merge it back into the heading as a line break.', 'typography-stylist'); ?></p>
-                <p><?php esc_html_e('Shift+Enter adds a line break in a Typography Stylist block as well, whichever way the Options setting is set.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('To add a line break in a regular heading, press Shift+Enter. If a heading has already split in two, put the cursor at the start of the paragraph below it and press Backspace. This joins the text back into the heading. Then press Shift+Enter where you want the line break.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Shift+Enter also adds a line break in a Typography Stylist block, whatever the Options setting is.', 'typography-stylist'); ?></p>
             </div>
 
             <div class="typost-help-section">
                 <h3><?php esc_html_e('Choosing Fonts for OpenType Features', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('This plugin works with fonts that include advanced typographical features and alternate glyphs.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('A feature works only when the font includes it. Look for fonts with alternate glyphs and advanced OpenType features.', 'typography-stylist'); ?></p>
 
-                <h4><?php esc_html_e('Font Types with OpenType Support:', 'typography-stylist'); ?></h4>
+                <h4><?php esc_html_e('Font types that often include OpenType features', 'typography-stylist'); ?></h4>
                 <ul>
-                    <li><strong><?php esc_html_e('Script & Calligraphy Fonts', 'typography-stylist'); ?></strong> - <?php esc_html_e('Often include contextual alternates, swashes, and stylistic sets', 'typography-stylist'); ?></li>
-                    <li><strong><?php esc_html_e('Serif Display Fonts', 'typography-stylist'); ?></strong> - <?php esc_html_e('May feature titling alternates and ligatures', 'typography-stylist'); ?></li>
-                    <li><strong><?php esc_html_e('Professional Typefaces', 'typography-stylist'); ?></strong> - <?php esc_html_e('Many include discretionary ligatures and stylistic alternates', 'typography-stylist'); ?></li>
-                    <li><strong><?php esc_html_e('Ornamental Fonts', 'typography-stylist'); ?></strong> - <?php esc_html_e('Can contain ornaments and special character sets', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Script and calligraphy fonts:', 'typography-stylist'); ?></strong> <?php esc_html_e('Often include contextual alternates, swashes, and stylistic sets.', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Serif display fonts:', 'typography-stylist'); ?></strong> <?php esc_html_e('Can include titling alternates and ligatures.', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Professional typefaces:', 'typography-stylist'); ?></strong> <?php esc_html_e('Many include discretionary ligatures and stylistic alternates.', 'typography-stylist'); ?></li>
+                    <li><strong><?php esc_html_e('Ornamental fonts:', 'typography-stylist'); ?></strong> <?php esc_html_e('Can include ornaments and special character sets.', 'typography-stylist'); ?></li>
                 </ul>
 
-                <p><?php esc_html_e('Upload fonts via the Custom Fonts tab, or load them through your theme or font service.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('Add fonts on the Custom Fonts tab. You can upload a font kit, connect Adobe Fonts, or define a font that your theme or a font service already loads.', 'typography-stylist'); ?></p>
             </div>
 
             <div class="typost-help-section">
                 <h3><?php esc_html_e('Tips for Using OpenType Features', 'typography-stylist'); ?></h3>
                 <ul>
-                    <li><?php esc_html_e('Start with contextual alternates (calt) for automatic character substitutions', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Use swashes sparingly on initial or terminal letters only', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Experiment with stylistic sets (ss01-ss20) to discover alternate designs', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Test ligatures - standard (liga) usually work universally, discretionary (dlig) need careful application', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Preview at actual display size - features may look different at various scales', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('Not all fonts support all features - check documentation and experiment', 'typography-stylist'); ?></li>
-                    <li><?php esc_html_e('For partial word styling, use the Typography Stylist block to maintain accessibility', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Start with contextual alternates (calt). They change letters automatically, based on the letters around them.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Use swashes sparingly, on first or last letters only.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Try the stylistic sets (ss01–ss20) to find alternate letter designs.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Standard ligatures (liga) suit most text. Use discretionary ligatures (dlig) with care.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Preview the text at the size it will display. Features can look different at other sizes.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('Not every font supports every feature. Read the font’s documentation, and test each feature.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('To style part of a word, use the Typography Stylist block. This keeps the text accessible.', 'typography-stylist'); ?></li>
                 </ul>
             </div>
 
             <div class="typost-help-section">
                 <h3><?php esc_html_e('Technical Notes', 'typography-stylist'); ?></h3>
-                <p><?php esc_html_e('Features are applied using CSS font-feature-settings stored as inline styles and data attributes. No additional database tables are required.', 'typography-stylist'); ?></p>
-                <p><?php esc_html_e('Browser support: All modern browsers (Chrome, Firefox, Safari, Edge) fully support OpenType features. Internet Explorer 10+ has partial support.', 'typography-stylist'); ?></p>
-                <p><?php esc_html_e('Frontend performance: The plugin uses CSS-only rendering with no JavaScript on the public site, ensuring fast page loads.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('The plugin stores features in the post content, as CSS font-feature-settings in inline styles and data attributes. It adds no database tables.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('All modern browsers (Chrome, Firefox, Safari, and Edge) support OpenType features.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('The pages that visitors see use only CSS. The plugin adds no JavaScript to them.', 'typography-stylist'); ?></p>
             </div>
 
             <!-- Developer Support Section -->
@@ -1715,7 +1719,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         <?php esc_html_e('Replacement Font:', 'typography-stylist'); ?>
                     </label>
                     <select id="typost-replacement-font-select">
-                        <option value=""><?php esc_html_e('— No Replacement (Skip) —', 'typography-stylist'); ?></option>
+                        <option value=""><?php esc_html_e('No Replacement (Skip)', 'typography-stylist'); ?></option>
                         <!-- Populated by JavaScript -->
                     </select>
                 </div>

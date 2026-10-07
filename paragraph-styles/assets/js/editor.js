@@ -311,7 +311,7 @@
 		}
 
 		// Build dropdown options
-		var options = [{ label: __('— Select a style —', 'typost-paragraph-styles'), value: '' }];
+		var options = [{ label: __('Select a style…', 'typost-paragraph-styles'), value: '' }];
 		currentStyles.forEach(function(style) {
 			var detail = getFontName(style.properties && style.properties.fontId);
 			if (style.properties && style.properties.fontWeight) {
@@ -497,7 +497,7 @@
 					// "Save as New" name input
 					isSaveAsNew && el('div', { className: 'typost-ps-save-form' },
 						el(TextControl, {
-							placeholder: __('New style name...', 'typost-paragraph-styles'),
+							placeholder: __('New style name…', 'typost-paragraph-styles'),
 							value: saveAsNewName,
 							onChange: setSaveAsNewName,
 							__nextHasNoMarginBottom: true,
@@ -557,7 +557,7 @@
 				}, __('Save Current Settings as Style', 'typost-paragraph-styles')),
 				isShowSave && el('div', { className: 'typost-ps-save-form' },
 					el(TextControl, {
-						placeholder: __('Style name...', 'typost-paragraph-styles'),
+						placeholder: __('Style name…', 'typost-paragraph-styles'),
 						value: styleName,
 						onChange: setStyleName,
 						__nextHasNoMarginBottom: true,
@@ -569,7 +569,7 @@
 							disabled: !styleName.trim() || isSaving,
 							isBusy: isSaving,
 							size: 'small',
-						}, isSaving ? __('Saving...', 'typost-paragraph-styles') : __('Save', 'typost-paragraph-styles')),
+						}, isSaving ? __('Saving…', 'typost-paragraph-styles') : __('Save', 'typost-paragraph-styles')),
 						el(Button, {
 							variant: 'link',
 							onClick: function() {
@@ -932,10 +932,10 @@
 		var body;
 		if (currentStyles.length === 0) {
 			body = el('p', { className: 'typost-ps-browser-empty' },
-				__('No paragraph styles saved yet. Set up the typography you want, then use "Save Current Settings as Style" in the sidebar.', 'typost-paragraph-styles'));
+				__('No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel.', 'typost-paragraph-styles'));
 		} else if (filtered.length === 0) {
 			body = el('p', { className: 'typost-ps-browser-empty', role: 'status' },
-				sprintf(/* translators: %s: search text */ __('No styles match "%s".', 'typost-paragraph-styles'), query));
+				sprintf(/* translators: %s: search text */ __('No styles match “%s”.', 'typost-paragraph-styles'), query));
 		} else {
 			body = el('ul', {
 				className: 'typost-ps-browser-list' + (cursorRowId ? ' has-cursor' : ''),

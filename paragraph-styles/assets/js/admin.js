@@ -152,7 +152,7 @@
 				$card.removeClass('typost-ps-saving');
 				focusEditButton($card[0]);
 				/* translators: %s: style name */
-				announce(wp.i18n.sprintf(wp.i18n.__('Style renamed to "%s".', 'typost-paragraph-styles'), response.name));
+				announce(wp.i18n.sprintf(wp.i18n.__('Style renamed to “%s”.', 'typost-paragraph-styles'), response.name));
 			},
 			error: function() {
 				$card.removeClass('typost-ps-saving');
@@ -173,7 +173,7 @@
 
 		/* translators: %s: style name */
 		if (!confirm(wp.i18n.sprintf(
-			wp.i18n.__('Are you sure you want to delete "%s"? This cannot be undone.', 'typost-paragraph-styles'),
+			wp.i18n.__('Are you sure you want to delete “%s”? This cannot be undone.', 'typost-paragraph-styles'),
 			name
 		))) {
 			return;
@@ -204,7 +204,7 @@
 						target.focus();
 					}
 					/* translators: %s: style name */
-					announce(wp.i18n.sprintf(wp.i18n.__('Style "%s" deleted.', 'typost-paragraph-styles'), name));
+					announce(wp.i18n.sprintf(wp.i18n.__('Style “%s” deleted.', 'typost-paragraph-styles'), name));
 				});
 			},
 			error: function() {

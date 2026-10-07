@@ -8,7 +8,7 @@
 
 .typost-ps-description {
 	color: #646970;
-	font-size: 13px;
+	font-size: 14px;
 	margin-bottom: 20px;
 }
 
@@ -51,7 +51,7 @@
 }
 
 .typost-ps-css-class {
-	font-size: 12px;
+	font-size: 13px;
 	/* #50575e is 6.4:1 on the #f0f0f1 chip; #757575 was 4.05:1 at 11px
 	   (QA finding A11Y-3). */
 	color: #50575e;
@@ -90,7 +90,7 @@
 }
 
 .typost-ps-detail {
-	font-size: 12px;
+	font-size: 13px;
 	color: #50575e;
 }
 
@@ -122,7 +122,7 @@
 
 .typost-ps-preview .typost-ps-preview-note {
 	margin-top: 8px;
-	font-size: 12px;
+	font-size: 13px;
 	line-height: 1.5;
 	color: #50575e;
 }
@@ -138,7 +138,7 @@
 	display: block;
 	margin-bottom: 8px;
 	font-weight: 600;
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .typost-ps-edit-form-inner input[type="text"] {

@@ -197,7 +197,7 @@ final class Typost_Glyphs_Panel {
 					<?php esc_html_e( 'Add a Glyphs button to the block toolbar', 'typost-glyphs-panel' ); ?>
 				</label>
 				<p class="description">
-					<?php esc_html_e( 'Puts a Glyphs button next to the Typography Stylist button in the block toolbar, so the glyph browser opens in one click instead of through the Typography Stylist panel. The button inside that panel stays where it is either way.', 'typost-glyphs-panel' ); ?>
+					<?php esc_html_e( 'Puts a Glyphs button next to the “Typography Stylist Features” button in the block toolbar. The glyph browser then opens in one click, not through the Typography Stylist panel. The Glyphs button inside that panel does not change.', 'typost-glyphs-panel' ); ?>
 				</p>
 			</td>
 		</tr>
@@ -354,7 +354,7 @@ final class Typost_Glyphs_Panel {
 					<?php esc_html_e( 'Open Glyph Browser', 'typost-glyphs-panel' ); ?>
 				</button>
 			</p>
-			<p class="description"><?php esc_html_e( 'Font data is read in your browser, on demand, for metadata only — no glyph outlines are ever extracted or stored.', 'typost-glyphs-panel' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Your browser reads the font data when you need it, and reads only the metadata. No glyph outlines are extracted or stored.', 'typost-glyphs-panel' ); ?></p>
 		</div>
 		<?php
 	}

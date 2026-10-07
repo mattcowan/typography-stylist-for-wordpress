@@ -9,6 +9,7 @@
 
     var __ = wp.i18n.__;
     var sprintf = wp.i18n.sprintf;
+    var _n = wp.i18n._n;
 
     // Registered axis tag → name auto-fill map.
     var registeredAxes = (window.typostVFAdmin || {}).registeredAxes || {};
@@ -482,7 +483,12 @@
                 autoUpdateHideWeights($container);
                 $status.text(sprintf(
                     /* translators: %d: number of detected variable font axes. */
-                    __( 'Detected %d axes, replacing the rows above. Review them, then Save Changes to store them.', 'typost-variable-fonts' ),
+                    _n(
+                        'Detected %d axis and replaced the rows above. Review it, then click “Save Changes” to store it.',
+                        'Detected %d axes and replaced the rows above. Review them, then click “Save Changes” to store them.',
+                        result.axes.length,
+                        'typost-variable-fonts'
+                    ),
                     result.axes.length
                 ));
             }).then(function() {

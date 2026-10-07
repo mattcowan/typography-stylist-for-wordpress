@@ -12,50 +12,50 @@ A Glyphs Panel, paragraph styles, and OpenType and variable font controls for th
 
 == Description ==
 
-Some of your fonts' best work is hidden.
+Some of your fonts’ best work is hidden.
 
-Professional fonts often contain swashes, stylistic sets, ligatures, and alternate characters. Unfortunately, using these features often resorts to manually inserting characters with inline spans, which is tedious, error-prone, and can cause issues with accessibility. Typography Stylist opens the full font cabinet, adding controls for these advanced features to the block editor with accessibility in mind, making it easy to use all the typographic features your fonts offer.
+Professional fonts often contain swashes, stylistic sets, ligatures, and alternate characters. Without a tool, you must type these characters by hand inside inline spans. This is slow, mistakes are easy, and the result can be difficult for screen readers. Typography Stylist adds controls for these features to the block editor, and it keeps the text accessible.
 
-If you set type in professional design tools, you know what these fonts can do. Typography Stylist brings that control to WordPress. You decide how your type looks, down to a single character. Pick the alternate you want for one letter, set a variable font to weight 435, and save the result as a paragraph style for the rest of the site, which you can later update everywhere at once. Typography Stylist also manages your fonts: upload webfont kits, connect Adobe Fonts, or use fonts from the WordPress Font Library.
+If you set type in professional design tools, you know what these fonts can do. Typography Stylist brings that control to WordPress. You decide how your type looks, down to a single character. Pick the alternate you want for one letter. Set a variable font to weight 435. Save the result as a paragraph style for the rest of the site, and later update the style everywhere at one time. Typography Stylist also manages your fonts: upload webfont kits, connect Adobe Fonts, or use fonts from the WordPress Font Library.
 
 = Glyphs Panel =
 
 The Glyphs Panel shows every character in a font, like the Glyphs panel in Adobe Illustrator.
 
 * Search by character, by codepoint (`U+XXXX`), or by glyph name.
-* Filter by stylistic set, by OpenType feature, or by Unicode block.
+* Filter by OpenType feature (this includes the stylistic sets) or by Unicode block.
 * Select a letter in your text to see all of its alternates. Click an alternate to put it in place of the letter.
 * Click any glyph to insert it into your text.
 * Move through the grid with the keyboard. Screen readers announce each glyph.
 
-The panel reads the font in your browser, and it reads only the font's metadata. It does not extract glyph outlines, and it does not store font data on your server.
+The panel reads the font in your browser, and it reads only the font’s metadata. It does not extract glyph outlines, and it does not store font data on your server.
 
 = Paragraph Styles =
 
 A paragraph style is a named set of typography settings, like a paragraph style in Adobe InDesign. Save a style one time, then apply it to text in any heading, paragraph, or Typography Stylist block.
 
 * A style holds the font, weight, italic, size, letter spacing, line height, OpenType features, and variable font axes. Fit-to-width sizes can also go into a style.
-* "Browse styles…" shows each style in its own typeface, with your selected words as the sample text. You can search the list, and group it by font family, by size type, or by recent use.
-* Each style is one CSS class. Change a style and click "Update Style", and all text that uses the style changes.
+* “Browse styles…” shows each style in its own typeface, with your selected words as the sample text. You can search the list, and group it by font family, by size mode, or by recent use.
+* Each style is one CSS class. Change a style and click “Update Style”. All text that uses the style then changes.
 * If the selected text already has its own settings, the editor asks before the style replaces them.
-* "Detach Style" changes styled text back to independent settings.
+* “Detach Style” changes styled text back to independent settings.
 * Rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist.
 
 = Granular typography control =
 
 Set the typography of a whole block, or of one word or one letter in it.
 
-* **OpenType features:** ligatures, swashes, stylistic sets ss01 to ss20, small capitals, figure styles, and more. The full list is below.
-* **Variable fonts:** the plugin reads the axes from the font file, and each axis gets a slider. You can set a weight of 435, not only 400 or 700. Custom axes also get sliders.
-* **Size:** a fixed size, a responsive size (a CSS `clamp()` between a minimum and a maximum), or fit-to-width.
-* **Fit-to-width:** each line of a Typography Stylist block fills the width of the block, as on a poster or a wedding invitation. In a fitted line, you can make one glyph smaller or move it up or down, and the line still fills the width.
-* **Spacing and style:** letter spacing, line height, weight, and italic.
+* **OpenType features:** Ligatures, swashes, stylistic sets ss01–ss20, small capitals, figure styles, and more. The full list is below.
+* **Variable fonts:** The plugin reads the axes from the font file, and each axis gets a slider. You can set a weight of 435, not only 400 or 700. Custom axes also get sliders.
+* **Size:** The text can keep the size it inherits, use a responsive size (a CSS `clamp()` between a minimum and a maximum), or use fit-to-width.
+* **Fit-to-width:** Each line of a Typography Stylist block fills the width of the block, as on a poster or a wedding invitation. In a fitted line, you can make one glyph smaller or move it up or down, and the line still fills the width.
+* **Spacing and style:** You can set the letter spacing, line height, weight, and italic.
 
-Your site's front end gets CSS only. The plugin adds no JavaScript to your pages.
+Your site’s front end gets CSS only. The plugin adds no JavaScript to your pages.
 
 = Two ways to style text =
 
-1. **In a heading or paragraph block.** Select the text, then click the Typography Stylist button (a swash "T") in the block toolbar. Use this for whole words and phrases.
+1. **In a heading, paragraph, or other text block.** Select the text, then click “Typography Stylist Features” (a swash “T”) in the block toolbar. Use this for whole words and phrases. Changes apply at once.
 2. **In a Typography Stylist block.** Use this block for letter-by-letter work. Set the options for the whole block in the sidebar. Select text in the block to change only that text.
 
 Two settings in Settings → Typography Stylist → Options add a Glyphs button and a Paragraph Styles button to the block toolbar. Both settings are off by default.
@@ -67,7 +67,7 @@ A style on part of a word puts the letters in separate elements. Some screen rea
 * A plain heading for screen readers. It is hidden from view, and it keeps the document outline correct.
 * A styled copy for the screen, with `aria-hidden="true"`.
 
-If you style part of a word in a heading or paragraph block, a notice tells you about the risk. The notice offers a one-click conversion to a Typography Stylist block. Your change applies whether you convert or not. You can turn the notice off in Settings → Typography Stylist → Accessibility.
+If you style part of a word in a heading or paragraph block, a notice tells you about the risk. The notice has a button that converts the block to a Typography Stylist block. Your change applies whether you convert or not. You can turn the notice off in Settings → Typography Stylist → Accessibility.
 
 The editor panels work with the keyboard and with screen readers.
 
@@ -138,7 +138,7 @@ By default, a font loads only on the pages that use it. This includes blog, cate
 
 The OpenType features work only with fonts that contain them. Many script fonts and professional typefaces do. Some examples:
 
-* Script fonts by Alejandro Paul, such as Inglesa, and Gratitude Script (with the wonderful Kathy Milici)
+* Script fonts by Alejandro Paul, such as Inglesa and Gratitude Script (with the wonderful Kathy Milici)
 * Bookmania by Mark Simonson
 * Orpheus, designed by Kevin King, Patrick Griffin, and Walter Tiemann, from Canada Type
 * Elaina and other fonts by Laura Worthington
@@ -146,23 +146,23 @@ The OpenType features work only with fonts that contain them. Many script fonts 
 * Memoriam by Patrick Griffin
 * ITC Avant Garde, designed by André Gürtler, Christian Mengelt, Ed Benguiat, Erich Gschwind, Herb Lubalin, and others, from Monotype
 
-To see which features a font has, read its specimen or open it in the Glyphs Panel.
+To see which features a font has, read its specimen or open the font in the Glyphs Panel.
 
 = Bundled Third-Party Libraries =
 
 The Glyphs Panel reads font files in the browser with two open-source libraries. They are bundled unmodified in `glyphs-panel/assets/js/vendor/`. They load only when you open the Glyphs Panel, and they run in the browser. No font data goes to a server.
 
 * **opentype.js** v1.3.4: reads TTF, OTF, and WOFF font files. MIT License. Source: https://github.com/opentypejs/opentype.js
-* **wawoff2**: decompresses WOFF2 font files (a WebAssembly build of Google's woff2). MIT License. Source: https://github.com/fontello/wawoff2
+* **wawoff2:** decompresses WOFF2 font files (a WebAssembly build of Google’s woff2). MIT License. Source: https://github.com/fontello/wawoff2
 
 See BUILD.txt for build and source details.
 
 = Source, Docs & Support =
 
-* **Source code and issue tracker:** [github.com/mattcowan/typography-stylist-for-wordpress](https://github.com/mattcowan/typography-stylist-for-wordpress)
-* **Developer documentation:** the hooks reference ([HOOKS.md](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md)) is on GitHub.
-* **Beta builds:** pre-release versions go to the GitHub Releases page before they go to WordPress.org.
-* **Support:** the [WordPress.org support forum](https://wordpress.org/support/plugin/typography-stylist/), or GitHub issues for bugs.
+* **Source code and issue tracker:** [github.com/mattcowan/typography-stylist-for-wordpress](https://github.com/mattcowan/typography-stylist-for-wordpress).
+* **Developer documentation:** The hooks reference ([HOOKS.md](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md)) is on GitHub.
+* **Beta builds:** Pre-release versions go to the GitHub Releases page before they go to WordPress.org.
+* **Support:** Use the [WordPress.org support forum](https://wordpress.org/support/plugin/typography-stylist/), or GitHub issues for bugs.
 
 If you like the plugin, [a short review](https://wordpress.org/support/plugin/typography-stylist/reviews/#new-post) helps other type lovers find it.
 
@@ -171,7 +171,8 @@ If you like the plugin, [a short review](https://wordpress.org/support/plugin/ty
 1. Upload the plugin files to `/wp-content/plugins/typography-stylist`, or install the plugin from the Plugins screen.
 2. Activate the plugin on the Plugins screen.
 3. Go to Settings → Typography Stylist to add your fonts and set the options.
-4. Open a post in the block editor. Select text in a heading, then click the Typography Stylist button in the block toolbar.
+4. Open a post in the block editor.
+5. Select text in a heading, then click “Typography Stylist Features” in the block toolbar.
 
 == Frequently Asked Questions ==
 
@@ -181,54 +182,53 @@ For OpenType features such as stylistic sets and swashes, the font must contain 
 
 = Does this work with Google Fonts? =
 
-Yes. Some Google Fonts have OpenType features. Read the font's specimen page to see which ones.
+Yes. Some Google Fonts have OpenType features. Read the font’s specimen page to see which ones.
 
 = Can I use my own web fonts? =
 
 Yes. You can add fonts in four ways:
 
-1. **Upload a webfont kit** from MyFonts, Font Squirrel, or another provider on the Custom Fonts tab.
+1. **Upload a webfont kit** from MyFonts, Font Squirrel, or a different provider on the Custom Fonts tab.
 2. **Connect Adobe Fonts** (Typekit). Paste the embed code of your project.
-3. **Define a custom font** that your theme, another plugin, or a CDN (such as Google Fonts) loads. The font then shows in the editor's font list.
-4. **Use a WordPress Font Library font** (WordPress 6.5+) from the editor's font list.
+3. **Define a custom font** that your theme, a different plugin, or a CDN (such as Google Fonts) loads. The font then shows in the editor’s font list.
+4. **Use a WordPress Font Library font** (WordPress 6.5+) from the editor’s font list.
 
 The plugin can also apply OpenType features to a font that your site already loads, without a selection in the font list. The previews on the settings page work only for fonts that you upload or connect through the plugin.
 
 = How do I upload a font? =
 
 1. Go to Settings → Typography Stylist → Custom Fonts.
-2. Click "Choose ZIP File" and select your webfont kit ZIP.
-3. Click "Upload Font Kit". The plugin reads the font names from the kit.
+2. Open “Add Font”, then open “Upload Font Kit”.
+3. Click “Choose ZIP File” and select your webfont kit ZIP.
+4. Click “Upload Font Kit”. The plugin reads the font names from the kit.
 
-Kits from MyFonts and Font Squirrel, and font downloads from Google Fonts, all work. The ZIP does not need a stylesheet. If the ZIP has only font files, the plugin reads each font's metadata and makes the @font-face CSS, with the weight range of a variable font. The server cannot read WOFF2 metadata. For a ZIP with only WOFF2 files, the plugin gets the family and the weight from the file names, and a warning asks you to check them.
+Kits from MyFonts and Font Squirrel, and font downloads from Google Fonts, all work. The ZIP does not need a stylesheet. If the ZIP has only font files, the plugin reads the metadata of each font and makes the @font-face CSS. For a variable font, the CSS includes the weight range. The server cannot read WOFF2 metadata. For a ZIP with only WOFF2 files, the plugin gets the family and the weight from the file names, and a warning asks you to check them.
 
-The plugin also finds the weights that each font has, and checks only those in "Available Font Weights". You can change the checkboxes at any time.
+The plugin also finds the weights that each font has, and checks only those weights in “Available Font Weights”. You can change the checkboxes at any time.
 
 = How do I add Adobe Fonts? =
 
 1. Go to Settings → Typography Stylist → Custom Fonts.
-2. Find the "Adobe Fonts (Typekit)" section.
-3. Enter a project name.
-4. Paste your Adobe Fonts embed code (the `<script>` tag).
-5. Optional: enter the font family names for the preview list.
-6. Click "Add Adobe Fonts Project".
+2. Open “Add Font”, then open “Add Adobe Fonts Project”.
+3. Paste the embed code of your Adobe Fonts project (the `<link>` tag) into “Adobe Fonts Embed Code”. The older `<script>` embed code also works.
+4. In “Font Family Names”, enter the font family names from your project, with commas between them. This field is necessary.
+5. Click “Add Adobe Fonts Project”.
 
-Make sure that your domain is authorized in your Adobe Fonts project settings. The fonts load from Adobe's servers.
+Make sure that your domain is authorized in your Adobe Fonts project settings. The fonts load from Adobe’s servers.
 
 = How do I use a font that my theme already loads? =
 
 1. Go to Settings → Typography Stylist → Custom Fonts.
-2. Find the "Custom Font Definitions" section.
-3. Enter a display name for the font.
-4. Enter the exact CSS font-family value, for example `'Playfair Display', serif`.
-5. Optional: add fallback fonts, with commas between them.
-6. Click "Add Custom Font".
+2. Open “Add Font”, then open “Add Custom Font Definition”.
+3. In “Font Name”, enter a display name for the font.
+4. In “CSS Font Family”, enter the exact CSS font-family value, for example `'Playfair Display', serif`. You can include fallback fonts in this value.
+5. Click “Add Custom Font”.
 
-The font shows in the block editor's font list. The settings page cannot preview features for it.
+The font shows in the block editor’s font list. The plugin does not load the font. The settings page cannot preview features for it.
 
 = Can I set fallback fonts? =
 
-Yes. For each uploaded font, Adobe font, and custom font definition, you can set fallback fonts. The browser uses them if the main font does not load.
+Yes. Click the name of a font on the Custom Fonts tab to open its settings. Enter the fallback fonts in “Fallback Fonts (optional)”, with commas between them. The browser uses them if the main font does not load. Content refers to a font through a CSS variable, so the change applies to existing content too.
 
 = What happens to my content if I delete a font? =
 
@@ -237,23 +237,23 @@ When you delete a font, you can choose a replacement font. Content that used the
 = How do paragraph styles work? =
 
 1. Set the typography of some text in either editor.
-2. Click "Save Current Settings as Style" and give the style a name.
-3. To use the style, select other text. In a heading or paragraph, click "Browse styles…" and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
+2. Click “Save Current Settings as Style” and give the style a name.
+3. Select other text.
+4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
 
-To change a style everywhere, change the settings on text that uses it and click "Update Style". The style browser shows 24 styles at a time. Click "Show more" to see the next 24.
+To change a style everywhere, change the settings on text that uses the style and click “Update Style”. The style browser shows 24 styles at a time. A button under the list shows the next styles.
 
 = Is this plugin accessible? =
 
 Yes. See the Accessibility section in the description for the two-copy pattern and the word-boundary notice. Settings → Typography Stylist → Accessibility has these options:
 
-* **Inline Format: Add aria-label Attributes:** add an `aria-label` to text that you style in a heading or paragraph block.
-* **Disable Word Boundary Warning:** turn off the notice about styles on part of a word.
+* **Disable Word Boundary Warning:** Turns off the notice about styles on part of a word.
 
-Each Typography Stylist block also has an Accessibility panel in its sidebar. There, choose the class that hides the plain heading: `visually-hidden`, `sr-only`, or your own class.
+Each Typography Stylist block also has an Accessibility panel in its sidebar. There, choose the class that hides the plain heading: `visually-hidden`, `sr-only`, `screen-reader-text`, or your own class.
 
 = Does the hidden heading cause a duplicate content problem for SEO? =
 
-No. Google's spam policies name "text that's only accessible to screen readers and is intended to improve the experience for those using screen readers" as hidden text that does not break their rules. The hidden heading and the styled copy contain the same text.
+No. Google’s spam policies name “text that’s only accessible to screen readers and is intended to improve the experience for those using screen readers” as hidden text that does not break their rules. The hidden heading and the styled copy contain the same text.
 
 = Should I style text in a heading block or use the Typography Stylist block? =
 
@@ -274,7 +274,7 @@ The upload has these protections:
 * File type validation
 * Safe ZIP extraction, with protection against path traversal
 * CSS sanitization
-* A 10 MB size limit
+* A 10 MB size limit for the ZIP, and 1 MB for a CSS file
 * Storage in a directory with `.htaccess` protection
 
 = Does this work with page builders? =
@@ -287,15 +287,15 @@ The front end gets CSS only, with no JavaScript. A font loads only on the pages 
 
 = How do I know which features my font supports? =
 
-Open the font in the Glyphs Panel. It lists the OpenType features that the font contains, and shows every glyph for each feature. You can also read the font's documentation.
+Open the font in the Glyphs Panel. It lists the OpenType features that the font contains, and shows every glyph for each feature. You can also read the font’s documentation.
 
 = Do variable fonts work? =
 
-Yes. When you upload a variable font, the plugin reads its axes from the font file: weight, width, slant, optical size, and any custom axis. Each axis gets a slider in both editors, and the output is standard `font-variation-settings` CSS. The server reads TTF and OTF files. For a kit with only WOFF2 files, click "Detect Axes from Font File" in the font's settings to read the axes in your browser, or enter the axes by hand.
+Yes. When you upload a variable font, the plugin reads its axes from the font file: weight, width, slant, optical size, and any custom axis. Each axis gets a slider in both editors, and the output is standard `font-variation-settings` CSS. The server reads TTF and OTF files. For a kit with only WOFF2 files, click “Detect Axes from Font File” in the font’s settings to read the axes in your browser. You can also enter the axes by hand.
 
-= What does "register in the WordPress Font Library" do? =
+= What does “register in the WordPress Font Library” do? =
 
-On WordPress 6.5+, the plugin adds new uploaded fonts to the WordPress Font Library automatically. You can turn this off in Options. To add older fonts, use the Custom Fonts tab, one font at a time or all together. WordPress can then use them like any Library font. In WordPress 7.1, the Font Library is at Appearance → Fonts. In earlier versions, open it from the Site Editor, in Styles → Typography. The font files stay where they are, and your existing content does not change. You can remove a font from the Library again. Adobe Fonts and custom font definitions stay in the plugin, because Adobe fonts load from Adobe's servers.
+On WordPress 6.5+, the plugin adds new uploaded fonts to the WordPress Font Library automatically. You can turn this off in Options. To add older fonts, use the Custom Fonts tab, one font at a time or all together. WordPress can then use them like any Library font. In WordPress 7.1, the Font Library is at Appearance → Fonts. In earlier versions, open it from the Site Editor, in Styles → Typography. The font files stay where they are, and your existing content does not change. You can remove a font from the Library again. Adobe Fonts and custom font definitions stay in the plugin, because Adobe fonts load from Adobe’s servers.
 
 = Where can I get beta versions or report bugs? =
 
@@ -303,15 +303,15 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Screenshots ==
 
-1. The Glyphs Panel — browse a font's full character set, filtered here to a stylistic set's script alternates, and insert any glyph with a click
-2. The Paragraph Styles browser — each saved style shown in its own typeface, with the selected words as the sample text
-3. Inline editor on a heading block — toggling Swashes (swsh) with live preview, applied instantly to the selected text
-4. Quick Feature Toggles inside the Typography Stylist block — per-selection controls, here setting a different variable-font weight for one word
-5. Typography Stylist block with sidebar controls — a variable font's Weight axis slider replaces the discrete weight dropdown
-6. Per-font variable axis configuration — axes detected from the font file, with ranges and WordPress Font Library registration
-7. Font Features preview in the admin — every OpenType feature previewed with your own text in the selected font
-8. The unified font list — uploaded kits, Adobe Fonts, and WordPress Font Library fonts with Variable and registration badges
-9. The block's Accessibility panel — the screen-reader class behind the dual-heading pattern that keeps styled text accessible
+1. The Glyphs Panel shows the full character set of a font. Here it shows the script alternates of one stylistic set. Click a glyph to insert it.
+2. The Paragraph Styles browser shows each saved style in its own typeface, with the selected words as the sample text.
+3. The inline editor on a heading block. Swashes (swsh) is on, and the change shows at once on the selected text.
+4. The Quick Feature Toggles in the Typography Stylist block. These controls change only the selected text. Here they give one word a different variable-font weight.
+5. The Typography Stylist block with its sidebar controls. For a variable font, a Weight axis slider replaces the weight list.
+6. The variable axis settings of one font. The plugin detects the axes from the font file. The settings also show the ranges and the WordPress Font Library registration.
+7. The Font Features tab shows a preview of each OpenType feature, with your own text in the selected font.
+8. The font list shows uploaded kits, Adobe Fonts, and WordPress Font Library fonts, with Variable and registration badges.
+9. The Accessibility panel of the block. It sets the screen reader class for the two-copy pattern that keeps styled text accessible.
 
 == Changelog ==
 
@@ -418,20 +418,21 @@ Fixes mixed-content blocking of locally-hosted fonts in the Glyphs Panel on HTTP
 
 = Data Storage =
 
-Typography features are stored as inline styles and data attributes within post content. No additional database tables are created.
+The plugin keeps the typography of your text in the post content, as inline styles and data attributes. It keeps fonts, paragraph styles, and settings in the WordPress options table. The plugin adds no database tables. Uploaded font files go in `wp-content/uploads/typography-stylist/fonts/`.
 
 = Extensibility =
 
-Developers can extend the plugin using WordPress hooks and filters — see [HOOKS.md on GitHub](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md) for the full reference with examples. REST API endpoints are available at `/wp-json/typost/v1/`.
+Developers can extend the plugin with WordPress hooks and filters. [HOOKS.md on GitHub](https://github.com/mattcowan/typography-stylist-for-wordpress/blob/main/HOOKS.md) has the full reference, with examples. The REST API endpoints are at `/wp-json/typost/v1/`.
 
 = Source Code =
 
-This plugin includes both compiled/minified files and their source code to meet WordPress security and transparency requirements.
+The plugin contains its compiled and minified files, and also their source code. WordPress.org requires this for security and transparency.
 
-**Minified/Compiled Files:**
-* assets/js/*.min.js files have corresponding source files in assets/js/
-* assets/css/*.min.css files have corresponding source files in assets/css/
-* blocks/typography-stylist/build/ files are compiled from blocks/typography-stylist/ source files
+**Minified and compiled files:**
+
+* Each `assets/js/*.min.js` file has its source file in `assets/js/`.
+* Each `assets/css/*.min.css` file has its source file in `assets/css/`.
+* The files in `blocks/typography-stylist/build/` are compiled from the source files in `blocks/typography-stylist/`.
 
 == Credits ==
 

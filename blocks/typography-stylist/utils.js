@@ -2451,18 +2451,67 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 }
 
 /**
+ * Screen reader classes the block's style.css already defines.
+ */
+export const SCREEN_READER_CLASS_PRESETS = ['visually-hidden', 'sr-only', 'screen-reader-text'];
+
+/**
+ * Derive the Screen Reader Class controls from the stored class.
+ *
+ * Anything that is not a bundled class is a custom class. Deriving the select
+ * from the value (rather than storing the literal 'custom') keeps the text
+ * field open while the author types. The old literal 'custom', saved by
+ * blocks edited before this fix, reads as an empty custom name.
+ *
+ * `customMode` is true while the author has "Custom" chosen in this editing
+ * session. Without it, typing "sr-only-wide" would match the bundled
+ * "sr-only" one keystroke before the end, switch the select back to it and
+ * unmount the text field mid-word.
+ *
+ * @param {string|null|undefined} value      The block's screenReaderClass attribute.
+ * @param {boolean}               customMode Whether the author chose "Custom".
+ * @return {{selectValue: string, isCustom: boolean, customValue: string}} Control state.
+ */
+export function resolveScreenReaderClassControl(value, customMode = false) {
+	if (customMode) {
+		return { selectValue: 'custom', isCustom: true, customValue: !value || value === 'custom' ? '' : value };
+	}
+	if (value === undefined || value === null) {
+		return { selectValue: 'visually-hidden', isCustom: false, customValue: '' };
+	}
+	if (SCREEN_READER_CLASS_PRESETS.includes(value)) {
+		return { selectValue: value, isCustom: false, customValue: '' };
+	}
+	return { selectValue: 'custom', isCustom: true, customValue: value === 'custom' ? '' : value };
+}
+
+/**
+ * The attribute value to store when the Screen Reader Class select changes.
+ *
+ * Choosing "Custom" stores an empty class; save() falls back to
+ * 'visually-hidden' for an empty value, so the copy stays hidden until a
+ * class name is typed.
+ *
+ * @param {string} selected The selected option value.
+ * @return {string} The screenReaderClass value to store.
+ */
+export function screenReaderClassForSelect(selected) {
+	return selected === 'custom' ? '' : selected;
+}
+
+/**
  * Standard CSS font weight options.
  */
 export const ALL_WEIGHT_OPTIONS = [
-	{ label: '100 - Thin', value: '100' },
-	{ label: '200 - Extra Light', value: '200' },
-	{ label: '300 - Light', value: '300' },
-	{ label: '400 - Normal', value: '400' },
-	{ label: '500 - Medium', value: '500' },
-	{ label: '600 - Semi Bold', value: '600' },
-	{ label: '700 - Bold', value: '700' },
-	{ label: '800 - Extra Bold', value: '800' },
-	{ label: '900 - Black', value: '900' }
+	{ label: '100 (Thin)', value: '100' },
+	{ label: '200 (Extra Light)', value: '200' },
+	{ label: '300 (Light)', value: '300' },
+	{ label: '400 (Normal)', value: '400' },
+	{ label: '500 (Medium)', value: '500' },
+	{ label: '600 (Semi Bold)', value: '600' },
+	{ label: '700 (Bold)', value: '700' },
+	{ label: '800 (Extra Bold)', value: '800' },
+	{ label: '900 (Black)', value: '900' }
 ];
 
 /**

@@ -123,8 +123,36 @@
 .typost-preset-font-selector .description,
 .form-table .description,
 .typost-feature-demo-description,
-.typost-accessibility-recommendations li {
+.typost-tab-content > form > p:not(.submit),
+.typost-builtin-a11y p,
+.typost-builtin-a11y li,
+.typost-accessibility-recommendations li,
+#typost-fonts-region > .notice p,
+.typost-font-details .description,
+.typost-add-font-subsection-body > p,
+.typost-add-font-subsection-body .description,
+.typost-add-replacement-section p,
+#typost-unassigned-fonts p,
+.typost-glyphs-admin-tab > p,
+.typost-ps-admin-tab .typost-ps-description {
     max-width: var(--typost-line-length);
+}
+
+/* Body text on every tab. Core admin sets p and .description to 13px; one
+   step up reads better at the 45em measure. The help panels keep the size
+   set on .typost-tab-help-content, and the prose lists set their own. */
+/* :where() keeps this at the specificity of core's own p / .description
+   rules (it wins on order), so component rules such as
+   .typost-preset-description still set their own size. Core's .notice p is
+   (0,1,1), so the Accessibility notice gets its own rule. */
+:where(.typost-tab-content) p,
+:where(.typost-tab-content) .description,
+.typost-builtin-a11y p {
+    font-size: var(--typost-font-size-xs);
+}
+
+.typost-tab-help-content p {
+    font-size: inherit;
 }
 
 /* =========================================================================
@@ -175,7 +203,7 @@
 
 .typost-tab-help-content {
     padding: 0 16px 16px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     line-height: 1.6;
     color: var(--typost-text-primary);
 }
@@ -184,14 +212,31 @@
     max-width: var(--typost-line-length);
 }
 
+/* Same markers and rhythm as the prose lists on the Help and Accessibility
+   tabs (core admin sets list-style: none on ul). The text keeps the panel's
+   own size (--typost-font-size-sm) so it matches the paragraphs beside it. */
 .typost-tab-help-content ul,
 .typost-tab-help-content ol {
-    margin-left: 20px;
+    margin-left: 0;
+    padding-left: 1.5em;
     max-width: var(--typost-line-length);
 }
 
+.typost-tab-help-content ul {
+    list-style: disc;
+}
+
+.typost-tab-help-content ol {
+    list-style: decimal;
+}
+
 .typost-tab-help-content li {
-    margin-bottom: 4px;
+    margin-bottom: 0.75em;
+    padding-left: 0.25em;
+}
+
+.typost-tab-help-content li:last-child {
+    margin-bottom: 0;
 }
 
 /* =========================================================================
@@ -218,13 +263,13 @@
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    font-size: var(--typost-font-size-sm);
+    font-size: var(--typost-font-size-base);
 }
 
 .typost-font-select {
     max-width: 400px;
     padding: 8px;
-    font-size: var(--typost-font-size-sm);
+    font-size: var(--typost-font-size-base);
     border: 1px solid var(--typost-border-input);
     border-radius: 4px;
 }
@@ -238,7 +283,7 @@
 .typost-preset-size-control .description {
     margin-top: 8px;
     color: var(--typost-text-secondary);
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-preset-size-control {
@@ -316,7 +361,7 @@
     display: block;
     font-weight: 600;
     margin-bottom: 8px;
-    font-size: var(--typost-font-size-sm);
+    font-size: var(--typost-font-size-base);
 }
 
 /* =========================================================================
@@ -339,7 +384,7 @@
 .typost-baseline-preview-section .description {
     margin: 0 0 20px 0;
     color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-baseline-preview-container {
@@ -424,7 +469,7 @@
 
 /* Feature count badge */
 .typost-feature-category-count {
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     font-weight: 400;
     color: var(--typost-text-secondary);
     min-width: 60px;
@@ -474,7 +519,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-muted);
     cursor: pointer;
     -webkit-user-select: none;
@@ -495,7 +540,7 @@
 }
 
 .typost-visibility-save-indicator {
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-color-success, #2ea44f);
     font-weight: 600;
     opacity: 0;
@@ -524,13 +569,13 @@
     color: var(--typost-text-on-primary);
     padding: 4px 8px;
     border-radius: 3px;
-    font-size: var(--typost-font-size-xxs);
+    font-size: var(--typost-font-size-xs);
     font-weight: 600;
 }
 
 .typost-feature-demo-description {
     color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     margin: 0 0 15px 0;
     line-height: 1.5;
 }
@@ -553,7 +598,7 @@
 }
 
 .typost-feature-preview-label {
-    font-size: var(--typost-font-size-label-small);
+    font-size: var(--typost-font-size-xxs);
     font-weight: 600;
     text-transform: uppercase;
     color: var(--typost-text-muted);
@@ -624,12 +669,12 @@
 
 .typost-preset-description {
     color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     margin-bottom: 10px;
 }
 
 .typost-preset-features {
-    font-size: var(--typost-font-size-xxs);
+    font-size: var(--typost-font-size-xs);
     margin-bottom: 15px;
     padding: 8px;
     background: var(--typost-bg-surface);
@@ -684,9 +729,55 @@
     color: var(--typost-text-primary);
 }
 
-.typost-help-section ul, .typost-help-section ol {
-    line-height: 1.8;
+
+/* =========================================================================
+   PROSE LISTS (Help and Accessibility tabs)
+   ========================================================================= */
+/* Markers (core admin sets list-style: none on ul), the size of the
+   paragraphs around them (--typost-font-size-xs), and a unitless line height. Without this the tabs
+   pass down 16px text on a fixed 18.2px line height (core's 13px x 1.4,
+   already computed), and the Help sections used to override it to 1.8. */
+.typost-help-section ul,
+.typost-help-section ol,
+.typost-builtin-a11y ul,
+.typost-accessibility-recommendations ul {
+    margin-left: 0;
+    padding-left: 1.5em;
 }
+
+.typost-help-section ul,
+.typost-builtin-a11y ul,
+.typost-accessibility-recommendations ul {
+    list-style: disc;
+}
+
+.typost-help-section ol {
+    list-style: decimal;
+}
+
+.typost-help-section li,
+.typost-builtin-a11y li,
+.typost-accessibility-recommendations li {
+    font-size: var(--typost-font-size-xs);
+    line-height: 1.6;
+    margin-bottom: 0.75em;
+    padding-left: 0.25em;
+}
+
+.typost-help-section li:last-child,
+.typost-builtin-a11y li:last-child,
+.typost-accessibility-recommendations li:last-child {
+    margin-bottom: 0;
+}
+
+/* =========================================================================
+   ACCESSIBILITY TAB
+   ========================================================================= */
+/* Beats core's `.wrap .notice` margin (0,2,0); this used to be inline. */
+.typost-tab-content .notice.typost-builtin-a11y {
+    margin: 20px 0;
+}
+
 
 .typost-add-preset-section {
     margin-top: 30px;
@@ -767,7 +858,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-kit-font-count {
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     font-weight: 400;
     color: var(--typost-text-secondary);
     min-width: 60px;
@@ -802,12 +893,12 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     background: var(--typost-bg-surface);
     border-radius: 3px;
     margin-bottom: 10px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-font-meta {
     color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xxs);
+    font-size: var(--typost-font-size-xs);
     margin-left: auto;
 }
 
@@ -904,7 +995,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-or-separator {
     color: var(--typost-text-muted);
     font-style: italic;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-selected-file {
@@ -952,7 +1043,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-file-size {
     color: var(--typost-text-muted);
-    font-size: var(--typost-font-size-xxs);
+    font-size: var(--typost-font-size-xs);
     margin-left: 8px;
 }
 
@@ -981,7 +1072,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-progress-text {
     text-align: center;
     margin-top: 8px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-muted);
 }
 
@@ -1186,7 +1277,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     background: var(--typost-bg-surface);
     padding: 2px 6px;
     border-radius: 3px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-delete-manual-font {
@@ -1280,7 +1371,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-modal-field .description {
     margin-top: 6px;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-secondary);
 }
 
@@ -1412,7 +1503,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-feature-visibility-summary-hint {
     font-weight: 400;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-muted);
 }
 
@@ -1437,7 +1528,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-form-visibility-category > legend {
     font-weight: 600;
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.4px;
@@ -1464,11 +1555,11 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-form-visibility-feature-name {
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
 }
 
 .typost-form-visibility-feature-code {
-    font-size: var(--typost-font-size-xxs);
+    font-size: var(--typost-font-size-xs);
     background: var(--typost-bg-surface);
     border: 1px solid var(--typost-border-default);
     border-radius: 2px;
@@ -1646,7 +1737,7 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 }
 
 .typost-wpl-family {
-    font-size: var(--typost-font-size-xs);
+    font-size: var(--typost-font-size-sm);
     color: var(--typost-text-secondary);
     background: var(--typost-bg-code);
     border: 1px solid var(--typost-border-default);

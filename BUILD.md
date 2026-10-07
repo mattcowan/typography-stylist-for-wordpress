@@ -122,7 +122,7 @@ npm test -- --coverage
 - Tool: Terser
 
 **Typography Stylist Block:**
-- Sources: `blocks/typography-stylist/*.js` (index.js, edit.js, save.js, utils.js, view.js)
+- Sources: `blocks/typography-stylist/*.js` (index.js, edit.js, save.js, utils.js)
 - Output: `blocks/typography-stylist/build/index.js` (37KB bundled)
 - Tool: @wordpress/scripts (webpack + babel)
 

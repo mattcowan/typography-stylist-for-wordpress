@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, computeFitRatio, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -1790,8 +1790,30 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const { options: fontOptions, fontIdMap } = buildFontOptions(window.typostData || {});
 
 	// Wrappers around utils.js helpers, binding to local fontIdMap
+	// ALL_WEIGHT_OPTIONS is plain data that the unit tests compare as
+	// English, so its labels are translated here at render time, by value.
+	const weightOptionLabels = {
+		inherit: __('Inherit from block', 'typography-stylist'),
+		100: __('100 (Thin)', 'typography-stylist'),
+		200: __('200 (Extra Light)', 'typography-stylist'),
+		300: __('300 (Light)', 'typography-stylist'),
+		400: __('400 (Normal)', 'typography-stylist'),
+		500: __('500 (Medium)', 'typography-stylist'),
+		600: __('600 (Semi Bold)', 'typography-stylist'),
+		700: __('700 (Bold)', 'typography-stylist'),
+		800: __('800 (Extra Bold)', 'typography-stylist'),
+		900: __('900 (Black)', 'typography-stylist'),
+	};
 	const getFilteredWeightOptions = (targetFontId, includeInherit = false) =>
-		getFilteredWeightOptionsUtil(targetFontId, fontIdMap, includeInherit);
+		getFilteredWeightOptionsUtil(targetFontId, fontIdMap, includeInherit).map((option) => ({
+			...option,
+			label: weightOptionLabels[option.value] || option.label,
+		}));
+
+	// True while "Custom" is chosen, so a typed class that starts with a
+	// bundled name (sr-only-wide) does not switch the select back mid-word.
+	const [screenReaderCustomMode, setScreenReaderCustomMode] = useState(() => resolveScreenReaderClassControl(screenReaderClass).isCustom);
+	const screenReaderClassControl = resolveScreenReaderClassControl(screenReaderClass, screenReaderCustomMode);
 
 	const getClosestWeight = (currentWeight, availableWeights) =>
 		getClosestWeightUtil(currentWeight, availableWeights);
@@ -1842,7 +1864,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	};
 
 	// Toggle block-level feature (always applies to entire block, ignores selection)
-	// Used by sidebar controls - for inline/selection control, use Quick Features Toggle
+	// Used by sidebar controls - for inline/selection control, use the Quick Feature Toggles modal
 	const toggleBlockFeature = (featureId) => {
 		const newFeatures = [...features];
 		const index = newFeatures.indexOf(featureId);
@@ -3584,7 +3606,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						🚨 {__('Reset Entire Block?', 'typography-stylist')}
 					</p>
 					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
-						{__('This will completely reset this block, removing both inline features AND all block-level settings (font, features, spacing, etc.). This cannot be undone.', 'typography-stylist')}
+						{__('This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac).', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
@@ -3631,7 +3653,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					{__('Reset Entire Block', 'typography-stylist')}
 				</Button>
 				<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
-					{__('Clears both individual features AND block-level settings (font, features, spacing, etc.).', 'typography-stylist')}
+					{__('Clears the inline features and the block-level settings (font, features, spacing, and more).', 'typography-stylist')}
 				</p>
 			</>
 		);
@@ -3762,7 +3784,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 													{'💡 ' + __('Tip: Drag the title bar to reposition this panel.', 'typography-stylist')}
 												</p>
 												<p style={{ margin: '4px 0 0' }}>
-													{__('Changes apply instantly, press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
+													{__('Changes apply instantly. Press Ctrl+Z (Cmd+Z on Mac) to undo.', 'typography-stylist')}
 												</p>
 											</div>
 											<Button
@@ -3809,7 +3831,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<FontPicker
 										label={__('Font Family (for selected text)', 'typography-stylist')}
-										placeholder={__('Select a font...', 'typography-stylist')}
+										placeholder={__('Select a font…', 'typography-stylist')}
 										value={inlineFontFamily}
 										options={fontOptions}
 										onChange={(value) => {
@@ -3958,7 +3980,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												resetFontStyle();
 											}
 										}}
-										help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+										help={__('Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead.', 'typography-stylist')}
 									/>
 									{inlineFontStyle && (
 										<Button
@@ -4403,14 +4425,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						{__('The Typography Stylist block provides two levels of control:', 'typography-stylist')}
 					</p>
 					<ul style={{ fontSize: '13px', lineHeight: '1.6', marginLeft: '16px', listStyleType: 'disc' }}>
-						<li><strong>{__('Sidebar controls', 'typography-stylist')}</strong> — {__('Apply settings to the entire block (font, size, weight, features).', 'typography-stylist')}</li>
-						<li><strong>{__('Quick Features Toggle', 'typography-stylist')}</strong> — {__('Select text and use the toolbar popover to style individual words or phrases.', 'typography-stylist')}</li>
+						<li><strong>{__('Sidebar controls:', 'typography-stylist')}</strong> {__('Apply settings to the entire block (font, size, weight, features).', 'typography-stylist')}</li>
+						<li><strong>{__('Quick Feature Toggles:', 'typography-stylist')}</strong> {__('To style individual words or phrases, select the text and click “Typography Stylist Features” in the block toolbar.', 'typography-stylist')}</li>
 					</ul>
 					<p style={{ fontSize: '13px', lineHeight: '1.6' }}>
-						{__('A clean semantic heading is automatically generated for screen readers — no extra configuration needed.', 'typography-stylist')}
+						{__('The block automatically adds a plain text copy of its content for screen readers. No extra setup is needed.', 'typography-stylist')}
 					</p>
 					<p style={{ fontSize: '12px', lineHeight: '1.5', color: '#757575' }}>
-						{__('Tip: Fonts added in Settings → Typography Stylist only load on pages where they are used, keeping your site fast.', 'typography-stylist')}
+						{__('Tip: By default, fonts added in Settings → Typography Stylist load only on pages that use them.', 'typography-stylist')}
 					</p>
 				</PanelBody>
 
@@ -4539,7 +4561,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							{ label: __('Italic', 'typography-stylist'), value: 'italic' }
 						]}
 						onChange={(value) => setAttributes({ fontStyle: value })}
-						help={__('Visual style only — the italic face of the font, without adding emphasis. To emphasize text semantically (screen readers announce it), use the editor’s Italic button instead.', 'typography-stylist')}
+						help={__('Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead.', 'typography-stylist')}
 					/>
 				</PanelBody>
 
@@ -4556,7 +4578,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							fontSize === 'responsive'
 								? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')
 								: fontSize === 'fit'
-									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap, and inline font sizes on selections are ignored — the block controls sizing.', 'typography-stylist')
+									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist')
 									: undefined
 						}
 					/>
@@ -4626,7 +4648,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				<PanelBody title={__('Line Height', 'typography-stylist')} initialOpen={false}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies line height to the entire block. To apply line height to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+						{__('This control applies line height to the entire block. To change the line height of selected text, select it and click “Typography Stylist Features” in the block toolbar.', 'typography-stylist')}
 					</p>
 					<RangeControl
 						value={lineHeight === 0 ? 1.5 : lineHeight}
@@ -4646,7 +4668,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				<PanelBody title={__('Letter Spacing', 'typography-stylist')} initialOpen={false}>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('This control applies letter spacing to the entire block. To apply letter spacing to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+						{__('This control applies letter spacing to the entire block. To change the letter spacing of selected text, select it and click “Typography Stylist Features” in the block toolbar.', 'typography-stylist')}
 					</p>
 					<RangeControl
 						value={letterSpacing}
@@ -4673,7 +4695,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						{__('OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features.', 'typography-stylist')}
 					</p>
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: 0, marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid #ddd' }}>
-						{__('These controls apply features to the entire block. To apply features to individual text selections, use the Quick Features Toggle from the toolbar.', 'typography-stylist')}
+						{__('These controls apply features to the entire block. To apply features to selected text, select it and click “Typography Stylist Features” in the block toolbar.', 'typography-stylist')}
 					</p>
 					{Object.entries(groupedFeatures).map(([category, categoryFeatures]) => (
 						<div key={category} className="typost-feature-category">
@@ -4692,27 +4714,31 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				</PanelBody>
 
 				<PanelBody title={__('Accessibility', 'typography-stylist')} initialOpen={false}>
+					{/* Derived from the stored class so the custom field stays open while typing. */}
 					<SelectControl
 						label={__('Screen Reader Class', 'typography-stylist')}
-						value={screenReaderClass}
+						value={screenReaderClassControl.selectValue}
 						options={[
 							{ label: 'visually-hidden', value: 'visually-hidden' },
 							{ label: 'sr-only', value: 'sr-only' },
 							{ label: 'screen-reader-text', value: 'screen-reader-text' },
 							{ label: __('Custom', 'typography-stylist'), value: 'custom' }
 						]}
-						onChange={(value) => setAttributes({ screenReaderClass: value })}
+						onChange={(value) => {
+							setScreenReaderCustomMode(value === 'custom');
+							setAttributes({ screenReaderClass: screenReaderClassForSelect(value) });
+						}}
 					/>
-					{screenReaderClass === 'custom' && (
+					{screenReaderClassControl.isCustom && (
 						<TextControl
 							label={__('Custom Class Name', 'typography-stylist')}
-							value={screenReaderClass}
+							value={screenReaderClassControl.customValue}
 							onChange={(value) => setAttributes({ screenReaderClass: value })}
-							help={__('Enter your theme\'s screen reader class', 'typography-stylist')}
+							help={__('Enter your theme’s screen reader class.', 'typography-stylist')}
 						/>
 					)}
 					<p className="description">
-						{__('The selected class will be used to hide duplicate text for screen readers. Make sure this class is defined in your theme.', 'typography-stylist')}
+						{__('The selected class hides the screen reader copy of the text from view. The plugin includes styles for visually-hidden, sr-only, and screen-reader-text. For a custom class, make sure your theme defines it.', 'typography-stylist')}
 					</p>
 				</PanelBody>
 
@@ -4763,7 +4789,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						identifier={splitOnEnter ? 'content' : undefined}
 						value={wrappedFitValue}
 						onChange={(value) => setAttributes({ content: unwrapFitLines(value) })}
-						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
+						placeholder={__('Add text with advanced typography…', 'typography-stylist')}
 						style={buildStyle()}
 						className={`typost-block-content typost-styled typost-fit typost-fit-editing${activeParagraphStyle ? ` ${styleClass}` : ''}`}
 					/>
@@ -4773,7 +4799,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						identifier={splitOnEnter ? 'content' : undefined}
 						value={content}
 						onChange={(value) => setAttributes({ content: value })}
-						placeholder={__('Add text with advanced typography...', 'typography-stylist')}
+						placeholder={__('Add text with advanced typography…', 'typography-stylist')}
 						style={buildStyle()}
 						className={contentClassName}
 					/>

@@ -1,166 +1,161 @@
-# Copyright (C) 2026 Matt Cowan
-# This file is distributed under the GPL-2.0-or-later license.
+# French (France) translation for Typography Stylist.
+# This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr ""
-"Project-Id-Version: Typography Stylist - Variable Fonts 1.2.1\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-07-02T00:00:00+00:00\n"
-"PO-Revision-Date: 2026-07-02 12:00+0000\n"
-"Language: fr\n"
-"X-Domain: typost-variable-fonts\n"
+msgstr "Project-Id-Version: Typography Stylist 2.3.1\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: fr\nX-Domain: typost-variable-fonts\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: variable-fonts.php:385
-msgid "Variable Font"
-msgstr "Police variable"
+#. translators: %s: comma-separated list of variable font axis tags.
+#: variable-fonts.php:346
+#, php-format
+msgid "Variable font (axes: %s)"
+msgstr "Police variable (axes : %s)"
 
-#: variable-fonts.php:387
-msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
-msgstr "Activez pour définir les axes de police variable (graisse, chasse, inclinaison, etc.) avec des plages personnalisées."
+#: variable-fonts.php:347
+msgid "Configured as a variable font"
+msgstr "Configurée comme police variable"
 
-#: variable-fonts.php:395
-#: assets/js/editor.js
-msgid "Tag"
-msgstr "Balise"
-
-#: variable-fonts.php:396
-#: assets/js/editor.js
-msgid "Name"
-msgstr "Nom"
-
-#: variable-fonts.php:397
-#: assets/js/editor.js
-msgid "Min"
-msgstr "Min"
-
-#: variable-fonts.php:400
-#: assets/js/editor.js
-msgid "Max"
-msgstr "Max"
-
-#: variable-fonts.php:403
-#: assets/js/editor.js
-msgid "Default"
-msgstr "Défaut"
-
-#: variable-fonts.php:406
-#: assets/js/editor.js
-msgid "Remove axis"
-msgstr "Supprimer l'axe"
-
-#: variable-fonts.php:412
-msgid "+ Add Axis"
-msgstr "+ Ajouter un axe"
-
-#: variable-fonts.php:427
-msgid "Hide weight selection"
-msgstr "Masquer la sélection de graisse"
-
-#: variable-fonts.php:429
-msgid "Hide the standard weight checkboxes above. Auto-enabled when no wght axis is defined."
-msgstr "Masque les cases de graisse standard ci-dessus. Activé automatiquement quand aucun axe wght n'est défini."
-
-#: variable-fonts.php:599
-msgid "Axes array is required"
-msgstr "Le tableau d'axes est requis"
-
-#: variable-fonts.php:733
-msgid "Settings saved successfully!"
-msgstr "Réglages enregistrés !"
-
-#: assets/js/editor.js
-msgid "Variable Font Axes"
-msgstr "Axes de police variable"
-
-#: assets/js/editor.js
-msgid "Reset to defaults"
-msgstr "Réinitialiser aux valeurs par défaut"
-
-#: variable-fonts.php:424
-msgid "Detect Axes from Font File"
-msgstr "Détecter les axes depuis le fichier de police"
-
-#: variable-fonts.php:428
-msgid "Reads the axes back out of the font file and replaces every axis row above — any axis names, ranges, or defaults you set by hand are discarded. Nothing is stored until you save."
-msgstr "Relit les axes depuis le fichier de police et remplace toutes les lignes d'axes ci-dessus — les noms, plages ou valeurs par défaut que vous avez saisis à la main sont supprimés. Rien n'est enregistré tant que vous n'avez pas sauvegardé."
-
-#: variable-fonts.php:634
-msgid "Axes can only be re-detected from uploaded font files."
-msgstr "Les axes ne peuvent être redétectés qu'à partir de fichiers de police téléversés."
-
-#: assets/js/admin.js
-msgid "Detecting axes…"
-msgstr "Détection des axes…"
-
-#: assets/js/admin.js
-msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
-msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
-
-#. translators: %d: number of detected variable font axes.
-#: assets/js/admin.js
-#, javascript-format
-msgid "Detected %d axes, replacing the rows above. Review them, then Save Changes to store them."
-msgstr "%d axes détectés, remplaçant les lignes ci-dessus. Vérifiez-les, puis cliquez sur Enregistrer les modifications pour les sauvegarder."
-
-#: assets/js/admin.js
-msgid "No variable axes found in the resolved font file (no fvar table)."
-msgstr "Aucun axe variable trouvé dans le fichier de police résolu (pas de table fvar)."
-
-#: assets/js/admin.js
-msgid "Font data not found on this page."
-msgstr "Données de police introuvables sur cette page."
-
-#: assets/js/admin.js
-msgid "No font file could be found for this font."
-msgstr "Aucun fichier de police n'a pu être trouvé pour cette police."
-
-#: assets/js/admin.js
-msgid "The font file download was blocked by the remote server (CORS)."
-msgstr "Le téléchargement du fichier de police a été bloqué par le serveur distant (CORS)."
-
-#: assets/js/admin.js
-msgid "The font file could not be downloaded."
-msgstr "Le fichier de police n'a pas pu être téléchargé."
-
-#: assets/js/admin.js
-msgid "The font file format is not supported."
-msgstr "Le format du fichier de police n'est pas pris en charge."
-
-#: assets/js/admin.js
-msgid "The font-parsing libraries could not be loaded."
-msgstr "Les bibliothèques d'analyse de polices n'ont pas pu être chargées."
-
-#: assets/js/admin.js
-msgid "The font file could not be read."
-msgstr "Le fichier de police n'a pas pu être lu."
-
-#: assets/js/admin.js
-#, javascript-format
-msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
-msgstr "Axes de police variable détectés et enregistrés pour %1$d des %2$d nouvelles polices."
-
-#: variable-fonts.php:395
-#: assets/js/admin.js
-msgid "Axis tag"
-msgstr "Balise de l'axe"
-
-#: variable-fonts.php:396
-#: assets/js/admin.js
-msgid "Axis name"
-msgstr "Nom de l'axe"
-
-#: variable-fonts.php:353
+#: variable-fonts.php:352
 msgid "Variable"
 msgstr "Variable"
 
-#. translators: %s: comma-separated list of variable font axis tags.
-#: variable-fonts.php:347
-#, php-format
-msgid "Variable font — axes: %s"
-msgstr "Police variable — axes : %s"
+#: variable-fonts.php:384
+msgid "Variable Font"
+msgstr "Police variable"
 
-#: variable-fonts.php:348
-msgid "Configured as a variable font"
-msgstr "Configurée comme police variable"
+#: variable-fonts.php:386
+msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
+msgstr "Activez pour définir les axes de police variable (graisse, chasse, inclinaison, etc.) avec des plages personnalisées."
+
+#: variable-fonts.php:394
+#: assets/js/admin.js:24
+msgid "Tag"
+msgstr "Balise"
+
+#: variable-fonts.php:394
+#: assets/js/admin.js:24
+msgid "Axis tag"
+msgstr "Balise de l'axe"
+
+#: variable-fonts.php:395
+#: assets/js/admin.js:25
+msgid "Name"
+msgstr "Nom"
+
+#: variable-fonts.php:395
+#: assets/js/admin.js:25
+msgid "Axis name"
+msgstr "Nom de l'axe"
+
+#: variable-fonts.php:396
+#: assets/js/admin.js:26
+msgid "Min"
+msgstr "Min"
+
+#: variable-fonts.php:399
+#: assets/js/admin.js:29
+msgid "Max"
+msgstr "Max"
+
+#: variable-fonts.php:402
+#: assets/js/admin.js:32
+msgid "Default"
+msgstr "Défaut"
+
+#: variable-fonts.php:405
+#: assets/js/admin.js:35
+msgid "Remove axis"
+msgstr "Supprimer l'axe"
+
+#: variable-fonts.php:411
+msgid "+ Add Axis"
+msgstr "+ Ajouter un axe"
+
+#: variable-fonts.php:423
+msgid "Detect Axes from Font File"
+msgstr "Détecter les axes depuis le fichier de police"
+
+#: variable-fonts.php:427
+msgid "Reads the axes from the font file and replaces all the axis rows above. Axis names, ranges, and defaults that you set by hand are lost. Nothing is saved until you click “Save Changes”."
+msgstr "Lit les axes depuis le fichier de police et remplace toutes les lignes d’axes ci-dessus. Les noms, plages et valeurs par défaut des axes que vous avez saisis à la main sont perdus. Rien n’est enregistré tant que vous n’avez pas cliqué sur « Enregistrer les modifications »."
+
+#: variable-fonts.php:438
+msgid "Hide weight selection"
+msgstr "Masquer la sélection de graisse"
+
+#: variable-fonts.php:440
+msgid "Hide the standard weight checkboxes above. This is on by default for a variable font."
+msgstr "Masque les cases de graisse standard ci-dessus. Cette option est activée par défaut pour une police variable."
+
+#: variable-fonts.php:633
+msgid "Axes can only be re-detected from uploaded font files."
+msgstr "Les axes ne peuvent être redétectés qu'à partir de fichiers de police téléversés."
+
+#: variable-fonts.php:660
+msgid "Axes array is required"
+msgstr "Le tableau d'axes est requis"
+
+#: variable-fonts.php:794
+msgid "Settings saved successfully!"
+msgstr "Réglages enregistrés !"
+
+#: assets/js/admin.js:200
+msgid "No variable axes found in the resolved font file (no fvar table)."
+msgstr "Aucun axe variable trouvé dans le fichier de police résolu (pas de table fvar)."
+
+#: assets/js/admin.js:201
+msgid "Font data not found on this page."
+msgstr "Données de police introuvables sur cette page."
+
+#: assets/js/admin.js:202
+msgid "No font file could be found for this font."
+msgstr "Aucun fichier de police n'a pu être trouvé pour cette police."
+
+#: assets/js/admin.js:203
+msgid "The font file download was blocked by the remote server (CORS)."
+msgstr "Le téléchargement du fichier de police a été bloqué par le serveur distant (CORS)."
+
+#: assets/js/admin.js:204
+msgid "The font file could not be downloaded."
+msgstr "Le fichier de police n'a pas pu être téléchargé."
+
+#: assets/js/admin.js:205
+msgid "The font file format is not supported."
+msgstr "Le format du fichier de police n'est pas pris en charge."
+
+#: assets/js/admin.js:206
+msgid "The font-parsing libraries could not be loaded."
+msgstr "Les bibliothèques d'analyse de polices n'ont pas pu être chargées."
+
+#: assets/js/admin.js:207
+#: assets/js/admin.js:208
+msgid "The font file could not be read."
+msgstr "Le fichier de police n'a pas pu être lu."
+
+#: assets/js/admin.js:445
+msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
+msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
+
+#: assets/js/admin.js:456
+msgid "Detecting axes…"
+msgstr "Détection des axes…"
+
+#. translators: %d: number of detected variable font axes.
+#: assets/js/admin.js:486
+#, js-format
+msgid "Detected %d axis and replaced the rows above. Review it, then click “Save Changes” to store it."
+msgid_plural "Detected %d axes and replaced the rows above. Review them, then click “Save Changes” to store them."
+msgstr[0] "%d axe détecté, qui remplace les lignes ci-dessus. Vérifiez-le, puis cliquez sur « Enregistrer les modifications » pour le sauvegarder."
+msgstr[1] "%d axes détectés, qui remplacent les lignes ci-dessus. Vérifiez-les, puis cliquez sur « Enregistrer les modifications » pour les sauvegarder."
+
+#. translators: 1: number of variable fonts detected, 2: total number of new fonts.
+#: assets/js/admin.js:611
+#, js-format
+msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
+msgstr "Axes de police variable détectés et enregistrés pour %1$d des %2$d nouvelles polices."
+
+#: assets/js/editor.js:318
+msgid "Reset to defaults"
+msgstr "Réinitialiser aux valeurs par défaut"
+
+#: assets/js/editor.js:432
+msgid "Variable Font Axes"
+msgstr "Axes de police variable"

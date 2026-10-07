@@ -77,6 +77,8 @@ Core scans the page once on DOM ready and again after each font list refresh. Fo
 
 Fired at the end of `register_rest_routes()`. Register your extension's REST API endpoints under the `typost/v1` namespace.
 
+Write requests (POST, PUT, PATCH, DELETE) to any `typost/v1` route share one limit: 50 per minute for each user (since 2.3.2). The count starts after your permission callback passes, and an extra request gets a 429 `rate_limit_exceeded` error. Read requests are not counted. A route in another namespace can use `Typost::get_instance()->check_permissions()` as its permission callback to get the same limit.
+
 ```php
 add_action('typost_register_rest_routes', function() {
     register_rest_route('typost/v1', '/my-extension/data', array(
