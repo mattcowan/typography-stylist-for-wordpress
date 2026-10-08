@@ -79,6 +79,35 @@ class ParagraphStylesCssSelectorTest extends TestCase {
         $this->assertStringNotContainsString('--typost-hang', $off);
     }
 
+    public function test_case_matches_the_js_generator_byte_for_byte() {
+        $module = $this->freshInstance();
+        $head   = ".typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id=\"5\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n";
+
+        // Expected strings shared with ps-utils.test.js ("case (#214)")
+        $this->assertSame(
+            $head
+            . "    font-family: var(--font-9);\n"
+            . "    letter-spacing: 0.1em;\n"
+            . "    text-transform: uppercase;\n"
+            . "    font-variant-caps: normal;\n"
+            . "}",
+            $module->generate_style_css(['id' => 5, 'properties' => ['fontId' => 9, 'letterSpacing' => 100, 'textCase' => 'uppercase']])
+        );
+        $this->assertSame(
+            $head
+            . "    text-transform: none;\n"
+            . "    font-variant-caps: all-small-caps;\n"
+            . "    font-synthesis-small-caps: none;\n"
+            . "}",
+            $module->generate_style_css(['id' => 5, 'properties' => ['textCase' => 'all-small-caps', 'fakeSmallCaps' => false]])
+        );
+
+        // A style saved before #214 renders as before
+        $this->assertStringNotContainsString('text-transform', $module->generate_style_css(['id' => 5, 'properties' => ['fontId' => 9]]));
+        $this->assertStringNotContainsString('text-transform', $module->generate_style_css(['id' => 5, 'properties' => ['fontId' => 9, 'textCase' => 'bogus']]));
+        $this->assertStringContainsString('font-synthesis-small-caps: auto;', $module->generate_style_css(['id' => 5, 'properties' => ['textCase' => 'small-caps']]));
+    }
+
     public function test_legacy_ids_get_the_same_boosted_variants() {
         $module = $this->freshInstance();
         $css = $module->generate_style_css([

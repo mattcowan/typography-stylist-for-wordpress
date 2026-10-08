@@ -180,6 +180,24 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 					/* translators: %s: hang in em */
 					$hang_display = sprintf( __( '%sem', 'typost-paragraph-styles' ), $hang_value );
 				}
+
+				// Case (#214)
+				$case_labels  = array(
+					'none'           => __( 'Normal', 'typost-paragraph-styles' ),
+					'uppercase'      => __( 'All Caps', 'typost-paragraph-styles' ),
+					'lowercase'      => __( 'Lowercase', 'typost-paragraph-styles' ),
+					'capitalize'     => __( 'Title Case', 'typost-paragraph-styles' ),
+					'small-caps'     => __( 'Small Caps', 'typost-paragraph-styles' ),
+					'all-small-caps' => __( 'All Small Caps', 'typost-paragraph-styles' ),
+				);
+				$case_display = '';
+				if ( isset( $props['textCase'] ) && is_string( $props['textCase'] ) && isset( $case_labels[ $props['textCase'] ] ) ) {
+					$case_display = $case_labels[ $props['textCase'] ];
+					if ( in_array( $props['textCase'], array( 'small-caps', 'all-small-caps' ), true ) && isset( $props['fakeSmallCaps'] ) && false === $props['fakeSmallCaps'] ) {
+						/* translators: %s: case setting, such as "Small Caps" */
+						$case_display = sprintf( __( '%s (no fake small caps)', 'typost-paragraph-styles' ), $case_display );
+					}
+				}
 			?>
 				<div class="typost-ps-style-card" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 					<div class="typost-ps-style-card-header">
@@ -236,6 +254,12 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 							<span class="typost-ps-detail">
 								<strong><?php esc_html_e( 'First Letter Hang:', 'typost-paragraph-styles' ); ?></strong>
 								<?php echo esc_html( $hang_display ); ?>
+							</span>
+						<?php endif; ?>
+						<?php if ( $case_display ) : ?>
+							<span class="typost-ps-detail">
+								<strong><?php esc_html_e( 'Case:', 'typost-paragraph-styles' ); ?></strong>
+								<?php echo esc_html( $case_display ); ?>
 							</span>
 						<?php endif; ?>
 					</div>

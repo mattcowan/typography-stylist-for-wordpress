@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, normalizeTextCase, isSmallCapsCase, caseDeclarations } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -162,6 +162,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		fitMaxSize,
 		initialHang,
 		fitLineHangs,
+		textCase,
+		fakeSmallCaps,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -441,6 +443,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (props.fitMaxSize !== undefined) newAttrs.fitMaxSize = props.fitMaxSize;
 				// fitLineHangs is content-specific like fitLineSizes and never set here
 				if (props.initialHang !== undefined) newAttrs.initialHang = normalizeHang(props.initialHang);
+				if (props.textCase !== undefined) newAttrs.textCase = normalizeTextCase(props.textCase);
+				if (props.fakeSmallCaps !== undefined) newAttrs.fakeSmallCaps = props.fakeSmallCaps !== false;
 				if (props.letterSpacing !== undefined) newAttrs.letterSpacing = props.letterSpacing;
 				if (props.lineHeight !== undefined) newAttrs.lineHeight = props.lineHeight;
 				if (props.features !== undefined) newAttrs.features = props.features;
@@ -585,7 +589,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	qftStateRef.current = {
 		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred,
 		fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, styleClass,
-		fontVariationSettings, initialHang, layeredConfigId: attributes.layeredConfigId || 0,
+		fontVariationSettings, initialHang, textCase, fakeSmallCaps, layeredConfigId: attributes.layeredConfigId || 0,
 		animationConfigId: attributes.animationConfigId || 0,
 		content: attributes.content || '', tagName: attributes.tagName || 'h2',
 		// inheritedFontId is filled in below, once fontIdMap exists
@@ -690,7 +694,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	measureFitPropsRef.current = {
 		content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing,
 		features, fontVariationSettings, fitLineSizes, setAttributes,
-		initialHang, fitLineHangs, textAlign
+		initialHang, fitLineHangs, textAlign, textCase, fakeSmallCaps
 	};
 
 	const measureFitLines = () => {
@@ -726,6 +730,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			node.style.fontFeatureSettings = p.features.map(f => `"${f}" 1`).join(', ');
 		}
 		if (p.fontVariationSettings) node.style.fontVariationSettings = p.fontVariationSettings;
+		// Case changes glyph widths (capitals, small caps), so it is measured too (#214)
+		caseDeclarations(p.textCase, p.fakeSmallCaps).forEach(([property, value]) => node.style.setProperty(property, value));
 
 		targetDoc.body.appendChild(node);
 
@@ -781,7 +787,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	useEffect(() => {
 		if (fontSize !== 'fit') return;
 		debouncedMeasureFit();
-	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign, textCase, fakeSmallCaps]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
 
 	// Measure after fonts are ready, and re-measure on late font loads
 	useEffect(() => {
@@ -3415,7 +3421,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			fontSizeMax: 64,
 			fitMaxSize: 0,
 			initialHang: 0,
-			fitLineHangs: []
+			fitLineHangs: [],
+			textCase: '',
+			fakeSmallCaps: true
 		});
 
 		setShowInlineResetConfirm(false);
@@ -3456,7 +3464,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			const props = psUtils && psUtils.normalizeApplyProperties ? psUtils.normalizeApplyProperties(style.properties) : style.properties;
 			const { fontIdMap: idMap } = blockPropsRef.current || {};
 			const synced = {};
-			['fontId', 'fontWeight', 'fontStyle', 'fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize', 'letterSpacing', 'lineHeight', 'features', 'fontVariationSettings', 'initialHang'].forEach((key) => {
+			['fontId', 'fontWeight', 'fontStyle', 'fontSize', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize', 'letterSpacing', 'lineHeight', 'features', 'fontVariationSettings', 'initialHang', 'textCase', 'fakeSmallCaps'].forEach((key) => {
 				if (props[key] !== undefined) {
 					synced[key] = props[key];
 				}
@@ -3490,9 +3498,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	}, [styleClass, paragraphStylesVersion, setAttributes]);
 	const styleOverrides = useMemo(
 		() => activeParagraphStyle
-			? stylePropertyOverrides({ fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang }, activeParagraphStyle.properties)
+			? stylePropertyOverrides({ fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang, textCase, fakeSmallCaps }, activeParagraphStyle.properties)
 			: null,
-		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang]
+		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang, textCase, fakeSmallCaps]
 	);
 	const rendersInline = (key) => !styleOverrides || !!styleOverrides[key];
 	// typost-hang gates the editor-only hang rules in editor.css (#242). The
@@ -3573,6 +3581,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// hang off on one block cancels the style's value while previewing.
 		if (rendersInline('initialHang') && (styleOverrides || normalizeHang(initialHang) > 0)) {
 			styles['--typost-hang'] = String(normalizeHang(initialHang));
+		}
+
+		// Case (#214). With a paragraph style active the class supplies it;
+		// an override back to Default previews as Normal, because an inline
+		// style cannot fall back to the theme past the class rule.
+		if (rendersInline('textCase')) {
+			const caseValue = normalizeTextCase(textCase) || (styleOverrides ? 'none' : '');
+			caseDeclarations(caseValue, fakeSmallCaps).forEach(([property, value]) => {
+				styles[property.replace(/-([a-z])/g, (g) => g[1].toUpperCase())] = value;
+			});
 		}
 
 		return styles;
@@ -4592,6 +4610,42 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						onChange={(value) => setAttributes({ fontStyle: value })}
 						help={__('Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead.', 'typography-stylist')}
 					/>
+				</PanelBody>
+
+				<PanelBody title={__('Case', 'typography-stylist')} initialOpen={false}>
+					<SelectControl
+						label={__('Case', 'typography-stylist')}
+						hideLabelFromVision
+						value={normalizeTextCase(textCase)}
+						options={[
+							{ label: __('Default', 'typography-stylist'), value: '' },
+							{ label: __('Normal', 'typography-stylist'), value: 'none' },
+							{ label: __('All Caps', 'typography-stylist'), value: 'uppercase' },
+							{ label: __('Lowercase', 'typography-stylist'), value: 'lowercase' },
+							{ label: __('Title Case', 'typography-stylist'), value: 'capitalize' },
+							{ label: __('Small Caps', 'typography-stylist'), value: 'small-caps' },
+							{ label: __('All Small Caps', 'typography-stylist'), value: 'all-small-caps' }
+						]}
+						onChange={(value) => setAttributes({ textCase: normalizeTextCase(value) })}
+						help={normalizeTextCase(textCase) === 'capitalize'
+							? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
+							: __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist')}
+					/>
+					{isSmallCapsCase(textCase) && (
+						<ToggleControl
+							label={__('Allow fake small caps', 'typography-stylist')}
+							checked={fakeSmallCaps !== false}
+							onChange={(value) => setAttributes({ fakeSmallCaps: value })}
+							help={fakeSmallCaps !== false
+								? __('When the font has no small caps, the browser makes them by shrinking capitals.', 'typography-stylist')
+								: __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
+						/>
+					)}
+					{normalizeTextCase(textCase) === 'uppercase' && (
+						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: 0 }}>
+							{__('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')}
+						</p>
+					)}
 				</PanelBody>
 
 				<PanelBody title={__('Font Size', 'typography-stylist')} initialOpen={false}>

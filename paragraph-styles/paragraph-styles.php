@@ -80,6 +80,12 @@ final class Typost_Paragraph_Styles {
 	const HANG_MAX = 1;
 
 	/**
+	 * @var string[] Case values a style can store (#214); absent = Default.
+	 * Mirrors TEXT_CASE_VALUES in core utils.js and ps-utils.js.
+	 */
+	const TEXT_CASE_VALUES = array( 'none', 'uppercase', 'lowercase', 'capitalize', 'small-caps', 'all-small-caps' );
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return self
@@ -335,6 +341,12 @@ final class Typost_Paragraph_Styles {
 		$hang = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;
 		if ( $hang > 0 ) {
 			$css_rules[] = '--typost-hang: ' . $hang;
+		}
+
+		// Case (#214). caseDeclarations() in ps-utils.js emits the same.
+		$fake_small_caps = ! ( isset( $props['fakeSmallCaps'] ) && false === $props['fakeSmallCaps'] );
+		foreach ( self::case_declarations( isset( $props['textCase'] ) ? $props['textCase'] : '', $fake_small_caps ) as $declaration ) {
+			$css_rules[] = $declaration[0] . ': ' . $declaration[1];
 		}
 
 		if ( empty( $css_rules ) ) {
@@ -1334,7 +1346,52 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Case (#214): Default ('') is never stored. fakeSmallCaps is stored
+		// only as false, and only with a small caps value (absent = allowed).
+		if ( isset( $raw['textCase'] ) && in_array( $raw['textCase'], self::TEXT_CASE_VALUES, true ) ) {
+			$clean['textCase'] = $raw['textCase'];
+			if ( in_array( $raw['textCase'], array( 'small-caps', 'all-small-caps' ), true )
+				&& isset( $raw['fakeSmallCaps'] )
+				&& in_array( $raw['fakeSmallCaps'], array( false, 0, '0', 'false' ), true ) ) {
+				$clean['fakeSmallCaps'] = false;
+			}
+		}
+
 		return $clean;
+	}
+
+	/**
+	 * CSS declarations for a case setting (#214), as [property, value] pairs.
+	 *
+	 * Case is one exclusive choice, so every value sets both mechanisms: a
+	 * transform resets font-variant-caps, and small caps reset
+	 * text-transform (a theme that uppercases headings would otherwise turn
+	 * a Small Caps style into full capitals). font-variant-caps lets the
+	 * browser fake small caps when the font has none, unless
+	 * font-synthesis-small-caps is none. Feature toggles use
+	 * font-feature-settings, which applies after font-variant-caps, so they
+	 * keep working. Mirrors caseDeclarations() in core utils.js and
+	 * ps-utils.js; the order is part of the byte-identical CSS.
+	 *
+	 * @param mixed $text_case       Case value; anything unknown is Default.
+	 * @param bool  $fake_small_caps Allow fake small caps.
+	 * @return array[] Declarations, empty for Default.
+	 */
+	public static function case_declarations( $text_case, $fake_small_caps = true ) {
+		if ( ! is_string( $text_case ) || ! in_array( $text_case, self::TEXT_CASE_VALUES, true ) ) {
+			return array();
+		}
+		if ( 'small-caps' === $text_case || 'all-small-caps' === $text_case ) {
+			return array(
+				array( 'text-transform', 'none' ),
+				array( 'font-variant-caps', $text_case ),
+				array( 'font-synthesis-small-caps', $fake_small_caps ? 'auto' : 'none' ),
+			);
+		}
+		return array(
+			array( 'text-transform', $text_case ),
+			array( 'font-variant-caps', 'normal' ),
+		);
 	}
 
 	/**

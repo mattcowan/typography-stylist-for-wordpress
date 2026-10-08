@@ -3,7 +3,7 @@
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml, normalizeHang } from './utils';
+import { buildFitLinesHtml, normalizeHang, caseDeclarations } from './utils';
 
 // Viewport breakpoints for responsive font sizing
 const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
@@ -43,6 +43,8 @@ export default function save({ attributes }) {
 		fitMaxSize,
 		initialHang,
 		fitLineHangs,
+		textCase,
+		fakeSmallCaps,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -96,6 +98,12 @@ export default function save({ attributes }) {
 		if (lineHeight !== 0) {
 			styleArray.push(`line-height: ${lineHeight}`);
 		}
+
+		// Case (#214). Default ('') writes nothing, so blocks saved before
+		// the attribute existed serialize unchanged (block validation).
+		caseDeclarations(textCase, fakeSmallCaps).forEach(([property, value]) => {
+			styleArray.push(`${property}: ${value}`);
+		});
 
 		if (fontSize === 'responsive') {
 			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);

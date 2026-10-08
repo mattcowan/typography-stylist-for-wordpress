@@ -2226,6 +2226,11 @@ export function buildQftEditorState(s) {
 		// reach an inline span, so the inline editor never reports this key
 		// and the Paragraph Styles diff skips it when absent.
 		initialHang: normalizeHang(source.initialHang),
+		// Case (#214), block-level like the hang: the inline editor has no
+		// case control and never reports these keys, so the Paragraph Styles
+		// diff skips them there and Update Style keeps the style's value.
+		textCase: normalizeTextCase(source.textCase),
+		fakeSmallCaps: source.fakeSmallCaps !== false,
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,
 		content: source.content || '',
@@ -3193,6 +3198,75 @@ export function normalizeHang(value) {
 }
 
 /**
+ * Case values a block or paragraph style can store (#214). '' (absent) is
+ * Default: the text keeps whatever case the theme gives it, so blocks and
+ * styles saved before this setting existed render as before. 'none' is
+ * Normal, an explicit reset of a theme's transform or small caps.
+ * Mirrors TEXT_CASE_VALUES in ps-utils.js and
+ * Typost_Paragraph_Styles::TEXT_CASE_VALUES in PHP.
+ */
+export const TEXT_CASE_VALUES = ['none', 'uppercase', 'lowercase', 'capitalize', 'small-caps', 'all-small-caps'];
+
+/**
+ * Normalize a stored case value: '' for Default or anything unknown.
+ *
+ * @param {*} value Raw value.
+ * @return {string} One of TEXT_CASE_VALUES, or ''.
+ */
+export function normalizeTextCase(value) {
+	return typeof value === 'string' && TEXT_CASE_VALUES.indexOf(value) !== -1 ? value : '';
+}
+
+/**
+ * Whether a case value uses font-variant-caps (and so the fake small caps
+ * choice applies to it).
+ *
+ * @param {*} value Case value.
+ * @return {boolean} True for Small Caps and All Small Caps.
+ */
+export function isSmallCapsCase(value) {
+	const c = normalizeTextCase(value);
+	return c === 'small-caps' || c === 'all-small-caps';
+}
+
+/**
+ * CSS declarations for a case setting (#214), as [property, value] pairs.
+ *
+ * Case is one exclusive choice, so every value sets both mechanisms: a
+ * transform resets font-variant-caps and small caps reset text-transform.
+ * Otherwise a theme that uppercases headings would turn a Small Caps style
+ * into full capitals (smcp leaves capitals alone). font-variant-caps maps
+ * to smcp/c2sc and, unlike font-feature-settings, lets the browser fake
+ * small caps when the font has none; font-synthesis-small-caps: none turns
+ * that off. The block's own feature toggles use font-feature-settings,
+ * which is applied after font-variant-caps, so they keep working.
+ * Mirrors caseDeclarations() in ps-utils.js and
+ * Typost_Paragraph_Styles::case_declarations() in PHP; the order of the
+ * pairs is part of the byte-identical style CSS.
+ *
+ * @param {*}       textCase      Case value.
+ * @param {boolean} fakeSmallCaps Allow fake small caps (false = off).
+ * @return {Array<Array<string>>} Declarations, empty for Default.
+ */
+export function caseDeclarations(textCase, fakeSmallCaps) {
+	const c = normalizeTextCase(textCase);
+	if (!c) {
+		return [];
+	}
+	if (isSmallCapsCase(c)) {
+		return [
+			['text-transform', 'none'],
+			['font-variant-caps', c],
+			['font-synthesis-small-caps', fakeSmallCaps === false ? 'none' : 'auto'],
+		];
+	}
+	return [
+		['text-transform', c],
+		['font-variant-caps', 'normal'],
+	];
+}
+
+/**
  * Whether a hanging initial shows for a given text alignment.
  *
  * The hang moves the first letter past the start edge, which only reads as
@@ -3957,7 +4031,7 @@ export function isOrphanStyleClass(styleClass, styles) {
  *
  * @param {Object} attrs      Block attributes.
  * @param {Object} styleProps The style's stored properties.
- * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize).
+ * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize, textCase covers fakeSmallCaps).
  */
 export function stylePropertyOverrides(attrs, styleProps) {
 	const a = attrs || {};
@@ -4005,6 +4079,13 @@ export function stylePropertyOverrides(attrs, styleProps) {
 	}
 	if (normalizeHang(a.initialHang) !== normalizeHang(s.initialHang)) {
 		overrides.initialHang = true;
+	}
+	// One key for both case settings: they render as one set of declarations.
+	// The fake small caps choice only matters with a small caps value.
+	const attrCase = normalizeTextCase(a.textCase);
+	if (attrCase !== normalizeTextCase(s.textCase)
+		|| (isSmallCapsCase(attrCase) && (a.fakeSmallCaps !== false) !== (s.fakeSmallCaps !== false))) {
+		overrides.textCase = true;
 	}
 	return overrides;
 }
