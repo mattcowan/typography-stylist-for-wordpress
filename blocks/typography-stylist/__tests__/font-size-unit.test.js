@@ -164,3 +164,89 @@ describe('fit helpers take the unit', () => {
 		);
 	});
 });
+
+describe('leaving a paragraph style keeps the style unit (review of #233)', () => {
+	const { resolveDetachFontSizeUnit, resolveStyleFontSizeUnit } = require('../utils');
+	const styles = [
+		{ id: 3, properties: { fontSize: '24' } },
+		{ id: 4, properties: { fontSize: '24', fontSizeUnit: 'rem' } },
+		{ id: 9, legacyId: 'ps_17', properties: { fontSize: 'responsive', fontSizeUnit: 'px' } }
+	];
+
+	it('Detach from a style saved before #233 gives px', () => {
+		// The block validated directly (no size under a styleClass) and got
+		// the rem default; its sizes came from this px style
+		expect(resolveDetachFontSizeUnit('typost-ps-3', styles)).toBe('px');
+		expect(resolveDetachFontSizeUnit('typost-ps-ps_17', styles)).toBe('px');
+	});
+
+	it('Detach from a rem style gives rem', () => {
+		expect(resolveDetachFontSizeUnit('typost-ps-4', styles)).toBe('rem');
+		expect(resolveDetachFontSizeUnit('my-theme typost-ps-4', styles)).toBe('rem');
+	});
+
+	it('a deleted style gives px, the output before #233', () => {
+		expect(resolveDetachFontSizeUnit('typost-ps-99', styles)).toBe('px');
+		expect(resolveDetachFontSizeUnit('typost-ps-3', undefined)).toBe('px');
+		expect(resolveStyleFontSizeUnit(null)).toBe('px');
+	});
+
+	it('leaves the unit alone for a class that is not a paragraph style', () => {
+		expect(resolveDetachFontSizeUnit('some-extension-class', styles)).toBeNull();
+		expect(resolveDetachFontSizeUnit('', styles)).toBeNull();
+		expect(resolveDetachFontSizeUnit(undefined, styles)).toBeNull();
+	});
+});
+
+describe('resolveSpanFontSizeUnit (inline editor rebuild, review of #233)', () => {
+	const { resolveSpanFontSizeUnit, findStyleById } = units;
+	const styles = [
+		{ id: 3, properties: { fontSize: '24' } },
+		{ id: 4, properties: { fontSize: '24', fontSizeUnit: 'rem' } }
+	];
+	const pxClamp = 'font-feature-settings: "swsh" 1; font-size: clamp(16px, 2rem + 3vw, 64px)';
+	const remClamp = 'font-size: clamp(1rem, 2rem + 3vw, 4rem)';
+
+	it('keeps px on an older span when only a feature changed', () => {
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: pxClamp })).toBe('px');
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: 'font-size: 24px' })).toBe('px');
+	});
+
+	it('the rebuilt px clamp is the stored one, byte for byte', () => {
+		const unit = resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: pxClamp });
+		expect(`font-size: ${buildResponsiveClamp(16, 32, 64, unit)}`).toBe('font-size: clamp(16px, 2rem + 3vw, 64px)');
+	});
+
+	it('keeps rem on a rem span', () => {
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: remClamp })).toBe('rem');
+	});
+
+	it('writes rem when the author changed the size', () => {
+		expect(resolveSpanFontSizeUnit({ sizeChanged: true, spanStyle: pxClamp })).toBe('rem');
+	});
+
+	it('a span leaving a style (Detach) takes the style unit', () => {
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: '', styleId: '3', styles })).toBe('px');
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, styleId: 4, styles })).toBe('rem');
+		// A deleted style: px, as before #233
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, styleId: '99', styles })).toBe('px');
+	});
+
+	it('a span with no size and no style gets rem (a new size)', () => {
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false })).toBe('rem');
+		expect(resolveSpanFontSizeUnit({ sizeChanged: false, spanStyle: 'font-weight: 700', styleId: '0' })).toBe('rem');
+		expect(resolveSpanFontSizeUnit()).toBe('rem');
+	});
+
+	it('does not read letter-spacing or a fit scale as a px size', () => {
+		expect(resolveSpanFontSizeUnit({ spanStyle: 'letter-spacing: 2px' })).toBe('rem');
+		expect(resolveSpanFontSizeUnit({ spanStyle: 'font-size: 0.6em' })).toBe('rem');
+	});
+
+	it('finds a style by numeric or legacy id', () => {
+		expect(findStyleById([{ id: 9, legacyId: 'ps_1' }], 'ps_1').id).toBe(9);
+		expect(findStyleById(styles, 3).id).toBe(3);
+		expect(findStyleById(styles, '')).toBeNull();
+		expect(findStyleById(null, 3)).toBeNull();
+	});
+});

@@ -312,7 +312,9 @@
 		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
 			properties.initialHang = normalizeHang(base.initialHang);
 		}
-		var baseHasSize = base.fontSize !== undefined && base.fontSize !== '' && base.fontSize !== 'inherit';
+		// Same test as the CSS generators: only these write a size ('0' does not)
+		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
+			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
 		if (isUpdate && properties.fontSizeUnit && baseHasSize && base.fontSizeUnit !== 'rem') {
 			properties.fontSizeUnit = 'px';
 		}

@@ -13,9 +13,10 @@ const { FontPicker } = require('./font-picker.js');
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
 const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-// Spans written by this editor are new content, so their sizes are written
-// in rem (#233). Spans already in post content keep their px values.
-const { buildResponsiveClamp, pxToRem } = require('./font-size-units.js');
+// A size this editor writes is new content and is written in rem (#233). A
+// size the author did not change keeps the unit the span already has
+// (resolveSpanFontSizeUnit), so older px spans are not rewritten.
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -2549,6 +2550,18 @@ const { buildResponsiveClamp, pxToRem } = require('./font-size-units.js');
                 onChange(newValue);
                 return;
             }
+            // The unit of the size this rebuild writes (#233): a size the author
+            // did not change keeps the unit the span has now — the rebuild
+            // rewrites the whole style even when only a feature changed — and a
+            // span leaving a paragraph style takes the style's unit. Read before
+            // the pending changes are reset.
+            const activeAttrs = (activeFormatForRaw && activeFormatForRaw.attributes) || {};
+            const sizeUnit = resolveSpanFontSizeUnit({
+                sizeChanged: !!(pending && pending.keys.has('fontSize')),
+                spanStyle: activeAttrs.style,
+                styleId: activeAttrs['data-style-id'],
+                styles: window.typostData && window.typostData.paragraphStyles
+            });
             if (pending) {
                 this._resetPendingChanges();
             }
@@ -2669,7 +2682,7 @@ const { buildResponsiveClamp, pxToRem } = require('./font-size-units.js');
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem')}`;
+                        styleString += `font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit)}`;
                     }
                 }
 

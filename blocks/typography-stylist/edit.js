@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -175,10 +175,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// same size. Inline spans are always new content and always write rem.
 	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
 
-	// Slider readout. Sizes are always entered in px; a rem block also shows
-	// the rem value it writes ("24px (1.5rem)"). A px block shows px only,
-	// so the readout always matches the saved markup.
-	const formatSizeReadout = (px) => (blockFontSizeUnit === 'rem'
+	// Slider readout. Sizes are always entered in px; in rem the readout also
+	// shows the rem value written ("24px (1.5rem)"), in px it shows px only,
+	// so it matches the markup. Called at render time, after
+	// sizePreviewUnit (the size unit, which follows an active style) exists.
+	const formatSizeReadout = (px, unit) => (unit === 'rem'
 		? sprintf(
 			/* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
 			__('%1$spx (%2$srem)', 'typography-stylist'),
@@ -397,7 +398,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const handleApplyBlockProperties = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
-				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId } = blockPropsRef.current;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId, styleClass: curStyleClass } = blockPropsRef.current;
 				// Targeting guard: every Typography Stylist block registers this
 				// listener, so only the block the extension UI actually targets
 				// may handle the event. Extensions don't know clientIds, so the
@@ -463,6 +464,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// Generic styleClass support: extensions can pass a CSS class to apply
 				if (e.detail.styleClass !== undefined) {
 					newAttrs.styleClass = e.detail.styleClass;
+					// Detach (#233): the sizes the style rendered keep its unit
+					// once the block writes them itself
+					if (e.detail.styleClass === '') {
+						const detachUnit = resolveDetachFontSizeUnit(curStyleClass, window.typostData && window.typostData.paragraphStyles);
+						if (detachUnit) {
+							newAttrs.fontSizeUnit = detachUnit;
+						}
+					}
 				}
 				// Layered font configuration ID support
 				if (props.layeredConfigId !== undefined) {
@@ -1848,7 +1857,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that
@@ -3500,7 +3509,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// block behaves as detached and both sides render the attributes inline.
 	useEffect(() => {
 		if (isOrphanStyleClass(styleClass, window.typostData && window.typostData.paragraphStyles)) {
-			setAttributes({ styleClass: '' });
+			// The deleted style's unit is unknown: px, as before #233
+			setAttributes({ styleClass: '', fontSizeUnit: resolveDetachFontSizeUnit(styleClass, window.typostData && window.typostData.paragraphStyles) });
 		}
 	}, [styleClass, paragraphStylesVersion, setAttributes]);
 	const styleOverrides = useMemo(
@@ -3510,6 +3520,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang]
 	);
 	const rendersInline = (key) => !styleOverrides || !!styleOverrides[key];
+	// Under a paragraph style an edited size previews in the style's unit:
+	// Update Style writes it there, and Detach gives the block that unit
+	// (resolveDetachFontSizeUnit). The block's own unit says nothing while it
+	// has a styleClass (#233).
+	const sizePreviewUnit = activeParagraphStyle ? resolveStyleFontSizeUnit(activeParagraphStyle) : blockFontSizeUnit;
 	// typost-hang gates the editor-only hang rules in editor.css (#242). The
 	// attribute is the working copy, equal to the style's value unless edited.
 	const hangClass = normalizeHang(initialHang) > 0 ? ' typost-hang' : '';
@@ -3550,7 +3565,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (fontSize === 'responsive' && rendersInline('fontSize')) {
-			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, blockFontSizeUnit);
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit);
 		}
 
 		// Fit-to-width: the editing surface renders the real per-line
@@ -3559,7 +3574,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// unmeasured lines and empty lines inherit — the same clamp the
 		// frontend emits (save.js) for browsers without container queries.
 		if (fontSize === 'fit' && rendersInline('fontSize')) {
-			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, blockFontSizeUnit);
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit);
 		}
 
 		// A fixed px size (a style created from the inline editor) has no
@@ -3569,7 +3584,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// emits the same inline size once the block has no styleClass. Zero
 		// means "no size" (save.js and the style CSS generators agree).
 		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
-			styles.fontSize = formatFontSizeLength(fontSize, blockFontSizeUnit);
+			styles.fontSize = formatFontSizeLength(fontSize, sizePreviewUnit);
 		}
 
 		if (fontVariationSettings && rendersInline('fontVariationSettings')) {
@@ -4643,7 +4658,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									min={8}
 									max={400}
 									step={1}
-									help={formatSizeReadout(fitMaxSize)}
+									help={formatSizeReadout(fitMaxSize, blockFontSizeUnit)}
 								/>
 							)}
 							<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
@@ -4661,7 +4676,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={formatSizeReadout(fontSizeMin)}
+								help={formatSizeReadout(fontSizeMin, sizePreviewUnit)}
 							/>
 							<RangeControl
 								label={__('Intermediate', 'typography-stylist')}
@@ -4670,7 +4685,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={formatSizeReadout(fontSizePreferred)}
+								help={formatSizeReadout(fontSizePreferred, sizePreviewUnit)}
 							/>
 							<RangeControl
 								label={__('Large (up to 1920px)', 'typography-stylist')}
@@ -4679,7 +4694,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={formatSizeReadout(fontSizeMax)}
+								help={formatSizeReadout(fontSizeMax, sizePreviewUnit)}
 							/>
 							{!isValidFontSizeRange(fontSizeMin, fontSizePreferred, fontSizeMax) && (
 								<Notice status="warning" isDismissible={false}>

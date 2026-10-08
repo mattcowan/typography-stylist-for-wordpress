@@ -103,11 +103,91 @@ function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)
 	return 'clamp(' + fontSizeMin + 'px, ' + (fontSizePreferred / 16) + 'rem + ' + vw + 'vw, ' + fontSizeMax + 'px)';
 }
 
+/**
+ * The unit for sizes that a paragraph style rendered until now.
+ *
+ * Used when the style lets go of the text: Detach, or clearing the class of
+ * a deleted style. Until then the text showed the style's size in the
+ * style's unit, so it keeps that unit and renders the same. A block or span
+ * under a style writes no size of its own, so its own unit tells nothing:
+ * a block saved before #233 passes the current save and gets the 'rem'
+ * default. A style that is not found (deleted) gives px, which is what the
+ * text wrote before #233.
+ *
+ * @param {Object|null} style Stored style ({id, properties}), or null
+ * @return {string} 'rem' or 'px'
+ */
+function resolveStyleFontSizeUnit(style) {
+	if (!style) {
+		return FONT_SIZE_UNIT_PX;
+	}
+	return resolveFontSizeUnit(style.properties && style.properties.fontSizeUnit);
+}
+
+/**
+ * Find a paragraph style by numeric or legacy id.
+ *
+ * @param {Array}         styles Stored styles (typostData.paragraphStyles)
+ * @param {number|string} id     Style id, as in data-style-id
+ * @return {Object|null} The style, or null
+ */
+function findStyleById(styles, id) {
+	if (!Array.isArray(styles) || id === undefined || id === null || id === '') {
+		return null;
+	}
+	var ref = String(id);
+	for (var i = 0; i < styles.length; i++) {
+		var style = styles[i];
+		if (style && (String(style.id) === ref || (style.legacyId && String(style.legacyId) === ref))) {
+			return style;
+		}
+	}
+	return null;
+}
+
+/**
+ * The unit an editor writes when it rebuilds the size of an existing span.
+ *
+ * The inline editor rebuilds a span's whole style on every apply, also when
+ * only a feature changed. A size the author did not touch must keep its
+ * unit, or toggling one feature turns an older px span into rem (and, on a
+ * partial selection, splits a word into a rem part and a px part).
+ *
+ * - The author changed the size in this session: rem (a new value).
+ * - The span already declares a font-size: that declaration's unit.
+ * - The span is under a paragraph style (Detach): the style's unit.
+ * - Otherwise: rem (a new size).
+ *
+ * @param {Object}  args
+ * @param {boolean} args.sizeChanged The author changed the size
+ * @param {string}  [args.spanStyle] The span's current style attribute
+ * @param {*}       [args.styleId]   The span's data-style-id
+ * @param {Array}   [args.styles]    Stored paragraph styles
+ * @return {string} 'rem' or 'px'
+ */
+function resolveSpanFontSizeUnit(args) {
+	var options = args || {};
+	if (options.sizeChanged) {
+		return FONT_SIZE_UNIT_REM;
+	}
+	var declaration = String(options.spanStyle || '').match(/(?:^|;)\s*font-size\s*:\s*([^;]*)/i);
+	if (declaration && declaration[1].trim()) {
+		return /\dpx\b/i.test(declaration[1]) ? FONT_SIZE_UNIT_PX : FONT_SIZE_UNIT_REM;
+	}
+	if (options.styleId !== undefined && options.styleId !== null && options.styleId !== '' && String(options.styleId) !== '0') {
+		return resolveStyleFontSizeUnit(findStyleById(options.styles, options.styleId));
+	}
+	return FONT_SIZE_UNIT_REM;
+}
+
 module.exports = {
 	FONT_SIZE_UNIT_PX: FONT_SIZE_UNIT_PX,
 	FONT_SIZE_UNIT_REM: FONT_SIZE_UNIT_REM,
 	resolveFontSizeUnit: resolveFontSizeUnit,
 	pxToRem: pxToRem,
 	formatFontSizeLength: formatFontSizeLength,
-	buildResponsiveClamp: buildResponsiveClamp
+	buildResponsiveClamp: buildResponsiveClamp,
+	resolveStyleFontSizeUnit: resolveStyleFontSizeUnit,
+	findStyleById: findStyleById,
+	resolveSpanFontSizeUnit: resolveSpanFontSizeUnit
 };

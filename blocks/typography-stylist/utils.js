@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -3918,6 +3918,30 @@ export function findParagraphStyleByClass(styleClass, styles) {
 	}
 	const ref = match[1];
 	return styles.find((style) => style && (String(style.id) === ref || (style.legacyId && String(style.legacyId) === ref))) || null;
+}
+
+export { resolveStyleFontSizeUnit };
+
+/**
+ * The fontSizeUnit a block takes when it leaves its paragraph style (#233):
+ * Detach, or clearing the class of a deleted style.
+ *
+ * Under a styleClass the block writes no size, so a block saved before
+ * #233 validates against the current save and gets the 'rem' default while
+ * the size it shows comes from the style's CSS. Once the class is gone the
+ * block writes its sizes itself; taking the style's unit keeps them
+ * rendering as they did. A deleted style gives px, the pre-#233 output.
+ *
+ * @param {string} styleClass The block's styleClass before it is cleared
+ * @param {Array}  styles     Stored paragraph styles
+ * @return {string|null} 'rem' or 'px', or null when styleClass is not a
+ *   paragraph style class (an extension's class: leave the unit alone)
+ */
+export function resolveDetachFontSizeUnit(styleClass, styles) {
+	if (!styleClass || !/typost-ps-[A-Za-z0-9_-]+/.test(String(styleClass))) {
+		return null;
+	}
+	return resolveStyleFontSizeUnit(findParagraphStyleByClass(styleClass, styles));
 }
 
 /**

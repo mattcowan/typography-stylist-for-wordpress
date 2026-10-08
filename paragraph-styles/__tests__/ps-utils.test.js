@@ -941,6 +941,13 @@ describe('font size unit (#233)', () => {
 		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'inherit' }, true).fontSizeUnit).toBe('rem');
 	});
 
+	test('Update Style treats a "0" size as no size, like the CSS generators', () => {
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: '0' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 0 }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'abc' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'fit' }, true).fontSizeUnit).toBe('px');
+	});
+
 	test('Update Style that removes the size stores no unit', () => {
 		expect(buildPropertiesForStyleSave({ fontSize: 'inherit' }, { fontSize: '24' }, true)).not.toHaveProperty('fontSizeUnit');
 	});
