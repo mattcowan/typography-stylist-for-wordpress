@@ -212,11 +212,12 @@ describe('buildPropertiesFromState', () => {
 
 	test('skips fontSize when inherit, keeps explicit and responsive sizes', () => {
 		expect(buildPropertiesFromState({ fontSize: 'inherit' })).toEqual({});
-		expect(buildPropertiesFromState({ fontSize: '24' })).toEqual({ fontSize: '24' });
+		// #233: a sized style is new content and stores its unit as rem
+		expect(buildPropertiesFromState({ fontSize: '24' })).toEqual({ fontSize: '24', fontSizeUnit: 'rem' });
 		expect(buildPropertiesFromState({
 			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 		})).toEqual({
-			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fontSize: 'responsive', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 		});
 	});
 
@@ -225,14 +226,14 @@ describe('buildPropertiesFromState', () => {
 			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 			fitMaxSize: 120,
 		})).toEqual({
-			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 			fitMaxSize: 120,
 		});
 	});
 
 	test('stores fitMaxSize as 0 (uncapped) when unset in fit mode', () => {
 		expect(buildPropertiesFromState({ fontSize: 'fit' })).toEqual({
-			fontSize: 'fit', fitMaxSize: 0,
+			fontSize: 'fit', fontSizeUnit: 'rem', fitMaxSize: 0,
 		});
 	});
 
@@ -733,7 +734,7 @@ describe('PS-3: size trio only stored for responsive/fit sizes', () => {
 		// must not persist them (they rendered nothing and spread on update)
 		expect(buildPropertiesFromState({
 			fontSize: '16', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
-		})).toEqual({ fontSize: '16' });
+		})).toEqual({ fontSize: '16', fontSizeUnit: 'rem' });
 	});
 
 	test('an inherit-size style does not store the trio either', () => {
@@ -745,10 +746,10 @@ describe('PS-3: size trio only stored for responsive/fit sizes', () => {
 	test('responsive and fit sizes keep the trio', () => {
 		expect(buildPropertiesFromState({
 			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
-		})).toEqual({ fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 });
+		})).toEqual({ fontSize: 'responsive', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 });
 		expect(buildPropertiesFromState({
 			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0,
-		})).toEqual({ fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 });
+		})).toEqual({ fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 });
 	});
 });
 
@@ -902,5 +903,62 @@ describe('buildPropertiesForStyleSave (Update Style / Save as New, #242 review)'
 	test('no base style, or a base without a hang, adds nothing', () => {
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, null)).not.toHaveProperty('initialHang');
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, { fontId: 1 })).not.toHaveProperty('initialHang');
+	});
+});
+
+describe('font size unit (#233)', () => {
+	const { pxToRem } = require('../assets/js/lib/ps-utils.js');
+	const fixture = require('./fixtures/font-size-unit-css.json');
+	// The same strings tests/Unit/ParagraphStylesFontSizeUnitTest.php holds
+	// generate_style_css() to, so the two generators cannot drift apart.
+	const selector = '.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id]';
+
+	test.each(fixture.cases)('buildStyleCssBlock writes $rule for $label', ({ properties, rule }) => {
+		expect(buildStyleCssBlock({ id: 8, properties })).toBe(`${selector} {\n    ${rule};\n}`);
+	});
+
+	test('a new style stores rem only when it has a size', () => {
+		expect(buildPropertiesFromState({ fontSize: '24' }).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesFromState({ fontSize: 'inherit', fontWeight: '700' })).not.toHaveProperty('fontSizeUnit');
+	});
+
+	test('Update Style keeps px on a sized style saved before #233', () => {
+		const base = { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 };
+		const state = { fontSize: 'responsive', fontSizeMin: 18, fontSizePreferred: 32, fontSizeMax: 64 };
+		expect(buildPropertiesForStyleSave(state, base, true).fontSizeUnit).toBe('px');
+		// An explicit px stays px too
+		expect(buildPropertiesForStyleSave(state, { ...base, fontSizeUnit: 'px' }, true).fontSizeUnit).toBe('px');
+	});
+
+	test('Update Style keeps rem on a rem style', () => {
+		const base = { fontSize: '24', fontSizeUnit: 'rem' };
+		expect(buildPropertiesForStyleSave({ fontSize: '28' }, base, true).fontSizeUnit).toBe('rem');
+	});
+
+	test('Update Style writes rem when the older style had no size', () => {
+		// It wrote no size before, so the size it gets now is new
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontWeight: '700' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'inherit' }, true).fontSizeUnit).toBe('rem');
+	});
+
+	test('Update Style that removes the size stores no unit', () => {
+		expect(buildPropertiesForStyleSave({ fontSize: 'inherit' }, { fontSize: '24' }, true)).not.toHaveProperty('fontSizeUnit');
+	});
+
+	test('Save as New is a new style and writes rem, even from a px style', () => {
+		const base = { fontSize: '24' };
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, base, false).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, base).fontSizeUnit).toBe('rem');
+	});
+
+	test('the unit is not a style-modified difference (the editors never report it)', () => {
+		expect(isStyleModified({ fontSize: '24' }, { fontSize: '24', fontSizeUnit: 'rem' })).toBe(false);
+	});
+
+	test('pxToRem matches the block twin in assets/js/font-size-units.js', () => {
+		const core = require('../../assets/js/font-size-units.js');
+		for (const px of [0, 1, 8, 13, 16, 17, 24, 36.5, 13.3, 120, 400, 0.001, 0.0016, '24', ' 24', 'abc', '', null, undefined]) {
+			expect(pxToRem(px)).toBe(core.pxToRem(px));
+		}
 	});
 });

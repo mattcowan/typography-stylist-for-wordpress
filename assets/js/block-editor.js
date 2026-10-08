@@ -13,10 +13,9 @@ const { FontPicker } = require('./font-picker.js');
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
 const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+// Spans written by this editor are new content, so their sizes are written
+// in rem (#233). Spans already in post content keep their px values.
+const { buildResponsiveClamp, pxToRem } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -25,6 +24,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
+
+    // Slider readout: sizes are entered in px, and every span this editor
+    // writes is rem (#233), so show both ("24px (1.5rem)").
+    const formatRemReadout = (px) => sprintf(
+        /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+        __('%1$spx (%2$srem)', 'typography-stylist'),
+        px,
+        pxToRem(px)
+    );
     const { compose, debounce } = wp.compose;
 
     /**
@@ -2246,7 +2254,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${maxPx}px)`);
+                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, 'rem')}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2450,7 +2458,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     dataAttrs['data-fontsize-min'] = String(fontSizeMin);
                     dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
                     dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem');
                 } else {
                     dataAttrs['data-fontsize'] = null;
                     dataAttrs['data-fontsize-min'] = null;
@@ -2661,7 +2669,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                        styleString += `font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem')}`;
                     }
                 }
 
@@ -3556,7 +3564,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMin}px`}
+                                                help={formatRemReadout(fontSizeMin)}
                                             />
                                             <RangeControl
                                                 label={__('Preferred Size (tablet)', 'typography-stylist')}
@@ -3565,7 +3573,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizePreferred}px`}
+                                                help={formatRemReadout(fontSizePreferred)}
                                             />
                                             <RangeControl
                                                 label={__('Maximum Size (desktop)', 'typography-stylist')}
@@ -3574,7 +3582,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMax}px`}
+                                                help={formatRemReadout(fontSizeMax)}
                                             />
                                             {/* Same soft validation as the block (QA E-1): the
                                                 clamp() is still written as typed, so the author

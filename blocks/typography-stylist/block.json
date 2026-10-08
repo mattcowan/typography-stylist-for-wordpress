@@ -66,6 +66,11 @@
 			"type": "number",
 			"default": 64
 		},
+		"fontSizeUnit": {
+			"type": "string",
+			"enum": [ "px", "rem" ],
+			"default": "rem"
+		},
 		"fitLineSizes": {
 			"type": "array",
 			"default": []

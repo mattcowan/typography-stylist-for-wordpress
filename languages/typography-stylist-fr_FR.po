@@ -2862,3 +2862,10 @@ msgstr "Le débord n’a aucun effet quand le texte est centré ou aligné sur l
 #: blocks/typography-stylist/build/index.js:4
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr "L’ornement calligraphique dépasse du bloc. Certains thèmes coupent le contenu qui dépasse de son conteneur, et l’ornement est alors coupé sur le site. Vérifiez la page publiée."
+
+#. translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16)
+#: assets/js/block-editor.js:32
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "%1$spx (%2$srem)"
+msgstr "%1$spx (%2$srem)"

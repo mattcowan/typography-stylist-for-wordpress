@@ -253,6 +253,9 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
 - **Font Weight:** Choose a weight (100–900). For a variable font with a weight axis, a slider replaces the list.
 - **Font Style:** Choose the italic face of the font.
 - **Font Size:** “Inherit”, “Responsive (Fluid)”, or “Fit to width”. A responsive size has three values: “Mobile (320px and up)”, “Intermediate”, and “Large (up to 1920px)”. Fit to width makes each line fill the width of the block.
+  - You enter sizes in px. A new block writes them in rem (the px value divided by 16), so the size follows the default font size that the reader sets in the browser. The slider shows both values, for example “24px (1.5rem)”.
+  - A block saved before version 2.3.2 keeps px, also after you edit it. Its slider shows px only.
+  - If the theme changes the root font size (for example `html { font-size: 62.5% }`), rem sizes change with it. The editor uses the theme styles, so you see the result while you edit.
 - **Line Height:** Set the line height.
 - **Letter Spacing:** Change the spacing in steps of 1/1000 em.
 - **First Letter Hang:** Move the first letter into the margin at the start of the line by a value in em, from 0 to 1. This is the left margin in left-to-right text and the right margin in right-to-left text. Use it for a swash capital: the swash goes into the margin, and the main shape of the letter aligns with the text edge. 0 turns it off. Only the first line hangs. In fit-to-width mode, each line has its own value. The hang has no effect when the text is centered or aligned to the end. Some themes cut off content that goes outside its container. If the swash is cut off, examine the published page.

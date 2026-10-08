@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -42,10 +42,6 @@ import { calculateResize } from '../../assets/js/modal-drag-resize';
 // iframe on that write, stranding keyboard users outside an open dialog.
 // The guard lives on the editor document, so one install covers every editor.
 installModalFocusGuard();
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
 /**
  * Typography Stylist Hook System
@@ -158,6 +154,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		fontSizeMin,
 		fontSizePreferred,
 		fontSizeMax,
+		fontSizeUnit,
 		fitLineSizes,
 		fitMaxSize,
 		initialHang,
@@ -171,6 +168,24 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		styleClass,
 		fontVariationSettings
 	} = attributes;
+
+	// Unit the block writes its sizes in (#233): rem for new blocks, px for
+	// blocks saved before rem existed (set by the deprecations' migrate()).
+	// The editor preview uses the same unit as save.js, so both render the
+	// same size. Inline spans are always new content and always write rem.
+	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
+
+	// Slider readout. Sizes are always entered in px; a rem block also shows
+	// the rem value it writes ("24px (1.5rem)"). A px block shows px only,
+	// so the readout always matches the saved markup.
+	const formatSizeReadout = (px) => (blockFontSizeUnit === 'rem'
+		? sprintf(
+			/* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+			__('%1$spx (%2$srem)', 'typography-stylist'),
+			px,
+			pxToRem(px)
+		)
+		: `${px}px`);
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 	// Usage tips notice dismissal — shares the same localStorage key as the
@@ -818,8 +833,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
 	// the render branch ever sees the wrapped form.
 	const wrappedFitValue = useMemo(
-		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) : ''),
-		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs]
+		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit) : ''),
+		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit]
 	);
 
 	// Labels for the per-line hang controls (fit-to-width only)
@@ -1382,7 +1397,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
 			styles['font-size'] = clampValue;
 		}
 
@@ -1435,7 +1450,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
 			styles['font-size'] = clampValue;
 		}
 
@@ -1767,7 +1782,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		// Calculate clamp() for font-size
-		const clampValue = `clamp(${min}px, ${preferred / 16}rem + ${((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${max}px)`;
+		const clampValue = buildResponsiveClamp(min, preferred, max, 'rem');
 		styles['font-size'] = clampValue;
 
 		applyPreviewStyles({
@@ -3535,7 +3550,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (fontSize === 'responsive' && rendersInline('fontSize')) {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, blockFontSizeUnit);
 		}
 
 		// Fit-to-width: the editing surface renders the real per-line
@@ -3544,7 +3559,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// unmeasured lines and empty lines inherit — the same clamp the
 		// frontend emits (save.js) for browsers without container queries.
 		if (fontSize === 'fit' && rendersInline('fontSize')) {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, blockFontSizeUnit);
 		}
 
 		// A fixed px size (a style created from the inline editor) has no
@@ -3554,7 +3569,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// emits the same inline size once the block has no styleClass. Zero
 		// means "no size" (save.js and the style CSS generators agree).
 		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
-			styles.fontSize = `${fontSize}px`;
+			styles.fontSize = formatFontSizeLength(fontSize, blockFontSizeUnit);
 		}
 
 		if (fontVariationSettings && rendersInline('fontVariationSettings')) {
@@ -4628,7 +4643,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									min={8}
 									max={400}
 									step={1}
-									help={`${fitMaxSize}px`}
+									help={formatSizeReadout(fitMaxSize)}
 								/>
 							)}
 							<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
@@ -4646,7 +4661,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizeMin}px`}
+								help={formatSizeReadout(fontSizeMin)}
 							/>
 							<RangeControl
 								label={__('Intermediate', 'typography-stylist')}
@@ -4655,7 +4670,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizePreferred}px`}
+								help={formatSizeReadout(fontSizePreferred)}
 							/>
 							<RangeControl
 								label={__('Large (up to 1920px)', 'typography-stylist')}
@@ -4664,7 +4679,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizeMax}px`}
+								help={formatSizeReadout(fontSizeMax)}
 							/>
 							{!isValidFontSizeRange(fontSizeMin, fontSizePreferred, fontSizeMax) && (
 								<Notice status="warning" isDismissible={false}>
