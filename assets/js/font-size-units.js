@@ -40,6 +40,58 @@ function resolveFontSizeUnit(unit) {
 }
 
 /**
+ * The unit new content writes its sizes in (#248).
+ *
+ * rem by default (#233). The Options setting "Write new font sizes in px"
+ * (option typost_new_font_sizes_px, localized as typostData.newFontSizeUnit)
+ * switches new content to px for themes that change the root font size
+ * (html { font-size: 62.5% } would render 1.5rem at 15px). Only new content
+ * follows it: a block stores its unit when it is inserted, a style stores
+ * it when it is saved, and a span's declaration carries it, so content
+ * saved under either setting keeps its unit when the setting changes.
+ *
+ * @param {Object} [data] Editor data; defaults to window.typostData
+ * @return {string} 'rem' or 'px'
+ */
+function getNewFontSizeUnit(data) {
+	var source = data;
+	if (source === undefined && typeof window !== 'undefined') {
+		source = window.typostData;
+	}
+	return source && source.newFontSizeUnit === FONT_SIZE_UNIT_PX ? FONT_SIZE_UNIT_PX : FONT_SIZE_UNIT_REM;
+}
+
+/**
+ * The inserter variation that makes a new block store the site's unit (#248).
+ *
+ * block.json's fontSizeUnit default ('rem') also decides how saved blocks
+ * parse: a block saved under the rem setting stores no unit, so the default
+ * cannot follow the setting without breaking it. A new block must store the
+ * unit when it is inserted instead. Core's inserter replaces a block's own
+ * item with its isDefault variation and inserts it with the variation's
+ * attributes (getInserterItems / getItemFromVariation in
+ * @wordpress/block-editor), so the inserter, the slash inserter and drag
+ * from the inserter all create the block with fontSizeUnit 'px'. Title,
+ * icon and description are left out, so the item keeps the block's own.
+ *
+ * Nothing is registered for rem: the block's default already is rem.
+ *
+ * @param {string} unit The new-content unit (getNewFontSizeUnit)
+ * @return {Object|null} Variation for registerBlockVariation(), or null
+ */
+function buildNewBlockUnitVariation(unit) {
+	if (unit !== FONT_SIZE_UNIT_PX) {
+		return null;
+	}
+	return {
+		name: 'typost-new-font-size-unit',
+		isDefault: true,
+		scope: ['inserter'],
+		attributes: { fontSizeUnit: FONT_SIZE_UNIT_PX }
+	};
+}
+
+/**
  * Convert a px size to rem, rounded to six decimals.
  *
  * Whole and one- or two-decimal px values divide by 16 exactly, so the
@@ -153,22 +205,27 @@ function findStyleById(styles, id) {
  * unit, or toggling one feature turns an older px span into rem (and, on a
  * partial selection, splits a word into a rem part and a px part).
  *
- * - The author changed the size in this session: rem (a new value).
+ * - The author changed the size in this session: the new-content unit.
  * - The span already declares a font-size: that declaration's unit.
  * - The span is under a paragraph style (Detach): the style's unit.
- * - Otherwise: rem (a new size).
+ * - Otherwise: the new-content unit (a new size).
+ *
+ * The new-content unit is rem unless the site writes new sizes in px
+ * (#248, getNewFontSizeUnit).
  *
  * @param {Object}  args
  * @param {boolean} args.sizeChanged The author changed the size
  * @param {string}  [args.spanStyle] The span's current style attribute
  * @param {*}       [args.styleId]   The span's data-style-id
  * @param {Array}   [args.styles]    Stored paragraph styles
+ * @param {string}  [args.newUnit]   Unit for new sizes (default rem)
  * @return {string} 'rem' or 'px'
  */
 function resolveSpanFontSizeUnit(args) {
 	var options = args || {};
+	var newUnit = resolveFontSizeUnit(options.newUnit === undefined ? FONT_SIZE_UNIT_REM : options.newUnit);
 	if (options.sizeChanged) {
-		return FONT_SIZE_UNIT_REM;
+		return newUnit;
 	}
 	var declaration = String(options.spanStyle || '').match(/(?:^|;)\s*font-size\s*:\s*([^;]*)/i);
 	if (declaration && declaration[1].trim()) {
@@ -177,13 +234,15 @@ function resolveSpanFontSizeUnit(args) {
 	if (options.styleId !== undefined && options.styleId !== null && options.styleId !== '' && String(options.styleId) !== '0') {
 		return resolveStyleFontSizeUnit(findStyleById(options.styles, options.styleId));
 	}
-	return FONT_SIZE_UNIT_REM;
+	return newUnit;
 }
 
 module.exports = {
 	FONT_SIZE_UNIT_PX: FONT_SIZE_UNIT_PX,
 	FONT_SIZE_UNIT_REM: FONT_SIZE_UNIT_REM,
 	resolveFontSizeUnit: resolveFontSizeUnit,
+	getNewFontSizeUnit: getNewFontSizeUnit,
+	buildNewBlockUnitVariation: buildNewBlockUnitVariation,
 	pxToRem: pxToRem,
 	formatFontSizeLength: formatFontSizeLength,
 	buildResponsiveClamp: buildResponsiveClamp,

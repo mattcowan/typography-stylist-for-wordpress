@@ -9,7 +9,7 @@ import { registerBlockType, createBlock } from '@wordpress/blocks';
 import Edit from './edit';
 import save from './save';
 import deprecated from './deprecated';
-import { analyzeInlineFeatures, stripInlineFeatures, detectBlockComputedWeight } from './utils';
+import { analyzeInlineFeatures, stripInlineFeatures, detectBlockComputedWeight, getNewFontSizeUnit } from './utils';
 
 /**
  * The weight the block being transformed is currently rendering at.
@@ -69,6 +69,10 @@ registerBlockType('typost/block', {
 	edit: Edit,
 	save: save,
 	deprecated: deprecated,
+	// A block made by a transform is a new block, so it stores the site's
+	// new-content size unit (#248): block.json's 'rem' default cannot follow
+	// the setting without breaking how saved blocks parse. Read at transform
+	// time, when the editor data is loaded.
 	transforms: {
 		from: [
 			{
@@ -87,6 +91,7 @@ registerBlockType('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'p',
 							features: analysis.commonFeatures,
+							fontSizeUnit: getNewFontSizeUnit(),
 							...inherited
 						});
 					}
@@ -96,6 +101,7 @@ registerBlockType('typost/block', {
 						content: attributes.content,
 						tagName: 'p',
 						features: [],
+						fontSizeUnit: getNewFontSizeUnit(),
 						...inherited
 					});
 				},
@@ -118,6 +124,7 @@ registerBlockType('typost/block', {
 							content: stripInlineFeatures(attributes.content),
 							tagName: 'h' + attributes.level,
 							features: analysis.commonFeatures,
+							fontSizeUnit: getNewFontSizeUnit(),
 							...inherited
 						});
 					}
@@ -127,6 +134,7 @@ registerBlockType('typost/block', {
 						content: attributes.content,
 						tagName: 'h' + attributes.level,
 						features: [],
+						fontSizeUnit: getNewFontSizeUnit(),
 						...inherited
 					});
 				},

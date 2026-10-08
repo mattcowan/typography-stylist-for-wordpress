@@ -826,6 +826,18 @@ msgid "When enabled (the default), pressing Enter inside a Typography Stylist bl
 msgstr ""
 
 #: includes/admin-page.php:1318
+msgid "Font Size Unit for New Content"
+msgstr ""
+
+#: includes/admin-page.php:1330
+msgid "Write new font sizes in px"
+msgstr ""
+
+#: includes/admin-page.php:1333
+msgid "You always enter font sizes in px. By default, new content writes them in rem (the px value divided by 16), so headings grow when a reader sets a larger default font size in the browser. If your theme changes the root font size (for example html { font-size: 62.5% }), rem sizes render smaller than the px value you enter. Turn this on to write new font sizes in px instead. It applies to new Typography Stylist blocks, new inline font sizes and new paragraph styles. Content saved before you change this setting keeps its unit."
+msgstr ""
+
+#: includes/admin-page.php:1318
 msgid "Archive Page Font Detection"
 msgstr ""
 

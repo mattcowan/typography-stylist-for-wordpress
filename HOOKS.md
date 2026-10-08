@@ -236,6 +236,7 @@ add_filter('typost_editor_data', function($data) {
 `wp_localize_script()` casts scalars to strings, so booleans arrive as `"1"` / `""` — truthy and falsy as expected, but never `true`/`false`. Fields worth knowing about:
 
 - `blockEnterLineBreak` *(since 2.3.0)* — `"1"` when Enter inside a Typography Stylist block inserts a line break (the default), `""` when Enter starts a new block. The editor itself does not read this: the behaviour is driven by core's `splitting` block support, added server-side in `filter_block_splitting_support()`, so `wp.blocks.hasBlockSupport('typost/block', 'splitting', false)` is the authoritative check inside the editor. The localized value is here for extensions that need the user's setting without reaching into the block registry.
+- `newFontSizeUnit` *(since 2.3.2)* — `"rem"` (the default) or `"px"` when Settings → Typography Stylist → Options → "Write new font sizes in px" is on (#248). The unit new content writes its font sizes in. An extension that creates a `typost/block` in code should pass `fontSizeUnit` with this value: block.json's `rem` default also decides how saved blocks parse, so it cannot follow the setting. An extension that writes a new inline font size should write it in this unit. `getNewFontSizeUnit()` in `assets/js/font-size-units.js` reads it.
 
 #### `typost_admin_localize_data`
 

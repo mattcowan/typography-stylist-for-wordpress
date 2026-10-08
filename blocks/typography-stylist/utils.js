@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -3460,7 +3460,7 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
 	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
 
-export { resolveFontSizeUnit, formatFontSizeLength, pxToRem };
+export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getNewFontSizeUnit };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)
@@ -3485,17 +3485,19 @@ export { resolveFontSizeUnit, formatFontSizeLength, pxToRem };
  * @param {number} fontSizeMin Mobile size (px)
  * @param {number} fontSizePreferred Preferred size (px)
  * @param {number} fontSizeMax Desktop size (px)
+ * @param {string} [unit='rem'] Unit the size is written in: the new-content
+ *   unit (getNewFontSizeUnit, #248), rem unless the site writes px
  * @return {{attributes: Object, fontSize: string, styleString: string}|null}
  *   `attributes` are the data attributes for the span, `fontSize` the CSS
  *   value, `styleString` the full `font-size: …` declaration
  */
-export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = 'rem') {
 	if (!size || size === 'inherit') {
 		return null;
 	}
 
 	if (size === 'responsive') {
-		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem');
+		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 		return {
 			attributes: {
 				'data-fontsize': 'responsive',
@@ -3510,7 +3512,7 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
 
 	const fixedPx = String(size).match(/^(\d+(?:\.\d+)?)(?:px)?$/);
 	const fontSize = fixedPx && Number(fixedPx[1]) > 0
-		? formatFontSizeLength(fixedPx[1], 'rem')
+		? formatFontSizeLength(fixedPx[1], unit)
 		: size;
 	return {
 		attributes: { 'data-fontsize': size },

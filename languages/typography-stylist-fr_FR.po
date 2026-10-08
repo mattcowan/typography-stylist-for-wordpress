@@ -827,6 +827,18 @@ msgid "When enabled (the default), pressing Enter inside a Typography Stylist bl
 msgstr "Lorsque cette option est activée (par défaut), appuyer sur Entrée dans un bloc Typography Stylist insère un saut de ligne dans le même bloc : un titre sur plusieurs lignes reste un seul bloc avec un seul jeu de réglages typographiques. Désactivez-la pour retrouver le comportement du reste de l’éditeur, où Entrée crée un nouveau bloc. Maj+Entrée insère toujours un saut de ligne dans les deux cas. Ce réglage ne modifie pas le contenu existant."
 
 #: includes/admin-page.php:1318
+msgid "Font Size Unit for New Content"
+msgstr "Unité de taille de police pour le nouveau contenu"
+
+#: includes/admin-page.php:1330
+msgid "Write new font sizes in px"
+msgstr "Écrire les nouvelles tailles de police en px"
+
+#: includes/admin-page.php:1333
+msgid "You always enter font sizes in px. By default, new content writes them in rem (the px value divided by 16), so headings grow when a reader sets a larger default font size in the browser. If your theme changes the root font size (for example html { font-size: 62.5% }), rem sizes render smaller than the px value you enter. Turn this on to write new font sizes in px instead. It applies to new Typography Stylist blocks, new inline font sizes and new paragraph styles. Content saved before you change this setting keeps its unit."
+msgstr "Vous saisissez toujours les tailles de police en px. Par défaut, le nouveau contenu les écrit en rem (la valeur en px divisée par 16), ce qui agrandit les titres quand un lecteur choisit une taille de police par défaut plus grande dans son navigateur. Si votre thème modifie la taille de police racine (par exemple html { font-size: 62.5% }), les tailles en rem s’affichent plus petites que la valeur en px saisie. Activez cette option pour écrire les nouvelles tailles de police en px. Elle s’applique aux nouveaux blocs Typography Stylist, aux nouvelles tailles de police en ligne et aux nouveaux styles de paragraphe. Le contenu enregistré avant la modification de ce réglage conserve son unité."
+
+#: includes/admin-page.php:1318
 msgid "Archive Page Font Detection"
 msgstr "Détection de police sur les pages d'archives"
 

@@ -13,10 +13,12 @@ const { FontPicker } = require('./font-picker.js');
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
 const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-// A size this editor writes is new content and is written in rem (#233). A
-// size the author did not change keeps the unit the span already has
-// (resolveSpanFontSizeUnit), so older px spans are not rewritten.
-const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./font-size-units.js');
+// A size this editor writes is new content and is written in the site's
+// new-content unit: rem (#233), or px when the Options setting asks for it
+// (#248, getNewFontSizeUnit). A size the author did not change keeps the
+// unit the span already has (resolveSpanFontSizeUnit), so older spans are
+// not rewritten.
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -2255,7 +2257,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, 'rem')}`);
+                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2326,7 +2328,8 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                         isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        effectiveWeight: blockInheritedWeight
+                        effectiveWeight: blockInheritedWeight,
+                        fontSizeUnit: getNewFontSizeUnit()
                     }));
 
                     // Replace current block
@@ -2375,6 +2378,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                         content: textContent,
                         tagName: tagName,
                         effectiveWeight: convertFontWeight,
+                        fontSizeUnit: getNewFontSizeUnit(),
                         state: this.state
                     }));
 
@@ -2459,7 +2463,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                     dataAttrs['data-fontsize-min'] = String(fontSizeMin);
                     dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
                     dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem');
+                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
                 } else {
                     dataAttrs['data-fontsize'] = null;
                     dataAttrs['data-fontsize-min'] = null;
@@ -2560,7 +2564,8 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                 sizeChanged: !!(pending && pending.keys.has('fontSize')),
                 spanStyle: activeAttrs.style,
                 styleId: activeAttrs['data-style-id'],
-                styles: window.typostData && window.typostData.paragraphStyles
+                styles: window.typostData && window.typostData.paragraphStyles,
+                newUnit: getNewFontSizeUnit()
             });
             if (pending) {
                 this._resetPendingChanges();
@@ -3903,5 +3908,19 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
             );
         })
     });
+
+    /**
+     * New Typography Stylist blocks store the site's size unit (#248).
+     *
+     * Registered here rather than in the block script because typostData is
+     * localized on this handle; the block script has no guaranteed order
+     * relative to it. Variations are stored by block name, so registering
+     * before the block type exists is fine. Blocks created in code (the
+     * transforms, Convert to block) pass the unit themselves.
+     */
+    const newBlockUnitVariation = buildNewBlockUnitVariation(getNewFontSizeUnit());
+    if (newBlockUnitVariation && wp.blocks && wp.blocks.registerBlockVariation) {
+        wp.blocks.registerBlockVariation('typost/block', newBlockUnitVariation);
+    }
 
 })(window.wp);

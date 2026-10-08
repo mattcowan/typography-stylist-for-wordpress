@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -172,7 +172,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// Unit the block writes its sizes in (#233): rem for new blocks, px for
 	// blocks saved before rem existed (set by the deprecations' migrate()).
 	// The editor preview uses the same unit as save.js, so both render the
-	// same size. Inline spans are always new content and always write rem.
+	// same size. Inline spans are always new content and write the site's
+	// new-content unit (getNewFontSizeUnit: rem, or px when the Options
+	// setting asks for it, #248).
 	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
 
 	// Slider readout. Sizes are always entered in px; in rem the readout also
@@ -1406,7 +1408,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1459,7 +1461,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1791,7 +1793,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		// Calculate clamp() for font-size
-		const clampValue = buildResponsiveClamp(min, preferred, max, 'rem');
+		const clampValue = buildResponsiveClamp(min, preferred, max, getNewFontSizeUnit());
 		styles['font-size'] = clampValue;
 
 		applyPreviewStyles({
@@ -2299,7 +2301,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const size = sizeOverride !== undefined ? sizeOverride : inlineFontSize;
 		// Attributes and style for both collapsed and selection cases; null
 		// for 'inherit' (nothing to apply)
-		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax);
+		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax, getNewFontSizeUnit());
 		if (!content || !spanSpec) return;
 
 		if (resolvedApplyRange) {
