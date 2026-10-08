@@ -215,9 +215,20 @@
 	}
 
 	/**
-	 * Build properties object from current editor state.
+	 * The size unit new styles write: 'px' only when the site asks for it
+	 * (typostData.newFontSizeUnit, #248), else 'rem' (#233).
 	 */
-	function buildPropertiesFromState(state) {
+	function resolveNewStyleUnit(unit) {
+		return unit === 'px' ? 'px' : 'rem';
+	}
+
+	/**
+	 * Build properties object from current editor state.
+	 *
+	 * @param {Object} state     Editor state from typost_current_editor_state.
+	 * @param {string} [newUnit] The site's unit for new sizes ('rem' default).
+	 */
+	function buildPropertiesFromState(state, newUnit) {
 		var properties = {};
 		if (!state) return properties;
 		if (state.fontId || state.selectedFontId) {
@@ -234,6 +245,13 @@
 		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
+			// A style saved now is new content: its sizes are written in the
+			// site's new-content unit, rem (#233) unless the Options setting
+			// asks for px (#248). Not taken from the editor, because a
+			// block's unit only keeps its own saved markup unchanged. Update
+			// Style keeps the unit of a style that already has a size
+			// (buildPropertiesForStyleSave).
+			properties.fontSizeUnit = resolveNewStyleUnit(newUnit);
 		}
 		// Fit mode: the max-size cap is part of the fit look. Always stored
 		// (0 = uncapped) so applying a fit style is deterministic.
@@ -289,15 +307,31 @@
 	 * (PR review). A key the editor does not report is carried from the
 	 * base style; a key it reports, including 0, is the editor's value.
 	 *
-	 * @param {Object} state          Editor state from typost_current_editor_state.
-	 * @param {Object} baseProperties The active style's stored properties.
+	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
+	 * style that already writes a size, so its CSS does not change unit
+	 * under content that already uses it: px for a style saved before rem
+	 * existed (a size and no fontSizeUnit) or under the px setting, rem for
+	 * one saved as rem — whatever the site setting is now. A style that had
+	 * no size wrote none, so a size added to it is new and takes the site's
+	 * new-content unit. Save as New is a new style and always takes it.
+	 *
+	 * @param {Object}  state          Editor state from typost_current_editor_state.
+	 * @param {Object}  baseProperties The active style's stored properties.
+	 * @param {boolean} [isUpdate]     True for Update Style, false for Save as New.
+	 * @param {string}  [newUnit]      The site's unit for new sizes ('rem' default).
 	 * @return {Object} Properties for the REST request.
 	 */
-	function buildPropertiesForStyleSave(state, baseProperties) {
-		var properties = buildPropertiesFromState(state);
+	function buildPropertiesForStyleSave(state, baseProperties, isUpdate, newUnit) {
+		var properties = buildPropertiesFromState(state, newUnit);
 		var base = baseProperties || {};
 		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
 			properties.initialHang = normalizeHang(base.initialHang);
+		}
+		// Same test as the CSS generators: only these write a size ('0' does not)
+		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
+			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
+		if (isUpdate && properties.fontSizeUnit && baseHasSize) {
+			properties.fontSizeUnit = base.fontSizeUnit === 'rem' ? 'rem' : 'px';
 		}
 		return properties;
 	}
@@ -319,6 +353,10 @@
 	 * - fitMaxSize — style-owned since fit became a first-class style
 	 *   property (fit styles always store it, so it rides in via properties);
 	 *   not defaulted when absent for the same reason as min/pref/max.
+	 * - fontSizeUnit (#233) — style-only: it decides the unit of the style's
+	 *   own CSS rule. It rides along in the payload when stored, but neither
+	 *   editor's apply handler reads it: a block keeps its own unit, which
+	 *   only matters once the block has no styleClass.
 	 * - Extension-owned keys (layeredConfigId, animationConfigId).
 	 *
 	 * initialHang IS normalized (to 0): a style without a hang must remove a
@@ -479,6 +517,17 @@
 		return String(Number(n.toPrecision(14)));
 	}
 
+	// px ÷ 16, rounded to six decimals: the twin of PHP px_to_rem() and of
+	// pxToRem() in core's assets/js/font-size-units.js (#233), which this
+	// module cannot require (no build step). Keep all three identical.
+	function pxToRem(px) {
+		var rem = Number(px) / 16;
+		if (!isFinite(rem) || Math.abs(rem) < 0.0001) {
+			return 0;
+		}
+		return Number(Math.round(Number(rem + 'e6')) + 'e-6');
+	}
+
 	/**
 	 * The selector list for one style id (numeric or legacy string).
 	 *
@@ -573,8 +622,14 @@
 			}
 		}
 
+		// Styles saved after #233 write rem; a style without the key writes
+		// px exactly as before (see the PHP twin)
+		var useRem = props.fontSizeUnit === 'rem';
+
 		if (props.fontSize !== undefined && isFinite(props.fontSize) && Number(props.fontSize) > 0) {
-			rules.push('font-size: ' + phpInt(props.fontSize) + 'px');
+			rules.push(useRem
+				? 'font-size: ' + phpFloatStr(pxToRem(props.fontSize)) + 'rem'
+				: 'font-size: ' + phpInt(props.fontSize) + 'px');
 		}
 
 		// Responsive clamp; fit styles emit the same fallback clamp (see the
@@ -585,7 +640,12 @@
 			var pref = phpInt(props.fontSizePreferred);
 			var max = phpInt(props.fontSizeMax);
 			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
-			rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
+			if (useRem) {
+				rules.push('font-size: clamp(' + phpFloatStr(pxToRem(min)) + 'rem, ' + phpFloatStr(pxToRem(pref)) + 'rem + ' +
+					round4(vw) + 'vw, ' + phpFloatStr(pxToRem(max)) + 'rem)');
+			} else {
+				rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
+			}
 		}
 
 		// Hanging initial (#242): a custom property that core's block
@@ -1026,6 +1086,7 @@
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,
 		buildStyleCssBlock: buildStyleCssBlock,
+		pxToRem: pxToRem,
 	};
 
 	if (typeof window !== 'undefined') {

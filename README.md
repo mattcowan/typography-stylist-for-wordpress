@@ -44,6 +44,14 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
 - A paragraph style can keep the value.
 
+### Font Sizes in rem (v2.3.2+)
+
+- You enter font sizes in px. New content writes them in rem (the px value divided by 16): new Typography Stylist blocks, new inline font sizes, and new paragraph styles.
+- A reader who sets a larger default font size in the browser gets larger headings, together with larger body text.
+- Content saved before version 2.3.2 keeps px and looks the same. A block saved before then keeps px after you edit it.
+- If the theme changes the root font size (for example `html { font-size: 62.5% }`), rem sizes change with it. The editor uses the theme styles, so you see the result while you edit.
+- To write new sizes in px instead, turn on **Write new font sizes in px** in Settings → Typography Stylist → Options. Content saved before you change the setting keeps its unit, in either direction.
+
 ### Glyphs Panel (built in)
 
 - The Glyphs Panel shows every character and every OpenType feature of a font, like the Glyphs panel in Adobe Illustrator.

@@ -5,6 +5,8 @@
  * These functions have no side effects and can be tested independently.
  */
 
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
  *
@@ -3028,11 +3030,6 @@ export function sanitizeFontVariationSettings(value) {
 
 // ===== Fit-to-width sizing (fontSize: "fit") =====
 
-// Viewport breakpoints for the responsive clamp() fallback — must stay in
-// sync with the constants of the same name in edit.js and save.js.
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
-
 /**
  * Split serialized RichText HTML into visual-line HTML strings on <br>
  * boundaries. Elements straddling a boundary (a styled span containing a
@@ -3117,16 +3114,20 @@ export function computeFitRatio(referenceSize, measuredWidth) {
  * rather than pre-multiplied, so the emitted string is exactly the stored
  * attribute value — no float artifacts, byte-stable for block validation.
  *
+ * The cap is entered in px and written in the block's unit (#233): px for
+ * blocks saved before rem existed, rem for new blocks.
+ *
  * @param {number} ratio - Per-line ratio from computeFitRatio()
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
  * @return {string} CSS font-size value, or '' when ratio is unusable
  */
-export function buildFitFontSize(ratio, fitMaxSize) {
+export function buildFitFontSize(ratio, fitMaxSize, unit) {
 	if (!(ratio > 0)) {
 		return '';
 	}
 	const cqi = `calc(${ratio} * 100cqi)`;
-	return fitMaxSize > 0 ? `min(${cqi}, ${fitMaxSize}px)` : cqi;
+	return fitMaxSize > 0 ? `min(${cqi}, ${formatFontSizeLength(fitMaxSize, unit)})` : cqi;
 }
 
 /**
@@ -3141,14 +3142,15 @@ export function buildFitFontSize(ratio, fitMaxSize) {
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (index = visual line; index 0 is unused, see buildFitLineOpenTag)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
  * @return {string} HTML with each line wrapped in span.typost-line
  */
-export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs) {
+export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) {
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
 
 	return lines.map((lineHtml, i) => (
-		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`
+		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit)}${lineHtml}</span>`
 	)).join('');
 }
 
@@ -3318,11 +3320,12 @@ export function buildFitLinePreviews(content, maxChars) {
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} fitLineHangs - Per-line hangs in em
  * @param {number} index - Visual line index
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
  * @return {string} Opening span tag
  */
-export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index) {
+export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit) {
 	const declarations = [];
-	const size = buildFitFontSize(ratio, fitMaxSize);
+	const size = buildFitFontSize(ratio, fitMaxSize, unit);
 	if (size) {
 		declarations.push(`font-size:${size}`);
 	}
@@ -3353,9 +3356,10 @@ export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index) {
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (lines 2+)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
  * @return {string} Wrapped editing value for RichText
  */
-export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) {
+export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) {
 	if (!content) {
 		return '';
 	}
@@ -3366,7 +3370,7 @@ export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) {
 		if (!lineHtml) {
 			return '';
 		}
-		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`;
+		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit)}${lineHtml}</span>`;
 	}).join('<br>');
 }
 
@@ -3439,32 +3443,38 @@ export function stripRedundantFontSizeAttrs(content) {
 /**
  * Build the responsive clamp() font-size expression.
  *
- * IMPORTANT: this must reproduce the legacy inline expression (edit.js /
- * save.js) byte-for-byte — including float artifacts like
- * 1.8124999999999998vw — because save output must stay byte-stable for
- * block validation of already-published posts. The template and arithmetic
- * are copied verbatim; a byte-identity test locks it in.
+ * Wrapper around buildResponsiveClamp() in assets/js/font-size-units.js,
+ * which the inline editor shares. IMPORTANT: the px form must reproduce the
+ * legacy inline expression byte-for-byte — including float artifacts like
+ * 1.8124999999999998vw — because blocks saved before rem existed must keep
+ * validating; a byte-identity test locks it in. The rem form (#233) is new
+ * content: 16 / 32 / 64 gives clamp(1rem, 2rem + 3vw, 4rem).
  *
  * @param {number} fontSizeMin - Mobile size (px, at 320px viewport)
  * @param {number} fontSizePreferred - Preferred size (px, drives rem base)
  * @param {number} fontSizeMax - Desktop size (px, at 1920px viewport)
+ * @param {string} [unit='px'] - 'px' or 'rem'
  * @return {string} clamp() expression
  */
-export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax) {
-	return `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit) {
+	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
+
+export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getNewFontSizeUnit };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)
  * font size, as applied by the Quick Feature Toggles "Font Size (for
  * selected text)" control.
  *
+ * A span written now is new content, so its size is written in rem (#233);
+ * spans already in post content are never rewritten by this function.
  * 'responsive' carries the three breakpoint values as data attributes and
  * renders through buildResponsiveClamp() — the same expression the block
- * level uses, so the clamp() string (float artifacts included) is identical
- * wherever the size is written. Any other size string (a fixed px value
- * detected from a paragraph style saved in the inline editor) is emitted
- * as-is. 'inherit' or an empty size means "no inline size": null.
+ * level uses. A fixed px size (from a paragraph style saved in the inline
+ * editor, '24px' or a bare 24) is converted to rem; data-fontsize keeps the
+ * value as given. Any other size string is emitted as-is. 'inherit' or an
+ * empty size means "no inline size": null.
  *
  * The caller passes the size explicitly rather than reading component state,
  * so applying right when the select changes cannot see a stale value (QA
@@ -3475,17 +3485,19 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
  * @param {number} fontSizeMin Mobile size (px)
  * @param {number} fontSizePreferred Preferred size (px)
  * @param {number} fontSizeMax Desktop size (px)
+ * @param {string} [unit='rem'] Unit the size is written in: the new-content
+ *   unit (getNewFontSizeUnit, #248), rem unless the site writes px
  * @return {{attributes: Object, fontSize: string, styleString: string}|null}
  *   `attributes` are the data attributes for the span, `fontSize` the CSS
  *   value, `styleString` the full `font-size: …` declaration
  */
-export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = 'rem') {
 	if (!size || size === 'inherit') {
 		return null;
 	}
 
 	if (size === 'responsive') {
-		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax);
+		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 		return {
 			attributes: {
 				'data-fontsize': 'responsive',
@@ -3498,10 +3510,14 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
 		};
 	}
 
+	const fixedPx = String(size).match(/^(\d+(?:\.\d+)?)(?:px)?$/);
+	const fontSize = fixedPx && Number(fixedPx[1]) > 0
+		? formatFontSizeLength(fixedPx[1], unit)
+		: size;
 	return {
 		attributes: { 'data-fontsize': size },
-		fontSize: size,
-		styleString: `font-size: ${size}`
+		fontSize,
+		styleString: `font-size: ${fontSize}`
 	};
 }
 
@@ -3904,6 +3920,30 @@ export function findParagraphStyleByClass(styleClass, styles) {
 	}
 	const ref = match[1];
 	return styles.find((style) => style && (String(style.id) === ref || (style.legacyId && String(style.legacyId) === ref))) || null;
+}
+
+export { resolveStyleFontSizeUnit };
+
+/**
+ * The fontSizeUnit a block takes when it leaves its paragraph style (#233):
+ * Detach, or clearing the class of a deleted style.
+ *
+ * Under a styleClass the block writes no size, so a block saved before
+ * #233 validates against the current save and gets the 'rem' default while
+ * the size it shows comes from the style's CSS. Once the class is gone the
+ * block writes its sizes itself; taking the style's unit keeps them
+ * rendering as they did. A deleted style gives px, the pre-#233 output.
+ *
+ * @param {string} styleClass The block's styleClass before it is cleared
+ * @param {Array}  styles     Stored paragraph styles
+ * @return {string|null} 'rem' or 'px', or null when styleClass is not a
+ *   paragraph style class (an extension's class: leave the unit alone)
+ */
+export function resolveDetachFontSizeUnit(styleClass, styles) {
+	if (!styleClass || !/typost-ps-[A-Za-z0-9_-]+/.test(String(styleClass))) {
+		return null;
+	}
+	return resolveStyleFontSizeUnit(findParagraphStyleByClass(styleClass, styles));
 }
 
 /**

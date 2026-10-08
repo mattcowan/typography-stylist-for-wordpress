@@ -1315,6 +1315,27 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                         </tr>
                         <tr>
                             <th scope="row">
+                                <?php esc_html_e('Font Size Unit for New Content', 'typography-stylist'); ?>
+                            </th>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    id="typost_new_font_sizes_px"
+                                    name="typost_new_font_sizes_px"
+                                    value="1"
+                                    aria-describedby="typost_new_font_sizes_px_description"
+                                    <?php checked(get_option('typost_new_font_sizes_px', false)); ?>
+                                />
+                                <label for="typost_new_font_sizes_px">
+                                    <?php esc_html_e('Write new font sizes in px', 'typography-stylist'); ?>
+                                </label>
+                                <p class="description" id="typost_new_font_sizes_px_description">
+                                    <?php esc_html_e('You always enter font sizes in px. By default, new content writes them in rem (the px value divided by 16), so headings grow when a reader sets a larger default font size in the browser. If your theme changes the root font size (for example html { font-size: 62.5% }), rem sizes render smaller than the px value you enter. Turn this on to write new font sizes in px instead. It applies to new Typography Stylist blocks, new inline font sizes and new paragraph styles. Content saved before you change this setting keeps its unit.', 'typography-stylist'); ?>
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
                                 <?php esc_html_e('Archive Page Font Detection', 'typography-stylist'); ?>
                             </th>
                             <td>

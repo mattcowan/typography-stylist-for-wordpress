@@ -2528,6 +2528,7 @@ jQuery(document).ready(function($) {
         var originalText = $submit.text();
         var $autoRegister = $('#typost_auto_register_wp_fonts');
         var $enterLineBreak = $('#typost_block_enter_line_break');
+        var $newFontSizesPx = $('#typost_new_font_sizes_px');
 
         if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
@@ -2555,6 +2556,7 @@ jQuery(document).ready(function($) {
                 // REST handler skips a null, so client and server agree that
                 // absent means "leave it alone".
                 block_enter_line_break: $enterLineBreak.length ? $enterLineBreak.is(':checked') : null,
+                new_font_sizes_px: $newFontSizesPx.length ? $newFontSizesPx.is(':checked') : null,
                 // Checkbox only rendered when the WP Font Library is available
                 auto_register_wp_fonts: $autoRegister.length ? $autoRegister.is(':checked') : null,
                 color_scheme: $('#typost_admin_color_scheme').val()

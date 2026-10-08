@@ -13,10 +13,12 @@ const { FontPicker } = require('./font-picker.js');
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
 const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+// A size this editor writes is new content and is written in the site's
+// new-content unit: rem (#233), or px when the Options setting asks for it
+// (#248, getNewFontSizeUnit). A size the author did not change keeps the
+// unit the span already has (resolveSpanFontSizeUnit), so older spans are
+// not rewritten.
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -25,6 +27,15 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
     const { Component, Fragment } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
+
+    // Slider readout: sizes are entered in px, and every span this editor
+    // writes is rem (#233), so show both ("24px (1.5rem)").
+    const formatRemReadout = (px) => sprintf(
+        /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+        __('%1$spx (%2$srem)', 'typography-stylist'),
+        px,
+        pxToRem(px)
+    );
     const { compose, debounce } = wp.compose;
 
     /**
@@ -2246,7 +2257,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${maxPx}px)`);
+                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2317,7 +2328,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        effectiveWeight: blockInheritedWeight
+                        effectiveWeight: blockInheritedWeight,
+                        fontSizeUnit: getNewFontSizeUnit()
                     }));
 
                     // Replace current block
@@ -2366,6 +2378,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         content: textContent,
                         tagName: tagName,
                         effectiveWeight: convertFontWeight,
+                        fontSizeUnit: getNewFontSizeUnit(),
                         state: this.state
                     }));
 
@@ -2450,7 +2463,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     dataAttrs['data-fontsize-min'] = String(fontSizeMin);
                     dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
                     dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
                 } else {
                     dataAttrs['data-fontsize'] = null;
                     dataAttrs['data-fontsize-min'] = null;
@@ -2541,6 +2554,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 onChange(newValue);
                 return;
             }
+            // The unit of the size this rebuild writes (#233): a size the author
+            // did not change keeps the unit the span has now — the rebuild
+            // rewrites the whole style even when only a feature changed — and a
+            // span leaving a paragraph style takes the style's unit. Read before
+            // the pending changes are reset.
+            const activeAttrs = (activeFormatForRaw && activeFormatForRaw.attributes) || {};
+            const sizeUnit = resolveSpanFontSizeUnit({
+                sizeChanged: !!(pending && pending.keys.has('fontSize')),
+                spanStyle: activeAttrs.style,
+                styleId: activeAttrs['data-style-id'],
+                styles: window.typostData && window.typostData.paragraphStyles,
+                newUnit: getNewFontSizeUnit()
+            });
             if (pending) {
                 this._resetPendingChanges();
             }
@@ -2661,7 +2687,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                        styleString += `font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit)}`;
                     }
                 }
 
@@ -3556,7 +3582,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMin}px`}
+                                                help={formatRemReadout(fontSizeMin)}
                                             />
                                             <RangeControl
                                                 label={__('Preferred Size (tablet)', 'typography-stylist')}
@@ -3565,7 +3591,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizePreferred}px`}
+                                                help={formatRemReadout(fontSizePreferred)}
                                             />
                                             <RangeControl
                                                 label={__('Maximum Size (desktop)', 'typography-stylist')}
@@ -3574,7 +3600,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMax}px`}
+                                                help={formatRemReadout(fontSizeMax)}
                                             />
                                             {/* Same soft validation as the block (QA E-1): the
                                                 clamp() is still written as typed, so the author
@@ -3882,5 +3908,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             );
         })
     });
+
+    /**
+     * New Typography Stylist blocks store the site's size unit (#248).
+     *
+     * Registered here rather than in the block script because typostData is
+     * localized on this handle; the block script has no guaranteed order
+     * relative to it. Variations are stored by block name, so registering
+     * before the block type exists is fine. Blocks created in code (the
+     * transforms, Convert to block) pass the unit themselves.
+     */
+    const newBlockUnitVariation = buildNewBlockUnitVariation(getNewFontSizeUnit());
+    if (newBlockUnitVariation && wp.blocks && wp.blocks.registerBlockVariation) {
+        wp.blocks.registerBlockVariation('typost/block', newBlockUnitVariation);
+    }
 
 })(window.wp);

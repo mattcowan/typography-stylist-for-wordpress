@@ -100,6 +100,12 @@
 		return 'typost-ps-browser-group-' + index;
 	}
 
+	// The site's unit for new font sizes (#248): 'px' when the Options
+	// setting "Write new font sizes in px" is on, else 'rem' (#233)
+	function getNewFontSizeUnit() {
+		return window.typostData && window.typostData.newFontSizeUnit === 'px' ? 'px' : 'rem';
+	}
+
 	// Whether the site has opted into the direct block toolbar button
 	function toolbarButtonEnabled() {
 		return !!(window.typostData &&
@@ -349,7 +355,7 @@
 			setIsSaving(true);
 
 			var state = getCurrentState();
-			var properties = buildPropertiesFromState(state);
+			var properties = buildPropertiesFromState(state, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',
@@ -385,7 +391,7 @@
 
 			var state = getCurrentState();
 			// Keeps block-only properties (the hang) the inline editor cannot report
-			var properties = buildPropertiesForStyleSave(state, activeStyle.properties);
+			var properties = buildPropertiesForStyleSave(state, activeStyle.properties, true, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
@@ -413,7 +419,7 @@
 
 			var state = getCurrentState();
 			// A variant of the active style keeps its block-only properties too
-			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null);
+			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null, false, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',
@@ -449,7 +455,7 @@
 
 			// Re-apply current settings as inline styles (no paragraph style)
 			var state = getCurrentState();
-			dispatchApply(null, editorSource, buildPropertiesFromState(state));
+			dispatchApply(null, editorSource, buildPropertiesFromState(state, getNewFontSizeUnit()));
 		}, [editorSource]);
 
 		// ---- Render ----
@@ -867,7 +873,7 @@
 			var state = window.typostHooks
 				? window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType)
 				: {};
-			dispatchApply(null, editorSource, buildPropertiesFromState(state));
+			dispatchApply(null, editorSource, buildPropertiesFromState(state, getNewFontSizeUnit()));
 			props.onClose();
 		}, [props.onClose, props.onApplied, applyTo, editorSource, editorType]);
 

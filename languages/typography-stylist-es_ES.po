@@ -827,6 +827,18 @@ msgid "When enabled (the default), pressing Enter inside a Typography Stylist bl
 msgstr "Cuando está activada (por defecto), al pulsar Intro dentro de un bloque Typography Stylist se inserta un salto de línea en el mismo bloque, de modo que un titular de varias líneas sigue siendo un solo bloque con un único conjunto de ajustes tipográficos. Desactiva esta opción para que coincida con el resto del editor, donde Intro crea un bloque nuevo. Mayús+Intro siempre inserta un salto de línea en ambos casos. Este ajuste no cambia el contenido existente."
 
 #: includes/admin-page.php:1318
+msgid "Font Size Unit for New Content"
+msgstr "Unidad de tamaño de fuente para el contenido nuevo"
+
+#: includes/admin-page.php:1330
+msgid "Write new font sizes in px"
+msgstr "Escribir los nuevos tamaños de fuente en px"
+
+#: includes/admin-page.php:1333
+msgid "You always enter font sizes in px. By default, new content writes them in rem (the px value divided by 16), so headings grow when a reader sets a larger default font size in the browser. If your theme changes the root font size (for example html { font-size: 62.5% }), rem sizes render smaller than the px value you enter. Turn this on to write new font sizes in px instead. It applies to new Typography Stylist blocks, new inline font sizes and new paragraph styles. Content saved before you change this setting keeps its unit."
+msgstr "Los tamaños de fuente siempre se introducen en px. De forma predeterminada, el contenido nuevo los escribe en rem (el valor en px dividido entre 16), de modo que los títulos crecen cuando un lector elige un tamaño de fuente predeterminado mayor en el navegador. Si tu tema cambia el tamaño de fuente raíz (por ejemplo html { font-size: 62.5% }), los tamaños en rem se muestran más pequeños que el valor en px introducido. Activa esta opción para escribir los nuevos tamaños de fuente en px. Se aplica a los nuevos bloques de Typography Stylist, a los nuevos tamaños de fuente en línea y a los nuevos estilos de párrafo. El contenido guardado antes de cambiar este ajuste conserva su unidad."
+
+#: includes/admin-page.php:1318
 msgid "Archive Page Font Detection"
 msgstr "Detección de fuentes en páginas de archivo"
 
@@ -2862,3 +2874,10 @@ msgstr "El desborde no tiene efecto mientras el texto está centrado o alineado 
 #: blocks/typography-stylist/build/index.js:4
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr "La floritura se dibuja fuera del bloque. Algunos temas recortan el contenido que sale de su contenedor, y entonces la floritura aparece recortada en el sitio. Revisa la página publicada."
+
+#. translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16)
+#: assets/js/block-editor.js:32
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "%1$spx (%2$srem)"
+msgstr "%1$spx (%2$srem)"
