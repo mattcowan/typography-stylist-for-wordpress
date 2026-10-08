@@ -16,7 +16,7 @@ const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes,
 // A size this editor writes is new content and is written in rem (#233). A
 // size the author did not change keeps the unit the span already has
 // (resolveSpanFontSizeUnit), so older px spans are not rewritten.
-const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./font-size-units.js');
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoomNotice } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -34,6 +34,26 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
         px,
         pxToRem(px)
     );
+    // Zoom notice for responsive sizes (#234): a new size whose slope would
+    // not double by 500% zoom grows more slowly than set (buildResponsiveClamp
+    // limits it). Core's Notice speaks its text when it appears.
+    const renderZoomNotice = (min, preferred, max) => {
+        const notice = getResponsiveZoomNotice(min, preferred, max, 'rem');
+        if (!notice) {
+            return null;
+        }
+        return (
+            <Notice status="warning" isDismissible={false} className="typost-size-zoom-notice">
+                {sprintf(
+                    /* translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size */
+                    __('To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx.', 'typography-stylist'),
+                    notice.reach,
+                    notice.max,
+                    notice.minPreferred
+                )}
+            </Notice>
+        );
+    };
     const { compose, debounce } = wp.compose;
 
     /**
@@ -3606,6 +3626,10 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                                                     {__('Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior.', 'typography-stylist')}
                                                 </Notice>
                                             )}
+                                            {/* Zoom notice (#234), same as the block's. A size the
+                                                author sets here is written in rem, so the new
+                                                content wording applies. */}
+                                            {renderZoomNotice(fontSizeMin, fontSizePreferred, fontSizeMax)}
                                         </div>
                                     )}
                                 </div>

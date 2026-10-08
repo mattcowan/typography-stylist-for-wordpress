@@ -164,6 +164,34 @@
 	font-optical-sizing: none;
 }
 
+/* Fit-to-width lines grow with browser zoom (#235).
+ * A line is calc(R * 100cqi), and zoom makes the container narrower in CSS
+ * px, so on screen the line kept its size at every zoom level (WCAG 1.4.4).
+ * CSS cannot tell zoom from a small window, but a zoomed desktop window
+ * keeps its landscape shape while it gets narrow, and a phone held upright
+ * does not. So in a landscape viewport narrower than 782px (core's columns
+ * breakpoint: a zoomed window stacks its columns there), a line whose
+ * container is narrower than 32rem is sized as if the container were
+ * 32rem. On screen it grows with the zoom from there and wraps; overflow-
+ * wrap breaks a word only when the word alone is wider than the container,
+ * so nothing scrolls sideways (1.4.10 Reflow). 32rem is 0.4 × 1280px: a
+ * line that fills a 1280px window doubles by 500% zoom. Wider containers
+ * fill exactly as before, so 100% zoom is unchanged everywhere except in a
+ * landscape viewport under 782px with a container under 32rem.
+ * Only lines saved since #233 read the variable (buildFitFontSize() in
+ * utils.js writes calc(R * var(--typost-fit-width, 100cqi))); older lines
+ * keep calc(R * 100cqi) and never wrap, hence the attribute test. The
+ * editor renders the same lines (wrapFitLines), so it wraps the same. */
+@media (orientation: landscape) and (max-width: 781.98px) {
+	@container (width < 32rem) {
+		.wp-block-typost .typost-fit .typost-line[style*="--typost-fit-width"] {
+			--typost-fit-width: 32rem;
+			white-space: normal;
+			overflow-wrap: anywhere;
+		}
+	}
+}
+
 /* Inline font sizes are ignored in fit mode — each line renders at one
  * uniform size (the block controls sizing). Inline styles can only be
  * beaten by !important. */

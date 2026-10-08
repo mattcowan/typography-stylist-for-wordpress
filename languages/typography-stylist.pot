@@ -2868,3 +2868,25 @@ msgstr ""
 msgctxt "block keyword"
 msgid "accessibility"
 msgstr ""
+
+#. translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx."
+msgstr ""
+
+#. translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored."
+msgstr ""
+
+#. translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size
+#: assets/js/block-editor.js:49
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx."
+msgstr ""

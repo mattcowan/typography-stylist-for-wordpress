@@ -101,14 +101,14 @@ describe('save() with the rem default (new blocks)', () => {
 		const tree = visual({ fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3], fitMaxSize: 96 });
 		expect(tree.props.style.fontSize).toBe('clamp(1rem, 2rem + 3vw, 4rem)');
 		expect(tree.children[0]).toBe(
-			'<span class="typost-line" style="font-size:min(calc(0.2 * 100cqi), 6rem)">One</span>' +
-			'<span class="typost-line" style="font-size:min(calc(0.3 * 100cqi), 6rem)">Two</span>'
+			'<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), 6rem)">One</span>' +
+			'<span class="typost-line" style="font-size:min(calc(0.3 * var(--typost-fit-width, 100cqi)), 6rem)">Two</span>'
 		);
 	});
 
-	it('writes no unit at all for an uncapped fit line (cqi only)', () => {
+	it('writes no px or rem for an uncapped fit line', () => {
 		const tree = visual({ fontSize: 'fit', content: 'One', fitLineSizes: [0.2] });
-		expect(tree.children[0]).toBe('<span class="typost-line" style="font-size:calc(0.2 * 100cqi)">One</span>');
+		expect(tree.children[0]).toBe('<span class="typost-line" style="font-size:calc(0.2 * var(--typost-fit-width, 100cqi))">One</span>');
 	});
 
 	it('writes an inherit block byte-identically in both units', () => {
@@ -146,21 +146,21 @@ describe('fit helpers take the unit', () => {
 	});
 
 	it('writes the cap in rem when asked', () => {
-		expect(buildFitFontSize(0.2, 120, 'rem')).toBe('min(calc(0.2 * 100cqi), 7.5rem)');
+		expect(buildFitFontSize(0.2, 120, 'rem')).toBe('min(calc(0.2 * var(--typost-fit-width, 100cqi)), 7.5rem)');
 		expect(buildFitLineOpenTag(0.2, 120, [0, 0.1], 1, 'rem'))
-			.toBe('<span class="typost-line" style="font-size:min(calc(0.2 * 100cqi), 7.5rem);--typost-line-hang:0.1">');
+			.toBe('<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), 7.5rem);--typost-line-hang:0.1">');
 	});
 
 	it('gives the editing value and the saved markup the same unit', () => {
 		// The editor renders wrapFitLines, the frontend buildFitLinesHtml;
 		// both must carry the same cap so the editor and the frontend agree
 		expect(wrapFitLines('A<br>B', [0.2, 0.3], 96, [], 'rem')).toBe(
-			'<span class="typost-line" style="font-size:min(calc(0.2 * 100cqi), 6rem)">A</span><br>' +
-			'<span class="typost-line" style="font-size:min(calc(0.3 * 100cqi), 6rem)">B</span>'
+			'<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), 6rem)">A</span><br>' +
+			'<span class="typost-line" style="font-size:min(calc(0.3 * var(--typost-fit-width, 100cqi)), 6rem)">B</span>'
 		);
 		expect(buildFitLinesHtml('A<br>B', [0.2, 0.3], 96, [], 'rem')).toBe(
-			'<span class="typost-line" style="font-size:min(calc(0.2 * 100cqi), 6rem)">A</span>' +
-			'<span class="typost-line" style="font-size:min(calc(0.3 * 100cqi), 6rem)">B</span>'
+			'<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), 6rem)">A</span>' +
+			'<span class="typost-line" style="font-size:min(calc(0.3 * var(--typost-fit-width, 100cqi)), 6rem)">B</span>'
 		);
 	});
 });

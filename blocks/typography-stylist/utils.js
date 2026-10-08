@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -3117,6 +3117,12 @@ export function computeFitRatio(referenceSize, measuredWidth) {
  * The cap is entered in px and written in the block's unit (#233): px for
  * blocks saved before rem existed, rem for new blocks.
  *
+ * New blocks (rem) also size the line from --typost-fit-width, which falls
+ * back to 100cqi (#235). style.css sets it to a 32rem floor when browser
+ * zoom has made the container narrow, so the line grows with zoom and
+ * wraps instead of staying the same size on screen. Blocks saved before
+ * keep calc(R * 100cqi).
+ *
  * @param {number} ratio - Per-line ratio from computeFitRatio()
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
@@ -3126,7 +3132,8 @@ export function buildFitFontSize(ratio, fitMaxSize, unit) {
 	if (!(ratio > 0)) {
 		return '';
 	}
-	const cqi = `calc(${ratio} * 100cqi)`;
+	const width = resolveFontSizeUnit(unit) === 'rem' ? 'var(--typost-fit-width, 100cqi)' : '100cqi';
+	const cqi = `calc(${ratio} * ${width})`;
 	return fitMaxSize > 0 ? `min(${cqi}, ${formatFontSizeLength(fitMaxSize, unit)})` : cqi;
 }
 
@@ -3460,7 +3467,7 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
 	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
 
-export { resolveFontSizeUnit, formatFontSizeLength, pxToRem };
+export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getResponsiveZoomNotice };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)

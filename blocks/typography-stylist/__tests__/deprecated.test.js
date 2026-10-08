@@ -226,7 +226,10 @@ describe('Typography Stylist - deprecated save (v2, pre-rem #233)', () => {
 		{ label: 'fit without a cap', attributes: { ...base, fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3] } },
 		// The per-line cap is written also under a styleClass, so this styled
 		// block is sized: it goes through v2 and keeps px (review of #233)
-		{ label: 'fit with a cap and a styleClass', attributes: { ...base, fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3], fitMaxSize: 96, styleClass: 'typost-ps-5' } }
+		{ label: 'fit with a cap and a styleClass', attributes: { ...base, fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3], fitMaxSize: 96, styleClass: 'typost-ps-5' } },
+		// New fit lines read --typost-fit-width (#235), so an uncapped styled
+		// fit block differs too: it goes through v2 and keeps calc(R * 100cqi)
+		{ label: 'fit without a cap, with a styleClass', attributes: { ...base, fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3], styleClass: 'typost-ps-5' } }
 	];
 
 	// Blocks that write no size: identical under both units, so they
@@ -236,9 +239,7 @@ describe('Typography Stylist - deprecated save (v2, pre-rem #233)', () => {
 		{ label: 'inherit with a hang', attributes: { ...base, initialHang: 0.3 } },
 		{ label: 'responsive with a styleClass', attributes: { ...base, fontSize: 'responsive', styleClass: 'typost-ps-3' } },
 		{ label: 'fixed 24 with a styleClass', attributes: { ...base, fontSize: '24', styleClass: 'typost-ps-4' } },
-		{ label: 'fixed "0" (zero means no size)', attributes: { ...base, fontSize: '0' } },
-		// Without a cap the fit lines carry only cqi sizes, which have no unit
-		{ label: 'fit without a cap, with a styleClass', attributes: { ...base, fontSize: 'fit', content: 'One<br>Two', fitLineSizes: [0.2, 0.3], styleClass: 'typost-ps-5' } }
+		{ label: 'fixed "0" (zero means no size)', attributes: { ...base, fontSize: '0' } }
 	];
 
 	it.each(sizedMatrix)('v2 matches the current save in px for $label (re-save after migrate is unchanged)', ({ attributes }) => {

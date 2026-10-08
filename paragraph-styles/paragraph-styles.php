@@ -332,7 +332,7 @@ final class Typost_Paragraph_Styles {
 					'font-size: clamp(%srem, %srem + %svw, %srem)',
 					self::px_to_rem( $min ),
 					self::px_to_rem( $pref ),
-					round( $vw, 4 ),
+					self::responsive_zoom_vw( $min, $pref, $max ),
 					self::px_to_rem( $max )
 				);
 			} else {
@@ -1407,5 +1407,34 @@ final class Typost_Paragraph_Styles {
 			return 0;
 		}
 		return round( $rem, 6 );
+	}
+
+	/**
+	 * The vw term of a rem style's responsive clamp (#234).
+	 *
+	 * The author's slope, limited so the size doubles by 500% browser zoom
+	 * (WCAG 1.4.4 for fluid type): the size may reach max(4 × pref,
+	 * 2.5 × min) in a 1920px window, so when Large is above that, the slope
+	 * is lowered to reach it there and rounded down to four decimals.
+	 * Mirrors getResponsiveZoomLimit() in assets/js/font-size-units.js
+	 * (which explains the bound) and responsiveZoomVw() in ps-utils.js.
+	 * Styles saved before #233 (px) keep the author's slope.
+	 *
+	 * @param int $min  Mobile size (px).
+	 * @param int $pref Preferred size (px).
+	 * @param int $max  Desktop size (px).
+	 * @return float vw coefficient, four decimals.
+	 */
+	public static function responsive_zoom_vw( $min, $pref, $max ) {
+		$vw    = ( ( $max - $min ) / ( self::RESPONSIVE_FONT_MAX_VIEWPORT - self::RESPONSIVE_FONT_MIN_VIEWPORT ) ) * 100;
+		$reach = max( 4 * $pref, 2.5 * $min );
+		if ( $vw > 0 && $pref >= 0 && $max > $reach ) {
+			// The epsilon keeps an exact bound (2.5) from flooring to 2.4999.
+			$bound = floor( ( ( ( $reach - $pref ) * 100 ) / self::RESPONSIVE_FONT_MAX_VIEWPORT ) * 10000 + 1e-7 ) / 10000;
+			if ( $bound < $vw ) {
+				return $bound;
+			}
+		}
+		return round( $vw, 4 );
 	}
 }

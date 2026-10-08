@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -187,6 +187,36 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			pxToRem(px)
 		)
 		: `${px}px`);
+
+	// Zoom notice for responsive sizes (#234), beside the out-of-order note
+	// in the Inspector and the Quick Feature Toggles. New content (rem) grows
+	// more slowly than set when its slope would not double by 500% zoom;
+	// content saved before (px) keeps its slope, so it is told it fails.
+	// Core's Notice speaks its text when it appears.
+	const renderZoomNotice = (min, preferred, max, unit) => {
+		const notice = getResponsiveZoomNotice(min, preferred, max, unit);
+		if (!notice) {
+			return null;
+		}
+		return (
+			<Notice status="warning" isDismissible={false} className="typost-size-zoom-notice">
+				{notice.kind === 'slower'
+					? sprintf(
+						/* translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size */
+						__('To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx.', 'typography-stylist'),
+						notice.reach,
+						notice.max,
+						notice.minPreferred
+					)
+					: sprintf(
+						/* translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom */
+						__('This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx.', 'typography-stylist'),
+						notice.reach,
+						notice.minPreferred
+					)}
+			</Notice>
+		);
+	};
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 	// Usage tips notice dismissal — shares the same localStorage key as the
@@ -4200,6 +4230,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 												</Notice>
 											)}
+											{/* Inline spans are always written in rem (buildInlineFontSizeSpan) */}
+											{renderZoomNotice(inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax, 'rem')}
 											<Button
 												variant="secondary"
 												onClick={resetFontSize}
@@ -4637,7 +4669,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							fontSize === 'responsive'
 								? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')
 								: fontSize === 'fit'
-									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist')
+									// Rem blocks grow with browser zoom and wrap there (#235)
+									? (blockFontSizeUnit === 'rem'
+										? __('Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist')
+										: __('Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist'))
 									: undefined
 						}
 					/>
@@ -4701,6 +4736,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 								</Notice>
 							)}
+							{/* Fit uses these values only as its no-container-query fallback */}
+							{fontSize === 'responsive' && renderZoomNotice(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit)}
 						</>
 					)}
 				</PanelBody>
