@@ -610,7 +610,30 @@
 			selector += ',\n' + selectorSet(String(style.legacyId));
 		}
 
-		return selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
+		var css = selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
+		if (hang > 0) {
+			css += coreBlockHangCss(id);
+		}
+		return css;
+	}
+
+	/**
+	 * The First Letter Hang rules for a style on core blocks (#219) — the
+	 * JS twin of PHP core_block_hang_css(); see there for each rule's reason.
+	 * Emitted only for a style with a hang.
+	 *
+	 * @param {number} id Style id.
+	 * @return {string} CSS, starting with a blank line.
+	 */
+	function coreBlockHangCss(id) {
+		var cls = '.typost-styled.typost-ps-' + id;
+		var amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
+		var tags = ':is(p, h1, h2, h3, h4, h5, h6)';
+		return '\n\n' + cls + tags + ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {\n    margin-inline-start: ' + amount + ';\n}' +
+			'\n\n' + cls + '.block-editor-rich-text__editable' + tags + ':not(.wp-block-typost *, .has-drop-cap) {\n    text-indent: ' + amount + ';\n}' +
+			'\n\n' + cls + '.has-text-align-center {\n    --typost-hang-on: 0;\n}' +
+			'\n\n' + cls + '.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}' +
+			'\n\n' + cls + '.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}';
 	}
 
 	/**
@@ -632,6 +655,153 @@
 			return parseInt(s.selectionParagraphStyleId, 10) || 0;
 		}
 		return parseInt(s.paragraphStyleId, 10) || 0;
+	}
+
+	// -------------------------------------------------------------------------
+	// Styles on core blocks (#219)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Core blocks that take a paragraph style as a whole. The style goes in
+	 * the block's className as `typost-styled typost-ps-N`, which the block
+	 * serializes into both the comment and the root element's class, so the
+	 * block stays valid and the generator's block-level selector matches it.
+	 */
+	var CORE_STYLE_BLOCKS = ['core/paragraph', 'core/heading'];
+
+	var STYLE_CLASS_PATTERN = /^typost-ps-([A-Za-z0-9_-]+)$/;
+
+	/**
+	 * @param {string} blockName Block type name
+	 * @return {boolean} Whether a style can be applied to the whole block
+	 */
+	function isCoreStyleBlock(blockName) {
+		return CORE_STYLE_BLOCKS.indexOf(blockName) !== -1;
+	}
+
+	function classTokens(className) {
+		return typeof className === 'string' ? className.split(/\s+/).filter(Boolean) : [];
+	}
+
+	/**
+	 * Every class except the ones a paragraph style owns. Other classes
+	 * (a theme's is-style-outline, the author's own) stay in their order.
+	 */
+	function withoutStyleClasses(className) {
+		return classTokens(className).filter(function (token) {
+			return token !== 'typost-styled' && !STYLE_CLASS_PATTERN.test(token);
+		});
+	}
+
+	/**
+	 * The style reference in a core block's className.
+	 *
+	 * @param {string} className The block's className attribute
+	 * @return {string} The id (or legacy id) after `typost-ps-`, '' for none
+	 */
+	function getCoreBlockStyleRef(className) {
+		var tokens = classTokens(className);
+		for (var i = 0; i < tokens.length; i++) {
+			var match = STYLE_CLASS_PATTERN.exec(tokens[i]);
+			if (match) {
+				return match[1];
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * The className with a style applied. Replaces any style the block
+	 * already had, so a block carries at most one.
+	 *
+	 * @param {string}        className The block's className attribute
+	 * @param {number|string} styleId   Style id
+	 * @return {string} New className
+	 */
+	function applyStyleToClassName(className, styleId) {
+		var id = String(styleId === undefined || styleId === null ? '' : styleId);
+		var tokens = withoutStyleClasses(className);
+		if (/^[A-Za-z0-9_-]+$/.test(id)) {
+			tokens.push('typost-styled', 'typost-ps-' + id);
+		}
+		return tokens.join(' ');
+	}
+
+	/**
+	 * The className with the style removed (Detach).
+	 *
+	 * @param {string} className The block's className attribute
+	 * @return {string|undefined} New className, undefined when no class is
+	 *   left, so the attribute is dropped instead of saved as ""
+	 */
+	function removeStyleFromClassName(className) {
+		var tokens = withoutStyleClasses(className);
+		return tokens.length ? tokens.join(' ') : undefined;
+	}
+
+	/**
+	 * The stored style a reference names: by id, or by the legacy
+	 * `ps_…` id that migrated content can still carry.
+	 *
+	 * @param {Array}         styles Stored styles
+	 * @param {string|number} ref    Style reference
+	 * @return {Object|null} The style, or null when none matches
+	 */
+	function findStyleByRef(styles, ref) {
+		var key = String(ref === undefined || ref === null ? '' : ref);
+		if (!key) return null;
+		var list = styles || [];
+		for (var i = 0; i < list.length; i++) {
+			var style = list[i];
+			if (style && (String(style.id) === key || (style.legacyId && String(style.legacyId) === key))) {
+				return style;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Where a browser opened from a block toolbar applies.
+	 *
+	 * - The inline editor's toolbar (source 'inline') with text selected:
+	 *   the selection, through the inline route (a data-style-id span).
+	 * - The same toolbar with only a caret, in a core Paragraph or Heading:
+	 *   the whole block, through its className ('core-block').
+	 * - The same toolbar with only a caret in any other block: nothing to
+	 *   apply to (needsSelection). Those blocks take a style on selected
+	 *   text only, and a collapsed range would style nothing.
+	 * - The Typography Stylist block's toolbar: block-level through the
+	 *   'inspector' route, or the selection when one was captured.
+	 * A caller that names its editorSource (the panels) keeps it.
+	 *
+	 * @param {Object} context Toolbar click context (see HOOKS.md)
+	 * @param {Object} block   The selected block ({clientId, name}), or null
+	 * @return {Object} {editorSource, hasSelection, clientId, needsSelection}
+	 */
+	function resolveBrowserLaunch(context, block) {
+		var ctx = context || {};
+		if (ctx.editorSource) {
+			return {
+				editorSource: ctx.editorSource,
+				hasSelection: !!ctx.hasSelection,
+				clientId: ctx.clientId || null,
+				needsSelection: false,
+			};
+		}
+		if (ctx.source === 'inline') {
+			var start = ctx.savedSelectionStart;
+			var end = ctx.savedSelectionEnd;
+			var selected = typeof start === 'number' && typeof end === 'number' && start !== end;
+			if (!selected && block && isCoreStyleBlock(block.name)) {
+				return { editorSource: 'core-block', hasSelection: false, clientId: block.clientId || null, needsSelection: false };
+			}
+			return { editorSource: 'inline', hasSelection: true, clientId: null, needsSelection: !selected };
+		}
+		var captured = ctx.capturedSelection;
+		var hasSelection = ctx.hasSelection !== undefined
+			? !!ctx.hasSelection
+			: !!(captured && captured.start !== captured.end);
+		return { editorSource: 'inspector', hasSelection: hasSelection, clientId: null, needsSelection: false };
 	}
 
 	/**
@@ -1006,6 +1176,13 @@
 		roundLineHeight: roundLineHeight,
 		normalizeHang: normalizeHang,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
+		CORE_STYLE_BLOCKS: CORE_STYLE_BLOCKS,
+		isCoreStyleBlock: isCoreStyleBlock,
+		getCoreBlockStyleRef: getCoreBlockStyleRef,
+		applyStyleToClassName: applyStyleToClassName,
+		removeStyleFromClassName: removeStyleFromClassName,
+		findStyleByRef: findStyleByRef,
+		resolveBrowserLaunch: resolveBrowserLaunch,
 		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
 		BROWSER_GROUP_MODES: BROWSER_GROUP_MODES,
 		RECENT_STYLES_KEY: RECENT_STYLES_KEY,

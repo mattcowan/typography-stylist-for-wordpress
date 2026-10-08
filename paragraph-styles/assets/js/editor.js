@@ -53,6 +53,12 @@
 	var buildPropertiesForStyleSave = utils.buildPropertiesForStyleSave;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
+	var isCoreStyleBlock         = utils.isCoreStyleBlock;
+	var getCoreBlockStyleRef     = utils.getCoreBlockStyleRef;
+	var applyStyleToClassName    = utils.applyStyleToClassName;
+	var removeStyleFromClassName = utils.removeStyleFromClassName;
+	var findStyleByRef           = utils.findStyleByRef;
+	var resolveBrowserLaunch     = utils.resolveBrowserLaunch;
 
 	/**
 	 * Toolbar icon: a swash "P". Drawn as one of a set with core's swash "T"
@@ -128,6 +134,47 @@
 		document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
 			detail: buildApplyEventDetail(style, editorSource, detachProperties, applyTo),
 		}));
+	}
+
+	// -------------------------------------------------------------------------
+	// Styles on core Paragraph and Heading blocks (#219)
+	// -------------------------------------------------------------------------
+
+	// The block a toolbar button was clicked in: the selected block.
+	function getSelectedBlock() {
+		if (!window.wp || !wp.data || !wp.data.select) return null;
+		var store = wp.data.select('core/block-editor');
+		return store && store.getSelectedBlock ? store.getSelectedBlock() : null;
+	}
+
+	function getBlockClassName(clientId) {
+		if (!clientId || !window.wp || !wp.data) return '';
+		var attrs = wp.data.select('core/block-editor').getBlockAttributes(clientId);
+		return (attrs && attrs.className) || '';
+	}
+
+	/**
+	 * Apply a style to a whole core block (style), or detach it (null).
+	 *
+	 * The style lives in the block's className as `typost-styled
+	 * typost-ps-N`: core serializes className into the block comment and
+	 * the root element's class, so the block stays valid, and the
+	 * generator's block-level selector renders it. The block's own sidebar
+	 * settings are inline styles or `!important` preset classes, so they
+	 * still win over the style. One undo step, like any attribute change.
+	 */
+	function setCoreBlockStyle(clientId, style) {
+		if (!clientId || !window.wp || !wp.data) return;
+		var current = getBlockClassName(clientId);
+		var next = style ? applyStyleToClassName(current, style.id) : removeStyleFromClassName(current);
+		wp.data.dispatch('core/block-editor').updateBlockAttributes(clientId, { className: next });
+		if (style) {
+			// Core no longer loads every Adobe Fonts kit in the editor (#230)
+			var kits = window.typostFontKits;
+			if (kits && typeof kits.ensureFontIds === 'function' && style.properties) {
+				kits.ensureFontIds([style.properties.fontId]);
+			}
+		}
 	}
 
 	/**
@@ -618,7 +665,12 @@
 	 *   sampleText: string — the selected text; each row renders it in the
 	 *     style instead of the style name (buildBrowserSampleText falls back
 	 *     to the name when empty)
-	 *   editorSource: 'inspector' | 'inline'
+	 *   editorSource: 'inspector' | 'inline' | 'core-block'
+	 *   clientId: string — the core Paragraph/Heading a 'core-block'
+	 *     browser applies to (through its className)
+	 *   needsSelection: boolean — opened with only a caret in a block that
+	 *     takes a style on selected text only; shows how to proceed instead
+	 *     of the list
 	 *   onApplied: function(style|null) — optional, called before the apply
 	 *   onClose: function
 	 */
@@ -843,7 +895,8 @@
 		// neighbours just because they carry no explicit styling of their own.
 		// The inline editor is selection-scoped by nature, so it needs no
 		// applyTo flag; its host applies to the saved selection.
-		var applyTo = props.hasSelection && editorSource !== 'inline' ? 'selection' : undefined;
+		var applyTo = props.hasSelection && editorSource === 'inspector' ? 'selection' : undefined;
+		var isCoreBlock = editorSource === 'core-block';
 
 		var onApply = useCallback(function(style) {
 			setRecentIds(recordRecentStyleId(storageOrNull(), style.id));
@@ -851,13 +904,23 @@
 			// The launching panel first, so a cancel reported during the
 			// apply (typost-paragraph-style-apply-cancelled) lands after it
 			if (props.onApplied) props.onApplied(style);
-			dispatchApply(style, editorSource, undefined, applyTo);
+			if (isCoreBlock) {
+				setCoreBlockStyle(props.clientId, style);
+			} else {
+				dispatchApply(style, editorSource, undefined, applyTo);
+			}
 			props.onClose();
-		}, [props.onClose, props.onApplied, applyTo, editorSource]);
+		}, [props.onClose, props.onApplied, props.clientId, applyTo, editorSource, isCoreBlock]);
 
 		var onDetach = useCallback(function() {
 			setActiveStyleId(0);
 			if (props.onApplied) props.onApplied(null);
+			if (isCoreBlock) {
+				// The block keeps its own settings; only the class goes
+				setCoreBlockStyle(props.clientId, null);
+				props.onClose();
+				return;
+			}
 			if (applyTo === 'selection') {
 				// Strip the style from the selected text only
 				dispatchApply(null, editorSource, {}, applyTo);
@@ -869,7 +932,7 @@
 				: {};
 			dispatchApply(null, editorSource, buildPropertiesFromState(state));
 			props.onClose();
-		}, [props.onClose, props.onApplied, applyTo, editorSource, editorType]);
+		}, [props.onClose, props.onApplied, props.clientId, applyTo, editorSource, editorType, isCoreBlock]);
 
 		// One listbox option per style. The row itself is the option (no
 		// inner button): the listbox owns focus and points at the cursor row
@@ -933,7 +996,10 @@
 		}
 
 		var body;
-		if (currentStyles.length === 0) {
+		if (props.needsSelection) {
+			body = el('p', { className: 'typost-ps-browser-empty' },
+				__('Select the text to style first. A style applies to a whole block only in Paragraph and Heading blocks.', 'typost-paragraph-styles'));
+		} else if (currentStyles.length === 0) {
 			body = el('p', { className: 'typost-ps-browser-empty' },
 				__('No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel.', 'typost-paragraph-styles'));
 		} else if (filtered.length === 0) {
@@ -956,12 +1022,12 @@
 			onRequestClose: props.onClose,
 			className: 'typost-ps-browser-modal',
 		},
-			currentStyles.length > 0 && el('p', { className: 'typost-ps-browser-scope' },
+			!props.needsSelection && currentStyles.length > 0 && el('p', { className: 'typost-ps-browser-scope' },
 				props.hasSelection
 					? __('Applies to the selected text.', 'typost-paragraph-styles')
 					: __('Applies to the whole block.', 'typost-paragraph-styles')
 			),
-			currentStyles.length > 0 && el('div', { className: 'typost-ps-browser-search' },
+			!props.needsSelection && currentStyles.length > 0 && el('div', { className: 'typost-ps-browser-search' },
 				el(TextControl, {
 					label: __('Search styles', 'typost-paragraph-styles'),
 					type: 'search',
@@ -988,7 +1054,7 @@
 				})
 			),
 			body,
-			hiddenCount > 0 && el('div', { className: 'typost-ps-browser-more' },
+			!props.needsSelection && hiddenCount > 0 && el('div', { className: 'typost-ps-browser-more' },
 				el(Button, {
 					variant: 'secondary',
 					onClick: onShowMore,
@@ -998,7 +1064,7 @@
 					nextPageCount
 				))
 			),
-			activeStyleId ? el('div', { className: 'typost-ps-browser-footer' },
+			activeStyleId && !props.needsSelection ? el('div', { className: 'typost-ps-browser-footer' },
 				el(Button, {
 					variant: 'link',
 					isDestructive: true,
@@ -1044,12 +1110,20 @@
 			(window.typostHooks ? window.typostHooks.applyFilters('typost_current_editor_state', {}, 'qft') : {}) ||
 			{};
 
-		// A captured selection means the author highlighted text before opening
-		// the browser, so the style should wrap that text rather than the block.
+		// Where the browser applies (resolveBrowserLaunch): a captured
+		// selection wraps that text; a caret in a core Paragraph or Heading
+		// styles the whole block through its className; a caret in the
+		// Typography Stylist block styles that block.
 		var captured = context && context.capturedSelection;
-		var hasSelection = context && context.hasSelection !== undefined
-			? !!context.hasSelection
-			: !!(captured && captured.start !== captured.end);
+		var launch = resolveBrowserLaunch(context, context && context.source === 'inline' ? getSelectedBlock() : null);
+		var hasSelection = launch.hasSelection;
+
+		// A core block's style is in its className, not in editor state
+		var activeStyleId = resolveBrowserActiveStyleId(state, hasSelection);
+		if (launch.editorSource === 'core-block') {
+			var applied = findStyleByRef(getStyles(), getCoreBlockStyleRef(getBlockClassName(launch.clientId)));
+			activeStyleId = applied ? applied.id : 0;
+		}
 
 		// The text the rows render in each style. Both launchers hand it
 		// over: the block toolbar's click context carries selectedText (the
@@ -1064,17 +1138,137 @@
 			el(ParagraphStylesBrowser, {
 				// In selection scope the pressed row and Detach must describe
 				// the selection's own style, not the block's (see the helper).
-				activeStyleId: resolveBrowserActiveStyleId(state, hasSelection),
+				activeStyleId: activeStyleId,
 				hasSelection: hasSelection,
 				sampleText: sampleText,
-				// 'inline' when launched from the inline modal's panel; the
-				// toolbar button (block) keeps the 'inspector' route
-				editorSource: (context && context.editorSource) || 'inspector',
+				// 'inline' from the inline modal's panel or a selection in a
+				// core block, 'core-block' for a whole core block, else the
+				// Typography Stylist block's 'inspector' route
+				editorSource: launch.editorSource,
+				clientId: launch.clientId,
+				needsSelection: launch.needsSelection,
 				onApplied: context && context.onApplied,
 				onClose: closeBrowser,
 			}),
 			browserRoot
 		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Sidebar panel on core Paragraph and Heading blocks (#219)
+	// -------------------------------------------------------------------------
+
+	// Plain text of a block's content (a string, or RichTextData in WP 6.5+)
+	// for the browser's sample rows. DOMParser builds an inert document: an
+	// element of this document would load an <img> in the content, and run
+	// its onerror, even unattached.
+	function blockSampleText(content) {
+		if (!content || typeof DOMParser === 'undefined') return '';
+		var doc = new DOMParser().parseFromString(String(content), 'text/html');
+		return (doc.body && doc.body.textContent) || '';
+	}
+
+	/**
+	 * "Paragraph Style" panel in a core Paragraph or Heading block's
+	 * sidebar: the style the block carries, "Browse styles…" to apply or
+	 * change it, and Detach. Always present, so the feature does not depend
+	 * on the optional toolbar button.
+	 *
+	 * No "(modified)" badge: unlike a Typography Stylist block, a core block
+	 * keeps no copy of the style's values to compare — its own sidebar
+	 * settings are overrides by design.
+	 *
+	 * Props: clientId, className, content (the block's attributes)
+	 */
+	function CoreBlockStylePanel(props) {
+		var stylesState      = useState(getStyles());
+		var currentStyles    = stylesState[0];
+		var setCurrentStyles = stylesState[1];
+		var browseRef        = useRef(null);
+
+		useEffect(function() {
+			function onStylesUpdated() {
+				setCurrentStyles(getStyles());
+			}
+			document.addEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+			return function() {
+				document.removeEventListener('typost-paragraph-styles-updated', onStylesUpdated);
+			};
+		}, []);
+
+		var ref = getCoreBlockStyleRef(props.className);
+		var style = findStyleByRef(currentStyles, ref);
+
+		// Nothing to apply and nothing to detach
+		if (!ref && !currentStyles.length) {
+			return null;
+		}
+
+		function onBrowse() {
+			openBrowser({
+				editorSource: 'core-block',
+				clientId: props.clientId,
+				hasSelection: false,
+				selectedText: blockSampleText(props.content),
+			});
+		}
+
+		function onDetach() {
+			setCoreBlockStyle(props.clientId, null);
+			// Detach unmounts the button that was clicked; keep focus in the panel
+			if (browseRef.current && typeof browseRef.current.focus === 'function') {
+				browseRef.current.focus();
+			}
+		}
+
+		return el(wp.blockEditor.InspectorControls, null,
+			el(wp.components.PanelBody, {
+				title: __('Paragraph Style', 'typost-paragraph-styles'),
+				initialOpen: !!ref,
+				className: 'typost-ps-core-panel',
+			},
+				ref && el('div', { className: 'typost-ps-badge' },
+					el('span', { className: 'typost-ps-badge-name' },
+						style ? style.name : __('Missing style', 'typost-paragraph-styles')),
+					el('span', { className: 'typost-ps-badge-class' }, '.typost-ps-' + ref)
+				),
+				el('p', { className: 'typost-ps-core-help' },
+					__('The style applies to the whole block. The block’s own settings override it.', 'typost-paragraph-styles')),
+				el('div', { className: 'typost-ps-style-actions' },
+					el(Button, {
+						variant: 'secondary',
+						ref: browseRef,
+						onClick: onBrowse,
+						'aria-haspopup': 'dialog',
+					}, __('Browse styles…', 'typost-paragraph-styles')),
+					ref && el(Button, {
+						variant: 'link',
+						isDestructive: true,
+						onClick: onDetach,
+					}, __('Detach Style', 'typost-paragraph-styles'))
+				)
+			)
+		);
+	}
+
+	if (window.wp && wp.hooks && wp.compose && wp.blockEditor && wp.blockEditor.InspectorControls) {
+		var withCoreBlockStylePanel = wp.compose.createHigherOrderComponent(function(BlockEdit) {
+			return function(props) {
+				if (!props.isSelected || !isCoreStyleBlock(props.name)) {
+					return el(BlockEdit, props);
+				}
+				injectStyles();
+				return el(wp.element.Fragment, null,
+					el(BlockEdit, props),
+					el(CoreBlockStylePanel, {
+						clientId: props.clientId,
+						className: props.attributes && props.attributes.className,
+						content: props.attributes && props.attributes.content,
+					})
+				);
+			};
+		}, 'withTypostCoreBlockStylePanel');
+		wp.hooks.addFilter('editor.BlockEdit', 'typost/paragraph-styles-core-block', withCoreBlockStylePanel);
 	}
 
 	// -------------------------------------------------------------------------
@@ -1237,6 +1431,8 @@
 			'.typost-ps-browser-empty { color: #757575; margin: 0; }',
 			'.typost-ps-browser-scope { margin: 0 0 12px 0; font-size: 12px; color: #757575; }',
 			'.typost-ps-browser-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e0e0e0; }',
+			// Core Paragraph/Heading sidebar panel (#219)
+			'.typost-ps-core-help { font-size: 12px; color: #757575; margin: 0 0 12px; }',
 		].join('\n');
 
 		var styleEl = document.createElement('style');
@@ -1301,16 +1497,17 @@
 			}
 		}, 10);
 
-		// Optional direct-access button in the Typography Stylist block toolbar.
-		// Block-level only: a paragraph style describes a whole block, and the
-		// 'inspector' apply route it uses targets the selected block.
+		// Optional direct-access button, in the Typography Stylist block
+		// toolbar ('qft') and in the inline editor's toolbar on core blocks
+		// ('inline'). openBrowser() decides the scope from the click context:
+		// the selected text, or the whole block with only a caret.
 		if (toolbarButtonEnabled()) {
 			window.typostHooks.addFilter('typost_editor_toolbar_buttons', function(buttons) {
 				return buttons.concat([{
 					id: 'paragraph-styles',
 					icon: PSIcon,
 					label: __('Paragraph Styles', 'typost-paragraph-styles'),
-					editors: ['qft'],
+					editors: ['qft', 'inline'],
 					onClick: openBrowser,
 				}]);
 			}, 10);

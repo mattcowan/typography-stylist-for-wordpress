@@ -39,6 +39,7 @@ A paragraph style is a named set of typography settings, like a paragraph style 
 * Each style is one CSS class. Change a style and click “Update Style”. All text that uses the style then changes.
 * If the selected text already has its own settings, the editor asks before the style replaces them.
 * “Detach Style” changes styled text back to independent settings.
+* In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
 * Rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist.
 
 = Granular typography control =
@@ -240,6 +241,8 @@ When you delete a font, you can choose a replacement font. Content that used the
 2. Click “Save Current Settings as Style” and give the style a name.
 3. Select other text.
 4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
+
+To style a whole Paragraph or Heading block, open Paragraph Style in the block sidebar and click “Browse styles…”. The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove those two classes by hand; use “Detach Style” instead.
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. The style browser shows 24 styles at a time. A button under the list shows the next styles.
 

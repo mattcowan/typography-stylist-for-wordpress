@@ -878,7 +878,15 @@ describe('hanging initial (#242)', () => {
 			'.typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id="5"][data-style-id][data-style-id][data-style-id][data-style-id] {\n' +
 			'    font-family: var(--font-9);\n' +
 			'    --typost-hang: 0.12;\n' +
-			'}'
+			'}' +
+			// Core Paragraph/Heading rules (#219), only for a style with a hang
+			'\n\n.typost-styled.typost-ps-5:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {\n' +
+			'    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
+			'\n\n.typost-styled.typost-ps-5.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap) {\n' +
+			'    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-center {\n    --typost-hang-on: 0;\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}'
 		);
 		expect(buildStyleCssBlock({ id: 5, properties: { initialHang: 1 } })).toContain('--typost-hang: 1;');
 		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, initialHang: 0 } })).not.toContain('--typost-hang');
@@ -902,5 +910,128 @@ describe('buildPropertiesForStyleSave (Update Style / Save as New, #242 review)'
 	test('no base style, or a base without a hang, adds nothing', () => {
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, null)).not.toHaveProperty('initialHang');
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, { fontId: 1 })).not.toHaveProperty('initialHang');
+	});
+});
+
+describe('styles on core blocks (#219)', () => {
+	const {
+		isCoreStyleBlock,
+		getCoreBlockStyleRef,
+		applyStyleToClassName,
+		removeStyleFromClassName,
+		findStyleByRef,
+		resolveBrowserLaunch,
+	} = require('../assets/js/lib/ps-utils.js');
+
+	test('only Paragraph and Heading take a whole-block style', () => {
+		expect(isCoreStyleBlock('core/paragraph')).toBe(true);
+		expect(isCoreStyleBlock('core/heading')).toBe(true);
+		expect(isCoreStyleBlock('core/list-item')).toBe(false);
+		expect(isCoreStyleBlock('core/quote')).toBe(false);
+		expect(isCoreStyleBlock('typost/block')).toBe(false);
+		expect(isCoreStyleBlock(undefined)).toBe(false);
+	});
+
+	test('applying adds the two classes the block-level selector needs', () => {
+		expect(applyStyleToClassName(undefined, 5)).toBe('typost-styled typost-ps-5');
+		expect(applyStyleToClassName('', '5')).toBe('typost-styled typost-ps-5');
+	});
+
+	test('a theme block style variation and the author\'s own classes stay, in order', () => {
+		expect(applyStyleToClassName('is-style-outline my-class', 5))
+			.toBe('is-style-outline my-class typost-styled typost-ps-5');
+	});
+
+	test('applying replaces the style the block had, so it carries one', () => {
+		expect(applyStyleToClassName('is-style-outline typost-styled typost-ps-3 extra', 5))
+			.toBe('is-style-outline extra typost-styled typost-ps-5');
+		expect(applyStyleToClassName('typost-ps-ps_1709312345_123 typost-styled', 7))
+			.toBe('typost-styled typost-ps-7');
+	});
+
+	test('whitespace in the field is normalized', () => {
+		expect(applyStyleToClassName('  a   b ', 2)).toBe('a b typost-styled typost-ps-2');
+	});
+
+	test('an id that cannot be a class only strips the old style', () => {
+		expect(applyStyleToClassName('a typost-styled typost-ps-3', 'x y')).toBe('a');
+		expect(applyStyleToClassName('a', null)).toBe('a');
+	});
+
+	test('detach removes only the style classes', () => {
+		expect(removeStyleFromClassName('is-style-outline typost-styled typost-ps-5 mine')).toBe('is-style-outline mine');
+	});
+
+	test('detach drops the attribute when no class is left', () => {
+		expect(removeStyleFromClassName('typost-styled typost-ps-5')).toBeUndefined();
+		expect(removeStyleFromClassName(undefined)).toBeUndefined();
+	});
+
+	test('an empty prefix is not a style', () => {
+		expect(removeStyleFromClassName('typost-ps- mine')).toBe('typost-ps- mine');
+	});
+
+	test('reads the style reference from className', () => {
+		expect(getCoreBlockStyleRef('is-style-outline typost-styled typost-ps-12')).toBe('12');
+		expect(getCoreBlockStyleRef('typost-ps-ps_1709312345_123')).toBe('ps_1709312345_123');
+		expect(getCoreBlockStyleRef('my-typost-ps-5')).toBe('');
+		expect(getCoreBlockStyleRef(undefined)).toBe('');
+	});
+
+	test('a reference finds a style by id or legacy id, not by prefix', () => {
+		const styles = [
+			{ id: 5, name: 'Five' },
+			{ id: 50, name: 'Fifty' },
+			{ id: 9, legacyId: 'ps_1709312345_123', name: 'Migrated' },
+		];
+		expect(findStyleByRef(styles, '5').name).toBe('Five');
+		expect(findStyleByRef(styles, 50).name).toBe('Fifty');
+		expect(findStyleByRef(styles, 'ps_1709312345_123').name).toBe('Migrated');
+		expect(findStyleByRef(styles, '7')).toBeNull();
+		expect(findStyleByRef(styles, '')).toBeNull();
+		expect(findStyleByRef(null, '5')).toBeNull();
+	});
+
+	describe('resolveBrowserLaunch', () => {
+		const paragraph = { clientId: 'abc', name: 'core/paragraph' };
+		const listItem = { clientId: 'li', name: 'core/list-item' };
+
+		test('a caret in a core Paragraph applies to the whole block', () => {
+			expect(resolveBrowserLaunch({ source: 'inline', savedSelectionStart: 3, savedSelectionEnd: 3 }, paragraph))
+				.toEqual({ editorSource: 'core-block', hasSelection: false, clientId: 'abc', needsSelection: false });
+			expect(resolveBrowserLaunch({ source: 'inline', savedSelectionStart: null, savedSelectionEnd: null }, { clientId: 'h', name: 'core/heading' }).editorSource)
+				.toBe('core-block');
+		});
+
+		test('selected text in a core block still wraps only that text', () => {
+			expect(resolveBrowserLaunch({ source: 'inline', savedSelectionStart: 2, savedSelectionEnd: 6 }, paragraph))
+				.toEqual({ editorSource: 'inline', hasSelection: true, clientId: null, needsSelection: false });
+		});
+
+		test('a caret in another core block has nothing to apply to', () => {
+			expect(resolveBrowserLaunch({ source: 'inline', savedSelectionStart: 1, savedSelectionEnd: 1 }, listItem))
+				.toEqual({ editorSource: 'inline', hasSelection: true, clientId: null, needsSelection: true });
+			expect(resolveBrowserLaunch({ source: 'inline', savedSelectionStart: 1, savedSelectionEnd: 4 }, listItem).needsSelection)
+				.toBe(false);
+		});
+
+		test('the Typography Stylist block toolbar keeps the inspector route', () => {
+			expect(resolveBrowserLaunch({ source: 'qft', capturedSelection: { start: 1, end: 1 } }, null))
+				.toEqual({ editorSource: 'inspector', hasSelection: false, clientId: null, needsSelection: false });
+			expect(resolveBrowserLaunch({ source: 'qft', capturedSelection: { start: 1, end: 5 } }, null).hasSelection)
+				.toBe(true);
+			expect(resolveBrowserLaunch({ hasSelection: true }, null).hasSelection).toBe(true);
+		});
+
+		test('a caller that names its editorSource keeps it', () => {
+			expect(resolveBrowserLaunch({ editorSource: 'inline', hasSelection: true }, paragraph))
+				.toEqual({ editorSource: 'inline', hasSelection: true, clientId: null, needsSelection: false });
+			expect(resolveBrowserLaunch({ editorSource: 'core-block', clientId: 'abc' }, null))
+				.toEqual({ editorSource: 'core-block', hasSelection: false, clientId: 'abc', needsSelection: false });
+		});
+
+		test('no context falls back to the inspector route', () => {
+			expect(resolveBrowserLaunch(undefined, undefined).editorSource).toBe('inspector');
+		});
 	});
 });
