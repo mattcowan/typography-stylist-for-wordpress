@@ -83,6 +83,73 @@
 	container-type: inline-size;
 }
 
+/* Keep a fit-to-width block at full width when its parent sizes to its
+ * content (#243). Inline-size containment makes the container's natural
+ * width 0, so a parent that shrinks to fit (a column flex item with auto
+ * margins, which is how a sticky-footer theme centers the editor's root
+ * container, or a float) gives the block 0px and every cqi line size
+ * becomes 0. This empty line adds width only to the block's max-content
+ * size: one space, widened to 100vw by word-spacing, between two zero
+ * width spaces. A parent that shrinks to fit then grows to the available
+ * width, up to its own max-width. Its min-content size stays 0 (the line
+ * can break at the space, and a space at a line break takes no width), so
+ * a flex item, grid track or table cell can still shrink it and nothing
+ * overflows. contain-intrinsic-inline-size cannot do this: it sets the
+ * min-content size too, which made Row items and Media & Text overflow.
+ * The line is a zero-height float because a float is out of flow: an
+ * in-flow line (or an empty grid) between the wrapper and the styled
+ * heading stopped their top margins from collapsing and made the block
+ * taller wherever a theme gives the heading a margin. A float still adds
+ * to the parent's intrinsic width.
+ * The float still takes part in float placement, so the negative end
+ * margin is needed. A percentage margin counts as 0 when the parent
+ * computes its intrinsic width, so the max-content width stays 100vw. In
+ * layout, the float's width is capped by the wrapper's width W minus the
+ * margin, so with -1000% its outer width is min(11W, 100vw) - 10W, which is
+ * 0 or less when W is at least 10vw: the float fits beside any earlier
+ * float. (-100% was not enough: in a content column narrower than half the
+ * viewport the outer width came back to W.) A length margin such as -100vw
+ * cannot do this, because it counts in the intrinsic width and cancels the
+ * 100vw. Without the margin, the float was as wide as the wrapper: after an
+ * earlier float (an aligned image) it dropped below that float, every later
+ * float had to sit below it, and in Chromium the styled heading moved below
+ * the image too.
+ * The two spaces after the first escape are needed: CSS takes the first
+ * one as the end of the escape. "/ ''" keeps the text out of the
+ * accessibility tree. Not ::after, which the editor uses for the block
+ * outline.
+ * A Stack (vertical flex) sizes its items' width the same way, so it gets
+ * the line too. In a Row, only an item with no width setting gets it (see
+ * the flex rule below): its flex-basis is 0, so the line only makes the Row
+ * itself as wide as the space it has. A Grow item has flex-basis auto, so
+ * the line would become its basis and push its neighbors aside. A grid sizes
+ * its tracks itself. */
+:not(.is-layout-flex, .is-layout-grid) > .wp-block-typost:has(> .typost-fit)::before,
+.is-layout-flex.is-vertical > .wp-block-typost:has(> .typost-fit)::before,
+.is-layout-flex:not(.is-vertical) > .wp-block-typost:has(> .typost-fit):not([class*="wp-container-content-"])::before {
+	content: "\200B  \200B";
+	content: "\200B  \200B" / "";
+	float: left;
+	height: 0;
+	font-size: 0;
+	line-height: 0;
+	letter-spacing: 0;
+	word-spacing: 100vw;
+	margin-inline-end: -1000%;
+	text-indent: 0;
+	white-space: normal;
+	pointer-events: none;
+}
+
+/* In a Row, a fit-to-width block with no width setting fills the space the
+ * other items leave, as if its width were set to Grow: at its content size
+ * it would be 0px wide. A Grow or Fixed width gets a wp-container-content-*
+ * class from core (frontend and editor add it only when it carries CSS, so
+ * an explicit "Fit" has none), and core's rules then apply unchanged. */
+.is-layout-flex:not(.is-vertical) > .wp-block-typost:has(> .typost-fit):not([class*="wp-container-content-"]) {
+	flex: 1 1 0;
+}
+
 /* Each visual line is its own block-level, non-wrapping row; the <br>
  * separators are dropped from the fit markup.
  * font-optical-sizing is disabled because fit sizing stores one
