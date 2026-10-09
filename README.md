@@ -53,9 +53,9 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 
 ### Font Sizes That Grow with Browser Zoom (v2.3.2+)
 
-- A new responsive size is at least twice its size at 500% browser zoom, in windows from 320 to 1920px (WCAG 1.4.4 Resize Text).
+- A new responsive size is at least twice its size at 500% browser zoom, in windows from 320 to 1920px (WCAG 1.4.4 Resize Text). This assumes the default root font size of 16px.
 - When the Mobile / Intermediate / Large values you set would not double, the size grows more slowly, and a note under the sliders says what size it reaches in a 1920px window. For example, 16 / 16 / 120 reaches 64px.
-- A new fit-to-width heading grows with zoom too: when zoom makes its container narrower than 32rem (512px), each line keeps the size it has at 32rem and wraps. A heading that fills a 1280px window doubles by 500% zoom.
+- A new fit-to-width heading grows with zoom too. When zoom makes its container narrower than 32rem (512px), a line of two or more words grows and wraps between its words. It stops growing at the size it has in a 32rem container, or when its widest word fills the container. Thus no word is broken. A line of one word cannot wrap, so it keeps filling its container.
 - Content saved before version 2.3.2 looks the same.
 
 ### Glyphs Panel (built in)

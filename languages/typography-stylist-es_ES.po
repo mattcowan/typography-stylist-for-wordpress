@@ -2891,3 +2891,19 @@ msgstr "Cada línea se ajusta para ocupar todo el ancho del bloque, en directo m
 #, js-format
 msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx."
 msgstr "Para seguir siendo legible cuando un lector amplía la página, este tamaño crece más despacio de lo indicado: %1$spx en una ventana de 1920px en lugar de %2$spx. Para llegar a %2$spx, ajusta Tamaño Preferido a %3$spx como mínimo."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set."
+msgstr "Para seguir siendo legible cuando un lector amplía la página, este tamaño crece más despacio de lo indicado."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+msgid "This size does not double when a reader zooms to 500%."
+msgstr "Este tamaño no se duplica cuando un lector amplía la página al 500%."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx."
+msgstr "Este tamaño no se duplica cuando un lector amplía la página al 500%%. Ajusta Tamaño Máximo a %1$spx como máximo, o Tamaño Preferido a %2$spx como mínimo."

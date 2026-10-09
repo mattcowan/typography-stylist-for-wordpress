@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -449,6 +449,9 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			// selection inside semantic emphasis can't bake italic into a style.
 			explicitFontStyle: null,
 			fontSize: null,
+			// Unit the detected size is written in now (#233): the zoom notice
+			// (#234) describes px sizes that keep their slope differently
+			fontSizeUnit: null,
 			fontSizeMin: null,
 			fontSizePreferred: null,
 			fontSizeMax: null,
@@ -543,6 +546,12 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontSize = currentSpan.getAttribute('data-fontsize');
 				if (fontSize) {
 					result.fontSize = fontSize;
+					result.fontSizeUnit = resolveSpanFontSizeUnit({
+						sizeChanged: false,
+						spanStyle: currentSpan.getAttribute('style'),
+						styleId: currentSpan.getAttribute('data-style-id'),
+						styles: typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null
+					});
 					// Also get breakpoints if responsive
 					if (fontSize === 'responsive') {
 						const min = currentSpan.getAttribute('data-fontsize-min');
@@ -3117,24 +3126,92 @@ export function computeFitRatio(referenceSize, measuredWidth) {
  * The cap is entered in px and written in the block's unit (#233): px for
  * blocks saved before rem existed, rem for new blocks.
  *
- * New blocks (rem) also size the line from --typost-fit-width, which falls
+ * A new (rem) line also sizes itself from --typost-fit-width, which falls
  * back to 100cqi (#235). style.css sets it to a 32rem floor when browser
  * zoom has made the container narrow, so the line grows with zoom and
- * wraps instead of staying the same size on screen. Blocks saved before
- * keep calc(R * 100cqi).
+ * wraps at its spaces instead of staying the same size on screen. The word
+ * cap, calc(C * 100cqi), stops that growth where the line's widest word
+ * fills the container, so the wrap never has to break a word: C is W from
+ * computeFitWordRatio() (fitWordSizes) when W > R, and R otherwise. A line
+ * with C = R — one word, or W not measured yet — cannot grow without
+ * breaking a word or overflowing, so it keeps filling its container.
+ * At 100% zoom (no floor) var() is 100cqi and C >= R, so the size is
+ * R × 100cqi and the line fills its container exactly as before.
+ *
+ * Every rem line has the var() form, also with C = R: it keeps rem output
+ * distinct from px output, so a fit block saved before #233 with a
+ * styleClass (no block-level size) still matches the v2 deprecation and is
+ * migrated to px, rather than validating as a rem block. Px lines (blocks
+ * saved before #233) keep calc(R * 100cqi).
  *
  * @param {number} ratio - Per-line ratio from computeFitRatio()
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number} [wordRatio] - Per-line widest-word ratio (fitWordSizes)
  * @return {string} CSS font-size value, or '' when ratio is unusable
  */
-export function buildFitFontSize(ratio, fitMaxSize, unit) {
+export function buildFitFontSize(ratio, fitMaxSize, unit, wordRatio) {
 	if (!(ratio > 0)) {
 		return '';
 	}
-	const width = resolveFontSizeUnit(unit) === 'rem' ? 'var(--typost-fit-width, 100cqi)' : '100cqi';
-	const cqi = `calc(${ratio} * ${width})`;
-	return fitMaxSize > 0 ? `min(${cqi}, ${formatFontSizeLength(fitMaxSize, unit)})` : cqi;
+	const sizes = resolveFontSizeUnit(unit) === 'rem'
+		? [`calc(${ratio} * var(--typost-fit-width, 100cqi))`, `calc(${wordRatio > ratio ? wordRatio : ratio} * 100cqi)`]
+		: [`calc(${ratio} * 100cqi)`];
+	if (fitMaxSize > 0) {
+		sizes.push(formatFontSizeLength(fitMaxSize, unit));
+	}
+	return sizes.length > 1 ? `min(${sizes.join(', ')})` : sizes[0];
+}
+
+/**
+ * Classes for the fit-to-width measuring probe, from the block's visual
+ * heading in the editor canvas.
+ *
+ * The probe must inherit what the rendered line inherits: the theme's
+ * heading font, letter spacing, case and the paragraph style class. A probe
+ * on the canvas body inherited the body font instead, so in a theme whose
+ * headings use a different font every line of a fit block with no font of
+ * its own was measured too narrow and overflowed its column (4.1% on the
+ * test site). So the probe copies the heading's tag and classes, minus:
+ * - typost-fit: its inline-size containment makes the probe's natural
+ *   width 0;
+ * - typost-hang: an editor-only text-indent that would change the width
+ *   (the measurement accounts for hangs itself);
+ * - RichText and block-editor classes (rich-text, block-editor-*, is-*),
+ *   whose editor rules (white-space, min-width) are not frontend styles.
+ *
+ * @param {string} className - The heading's class attribute
+ * @return {string} Class attribute for the probe
+ */
+export function buildFitProbeClassName(className) {
+	return String(className || '')
+		.split(/\s+/)
+		.filter((name) => name && name !== 'typost-fit' && name !== 'typost-hang' && name !== 'rich-text' &&
+			!/^block-editor-/.test(name) && !/^is-/.test(name))
+		.join(' ');
+}
+
+/**
+ * Fit-to-width ratio for the widest word of a line (#235 word cap).
+ *
+ * The widest word is the line's min-content width: the widest run the
+ * browser cannot break, so a word split across inline spans counts as
+ * one. A hang of h em widens every row of the line by h × size, as in
+ * computeHungFitRatio(). Rounded DOWN to four decimals, unlike the line
+ * ratio: a word sized one rounding step too large would overflow its
+ * container when the line wraps.
+ *
+ * @param {number} referenceSize - Font size the line was measured at (px)
+ * @param {number} wordWidth - Min-content width of the line at that size (px)
+ * @param {number} hang - Hang in em (0 = none)
+ * @return {number|null} Ratio, or null when unmeasurable
+ */
+export function computeFitWordRatio(referenceSize, wordWidth, hang) {
+	const width = wordWidth - (normalizeHang(hang) * referenceSize);
+	if (!(referenceSize > 0) || !(width > 0)) {
+		return null;
+	}
+	return Math.floor((referenceSize / width) * 10000) / 10000;
 }
 
 /**
@@ -3150,14 +3227,16 @@ export function buildFitFontSize(ratio, fitMaxSize, unit) {
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (index = visual line; index 0 is unused, see buildFitLineOpenTag)
  * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number[]} [fitWordSizes] - Per-line widest-word ratios (see buildFitFontSize)
  * @return {string} HTML with each line wrapped in span.typost-line
  */
-export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) {
+export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit, fitWordSizes) {
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+	const words = Array.isArray(fitWordSizes) ? fitWordSizes : [];
 
 	return lines.map((lineHtml, i) => (
-		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit)}${lineHtml}</span>`
+		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit, words[i])}${lineHtml}</span>`
 	)).join('');
 }
 
@@ -3328,11 +3407,12 @@ export function buildFitLinePreviews(content, maxChars) {
  * @param {number[]} fitLineHangs - Per-line hangs in em
  * @param {number} index - Visual line index
  * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number} [wordRatio] - Widest-word ratio (fitWordSizes entry)
  * @return {string} Opening span tag
  */
-export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit) {
+export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit, wordRatio) {
 	const declarations = [];
-	const size = buildFitFontSize(ratio, fitMaxSize, unit);
+	const size = buildFitFontSize(ratio, fitMaxSize, unit, wordRatio);
 	if (size) {
 		declarations.push(`font-size:${size}`);
 	}
@@ -3364,20 +3444,22 @@ export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (lines 2+)
  * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number[]} [fitWordSizes] - Per-line widest-word ratios (see buildFitFontSize)
  * @return {string} Wrapped editing value for RichText
  */
-export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) {
+export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, unit, fitWordSizes) {
 	if (!content) {
 		return '';
 	}
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+	const words = Array.isArray(fitWordSizes) ? fitWordSizes : [];
 
 	return lines.map((lineHtml, i) => {
 		if (!lineHtml) {
 			return '';
 		}
-		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit)}${lineHtml}</span>`;
+		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit, words[i])}${lineHtml}</span>`;
 	}).join('<br>');
 }
 

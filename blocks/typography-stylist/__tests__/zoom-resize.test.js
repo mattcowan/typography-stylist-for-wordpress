@@ -233,13 +233,53 @@ describe('fit-to-width lines and zoom (#235)', () => {
 		expect(buildFitFontSize(0.1, 96, 'px')).toBe('min(calc(0.1 * 100cqi), 96px)');
 	});
 
-	it('sizes a new line from --typost-fit-width, which falls back to 100cqi', () => {
-		expect(buildFitFontSize(0.1, 0, 'rem')).toBe('calc(0.1 * var(--typost-fit-width, 100cqi))');
-		expect(buildFitFontSize(0.1, 96, 'rem')).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), 6rem)');
+	it('sizes a new line from --typost-fit-width, capped at its widest word', () => {
+		// Word cap from fitWordSizes when it is wider than the line ratio
+		expect(buildFitFontSize(0.1, 0, 'rem', 0.25)).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.25 * 100cqi))');
+		expect(buildFitFontSize(0.1, 96, 'rem', 0.25)).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.25 * 100cqi), 6rem)');
+	});
+
+	it('caps a line that cannot wrap at its own size', () => {
+		// One word (W <= R) or no word size yet: the cap is R, so the line
+		// never grows past its container and never breaks a word
+		expect(buildFitFontSize(0.1, 0, 'rem')).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.1 * 100cqi))');
+		expect(buildFitFontSize(0.1, 0, 'rem', 0.1)).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.1 * 100cqi))');
+		expect(buildFitFontSize(0.1, 0, 'rem', 0.0999)).toBe('min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.1 * 100cqi))');
 	});
 
 	it('saves the new expression on the lines of a new fit block', () => {
-		const html = JSON.stringify(visual({ fontSize: 'fit', fitLineSizes: [0.1] }));
-		expect(html).toContain('font-size:calc(0.1 * var(--typost-fit-width, 100cqi))');
+		const html = JSON.stringify(visual({ fontSize: 'fit', fitLineSizes: [0.1], fitWordSizes: [0.3] }));
+		expect(html).toContain('font-size:min(calc(0.1 * var(--typost-fit-width, 100cqi)), calc(0.3 * 100cqi))');
+	});
+
+	it('computes the word ratio from the min-content width, rounded down', () => {
+		const { computeFitWordRatio, computeHungFitRatio } = require('../utils');
+		// 100 / 300 = 0.33333…: floored, where the line ratio rounds
+		expect(computeFitWordRatio(100, 300, 0)).toBe(0.3333);
+		expect(computeFitWordRatio(100, 150, 0)).toBe(0.6666);
+		expect(computeHungFitRatio(100, 150, 0)).toBe(0.6667);
+		// A hang widens every row of the line by h em, as for the line ratio
+		expect(computeFitWordRatio(100, 300, 0.5)).toBe(0.4);
+		expect(computeFitWordRatio(100, 0, 0)).toBeNull();
+		expect(computeFitWordRatio(0, 300, 0)).toBeNull();
+		expect(computeFitWordRatio(100, 40, 0.5)).toBeNull();
+	});
+});
+
+describe('fit measurement probe classes (review of #250)', () => {
+	const { buildFitProbeClassName } = require('../utils');
+
+	it('keeps the classes the rendered heading styles come from', () => {
+		expect(buildFitProbeClassName('typost-block-content typost-styled typost-ps-4')).toBe('typost-block-content typost-styled typost-ps-4');
+	});
+
+	it('drops fit containment, the editor hang indent, and editor-only classes', () => {
+		expect(buildFitProbeClassName('block-editor-rich-text__editable typost-block-content typost-fit typost-hang rich-text is-selected typost-styled'))
+			.toBe('typost-block-content typost-styled');
+	});
+
+	it('handles a missing class attribute', () => {
+		expect(buildFitProbeClassName(null)).toBe('');
+		expect(buildFitProbeClassName('')).toBe('');
 	});
 });

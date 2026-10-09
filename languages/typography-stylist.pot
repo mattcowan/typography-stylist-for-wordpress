@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T19:13:21+00:00\n"
+"POT-Creation-Date: 2026-10-09T15:07:14+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typography-stylist\n"
@@ -18,8 +18,8 @@ msgstr ""
 #: typography-stylist.php
 #: typography-stylist.php:1274
 #: typography-stylist.php:1275
-#: assets/js/block-editor.js:3315
-#: assets/js/block-editor.js:3852
+#: assets/js/block-editor.js:3403
+#: assets/js/block-editor.js:3943
 msgid "Typography Stylist"
 msgstr ""
 
@@ -44,56 +44,56 @@ msgid "https://mnc4.com"
 msgstr ""
 
 #: includes/admin-page.php:34
-#: assets/js/block-editor.js:2858
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2946
+#: blocks/typography-stylist/build/index.js:5
 msgid "100 (Thin)"
 msgstr ""
 
 #: includes/admin-page.php:35
-#: assets/js/block-editor.js:2859
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2947
+#: blocks/typography-stylist/build/index.js:5
 msgid "200 (Extra Light)"
 msgstr ""
 
 #: includes/admin-page.php:36
-#: assets/js/block-editor.js:2860
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2948
+#: blocks/typography-stylist/build/index.js:5
 msgid "300 (Light)"
 msgstr ""
 
 #: includes/admin-page.php:37
-#: assets/js/block-editor.js:2861
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2949
+#: blocks/typography-stylist/build/index.js:5
 msgid "400 (Normal)"
 msgstr ""
 
 #: includes/admin-page.php:38
-#: assets/js/block-editor.js:2862
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2950
+#: blocks/typography-stylist/build/index.js:5
 msgid "500 (Medium)"
 msgstr ""
 
 #: includes/admin-page.php:39
-#: assets/js/block-editor.js:2863
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2951
+#: blocks/typography-stylist/build/index.js:5
 msgid "600 (Semi Bold)"
 msgstr ""
 
 #: includes/admin-page.php:40
-#: assets/js/block-editor.js:2864
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2952
+#: blocks/typography-stylist/build/index.js:5
 msgid "700 (Bold)"
 msgstr ""
 
 #: includes/admin-page.php:41
-#: assets/js/block-editor.js:2865
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2953
+#: blocks/typography-stylist/build/index.js:5
 msgid "800 (Extra Bold)"
 msgstr ""
 
 #: includes/admin-page.php:42
-#: assets/js/block-editor.js:2866
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:2954
+#: blocks/typography-stylist/build/index.js:5
 msgid "900 (Black)"
 msgstr ""
 
@@ -197,7 +197,7 @@ msgid "Uploaded"
 msgstr ""
 
 #: includes/admin-page.php:418
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Custom"
 msgstr ""
 
@@ -282,8 +282,8 @@ msgstr ""
 #: includes/admin-page.php:574
 #: includes/admin-page.php:630
 #: includes/admin-page.php:1736
-#: assets/js/block-editor.js:3730
-#: blocks/typography-stylist/build/index.js:5
+#: assets/js/block-editor.js:3821
+#: blocks/typography-stylist/build/index.js:7
 msgid "Cancel"
 msgstr ""
 
@@ -364,7 +364,7 @@ msgid "Options"
 msgstr ""
 
 #: includes/admin-page.php:713
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Accessibility"
 msgstr ""
 
@@ -1236,9 +1236,9 @@ msgid "Delete Font"
 msgstr ""
 
 #: includes/admin-page.php:1711
-#: assets/js/block-editor.js:3324
-#: assets/js/block-editor.js:3758
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3412
+#: assets/js/block-editor.js:3849
+#: blocks/typography-stylist/build/index.js:5
 msgid "Close"
 msgstr ""
 
@@ -1621,56 +1621,56 @@ msgid "Too many requests. Please try again later."
 msgstr ""
 
 #: typography-stylist.php:2612
-#: assets/js/block-editor.js:3833
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3924
+#: blocks/typography-stylist/build/index.js:5
 msgid "Ligatures"
 msgstr ""
 
 #: typography-stylist.php:2613
-#: assets/js/block-editor.js:3834
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3925
+#: blocks/typography-stylist/build/index.js:5
 msgid "Stylistic Sets"
 msgstr ""
 
 #: typography-stylist.php:2614
-#: assets/js/block-editor.js:3835
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3926
+#: blocks/typography-stylist/build/index.js:5
 msgid "Swashes & Alternates"
 msgstr ""
 
 #: typography-stylist.php:2615
-#: assets/js/block-editor.js:3836
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3927
+#: blocks/typography-stylist/build/index.js:5
 msgid "Decorative"
 msgstr ""
 
 #: typography-stylist.php:2616
-#: assets/js/block-editor.js:3837
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3928
+#: blocks/typography-stylist/build/index.js:5
 msgid "Numerals & Figures"
 msgstr ""
 
 #: typography-stylist.php:2617
-#: assets/js/block-editor.js:3838
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3929
+#: blocks/typography-stylist/build/index.js:5
 msgid "Capitals & Case"
 msgstr ""
 
 #: typography-stylist.php:2618
-#: assets/js/block-editor.js:3839
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3930
+#: blocks/typography-stylist/build/index.js:5
 msgid "Positional Forms"
 msgstr ""
 
 #: typography-stylist.php:2619
-#: assets/js/block-editor.js:3840
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3931
+#: blocks/typography-stylist/build/index.js:5
 msgid "Superscript & Ordinals"
 msgstr ""
 
 #: typography-stylist.php:2620
-#: assets/js/block-editor.js:3841
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3932
+#: blocks/typography-stylist/build/index.js:5
 msgid "Other Features"
 msgstr ""
 
@@ -2245,592 +2245,630 @@ msgid "Settings saved successfully."
 msgstr ""
 
 #. translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16)
-#: assets/js/block-editor.js:32
-#: blocks/typography-stylist/build/index.js:2
+#: assets/js/block-editor.js:33
+#: blocks/typography-stylist/build/index.js:4
 #, js-format
 msgid "%1$spx (%2$srem)"
 msgstr ""
 
-#: assets/js/block-editor.js:1648
-#: assets/js/block-editor.js:3396
+#: assets/js/block-editor.js:58
+#: blocks/typography-stylist/build/index.js:1
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set."
+msgstr ""
+
+#: assets/js/block-editor.js:59
+#: blocks/typography-stylist/build/index.js:1
+msgid "This size does not double when a reader zooms to 500%."
+msgstr ""
+
+#. translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size
+#: assets/js/block-editor.js:71
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx."
+msgstr ""
+
+#. translators: 1: the largest Maximum font size in px that doubles with zoom, 2: the smallest Preferred size in px that doubles with zoom
+#: assets/js/block-editor.js:78
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx."
+msgstr ""
+
+#: assets/js/block-editor.js:1697
+#: assets/js/block-editor.js:3484
 msgid "Accessibility Notice"
 msgstr ""
 
-#: assets/js/block-editor.js:1682
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:1731
+#: blocks/typography-stylist/build/index.js:5
 msgid "Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?"
 msgstr ""
 
-#: assets/js/block-editor.js:2037
+#: assets/js/block-editor.js:2113
 msgid "Conversion is available for heading and paragraph blocks."
 msgstr ""
 
-#: assets/js/block-editor.js:2041
+#: assets/js/block-editor.js:2117
 msgid "This block can’t be converted to a Typography Stylist block because it is locked, or part of a locked template or pattern."
 msgstr ""
 
-#: assets/js/block-editor.js:2047
+#: assets/js/block-editor.js:2123
 #, js-format
 msgid "This block can’t be converted here. The parent %s block only allows certain blocks inside it. Move the block out of it to convert."
 msgstr ""
 
-#: assets/js/block-editor.js:2052
+#: assets/js/block-editor.js:2128
 msgid "This block can’t be converted here. Its parent block only allows certain blocks inside it. Move the block out of it to convert."
 msgstr ""
 
-#: assets/js/block-editor.js:2146
+#: assets/js/block-editor.js:2222
 msgid "Your selection breaks a word boundary. Screen readers usually read inline spans correctly. For the best accessibility, convert this block to a Typography Stylist block, which adds dedicated screen reader text."
 msgstr ""
 
-#: assets/js/block-editor.js:2351
-#: assets/js/block-editor.js:2396
+#: assets/js/block-editor.js:2427
+#: assets/js/block-editor.js:2472
 msgid "Block could not be converted. Features were applied directly."
 msgstr ""
 
 #. translators: %s: OpenType feature name.
-#: assets/js/block-editor.js:2964
+#: assets/js/block-editor.js:3052
 #, js-format
 msgid "Apply the %s feature"
 msgstr ""
 
 #. translators: %s: OpenType feature name.
-#: assets/js/block-editor.js:2965
+#: assets/js/block-editor.js:3053
 #, js-format
 msgid "Click to apply %s"
 msgstr ""
 
-#: assets/js/block-editor.js:3243
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3331
+#: blocks/typography-stylist/build/index.js:5
 msgid "Typography Stylist Features"
 msgstr ""
 
-#: assets/js/block-editor.js:3318
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3406
+#: blocks/typography-stylist/build/index.js:5
 msgid "Move panel, use arrow keys"
 msgstr ""
 
-#: assets/js/block-editor.js:3362
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3450
+#: blocks/typography-stylist/build/index.js:5
 msgid "Tip: Drag the title bar to reposition this panel."
 msgstr ""
 
-#: assets/js/block-editor.js:3365
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3453
+#: blocks/typography-stylist/build/index.js:5
 msgid "Changes apply instantly. Press Ctrl+Z (Cmd+Z on Mac) to undo."
 msgstr ""
 
-#: assets/js/block-editor.js:3370
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3458
+#: blocks/typography-stylist/build/index.js:5
 msgid "Dismiss tip"
 msgstr ""
 
-#: assets/js/block-editor.js:3400
-#: assets/js/block-editor.js:3691
+#: assets/js/block-editor.js:3488
+#: assets/js/block-editor.js:3782
 msgid "Convert to Typography Stylist Block"
 msgstr ""
 
-#: assets/js/block-editor.js:3408
+#: assets/js/block-editor.js:3496
 msgid "Manage accessibility settings"
 msgstr ""
 
-#: assets/js/block-editor.js:3430
+#: assets/js/block-editor.js:3518
 msgid "Font could not be detected for this block type."
 msgstr ""
 
-#: assets/js/block-editor.js:3433
+#: assets/js/block-editor.js:3521
 msgid "For the best experience with OpenType features, consider using the Typography Stylist block instead of the inline toolbar."
 msgstr ""
 
-#: assets/js/block-editor.js:3441
-#: assets/js/block-editor.js:3445
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3529
+#: assets/js/block-editor.js:3533
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Family"
 msgstr ""
 
-#: assets/js/block-editor.js:3447
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3535
+#: blocks/typography-stylist/build/index.js:5
 msgid "(Default)"
 msgstr ""
 
-#: assets/js/block-editor.js:3458
+#: assets/js/block-editor.js:3546
 msgid "This WordPress Font Library font could not be added. Please try again."
 msgstr ""
 
-#: assets/js/block-editor.js:3491
-#: assets/js/block-editor.js:3496
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3579
+#: assets/js/block-editor.js:3584
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Weight"
 msgstr ""
 
-#: assets/js/block-editor.js:3519
-#: assets/js/block-editor.js:3521
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3607
+#: assets/js/block-editor.js:3609
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Style"
 msgstr ""
 
-#: assets/js/block-editor.js:3525
-#: assets/js/block-editor.js:3542
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3613
+#: assets/js/block-editor.js:3630
+#: blocks/typography-stylist/build/index.js:5
 msgid "Inherit"
 msgstr ""
 
-#: assets/js/block-editor.js:3526
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3614
+#: blocks/typography-stylist/build/index.js:5
 msgid "Normal (upright)"
 msgstr ""
 
-#: assets/js/block-editor.js:3527
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3615
+#: blocks/typography-stylist/build/index.js:5
 msgid "Italic"
 msgstr ""
 
-#: assets/js/block-editor.js:3530
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3618
+#: blocks/typography-stylist/build/index.js:5
 msgid "Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead."
 msgstr ""
 
-#: assets/js/block-editor.js:3536
-#: assets/js/block-editor.js:3538
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3624
+#: assets/js/block-editor.js:3626
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size"
 msgstr ""
 
-#: assets/js/block-editor.js:3543
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3631
+#: blocks/typography-stylist/build/index.js:5
 msgid "Responsive (Fluid)"
 msgstr ""
 
-#: assets/js/block-editor.js:3548
+#: assets/js/block-editor.js:3636
 msgid "Fit to Width (blocks only)"
 msgstr ""
 
-#: assets/js/block-editor.js:3552
+#: assets/js/block-editor.js:3640
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr ""
 
-#: assets/js/block-editor.js:3554
+#: assets/js/block-editor.js:3642
 msgid "This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead."
 msgstr ""
 
-#: assets/js/block-editor.js:3561
+#: assets/js/block-editor.js:3649
 msgid "Minimum Size (mobile)"
 msgstr ""
 
-#: assets/js/block-editor.js:3570
+#: assets/js/block-editor.js:3658
 msgid "Preferred Size (tablet)"
 msgstr ""
 
-#: assets/js/block-editor.js:3579
+#: assets/js/block-editor.js:3667
 msgid "Maximum Size (desktop)"
 msgstr ""
 
-#: assets/js/block-editor.js:3593
+#: assets/js/block-editor.js:3681
 msgid "Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior."
 msgstr ""
 
-#: assets/js/block-editor.js:3602
-#: assets/js/block-editor.js:3604
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3693
+#: assets/js/block-editor.js:3695
+#: blocks/typography-stylist/build/index.js:5
 msgid "Line Height"
 msgstr ""
 
-#: assets/js/block-editor.js:3611
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3702
+#: blocks/typography-stylist/build/index.js:5
 msgid "Currently using browser default"
 msgstr ""
 
-#: assets/js/block-editor.js:3617
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3708
+#: blocks/typography-stylist/build/index.js:5
 msgid "Browser default"
 msgstr ""
 
-#: assets/js/block-editor.js:3623
-#: assets/js/block-editor.js:3625
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3714
+#: assets/js/block-editor.js:3716
+#: blocks/typography-stylist/build/index.js:5
 msgid "Letter Spacing"
 msgstr ""
 
-#: assets/js/block-editor.js:3632
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3723
+#: blocks/typography-stylist/build/index.js:5
 msgid "Normal"
 msgstr ""
 
-#: assets/js/block-editor.js:3641
+#: assets/js/block-editor.js:3732
 msgid "Quick Presets"
 msgstr ""
 
-#: assets/js/block-editor.js:3658
+#: assets/js/block-editor.js:3749
 msgid "Individual Features"
 msgstr ""
 
-#: assets/js/block-editor.js:3694
+#: assets/js/block-editor.js:3785
 msgid "Converts this heading or paragraph into a Typography Stylist block, which adds screen reader text and block-level typography controls."
 msgstr ""
 
-#: assets/js/block-editor.js:3712
+#: assets/js/block-editor.js:3803
 msgid "Clear All Typography Settings?"
 msgstr ""
 
-#: assets/js/block-editor.js:3715
+#: assets/js/block-editor.js:3806
 msgid "This will remove all typography features, font selections, and styling."
 msgstr ""
 
-#: assets/js/block-editor.js:3718
+#: assets/js/block-editor.js:3809
 msgid "Do not show this warning again (this session)"
 msgstr ""
 
-#: assets/js/block-editor.js:3726
+#: assets/js/block-editor.js:3817
 msgid "Clear All Settings"
 msgstr ""
 
-#: assets/js/block-editor.js:3752
-#: blocks/typography-stylist/build/index.js:3
+#: assets/js/block-editor.js:3843
+#: blocks/typography-stylist/build/index.js:5
 msgid "Clear"
 msgstr ""
 
-#. translators: %d: maximum number of nested styled spans
+#. translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx."
+msgstr ""
+
+#. translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom
 #: blocks/typography-stylist/build/index.js:3
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx."
+msgstr ""
+
+#. translators: %d: maximum number of nested styled spans
+#: blocks/typography-stylist/build/index.js:5
 #, js-format
 msgid "Maximum nesting depth (%d) reached. Select the whole styled text to change it."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "The styling could not be applied to this selection."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Inherit from block"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Quick Feature Toggles"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Family (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Select a font…"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Font Family"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Weight (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Font Weight"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Style (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Font Style"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Responsive (fluid)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Relative size (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Full line size"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Relative Size"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Vertical shift (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "On the baseline"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Vertical Shift"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Mobile (320px+)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Intermediate"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Large (1920px)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Reset Font Size"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Line Height (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Letter Spacing (for selected text)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Active Features:"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Clear All"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Change heading level"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 1"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 2"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 3"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 4"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 5"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Heading 6"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Paragraph"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Div"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Help & Tips"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "The Typography Stylist block provides two levels of control:"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Sidebar controls:"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Apply settings to the entire block (font, size, weight, features)."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Quick Feature Toggles:"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "To style individual words or phrases, select the text and click “Typography Stylist Features” in the block toolbar."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "The block automatically adds a plain text copy of its content for screen readers. No extra setup is needed."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Tip: By default, fonts added in Settings → Typography Stylist load only on pages that use them."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Fit to width"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
+msgid "Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:5
 msgid "Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Maximum font size"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Cap how large short lines can grow on wide screens."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Maximum size (px)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Fallback size for browsers without container query support:"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Mobile (320px and up)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Large (up to 1920px)"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "This control applies line height to the entire block. To change the line height of selected text, select it and click “Typography Stylist Features” in the block toolbar."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "This control applies letter spacing to the entire block. To change the letter spacing of selected text, select it and click “Typography Stylist Features” in the block toolbar."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "First Letter Hang"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Moves the first letter of a line into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Each line has its own value."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:5
 msgid "Moves the first letter into the margin, so a swash hangs outside the text edge and the main shape of the letter lines up with the edge. The value is in em: 0.1 is one tenth of the font size, so the hang scales with the text. Only the first line hangs."
 msgstr ""
 
 #. translators: 1: line number, 2: start of the line's text.
-#: blocks/typography-stylist/build/index.js:4
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:6
+#: blocks/typography-stylist/build/index.js:7
 #, js-format
 msgid "Line %1$d: %2$s"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:4
+#: blocks/typography-stylist/build/index.js:6
 msgid "First letter"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:4
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:6
+#: blocks/typography-stylist/build/index.js:7
 msgid "Off"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "OpenType Features"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "OpenType features are advanced typographic capabilities built into font files, like ligatures and stylistic alternates. Not all fonts support all features."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "These controls apply features to the entire block. To apply features to selected text, select it and click “Typography Stylist Features” in the block toolbar."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Screen Reader Class"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Custom Class Name"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Enter your theme’s screen reader class."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "The selected class hides the screen reader copy of the text from view. The plugin includes styles for visually-hidden, sr-only, and screen-reader-text. For a custom class, make sure your theme defines it."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Reset Features"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Clear features and styling applied to this block."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Are you sure?"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "This will remove all inline features (typost-styled spans) from this block. Block-level settings will remain."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Yes, Clear"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Reset Entire Block?"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac)."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Yes, Reset All"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Clear Individual Features"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Removes all inline features (typost-styled spans) but keeps block-level settings."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Reset Entire Block"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Clears the inline features and the block-level settings (font, features, spacing, and more)."
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:5
+#: blocks/typography-stylist/build/index.js:7
 msgid "Add text with advanced typography…"
 msgstr ""
 
@@ -2867,26 +2905,4 @@ msgstr ""
 #: blocks/typography-stylist/block.json
 msgctxt "block keyword"
 msgid "accessibility"
-msgstr ""
-
-#. translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size
-#: blocks/typography-stylist/build/index.js:2
-#, js-format
-msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx."
-msgstr ""
-
-#. translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom
-#: blocks/typography-stylist/build/index.js:2
-#, js-format
-msgid "This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx."
-msgstr ""
-
-#: blocks/typography-stylist/build/index.js:3
-msgid "Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored."
-msgstr ""
-
-#. translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size
-#: assets/js/block-editor.js:49
-#, js-format
-msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx."
 msgstr ""

@@ -79,6 +79,10 @@
 			"type": "number",
 			"default": 0
 		},
+		"fitWordSizes": {
+			"type": "array",
+			"default": []
+		},
 		"initialHang": {
 			"type": "number",
 			"default": 0
