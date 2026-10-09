@@ -69,7 +69,15 @@ class ParagraphStylesCssSelectorTest extends TestCase {
         $expected = ".typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id=\"5\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n"
             . "    font-family: var(--font-9);\n"
             . "    --typost-hang: 0.12;\n"
-            . "}";
+            . "}"
+            // Core Paragraph/Heading rules (#219), only for a style with a hang
+            . "\n\n.typost-styled.typost-ps-5:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {\n"
+            . "    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}"
+            . "\n\n.typost-styled.typost-ps-5.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap) {\n"
+            . "    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}"
+            . "\n\n.typost-styled.typost-ps-5.has-text-align-center {\n    --typost-hang-on: 0;\n}"
+            . "\n\n.typost-styled.typost-ps-5.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}"
+            . "\n\n.typost-styled.typost-ps-5.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}";
         $this->assertSame($expected, $css);
 
         $whole = $module->generate_style_css(['id' => 5, 'properties' => ['initialHang' => 1]]);
@@ -77,6 +85,7 @@ class ParagraphStylesCssSelectorTest extends TestCase {
 
         $off = $module->generate_style_css(['id' => 5, 'properties' => ['fontId' => 9, 'initialHang' => 0]]);
         $this->assertStringNotContainsString('--typost-hang', $off);
+        $this->assertStringNotContainsString('::first-letter', $off);
     }
 
     public function test_legacy_ids_get_the_same_boosted_variants() {

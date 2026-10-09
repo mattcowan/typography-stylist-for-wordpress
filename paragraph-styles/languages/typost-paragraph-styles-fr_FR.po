@@ -351,3 +351,15 @@ msgstr "Taille héritée"
 #: includes/admin-tab.php:237
 msgid "First Letter Hang:"
 msgstr "Débord de la première lettre :"
+
+#: assets/js/editor.js:1001
+msgid "Select the text to style first. A style applies to a whole block only in Paragraph and Heading blocks."
+msgstr "Sélectionnez d’abord le texte à styliser. Un style ne s’applique à un bloc entier que dans les blocs Paragraphe et Titre."
+
+#: assets/js/editor.js:1231
+msgid "Missing style"
+msgstr "Style introuvable"
+
+#: assets/js/editor.js:1235
+msgid "The style applies to the whole block. The block’s own settings override it."
+msgstr "Le style s’applique à tout le bloc. Les réglages propres du bloc l’emportent sur lui."

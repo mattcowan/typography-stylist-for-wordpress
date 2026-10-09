@@ -379,11 +379,51 @@ final class Typost_Paragraph_Styles {
 			);
 		}
 
-		return sprintf(
+		$css = sprintf(
 			"%s {\n    %s;\n}",
 			$selector,
 			implode( ";\n    ", $css_rules )
 		);
+
+		if ( $hang > 0 ) {
+			$css .= self::core_block_hang_css( $id );
+		}
+
+		return $css;
+	}
+
+	/**
+	 * The First Letter Hang rules for a style on core blocks (#219).
+	 *
+	 * The style's main rule sets `--typost-hang`, and core's block style.css
+	 * consumes it only inside a Typography Stylist block. A core Paragraph
+	 * or Heading carrying the style class needs its own rules, so a style
+	 * with a hang adds them (a style without one adds nothing, which keeps
+	 * a theme's `::first-letter` margin and paragraph indent untouched):
+	 *  - frontend: `::first-letter` gets the negative start margin;
+	 *  - editor (`.block-editor-rich-text__editable`): `text-indent`, because
+	 *    `::first-letter` on a contenteditable puts Home after the first
+	 *    letter in Chromium (the reason style.css uses text-indent there);
+	 *  - centered and end-aligned blocks (core's `has-text-align-*` classes)
+	 *    turn the hang off, as the Typography Stylist block does for its
+	 *    inline text-align. Separate rules, so a browser without `:dir()`
+	 *    drops only those.
+	 * Typography Stylist block content (`.wp-block-typost *`) is left to
+	 * style.css, and a drop cap wins over a hang. buildStyleCssBlock() in
+	 * ps-utils.js emits the same text.
+	 *
+	 * @param int $id Style id.
+	 * @return string CSS, starting with a blank line.
+	 */
+	private static function core_block_hang_css( $id ) {
+		$cls    = '.typost-styled.typost-ps-' . intval( $id );
+		$amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
+		$tags   = ':is(p, h1, h2, h3, h4, h5, h6)';
+		return "\n\n" . $cls . $tags . ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {' . "\n    margin-inline-start: " . $amount . ";\n}"
+			. "\n\n" . $cls . '.block-editor-rich-text__editable' . $tags . ':not(.wp-block-typost *, .has-drop-cap) {' . "\n    text-indent: " . $amount . ";\n}"
+			. "\n\n" . $cls . ".has-text-align-center {\n    --typost-hang-on: 0;\n}"
+			. "\n\n" . $cls . ".has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}"
+			. "\n\n" . $cls . ".has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}";
 	}
 
 	/**
@@ -1073,7 +1113,7 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/editor.js',
-			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch' ),
+			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor' ),
 			TYPOST_PS_VERSION,
 			true
 		);

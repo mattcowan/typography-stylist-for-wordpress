@@ -118,6 +118,15 @@ class ParagraphStylesFrontendCssTest extends TestCase {
         $this->assertSame(['3', '5'], $this->printedIds($css));
     }
 
+    public function test_a_style_used_only_by_a_core_block_class_prints_its_rule() {
+        // #219: Paragraph and Heading blocks carry the style in className
+        $this->singular('<!-- wp:paragraph {"className":"is-style-outline typost-styled typost-ps-4"} -->'
+            . '<p class="is-style-outline typost-styled typost-ps-4">Body</p><!-- /wp:paragraph -->');
+        $module = $this->freshInstance();
+
+        $this->assertSame(['4'], $this->printedIds($this->head($module)));
+    }
+
     public function test_the_rules_are_the_same_text_get_all_css_prints() {
         $this->singular('<span data-style-id="3">a</span><span data-style-id="5">b</span>');
         $module = $this->freshInstance();

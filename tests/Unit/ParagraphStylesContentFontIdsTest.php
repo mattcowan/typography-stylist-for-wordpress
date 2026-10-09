@@ -51,6 +51,24 @@ class ParagraphStylesContentFontIdsTest extends TestCase {
         $this->assertSame([1], $ids);
     }
 
+    public function test_a_core_paragraph_or_heading_with_the_style_in_its_class_resolves_to_the_style_font() {
+        // #219: a whole core block carries the style in className, which core
+        // saves in the block comment and on the root element
+        $module = $this->freshInstance();
+        $content = '<!-- wp:paragraph {"className":"is-style-outline typost-styled typost-ps-5"} -->'
+            . '<p class="is-style-outline typost-styled typost-ps-5">Body text</p><!-- /wp:paragraph -->'
+            . '<!-- wp:heading {"className":"typost-styled typost-ps-2"} -->'
+            . '<h2 class="wp-block-heading typost-styled typost-ps-2">Title</h2><!-- /wp:heading -->';
+        $ids = $module->font_ids_from_content([], $content);
+        sort($ids);
+        $this->assertSame([1, 40], $ids);
+    }
+
+    public function test_style_5_in_a_core_block_class_does_not_match_style_50() {
+        $module = $this->freshInstance();
+        $this->assertSame([], $module->font_ids_from_content([], '<p class="typost-styled typost-ps-50">x</p>'));
+    }
+
     public function test_escaped_quotes_from_block_attribute_json_are_matched() {
         $module = $this->freshInstance();
         $ids = $module->font_ids_from_content([], '{"content":"Typography <span class=\"typost-styled\" data-style-id=\"5\">Stylist</span>"}');

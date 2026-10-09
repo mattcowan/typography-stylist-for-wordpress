@@ -42,7 +42,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - In the Typography Stylist block, move the first letter into the margin by a value in em. A swash capital then hangs outside the text edge, and the main shape of the letter aligns with the edge.
 - Only the first line hangs. In fit-to-width mode, each line has its own value.
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
-- A paragraph style can keep the value.
+- A paragraph style can keep the value. A core Paragraph or Heading block that uses the style hangs too, unless it is centered, aligned to the end, or has a drop cap.
 
 ### Glyphs Panel (built in)
 
@@ -66,6 +66,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - To apply a style in the inline editor, click “Browse styles…”. In the Quick Feature Toggles and in the block sidebar, use the Paragraph Style list.
 - The style browser shows each style in its own typeface, with your selected words as the sample text. It has a search field and a “Group by” control (font family, size mode, or recently used). You can move through the list with the keyboard and type a first letter to jump to a style. To open the browser from the block toolbar, turn on “Paragraph Styles Toolbar Button” in Options. This setting is off by default.
 - Styled text uses a shared CSS class (`.typost-ps-{id}`, with `data-style-id`). Thus “Update Style” changes every use of the style at one time. “Detach Style” changes the text back to independent inline settings.
+- **Core Paragraph and Heading blocks (v2.3.2+):** a style can apply to the whole block. Open Paragraph Style in the block sidebar and click “Browse styles…”, or use the toolbar button with no text selected. The style goes into the block’s className as `typost-styled typost-ps-{id}`, so the block stays valid and renders from the same CSS class. The block’s own sidebar settings (size, color, spacing) override the style, and the theme’s block styles such as “Outline” keep working. “Detach Style” removes the class. With text selected, a style still wraps only that text. A style’s First Letter Hang reaches these blocks too.
 - Rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Each style shows sample text in that style. The page loads the font files of a style only when you open that tab. An Adobe Fonts kit loads when a sample that uses it comes into view.
 
 ### WordPress Font Library Integration (WP 6.5+)
