@@ -172,7 +172,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// Unit the block writes its sizes in (#233): rem for new blocks, px for
 	// blocks saved before rem existed (set by the deprecations' migrate()).
 	// The editor preview uses the same unit as save.js, so both render the
-	// same size. Inline spans are always new content and always write rem.
+	// same size. A span size set in the Quick Feature Toggles is written in
+	// rem (buildInlineFontSizeSpan); other span edits keep the size as stored.
 	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
 
 	// Slider readout. Sizes are always entered in px; in rem the readout also
