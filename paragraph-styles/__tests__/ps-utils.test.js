@@ -289,6 +289,8 @@ describe('normalizeApplyProperties', () => {
 			features: [],
 			fontVariationSettings: '',
 			initialHang: 0,
+			textCase: '',
+			fakeSmallCaps: true,
 		});
 	});
 
@@ -313,6 +315,8 @@ describe('normalizeApplyProperties', () => {
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
 			initialHang: 0.2,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
 		})).toEqual({
 			fontId: 15,
 			fontWeight: 'bold',
@@ -326,6 +330,8 @@ describe('normalizeApplyProperties', () => {
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
 			initialHang: 0.2,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
 		});
 	});
 
@@ -347,6 +353,8 @@ describe('normalizeApplyProperties', () => {
 			features: [],
 			fontVariationSettings: '',
 			initialHang: 0,
+			textCase: '',
+			fakeSmallCaps: true,
 		});
 	});
 
@@ -372,6 +380,8 @@ describe('buildApplyEventDetail', () => {
 				features: [],
 				fontVariationSettings: '',
 				initialHang: 0,
+				textCase: '',
+				fakeSmallCaps: true,
 			},
 			paragraphStyleId: 3,
 			styleClass: 'typost-ps-3',
@@ -902,5 +912,100 @@ describe('buildPropertiesForStyleSave (Update Style / Save as New, #242 review)'
 	test('no base style, or a base without a hang, adds nothing', () => {
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, null)).not.toHaveProperty('initialHang');
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, { fontId: 1 })).not.toHaveProperty('initialHang');
+	});
+});
+
+describe('case (#214)', () => {
+	const {
+		normalizeTextCase,
+		isSmallCapsCase,
+	} = require('../assets/js/lib/ps-utils.js');
+
+	test('helpers accept only the known values', () => {
+		expect(normalizeTextCase('all-small-caps')).toBe('all-small-caps');
+		expect(normalizeTextCase('Uppercase')).toBe('');
+		expect(normalizeTextCase(undefined)).toBe('');
+		expect(isSmallCapsCase('small-caps')).toBe(true);
+		expect(isSmallCapsCase('uppercase')).toBe(false);
+	});
+
+	test('capture stores a case and leaves out Default', () => {
+		expect(buildPropertiesFromState({ textCase: 'uppercase', fakeSmallCaps: true }).textCase).toBe('uppercase');
+		expect(buildPropertiesFromState({ textCase: '' })).not.toHaveProperty('textCase');
+		expect(buildPropertiesFromState({})).not.toHaveProperty('textCase');
+		expect(buildPropertiesFromState({ textCase: 'junk' })).not.toHaveProperty('textCase');
+	});
+
+	test('capture stores fakeSmallCaps only when it is off for a small caps value', () => {
+		expect(buildPropertiesFromState({ textCase: 'small-caps', fakeSmallCaps: false }).fakeSmallCaps).toBe(false);
+		expect(buildPropertiesFromState({ textCase: 'small-caps', fakeSmallCaps: true })).not.toHaveProperty('fakeSmallCaps');
+		expect(buildPropertiesFromState({ textCase: 'uppercase', fakeSmallCaps: false })).not.toHaveProperty('fakeSmallCaps');
+	});
+
+	test('a different case marks the style modified', () => {
+		expect(isStyleModified({ textCase: 'uppercase' }, { textCase: 'lowercase' })).toBe(true);
+		expect(isStyleModified({ textCase: '' }, { textCase: 'uppercase' })).toBe(true);
+		expect(isStyleModified({ textCase: 'uppercase' }, {})).toBe(true);
+		expect(isStyleModified({ textCase: 'uppercase', fakeSmallCaps: true }, { textCase: 'uppercase' })).toBe(false);
+		expect(isStyleModified({ textCase: '', fakeSmallCaps: true }, {})).toBe(false);
+	});
+
+	test('a fake small caps change marks a small caps style modified', () => {
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: false }, { textCase: 'small-caps' })).toBe(true);
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: true }, { textCase: 'small-caps', fakeSmallCaps: false })).toBe(true);
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: false }, { textCase: 'small-caps', fakeSmallCaps: false })).toBe(false);
+		// No effect without small caps, so not a modification
+		expect(isStyleModified({ textCase: 'uppercase', fakeSmallCaps: false }, { textCase: 'uppercase' })).toBe(false);
+	});
+
+	test('an editor that does not report case (the inline editor) is not modified by it', () => {
+		expect(isStyleModified({}, { textCase: 'uppercase' })).toBe(false);
+	});
+
+	test('apply resets a lingering case when the style has none', () => {
+		const normalized = normalizeApplyProperties({});
+		expect(normalized.textCase).toBe('');
+		expect(normalized.fakeSmallCaps).toBe(true);
+		const smallCaps = normalizeApplyProperties({ textCase: 'small-caps', fakeSmallCaps: false });
+		expect(smallCaps.textCase).toBe('small-caps');
+		expect(smallCaps.fakeSmallCaps).toBe(false);
+	});
+
+	test('Update Style from an editor without the key keeps the style case', () => {
+		const base = { fontId: 1, textCase: 'all-small-caps', fakeSmallCaps: false };
+		const props = buildPropertiesForStyleSave({ fontId: 1, fontWeight: '700' }, base);
+		expect(props.textCase).toBe('all-small-caps');
+		expect(props.fakeSmallCaps).toBe(false);
+		// An editor that reports the key wins, including Default
+		expect(buildPropertiesForStyleSave({ fontId: 1, textCase: '' }, base)).not.toHaveProperty('textCase');
+		expect(buildPropertiesForStyleSave({ fontId: 1, textCase: 'uppercase' }, base).textCase).toBe('uppercase');
+	});
+
+	test('the CSS block carries the case declarations, PHP-formatted', () => {
+		// Expected strings shared with ParagraphStylesCssSelectorTest.php
+		const head = '.typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id="5"][data-style-id][data-style-id][data-style-id][data-style-id] {\n';
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, letterSpacing: 100, textCase: 'uppercase' } })).toBe(
+			head +
+			'    font-family: var(--font-9);\n' +
+			'    letter-spacing: 0.1em;\n' +
+			'    text-transform: uppercase;\n' +
+			'    font-variant-caps: normal;\n' +
+			'}'
+		);
+		expect(buildStyleCssBlock({ id: 5, properties: { textCase: 'all-small-caps', fakeSmallCaps: false } })).toBe(
+			head +
+			'    text-transform: none;\n' +
+			'    font-variant-caps: all-small-caps;\n' +
+			'    font-synthesis-small-caps: none;\n' +
+			'}'
+		);
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9 } })).not.toContain('text-transform');
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, textCase: 'bogus' } })).not.toContain('text-transform');
+	});
+
+	test('a small caps style with feature toggles keeps its font-feature-settings', () => {
+		const css = buildStyleCssBlock({ id: 5, properties: { features: ['c2sc'], textCase: 'small-caps' } });
+		expect(css).toContain('font-feature-settings: "c2sc" 1;');
+		expect(css).toContain('font-variant-caps: small-caps;');
 	});
 });

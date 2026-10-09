@@ -44,6 +44,13 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
 - A paragraph style can keep the value.
 
+### Case (v2.3.2+)
+
+- In the Typography Stylist block, set the case: All Caps, Lowercase, Title Case, Small Caps, or All Small Caps. “Normal” removes a case the theme sets.
+- The stored text keeps the case you typed. Only the look changes.
+- Small caps use the font’s own small caps. “Allow fake small caps” lets the browser shrink capitals when the font has none.
+- A paragraph style can keep the setting, for example a “Kicker” style in All Caps with wide letter spacing.
+
 ### Glyphs Panel (built in)
 
 - The Glyphs Panel shows every character and every OpenType feature of a font, like the Glyphs panel in Adobe Illustrator.

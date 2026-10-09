@@ -779,6 +779,7 @@ msgid "Admin Color Scheme"
 msgstr "Schéma de couleurs admin"
 
 #: includes/admin-page.php:1256
+#: blocks/typography-stylist/build/index.js:2
 msgid "Default"
 msgstr "Par défaut"
 
@@ -2862,3 +2863,51 @@ msgstr "Le débord n’a aucun effet quand le texte est centré ou aligné sur l
 #: blocks/typography-stylist/build/index.js:4
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr "L’ornement calligraphique dépasse du bloc. Certains thèmes coupent le contenu qui dépasse de son conteneur, et l’ornement est alors coupé sur le site. Vérifiez la page publiée."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Case"
+msgstr "Casse"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Caps"
+msgstr "Tout en capitales"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Lowercase"
+msgstr "Minuscules"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Title Case"
+msgstr "Majuscule à chaque mot"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Small Caps"
+msgstr "Petites capitales"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Small Caps"
+msgstr "Tout en petites capitales"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen."
+msgstr "Met en majuscule la première lettre de chaque mot, y compris les mots courts comme « de » et « le », ainsi que la lettre qui suit un trait d’union."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it."
+msgstr "Modifie uniquement l’apparence du texte. Le texte garde la casse saisie. Par défaut garde la casse définie par le thème ; Normal la supprime."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Allow fake small caps"
+msgstr "Autoriser les fausses petites capitales"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the browser makes them by shrinking capitals."
+msgstr "Si la police n’a pas de petites capitales, le navigateur les crée en réduisant des capitales."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the text stays in normal case."
+msgstr "Si la police n’a pas de petites capitales, le texte reste en casse normale."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations."
+msgstr "Les capitales sont plus difficiles à lire dans un texte long : réservez-les aux libellés courts. Les lecteurs d’écran lisent le texte d’origine de ce bloc, mais quand un style Tout en capitales est appliqué au texte d’autres blocs, certains lecteurs d’écran épellent lettre par lettre les mots courts en capitales, comme des abréviations."

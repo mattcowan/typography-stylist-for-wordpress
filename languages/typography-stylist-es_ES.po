@@ -779,6 +779,7 @@ msgid "Admin Color Scheme"
 msgstr "Esquema de colores del admin"
 
 #: includes/admin-page.php:1256
+#: blocks/typography-stylist/build/index.js:2
 msgid "Default"
 msgstr "Predeterminado"
 
@@ -2862,3 +2863,51 @@ msgstr "El desborde no tiene efecto mientras el texto está centrado o alineado 
 #: blocks/typography-stylist/build/index.js:4
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr "La floritura se dibuja fuera del bloque. Algunos temas recortan el contenido que sale de su contenedor, y entonces la floritura aparece recortada en el sitio. Revisa la página publicada."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Case"
+msgstr "Mayúsculas y minúsculas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Caps"
+msgstr "Todo en mayúsculas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Lowercase"
+msgstr "Minúsculas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Title Case"
+msgstr "Mayúscula inicial en cada palabra"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Small Caps"
+msgstr "Versalitas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Small Caps"
+msgstr "Todo en versalitas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen."
+msgstr "Pone en mayúscula la primera letra de cada palabra, incluidas palabras cortas como «de» y «el», y la letra que sigue a un guion."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it."
+msgstr "Solo cambia el aspecto del texto. El texto conserva las mayúsculas y minúsculas que escribiste. Predeterminado conserva lo que define el tema; Normal lo quita."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Allow fake small caps"
+msgstr "Permitir versalitas simuladas"
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the browser makes them by shrinking capitals."
+msgstr "Si la fuente no tiene versalitas, el navegador las crea reduciendo mayúsculas."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the text stays in normal case."
+msgstr "Si la fuente no tiene versalitas, el texto se queda en mayúsculas y minúsculas normales."
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations."
+msgstr "Las mayúsculas son más difíciles de leer en textos largos, así que resérvalas para etiquetas cortas. Los lectores de pantalla leen el texto original de este bloque, pero cuando se aplica un estilo con Todo en mayúsculas al texto de otros bloques, algunos lectores de pantalla deletrean letra por letra las palabras cortas en mayúsculas, como abreviaturas."

@@ -82,6 +82,14 @@
 			"type": "array",
 			"default": []
 		},
+		"textCase": {
+			"type": "string",
+			"default": ""
+		},
+		"fakeSmallCaps": {
+			"type": "boolean",
+			"default": true
+		},
 		"fontWeight": {
 			"type": "string",
 			"default": "400"

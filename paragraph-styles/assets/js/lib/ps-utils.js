@@ -146,6 +146,52 @@
 		return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
 	}
 
+	// Case values a style can store (#214); absent = Default (theme case).
+	// Mirrors TEXT_CASE_VALUES in core utils.js and in paragraph-styles.php.
+	var TEXT_CASE_VALUES = ['none', 'uppercase', 'lowercase', 'capitalize', 'small-caps', 'all-small-caps'];
+
+	/** '' for Default or an unknown value, otherwise the case value. */
+	function normalizeTextCase(value) {
+		return typeof value === 'string' && TEXT_CASE_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	/** True for the case values that use font-variant-caps. */
+	function isSmallCapsCase(value) {
+		var c = normalizeTextCase(value);
+		return c === 'small-caps' || c === 'all-small-caps';
+	}
+
+	/**
+	 * CSS declarations for a case setting (#214), as [property, value]
+	 * pairs. Twin of caseDeclarations() in core utils.js and of
+	 * case_declarations() in PHP (see there for why every value sets both
+	 * text-transform and font-variant-caps). Order matters: it is part of
+	 * the byte-identical style CSS.
+	 */
+	function caseDeclarations(textCase, fakeSmallCaps) {
+		var c = normalizeTextCase(textCase);
+		if (!c) return [];
+		if (isSmallCapsCase(c)) {
+			return [
+				['text-transform', 'none'],
+				['font-variant-caps', c],
+				['font-synthesis-small-caps', fakeSmallCaps === false ? 'none' : 'auto'],
+			];
+		}
+		return [
+			['text-transform', c],
+			['font-variant-caps', 'normal'],
+		];
+	}
+
+	/**
+	 * The fake small caps choice as stored: false only when it is off for a
+	 * small caps value; true otherwise (it has no effect on other values).
+	 */
+	function effectiveFakeSmallCaps(textCase, fakeSmallCaps) {
+		return !(isSmallCapsCase(textCase) && fakeSmallCaps === false);
+	}
+
 	/**
 	 * Compare current editor state against a stored style's properties.
 	 * Returns true if any property differs.
@@ -211,6 +257,14 @@
 		// "(modified)" on every use of a style that has a hang.
 		if (state.initialHang !== undefined && normalizeHang(state.initialHang) !== normalizeHang(styleProps.initialHang)) return true;
 
+		// Case (#214) is block-level too: the inline editor has no case
+		// control and never sends the key, and a style's case reaches
+		// inline spans through its class.
+		if (state.textCase !== undefined) {
+			if (normalizeTextCase(state.textCase) !== normalizeTextCase(styleProps.textCase)) return true;
+			if (effectiveFakeSmallCaps(state.textCase, state.fakeSmallCaps) !== effectiveFakeSmallCaps(styleProps.textCase, styleProps.fakeSmallCaps)) return true;
+		}
+
 		return false;
 	}
 
@@ -274,6 +328,15 @@
 		if (normalizeHang(state.initialHang) > 0) {
 			properties.initialHang = normalizeHang(state.initialHang);
 		}
+		// Default case is never stored; fakeSmallCaps only when it is off
+		// for a small caps value (absent = allowed)
+		var textCase = normalizeTextCase(state.textCase);
+		if (textCase) {
+			properties.textCase = textCase;
+			if (!effectiveFakeSmallCaps(textCase, state.fakeSmallCaps)) {
+				properties.fakeSmallCaps = false;
+			}
+		}
 		return properties;
 	}
 
@@ -283,7 +346,8 @@
 	 *
 	 * Some properties are block-level only, and the inline editor does not
 	 * report them in its state: initialHang (#242) works through
-	 * ::first-letter, which cannot reach an inline span. The REST update
+	 * ::first-letter, which cannot reach an inline span, and textCase /
+	 * fakeSmallCaps (#214) have no control in the inline editor. The REST update
 	 * replaces the whole properties object, so building from the inline
 	 * state alone deleted the style's hang from every block that used it
 	 * (PR review). A key the editor does not report is carried from the
@@ -298,6 +362,12 @@
 		var base = baseProperties || {};
 		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
 			properties.initialHang = normalizeHang(base.initialHang);
+		}
+		if ((!state || state.textCase === undefined) && normalizeTextCase(base.textCase)) {
+			properties.textCase = normalizeTextCase(base.textCase);
+			if (!effectiveFakeSmallCaps(base.textCase, base.fakeSmallCaps)) {
+				properties.fakeSmallCaps = false;
+			}
 		}
 		return properties;
 	}
@@ -325,6 +395,10 @@
 	 * lingering hang on apply. The inline editor ignores the key, because a
 	 * hang has no effect on an inline span.
 	 *
+	 * textCase IS normalized (to '' = Default) and fakeSmallCaps (to true),
+	 * for the same reason (#214). The inline editor ignores both: an inline
+	 * span gets the style's case from its class.
+	 *
 	 * fontStyle IS normalized (to '' = inherit): styles express italic as a
 	 * first-class property now, so a style saved without one must reset a
 	 * lingering italic on apply — the applied result has to look like the
@@ -343,6 +417,8 @@
 			features: [],
 			fontVariationSettings: '',
 			initialHang: 0,
+			textCase: '',
+			fakeSmallCaps: true,
 		};
 		if (!properties) return normalized;
 		for (var key in properties) {
@@ -594,6 +670,12 @@
 		var hang = normalizeHang(props.initialHang);
 		if (hang > 0) {
 			rules.push('--typost-hang: ' + phpFloatStr(hang));
+		}
+
+		// Case (#214). Same declarations and order as the PHP twin.
+		var caseRules = caseDeclarations(props.textCase, props.fakeSmallCaps);
+		for (var k = 0; k < caseRules.length; k++) {
+			rules.push(caseRules[k][0] + ': ' + caseRules[k][1]);
 		}
 
 		if (!rules.length) return '';
@@ -1005,6 +1087,10 @@
 		isStyleModified: isStyleModified,
 		roundLineHeight: roundLineHeight,
 		normalizeHang: normalizeHang,
+		TEXT_CASE_VALUES: TEXT_CASE_VALUES,
+		normalizeTextCase: normalizeTextCase,
+		isSmallCapsCase: isSmallCapsCase,
+		caseDeclarations: caseDeclarations,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
 		BROWSER_PAGE_SIZE: BROWSER_PAGE_SIZE,
 		BROWSER_GROUP_MODES: BROWSER_GROUP_MODES,

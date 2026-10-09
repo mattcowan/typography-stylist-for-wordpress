@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-07T19:46:58+00:00\n"
+"POT-Creation-Date: 2026-10-08T23:09:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typography-stylist\n"
@@ -778,6 +778,7 @@ msgid "Admin Color Scheme"
 msgstr ""
 
 #: includes/admin-page.php:1256
+#: blocks/typography-stylist/build/index.js:2
 msgid "Default"
 msgstr ""
 
@@ -2665,6 +2666,54 @@ msgstr ""
 
 #: blocks/typography-stylist/build/index.js:2
 msgid "Tip: By default, fonts added in Settings → Typography Stylist load only on pages that use them."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Case"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Caps"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Lowercase"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Title Case"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Small Caps"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All Small Caps"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "Allow fake small caps"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the browser makes them by shrinking capitals."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "When the font has no small caps, the text stays in normal case."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:2
+msgid "All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations."
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:2
