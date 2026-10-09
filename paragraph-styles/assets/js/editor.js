@@ -385,7 +385,7 @@
 
 			var state = getCurrentState();
 			// Keeps block-only properties (the hang) the inline editor cannot report
-			var properties = buildPropertiesForStyleSave(state, activeStyle.properties);
+			var properties = buildPropertiesForStyleSave(state, activeStyle.properties, true);
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
@@ -413,7 +413,7 @@
 
 			var state = getCurrentState();
 			// A variant of the active style keeps its block-only properties too
-			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null);
+			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null, false);
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',

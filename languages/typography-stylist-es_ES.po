@@ -2862,3 +2862,10 @@ msgstr "El desborde no tiene efecto mientras el texto está centrado o alineado 
 #: blocks/typography-stylist/build/index.js:4
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
 msgstr "La floritura se dibuja fuera del bloque. Algunos temas recortan el contenido que sale de su contenedor, y entonces la floritura aparece recortada en el sitio. Revisa la página publicada."
+
+#. translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16)
+#: assets/js/block-editor.js:32
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "%1$spx (%2$srem)"
+msgstr "%1$spx (%2$srem)"

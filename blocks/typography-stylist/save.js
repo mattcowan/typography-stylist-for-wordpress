@@ -3,11 +3,7 @@
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml, normalizeHang } from './utils';
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+import { buildFitLinesHtml, normalizeHang, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit } from './utils';
 
 // Validate and sanitize font-variation-settings value.
 // Ensures each entry matches the "axis" number format (e.g. "wght" 700, "wdth" 100).
@@ -39,6 +35,7 @@ export default function save({ attributes }) {
 		fontSizeMin,
 		fontSizePreferred,
 		fontSizeMax,
+		fontSizeUnit,
 		fitLineSizes,
 		fitMaxSize,
 		initialHang,
@@ -54,6 +51,11 @@ export default function save({ attributes }) {
 		layeredConfigId,
 		animationConfigId
 	} = attributes;
+
+	// Sizes are entered in px and written in the block's unit (#233). New
+	// blocks default to rem; blocks saved before the attribute existed get
+	// 'px' from the deprecations' migrate(), so they keep writing px.
+	const unit = resolveFontSizeUnit(fontSizeUnit);
 
 	// Build inline style — skipped when styleClass is set (CSS class provides styling)
 	const buildStyle = () => {
@@ -98,7 +100,7 @@ export default function save({ attributes }) {
 		}
 
 		if (fontSize === 'responsive') {
-			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
+			styleArray.push(`font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)}`);
 		}
 
 		// Fit-to-width: per-line sizes are emitted on the typost-line spans
@@ -106,18 +108,18 @@ export default function save({ attributes }) {
 		// without container-query support, which drop the calc(...cqi)
 		// declaration and let lines inherit this size.
 		if (fontSize === 'fit') {
-			styleArray.push(`font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`);
+			styleArray.push(`font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)}`);
 		}
 
-		// Fixed px size (kept from a paragraph style saved in the inline
-		// editor, after Detach or after a deleted style's class is cleared).
-		// Same test as buildStyle() in edit.js, so both sides render it.
-		// Zero means "no size", as in the paragraph style CSS generators.
-		// Blocks saved before this branch existed carry no font-size and
-		// validate through the v1 deprecation and are upgraded the next time
-		// the post is saved after a block edit.
+		// Fixed size, entered in px (kept from a paragraph style saved in the
+		// inline editor, after Detach or after a deleted style's class is
+		// cleared). Same test as buildStyle() in edit.js, so both sides
+		// render it. Zero means "no size", as in the paragraph style CSS
+		// generators. Blocks saved before this branch existed carry no
+		// font-size and validate through the v1 deprecation and are upgraded
+		// the next time the post is saved after a block edit.
 		if (/^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
-			styleArray.push(`font-size: ${fontSize}px`);
+			styleArray.push(`font-size: ${formatFontSizeLength(fontSize, unit)}`);
 		}
 
 		if (fontVariationSettings) {
@@ -184,9 +186,10 @@ export default function save({ attributes }) {
 	// establishes the container (container-type: inline-size in style.css)
 	// and the rule that neutralizes inline data-fontsize spans. Non-fit
 	// output below is byte-identical to the pre-fit save (block validation),
-	// except the fixed px font-size above, which v1 never wrote (#218).
+	// except the fixed font-size above, which v1 never wrote (#218), and
+	// rem sizes (#233), which the v2 deprecation covers.
 	const isFit = fontSize === 'fit';
-	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs) : content;
+	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) : content;
 	const visualClassName = (isFit ? 'typost-styled typost-fit' : 'typost-styled') + (styleClass ? ` ${styleClass}` : '');
 
 	return (

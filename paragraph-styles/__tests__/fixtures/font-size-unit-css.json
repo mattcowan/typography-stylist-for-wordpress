@@ -1,0 +1,19 @@
+{
+	"_comment": "Paragraph style font-size declarations (#233). Read by ps-utils.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesFontSizeUnitTest.php (generate_style_css), so both generators are held to the same strings. A style without fontSizeUnit was saved before #233 and must write px exactly as before.",
+	"cases": [
+		{ "label": "fixed size, no unit (saved before #233)", "properties": { "fontSize": "24" }, "rule": "font-size: 24px" },
+		{ "label": "fixed size, explicit px", "properties": { "fontSize": "24", "fontSizeUnit": "px" }, "rule": "font-size: 24px" },
+		{ "label": "fixed size, rem", "properties": { "fontSize": "24", "fontSizeUnit": "rem" }, "rule": "font-size: 1.5rem" },
+		{ "label": "fixed size 17, rem", "properties": { "fontSize": "17", "fontSizeUnit": "rem" }, "rule": "font-size: 1.0625rem" },
+		{ "label": "fixed decimal size, no unit (intval as before)", "properties": { "fontSize": "36.5" }, "rule": "font-size: 36px" },
+		{ "label": "fixed decimal size, rem (keeps decimals)", "properties": { "fontSize": "36.5", "fontSizeUnit": "rem" }, "rule": "font-size: 2.28125rem" },
+		{ "label": "fixed tiny size, rem (below 0.0001rem is 0)", "properties": { "fontSize": "0.001", "fontSizeUnit": "rem" }, "rule": "font-size: 0rem" },
+		{ "label": "responsive 16/24/64, no unit", "properties": { "fontSize": "responsive", "fontSizeMin": 16, "fontSizePreferred": 24, "fontSizeMax": 64 }, "rule": "font-size: clamp(16px, 1.5rem + 3vw, 64px)" },
+		{ "label": "responsive 16/32/64, rem", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 32, "fontSizeMax": 64 }, "rule": "font-size: clamp(1rem, 2rem + 3vw, 4rem)" },
+		{ "label": "responsive 13/29/42, no unit", "properties": { "fontSize": "responsive", "fontSizeMin": 13, "fontSizePreferred": 29, "fontSizeMax": 42 }, "rule": "font-size: clamp(13px, 1.8125rem + 1.8125vw, 42px)" },
+		{ "label": "responsive 13/29/42, rem", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 13, "fontSizePreferred": 29, "fontSizeMax": 42 }, "rule": "font-size: clamp(0.8125rem, 1.8125rem + 1.8125vw, 2.625rem)" },
+		{ "label": "fit fallback 16/24/64, no unit", "properties": { "fontSize": "fit", "fontSizeMin": 16, "fontSizePreferred": 24, "fontSizeMax": 64, "fitMaxSize": 120 }, "rule": "font-size: clamp(16px, 1.5rem + 3vw, 64px)" },
+		{ "label": "fit fallback 16/24/64, rem", "properties": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 24, "fontSizeMax": 64, "fitMaxSize": 120 }, "rule": "font-size: clamp(1rem, 1.5rem + 3vw, 4rem)" },
+		{ "label": "an unknown unit writes px", "properties": { "fontSize": "24", "fontSizeUnit": "em" }, "rule": "font-size: 24px" }
+	]
+}
