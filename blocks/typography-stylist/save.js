@@ -38,6 +38,7 @@ export default function save({ attributes }) {
 		fontSizeUnit,
 		fitLineSizes,
 		fitMaxSize,
+		fitWordSizes,
 		initialHang,
 		fitLineHangs,
 		fontWeight,
@@ -189,7 +190,7 @@ export default function save({ attributes }) {
 	// except the fixed font-size above, which v1 never wrote (#218), and
 	// rem sizes (#233), which the v2 deprecation covers.
 	const isFit = fontSize === 'fit';
-	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit) : content;
+	const visualValue = isFit ? buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit, fitWordSizes) : content;
 	const visualClassName = (isFit ? 'typost-styled typost-fit' : 'typost-styled') + (styleClass ? ` ${styleClass}` : '');
 
 	return (

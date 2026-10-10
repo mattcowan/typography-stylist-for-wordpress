@@ -164,6 +164,44 @@
 	font-optical-sizing: none;
 }
 
+/* Fit-to-width lines grow with browser zoom (#235).
+ * A line is calc(R * 100cqi), and zoom makes the container narrower in CSS
+ * px, so on screen the line kept its size at every zoom level (WCAG 1.4.4).
+ * CSS cannot tell zoom from a small window, but a zoomed desktop window
+ * keeps its landscape shape while it gets narrow, and a phone held upright
+ * does not. So in a landscape viewport narrower than 782px (core's columns
+ * breakpoint: a zoomed window stacks its columns there), a line whose
+ * container is narrower than 32rem is sized as if the container were
+ * 32rem, and wraps at its spaces. Its font-size also has a word cap,
+ * min(…, calc(W * 100cqi)), where W sizes the line's widest word to the
+ * container width, so the growth stops before a word is wider than the
+ * container: no word is broken and nothing scrolls sideways (1.4.10
+ * Reflow). overflow-wrap is reset to normal because many themes set
+ * break-word on headings, which would split a word a fraction of a pixel
+ * too wide. 32rem is 0.4 × 1280px, so with a 16px root a line whose
+ * widest word allows it doubles by 500% zoom. A one-word line cannot wrap,
+ * so its cap equals its line size and it keeps filling its container.
+ * Wider containers fill exactly as before, so 100% zoom is unchanged
+ * everywhere except in a landscape viewport under 782px with a container
+ * under 32rem.
+ * Only lines saved since #233 read the variable (buildFitFontSize() in
+ * utils.js writes min(calc(R * var(--typost-fit-width, 100cqi)),
+ * calc(C * 100cqi))); older px lines keep calc(R * 100cqi) and never wrap,
+ * hence the attribute test. Frontend only: in the editor the canvas iframe
+ * is its own viewport, often landscape and under 782px because of the
+ * sidebars while the window is wide, so the editor would wrap lines the
+ * frontend shows on one line. The editor's block wrapper always carries
+ * block-editor-block-list__block, and the saved markup never does. */
+@media (orientation: landscape) and (max-width: 781.98px) {
+	@container (width < 32rem) {
+		.wp-block-typost:not(.block-editor-block-list__block) .typost-fit .typost-line[style*="--typost-fit-width"] {
+			--typost-fit-width: 32rem;
+			white-space: normal;
+			overflow-wrap: normal;
+		}
+	}
+}
+
 /* Inline font sizes are ignored in fit mode — each line renders at one
  * uniform size (the block controls sizing). Inline styles can only be
  * beaten by !important. */

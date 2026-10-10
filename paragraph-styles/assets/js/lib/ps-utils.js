@@ -514,6 +514,30 @@
 	}
 
 	/**
+	 * The vw term of a rem style's responsive clamp (#234): the author's
+	 * slope, limited so the size doubles by 500% browser zoom. Twin of
+	 * getResponsiveZoomLimit() in core's assets/js/font-size-units.js (which
+	 * explains the bound) and of PHP responsive_zoom_vw(). Keep all three
+	 * identical.
+	 *
+	 * @param {number} min  Mobile size (px)
+	 * @param {number} pref Preferred size (px)
+	 * @param {number} max  Desktop size (px)
+	 * @return {number} vw coefficient, four decimals
+	 */
+	function responsiveZoomVw(min, pref, max) {
+		var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
+		var reach = Math.max(4 * pref, 2.5 * min);
+		if (vw > 0 && pref >= 0 && max > reach) {
+			var bound = Math.floor((((reach - pref) * 100) / RESPONSIVE_FONT_MAX_VIEWPORT) * 10000 + 1e-7) / 10000;
+			if (bound < vw) {
+				return bound;
+			}
+		}
+		return round4(vw);
+	}
+
+	/**
 	 * The selector list for one style id (numeric or legacy string).
 	 *
 	 * @param {number|string} id Style id.
@@ -627,7 +651,7 @@
 			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
 			if (useRem) {
 				rules.push('font-size: clamp(' + phpFloatStr(pxToRem(min)) + 'rem, ' + phpFloatStr(pxToRem(pref)) + 'rem + ' +
-					round4(vw) + 'vw, ' + phpFloatStr(pxToRem(max)) + 'rem)');
+					responsiveZoomVw(min, pref, max) + 'vw, ' + phpFloatStr(pxToRem(max)) + 'rem)');
 			} else {
 				rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
 			}
@@ -1072,6 +1096,7 @@
 		buildStylePreviewStyle: buildStylePreviewStyle,
 		buildStyleCssBlock: buildStyleCssBlock,
 		pxToRem: pxToRem,
+		responsiveZoomVw: responsiveZoomVw,
 	};
 
 	if (typeof window !== 'undefined') {

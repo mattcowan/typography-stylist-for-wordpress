@@ -27,11 +27,21 @@
  * styleClass writes no block-level size and validates against the current
  * save directly; it gets the 'rem' default, so a size set on it later is
  * new content and is written in rem. Exception: a fit-to-width block writes
- * its per-line cap (min(…cqi, Npx)) also under a styleClass, so a capped
- * fit block with a styleClass matches v2 and is migrated to px like any
- * other sized block. A styleClass block that validates directly keeps
- * showing the style's size; when it leaves the style (Detach, or a deleted
- * style), edit.js gives it the style's unit (resolveDetachFontSizeUnit).
+ * its per-line sizes also under a styleClass, and every rem line reads
+ * --typost-fit-width with a word cap (#235) where a px line has
+ * calc(R * 100cqi) and a px cap, so every fit block with a styleClass
+ * matches v2 and is migrated to px like any other sized block.
+ *
+ * No entry covers rem output from development builds before the zoom
+ * changes (#233 alone wrote an unlimited rem slope and plain cqi lines;
+ * #234 limits the slope and #235 adds the floor and the word cap). Every
+ * released version wrote px, and #233, #234 and #235 ship together in
+ * 2.3.2, so only a development site can hold such a block. It shows the
+ * "unexpected or invalid content" warning, and "Attempt recovery" rebuilds
+ * it. A styleClass block that validates
+ * directly keeps showing the style's size; when it leaves the style
+ * (Detach, or a deleted style), edit.js gives it the style's unit
+ * (resolveDetachFontSizeUnit).
  *
  * Order matters: [v2, v1]. Core tries the entries in order and runs only
  * the migrate() of the entry that matched, so v1 needs its own.

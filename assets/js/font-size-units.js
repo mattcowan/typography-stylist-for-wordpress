@@ -77,6 +77,66 @@ function formatFontSizeLength(px, unit) {
 }
 
 /**
+ * The vw slope of a responsive size, limited so the size doubles with zoom
+ * (#234).
+ *
+ * The responsive size is clamp(min, pref + slope, max): the preferred size
+ * plus a vw term. Browser zoom narrows the viewport in CSS px, so the vw
+ * term shrinks as the zoom goes up. At zoom z in a window W px wide the
+ * reader sees z × size(W / z). WCAG 1.4.4 asks for 200% text size, and for
+ * fluid type that is read as 2× by 500% zoom (the browser maximum; no size
+ * that grows with the viewport doubles at 200%). Because the preferred size
+ * is a rem constant, z × size(W / z) only grows with z, so checking 500% is
+ * enough.
+ *
+ * With a = pref, m = min, M = max (px) and slope b (px per px of window):
+ * 5 × size(W / 5) >= 2 × size(W) holds for every window up to 1920px
+ * when M <= max(4a, 2.5m), whatever the slope. Otherwise it holds exactly
+ * when the size never reaches M in a 1920px window and
+ * b × 1920 <= max(4a, 2.5m) - a. So the size can reach max(4a, 2.5m) in a
+ * 1920px window and still double: that is `reach`. The bound comes from
+ * size(W / 5) >= max(m, a + bW / 5); a brute-force test over windows and
+ * zoom levels holds it to the real clamp().
+ *
+ * `limited` means the slope from the author's values, (M - m) / 1600 px
+ * per px, is steeper than that bound. New content (rem) writes the bound
+ * instead, rounded down to four decimals so it never overshoots; the size
+ * then grows more slowly and reaches `reach`, not M, in a 1920px window.
+ * Content saved before (px) keeps its slope, so there `limited` means the
+ * size does not double.
+ *
+ * Mirrored in PHP by Typost_Paragraph_Styles::responsive_zoom_vw() and in
+ * ps-utils.js (responsiveZoomVw). Keep all three identical.
+ *
+ * @param {number} fontSizeMin       Mobile size (px)
+ * @param {number} fontSizePreferred Preferred size (px)
+ * @param {number} fontSizeMax       Desktop size (px)
+ * @return {{vw: number, limitedVw: number, limited: boolean, reach: number}}
+ *   vw: the author's slope in vw (unrounded); limitedVw: the slope new
+ *   content writes; reach: the largest size that still doubles (px)
+ */
+function getResponsiveZoomLimit(fontSizeMin, fontSizePreferred, fontSizeMax) {
+	var min = Number(fontSizeMin);
+	var pref = Number(fontSizePreferred);
+	var max = Number(fontSizeMax);
+	var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
+	var reach = Math.max(4 * pref, 2.5 * min);
+	var result = { vw: vw, limitedVw: vw, limited: false, reach: reach };
+	// Out-of-order or flat sizes clamp to a constant, which always doubles
+	if (!(vw > 0) || !(pref >= 0) || !(max > reach)) {
+		return result;
+	}
+	// The epsilon keeps an exact bound (2.5) from flooring to 2.4999
+	var bound = Math.floor((((reach - pref) * 100) / RESPONSIVE_FONT_MAX_VIEWPORT) * 10000 + 1e-7) / 10000;
+	if (bound >= vw) {
+		return result;
+	}
+	result.limitedVw = bound;
+	result.limited = true;
+	return result;
+}
+
+/**
  * Build the responsive clamp() font-size expression.
  *
  * The px form must reproduce the legacy inline expression byte-for-byte,
@@ -86,7 +146,9 @@ function formatFontSizeLength(px, unit) {
  *
  * The rem form is new content, so it is free to round: the vw term is
  * rounded to four decimals, as the paragraph style generators do.
- * 16 / 32 / 64 gives clamp(1rem, 2rem + 3vw, 4rem).
+ * 16 / 32 / 64 gives clamp(1rem, 2rem + 3vw, 4rem). Its slope is limited
+ * so the size doubles by 500% zoom (#234, getResponsiveZoomLimit()):
+ * 16 / 16 / 120 gives clamp(1rem, 1rem + 2.5vw, 7.5rem).
  *
  * @param {number} fontSizeMin       Mobile size (px, at 320px viewport)
  * @param {number} fontSizePreferred Preferred size (px, drives the rem base)
@@ -95,12 +157,44 @@ function formatFontSizeLength(px, unit) {
  * @return {string} clamp() expression
  */
 function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit) {
-	var vw = ((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
 	if (resolveFontSizeUnit(unit) === FONT_SIZE_UNIT_REM) {
+		var zoom = getResponsiveZoomLimit(fontSizeMin, fontSizePreferred, fontSizeMax);
+		var vwTerm = zoom.limited ? zoom.limitedVw : Math.round(zoom.vw * 10000) / 10000;
 		return 'clamp(' + pxToRem(fontSizeMin) + 'rem, ' + pxToRem(fontSizePreferred) + 'rem + ' +
-			(Math.round(vw * 10000) / 10000) + 'vw, ' + pxToRem(fontSizeMax) + 'rem)';
+			vwTerm + 'vw, ' + pxToRem(fontSizeMax) + 'rem)';
 	}
+	var vw = ((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
 	return 'clamp(' + fontSizeMin + 'px, ' + (fontSizePreferred / 16) + 'rem + ' + vw + 'vw, ' + fontSizeMax + 'px)';
+}
+
+/**
+ * The zoom notice to show beside responsive size controls (#234), or null.
+ *
+ * - 'slower': new content (rem) whose slope was limited. The size doubles
+ *   with zoom, but reaches `reach` instead of the Large size in a 1920px
+ *   window. `minPreferred` is the smallest Intermediate size that lets it
+ *   reach the Large size.
+ * - 'fails': content saved before (px) whose size does not double by 500%
+ *   zoom. Lowering Large to `reach` or raising Intermediate to
+ *   `minPreferred` fixes it.
+ *
+ * @param {number} fontSizeMin       Mobile size (px)
+ * @param {number} fontSizePreferred Preferred size (px)
+ * @param {number} fontSizeMax       Desktop size (px)
+ * @param {string} [unit='px']       'px' or 'rem'
+ * @return {{kind: string, reach: number, max: number, minPreferred: number}|null}
+ */
+function getResponsiveZoomNotice(fontSizeMin, fontSizePreferred, fontSizeMax, unit) {
+	var zoom = getResponsiveZoomLimit(fontSizeMin, fontSizePreferred, fontSizeMax);
+	if (!zoom.limited) {
+		return null;
+	}
+	return {
+		kind: resolveFontSizeUnit(unit) === FONT_SIZE_UNIT_REM ? 'slower' : 'fails',
+		reach: Math.floor(zoom.reach),
+		max: Number(fontSizeMax),
+		minPreferred: Math.ceil(Number(fontSizeMax) / 4)
+	};
 }
 
 /**
@@ -187,6 +281,8 @@ module.exports = {
 	pxToRem: pxToRem,
 	formatFontSizeLength: formatFontSizeLength,
 	buildResponsiveClamp: buildResponsiveClamp,
+	getResponsiveZoomLimit: getResponsiveZoomLimit,
+	getResponsiveZoomNotice: getResponsiveZoomNotice,
 	resolveStyleFontSizeUnit: resolveStyleFontSizeUnit,
 	findStyleById: findStyleById,
 	resolveSpanFontSizeUnit: resolveSpanFontSizeUnit

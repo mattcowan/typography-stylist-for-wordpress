@@ -16,13 +16,13 @@ const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes,
 // A size this editor writes is new content and is written in rem (#233). A
 // size the author did not change keeps the unit the span already has
 // (resolveSpanFontSizeUnit), so older px spans are not rewritten.
-const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./font-size-units.js');
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoomNotice } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
-    const { Component, Fragment } = wp.element;
+    const { Component, Fragment, useRef, useEffect } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
 
@@ -34,6 +34,54 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
         px,
         pxToRem(px)
     );
+    /**
+     * Zoom notice for responsive sizes (#234), the inline editor's copy of
+     * ZoomNotice in the block's edit.js (separate build pipeline). A size the
+     * author sets is written in rem, whose slope buildResponsiveClamp()
+     * limits ('slower'); a size the author has not changed keeps the unit
+     * the span has, and an older px span keeps a slope that may not double
+     * ('fails').
+     *
+     * The Notice itself speaks nothing: its text carries the live slider
+     * values, and core would speak it again on every slider step. A
+     * value-free sentence is spoken only when the notice appears or changes
+     * kind after mount — never on mount, which is the tick the modal takes
+     * focus, when a notice would be read before the dialog's name.
+     */
+    function ZoomNotice({ min, preferred, max, unit }) {
+        const notice = getResponsiveZoomNotice(min, preferred, max, unit);
+        const kind = notice ? notice.kind : null;
+        const previousKind = useRef(kind);
+        useEffect(() => {
+            if (kind && kind !== previousKind.current && wp.a11y && typeof wp.a11y.speak === 'function') {
+                wp.a11y.speak(kind === 'slower'
+                    ? __('To stay readable when a reader zooms in, this size grows more slowly than set.', 'typography-stylist')
+                    : __('This size does not double when a reader zooms to 500%.', 'typography-stylist'), 'polite');
+            }
+            previousKind.current = kind;
+        }, [kind]);
+        if (!notice) {
+            return null;
+        }
+        return (
+            <Notice status="warning" isDismissible={false} spokenMessage="" className="typost-size-zoom-notice">
+                {notice.kind === 'slower'
+                    ? sprintf(
+                        /* translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size */
+                        __('To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx.', 'typography-stylist'),
+                        notice.reach,
+                        notice.max,
+                        notice.minPreferred
+                    )
+                    : sprintf(
+                        /* translators: 1: the largest Maximum font size in px that doubles with zoom, 2: the smallest Preferred size in px that doubles with zoom */
+                        __('This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx.', 'typography-stylist'),
+                        notice.reach,
+                        notice.minPreferred
+                    )}
+            </Notice>
+        );
+    }
     const { compose, debounce } = wp.compose;
 
     /**
@@ -1815,6 +1863,33 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
 
         _recordFeatureToggle(tag, enabled) {
             this._pendingChanges.featureToggles.push({ tag: tag, enabled: enabled });
+        }
+
+        /**
+         * The unit the responsive size will be written in (#233), for the
+         * zoom notice (#234). Same rule as the full rebuild in
+         * _doApplyFeatures(): rem once the author changes the size,
+         * otherwise the unit the span already has. When the modal holds
+         * focus the live selection is collapsed, so read the format at the
+         * saved selection, as the apply path does.
+         */
+        getZoomNoticeUnit() {
+            const { value } = this.props;
+            const { savedSelectionStart, savedSelectionEnd } = this.state;
+            let format = null;
+            if (value) {
+                const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+                format = selectionLost
+                    ? ((value.formats && value.formats[savedSelectionStart]) || []).find((f) => f.type === FORMAT_TYPE)
+                    : getActiveFormat(value, FORMAT_TYPE);
+            }
+            const attrs = (format && format.attributes) || {};
+            return resolveSpanFontSizeUnit({
+                sizeChanged: !!(this._pendingChanges && this._pendingChanges.keys.has('fontSize')),
+                spanStyle: attrs.style,
+                styleId: attrs['data-style-id'],
+                styles: window.typostData && window.typostData.paragraphStyles
+            });
         }
 
         _resetPendingChanges() {
@@ -3606,6 +3681,9 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit } = require('./fo
                                                     {__('Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior.', 'typography-stylist')}
                                                 </Notice>
                                             )}
+                                            {/* Zoom notice (#234), worded for the unit the
+                                                span will be written in */}
+                                            <ZoomNotice min={fontSizeMin} preferred={fontSizePreferred} max={fontSizeMax} unit={this.getZoomNoticeUnit()} />
                                         </div>
                                     )}
                                 </div>

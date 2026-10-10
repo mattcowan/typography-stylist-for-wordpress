@@ -2869,3 +2869,41 @@ msgstr "L’ornement calligraphique dépasse du bloc. Certains thèmes coupent l
 #, js-format
 msgid "%1$spx (%2$srem)"
 msgstr "%1$spx (%2$srem)"
+
+#. translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx."
+msgstr "Pour rester lisible quand un lecteur zoome, cette taille augmente plus lentement que prévu : %1$spx dans une fenêtre de 1920px au lieu de %2$spx. Pour atteindre %2$spx, réglez Intermédiaire sur au moins %3$spx."
+
+#. translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom
+#: blocks/typography-stylist/build/index.js:2
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx."
+msgstr "Cette taille ne double pas quand un lecteur zoome à 500%%. Réglez Grand sur %1$spx au maximum, ou Intermédiaire sur au moins %2$spx."
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored."
+msgstr "Chaque ligne est dimensionnée pour occuper toute la largeur du bloc, en direct pendant la modification. Quand un lecteur zoome, les lignes grandissent et passent à la ligne pour que le texte reste lisible. Le bloc contrôle la taille, les tailles de police en ligne des sélections sont donc ignorées."
+
+#. translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size
+#: assets/js/block-editor.js:49
+#, js-format
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx."
+msgstr "Pour rester lisible quand un lecteur zoome, cette taille augmente plus lentement que prévu : %1$spx dans une fenêtre de 1920px au lieu de %2$spx. Pour atteindre %2$spx, réglez Taille Préférée sur au moins %3$spx."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+msgid "To stay readable when a reader zooms in, this size grows more slowly than set."
+msgstr "Pour rester lisible quand un lecteur zoome, cette taille augmente plus lentement que prévu."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+msgid "This size does not double when a reader zooms to 500%."
+msgstr "Cette taille ne double pas quand un lecteur zoome à 500%."
+
+#: assets/js/block-editor.js
+#: blocks/typography-stylist/build/index.js
+#, js-format
+msgid "This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx."
+msgstr "Cette taille ne double pas quand un lecteur zoome à 500%%. Réglez Taille Maximale sur %1$spx au maximum, ou Taille Préférée sur au moins %2$spx."
