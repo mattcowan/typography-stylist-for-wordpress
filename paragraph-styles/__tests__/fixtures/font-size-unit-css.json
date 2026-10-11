@@ -1,5 +1,5 @@
 {
-	"_comment": "Paragraph style font-size declarations (#233). Read by ps-utils.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesFontSizeUnitTest.php (generate_style_css), so both generators are held to the same strings. A style without fontSizeUnit was saved before #233 and must write px exactly as before.",
+	"_comment": "Paragraph style font-size declarations (#233, zoom-safe rem slope #234). Read by ps-utils.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesFontSizeUnitTest.php (generate_style_css), so both generators are held to the same strings. A style without fontSizeUnit was saved before #233 and must write px exactly as before.",
 	"cases": [
 		{ "label": "fixed size, no unit (saved before #233)", "properties": { "fontSize": "24" }, "rule": "font-size: 24px" },
 		{ "label": "fixed size, explicit px", "properties": { "fontSize": "24", "fontSizeUnit": "px" }, "rule": "font-size: 24px" },
@@ -14,6 +14,11 @@
 		{ "label": "responsive 13/29/42, rem", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 13, "fontSizePreferred": 29, "fontSizeMax": 42 }, "rule": "font-size: clamp(0.8125rem, 1.8125rem + 1.8125vw, 2.625rem)" },
 		{ "label": "fit fallback 16/24/64, no unit", "properties": { "fontSize": "fit", "fontSizeMin": 16, "fontSizePreferred": 24, "fontSizeMax": 64, "fitMaxSize": 120 }, "rule": "font-size: clamp(16px, 1.5rem + 3vw, 64px)" },
 		{ "label": "fit fallback 16/24/64, rem", "properties": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 24, "fontSizeMax": 64, "fitMaxSize": 120 }, "rule": "font-size: clamp(1rem, 1.5rem + 3vw, 4rem)" },
+		{ "label": "responsive 16/16/120, no unit (slope kept)", "properties": { "fontSize": "responsive", "fontSizeMin": 16, "fontSizePreferred": 16, "fontSizeMax": 120 }, "rule": "font-size: clamp(16px, 1rem + 6.5vw, 120px)" },
+		{ "label": "responsive 16/16/120, rem (slope limited for zoom, #234)", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 16, "fontSizeMax": 120 }, "rule": "font-size: clamp(1rem, 1rem + 2.5vw, 7.5rem)" },
+		{ "label": "responsive 10/17/100, rem (limited slope rounds down)", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 10, "fontSizePreferred": 17, "fontSizeMax": 100 }, "rule": "font-size: clamp(0.625rem, 1.0625rem + 2.6562vw, 6.25rem)" },
+		{ "label": "responsive 40/16/120, rem (limited by the mobile size)", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 40, "fontSizePreferred": 16, "fontSizeMax": 120 }, "rule": "font-size: clamp(2.5rem, 1rem + 4.375vw, 7.5rem)" },
+		{ "label": "fit fallback 16/16/120, rem (slope limited for zoom)", "properties": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 16, "fontSizeMax": 120, "fitMaxSize": 0 }, "rule": "font-size: clamp(1rem, 1rem + 2.5vw, 7.5rem)" },
 		{ "label": "an unknown unit writes px", "properties": { "fontSize": "24", "fontSizeUnit": "em" }, "rule": "font-size: 24px" }
 	]
 }

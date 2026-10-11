@@ -364,3 +364,20 @@ describe('detectEmItalicAtRange', () => {
 		expect(detectEmItalicAtRange('<em><span class="typost-styled" data-font-id="1">A</span></em>', 0, 1)).toBe('italic');
 	});
 });
+
+describe('parseInlineStylesAtCursor — size unit (#233, #234)', () => {
+	const span = (style, extra = '') => `<span class="typost-styled" data-fontsize="responsive" data-fontsize-min="16" data-fontsize-preferred="16" data-fontsize-max="120"${extra} style="${style}">Word</span>`;
+
+	it('reports px for an older span, so the zoom notice can say it fails', () => {
+		expect(parseInlineStylesAtCursor(span('font-size: clamp(16px, 1rem + 6.5vw, 120px)'), 1, 1).fontSizeUnit).toBe('px');
+	});
+
+	it('reports rem for a span written since #233', () => {
+		expect(parseInlineStylesAtCursor(span('font-size: clamp(1rem, 1rem + 2.5vw, 7.5rem)'), 1, 1).fontSizeUnit).toBe('rem');
+	});
+
+	it('reports null when the span has no size', () => {
+		const html = '<span class="typost-styled" data-fontweight="700" style="font-weight: 700">Word</span>';
+		expect(parseInlineStylesAtCursor(html, 1, 1).fontSizeUnit).toBeNull();
+	});
+});
