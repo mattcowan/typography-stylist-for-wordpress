@@ -2919,3 +2919,7 @@ msgstr "Cette taille ne double pas quand un lecteur zoome à 500%."
 #, js-format
 msgid "This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx."
 msgstr "Cette taille ne double pas quand un lecteur zoome à 500%%. Réglez Taille Maximale sur %1$spx au maximum, ou Taille Préférée sur au moins %2$spx."
+
+#: includes/admin-page.php
+msgid "With this setting on, new font sizes do not grow with browser zoom: a new responsive size keeps the slope you set and may not double at 500% zoom, and fit-to-width lines keep the same size on screen."
+msgstr "Quand ce réglage est activé, les nouvelles tailles de police ne grandissent pas avec le zoom du navigateur : une nouvelle taille fluide garde la pente que vous réglez et peut ne pas doubler à 500 % de zoom, et les lignes ajustées à la largeur gardent la même taille à l’écran."

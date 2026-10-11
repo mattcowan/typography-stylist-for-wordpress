@@ -1331,6 +1331,7 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                                 </label>
                                 <p class="description" id="typost_new_font_sizes_px_description">
                                     <?php esc_html_e('You always enter font sizes in px. By default, new content writes them in rem (the px value divided by 16), so headings grow when a reader sets a larger default font size in the browser. If your theme changes the root font size (for example html { font-size: 62.5% }), rem sizes render smaller than the px value you enter. Turn this on to write new font sizes in px instead. It applies to new Typography Stylist blocks, new inline font sizes and new paragraph styles. Content saved before you change this setting keeps its unit.', 'typography-stylist'); ?>
+                                    <?php esc_html_e('With this setting on, new font sizes do not grow with browser zoom: a new responsive size keeps the slope you set and may not double at 500% zoom, and fit-to-width lines keep the same size on screen.', 'typography-stylist'); ?>
                                 </p>
                             </td>
                         </tr>

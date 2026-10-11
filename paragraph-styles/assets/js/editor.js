@@ -455,7 +455,10 @@
 
 			// Re-apply current settings as inline styles (no paragraph style)
 			var state = getCurrentState();
-			dispatchApply(null, editorSource, buildPropertiesFromState(state, getNewFontSizeUnit()));
+			// No unit: a detached block or span takes the style's unit in the
+			// editor (resolveDetachFontSizeUnit / resolveSpanFontSizeUnit), and
+			// neither apply handler reads fontSizeUnit from the properties
+			dispatchApply(null, editorSource, buildPropertiesFromState(state));
 		}, [editorSource]);
 
 		// ---- Render ----
@@ -873,7 +876,8 @@
 			var state = window.typostHooks
 				? window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType)
 				: {};
-			dispatchApply(null, editorSource, buildPropertiesFromState(state, getNewFontSizeUnit()));
+			// No unit, as in onDetachStyle: the editor takes the style's unit
+			dispatchApply(null, editorSource, buildPropertiesFromState(state));
 			props.onClose();
 		}, [props.onClose, props.onApplied, applyTo, editorSource, editorType]);
 

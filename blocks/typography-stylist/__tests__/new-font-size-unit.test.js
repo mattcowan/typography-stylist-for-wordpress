@@ -182,3 +182,36 @@ describe('paragraph styles', () => {
 		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontWeight: '700' }, true, 'px').fontSizeUnit).toBe('px');
 	});
 });
+
+describe('defaults follow the site setting (review of #251)', () => {
+	test('resolveSpanFontSizeUnit without newUnit uses the site setting', () => {
+		window.typostData = { newFontSizeUnit: 'px' };
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true })).toBe('px');
+		expect(units.resolveSpanFontSizeUnit({})).toBe('px');
+		delete window.typostData;
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true })).toBe('rem');
+	});
+
+	test('an untouched declaration still keeps its own unit under either setting', () => {
+		window.typostData = { newFontSizeUnit: 'px' };
+		expect(units.resolveSpanFontSizeUnit({ spanStyle: 'font-size: clamp(1rem, 2rem + 3vw, 4rem)' })).toBe('rem');
+		window.typostData = { newFontSizeUnit: 'rem' };
+		expect(units.resolveSpanFontSizeUnit({ spanStyle: 'font-size: clamp(16px, 2rem + 3vw, 64px)' })).toBe('px');
+	});
+
+	test('only the exact string px is px when newUnit is given', () => {
+		window.typostData = { newFontSizeUnit: 'px' };
+		// A given value wins over the site setting; null and '' are not px
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: null })).toBe('rem');
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: '' })).toBe('rem');
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: 'em' })).toBe('rem');
+		expect(units.resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: 'px' })).toBe('px');
+	});
+
+	test('buildInlineFontSizeSpan without a unit uses the site setting', () => {
+		window.typostData = { newFontSizeUnit: 'px' };
+		expect(buildInlineFontSizeSpan('responsive', 16, 32, 64).fontSize).toBe('clamp(16px, 2rem + 3vw, 64px)');
+		delete window.typostData;
+		expect(buildInlineFontSizeSpan('responsive', 16, 32, 64).fontSize).toBe('clamp(1rem, 2rem + 3vw, 4rem)');
+	});
+});

@@ -28,11 +28,12 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
 
-    // Slider readout: sizes are entered in px, and a size set with these
-    // sliders is written in the site's new-content unit (#233, #248). In rem
-    // show both ("24px (1.5rem)"); with the px setting show px only, so the
-    // readout always matches what is written.
-    const formatRemReadout = (px) => (getNewFontSizeUnit() === 'rem'
+    // Slider readout: sizes are entered in px. The caller passes the unit the
+    // size is written in (getZoomNoticeUnit(): the new-content unit once the
+    // author changes the size, else the span's own unit), the same unit the
+    // zoom notice and the full rebuild use. In rem show both ("24px
+    // (1.5rem)"), in px show px only.
+    const formatRemReadout = (px, unit) => (unit === 'rem'
         ? sprintf(
             /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
             __('%1$spx (%2$srem)', 'typography-stylist'),
@@ -43,10 +44,10 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
     /**
      * Zoom notice for responsive sizes (#234), the inline editor's copy of
      * ZoomNotice in the block's edit.js (separate build pipeline). A size the
-     * author sets is written in rem, whose slope buildResponsiveClamp()
-     * limits ('slower'); a size the author has not changed keeps the unit
-     * the span has, and an older px span keeps a slope that may not double
-     * ('fails').
+     * author sets is written in the site's new-content unit (#248): in rem
+     * buildResponsiveClamp() limits the slope ('slower'), in px the slope is
+     * kept and may not double ('fails'). A size the author has not changed
+     * keeps the unit the span has.
      *
      * The Notice itself speaks nothing: its text carries the live slider
      * values, and core would speak it again on every slider step. A
@@ -3662,7 +3663,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizeMin)}
+                                                help={formatRemReadout(fontSizeMin, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Preferred Size (tablet)', 'typography-stylist')}
@@ -3671,7 +3672,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizePreferred)}
+                                                help={formatRemReadout(fontSizePreferred, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Maximum Size (desktop)', 'typography-stylist')}
@@ -3680,7 +3681,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizeMax)}
+                                                help={formatRemReadout(fontSizeMax, this.getZoomNoticeUnit())}
                                             />
                                             {/* Same soft validation as the block (QA E-1): the
                                                 clamp() is still written as typed, so the author

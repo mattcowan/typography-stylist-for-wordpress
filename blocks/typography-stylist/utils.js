@@ -3575,13 +3575,14 @@ export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getNewFontSizeUnit,
  * @param {number} fontSizeMin Mobile size (px)
  * @param {number} fontSizePreferred Preferred size (px)
  * @param {number} fontSizeMax Desktop size (px)
- * @param {string} [unit='rem'] Unit the size is written in: the new-content
- *   unit (getNewFontSizeUnit, #248), rem unless the site writes px
+ * @param {string} [unit] Unit the size is written in. Defaults to the
+ *   site's new-content unit (getNewFontSizeUnit, #248): rem unless the site
+ *   writes px, so a caller that forgets it cannot write rem on a px site
  * @return {{attributes: Object, fontSize: string, styleString: string}|null}
  *   `attributes` are the data attributes for the span, `fontSize` the CSS
  *   value, `styleString` the full `font-size: …` declaration
  */
-export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = 'rem') {
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = getNewFontSizeUnit()) {
 	if (!size || size === 'inherit') {
 		return null;
 	}

@@ -312,12 +312,17 @@ function findStyleById(styles, id) {
  * @param {string}  [args.spanStyle] The span's current style attribute
  * @param {*}       [args.styleId]   The span's data-style-id
  * @param {Array}   [args.styles]    Stored paragraph styles
- * @param {string}  [args.newUnit]   Unit for new sizes (default rem)
+ * @param {string}  [args.newUnit]   Unit for new sizes. Omitted: the site's
+ *   new-content unit (getNewFontSizeUnit), so a caller that forgets it
+ *   cannot write rem on a px site. Given: only the exact string 'px' is px,
+ *   the same rule as getNewFontSizeUnit.
  * @return {string} 'rem' or 'px'
  */
 function resolveSpanFontSizeUnit(args) {
 	var options = args || {};
-	var newUnit = resolveFontSizeUnit(options.newUnit === undefined ? FONT_SIZE_UNIT_REM : options.newUnit);
+	var newUnit = options.newUnit === undefined
+		? getNewFontSizeUnit()
+		: (options.newUnit === FONT_SIZE_UNIT_PX ? FONT_SIZE_UNIT_PX : FONT_SIZE_UNIT_REM);
 	if (options.sizeChanged) {
 		return newUnit;
 	}

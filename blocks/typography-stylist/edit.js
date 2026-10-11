@@ -136,9 +136,10 @@ const TSIcon = () => (
 
 /**
  * Zoom notice for responsive sizes (#234), beside the out-of-order note in
- * the Inspector and the Quick Feature Toggles. New content (rem) grows more
- * slowly than set when its slope would not double by 500% zoom; content
- * saved before (px) keeps its slope, so it is told it fails.
+ * the Inspector and the Quick Feature Toggles. A rem size grows more slowly
+ * than set when its slope would not double by 500% zoom ('slower'); a px
+ * size — saved before #233, or new under the #248 px setting — keeps its
+ * slope, so it is told it fails.
  *
  * Speech: the visible text carries the live slider values, and core's
  * Notice speaks its text again every time the text changes — once per
@@ -4310,7 +4311,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 												</Notice>
 											)}
-											{/* Inline spans are always written in rem (buildInlineFontSizeSpan) */}
+											{/* The unit the selection's size is written in now; a size set here is written in the site's new-content unit (buildInlineFontSizeSpan) and re-detected after the apply */}
 											<ZoomNotice min={inlineFontSizeMin} preferred={inlineFontSizePreferred} max={inlineFontSizeMax} unit={inlineFontSizeUnit} />
 											<Button
 												variant="secondary"
