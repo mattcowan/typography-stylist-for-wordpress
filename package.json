@@ -31,10 +31,10 @@
     "test:sr:headed": "playwright test -c playwright.nvda.config.js --headed"
   },
   "devDependencies": {
-    "@babel/cli": "^7.28.3",
-    "@babel/core": "^7.28.5",
-    "@babel/preset-env": "^7.28.5",
-    "@babel/preset-react": "^7.28.5",
+    "@babel/cli": "^7.29.7",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
     "@guidepup/guidepup": "^0.34.0",
     "@guidepup/playwright": "^0.19.1",
     "@playwright/test": "^1.58.0",
