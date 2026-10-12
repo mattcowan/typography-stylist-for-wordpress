@@ -6,9 +6,16 @@
 # glyphs-panel/assets/js/vendor/ have no manifest; update them by hand
 # (BUILD.txt).
 #
-# A dependency joins the first group whose patterns it matches. Security
-# updates for each ecosystem come as one pull request. Advisories whose fix
-# needs a major version get an alert but no pull request (#256).
+# A dependency joins the first group whose patterns it matches. Each
+# ecosystem has a security-updates group, so its security updates come as
+# one pull request. Those pull requests need the repository setting
+# "Dependabot security updates"; this file cannot turn it on.
+#
+# npm major version updates are ignored: Babel 8 (babelify 10 needs
+# @babel/core 7), react-test-renderer 19 (React is held at 18 by
+# @wordpress/element) and @wordpress/scripts 36 (Node and Jest preset to
+# check) need work by hand (#256). GitHub's docs do not say whether ignore
+# rules also limit security updates.
 #
 # Nothing merges automatically: every pull request runs the CI workflow and
 # waits for review.
@@ -18,6 +25,9 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-security:
         applies-to: security-updates
@@ -56,5 +66,8 @@ updates:
     schedule:
       interval: weekly
     groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
       actions:
         patterns: ["*"]
