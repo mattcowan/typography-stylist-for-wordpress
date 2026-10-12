@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -687,7 +687,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                         // Only the weight stored on the selected text ('' when
                         // inherited) — what a consumer may write into the
                         // span it creates (#254, see buildQftEditorState)
-                        selectionFontWeight: self.getExplicitFontWeight(),
+                        selectionFontWeight: self.getStoredFontWeight(),
                         // Rendered style, not just span styling — an <em>-italic
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
@@ -1237,19 +1237,20 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
          * the block lightened it, and a glyph inserted by the Glyphs panel
          * came out lighter than the headline around it.
          *
-         * Precedence: a weight stored on the selection, then one the author
-         * picked in this popover, then the weight of the paragraph style on
-         * the selection, then the weight actually rendering. The style comes
-         * before the rendered weight because that is read from the block
-         * element, which the style span does not change (#254).
+         * Precedence: a weight stored on the selection (one its paragraph
+         * style does not override, see getStoredFontWeight), then one the
+         * author picked in this popover, then the weight of the paragraph
+         * style on the selection, then the weight actually rendering. The
+         * style comes before the rendered weight because that is read from
+         * the block element, which the style span does not change (#254).
          *
          * @since 2.3.0
          * @return {string} Weight to use
          */
         getEffectiveFontWeight() {
-            const explicitWeight = this.getExplicitFontWeight();
-            if (explicitWeight) {
-                return explicitWeight;
+            const storedWeight = this.getStoredFontWeight();
+            if (storedWeight) {
+                return storedWeight;
             }
             if (this._pendingChanges.keys.has('fontWeight')) {
                 return this.state.fontWeight;
@@ -1259,6 +1260,29 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                 return styleWeight;
             }
             return this.getBlockInheritedWeight() || this.state.fontWeight;
+        }
+
+        /**
+         * The selection's data-fontweight, unless its paragraph style
+         * overrides it.
+         *
+         * Under a style the apply path keeps data-fontweight but writes no
+         * inline font-weight, so the style's class renders instead (review
+         * of #254). getExplicitFontWeight() stays raw: the apply path and
+         * the weight select write its value back.
+         *
+         * @since 2.3.2
+         * @return {string} Weight, or '' when none is stored or the style overrides it
+         */
+        getStoredFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            const attrs = activeFormat && activeFormat.attributes ? activeFormat.attributes : {};
+            return resolveSpanStoredFontWeight({
+                dataWeight: attrs['data-fontweight'],
+                styleAttr: attrs.style,
+                styleId: attrs['data-style-id']
+            }, window.typostData && window.typostData.paragraphStyles).stored;
         }
 
         /**

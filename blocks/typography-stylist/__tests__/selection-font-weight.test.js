@@ -12,7 +12,7 @@
 
 import { parseInlineStylesAtCursor, resolveSelectionFontWeights, buildQftEditorState } from '../utils';
 
-const { resolveParagraphStyleFontWeight } = require('../../../assets/js/inline-apply-rules.js');
+const { resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight } = require('../../../assets/js/inline-apply-rules.js');
 
 const STYLES = [
 	{ id: 3, name: 'Light', properties: { fontWeight: '400' } },
@@ -105,6 +105,95 @@ describe('selection weight under a paragraph style (#254)', () => {
 		const state = stateFor(html, 1, 2);
 		expect(state.fontWeight).toBe('800');
 		expect(state.selectionFontWeight).toBe('800');
+	});
+
+	test('a data-only weight on a style span loses to the style', () => {
+		// What the inline apply path writes when a style is applied over a
+		// 900 span: the data attribute stays, the inline font-weight does not,
+		// so the style's class renders 400 (review of #254)
+		const html = '<span class="typost-styled" data-style-id="3" data-fontweight="900">Words</span>';
+		const parsed = parseInlineStylesAtCursor(html, 1, 2);
+		expect(parsed.fontWeight).toBe('900'); // raw, for the QFT controls
+		expect(parsed.styleFontWeight).toBe('400');
+		const state = stateFor(html, 1, 2);
+		expect(state.fontWeight).toBe('400');
+		expect(state.selectionFontWeight).toBe('');
+	});
+
+	test('a data-only weight under a style with no weight takes the weight around it', () => {
+		const inner = '<span class="typost-styled" data-style-id="5" data-fontweight="900">Words</span>';
+		const parsed = parseInlineStylesAtCursor(inner, 1, 2);
+		expect(parsed.fontWeight).toBe('900'); // raw
+		expect(parsed.storedFontWeight).toBeNull();
+		// Block weight, as nothing on the span renders
+		expect(stateFor(inner, 1, 2).fontWeight).toBe('700');
+		expect(stateFor(inner, 1, 2).selectionFontWeight).toBe('');
+		// An outer weight span that renders is found
+		const nested = '<span class="typost-styled" data-fontweight="300" style="font-weight: 300">' + inner + '</span>';
+		const state = stateFor(nested, 1, 2);
+		expect(state.fontWeight).toBe('300');
+		expect(state.selectionFontWeight).toBe('300');
+	});
+
+	test('<strong> inside a style span renders bold, stores nothing', () => {
+		const html = '<span class="typost-styled" data-style-id="3">a <strong>bc</strong></span>';
+		const parsed = parseInlineStylesAtCursor(html, 2, 4);
+		expect(parsed.boldInsideStyleSpan).toBe(true);
+		const state = stateFor(html, 2, 4);
+		expect(state.fontWeight).toBe('700');
+		expect(state.selectionFontWeight).toBe('');
+	});
+
+	test('a selection only partly in <strong> inside a style span keeps the style weight', () => {
+		const html = '<span class="typost-styled" data-style-id="3">a <strong>bc</strong></span>';
+		expect(stateFor(html, 0, 4).fontWeight).toBe('400');
+	});
+
+	test('a style span inside <strong> renders the style weight', () => {
+		const html = '<strong>a <span class="typost-styled" data-style-id="3">bc</span></strong>';
+		const parsed = parseInlineStylesAtCursor(html, 2, 4);
+		expect(parsed.boldInsideStyleSpan).toBe(false);
+		// edit.js skips detectStrongBoldAtRange when a style weight is found
+		const state = stateFor(html, 2, 4, '700', null);
+		expect(state.fontWeight).toBe('400');
+		expect(state.selectionFontWeight).toBe('');
+	});
+});
+
+describe('resolveSpanStoredFontWeight (inline editor format attributes)', () => {
+	// getStoredFontWeight() in block-editor.js passes the active format's
+	// attributes through this rule
+	test('a data-only weight under a style is not stored', () => {
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleAttr: undefined, styleId: '3' }, STYLES))
+			.toEqual({ stored: '', styleWeight: '400' });
+	});
+
+	test('an inline font-weight on the style span keeps the weight stored', () => {
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleAttr: 'font-weight: 900', styleId: '3' }, STYLES))
+			.toEqual({ stored: '900', styleWeight: '' });
+	});
+
+	test('a property that only ends in font-weight is not a font-weight declaration', () => {
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleAttr: '--x-font-weight: 900', styleId: '3' }, STYLES).stored)
+			.toBe('');
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleAttr: 'color: red; font-weight:900', styleId: '3' }, STYLES).stored)
+			.toBe('900');
+	});
+
+	test('a span with no style keeps the data weight', () => {
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900' }, STYLES)).toEqual({ stored: '900', styleWeight: '' });
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleId: '0' }, STYLES)).toEqual({ stored: '900', styleWeight: '' });
+	});
+
+	test('a data-only weight under a style with no weight, or a deleted style, decides nothing', () => {
+		// No CSS reads data-fontweight: the weight around the span shows
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleId: '5' }, STYLES)).toEqual({ stored: '', styleWeight: '' });
+		expect(resolveSpanStoredFontWeight({ dataWeight: '900', styleId: '99' }, STYLES)).toEqual({ stored: '', styleWeight: '' });
+	});
+
+	test('nothing stored and no style gives empty values', () => {
+		expect(resolveSpanStoredFontWeight({}, STYLES)).toEqual({ stored: '', styleWeight: '' });
+		expect(resolveSpanStoredFontWeight(null, null)).toEqual({ stored: '', styleWeight: '' });
 	});
 });
 

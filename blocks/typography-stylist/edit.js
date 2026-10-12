@@ -1013,7 +1013,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// resolveSelectionFontWeights() for which weight is stored and which only
 	// rendered.
 	const strongBoldAtSelection = useMemo(() => {
-		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.fontWeight || inlineStylesAtSelection?.styleFontWeight) return null;
+		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.storedFontWeight || inlineStylesAtSelection?.styleFontWeight) return null;
 		return detectStrongBoldAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
 	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
 	const selectionFontWeights = resolveSelectionFontWeights(inlineStylesAtSelection, strongBoldAtSelection);

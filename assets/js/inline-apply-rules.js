@@ -239,10 +239,42 @@ function resolveParagraphStyleFontWeight(styles, styleId) {
 	return '';
 }
 
+/**
+ * Which weight of one span renders: its own, or its paragraph style's.
+ *
+ * Under a paragraph style the inline apply path keeps the span's
+ * data-fontweight but writes no inline font-weight (review of #254). No CSS
+ * reads data-fontweight, so on a span with a data-style-id that attribute
+ * renders nothing: the style's weight shows, or, when the style sets none
+ * (or was deleted), the weight around the span. A data-fontweight therefore
+ * counts as stored only when the span has no data-style-id, or its own
+ * style attribute declares font-weight (that declaration beats the class).
+ *
+ * Read paths only. The apply path keeps the raw data-fontweight.
+ *
+ * @param {Object}  span            The span's attributes.
+ * @param {string}  span.dataWeight Its data-fontweight.
+ * @param {string}  span.styleAttr  Its style attribute.
+ * @param {*}       span.styleId    Its data-style-id.
+ * @param {Array}   styles          Stored styles (typostData.paragraphStyles).
+ * @return {{stored: string, styleWeight: string}} The stored weight, or the
+ *         style weight that renders instead; '' for the one that does not
+ *         apply. Both '' means this span decides nothing: look further out.
+ */
+function resolveSpanStoredFontWeight(span, styles) {
+	var attrs = span || {};
+	var styleId = attrs.styleId;
+	var hasStyle = styleId !== undefined && styleId !== null && styleId !== '' && String(styleId) !== '0';
+	var declares = /(^|;)\s*font-weight\s*:/i.test(String(attrs.styleAttr || ''));
+	var stored = attrs.dataWeight && (!hasStyle || declares) ? String(attrs.dataWeight) : '';
+	return { stored: stored, styleWeight: stored ? '' : resolveParagraphStyleFontWeight(styles, styleId) };
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
 	resolvePresetFontState: resolvePresetFontState,
-	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight
+	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
+	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight
 };

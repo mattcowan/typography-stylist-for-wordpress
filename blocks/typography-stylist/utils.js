@@ -6,7 +6,7 @@
  */
 
 import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
-import { resolveParagraphStyleFontWeight } from '../../assets/js/inline-apply-rules.js';
+import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -443,11 +443,19 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			disabledFeatures: [],
 			fontId: null,
 			fontWeight: null,
-			// Weight a paragraph style sets on a span (data-style-id) that is
-			// closer to the selection than any data-fontweight span. When set,
-			// that style's CSS is what renders, and a fontWeight found further
-			// up belongs to an ancestor the style overrides (#254).
+			// The weight that renders, from the first span out from the
+			// selection that decides one (resolveSpanStoredFontWeight, #254):
+			// storedFontWeight is a data-fontweight that renders (no
+			// data-style-id on its span, or an inline font-weight with it);
+			// styleFontWeight is the weight of a paragraph style, which then
+			// overrides any data-fontweight on its own span and further up.
+			// fontWeight above stays the raw first data-fontweight.
+			storedFontWeight: null,
 			styleFontWeight: null,
+			// True when the selected text sits in a <strong>/<b> inside the
+			// span that gives styleFontWeight: the UA rule (bolder) then sets
+			// the weight below the style's class (review of #254).
+			boldInsideStyleSpan: false,
 			fontStyle: null,
 			// data-fontstyle only — never the <em>/<i> fallback below. Rendered
 			// consumers (previews, Glyphs face pick) read fontStyle; consumers
@@ -470,6 +478,9 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			spanStart: spanStart,
 			spanEnd: spanEnd
 		};
+
+		// The span whose paragraph style gives styleFontWeight, if any
+		let styleWeightSpan = null;
 
 		// Walk up from innermost span to collect properties
 		let currentSpan = smallestMatchingSpan;
@@ -531,18 +542,27 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			}
 
 			// FontWeight - inherited from first ancestor that has it
+			// fontWeight keeps the raw data-fontweight (the QFT controls and
+			// apply paths read it). The weight that renders is decided apart:
+			// the first span out from the selection with a stored weight
+			// (storedFontWeight) or a style weight (styleFontWeight) wins
 			if (result.fontWeight === null) {
 				const fontWeight = currentSpan.getAttribute('data-fontweight');
 				if (fontWeight) {
 					result.fontWeight = fontWeight;
-				} else if (result.styleFontWeight === null) {
-					const styleWeight = resolveParagraphStyleFontWeight(
-						typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null,
-						currentSpan.getAttribute('data-style-id')
-					);
-					if (styleWeight) {
-						result.styleFontWeight = styleWeight;
-					}
+				}
+			}
+			if (result.storedFontWeight === null && result.styleFontWeight === null) {
+				const spanWeight = resolveSpanStoredFontWeight({
+					dataWeight: currentSpan.getAttribute('data-fontweight'),
+					styleAttr: currentSpan.getAttribute('style'),
+					styleId: currentSpan.getAttribute('data-style-id')
+				}, typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null);
+				if (spanWeight.stored) {
+					result.storedFontWeight = spanWeight.stored;
+				} else if (spanWeight.styleWeight) {
+					result.styleFontWeight = spanWeight.styleWeight;
+					styleWeightSpan = currentSpan;
 				}
 			}
 
@@ -654,6 +674,28 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 		// still renders the italic face — previews must know about it
 		if (result.fontStyle === null && smallestMatchingSpan.closest('em, i')) {
 			result.fontStyle = 'italic';
+		}
+
+		// <strong>/<b> below the style span: every selected text node's
+		// closest bold element sits inside that span (same coverage rule as
+		// detectStrongBoldAtRange). Bold outside the span loses to the class.
+		if (styleWeightSpan) {
+			let sawNode = false;
+			let allBold = true;
+			textNodeMap.forEach(({ node, start, end }) => {
+				const overlaps = (cursorStart === cursorEnd)
+					? (cursorStart >= start && cursorStart < end)
+					: (cursorStart < end && cursorEnd > start);
+				if (!overlaps) {
+					return;
+				}
+				sawNode = true;
+				const bold = node.parentElement ? node.parentElement.closest('strong, b') : null;
+				if (!bold || !styleWeightSpan.contains(bold)) {
+					allBold = false;
+				}
+			});
+			result.boldInsideStyleSpan = sawNode && allBold;
 		}
 
 		return result;
@@ -2195,14 +2237,15 @@ export function resolveBlockSelectionRange(selectionStart, selectionEnd, clientI
  * The two weights the block reports for the selected text (#254).
  *
  * - rendered: the weight the text shows at. A paragraph style span closer
- *   to the selection than any weight span sets it with its CSS class, and
- *   overrides a weight span further up. Then a data-fontweight span, then
- *   semantic bold (<strong>/<b>, detected by the caller only when neither
- *   is set).
- * - stored: the data-fontweight on the selected text, when no closer style
- *   overrides it. A weight from a style, <strong>, the block or the theme is
- *   inherited, not stored, so consumers that write a span into the
- *   selection do not copy it.
+ *   to the selection than any rendering weight span sets it with its CSS
+ *   class — unless the text is in a <strong>/<b> inside that style span,
+ *   which renders bold ('700', the keyword convention). Then a stored
+ *   weight, then semantic bold (<strong>/<b>, detected by the caller only
+ *   when neither is set).
+ * - stored: a data-fontweight on the selected text that renders (see
+ *   resolveSpanStoredFontWeight). A weight from a style, <strong>, the block
+ *   or the theme is inherited, not stored, so consumers that write a span
+ *   into the selection do not copy it.
  *
  * @since 2.3.2
  * @param {Object|null} inlineStyles parseInlineStylesAtCursor() result
@@ -2211,9 +2254,10 @@ export function resolveBlockSelectionRange(selectionStart, selectionEnd, clientI
  */
 export function resolveSelectionFontWeights(inlineStyles, strongBold) {
 	const styleWeight = (inlineStyles && inlineStyles.styleFontWeight) || null;
-	const stored = styleWeight ? null : ((inlineStyles && inlineStyles.fontWeight) || null);
+	const stored = styleWeight ? null : ((inlineStyles && inlineStyles.storedFontWeight) || null);
+	const styleRendered = styleWeight && inlineStyles.boldInsideStyleSpan ? '700' : styleWeight;
 	return {
-		rendered: styleWeight || stored || strongBold || null,
+		rendered: styleRendered || stored || strongBold || null,
 		stored
 	};
 }
