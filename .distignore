@@ -28,8 +28,6 @@
 # --- module-level dev files ---
 __tests__
 __mocks__
-/glyphs-panel/jest.config.js
-/glyphs-panel/package.json
 /glyphs-panel/CLAUDE.md
 /variable-fonts/CLAUDE.md
 /paragraph-styles/CLAUDE.md
