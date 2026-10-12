@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -1009,11 +1009,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// this component holding the weight *the popover is offering* (default
 	// 'inherit'), and publishing that truthy string into the shared editor
 	// state would report a weight nothing renders at.
+	// A paragraph style on the selected text counts too (#254); see
+	// resolveSelectionFontWeights() for which weight is stored and which only
+	// rendered.
 	const strongBoldAtSelection = useMemo(() => {
-		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.fontWeight) return null;
+		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.storedFontWeight || inlineStylesAtSelection?.styleFontWeight) return null;
 		return detectStrongBoldAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
 	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
-	qftStateRef.current.selectionFontWeight = inlineStylesAtSelection?.fontWeight || strongBoldAtSelection || null;
+	const selectionFontWeights = resolveSelectionFontWeights(inlineStylesAtSelection, strongBoldAtSelection);
+	qftStateRef.current.selectionRenderedFontWeight = selectionFontWeights.rendered;
+	qftStateRef.current.selectionStoredFontWeight = selectionFontWeights.stored;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations

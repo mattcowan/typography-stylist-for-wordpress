@@ -200,9 +200,81 @@ function resolvePresetFontState(preset, current, fontIdMap) {
 	return next;
 }
 
+var findStyleById = require('./font-size-units.js').findStyleById;
+
+/**
+ * The font weight a paragraph style gives the text under its data-style-id.
+ *
+ * A style span carries no weight of its own: the style's CSS rule sets it.
+ * Without this, code that looks for a weight at the selection skipped the
+ * style span and reported the block's weight, so a glyph inserted there
+ * came out at the block's weight instead of the style's (#254).
+ *
+ * Mirrors the Paragraph Styles CSS generators: a number from 1 to 1000, or
+ * normal / bold / lighter / bolder. normal and bold are reported as 400 and
+ * 700; lighter and bolder stay keywords, because they depend on the parent.
+ *
+ * @param {Array}         styles  Stored styles (typostData.paragraphStyles).
+ * @param {number|string} styleId The span's data-style-id.
+ * @return {string} The weight, or '' when the style is unknown or sets none.
+ */
+function resolveParagraphStyleFontWeight(styles, styleId) {
+	if (styleId === undefined || styleId === null || styleId === '' || String(styleId) === '0') {
+		return '';
+	}
+	var style = findStyleById(styles, styleId);
+	var weight = style && style.properties ? style.properties.fontWeight : '';
+	if (!weight || weight === '0') {
+		return '';
+	}
+	var text = String(weight).trim().toLowerCase();
+	var keywords = { normal: '400', bold: '700', lighter: 'lighter', bolder: 'bolder' };
+	if (keywords[text]) {
+		return keywords[text];
+	}
+	var number = Number(text);
+	if (text !== '' && isFinite(number) && number >= 1 && number <= 1000) {
+		return String(parseInt(text, 10));
+	}
+	return '';
+}
+
+/**
+ * Which weight of one span renders: its own, or its paragraph style's.
+ *
+ * Under a paragraph style the inline apply path keeps the span's
+ * data-fontweight but writes no inline font-weight (review of #254). No CSS
+ * reads data-fontweight, so on a span with a data-style-id that attribute
+ * renders nothing: the style's weight shows, or, when the style sets none
+ * (or was deleted), the weight around the span. A data-fontweight therefore
+ * counts as stored only when the span has no data-style-id, or its own
+ * style attribute declares font-weight (that declaration beats the class).
+ *
+ * Read paths only. The apply path keeps the raw data-fontweight.
+ *
+ * @param {Object}  span            The span's attributes.
+ * @param {string}  span.dataWeight Its data-fontweight.
+ * @param {string}  span.styleAttr  Its style attribute.
+ * @param {*}       span.styleId    Its data-style-id.
+ * @param {Array}   styles          Stored styles (typostData.paragraphStyles).
+ * @return {{stored: string, styleWeight: string}} The stored weight, or the
+ *         style weight that renders instead; '' for the one that does not
+ *         apply. Both '' means this span decides nothing: look further out.
+ */
+function resolveSpanStoredFontWeight(span, styles) {
+	var attrs = span || {};
+	var styleId = attrs.styleId;
+	var hasStyle = styleId !== undefined && styleId !== null && styleId !== '' && String(styleId) !== '0';
+	var declares = /(^|;)\s*font-weight\s*:/i.test(String(attrs.styleAttr || ''));
+	var stored = attrs.dataWeight && (!hasStyle || declares) ? String(attrs.dataWeight) : '';
+	return { stored: stored, styleWeight: stored ? '' : resolveParagraphStyleFontWeight(styles, styleId) };
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
-	resolvePresetFontState: resolvePresetFontState
+	resolvePresetFontState: resolvePresetFontState,
+	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
+	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight
 };
