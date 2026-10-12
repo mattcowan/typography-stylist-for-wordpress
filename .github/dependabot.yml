@@ -1,0 +1,73 @@
+# Dependabot: weekly version updates and grouped security updates (#257).
+#
+# Everything here is a build or test tool. Nothing from node_modules/ or
+# vendor/ ships (.distignore), so these updates change CI and developer
+# machines, not sites that run the plugin. The vendored runtime libraries in
+# glyphs-panel/assets/js/vendor/ have no manifest; update them by hand
+# (BUILD.txt).
+#
+# A dependency joins the first group whose patterns it matches. Each
+# ecosystem has a security-updates group, so its security updates come as
+# one pull request. Those pull requests need the repository setting
+# "Dependabot security updates"; this file cannot turn it on.
+#
+# npm major version updates are ignored: Babel 8 (babelify 10 needs
+# @babel/core 7), react-test-renderer 19 (React is held at 18 by
+# @wordpress/element) and @wordpress/scripts 36 (Node and Jest preset to
+# check) need work by hand (#256). GitHub's docs do not say whether ignore
+# rules also limit security updates.
+#
+# Nothing merges automatically: every pull request runs the CI workflow and
+# waits for review.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      wordpress:
+        patterns: ["@wordpress/*"]
+      babel:
+        patterns: ["@babel/*", "babelify"]
+      testing:
+        patterns:
+          - "@playwright/*"
+          - "@testing-library/*"
+          - "@guidepup/*"
+          - "react-test-renderer"
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # composer.json sets config.platform.php to 7.4, and Composer resolves
+  # updates against it, so a version that needs a newer PHP is not offered.
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      composer-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      composer-dev:
+        patterns: ["*"]
+
+  # Dependabot updates version tags and commit SHAs only, so the two
+  # 10up/*@stable branch references in the workflows are not updated.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
+      actions:
+        patterns: ["*"]
