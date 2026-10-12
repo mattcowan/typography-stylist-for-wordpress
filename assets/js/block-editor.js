@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -684,6 +684,10 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                         // lighter than the text around it, because consumers
                         // wrote this value onto the span they created.
                         fontWeight: self.getEffectiveFontWeight(),
+                        // Only the weight stored on the selected text ('' when
+                        // inherited) — what a consumer may write into the
+                        // span it creates (#254, see buildQftEditorState)
+                        selectionFontWeight: self.getExplicitFontWeight(),
                         // Rendered style, not just span styling — an <em>-italic
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
@@ -1234,7 +1238,10 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
          * came out lighter than the headline around it.
          *
          * Precedence: a weight stored on the selection, then one the author
-         * picked in this popover, then the weight actually rendering.
+         * picked in this popover, then the weight of the paragraph style on
+         * the selection, then the weight actually rendering. The style comes
+         * before the rendered weight because that is read from the block
+         * element, which the style span does not change (#254).
          *
          * @since 2.3.0
          * @return {string} Weight to use
@@ -1247,7 +1254,24 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
             if (this._pendingChanges.keys.has('fontWeight')) {
                 return this.state.fontWeight;
             }
+            const styleWeight = this.getParagraphStyleFontWeight();
+            if (styleWeight) {
+                return styleWeight;
+            }
             return this.getBlockInheritedWeight() || this.state.fontWeight;
+        }
+
+        /**
+         * The weight the paragraph style on the selection sets, or ''.
+         *
+         * @since 2.3.2
+         * @return {string} Weight, or '' when no style (or no style weight) applies
+         */
+        getParagraphStyleFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            const styleId = activeFormat && activeFormat.attributes ? activeFormat.attributes['data-style-id'] : '';
+            return resolveParagraphStyleFontWeight(window.typostData && window.typostData.paragraphStyles, styleId);
         }
 
         getActiveFontVariationSettings() {

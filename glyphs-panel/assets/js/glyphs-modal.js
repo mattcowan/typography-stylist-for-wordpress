@@ -738,7 +738,7 @@
 				panelFontFamily: (selectedFont && !selectedFont.fontId) ? (selectedFont.cssFamily || '"' + selectedFont.family + '"') : '',
 				contextFontId: context.fontId || 0,
 				contextFeatures: context.features || [],
-				contextFontWeight: context.fontWeight || ''
+				contextFontWeight: context.insertionFontWeight || ''
 			});
 			// Swap only while the author keeps browsing the SAME character: the
 			// first pick for the launch selection, and further picks after it.

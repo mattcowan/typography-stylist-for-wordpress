@@ -200,9 +200,49 @@ function resolvePresetFontState(preset, current, fontIdMap) {
 	return next;
 }
 
+var findStyleById = require('./font-size-units.js').findStyleById;
+
+/**
+ * The font weight a paragraph style gives the text under its data-style-id.
+ *
+ * A style span carries no weight of its own: the style's CSS rule sets it.
+ * Without this, code that looks for a weight at the selection skipped the
+ * style span and reported the block's weight, so a glyph inserted there
+ * came out at the block's weight instead of the style's (#254).
+ *
+ * Mirrors the Paragraph Styles CSS generators: a number from 1 to 1000, or
+ * normal / bold / lighter / bolder. normal and bold are reported as 400 and
+ * 700; lighter and bolder stay keywords, because they depend on the parent.
+ *
+ * @param {Array}         styles  Stored styles (typostData.paragraphStyles).
+ * @param {number|string} styleId The span's data-style-id.
+ * @return {string} The weight, or '' when the style is unknown or sets none.
+ */
+function resolveParagraphStyleFontWeight(styles, styleId) {
+	if (styleId === undefined || styleId === null || styleId === '' || String(styleId) === '0') {
+		return '';
+	}
+	var style = findStyleById(styles, styleId);
+	var weight = style && style.properties ? style.properties.fontWeight : '';
+	if (!weight || weight === '0') {
+		return '';
+	}
+	var text = String(weight).trim().toLowerCase();
+	var keywords = { normal: '400', bold: '700', lighter: 'lighter', bolder: 'bolder' };
+	if (keywords[text]) {
+		return keywords[text];
+	}
+	var number = Number(text);
+	if (text !== '' && isFinite(number) && number >= 1 && number <= 1000) {
+		return String(parseInt(text, 10));
+	}
+	return '';
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
-	resolvePresetFontState: resolvePresetFontState
+	resolvePresetFontState: resolvePresetFontState,
+	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight
 };

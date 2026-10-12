@@ -6,6 +6,7 @@
  */
 
 import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveParagraphStyleFontWeight } from '../../assets/js/inline-apply-rules.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -442,6 +443,11 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			disabledFeatures: [],
 			fontId: null,
 			fontWeight: null,
+			// Weight a paragraph style sets on a span (data-style-id) that is
+			// closer to the selection than any data-fontweight span. When set,
+			// that style's CSS is what renders, and a fontWeight found further
+			// up belongs to an ancestor the style overrides (#254).
+			styleFontWeight: null,
 			fontStyle: null,
 			// data-fontstyle only — never the <em>/<i> fallback below. Rendered
 			// consumers (previews, Glyphs face pick) read fontStyle; consumers
@@ -529,6 +535,14 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontWeight = currentSpan.getAttribute('data-fontweight');
 				if (fontWeight) {
 					result.fontWeight = fontWeight;
+				} else if (result.styleFontWeight === null) {
+					const styleWeight = resolveParagraphStyleFontWeight(
+						typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null,
+						currentSpan.getAttribute('data-style-id')
+					);
+					if (styleWeight) {
+						result.styleFontWeight = styleWeight;
+					}
 				}
 			}
 
@@ -2178,6 +2192,33 @@ export function resolveBlockSelectionRange(selectionStart, selectionEnd, clientI
 }
 
 /**
+ * The two weights the block reports for the selected text (#254).
+ *
+ * - rendered: the weight the text shows at. A paragraph style span closer
+ *   to the selection than any weight span sets it with its CSS class, and
+ *   overrides a weight span further up. Then a data-fontweight span, then
+ *   semantic bold (<strong>/<b>, detected by the caller only when neither
+ *   is set).
+ * - stored: the data-fontweight on the selected text, when no closer style
+ *   overrides it. A weight from a style, <strong>, the block or the theme is
+ *   inherited, not stored, so consumers that write a span into the
+ *   selection do not copy it.
+ *
+ * @since 2.3.2
+ * @param {Object|null} inlineStyles parseInlineStylesAtCursor() result
+ * @param {string|null} strongBold   detectStrongBoldAtRange() result
+ * @return {{rendered: (string|null), stored: (string|null)}} Weights, null when none
+ */
+export function resolveSelectionFontWeights(inlineStyles, strongBold) {
+	const styleWeight = (inlineStyles && inlineStyles.styleFontWeight) || null;
+	const stored = styleWeight ? null : ((inlineStyles && inlineStyles.fontWeight) || null);
+	return {
+		rendered: styleWeight || stored || strongBold || null,
+		stored
+	};
+}
+
+/**
  * Build the shared editor-state object that the `typost_current_editor_state`
  * filter answers with for the 'qft' editor.
  *
@@ -2217,8 +2258,17 @@ export function buildQftEditorState(s) {
 		// parseInlineStylesAtCursor resolves). Reporting the block attribute
 		// there tells consumers the wrong weight — the Glyphs panel drew its
 		// cells in it and inserted glyphs at it, so a glyph placed in a bold
-		// run came out lighter than the text around it.
-		fontWeight: source.selectionFontWeight || source.fontWeight,
+		// run came out lighter than the text around it. A paragraph style on
+		// the selected text counts too (#254).
+		fontWeight: source.selectionRenderedFontWeight || source.fontWeight,
+		// The weight stored on the selected text itself (a data-fontweight
+		// span not overridden by a closer paragraph style), '' when the text
+		// inherits its weight from a style, <strong>, the block or the theme.
+		// Consumers that write a span into the selection (the Glyphs panel)
+		// write only this one: an inherited weight written inline would
+		// override the style's class and stay behind when the style or the
+		// block weight changes later (#254).
+		selectionFontWeight: source.selectionStoredFontWeight ? String(source.selectionStoredFontWeight) : '',
 		fontSize: source.fontSize,
 		fontSizeMin: source.fontSizeMin,
 		fontSizePreferred: source.fontSizePreferred,
