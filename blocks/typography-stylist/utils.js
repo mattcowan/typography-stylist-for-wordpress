@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -548,6 +548,7 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 					result.fontSize = fontSize;
 					result.fontSizeUnit = resolveSpanFontSizeUnit({
 						sizeChanged: false,
+						newUnit: getNewFontSizeUnit(),
 						spanStyle: currentSpan.getAttribute('style'),
 						styleId: currentSpan.getAttribute('data-style-id'),
 						styles: typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null
@@ -3549,7 +3550,7 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
 	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
 
-export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getResponsiveZoomNotice };
+export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getNewFontSizeUnit, getResponsiveZoomNotice };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)
@@ -3574,17 +3575,20 @@ export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getResponsiveZoomNo
  * @param {number} fontSizeMin Mobile size (px)
  * @param {number} fontSizePreferred Preferred size (px)
  * @param {number} fontSizeMax Desktop size (px)
+ * @param {string} [unit] Unit the size is written in. Defaults to the
+ *   site's new-content unit (getNewFontSizeUnit, #248): rem unless the site
+ *   writes px, so a caller that forgets it cannot write rem on a px site
  * @return {{attributes: Object, fontSize: string, styleString: string}|null}
  *   `attributes` are the data attributes for the span, `fontSize` the CSS
  *   value, `styleString` the full `font-size: …` declaration
  */
-export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = getNewFontSizeUnit()) {
 	if (!size || size === 'inherit') {
 		return null;
 	}
 
 	if (size === 'responsive') {
-		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem');
+		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 		return {
 			attributes: {
 				'data-fontsize': 'responsive',
@@ -3599,7 +3603,7 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
 
 	const fixedPx = String(size).match(/^(\d+(?:\.\d+)?)(?:px)?$/);
 	const fontSize = fixedPx && Number(fixedPx[1]) > 0
-		? formatFontSizeLength(fixedPx[1], 'rem')
+		? formatFontSizeLength(fixedPx[1], unit)
 		: size;
 	return {
 		attributes: { 'data-fontsize': size },

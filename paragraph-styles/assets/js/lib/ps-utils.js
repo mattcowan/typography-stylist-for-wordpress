@@ -215,9 +215,20 @@
 	}
 
 	/**
-	 * Build properties object from current editor state.
+	 * The size unit new styles write: 'px' only when the site asks for it
+	 * (typostData.newFontSizeUnit, #248), else 'rem' (#233).
 	 */
-	function buildPropertiesFromState(state) {
+	function resolveNewStyleUnit(unit) {
+		return unit === 'px' ? 'px' : 'rem';
+	}
+
+	/**
+	 * Build properties object from current editor state.
+	 *
+	 * @param {Object} state     Editor state from typost_current_editor_state.
+	 * @param {string} [newUnit] The site's unit for new sizes ('rem' default).
+	 */
+	function buildPropertiesFromState(state, newUnit) {
 		var properties = {};
 		if (!state) return properties;
 		if (state.fontId || state.selectedFontId) {
@@ -234,11 +245,13 @@
 		}
 		if (state.fontSize && state.fontSize !== 'inherit') {
 			properties.fontSize = state.fontSize;
-			// A style saved now is new content: its sizes are written in rem
-			// (#233). Not taken from the editor, because a px block is only
-			// px to keep its own saved markup unchanged. Update Style keeps
-			// an older style's px (buildPropertiesForStyleSave).
-			properties.fontSizeUnit = 'rem';
+			// A style saved now is new content: its sizes are written in the
+			// site's new-content unit, rem (#233) unless the Options setting
+			// asks for px (#248). Not taken from the editor, because a
+			// block's unit only keeps its own saved markup unchanged. Update
+			// Style keeps the unit of a style that already has a size
+			// (buildPropertiesForStyleSave).
+			properties.fontSizeUnit = resolveNewStyleUnit(newUnit);
 		}
 		// Fit mode: the max-size cap is part of the fit look. Always stored
 		// (0 = uncapped) so applying a fit style is deterministic.
@@ -294,20 +307,22 @@
 	 * (PR review). A key the editor does not report is carried from the
 	 * base style; a key it reports, including 0, is the editor's value.
 	 *
-	 * Size unit (#233): Update Style (isUpdate) keeps px on a style saved
-	 * before rem existed — one that has a size and no fontSizeUnit — so its
-	 * CSS does not change unit under content that already uses it, as a
-	 * block saved before #233 keeps px after an edit. A style that had no
-	 * size wrote none, so a size added to it is new and written in rem.
-	 * Save as New is a new style and always writes rem.
+	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
+	 * style that already writes a size, so its CSS does not change unit
+	 * under content that already uses it: px for a style saved before rem
+	 * existed (a size and no fontSizeUnit) or under the px setting, rem for
+	 * one saved as rem — whatever the site setting is now. A style that had
+	 * no size wrote none, so a size added to it is new and takes the site's
+	 * new-content unit. Save as New is a new style and always takes it.
 	 *
 	 * @param {Object}  state          Editor state from typost_current_editor_state.
 	 * @param {Object}  baseProperties The active style's stored properties.
 	 * @param {boolean} [isUpdate]     True for Update Style, false for Save as New.
+	 * @param {string}  [newUnit]      The site's unit for new sizes ('rem' default).
 	 * @return {Object} Properties for the REST request.
 	 */
-	function buildPropertiesForStyleSave(state, baseProperties, isUpdate) {
-		var properties = buildPropertiesFromState(state);
+	function buildPropertiesForStyleSave(state, baseProperties, isUpdate, newUnit) {
+		var properties = buildPropertiesFromState(state, newUnit);
 		var base = baseProperties || {};
 		if ((!state || state.initialHang === undefined) && normalizeHang(base.initialHang) > 0) {
 			properties.initialHang = normalizeHang(base.initialHang);
@@ -315,8 +330,8 @@
 		// Same test as the CSS generators: only these write a size ('0' does not)
 		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
 			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
-		if (isUpdate && properties.fontSizeUnit && baseHasSize && base.fontSizeUnit !== 'rem') {
-			properties.fontSizeUnit = 'px';
+		if (isUpdate && properties.fontSizeUnit && baseHasSize) {
+			properties.fontSizeUnit = base.fontSizeUnit === 'rem' ? 'rem' : 'px';
 		}
 		return properties;
 	}

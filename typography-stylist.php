@@ -379,6 +379,10 @@ class Typost {
                 // inserts a line break; when false the block declares core's
                 // `splitting` support and Enter starts a new block instead.
                 'blockEnterLineBreak' => (bool) get_option('typost_block_enter_line_break', true),
+                // Unit new content writes its font sizes in (#248): 'rem' by
+                // default (#233), 'px' when "Write new font sizes in px" is on.
+                // A string, not a bool, so it can never arrive as a truthy "0".
+                'newFontSizeUnit' => $this->get_new_font_size_unit(),
                 'settingsUrl' => admin_url('options-general.php?page=typography-stylist')
             );
 
@@ -2069,6 +2073,25 @@ class Typost {
     }
 
     /**
+     * The unit new content writes its font sizes in.
+     *
+     * rem by default (#233), so new headings follow the reader's default font
+     * size. A theme that changes the root font size (html { font-size: 62.5% })
+     * makes rem sizes smaller than the px value the author entered, so the
+     * Options tab can switch new content to px (#248). Only new content follows
+     * the setting: a block stores its unit when it is inserted, a paragraph
+     * style when it is saved, and an inline span in its own declaration.
+     * block.json's fontSizeUnit default stays 'rem' because it also decides how
+     * saved blocks parse.
+     *
+     * @since 2.3.2
+     * @return string 'px' or 'rem'
+     */
+    public function get_new_font_size_unit() {
+        return get_option('typost_new_font_sizes_px', false) ? 'px' : 'rem';
+    }
+
+    /**
      * Register REST API routes
      */
     public function register_rest_routes() {
@@ -3383,6 +3406,11 @@ class Typost {
         // "unchecked" and silently turn the default off.
         if (null !== $request->get_param('block_enter_line_break')) {
             update_option('typost_block_enter_line_break', rest_sanitize_boolean($request->get_param('block_enter_line_break')) ? '1' : '0');
+        }
+
+        // Same "only save what the client sent" rule (#248)
+        if (null !== $request->get_param('new_font_sizes_px')) {
+            update_option('typost_new_font_sizes_px', rest_sanitize_boolean($request->get_param('new_font_sizes_px')) ? '1' : '0');
         }
 
         // Checkbox rendered only when the Font Library is available; only
@@ -7187,6 +7215,10 @@ class Typost {
             // Save Enter-key behaviour for the Typography Stylist block
             $enter_line_break = isset($_POST['typost_block_enter_line_break']) ? '1' : '0';
             update_option('typost_block_enter_line_break', $enter_line_break);
+
+            // Save the unit new font sizes are written in (#248)
+            $new_font_sizes_px = isset($_POST['typost_new_font_sizes_px']) ? '1' : '0';
+            update_option('typost_new_font_sizes_px', $new_font_sizes_px);
 
             // Save WP Font Library auto-register setting (checkbox rendered
             // only when the Font Library is available)

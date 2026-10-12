@@ -103,6 +103,9 @@ function resolveWeightToWrite(facts) {
  *                                        fontSize, fontSizeMin/Preferred/Max,
  *                                        fontWeight, letterSpacing, lineHeight).
  * @param {Array}   args.existingFeatures Features already on an existing block.
+ * @param {string}  args.fontSizeUnit     Size unit for a new block: the site's
+ *                                        new-content unit (#248). Ignored for an
+ *                                        existing block, which keeps its own.
  * @return {object} Attributes for createBlock() or updateBlockAttributes().
  */
 function buildConvertBlockAttributes(args) {
@@ -113,6 +116,7 @@ function buildConvertBlockAttributes(args) {
 	if (a.partialSelection) {
 		if (a.isNewBlock) {
 			attrs.tagName = a.tagName;
+			setNewBlockFontSizeUnit(attrs, a.fontSizeUnit);
 			attrs.features = [];
 			attrs.fontFamily = '';
 			attrs.fontSize = 'inherit';
@@ -137,8 +141,26 @@ function buildConvertBlockAttributes(args) {
 	attrs.lineHeight = state.lineHeight || 0;
 	if (a.isNewBlock) {
 		attrs.tagName = a.tagName;
+		setNewBlockFontSizeUnit(attrs, a.fontSizeUnit);
 	}
 	return attrs;
+}
+
+/**
+ * Store the site's new-content size unit on a block being created (#248).
+ *
+ * block.json's fontSizeUnit default ('rem') also decides how saved blocks
+ * parse, so it cannot follow the setting: a new block stores its unit
+ * explicitly. An existing block keeps its own unit, so it is never set
+ * there. 'rem' equals the default and is not serialized.
+ *
+ * @param {Object} attrs Block attributes being built (mutated)
+ * @param {string} [unit] 'px' or 'rem'; anything else leaves the default
+ */
+function setNewBlockFontSizeUnit(attrs, unit) {
+	if (unit === 'px' || unit === 'rem') {
+		attrs.fontSizeUnit = unit;
+	}
 }
 
 var resolveFontIdFromFamily = require('./font-options.js').resolveFontIdFromFamily;

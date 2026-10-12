@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -136,9 +136,10 @@ const TSIcon = () => (
 
 /**
  * Zoom notice for responsive sizes (#234), beside the out-of-order note in
- * the Inspector and the Quick Feature Toggles. New content (rem) grows more
- * slowly than set when its slope would not double by 500% zoom; content
- * saved before (px) keeps its slope, so it is told it fails.
+ * the Inspector and the Quick Feature Toggles. A rem size grows more slowly
+ * than set when its slope would not double by 500% zoom ('slower'); a px
+ * size — saved before #233, or new under the #248 px setting — keeps its
+ * slope, so it is told it fails.
  *
  * Speech: the visible text carries the live slider values, and core's
  * Notice speaks its text again every time the text changes — once per
@@ -229,7 +230,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// blocks saved before rem existed (set by the deprecations' migrate()).
 	// The editor preview uses the same unit as save.js, so both render the
 	// same size. A span size set in the Quick Feature Toggles is written in
-	// rem (buildInlineFontSizeSpan); other span edits keep the size as stored.
+	// the site's new-content unit (getNewFontSizeUnit: rem, or px when the
+	// Options setting asks for it, #248; buildInlineFontSizeSpan); other
+	// span edits keep the size as stored.
 	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
 
 	// Slider readout. Sizes are always entered in px; in rem the readout also
@@ -279,10 +282,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
 	// Unit of the selection's size as it is written now (#233). A size the
-	// author sets here is always rem, and the re-detection that follows the
-	// apply reports that; until then an older span is px and keeps its
-	// slope, which the zoom notice describes differently (#234).
-	const [inlineFontSizeUnit, setInlineFontSizeUnit] = useState('rem');
+	// author sets here is written in the site's new-content unit (rem, or px
+	// with the #248 setting), and the re-detection that follows the apply
+	// reports that; until then an older span keeps its own unit and slope,
+	// which the zoom notice describes differently (#234).
+	const [inlineFontSizeUnit, setInlineFontSizeUnit] = useState(() => getNewFontSizeUnit());
 	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
 	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
 	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
@@ -1330,7 +1334,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			setInlineFontStyle('');
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
-			setInlineFontSizeUnit('rem');
+			setInlineFontSizeUnit(getNewFontSizeUnit());
 			setInlineFontSizeMin(16);
 			setInlineFontSizePreferred(32);
 			setInlineFontSizeMax(64);
@@ -1363,7 +1367,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
 		}
-		setInlineFontSizeUnit(detected.fontSizeUnit || 'rem');
+		setInlineFontSizeUnit(detected.fontSizeUnit || getNewFontSizeUnit());
 		if (detected.fontSize) {
 			setInlineFontSize(detected.fontSize);
 			if (detected.fontSizeMin !== null) setInlineFontSizeMin(detected.fontSizeMin);
@@ -1512,7 +1516,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1565,7 +1569,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, 'rem');
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1704,7 +1708,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				break;
 			case 'fontSize':
 				setInlineFontSize(detected.fontSize || 'inherit');
-				setInlineFontSizeUnit(detected.fontSizeUnit || 'rem');
+				setInlineFontSizeUnit(detected.fontSizeUnit || getNewFontSizeUnit());
 				setInlineFontSizeMin(has('fontSizeMin') ? detected.fontSizeMin : 16);
 				setInlineFontSizePreferred(has('fontSizePreferred') ? detected.fontSizePreferred : 32);
 				setInlineFontSizeMax(has('fontSizeMax') ? detected.fontSizeMax : 64);
@@ -1898,7 +1902,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		// Calculate clamp() for font-size
-		const clampValue = buildResponsiveClamp(min, preferred, max, 'rem');
+		const clampValue = buildResponsiveClamp(min, preferred, max, getNewFontSizeUnit());
 		styles['font-size'] = clampValue;
 
 		applyPreviewStyles({
@@ -2406,7 +2410,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const size = sizeOverride !== undefined ? sizeOverride : inlineFontSize;
 		// Attributes and style for both collapsed and selection cases; null
 		// for 'inherit' (nothing to apply)
-		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax);
+		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax, getNewFontSizeUnit());
 		if (!content || !spanSpec) return;
 
 		if (resolvedApplyRange) {
@@ -4307,7 +4311,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 												</Notice>
 											)}
-											{/* Inline spans are always written in rem (buildInlineFontSizeSpan) */}
+											{/* The unit the selection's size is written in now; a size set here is written in the site's new-content unit (buildInlineFontSizeSpan) and re-detected after the apply */}
 											<ZoomNotice min={inlineFontSizeMin} preferred={inlineFontSizePreferred} max={inlineFontSizeMax} unit={inlineFontSizeUnit} />
 											<Button
 												variant="secondary"

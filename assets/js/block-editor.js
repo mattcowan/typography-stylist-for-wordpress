@@ -13,10 +13,12 @@ const { FontPicker } = require('./font-picker.js');
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
 const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-// A size this editor writes is new content and is written in rem (#233). A
-// size the author did not change keeps the unit the span already has
-// (resolveSpanFontSizeUnit), so older px spans are not rewritten.
-const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoomNotice } = require('./font-size-units.js');
+// A size this editor writes is new content and is written in the site's
+// new-content unit: rem (#233), or px when the Options setting asks for it
+// (#248, getNewFontSizeUnit). A size the author did not change keeps the
+// unit the span already has (resolveSpanFontSizeUnit), so older spans are
+// not rewritten.
+const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -26,21 +28,26 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
 
-    // Slider readout: sizes are entered in px, and every span this editor
-    // writes is rem (#233), so show both ("24px (1.5rem)").
-    const formatRemReadout = (px) => sprintf(
-        /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
-        __('%1$spx (%2$srem)', 'typography-stylist'),
-        px,
-        pxToRem(px)
-    );
+    // Slider readout: sizes are entered in px. The caller passes the unit the
+    // size is written in (getZoomNoticeUnit(): the new-content unit once the
+    // author changes the size, else the span's own unit), the same unit the
+    // zoom notice and the full rebuild use. In rem show both ("24px
+    // (1.5rem)"), in px show px only.
+    const formatRemReadout = (px, unit) => (unit === 'rem'
+        ? sprintf(
+            /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+            __('%1$spx (%2$srem)', 'typography-stylist'),
+            px,
+            pxToRem(px)
+        )
+        : `${px}px`);
     /**
      * Zoom notice for responsive sizes (#234), the inline editor's copy of
      * ZoomNotice in the block's edit.js (separate build pipeline). A size the
-     * author sets is written in rem, whose slope buildResponsiveClamp()
-     * limits ('slower'); a size the author has not changed keeps the unit
-     * the span has, and an older px span keeps a slope that may not double
-     * ('fails').
+     * author sets is written in the site's new-content unit (#248): in rem
+     * buildResponsiveClamp() limits the slope ('slower'), in px the slope is
+     * kept and may not double ('fails'). A size the author has not changed
+     * keeps the unit the span has.
      *
      * The Notice itself speaks nothing: its text carries the live slider
      * values, and core would speak it again on every slider step. A
@@ -1886,6 +1893,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
             const attrs = (format && format.attributes) || {};
             return resolveSpanFontSizeUnit({
                 sizeChanged: !!(this._pendingChanges && this._pendingChanges.keys.has('fontSize')),
+                newUnit: getNewFontSizeUnit(),
                 spanStyle: attrs.style,
                 styleId: attrs['data-style-id'],
                 styles: window.typostData && window.typostData.paragraphStyles
@@ -2330,7 +2338,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, 'rem')}`);
+                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2401,7 +2409,8 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                         isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        effectiveWeight: blockInheritedWeight
+                        effectiveWeight: blockInheritedWeight,
+                        fontSizeUnit: getNewFontSizeUnit()
                     }));
 
                     // Replace current block
@@ -2450,6 +2459,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                         content: textContent,
                         tagName: tagName,
                         effectiveWeight: convertFontWeight,
+                        fontSizeUnit: getNewFontSizeUnit(),
                         state: this.state
                     }));
 
@@ -2534,7 +2544,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                     dataAttrs['data-fontsize-min'] = String(fontSizeMin);
                     dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
                     dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, 'rem');
+                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
                 } else {
                     dataAttrs['data-fontsize'] = null;
                     dataAttrs['data-fontsize-min'] = null;
@@ -2635,7 +2645,8 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                 sizeChanged: !!(pending && pending.keys.has('fontSize')),
                 spanStyle: activeAttrs.style,
                 styleId: activeAttrs['data-style-id'],
-                styles: window.typostData && window.typostData.paragraphStyles
+                styles: window.typostData && window.typostData.paragraphStyles,
+                newUnit: getNewFontSizeUnit()
             });
             if (pending) {
                 this._resetPendingChanges();
@@ -3652,7 +3663,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizeMin)}
+                                                help={formatRemReadout(fontSizeMin, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Preferred Size (tablet)', 'typography-stylist')}
@@ -3661,7 +3672,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizePreferred)}
+                                                help={formatRemReadout(fontSizePreferred, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Maximum Size (desktop)', 'typography-stylist')}
@@ -3670,7 +3681,7 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={formatRemReadout(fontSizeMax)}
+                                                help={formatRemReadout(fontSizeMax, this.getZoomNoticeUnit())}
                                             />
                                             {/* Same soft validation as the block (QA E-1): the
                                                 clamp() is still written as typed, so the author
@@ -3981,5 +3992,19 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getResponsiveZoo
             );
         })
     });
+
+    /**
+     * New Typography Stylist blocks store the site's size unit (#248).
+     *
+     * Registered here rather than in the block script because typostData is
+     * localized on this handle; the block script has no guaranteed order
+     * relative to it. Variations are stored by block name, so registering
+     * before the block type exists is fine. Blocks created in code (the
+     * transforms, Convert to block) pass the unit themselves.
+     */
+    const newBlockUnitVariation = buildNewBlockUnitVariation(getNewFontSizeUnit());
+    if (newBlockUnitVariation && wp.blocks && wp.blocks.registerBlockVariation) {
+        wp.blocks.registerBlockVariation('typost/block', newBlockUnitVariation);
+    }
 
 })(window.wp);
