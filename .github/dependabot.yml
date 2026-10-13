@@ -12,10 +12,10 @@
 # "Dependabot security updates"; this file cannot turn it on.
 #
 # npm major version updates are ignored: Babel 8 (babelify 10 needs
-# @babel/core 7), react-test-renderer 19 (React is held at 18 by
-# @wordpress/element) and @wordpress/scripts 36 (Node and Jest preset to
-# check) need work by hand (#256). GitHub's docs do not say whether ignore
-# rules also limit security updates.
+# @babel/core 7) and React 19 (WordPress ships React 18.3, so react,
+# react-dom and react-test-renderer stay at 18) need work by hand. This
+# ignore rule did not stop a major version in a security update: #266
+# raised @wordpress/scripts from 31 to 36 in the npm-security group.
 #
 # Nothing merges automatically: every pull request runs the CI workflow and
 # waits for review.

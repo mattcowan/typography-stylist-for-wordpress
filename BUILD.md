@@ -147,12 +147,12 @@ npm test -- --coverage
 
 The following build tools are used:
 
-- **@wordpress/scripts**: 26.19.0 - Block building and testing
+- **@wordpress/scripts**: 36.1.0 - Block building and testing
 - **Browserify**: 17.0.1 - JavaScript bundling
 - **Babelify**: 10.0.0 - JavaScript transpilation
 - **Terser**: 5.16.0 - JavaScript minification
 - **clean-css-cli**: 5.6.2 - CSS minification
-- **Jest**: 29.7.0 - Unit testing
+- **Jest**: 30.5.0 - Unit testing
 
 See `package.json` for complete list of dependencies.
 
