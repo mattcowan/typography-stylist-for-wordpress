@@ -800,7 +800,7 @@ See readme.txt for full version 1.1.3 changelog (initial public release).
 
 - WordPress 5.8 or later
 - PHP 7.4 or later
-- Node.js 18.12 or later, and npm 8.19 or later (for the build)
+- Node.js 22.22.2 or a later 22.x, 24.15.0 or a later 24.x, or 26 or later (for the build and the tests)
 
 ### Building the Plugin
 
