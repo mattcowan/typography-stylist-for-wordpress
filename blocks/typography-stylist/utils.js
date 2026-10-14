@@ -5,7 +5,7 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
 
 /**
@@ -3644,7 +3644,7 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
 	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
 
-export { resolveFontSizeUnit, formatFontSizeLength, pxToRem, getNewFontSizeUnit, getResponsiveZoomNotice };
+export { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, getNewFontSizeUnit, getResponsiveZoomNotice };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)
@@ -3695,9 +3695,9 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
 		};
 	}
 
-	const fixedPx = String(size).match(/^(\d+(?:\.\d+)?)(?:px)?$/);
-	const fontSize = fixedPx && Number(fixedPx[1]) > 0
-		? formatFontSizeLength(fixedPx[1], unit)
+	const fixedPx = parseFixedFontSize(size);
+	const fontSize = fixedPx !== null
+		? formatFontSizeLength(fixedPx, unit)
 		: size;
 	return {
 		attributes: { 'data-fontsize': size },
