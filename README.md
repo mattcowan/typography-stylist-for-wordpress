@@ -44,7 +44,23 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
 - A paragraph style can keep the value.
 
-### Case (v2.3.2+)
+### Font Sizes in rem (v2.3.2+)
+
+- You enter font sizes in px. New content writes them in rem (the px value divided by 16): new Typography Stylist blocks, new inline font sizes, and new paragraph styles.
+- A reader who sets a larger default font size in the browser gets larger headings, together with larger body text.
+- Content saved before version 2.3.2 keeps px and looks the same. A block saved before then keeps px after you edit it.
+- If the theme changes the root font size (for example `html { font-size: 62.5% }`), rem sizes change with it. The editor uses the theme styles, so you see the result while you edit.
+- To write new sizes in px instead, turn on **Write new font sizes in px** in Settings → Typography Stylist → Options. Content saved before you change the setting keeps its unit, in either direction.
+
+### Font Sizes That Grow with Browser Zoom (v2.3.2+)
+
+- A new responsive size is at least twice its size at 500% browser zoom, in windows from 320 to 1920px (WCAG 1.4.4 Resize Text). This assumes the default root font size of 16px.
+- When the Mobile / Intermediate / Large values you set would not double, the size grows more slowly, and a note under the sliders says what size it reaches in a 1920px window. For example, 16 / 16 / 120 reaches 64px.
+- A new fit-to-width heading grows with zoom too. When zoom makes its container narrower than 32rem (512px), a line of two or more words grows and wraps between its words. It stops growing at the size it has in a 32rem container, or when its widest word fills the container. Thus no word is broken. A line of one word cannot wrap, so it keeps filling its container.
+- Content saved before version 2.3.2 looks the same.
+- This applies to sizes written in rem. When the Options setting "Write new font sizes in px" is on, new sizes do not grow with zoom this way.
+
+### Case (v2.3.3+)
 
 - In the Typography Stylist block, set the case: All Caps, Lowercase, Title Case, Small Caps, or All Small Caps. “Normal” removes a case the theme sets.
 - The stored text keeps the case you typed. Only the look changes.
@@ -468,6 +484,19 @@ The front end gets CSS only, with no JavaScript. A font loads only on the pages 
 
 ## Changelog
 
+### Version 2.3.2
+
+- **Improved: new font sizes follow the default font size of the reader.** New blocks, new inline sizes and new paragraph styles write their sizes in rem. You still enter sizes in px. Content saved before keeps px and looks the same.
+- **Improved: new font sizes grow with browser zoom.** At 500% zoom, a new responsive size is at least two times its size at 100%. A note under the size sliders tells you when a size grows more slowly than set. New fit-to-width lines of two or more words also grow and wrap when a reader zooms in.
+- **New: Options setting to write new font sizes in px.** Use it when the theme changes the root font size. With this setting on, new sizes do not grow with browser zoom.
+- **New: First Letter Hang in the Typography Stylist block.** A swash capital can hang into the margin, while the main shape of the letter aligns with the text edge. A paragraph style keeps the value.
+- **Removed: the "Inline Format: Add aria-label Attributes" setting.** NVDA ignores the label, and the label made NVDA read a styled part of a word in pieces.
+- **Improved: all plugin REST API write requests share one limit** of 50 a minute for each user. Before, most write routes had no limit.
+- **Fixed: fit-to-width blocks.** A block with no font of its own was too wide for its column. A block in a theme that makes the content area only as wide as its content had a width of 0.
+- **Fixed: a fixed inline font size showed at the size of the sliders**, for example 64 from a paragraph style showed at 32px. The font size menu now shows "Fixed" and the size.
+- **Fixed: presets, glyphs and the settings page.** A preset that names a font now applies that font. A glyph from the Glyphs panel gets the weight of the text around it. About 250 strings that had no French or Spanish translation are translated.
+- Full details are in changelog.txt.
+
 ### Version 2.3.1
 
 - **NEW: the Paragraph Styles tab shows a preview of each style.** Each card shows sample text in the style's own font, weight, spacing and OpenType features, and says when a style's font was deleted and replaced.
@@ -791,7 +820,7 @@ See readme.txt for full version 1.1.3 changelog (initial public release).
 
 - WordPress 5.8 or later
 - PHP 7.4 or later
-- Node.js 18.12 or later, and npm 8.19 or later (for the build)
+- Node.js 22.22.2 or a later 22.x, 24.15.0 or a later 24.x, or 26 or later (for the build and the tests)
 
 ### Building the Plugin
 

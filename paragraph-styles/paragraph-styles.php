@@ -23,7 +23,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 // Guarded like the other bundled modules, so re-entry can never redefine these.
 if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
-	define( 'TYPOST_PS_VERSION', '1.2.1' );
+	define( 'TYPOST_PS_VERSION', '1.2.2' );
 	define( 'TYPOST_PS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 	define( 'TYPOST_PS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 }
@@ -305,11 +305,19 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Sizes are stored in px. A style saved after #233 carries
+		// fontSizeUnit 'rem' and writes them divided by 16; a style without
+		// the key was saved before and writes px exactly as it always did.
+		$use_rem = isset( $props['fontSizeUnit'] ) && 'rem' === $props['fontSizeUnit'];
+
 		// Font size — fixed numeric px value. The current editors only produce
 		// 'inherit' / 'responsive' / 'fit' states, but the REST API accepts any
-		// value and legacy/external data may store plain px numbers.
+		// value and legacy/external data may store plain px numbers. The rem
+		// form keeps decimals (36.5 → 2.28125rem), as the block's save does.
 		if ( isset( $props['fontSize'] ) && is_numeric( $props['fontSize'] ) && $props['fontSize'] > 0 ) {
-			$css_rules[] = 'font-size: ' . intval( $props['fontSize'] ) . 'px';
+			$css_rules[] = $use_rem
+				? 'font-size: ' . self::px_to_rem( $props['fontSize'] ) . 'rem'
+				: 'font-size: ' . intval( $props['fontSize'] ) . 'px';
 		}
 
 		// Font size (responsive clamp). Fit-to-width styles emit the same
@@ -325,13 +333,23 @@ final class Typost_Paragraph_Styles {
 			$max  = intval( $props['fontSizeMax'] );
 			$vw   = ( ( $max - $min ) / ( self::RESPONSIVE_FONT_MAX_VIEWPORT - self::RESPONSIVE_FONT_MIN_VIEWPORT ) ) * 100;
 
-			$css_rules[] = sprintf(
-				'font-size: clamp(%dpx, %srem + %svw, %dpx)',
-				$min,
-				round( $pref / 16, 4 ),
-				round( $vw, 4 ),
-				$max
-			);
+			if ( $use_rem ) {
+				$css_rules[] = sprintf(
+					'font-size: clamp(%srem, %srem + %svw, %srem)',
+					self::px_to_rem( $min ),
+					self::px_to_rem( $pref ),
+					self::responsive_zoom_vw( $min, $pref, $max ),
+					self::px_to_rem( $max )
+				);
+			} else {
+				$css_rules[] = sprintf(
+					'font-size: clamp(%dpx, %srem + %svw, %dpx)',
+					$min,
+					round( $pref / 16, 4 ),
+					round( $vw, 4 ),
+					$max
+				);
+			}
 		}
 
 		// Hanging initial (#242): a custom property that core's block
@@ -1319,6 +1337,12 @@ final class Typost_Paragraph_Styles {
 			$clean['fitMaxSize'] = absint( $raw['fitMaxSize'] );
 		}
 
+		// Unit the style's sizes are written in (#233). Absent means px: every
+		// style saved before the key existed. Anything else is dropped.
+		if ( isset( $raw['fontSizeUnit'] ) && in_array( $raw['fontSizeUnit'], array( 'px', 'rem' ), true ) ) {
+			$clean['fontSizeUnit'] = $raw['fontSizeUnit'];
+		}
+
 		if ( isset( $raw['letterSpacing'] ) ) {
 			$clean['letterSpacing'] = intval( $raw['letterSpacing'] );
 		}
@@ -1420,5 +1444,54 @@ final class Typost_Paragraph_Styles {
 			return 0;
 		}
 		return round( min( $hang, self::HANG_MAX ), 3 );
+	}
+
+	/**
+	 * Convert a px size to rem for the generated CSS (#233).
+	 *
+	 * Divides by 16 and rounds to six decimals. Mirrors pxToRem() in
+	 * assets/js/font-size-units.js (the block) and in ps-utils.js (the JS
+	 * twin of this generator), so a style and a block with the same size
+	 * write the same value. Below 0.0001rem gives 0: PHP prints smaller
+	 * floats in exponent form (1.0E-5) where JS does not.
+	 *
+	 * @param mixed $px Size in px (already checked as numeric by the caller).
+	 * @return float Size in rem.
+	 */
+	public static function px_to_rem( $px ) {
+		$rem = (float) $px / 16;
+		if ( ! is_finite( $rem ) || abs( $rem ) < 0.0001 ) {
+			return 0;
+		}
+		return round( $rem, 6 );
+	}
+
+	/**
+	 * The vw term of a rem style's responsive clamp (#234).
+	 *
+	 * The author's slope, limited so the size doubles by 500% browser zoom
+	 * (WCAG 1.4.4 for fluid type): the size may reach max(4 × pref,
+	 * 2.5 × min) in a 1920px window, so when Large is above that, the slope
+	 * is lowered to reach it there and rounded down to four decimals.
+	 * Mirrors getResponsiveZoomLimit() in assets/js/font-size-units.js
+	 * (which explains the bound) and responsiveZoomVw() in ps-utils.js.
+	 * Styles saved before #233 (px) keep the author's slope.
+	 *
+	 * @param int $min  Mobile size (px).
+	 * @param int $pref Preferred size (px).
+	 * @param int $max  Desktop size (px).
+	 * @return float vw coefficient, four decimals.
+	 */
+	public static function responsive_zoom_vw( $min, $pref, $max ) {
+		$vw    = ( ( $max - $min ) / ( self::RESPONSIVE_FONT_MAX_VIEWPORT - self::RESPONSIVE_FONT_MIN_VIEWPORT ) ) * 100;
+		$reach = max( 4 * $pref, 2.5 * $min );
+		if ( $vw > 0 && $pref >= 0 && $max > $reach ) {
+			// The epsilon keeps an exact bound (2.5) from flooring to 2.4999.
+			$bound = floor( ( ( ( $reach - $pref ) * 100 ) / self::RESPONSIVE_FONT_MAX_VIEWPORT ) * 10000 + 1e-7 ) / 10000;
+			if ( $bound < $vw ) {
+				return $bound;
+			}
+		}
+		return round( $vw, 4 );
 	}
 }

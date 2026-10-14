@@ -7,7 +7,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T23:09:31+00:00\n"
+"POT-Creation-Date: 2026-10-14T18:18:05+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-paragraph-styles\n"
@@ -18,9 +18,9 @@ msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 
 msgstr ""
 
 #: includes/admin-tab.php:89
-#: paragraph-styles.php:785
-#: assets/js/editor.js:955
-#: assets/js/editor.js:1312
+#: paragraph-styles.php:803
+#: assets/js/editor.js:965
+#: assets/js/editor.js:1322
 msgid "Paragraph Styles"
 msgstr ""
 
@@ -44,7 +44,7 @@ msgid "Deleted font, shown in the default font"
 msgstr ""
 
 #: includes/admin-tab.php:120
-#: assets/js/editor.js:121
+#: assets/js/editor.js:127
 msgid "Default"
 msgstr ""
 
@@ -75,7 +75,7 @@ msgstr ""
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
 #: includes/admin-tab.php:158
-#: assets/js/lib/ps-utils.js:505
+#: assets/js/lib/ps-utils.js:543
 #, php-format,js-format
 msgid "%spx"
 msgstr ""
@@ -167,39 +167,39 @@ msgid "Name:"
 msgstr ""
 
 #: includes/admin-tab.php:290
-#: assets/js/editor.js:515
-#: assets/js/editor.js:575
+#: assets/js/editor.js:524
+#: assets/js/editor.js:584
 msgid "Save"
 msgstr ""
 
 #: includes/admin-tab.php:293
-#: assets/js/editor.js:523
-#: assets/js/editor.js:583
+#: assets/js/editor.js:532
+#: assets/js/editor.js:592
 msgid "Cancel"
 msgstr ""
 
-#: paragraph-styles.php:882
+#: paragraph-styles.php:900
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""
 
-#: paragraph-styles.php:894
+#: paragraph-styles.php:912
 msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
 msgstr ""
 
-#: paragraph-styles.php:897
+#: paragraph-styles.php:915
 msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
 msgstr ""
 
-#: paragraph-styles.php:980
+#: paragraph-styles.php:998
 msgid "Style name is required."
 msgstr ""
 
-#: paragraph-styles.php:1013
-#: paragraph-styles.php:1048
+#: paragraph-styles.php:1031
+#: paragraph-styles.php:1066
 msgid "Style not found."
 msgstr ""
 
-#: paragraph-styles.php:1020
+#: paragraph-styles.php:1038
 msgid "Style name cannot be empty."
 msgstr ""
 
@@ -228,115 +228,115 @@ msgstr ""
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
-#: assets/js/editor.js:315
+#: assets/js/editor.js:321
 msgid "Select a style…"
 msgstr ""
 
-#: assets/js/editor.js:461
+#: assets/js/editor.js:470
 msgid "(modified)"
 msgstr ""
 
-#: assets/js/editor.js:467
-#: assets/js/editor.js:534
-#: assets/js/editor.js:548
+#: assets/js/editor.js:476
+#: assets/js/editor.js:543
+#: assets/js/editor.js:557
 msgid "Paragraph Style"
 msgstr ""
 
-#: assets/js/editor.js:480
-#: assets/js/editor.js:543
+#: assets/js/editor.js:489
+#: assets/js/editor.js:552
 msgid "Browse styles…"
 msgstr ""
 
-#: assets/js/editor.js:487
+#: assets/js/editor.js:496
 msgid "Update Style"
 msgstr ""
 
-#: assets/js/editor.js:492
+#: assets/js/editor.js:501
 msgid "Save as New"
 msgstr ""
 
-#: assets/js/editor.js:498
-#: assets/js/editor.js:1006
+#: assets/js/editor.js:507
+#: assets/js/editor.js:1016
 msgid "Detach Style"
 msgstr ""
 
-#: assets/js/editor.js:503
+#: assets/js/editor.js:512
 msgid "New style name…"
 msgstr ""
 
-#: assets/js/editor.js:560
+#: assets/js/editor.js:569
 msgid "Save Current Settings as Style"
 msgstr ""
 
-#: assets/js/editor.js:563
+#: assets/js/editor.js:572
 msgid "Style name…"
 msgstr ""
 
-#: assets/js/editor.js:575
+#: assets/js/editor.js:584
 msgid "Saving…"
 msgstr ""
 
 #. translators: %d: number of matching styles
-#: assets/js/editor.js:817
+#: assets/js/editor.js:826
 #, js-format
 msgid "%d style matches."
 msgid_plural "%d styles match."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/editor.js:938
+#: assets/js/editor.js:948
 msgid "No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel."
 msgstr ""
 
 #. translators: %s: search text
-#: assets/js/editor.js:941
+#: assets/js/editor.js:951
 #, js-format
 msgid "No styles match “%s”."
 msgstr ""
 
-#: assets/js/editor.js:948
+#: assets/js/editor.js:958
 msgid "Paragraph styles"
 msgstr ""
 
-#: assets/js/editor.js:961
+#: assets/js/editor.js:971
 msgid "Applies to the selected text."
 msgstr ""
 
-#: assets/js/editor.js:962
+#: assets/js/editor.js:972
 msgid "Applies to the whole block."
 msgstr ""
 
-#: assets/js/editor.js:966
+#: assets/js/editor.js:976
 msgid "Search styles"
 msgstr ""
 
-#: assets/js/editor.js:970
+#: assets/js/editor.js:980
 msgid "Style or font name"
 msgstr ""
 
-#: assets/js/editor.js:974
+#: assets/js/editor.js:984
 msgid "Group by"
 msgstr ""
 
-#: assets/js/editor.js:977
+#: assets/js/editor.js:987
 msgid "None"
 msgstr ""
 
-#: assets/js/editor.js:978
+#: assets/js/editor.js:988
 msgid "Font family"
 msgstr ""
 
-#: assets/js/editor.js:979
+#: assets/js/editor.js:989
 msgid "Size mode"
 msgstr ""
 
-#: assets/js/editor.js:984
-#: assets/js/lib/ps-utils.js:903
+#: assets/js/editor.js:994
+#: assets/js/lib/ps-utils.js:987
 msgid "Recently used"
 msgstr ""
 
 #. translators: %d: number of styles the button reveals
-#: assets/js/editor.js:997
+#: assets/js/editor.js:1007
 #, js-format
 msgid "Show %d more style"
 msgid_plural "Show %d more styles"
@@ -344,41 +344,41 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js:493
+#: assets/js/lib/ps-utils.js:531
 #, js-format
 msgid "Fluid %1$s–%2$s"
 msgstr ""
 
 #. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js:501
+#: assets/js/lib/ps-utils.js:539
 #, js-format
 msgid "Fit ≤ %spx"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:502
+#: assets/js/lib/ps-utils.js:540
 msgid "Fit"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:905
+#: assets/js/lib/ps-utils.js:989
 msgid "Other styles"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:938
+#: assets/js/lib/ps-utils.js:1022
 msgid "No font set"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:949
+#: assets/js/lib/ps-utils.js:1033
 msgid "Fixed size"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:950
+#: assets/js/lib/ps-utils.js:1034
 msgid "Responsive"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:951
+#: assets/js/lib/ps-utils.js:1035
 msgid "Fit to width"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:952
+#: assets/js/lib/ps-utils.js:1036
 msgid "Inherited size"
 msgstr ""

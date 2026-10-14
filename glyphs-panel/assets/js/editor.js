@@ -115,6 +115,11 @@
 			accessibility: (snapshot && snapshot.accessibility) || null,
 			fontId: state.fontId || 0,
 			fontWeight: state.fontWeight || '',
+			// The only weight an insertion writes onto its span: the one
+			// stored on the selected text, never an inherited one (#254)
+			insertionFontWeight: window.typostGlyphs.resolveInsertionFontWeight
+				? window.typostGlyphs.resolveInsertionFontWeight(state)
+				: '',
 			// The face variant rendering at the selection — the panel loads and
 			// displays this variant (no toggle; context decides)
 			fontStyle: state.fontStyle || '',

@@ -1,0 +1,10 @@
+# Requests the maintainer's review on pull requests that someone else opens,
+# Dependabot included (#269). A draft pull request gets the request when it
+# is marked ready for review, not when it opens. GitHub never requests a
+# review from a pull request's own author, so the maintainer's own pull
+# requests do not change.
+#
+# Review is requested, not required: main has no branch protection or
+# ruleset that requires code owner approval. Adding that rule would block
+# the maintainer from merging their own pull requests.
+* @mattcowan

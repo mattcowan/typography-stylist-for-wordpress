@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, normalizeTextCase, isSmallCapsCase, caseDeclarations } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -42,10 +42,6 @@ import { calculateResize } from '../../assets/js/modal-drag-resize';
 // iframe on that write, stranding keyboard users outside an open dialog.
 // The guard lives on the editor document, so one install covers every editor.
 installModalFocusGuard();
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
 
 /**
  * Typography Stylist Hook System
@@ -138,6 +134,62 @@ const TSIcon = () => (
 	</svg>
 );
 
+/**
+ * Zoom notice for responsive sizes (#234), beside the out-of-order note in
+ * the Inspector and the Quick Feature Toggles. A rem size grows more slowly
+ * than set when its slope would not double by 500% zoom ('slower'); a px
+ * size — saved before #233, or new under the #248 px setting — keeps its
+ * slope, so it is told it fails.
+ *
+ * Speech: the visible text carries the live slider values, and core's
+ * Notice speaks its text again every time the text changes — once per
+ * slider step. So the Notice speaks nothing itself, and a value-free
+ * sentence is spoken only when the notice appears or changes kind after
+ * mount. Never on mount: in the QFT modal that is the tick the dialog takes
+ * focus, and a notice spoken then is read before the dialog's name.
+ *
+ * @param {Object} props
+ * @param {number} props.min       Mobile size (px)
+ * @param {number} props.preferred Intermediate size (px)
+ * @param {number} props.max       Large size (px)
+ * @param {string} props.unit      Unit the size is written in ('px' or 'rem')
+ * @return {Element|null} Notice, or null when the size doubles
+ */
+function ZoomNotice({ min, preferred, max, unit }) {
+	const notice = getResponsiveZoomNotice(min, preferred, max, unit);
+	const kind = notice ? notice.kind : null;
+	const previousKind = useRef(kind);
+	useEffect(() => {
+		if (kind && kind !== previousKind.current) {
+			speak(kind === 'slower'
+				? __('To stay readable when a reader zooms in, this size grows more slowly than set.', 'typography-stylist')
+				: __('This size does not double when a reader zooms to 500%.', 'typography-stylist'), 'polite');
+		}
+		previousKind.current = kind;
+	}, [kind]);
+	if (!notice) {
+		return null;
+	}
+	return (
+		<Notice status="warning" isDismissible={false} spokenMessage="" className="typost-size-zoom-notice">
+			{notice.kind === 'slower'
+				? sprintf(
+					/* translators: 1: font size in px that the text reaches, 2: the Large font size in px, 3: the smallest Intermediate size in px that reaches the Large size */
+					__('To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Intermediate to at least %3$spx.', 'typography-stylist'),
+					notice.reach,
+					notice.max,
+					notice.minPreferred
+				)
+				: sprintf(
+					/* translators: 1: the largest Large font size in px that doubles with zoom, 2: the smallest Intermediate size in px that doubles with zoom */
+					__('This size does not double when a reader zooms to 500%%. Set Large to %1$spx or less, or Intermediate to at least %2$spx.', 'typography-stylist'),
+					notice.reach,
+					notice.minPreferred
+				)}
+		</Notice>
+	);
+}
+
 export default function Edit({ attributes, setAttributes, clientId, isSelected }) {
 	/**
 	 * Id of the Quick Feature Toggles heading, used to name its dialog.
@@ -158,8 +210,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		fontSizeMin,
 		fontSizePreferred,
 		fontSizeMax,
+		fontSizeUnit,
 		fitLineSizes,
 		fitMaxSize,
+		fitWordSizes,
 		initialHang,
 		fitLineHangs,
 		textCase,
@@ -173,6 +227,28 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		styleClass,
 		fontVariationSettings
 	} = attributes;
+
+	// Unit the block writes its sizes in (#233): rem for new blocks, px for
+	// blocks saved before rem existed (set by the deprecations' migrate()).
+	// The editor preview uses the same unit as save.js, so both render the
+	// same size. A span size set in the Quick Feature Toggles is written in
+	// the site's new-content unit (getNewFontSizeUnit: rem, or px when the
+	// Options setting asks for it, #248; buildInlineFontSizeSpan); other
+	// span edits keep the size as stored.
+	const blockFontSizeUnit = resolveFontSizeUnit(fontSizeUnit);
+
+	// Slider readout. Sizes are always entered in px; in rem the readout also
+	// shows the rem value written ("24px (1.5rem)"), in px it shows px only,
+	// so it matches the markup. Called at render time, after
+	// sizePreviewUnit (the size unit, which follows an active style) exists.
+	const formatSizeReadout = (px, unit) => (unit === 'rem'
+		? sprintf(
+			/* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+			__('%1$spx (%2$srem)', 'typography-stylist'),
+			px,
+			pxToRem(px)
+		)
+		: `${px}px`);
 
 	const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 	// Usage tips notice dismissal — shares the same localStorage key as the
@@ -207,6 +283,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [inlineFitShift, setInlineFitShift] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
+	// A fixed size on the selection (64, from a paragraph style) has no
+	// control in the QFT size menu; it is shown as a disabled option (#255)
+	const inlineFixedSizePx = parseFixedFontSize(inlineFontSize);
+	// Unit of the selection's size as it is written now (#233). A size the
+	// author sets here is written in the site's new-content unit (rem, or px
+	// with the #248 setting), and the re-detection that follows the apply
+	// reports that; until then an older span keeps its own unit and slope,
+	// which the zoom notice describes differently (#234).
+	const [inlineFontSizeUnit, setInlineFontSizeUnit] = useState(() => getNewFontSizeUnit());
 	const [inlineFontSizeMin, setInlineFontSizeMin] = useState(16);
 	const [inlineFontSizePreferred, setInlineFontSizePreferred] = useState(32);
 	const [inlineFontSizeMax, setInlineFontSizeMax] = useState(64);
@@ -384,7 +469,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const handleApplyBlockProperties = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
-				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId } = blockPropsRef.current;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId, styleClass: curStyleClass } = blockPropsRef.current;
 				// Targeting guard: every Typography Stylist block registers this
 				// listener, so only the block the extension UI actually targets
 				// may handle the event. Extensions don't know clientIds, so the
@@ -452,6 +537,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// Generic styleClass support: extensions can pass a CSS class to apply
 				if (e.detail.styleClass !== undefined) {
 					newAttrs.styleClass = e.detail.styleClass;
+					// Detach (#233): the sizes the style rendered keep its unit
+					// once the block writes them itself
+					if (e.detail.styleClass === '') {
+						const detachUnit = resolveDetachFontSizeUnit(curStyleClass, window.typostData && window.typostData.paragraphStyles);
+						if (detachUnit) {
+							newAttrs.fontSizeUnit = detachUnit;
+						}
+					}
 				}
 				// Layered font configuration ID support
 				if (props.layeredConfigId !== undefined) {
@@ -688,13 +781,17 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// the editor canvas document — appending to the iframe body makes
 	// var(--font-N) and @font-face resolve — and stores per-line ratios in
 	// fitLineSizes (R = 100 / width, so font-size: calc(R * 100cqi) fills
-	// the container). Reads through a ref so the debounced closure never
-	// goes stale.
+	// the container). Rem blocks also store fitWordSizes, the same ratio for
+	// the line's widest word (its min-content width), which caps the zoom
+	// floor so a wrapped line never breaks a word (#235, buildFitFontSize).
+	// Px blocks never use it, so it is not written there: opening an older
+	// post must not change its attributes. Reads through a ref so the
+	// debounced closure never goes stale.
 	const measureFitPropsRef = useRef({});
 	measureFitPropsRef.current = {
 		content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing,
-		features, fontVariationSettings, fitLineSizes, setAttributes,
-		initialHang, fitLineHangs, textAlign, textCase, fakeSmallCaps
+		features, fontVariationSettings, fitLineSizes, fitWordSizes, setAttributes,
+		initialHang, fitLineHangs, textAlign, unit: blockFontSizeUnit, clientId, textCase, fakeSmallCaps
 	};
 
 	const measureFitLines = () => {
@@ -705,8 +802,33 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const targetDoc = (canvasIframe && canvasIframe.contentDocument) || document;
 		if (!targetDoc.body) return;
 
-		// Absolutely-positioned + nowrap = shrink-to-fit natural line width
-		const node = targetDoc.createElement('div');
+		// The probe must inherit what the rendered line inherits. One on the
+		// canvas body took the body font, so in a theme whose headings use
+		// another font, a fit block with no font of its own was measured in
+		// the wrong font and overflowed (review of #250: 4.1%, 31px). So copy
+		// the visual heading's tag, classes and inline style, and append the
+		// probe to the block wrapper — never into the editable heading,
+		// where RichText would see it. Body probe only as a fallback.
+		const blockEl = targetDoc.querySelector(`[data-block="${p.clientId}"]`);
+		const heading = blockEl && blockEl.querySelector('.typost-block-content');
+		const host = heading ? blockEl : targetDoc.body;
+		const node = targetDoc.createElement(heading ? heading.tagName : 'div');
+		if (heading) {
+			node.className = buildFitProbeClassName(heading.getAttribute('class'));
+			const inlineStyle = heading.getAttribute('style');
+			if (inlineStyle) {
+				node.setAttribute('style', inlineStyle);
+			}
+		}
+		// Absolutely-positioned + nowrap = shrink-to-fit natural line width.
+		// The resets undo heading layout that is not part of the line width.
+		node.style.margin = '0';
+		node.style.padding = '0';
+		node.style.border = '0';
+		node.style.width = 'auto';
+		node.style.minWidth = '0';
+		node.style.maxWidth = 'none';
+		node.style.textIndent = '0';
 		node.style.position = 'absolute';
 		node.style.left = '-9999px';
 		node.style.top = '0';
@@ -733,10 +855,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// Case changes glyph widths (capitals, small caps), so it is measured too (#214)
 		caseDeclarations(p.textCase, p.fakeSmallCaps).forEach(([property, value]) => node.style.setProperty(property, value));
 
-		targetDoc.body.appendChild(node);
+		host.appendChild(node);
 
 		try {
 			const lines = splitContentIntoLines(p.content);
+			const measureWords = p.unit === 'rem';
+			const wordRatios = [];
 			const ratios = lines.map((lineHtml, i) => {
 				node.innerHTML = lineHtml;
 				// Inline font sizes are ignored in fit mode — mirror the
@@ -748,13 +872,22 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// A hung line starts left of the edge, so it must fill the
 				// width plus its hang (#242). Same alignment test as the CSS.
 				const hang = resolveFitLineHang(i, p.initialHang, p.fitLineHangs, initialHangApplies(p.textAlign, isRTL()));
+				if (measureWords) {
+					// min-content = the widest run the browser cannot break
+					node.style.whiteSpace = 'normal';
+					node.style.width = 'min-content';
+					wordRatios.push(computeFitWordRatio(100, node.getBoundingClientRect().width, hang));
+					node.style.whiteSpace = 'nowrap';
+					node.style.width = '';
+				}
 				return computeHungFitRatio(100, width, hang);
 			});
 
 			// Skip-when-equal: prevents effect loops and undo churn
-			const current = measureFitPropsRef.current.fitLineSizes || [];
-			const changed = ratios.length !== current.length ||
-				ratios.some((r, i) => r !== current[i]);
+			const differs = (next, current) => next.length !== current.length ||
+				next.some((r, i) => r !== current[i]);
+			const changed = differs(ratios, measureFitPropsRef.current.fitLineSizes || []) ||
+				(measureWords && differs(wordRatios, measureFitPropsRef.current.fitWordSizes || []));
 			if (changed) {
 				// Derived state, not a user edit: without this, the ratio
 				// write forms its own undo step and the first Ctrl+Z after
@@ -764,10 +897,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
 					dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
 				}
-				measureFitPropsRef.current.setAttributes({ fitLineSizes: ratios });
+				measureFitPropsRef.current.setAttributes(measureWords
+					? { fitLineSizes: ratios, fitWordSizes: wordRatios }
+					: { fitLineSizes: ratios });
 			}
 		} finally {
-			targetDoc.body.removeChild(node);
+			host.removeChild(node);
 		}
 	};
 
@@ -787,7 +922,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	useEffect(() => {
 		if (fontSize !== 'fit') return;
 		debouncedMeasureFit();
-	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign, textCase, fakeSmallCaps]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
+	}, [fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features, fontVariationSettings, initialHang, fitLineHangs, textAlign, blockFontSizeUnit, textCase, fakeSmallCaps]); // eslint-disable-line react-hooks/exhaustive-deps -- debouncedMeasureFit is a stable ref
 
 	// Measure after fonts are ready, and re-measure on late font loads
 	useEffect(() => {
@@ -824,8 +959,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
 	// the render branch ever sees the wrapped form.
 	const wrappedFitValue = useMemo(
-		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) : ''),
-		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs]
+		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit, fitWordSizes) : ''),
+		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit, fitWordSizes]
 	);
 
 	// Labels for the per-line hang controls (fit-to-width only)
@@ -883,11 +1018,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// this component holding the weight *the popover is offering* (default
 	// 'inherit'), and publishing that truthy string into the shared editor
 	// state would report a weight nothing renders at.
+	// A paragraph style on the selected text counts too (#254); see
+	// resolveSelectionFontWeights() for which weight is stored and which only
+	// rendered.
 	const strongBoldAtSelection = useMemo(() => {
-		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.fontWeight) return null;
+		if (!content || !resolvedApplyRange || inlineStylesAtSelection?.storedFontWeight || inlineStylesAtSelection?.styleFontWeight) return null;
 		return detectStrongBoldAtRange(content, resolvedApplyRange.start, resolvedApplyRange.end);
 	}, [content, resolvedApplyRange, inlineStylesAtSelection]);
-	qftStateRef.current.selectionFontWeight = inlineStylesAtSelection?.fontWeight || strongBoldAtSelection || null;
+	const selectionFontWeights = resolveSelectionFontWeights(inlineStylesAtSelection, strongBoldAtSelection);
+	qftStateRef.current.selectionRenderedFontWeight = selectionFontWeights.rendered;
+	qftStateRef.current.selectionStoredFontWeight = selectionFontWeights.stored;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations
@@ -1208,6 +1348,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			setInlineFontStyle('');
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
+			setInlineFontSizeUnit(getNewFontSizeUnit());
 			setInlineFontSizeMin(16);
 			setInlineFontSizePreferred(32);
 			setInlineFontSizeMax(64);
@@ -1240,6 +1381,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
 		}
+		setInlineFontSizeUnit(detected.fontSizeUnit || getNewFontSizeUnit());
 		if (detected.fontSize) {
 			setInlineFontSize(detected.fontSize);
 			if (detected.fontSizeMin !== null) setInlineFontSizeMin(detected.fontSizeMin);
@@ -1388,7 +1530,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1441,7 +1583,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (previewFontSize === 'responsive') {
-			const clampValue = `clamp(${previewFontSizeMin}px, ${previewFontSizePreferred / 16}rem + ${((previewFontSizeMax - previewFontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${previewFontSizeMax}px)`;
+			const clampValue = buildResponsiveClamp(previewFontSizeMin, previewFontSizePreferred, previewFontSizeMax, getNewFontSizeUnit());
 			styles['font-size'] = clampValue;
 		}
 
@@ -1580,6 +1722,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				break;
 			case 'fontSize':
 				setInlineFontSize(detected.fontSize || 'inherit');
+				setInlineFontSizeUnit(detected.fontSizeUnit || getNewFontSizeUnit());
 				setInlineFontSizeMin(has('fontSizeMin') ? detected.fontSizeMin : 16);
 				setInlineFontSizePreferred(has('fontSizePreferred') ? detected.fontSizePreferred : 32);
 				setInlineFontSizeMax(has('fontSizeMax') ? detected.fontSizeMax : 64);
@@ -1773,7 +1916,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		// Calculate clamp() for font-size
-		const clampValue = `clamp(${min}px, ${preferred / 16}rem + ${((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${max}px)`;
+		const clampValue = buildResponsiveClamp(min, preferred, max, getNewFontSizeUnit());
 		styles['font-size'] = clampValue;
 
 		applyPreviewStyles({
@@ -1839,7 +1982,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that
@@ -2281,7 +2424,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const size = sizeOverride !== undefined ? sizeOverride : inlineFontSize;
 		// Attributes and style for both collapsed and selection cases; null
 		// for 'inherit' (nothing to apply)
-		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax);
+		const spanSpec = buildInlineFontSizeSpan(size, inlineFontSizeMin, inlineFontSizePreferred, inlineFontSizeMax, getNewFontSizeUnit());
 		if (!content || !spanSpec) return;
 
 		if (resolvedApplyRange) {
@@ -3493,7 +3636,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// block behaves as detached and both sides render the attributes inline.
 	useEffect(() => {
 		if (isOrphanStyleClass(styleClass, window.typostData && window.typostData.paragraphStyles)) {
-			setAttributes({ styleClass: '' });
+			// The deleted style's unit is unknown: px, as before #233
+			setAttributes({ styleClass: '', fontSizeUnit: resolveDetachFontSizeUnit(styleClass, window.typostData && window.typostData.paragraphStyles) });
 		}
 	}, [styleClass, paragraphStylesVersion, setAttributes]);
 	const styleOverrides = useMemo(
@@ -3503,6 +3647,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		[activeParagraphStyle, fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize, letterSpacing, lineHeight, features, fontVariationSettings, initialHang, textCase, fakeSmallCaps]
 	);
 	const rendersInline = (key) => !styleOverrides || !!styleOverrides[key];
+	// Under a paragraph style an edited size previews in the style's unit:
+	// Update Style writes it there, and Detach gives the block that unit
+	// (resolveDetachFontSizeUnit). The block's own unit says nothing while it
+	// has a styleClass (#233).
+	const sizePreviewUnit = activeParagraphStyle ? resolveStyleFontSizeUnit(activeParagraphStyle) : blockFontSizeUnit;
 	// typost-hang gates the editor-only hang rules in editor.css (#242). The
 	// attribute is the working copy, equal to the style's value unless edited.
 	const hangClass = normalizeHang(initialHang) > 0 ? ' typost-hang' : '';
@@ -3543,7 +3692,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 
 		if (fontSize === 'responsive' && rendersInline('fontSize')) {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit);
 		}
 
 		// Fit-to-width: the editing surface renders the real per-line
@@ -3552,7 +3701,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// unmeasured lines and empty lines inherit — the same clamp the
 		// frontend emits (save.js) for browsers without container queries.
 		if (fontSize === 'fit' && rendersInline('fontSize')) {
-			styles.fontSize = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+			styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit);
 		}
 
 		// A fixed px size (a style created from the inline editor) has no
@@ -3562,7 +3711,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// emits the same inline size once the block has no styleClass. Zero
 		// means "no size" (save.js and the style CSS generators agree).
 		if ((!styleOverrides || styleOverrides.fontSize) && /^\d+(\.\d+)?$/.test(String(fontSize)) && Number(fontSize) > 0) {
-			styles.fontSize = `${fontSize}px`;
+			styles.fontSize = formatFontSizeLength(fontSize, sizePreviewUnit);
 		}
 
 		if (fontVariationSettings && rendersInline('fontVariationSettings')) {
@@ -4068,10 +4217,23 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 										}}
 										options={[
 											{ label: __('Inherit from block', 'typography-stylist'), value: 'inherit' },
-											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' }
+											{ label: __('Responsive (fluid)', 'typography-stylist'), value: 'responsive' },
+											// A fixed size on the selection (64, from a paragraph
+											// style) has no control here; shown disabled so the
+											// menu does not say Inherit (#255)
+											...(inlineFixedSizePx !== null ? [{
+												/* translators: %s: font size in px */
+												label: sprintf(__('Fixed (%spx)', 'typography-stylist'), inlineFixedSizePx),
+												value: String(inlineFontSize),
+												disabled: true
+											}] : [])
 										]}
 										disabled={fontSize === 'fit'}
-										help={fontSize === 'fit' ? __('Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line.', 'typography-stylist') : undefined}
+										help={fontSize === 'fit'
+											? __('Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line.', 'typography-stylist')
+											: (inlineFixedSizePx !== null
+												? __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist')
+												: undefined)}
 									/>
 									{fontSize === 'fit' && (
 										<>
@@ -4188,6 +4350,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 													{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 												</Notice>
 											)}
+											{/* The unit the selection's size is written in now; a size set here is written in the site's new-content unit (buildInlineFontSizeSpan) and re-detected after the apply */}
+											<ZoomNotice min={inlineFontSizeMin} preferred={inlineFontSizePreferred} max={inlineFontSizeMax} unit={inlineFontSizeUnit} />
 											<Button
 												variant="secondary"
 												onClick={resetFontSize}
@@ -4661,7 +4825,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							fontSize === 'responsive'
 								? __('Responsive mode uses CSS clamp() with separate sizes for mobile, tablet, and desktop viewports.', 'typography-stylist')
 								: fontSize === 'fit'
-									? __('Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist')
+									// Rem blocks grow with browser zoom and wrap there (#235)
+									? (blockFontSizeUnit === 'rem'
+										? __('Each line is sized to span the full block width, live while you edit. When a reader zooms in, lines grow and wrap so the text stays readable. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist')
+										: __('Each line is sized to span the full block width, live while you edit. Lines never wrap. The block controls the size, so inline font sizes on selections are ignored.', 'typography-stylist'))
 									: undefined
 						}
 					/>
@@ -4682,7 +4849,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									min={8}
 									max={400}
 									step={1}
-									help={`${fitMaxSize}px`}
+									help={formatSizeReadout(fitMaxSize, blockFontSizeUnit)}
 								/>
 							)}
 							<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
@@ -4700,7 +4867,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizeMin}px`}
+								help={formatSizeReadout(fontSizeMin, sizePreviewUnit)}
 							/>
 							<RangeControl
 								label={__('Intermediate', 'typography-stylist')}
@@ -4709,7 +4876,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizePreferred}px`}
+								help={formatSizeReadout(fontSizePreferred, sizePreviewUnit)}
 							/>
 							<RangeControl
 								label={__('Large (up to 1920px)', 'typography-stylist')}
@@ -4718,13 +4885,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								min={8}
 								max={120}
 								step={1}
-								help={`${fontSizeMax}px`}
+								help={formatSizeReadout(fontSizeMax, sizePreviewUnit)}
 							/>
 							{!isValidFontSizeRange(fontSizeMin, fontSizePreferred, fontSizeMax) && (
 								<Notice status="warning" isDismissible={false}>
 									{__('Note: Font sizes are out of order. Mobile should be ≤ Intermediate ≤ Large for expected behavior.', 'typography-stylist')}
 								</Notice>
 							)}
+							{/* Fit uses these values only as its no-container-query fallback */}
+							{fontSize === 'responsive' && <ZoomNotice min={fontSizeMin} preferred={fontSizePreferred} max={fontSizeMax} unit={sizePreviewUnit} />}
 						</>
 					)}
 				</PanelBody>

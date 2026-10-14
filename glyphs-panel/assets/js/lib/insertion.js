@@ -35,7 +35,12 @@
 	 *    dropping context features would visually break mid-run insertions.
 	 * 3. The span always carries data-font-id when a panel font is known, so
 	 *    frontend @font-face detection loads the font.
-	 * 4. Context font weight is preserved on the span when meaningful.
+	 * 4. A weight is written only when the selected text stores one
+	 *    (contextFontWeight, from resolveInsertionFontWeight()). An
+	 *    inherited weight (paragraph style, <strong>, block, theme) reaches
+	 *    the glyph through CSS and the host's format merge; written inline,
+	 *    it would override a style's class and stay behind when the style or
+	 *    the block weight changes later (#254).
 	 * 5. isBaseGlyph (the base cell of the alternates view) always builds a
 	 *    span, even when rule 1 would send plain text. A base-cell click
 	 *    means "restore the plain form": a plain insertion would inherit the
@@ -71,7 +76,8 @@
 	 *                                      (WP Font Library); used only when panelFontId is 0
 	 * @param {number} opts.contextFontId   Font active at the cursor / block
 	 * @param {string[]} opts.contextFeatures Features active at the cursor
-	 * @param {string} opts.contextFontWeight Font weight active at the cursor
+	 * @param {string} opts.contextFontWeight Font weight stored on the selected
+	 *                                      text, '' when it is inherited (rule 4)
 	 * @return {{text: string, attributes: Object|null}}
 	 */
 	function buildInsertionPayload(opts) {
@@ -155,7 +161,9 @@
 			styleParts.push('font-family: ' + panelFontFamily);
 		}
 
-		// Preserve context weight (matches core attribute-preservation convention)
+		// A weight stored on the selected text (rule 4). Re-declared because
+		// the host merge copies the attributes of one typost format only (the
+		// first at the insertion point), and the weight can sit on another.
 		if (contextFontWeight && contextFontWeight !== 'inherit') {
 			attributes['data-fontweight'] = String(contextFontWeight);
 			styleParts.push('font-weight: ' + contextFontWeight);
@@ -231,9 +239,33 @@
 		return String(args.selectionText || '') === altKey;
 	}
 
+	/**
+	 * The weight an insertion may write onto the glyph's span.
+	 *
+	 * The host editor state reports two weights: fontWeight is the weight
+	 * rendering at the selection (for drawing the cells and picking the
+	 * face), selectionFontWeight only the weight stored on the selected text
+	 * ('' when inherited). Insertions use the second (rule 4 of
+	 * buildInsertionPayload). A host that predates selectionFontWeight (core
+	 * before 2.3.2) keeps the old behavior: fontWeight.
+	 *
+	 * @param {Object} state typost_current_editor_state result
+	 * @return {string} Weight to write, or ''
+	 */
+	function resolveInsertionFontWeight(state) {
+		if (!state || typeof state !== 'object') {
+			return '';
+		}
+		if (Object.prototype.hasOwnProperty.call(state, 'selectionFontWeight')) {
+			return state.selectionFontWeight ? String(state.selectionFontWeight) : '';
+		}
+		return state.fontWeight ? String(state.fontWeight) : '';
+	}
+
 	var api = {
 		buildFeatureSettingsCSS: buildFeatureSettingsCSS,
 		buildInsertionPayload: buildInsertionPayload,
+		resolveInsertionFontWeight: resolveInsertionFontWeight,
 		shouldSwapInsertion: shouldSwapInsertion,
 		dispatchInsert: dispatchInsert
 	};

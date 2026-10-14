@@ -67,7 +67,7 @@ terser assets/js/admin-page.js --compress --mangle --output assets/js/admin-page
 
 **Purpose:** Custom Gutenberg block that provides advanced typography controls with accessibility features. Allows block-level OpenType settings and inline text styling within the block.
 
-**Build Tool:** @wordpress/scripts 26.19.0 (webpack + babel + WordPress build pipeline)
+**Build Tool:** @wordpress/scripts 36 (webpack + babel + WordPress build pipeline)
 
 **Build Command:**
 ```bash
@@ -207,7 +207,7 @@ All build tools are defined in `package.json` devDependencies:
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| @wordpress/scripts | 26.19.0 | Block building, testing, and WordPress integration |
+| @wordpress/scripts | 36.1.0 | Block building, and the `test-unit-jest` test command |
 | Browserify | 17.0.1 | JavaScript module bundling |
 | Babelify | 10.0.0 | Babel transformer for Browserify |
 | @babel/core | 7.28.5 | JavaScript transpilation core |
@@ -215,7 +215,7 @@ All build tools are defined in `package.json` devDependencies:
 | @babel/preset-react | 7.28.5 | JSX/React transpilation |
 | Terser | 5.16.0 | JavaScript minification |
 | clean-css-cli | 5.6.2 | CSS minification |
-| Jest | 29.7.0 | JavaScript unit testing (via @wordpress/scripts) |
+| Jest | 30.5.0 | JavaScript unit testing (with @wordpress/jest-preset-default) |
 
 See [`package.json`](package.json) for the complete list of dependencies and versions.
 

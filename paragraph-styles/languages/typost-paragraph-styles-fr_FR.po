@@ -2,7 +2,7 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 2.3.1\n"
+"Project-Id-Version: Typography Stylist 2.3.2\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
 "Last-Translator: \n"
 "Language-Team: \n"
@@ -21,9 +21,9 @@ msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 
 msgstr "Portez ce vieux whisky au juge blond qui fume. Thomas est à la poste : affluence officielle en fin d’été, 1/2 prix, 0123456789."
 
 #: includes/admin-tab.php:89
-#: paragraph-styles.php:785
-#: assets/js/editor.js:955
-#: assets/js/editor.js:1312
+#: paragraph-styles.php:803
+#: assets/js/editor.js:965
+#: assets/js/editor.js:1322
 msgid "Paragraph Styles"
 msgstr "Styles de paragraphe"
 
@@ -47,7 +47,7 @@ msgid "Deleted font, shown in the default font"
 msgstr "Police supprimée, affichée dans la police par défaut"
 
 #: includes/admin-tab.php:120
-#: assets/js/editor.js:121
+#: assets/js/editor.js:127
 msgid "Default"
 msgstr "Par défaut"
 
@@ -78,7 +78,7 @@ msgstr "Ajusté à la largeur (repli %1$s–%2$spx)"
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
 #: includes/admin-tab.php:158
-#: assets/js/lib/ps-utils.js:505
+#: assets/js/lib/ps-utils.js:543
 #, php-format,js-format
 msgid "%spx"
 msgstr "%spx"
@@ -132,39 +132,39 @@ msgid "Name:"
 msgstr "Nom :"
 
 #: includes/admin-tab.php:290
-#: assets/js/editor.js:515
-#: assets/js/editor.js:575
+#: assets/js/editor.js:524
+#: assets/js/editor.js:584
 msgid "Save"
 msgstr "Enregistrer"
 
 #: includes/admin-tab.php:293
-#: assets/js/editor.js:523
-#: assets/js/editor.js:583
+#: assets/js/editor.js:532
+#: assets/js/editor.js:592
 msgid "Cancel"
 msgstr "Annuler"
 
-#: paragraph-styles.php:882
+#: paragraph-styles.php:900
 msgid "Paragraph Styles Toolbar Button"
 msgstr "Bouton Styles de paragraphe dans la barre d’outils"
 
-#: paragraph-styles.php:894
+#: paragraph-styles.php:912
 msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
 msgstr "Ajouter un bouton Styles de paragraphe à la barre d’outils du bloc Typography Stylist"
 
-#: paragraph-styles.php:897
+#: paragraph-styles.php:915
 msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
 msgstr "Ouvre un navigateur affichant chaque style de paragraphe enregistré dans sa propre police, afin de voir un style avant de l’appliquer. La liste déroulante des styles dans la colonne latérale et les panneaux de l’éditeur reste inchangée."
 
-#: paragraph-styles.php:980
+#: paragraph-styles.php:998
 msgid "Style name is required."
 msgstr "Le nom du style est requis."
 
-#: paragraph-styles.php:1013
-#: paragraph-styles.php:1048
+#: paragraph-styles.php:1031
+#: paragraph-styles.php:1066
 msgid "Style not found."
 msgstr "Style introuvable."
 
-#: paragraph-styles.php:1020
+#: paragraph-styles.php:1038
 msgid "Style name cannot be empty."
 msgstr "Le nom du style ne peut pas être vide."
 
@@ -193,115 +193,115 @@ msgstr "Style « %s » supprimé."
 msgid "Failed to delete style. Please try again."
 msgstr "Échec de la suppression du style. Veuillez réessayer."
 
-#: assets/js/editor.js:315
+#: assets/js/editor.js:321
 msgid "Select a style…"
 msgstr "Sélectionner un style…"
 
-#: assets/js/editor.js:461
+#: assets/js/editor.js:470
 msgid "(modified)"
 msgstr "(modifié)"
 
-#: assets/js/editor.js:467
-#: assets/js/editor.js:534
-#: assets/js/editor.js:548
+#: assets/js/editor.js:476
+#: assets/js/editor.js:543
+#: assets/js/editor.js:557
 msgid "Paragraph Style"
 msgstr "Style de paragraphe"
 
-#: assets/js/editor.js:480
-#: assets/js/editor.js:543
+#: assets/js/editor.js:489
+#: assets/js/editor.js:552
 msgid "Browse styles…"
 msgstr "Parcourir les styles…"
 
-#: assets/js/editor.js:487
+#: assets/js/editor.js:496
 msgid "Update Style"
 msgstr "Mettre à jour le style"
 
-#: assets/js/editor.js:492
+#: assets/js/editor.js:501
 msgid "Save as New"
 msgstr "Enregistrer comme nouveau"
 
-#: assets/js/editor.js:498
-#: assets/js/editor.js:1006
+#: assets/js/editor.js:507
+#: assets/js/editor.js:1016
 msgid "Detach Style"
 msgstr "Détacher le style"
 
-#: assets/js/editor.js:503
+#: assets/js/editor.js:512
 msgid "New style name…"
 msgstr "Nom du nouveau style…"
 
-#: assets/js/editor.js:560
+#: assets/js/editor.js:569
 msgid "Save Current Settings as Style"
 msgstr "Enregistrer les réglages actuels comme style"
 
-#: assets/js/editor.js:563
+#: assets/js/editor.js:572
 msgid "Style name…"
 msgstr "Nom du style…"
 
-#: assets/js/editor.js:575
+#: assets/js/editor.js:584
 msgid "Saving…"
 msgstr "Enregistrement…"
 
 #. translators: %d: number of matching styles
-#: assets/js/editor.js:817
+#: assets/js/editor.js:826
 #, js-format
 msgid "%d style matches."
 msgid_plural "%d styles match."
 msgstr[0] "%d style correspond."
 msgstr[1] "%d styles correspondent."
 
-#: assets/js/editor.js:938
+#: assets/js/editor.js:948
 msgid "No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel."
 msgstr "Aucun style de paragraphe enregistré pour le moment. Réglez la typographie souhaitée, puis cliquez sur « Enregistrer les réglages actuels comme style » dans le panneau Style de paragraphe."
 
 #. translators: %s: search text
-#: assets/js/editor.js:941
+#: assets/js/editor.js:951
 #, js-format
 msgid "No styles match “%s”."
 msgstr "Aucun style ne correspond à « %s »."
 
-#: assets/js/editor.js:948
+#: assets/js/editor.js:958
 msgid "Paragraph styles"
 msgstr "Styles de paragraphe"
 
-#: assets/js/editor.js:961
+#: assets/js/editor.js:971
 msgid "Applies to the selected text."
 msgstr "S’applique au texte sélectionné."
 
-#: assets/js/editor.js:962
+#: assets/js/editor.js:972
 msgid "Applies to the whole block."
 msgstr "S’applique à tout le bloc."
 
-#: assets/js/editor.js:966
+#: assets/js/editor.js:976
 msgid "Search styles"
 msgstr "Rechercher des styles"
 
-#: assets/js/editor.js:970
+#: assets/js/editor.js:980
 msgid "Style or font name"
 msgstr "Nom du style ou de la police"
 
-#: assets/js/editor.js:974
+#: assets/js/editor.js:984
 msgid "Group by"
 msgstr "Grouper par"
 
-#: assets/js/editor.js:977
+#: assets/js/editor.js:987
 msgid "None"
 msgstr "Aucun"
 
-#: assets/js/editor.js:978
+#: assets/js/editor.js:988
 msgid "Font family"
 msgstr "Famille de police"
 
-#: assets/js/editor.js:979
+#: assets/js/editor.js:989
 msgid "Size mode"
 msgstr "Mode de taille"
 
-#: assets/js/editor.js:984
-#: assets/js/lib/ps-utils.js:903
+#: assets/js/editor.js:994
+#: assets/js/lib/ps-utils.js:987
 msgid "Recently used"
 msgstr "Utilisés récemment"
 
 #. translators: %d: number of styles the button reveals
-#: assets/js/editor.js:997
+#: assets/js/editor.js:1007
 #, js-format
 msgid "Show %d more style"
 msgid_plural "Show %d more styles"
@@ -309,42 +309,42 @@ msgstr[0] "Afficher %d style de plus"
 msgstr[1] "Afficher %d styles de plus"
 
 #. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js:493
+#: assets/js/lib/ps-utils.js:531
 #, js-format
 msgid "Fluid %1$s–%2$s"
 msgstr "Fluide %1$s–%2$s"
 
 #. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js:501
+#: assets/js/lib/ps-utils.js:539
 #, js-format
 msgid "Fit ≤ %spx"
 msgstr "Ajusté ≤ %spx"
 
-#: assets/js/lib/ps-utils.js:502
+#: assets/js/lib/ps-utils.js:540
 msgid "Fit"
 msgstr "Ajusté"
 
-#: assets/js/lib/ps-utils.js:905
+#: assets/js/lib/ps-utils.js:989
 msgid "Other styles"
 msgstr "Autres styles"
 
-#: assets/js/lib/ps-utils.js:938
+#: assets/js/lib/ps-utils.js:1022
 msgid "No font set"
 msgstr "Aucune police définie"
 
-#: assets/js/lib/ps-utils.js:949
+#: assets/js/lib/ps-utils.js:1033
 msgid "Fixed size"
 msgstr "Taille fixe"
 
-#: assets/js/lib/ps-utils.js:950
+#: assets/js/lib/ps-utils.js:1034
 msgid "Responsive"
 msgstr "Adaptative"
 
-#: assets/js/lib/ps-utils.js:951
+#: assets/js/lib/ps-utils.js:1035
 msgid "Fit to width"
 msgstr "Ajusté à la largeur"
 
-#: assets/js/lib/ps-utils.js:952
+#: assets/js/lib/ps-utils.js:1036
 msgid "Inherited size"
 msgstr "Taille héritée"
 
