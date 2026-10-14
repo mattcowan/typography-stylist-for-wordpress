@@ -12,19 +12,85 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState } = require('./inline-apply-rules.js');
-
-// Viewport breakpoints for responsive font sizing
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
+const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight } = require('./inline-apply-rules.js');
+// A size this editor writes is new content and is written in the site's
+// new-content unit: rem (#233), or px when the Options setting asks for it
+// (#248, getNewFontSizeUnit). A size the author did not change keeps the
+// unit the span already has (resolveSpanFontSizeUnit), so older spans are
+// not rewritten.
+const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttributes, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
+// Case (#214): the same mapping as the block and the paragraph styles
+const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseAttributes, readInlineCase, buildInlineCasePatch } = require('./text-case.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
     const { BlockControls } = wp.blockEditor;
     const { ToolbarGroup, ToolbarButton } = wp.components;
-    const { Component, Fragment } = wp.element;
+    const { Component, Fragment, useRef, useEffect } = wp.element;
     const { Popover, Button, ButtonGroup, ToggleControl, SelectControl, PanelBody, RangeControl, Modal, CheckboxControl, Notice } = wp.components;
     const { __, sprintf } = wp.i18n;
+
+    // Slider readout: sizes are entered in px. The caller passes the unit the
+    // size is written in (getZoomNoticeUnit(): the new-content unit once the
+    // author changes the size, else the span's own unit), the same unit the
+    // zoom notice and the full rebuild use. In rem show both ("24px
+    // (1.5rem)"), in px show px only.
+    const formatRemReadout = (px, unit) => (unit === 'rem'
+        ? sprintf(
+            /* translators: 1: font size in pixels, 2: the same size in rem (pixels divided by 16) */
+            __('%1$spx (%2$srem)', 'typography-stylist'),
+            px,
+            pxToRem(px)
+        )
+        : `${px}px`);
+    /**
+     * Zoom notice for responsive sizes (#234), the inline editor's copy of
+     * ZoomNotice in the block's edit.js (separate build pipeline). A size the
+     * author sets is written in the site's new-content unit (#248): in rem
+     * buildResponsiveClamp() limits the slope ('slower'), in px the slope is
+     * kept and may not double ('fails'). A size the author has not changed
+     * keeps the unit the span has.
+     *
+     * The Notice itself speaks nothing: its text carries the live slider
+     * values, and core would speak it again on every slider step. A
+     * value-free sentence is spoken only when the notice appears or changes
+     * kind after mount — never on mount, which is the tick the modal takes
+     * focus, when a notice would be read before the dialog's name.
+     */
+    function ZoomNotice({ min, preferred, max, unit }) {
+        const notice = getResponsiveZoomNotice(min, preferred, max, unit);
+        const kind = notice ? notice.kind : null;
+        const previousKind = useRef(kind);
+        useEffect(() => {
+            if (kind && kind !== previousKind.current && wp.a11y && typeof wp.a11y.speak === 'function') {
+                wp.a11y.speak(kind === 'slower'
+                    ? __('To stay readable when a reader zooms in, this size grows more slowly than set.', 'typography-stylist')
+                    : __('This size does not double when a reader zooms to 500%.', 'typography-stylist'), 'polite');
+            }
+            previousKind.current = kind;
+        }, [kind]);
+        if (!notice) {
+            return null;
+        }
+        return (
+            <Notice status="warning" isDismissible={false} spokenMessage="" className="typost-size-zoom-notice">
+                {notice.kind === 'slower'
+                    ? sprintf(
+                        /* translators: 1: font size in px that the text reaches, 2: the Maximum font size in px, 3: the smallest Preferred size in px that reaches the Maximum size */
+                        __('To stay readable when a reader zooms in, this size grows more slowly than set: %1$spx in a 1920px window instead of %2$spx. To reach %2$spx, set Preferred to at least %3$spx.', 'typography-stylist'),
+                        notice.reach,
+                        notice.max,
+                        notice.minPreferred
+                    )
+                    : sprintf(
+                        /* translators: 1: the largest Maximum font size in px that doubles with zoom, 2: the smallest Preferred size in px that doubles with zoom */
+                        __('This size does not double when a reader zooms to 500%%. Set Maximum to %1$spx or less, or Preferred to at least %2$spx.', 'typography-stylist'),
+                        notice.reach,
+                        notice.minPreferred
+                    )}
+            </Notice>
+        );
+    }
     const { compose, debounce } = wp.compose;
 
     /**
@@ -94,6 +160,18 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Escape a value for a double-quoted HTML attribute. escapeHTML() leaves
+     * quotes alone (innerHTML does not escape them in text).
+     */
+    function escapeAttribute(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     /**
@@ -506,6 +584,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             // strip data-fontweight/font-weight instead of writing '400'
             this._clearWeight = false;
 
+            const initialCase = this.getActiveCase();
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -517,6 +597,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 fontStyle: this.getActiveFontStyle() || '',
+                // Case (#214): '' Default, fake small caps allowed when unset
+                textCase: initialCase.textCase,
+                fakeSmallCaps: initialCase.fakeSmallCaps,
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 selectedText: '', // Extracted text for feature previews
@@ -580,6 +663,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
             this.setFontWeight = this.setFontWeight.bind(this);
             this.setFontStyle = this.setFontStyle.bind(this);
+            this.setTextCase = this.setTextCase.bind(this);
+            this.setFakeSmallCaps = this.setFakeSmallCaps.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
             this.setLineHeight = this.setLineHeight.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
@@ -620,6 +705,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         // lighter than the text around it, because consumers
                         // wrote this value onto the span they created.
                         fontWeight: self.getEffectiveFontWeight(),
+                        // Only the weight stored on the selected text ('' when
+                        // inherited) — what a consumer may write into the
+                        // span it creates (#254, see buildQftEditorState)
+                        selectionFontWeight: self.getStoredFontWeight(),
                         // Rendered style, not just span styling — an <em>-italic
                         // selection should give consumers (Glyphs panel) the
                         // italic face even without a data-fontstyle span
@@ -627,6 +716,10 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         // Attr/choice-derived only — what persisting consumers
                         // (paragraph style capture/diff) must read instead
                         explicitFontStyle: self.getExplicitFontStyle(),
+                        // The span's own case (#214), so a paragraph style
+                        // captures it and Detach keeps it
+                        textCase: normalizeTextCase(self.state.textCase),
+                        fakeSmallCaps: self.state.fakeSmallCaps !== false,
                         fontSize: self.state.fontSize,
                         fontSizeMin: self.state.fontSizeMin,
                         fontSizePreferred: self.state.fontSizePreferred,
@@ -687,6 +780,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                             self._clearWeight = !props.fontWeight;
                         }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
+                        if (props.textCase !== undefined || props.fakeSmallCaps !== undefined) { self._recordChange('textCase'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
                         if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
@@ -697,6 +791,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
                         fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
                         fontStyle: props.fontStyle !== undefined ? (props.fontStyle || '') : self.state.fontStyle,
+                        textCase: props.textCase !== undefined ? normalizeTextCase(props.textCase) : self.state.textCase,
+                        fakeSmallCaps: props.fakeSmallCaps !== undefined ? props.fakeSmallCaps !== false : self.state.fakeSmallCaps,
                         fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
                         fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
                         fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
@@ -1169,21 +1265,65 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          * the block lightened it, and a glyph inserted by the Glyphs panel
          * came out lighter than the headline around it.
          *
-         * Precedence: a weight stored on the selection, then one the author
-         * picked in this popover, then the weight actually rendering.
+         * Precedence: a weight stored on the selection (one its paragraph
+         * style does not override, see getStoredFontWeight), then one the
+         * author picked in this popover, then the weight of the paragraph
+         * style on the selection, then the weight actually rendering. The
+         * style comes before the rendered weight because that is read from
+         * the block element, which the style span does not change (#254).
          *
          * @since 2.3.0
          * @return {string} Weight to use
          */
         getEffectiveFontWeight() {
-            const explicitWeight = this.getExplicitFontWeight();
-            if (explicitWeight) {
-                return explicitWeight;
+            const storedWeight = this.getStoredFontWeight();
+            if (storedWeight) {
+                return storedWeight;
             }
             if (this._pendingChanges.keys.has('fontWeight')) {
                 return this.state.fontWeight;
             }
+            const styleWeight = this.getParagraphStyleFontWeight();
+            if (styleWeight) {
+                return styleWeight;
+            }
             return this.getBlockInheritedWeight() || this.state.fontWeight;
+        }
+
+        /**
+         * The selection's data-fontweight, unless its paragraph style
+         * overrides it.
+         *
+         * Under a style the apply path keeps data-fontweight but writes no
+         * inline font-weight, so the style's class renders instead (review
+         * of #254). getExplicitFontWeight() stays raw: the apply path and
+         * the weight select write its value back.
+         *
+         * @since 2.3.2
+         * @return {string} Weight, or '' when none is stored or the style overrides it
+         */
+        getStoredFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            const attrs = activeFormat && activeFormat.attributes ? activeFormat.attributes : {};
+            return resolveSpanStoredFontWeight({
+                dataWeight: attrs['data-fontweight'],
+                styleAttr: attrs.style,
+                styleId: attrs['data-style-id']
+            }, window.typostData && window.typostData.paragraphStyles).stored;
+        }
+
+        /**
+         * The weight the paragraph style on the selection sets, or ''.
+         *
+         * @since 2.3.2
+         * @return {string} Weight, or '' when no style (or no style weight) applies
+         */
+        getParagraphStyleFontWeight() {
+            const { value } = this.props;
+            const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+            const styleId = activeFormat && activeFormat.attributes ? activeFormat.attributes['data-style-id'] : '';
+            return resolveParagraphStyleFontWeight(window.typostData && window.typostData.paragraphStyles, styleId);
         }
 
         getActiveFontVariationSettings() {
@@ -1212,6 +1352,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             return '';
+        }
+
+        /**
+         * The case stored on the active span (#214): data-textcase and
+         * data-fakesmallcaps. '' (Default) and true when the span has none —
+         * a theme's or a paragraph style's case is not the span's own.
+         *
+         * @return {{textCase: string, fakeSmallCaps: boolean}}
+         */
+        getActiveCase() {
+            const { value } = this.props;
+            const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+            return readInlineCase(activeFormat && activeFormat.attributes);
         }
 
         /**
@@ -1563,6 +1716,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             }
 
             const wasOpen = this.state.isOpen;
+            const activeCase = this.getActiveCase();
 
             // Fresh popover session: no property changes recorded yet
             this._resetPendingChanges();
@@ -1582,6 +1736,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 // (700 on a theme-bold heading); it is written only when picked
                 fontWeight: this.getEffectiveFontWeight() || '400',
                 fontStyle: this.getActiveFontStyle() || '',
+                textCase: activeCase.textCase,
+                fakeSmallCaps: activeCase.fakeSmallCaps,
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 fontVariationSettings: this.getActiveFontVariationSettings() || '',
@@ -1808,6 +1964,34 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._pendingChanges.featureToggles.push({ tag: tag, enabled: enabled });
         }
 
+        /**
+         * The unit the responsive size will be written in (#233), for the
+         * zoom notice (#234). Same rule as the full rebuild in
+         * _doApplyFeatures(): rem once the author changes the size,
+         * otherwise the unit the span already has. When the modal holds
+         * focus the live selection is collapsed, so read the format at the
+         * saved selection, as the apply path does.
+         */
+        getZoomNoticeUnit() {
+            const { value } = this.props;
+            const { savedSelectionStart, savedSelectionEnd } = this.state;
+            let format = null;
+            if (value) {
+                const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
+                format = selectionLost
+                    ? ((value.formats && value.formats[savedSelectionStart]) || []).find((f) => f.type === FORMAT_TYPE)
+                    : getActiveFormat(value, FORMAT_TYPE);
+            }
+            const attrs = (format && format.attributes) || {};
+            return resolveSpanFontSizeUnit({
+                sizeChanged: !!(this._pendingChanges && this._pendingChanges.keys.has('fontSize')),
+                newUnit: getNewFontSizeUnit(),
+                spanStyle: attrs.style,
+                styleId: attrs['data-style-id'],
+                styles: window.typostData && window.typostData.paragraphStyles
+            });
+        }
+
         _resetPendingChanges() {
             this._pendingChanges = { keys: new Set(), featureToggles: [] };
         }
@@ -1881,6 +2065,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             this._recordChange('fontStyle');
             this.setState({
                 fontStyle: value
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Set the case (#214). Changes only how the text looks; the stored
+         * text keeps the case the author typed.
+         */
+        setTextCase(value) {
+            this._recordChange('textCase');
+            this.setState({
+                textCase: normalizeTextCase(value)
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Allow or forbid fake small caps (#214), for the two small caps cases
+         */
+        setFakeSmallCaps(value) {
+            this._recordChange('textCase');
+            this.setState({
+                fakeSmallCaps: value !== false
             }, () => {
                 this.debouncedApplyDropdown();
             });
@@ -2241,20 +2450,31 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         styleArray.push(`line-height: ${sanitizedLineHeight}`);
                     }
                 }
-                if (fontSize === 'responsive') {
-                    // Ensure all numeric values are actually numbers
-                    const minPx = parseFloat(fontSizeMin) || 16;
-                    const prefRem = parseFloat(fontSizePreferred) || 24;
-                    const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: clamp(${minPx}px, ${prefRem / 16}rem + ${((maxPx - minPx) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${maxPx}px)`);
+                // The size is written as in an apply: a fixed size (64, from a
+                // paragraph style) as a length, not dropped, in the unit the
+                // rebuild would use — a size the author did not change keeps
+                // the span's unit (#255, review)
+                const minPx = parseFloat(fontSizeMin) || 16;
+                const prefPx = parseFloat(fontSizePreferred) || 24;
+                const maxPx = parseFloat(fontSizeMax) || 32;
+                const sizeValue = buildInlineFontSizeValue(fontSize, minPx, prefPx, maxPx, this.getZoomNoticeUnit());
+                // data-fontsize lets the block read the size back (#255, review)
+                const sizeAttributes = sizeValue ? buildInlineFontSizeAttributes(fontSize, minPx, prefPx, maxPx) : null;
+                if (sizeValue) {
+                    styleArray.push(`font-size: ${sizeValue}`);
                 }
+                // Case (#214): the span keeps the selection's case, as an apply writes it
+                const caseAttributes = buildInlineCaseAttributes(this.state.textCase, this.state.fakeSmallCaps);
+                caseDeclarations(this.state.textCase, this.state.fakeSmallCaps).forEach(([property, declared]) => {
+                    styleArray.push(`${property}: ${declared}`);
+                });
 
                 const styleString = styleArray.join('; ');
 
                 // If we have existing HTML content with spans, we need to preserve it
                 if (hasHTMLTags(existingContent)) {
                     // Build the new span's attributes in the modern format
-                    const spanAttributes = {};
+                    const spanAttributes = Object.assign({}, sizeAttributes, caseAttributes);
                     if (selectedFeatures.length > 0) {
                         spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
                     }
@@ -2295,8 +2515,12 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     const beforeText = fullText.substring(0, effectiveStart);
                     const selectedText = fullText.substring(effectiveStart, effectiveEnd);
                     const afterText = fullText.substring(effectiveEnd);
+                    const extraAttributes = Object.assign({}, sizeAttributes, caseAttributes);
+                    const sizeAttributeString = Object.keys(extraAttributes)
+                        .map((key) => ` ${key}="${escapeAttribute(extraAttributes[key])}"`)
+                        .join('');
                     contentForBlock = escapeHTML(beforeText) +
-                        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${styleString}">${escapeHTML(selectedText)}</span>` +
                         escapeHTML(afterText);
                 }
 
@@ -2317,7 +2541,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         isNewBlock: true,
                         content: contentForBlock,
                         tagName: tagName,
-                        effectiveWeight: blockInheritedWeight
+                        effectiveWeight: blockInheritedWeight,
+                        fontSizeUnit: getNewFontSizeUnit()
                     }));
 
                     // Replace current block
@@ -2366,6 +2591,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                         content: textContent,
                         tagName: tagName,
                         effectiveWeight: convertFontWeight,
+                        fontSizeUnit: getNewFontSizeUnit(),
                         state: this.state
                     }));
 
@@ -2434,6 +2660,13 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 dataAttrs['data-fontstyle'] = fontStyle || null;
                 styleDecls['font-style'] = fontStyle || null;
             }
+            if (pending.keys.has('textCase')) {
+                // Every case attribute and declaration is set or removed, so
+                // a run that had another case keeps none of it (#214)
+                const casePatch = buildInlineCasePatch(this.state.textCase, this.state.fakeSmallCaps);
+                Object.assign(dataAttrs, casePatch.dataAttrs);
+                Object.assign(styleDecls, casePatch.styleDecls);
+            }
             if (pending.keys.has('letterSpacing')) {
                 dataAttrs['data-letterspacing'] = letterSpacing !== 0 ? String(letterSpacing) : null;
                 styleDecls['letter-spacing'] = letterSpacing !== 0 ? `${letterSpacing / 1000}em` : null;
@@ -2443,21 +2676,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 styleDecls['line-height'] = lineHeight !== 0 ? String(lineHeight) : null;
             }
             if (pending.keys.has('fontSize')) {
-                if (fontSize !== 'inherit') {
-                    // 'fit' (from a fit-mode paragraph style) has no inline
-                    // meaning — spans serialize its fallback clamp as responsive
-                    dataAttrs['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
-                    dataAttrs['data-fontsize-min'] = String(fontSizeMin);
-                    dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
-                    dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
-                } else {
-                    dataAttrs['data-fontsize'] = null;
-                    dataAttrs['data-fontsize-min'] = null;
-                    dataAttrs['data-fontsize-preferred'] = null;
-                    dataAttrs['data-fontsize-max'] = null;
-                    styleDecls['font-size'] = null;
-                }
+                // 'fit' (from a fit-mode paragraph style) has no inline
+                // meaning — spans serialize its fallback clamp as responsive.
+                // A fixed size is a length and has no slider values (#255), so
+                // those are removed (null) like every attribute of no size.
+                const sizeValue = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
+                const sizeAttrs = (sizeValue && buildInlineFontSizeAttributes(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax)) || {};
+                ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'].forEach((key) => {
+                    dataAttrs[key] = sizeAttrs[key] || null;
+                });
+                styleDecls['font-size'] = sizeValue;
             }
             if (pending.keys.has('fontVariationSettings')) {
                 const safeSettings = sanitizeFontVariationSettings(fontVariationSettings || '');
@@ -2477,7 +2705,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, textCase, fakeSmallCaps, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const caseValue = normalizeTextCase(textCase);
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -2541,6 +2770,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 onChange(newValue);
                 return;
             }
+            // The unit of the size this rebuild writes (#233): a size the author
+            // did not change keeps the unit the span has now — the rebuild
+            // rewrites the whole style even when only a feature changed — and a
+            // span leaving a paragraph style takes the style's unit. Read before
+            // the pending changes are reset.
+            const activeAttrs = (activeFormatForRaw && activeFormatForRaw.attributes) || {};
+            const sizeUnit = resolveSpanFontSizeUnit({
+                sizeChanged: !!(pending && pending.keys.has('fontSize')),
+                spanStyle: activeAttrs.style,
+                styleId: activeAttrs['data-style-id'],
+                styles: window.typostData && window.typostData.paragraphStyles,
+                newUnit: getNewFontSizeUnit()
+            });
             if (pending) {
                 this._resetPendingChanges();
             }
@@ -2554,7 +2796,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 clearWeight: this._clearWeight
             });
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && !caseValue && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -2633,6 +2875,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                     }
                 }
 
+                // Add case (#214) — how the letters look; the text keeps its case
+                if (caseValue) {
+                    Object.assign(attributes, buildInlineCaseAttributes(caseValue, fakeSmallCaps));
+                    if (!hasActiveStyle) {
+                        caseDeclarations(caseValue, fakeSmallCaps).forEach(([property, declared]) => {
+                            if (styleString) styleString += '; ';
+                            styleString += `${property}: ${declared}`;
+                        });
+                    }
+                }
+
                 // Add letter spacing
                 if (letterSpacing !== 0) {
                     attributes['data-letterspacing'] = letterSpacing.toString();
@@ -2652,16 +2905,17 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 }
 
                 // Add font size. 'fit' (from a fit-mode paragraph style) has no
-                // inline meaning — spans serialize its fallback clamp as responsive
-                if (fontSize !== 'inherit') {
-                    attributes['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
-                    attributes['data-fontsize-min'] = fontSizeMin.toString();
-                    attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
-                    attributes['data-fontsize-max'] = fontSizeMax.toString();
+                // inline meaning — spans serialize its fallback clamp as responsive.
+                // A fixed size (64, from a paragraph style) is written as a
+                // length in the span's unit, not as a clamp() of the sliders,
+                // which showed it at their 32px (#255).
+                const sizeValue = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit);
+                if (sizeValue) {
+                    Object.assign(attributes, buildInlineFontSizeAttributes(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax));
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+                        styleString += `font-size: ${sizeValue}`;
                     }
                 }
 
@@ -2791,6 +3045,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                 fontSizePreferred: 24,
                 fontSizeMax: 32,
                 fontWeight: '400',
+                textCase: '',
+                fakeSmallCaps: true,
                 letterSpacing: 0,
                 lineHeight: 0,
                 activePreset: null
@@ -2938,6 +3194,8 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             if (renderedStyle) {
                 previewStyle.fontStyle = renderedStyle;
             }
+            // The chosen case (#214): smcp, c2sc and case look different on capitals
+            Object.assign(previewStyle, caseStyleObject(this.state.textCase, this.state.fakeSmallCaps));
 
             return (
                 <div key={feature.id} className="typost-feature-toggle">
@@ -3203,6 +3461,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
         render() {
             const { isActive, isInTypostBlock = false } = this.props;
             const { isOpen, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, wordBoundaryWarning, canConvert, showClearConfirmation, dontShowClearWarning, fontDetectionFailed } = this.state;
+            // A fixed size (64, from a paragraph style) has no control in the
+            // Font Size menu; it is shown as a disabled option (#255)
+            const fixedSizePx = parseFixedFontSize(fontSize);
             const groupedFeatures = this.groupFeatures();
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -3523,6 +3784,46 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                     />
                                 </div>
 
+                                {/* Case (#214) — how the letters look; the text keeps its case */}
+                                <div className="typost-modal-section typost-textcase-section">
+                                    <h4>{__('Case', 'typography-stylist')}</h4>
+                                    <SelectControl
+                                        label={__('Case', 'typography-stylist')}
+                                        hideLabelFromVision
+                                        value={normalizeTextCase(this.state.textCase)}
+                                        options={[
+                                            { label: __('Default', 'typography-stylist'), value: '' },
+                                            { label: __('Normal', 'typography-stylist'), value: 'none' },
+                                            { label: __('All Caps', 'typography-stylist'), value: 'uppercase' },
+                                            { label: __('Lowercase', 'typography-stylist'), value: 'lowercase' },
+                                            { label: __('Title Case', 'typography-stylist'), value: 'capitalize' },
+                                            { label: __('Small Caps', 'typography-stylist'), value: 'small-caps' },
+                                            { label: __('All Small Caps', 'typography-stylist'), value: 'all-small-caps' }
+                                        ]}
+                                        onChange={this.setTextCase}
+                                        help={this.state.paragraphStyleId
+                                            // Under a style the span writes no inline case,
+                                            // as with the size (#255)
+                                            ? __('The paragraph style sets the case. To change the case of this text only, click Detach Style first.', 'typography-stylist')
+                                            : (normalizeTextCase(this.state.textCase) === 'capitalize'
+                                                ? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
+                                                : (normalizeTextCase(this.state.textCase) === 'uppercase'
+                                                    // No hidden copy here: screen readers read the transformed text
+                                                    ? __('All caps are harder to read in long text, so keep them for short labels. Some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')
+                                                    : __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist')))}
+                                    />
+                                    {isSmallCapsCase(this.state.textCase) && (
+                                        <ToggleControl
+                                            label={__('Allow fake small caps', 'typography-stylist')}
+                                            checked={this.state.fakeSmallCaps !== false}
+                                            onChange={this.setFakeSmallCaps}
+                                            help={this.state.fakeSmallCaps !== false
+                                                ? __('When the font has no small caps, the browser makes them by shrinking capitals.', 'typography-stylist')
+                                                : __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
+                                        />
+                                    )}
+                                </div>
+
                                 {/* Font Size Controls */}
                                 <div className="typost-modal-section typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
@@ -3537,14 +3838,29 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                             // the value can still appear here via a fit-mode paragraph
                                             // style. Shown disabled (and only while active) so the
                                             // dropdown reflects the truth instead of a wrong option.
-                                            ...(fontSize === 'fit' ? [{ label: __('Fit to Width (blocks only)', 'typography-stylist'), value: 'fit', disabled: true }] : [])
+                                            ...(fontSize === 'fit' ? [{ label: __('Fit to Width (blocks only)', 'typography-stylist'), value: 'fit', disabled: true }] : []),
+                                            // A fixed size (64, from a paragraph style) has no
+                                            // control here either; shown the same way so the
+                                            // menu does not say Inherit (#255)
+                                            ...(fixedSizePx !== null ? [{
+                                                /* translators: %s: font size in px */
+                                                label: sprintf(__('Fixed (%spx)', 'typography-stylist'), fixedSizePx),
+                                                value: String(fontSize),
+                                                disabled: true
+                                            }] : [])
                                         ]}
                                         onChange={this.setFontSize}
                                         help={fontSize === 'responsive'
                                             ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist')
                                             : (fontSize === 'fit'
                                                 ? __('This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead.', 'typography-stylist')
-                                                : undefined)}
+                                                : (fixedSizePx !== null
+                                                    // Under a style the span writes no inline size, so a
+                                                    // new size shows only after Detach (#255, review)
+                                                    ? (this.state.paragraphStyleId
+                                                        ? __('The paragraph style sets this size. To change the size of this text only, click Detach Style first.', 'typography-stylist')
+                                                        : __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist'))
+                                                    : undefined))}
                                     />
 
                                     {fontSize === 'responsive' && (
@@ -3556,7 +3872,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMin}px`}
+                                                help={formatRemReadout(fontSizeMin, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Preferred Size (tablet)', 'typography-stylist')}
@@ -3565,7 +3881,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizePreferred}px`}
+                                                help={formatRemReadout(fontSizePreferred, this.getZoomNoticeUnit())}
                                             />
                                             <RangeControl
                                                 label={__('Maximum Size (desktop)', 'typography-stylist')}
@@ -3574,7 +3890,7 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                 min={8}
                                                 max={120}
                                                 step={1}
-                                                help={`${fontSizeMax}px`}
+                                                help={formatRemReadout(fontSizeMax, this.getZoomNoticeUnit())}
                                             />
                                             {/* Same soft validation as the block (QA E-1): the
                                                 clamp() is still written as typed, so the author
@@ -3585,6 +3901,9 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
                                                     {__('Note: Font sizes are out of order. Minimum should be ≤ Preferred ≤ Maximum for expected behavior.', 'typography-stylist')}
                                                 </Notice>
                                             )}
+                                            {/* Zoom notice (#234), worded for the unit the
+                                                span will be written in */}
+                                            <ZoomNotice min={fontSizeMin} preferred={fontSizePreferred} max={fontSizeMax} unit={this.getZoomNoticeUnit()} />
                                         </div>
                                     )}
                                 </div>
@@ -3853,6 +4172,16 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             'data-fontsize-preferred': 'data-fontsize-preferred',
             'data-fontsize-max': 'data-fontsize-max',
             'data-fontweight': 'data-fontweight',
+            // Every attribute this editor writes must be registered here to
+            // be readable after a reload: RichText keeps unregistered ones in
+            // format.unregisteredAttributes, which getActiveFormat() callers
+            // and applyFormat() rebuilds never see. data-fontstyle was
+            // missing, so after a reload one feature toggle rebuilt an italic
+            // span without its italic.
+            'data-fontstyle': 'data-fontstyle',
+            // Case (#214)
+            'data-textcase': 'data-textcase',
+            'data-fakesmallcaps': 'data-fakesmallcaps',
             'data-letterspacing': 'data-letterspacing',
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',
@@ -3882,5 +4211,19 @@ const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
             );
         })
     });
+
+    /**
+     * New Typography Stylist blocks store the site's size unit (#248).
+     *
+     * Registered here rather than in the block script because typostData is
+     * localized on this handle; the block script has no guaranteed order
+     * relative to it. Variations are stored by block name, so registering
+     * before the block type exists is fine. Blocks created in code (the
+     * transforms, Convert to block) pass the unit themselves.
+     */
+    const newBlockUnitVariation = buildNewBlockUnitVariation(getNewFontSizeUnit());
+    if (newBlockUnitVariation && wp.blocks && wp.blocks.registerBlockVariation) {
+        wp.blocks.registerBlockVariation('typost/block', newBlockUnitVariation);
+    }
 
 })(window.wp);

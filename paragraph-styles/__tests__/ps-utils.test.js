@@ -212,11 +212,12 @@ describe('buildPropertiesFromState', () => {
 
 	test('skips fontSize when inherit, keeps explicit and responsive sizes', () => {
 		expect(buildPropertiesFromState({ fontSize: 'inherit' })).toEqual({});
-		expect(buildPropertiesFromState({ fontSize: '24' })).toEqual({ fontSize: '24' });
+		// #233: a sized style is new content and stores its unit as rem
+		expect(buildPropertiesFromState({ fontSize: '24' })).toEqual({ fontSize: '24', fontSizeUnit: 'rem' });
 		expect(buildPropertiesFromState({
 			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 		})).toEqual({
-			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fontSize: 'responsive', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 		});
 	});
 
@@ -225,14 +226,14 @@ describe('buildPropertiesFromState', () => {
 			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 			fitMaxSize: 120,
 		})).toEqual({
-			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
+			fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 64,
 			fitMaxSize: 120,
 		});
 	});
 
 	test('stores fitMaxSize as 0 (uncapped) when unset in fit mode', () => {
 		expect(buildPropertiesFromState({ fontSize: 'fit' })).toEqual({
-			fontSize: 'fit', fitMaxSize: 0,
+			fontSize: 'fit', fontSizeUnit: 'rem', fitMaxSize: 0,
 		});
 	});
 
@@ -289,6 +290,8 @@ describe('normalizeApplyProperties', () => {
 			features: [],
 			fontVariationSettings: '',
 			initialHang: 0,
+			textCase: '',
+			fakeSmallCaps: true,
 		});
 	});
 
@@ -313,6 +316,8 @@ describe('normalizeApplyProperties', () => {
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
 			initialHang: 0.2,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
 		})).toEqual({
 			fontId: 15,
 			fontWeight: 'bold',
@@ -326,6 +331,8 @@ describe('normalizeApplyProperties', () => {
 			features: ['liga', 'ss01'],
 			fontVariationSettings: '"wght" 650',
 			initialHang: 0.2,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
 		});
 	});
 
@@ -347,6 +354,8 @@ describe('normalizeApplyProperties', () => {
 			features: [],
 			fontVariationSettings: '',
 			initialHang: 0,
+			textCase: '',
+			fakeSmallCaps: true,
 		});
 	});
 
@@ -372,6 +381,8 @@ describe('buildApplyEventDetail', () => {
 				features: [],
 				fontVariationSettings: '',
 				initialHang: 0,
+				textCase: '',
+				fakeSmallCaps: true,
 			},
 			paragraphStyleId: 3,
 			styleClass: 'typost-ps-3',
@@ -733,7 +744,7 @@ describe('PS-3: size trio only stored for responsive/fit sizes', () => {
 		// must not persist them (they rendered nothing and spread on update)
 		expect(buildPropertiesFromState({
 			fontSize: '16', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
-		})).toEqual({ fontSize: '16' });
+		})).toEqual({ fontSize: '16', fontSizeUnit: 'rem' });
 	});
 
 	test('an inherit-size style does not store the trio either', () => {
@@ -745,10 +756,10 @@ describe('PS-3: size trio only stored for responsive/fit sizes', () => {
 	test('responsive and fit sizes keep the trio', () => {
 		expect(buildPropertiesFromState({
 			fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64,
-		})).toEqual({ fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 });
+		})).toEqual({ fontSize: 'responsive', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 });
 		expect(buildPropertiesFromState({
 			fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0,
-		})).toEqual({ fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 });
+		})).toEqual({ fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 });
 	});
 });
 
@@ -910,6 +921,165 @@ describe('buildPropertiesForStyleSave (Update Style / Save as New, #242 review)'
 	test('no base style, or a base without a hang, adds nothing', () => {
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, null)).not.toHaveProperty('initialHang');
 		expect(buildPropertiesForStyleSave({ fontId: 1 }, { fontId: 1 })).not.toHaveProperty('initialHang');
+	});
+});
+
+describe('case (#214)', () => {
+	const {
+		normalizeTextCase,
+		isSmallCapsCase,
+	} = require('../assets/js/lib/ps-utils.js');
+
+	test('helpers accept only the known values', () => {
+		expect(normalizeTextCase('all-small-caps')).toBe('all-small-caps');
+		expect(normalizeTextCase('Uppercase')).toBe('');
+		expect(normalizeTextCase(undefined)).toBe('');
+		expect(isSmallCapsCase('small-caps')).toBe(true);
+		expect(isSmallCapsCase('uppercase')).toBe(false);
+	});
+
+	test('capture stores a case and leaves out Default', () => {
+		expect(buildPropertiesFromState({ textCase: 'uppercase', fakeSmallCaps: true }).textCase).toBe('uppercase');
+		expect(buildPropertiesFromState({ textCase: '' })).not.toHaveProperty('textCase');
+		expect(buildPropertiesFromState({})).not.toHaveProperty('textCase');
+		expect(buildPropertiesFromState({ textCase: 'junk' })).not.toHaveProperty('textCase');
+	});
+
+	test('capture stores fakeSmallCaps only when it is off for a small caps value', () => {
+		expect(buildPropertiesFromState({ textCase: 'small-caps', fakeSmallCaps: false }).fakeSmallCaps).toBe(false);
+		expect(buildPropertiesFromState({ textCase: 'small-caps', fakeSmallCaps: true })).not.toHaveProperty('fakeSmallCaps');
+		expect(buildPropertiesFromState({ textCase: 'uppercase', fakeSmallCaps: false })).not.toHaveProperty('fakeSmallCaps');
+	});
+
+	test('a different case marks the style modified', () => {
+		expect(isStyleModified({ textCase: 'uppercase' }, { textCase: 'lowercase' })).toBe(true);
+		expect(isStyleModified({ textCase: '' }, { textCase: 'uppercase' })).toBe(true);
+		expect(isStyleModified({ textCase: 'uppercase' }, {})).toBe(true);
+		expect(isStyleModified({ textCase: 'uppercase', fakeSmallCaps: true }, { textCase: 'uppercase' })).toBe(false);
+		expect(isStyleModified({ textCase: '', fakeSmallCaps: true }, {})).toBe(false);
+	});
+
+	test('a fake small caps change marks a small caps style modified', () => {
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: false }, { textCase: 'small-caps' })).toBe(true);
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: true }, { textCase: 'small-caps', fakeSmallCaps: false })).toBe(true);
+		expect(isStyleModified({ textCase: 'small-caps', fakeSmallCaps: false }, { textCase: 'small-caps', fakeSmallCaps: false })).toBe(false);
+		// No effect without small caps, so not a modification
+		expect(isStyleModified({ textCase: 'uppercase', fakeSmallCaps: false }, { textCase: 'uppercase' })).toBe(false);
+	});
+
+	test('an editor that does not report case (the inline editor) is not modified by it', () => {
+		expect(isStyleModified({}, { textCase: 'uppercase' })).toBe(false);
+	});
+
+	test('apply resets a lingering case when the style has none', () => {
+		const normalized = normalizeApplyProperties({});
+		expect(normalized.textCase).toBe('');
+		expect(normalized.fakeSmallCaps).toBe(true);
+		const smallCaps = normalizeApplyProperties({ textCase: 'small-caps', fakeSmallCaps: false });
+		expect(smallCaps.textCase).toBe('small-caps');
+		expect(smallCaps.fakeSmallCaps).toBe(false);
+	});
+
+	test('Update Style from an editor without the key keeps the style case', () => {
+		const base = { fontId: 1, textCase: 'all-small-caps', fakeSmallCaps: false };
+		const props = buildPropertiesForStyleSave({ fontId: 1, fontWeight: '700' }, base);
+		expect(props.textCase).toBe('all-small-caps');
+		expect(props.fakeSmallCaps).toBe(false);
+		// An editor that reports the key wins, including Default
+		expect(buildPropertiesForStyleSave({ fontId: 1, textCase: '' }, base)).not.toHaveProperty('textCase');
+		expect(buildPropertiesForStyleSave({ fontId: 1, textCase: 'uppercase' }, base).textCase).toBe('uppercase');
+	});
+
+	test('the CSS block carries the case declarations, PHP-formatted', () => {
+		// Expected strings shared with ParagraphStylesCssSelectorTest.php
+		const head = '.typost-ps-5,\n.typost-styled.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5.typost-ps-5,\n.typost-styled[data-style-id="5"][data-style-id][data-style-id][data-style-id][data-style-id] {\n';
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, letterSpacing: 100, textCase: 'uppercase' } })).toBe(
+			head +
+			'    font-family: var(--font-9);\n' +
+			'    letter-spacing: 0.1em;\n' +
+			'    text-transform: uppercase;\n' +
+			'    font-variant-caps: normal;\n' +
+			'}'
+		);
+		expect(buildStyleCssBlock({ id: 5, properties: { textCase: 'all-small-caps', fakeSmallCaps: false } })).toBe(
+			head +
+			'    text-transform: none;\n' +
+			'    font-variant-caps: all-small-caps;\n' +
+			'    font-synthesis-small-caps: none;\n' +
+			'}'
+		);
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9 } })).not.toContain('text-transform');
+		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, textCase: 'bogus' } })).not.toContain('text-transform');
+	});
+
+	test('a small caps style with feature toggles keeps its font-feature-settings', () => {
+		const css = buildStyleCssBlock({ id: 5, properties: { features: ['c2sc'], textCase: 'small-caps' } });
+		expect(css).toContain('font-feature-settings: "c2sc" 1;');
+		expect(css).toContain('font-variant-caps: small-caps;');
+	});
+});
+
+describe('font size unit (#233)', () => {
+	const { pxToRem } = require('../assets/js/lib/ps-utils.js');
+	const fixture = require('./fixtures/font-size-unit-css.json');
+	// The same strings tests/Unit/ParagraphStylesFontSizeUnitTest.php holds
+	// generate_style_css() to, so the two generators cannot drift apart.
+	const selector = '.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id="8"][data-style-id][data-style-id][data-style-id][data-style-id]';
+
+	test.each(fixture.cases)('buildStyleCssBlock writes $rule for $label', ({ properties, rule }) => {
+		expect(buildStyleCssBlock({ id: 8, properties })).toBe(`${selector} {\n    ${rule};\n}`);
+	});
+
+	test('a new style stores rem only when it has a size', () => {
+		expect(buildPropertiesFromState({ fontSize: '24' }).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesFromState({ fontSize: 'inherit', fontWeight: '700' })).not.toHaveProperty('fontSizeUnit');
+	});
+
+	test('Update Style keeps px on a sized style saved before #233', () => {
+		const base = { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 };
+		const state = { fontSize: 'responsive', fontSizeMin: 18, fontSizePreferred: 32, fontSizeMax: 64 };
+		expect(buildPropertiesForStyleSave(state, base, true).fontSizeUnit).toBe('px');
+		// An explicit px stays px too
+		expect(buildPropertiesForStyleSave(state, { ...base, fontSizeUnit: 'px' }, true).fontSizeUnit).toBe('px');
+	});
+
+	test('Update Style keeps rem on a rem style', () => {
+		const base = { fontSize: '24', fontSizeUnit: 'rem' };
+		expect(buildPropertiesForStyleSave({ fontSize: '28' }, base, true).fontSizeUnit).toBe('rem');
+	});
+
+	test('Update Style writes rem when the older style had no size', () => {
+		// It wrote no size before, so the size it gets now is new
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontWeight: '700' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'inherit' }, true).fontSizeUnit).toBe('rem');
+	});
+
+	test('Update Style treats a "0" size as no size, like the CSS generators', () => {
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: '0' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 0 }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'abc' }, true).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, { fontSize: 'fit' }, true).fontSizeUnit).toBe('px');
+	});
+
+	test('Update Style that removes the size stores no unit', () => {
+		expect(buildPropertiesForStyleSave({ fontSize: 'inherit' }, { fontSize: '24' }, true)).not.toHaveProperty('fontSizeUnit');
+	});
+
+	test('Save as New is a new style and writes rem, even from a px style', () => {
+		const base = { fontSize: '24' };
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, base, false).fontSizeUnit).toBe('rem');
+		expect(buildPropertiesForStyleSave({ fontSize: '24' }, base).fontSizeUnit).toBe('rem');
+	});
+
+	test('the unit is not a style-modified difference (the editors never report it)', () => {
+		expect(isStyleModified({ fontSize: '24' }, { fontSize: '24', fontSizeUnit: 'rem' })).toBe(false);
+	});
+
+	test('pxToRem matches the block twin in assets/js/font-size-units.js', () => {
+		const core = require('../../assets/js/font-size-units.js');
+		for (const px of [0, 1, 8, 13, 16, 17, 24, 36.5, 13.3, 120, 400, 0.001, 0.0016, '24', ' 24', 'abc', '', null, undefined]) {
+			expect(pxToRem(px)).toBe(core.pxToRem(px));
+		}
 	});
 });
 

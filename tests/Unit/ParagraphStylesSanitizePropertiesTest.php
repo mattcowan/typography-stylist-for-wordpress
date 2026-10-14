@@ -104,4 +104,20 @@ class ParagraphStylesSanitizePropertiesTest extends TestCase {
             $this->assertArrayNotHasKey('initialHang', $this->sanitize(['initialHang' => $raw]), var_export($raw, true));
         }
     }
+
+    public function test_case_is_whitelisted_and_default_is_never_stored() {
+        $this->assertSame('uppercase', $this->sanitize(['textCase' => 'uppercase'])['textCase']);
+        $this->assertArrayNotHasKey('textCase', $this->sanitize(['textCase' => '']));
+        $this->assertArrayNotHasKey('textCase', $this->sanitize(['textCase' => 'uppercase; color: red']));
+        $this->assertArrayNotHasKey('textCase', $this->sanitize(['textCase' => ['uppercase']]));
+    }
+
+    public function test_fake_small_caps_is_stored_only_when_off_for_small_caps() {
+        $off = $this->sanitize(['textCase' => 'small-caps', 'fakeSmallCaps' => false]);
+        $this->assertFalse($off['fakeSmallCaps']);
+        $this->assertFalse($this->sanitize(['textCase' => 'all-small-caps', 'fakeSmallCaps' => 'false'])['fakeSmallCaps']);
+        $this->assertArrayNotHasKey('fakeSmallCaps', $this->sanitize(['textCase' => 'small-caps', 'fakeSmallCaps' => true]));
+        $this->assertArrayNotHasKey('fakeSmallCaps', $this->sanitize(['textCase' => 'uppercase', 'fakeSmallCaps' => false]));
+        $this->assertArrayNotHasKey('fakeSmallCaps', $this->sanitize(['fakeSmallCaps' => false]));
+    }
 }

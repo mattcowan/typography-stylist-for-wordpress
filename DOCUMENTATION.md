@@ -211,13 +211,15 @@ Use this method to style whole words or phrases in a heading, paragraph, or othe
 4. Select the text that you want to style. Select whole words only.
 5. Click “Typography Stylist Features” (the swash “T”) in the block toolbar.
 6. A panel opens. It has these controls:
-   - Font family, font weight, font style, font size, line height, and letter spacing
+   - Font family, font weight, font style, case, font size, line height, and letter spacing
    - “Quick Presets” (only if presets exist)
    - “Glyphs…”, which opens the Glyphs Panel
    - “Browse styles…”, which opens the Paragraph Styles browser
    - “Individual Features”, the OpenType features in groups
 7. Change the settings. Each change applies to the selected text at once. Use Ctrl+Z (Cmd+Z on Mac) to undo a change.
 8. Click “Close” when you are done. To remove the styling from the selection, click “Clear”.
+
+**Case:** The “Case” setting has the same choices as in the Typography Stylist block (see the sidebar settings in Method 2). It changes how the selected letters look; the text keeps the case you typed. Text in these blocks has no hidden copy for screen readers, so some screen readers spell out short words in All Caps letter by letter. When a paragraph style is applied to the text, the style sets the case. To change the case of this text only, click “Detach Style” first. The text keeps the style’s case when you detach it.
 
 **Partial word notice:**
 
@@ -253,9 +255,16 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
 - **Font Weight:** Choose a weight (100–900). For a variable font with a weight axis, a slider replaces the list.
 - **Font Style:** Choose the italic face of the font.
 - **Font Size:** “Inherit”, “Responsive (Fluid)”, or “Fit to width”. A responsive size has three values: “Mobile (320px and up)”, “Intermediate”, and “Large (up to 1920px)”. Fit to width makes each line fill the width of the block.
+  - You enter sizes in px. A new block writes them in rem (the px value divided by 16), so the size follows the default font size that the reader sets in the browser. The slider shows both values, for example “24px (1.5rem)”.
+  - A block saved before version 2.3.2 keeps px, also after you edit it. Its slider shows px only.
+  - If the theme changes the root font size (for example `html { font-size: 62.5% }`), rem sizes change with it. The editor uses the theme styles, so you see the result while you edit.
+  - A new responsive size is at least twice its size when a reader zooms the browser to 500%, in windows from 320 to 1920px. This assumes the default root font size of 16px. Browser zoom makes the window narrower in CSS px, so the part of the size that follows the window width gets smaller. When your values would not double, the size grows more slowly than you set, and a note under the sliders shows the size it reaches in a 1920px window and the Intermediate size that reaches your Large size. In a block saved before version 2.3.2, the note says when the size does not double.
+  - A new fit-to-width line grows with zoom too. When zoom makes the container narrower than 32rem (512px), a line of two or more words grows and wraps between its words. It stops growing at the size it has in a 32rem container, or when its widest word fills the container, so no word is broken. A line of one word cannot wrap, so it keeps filling its container. CSS cannot tell zoom from a small window, so this applies only in a landscape window narrower than 782px, which is what a zoomed desktop window is. A phone held upright, and a narrow column in a wide window, fill the width as before. The editor always shows the lines as they are at 100% zoom.
+  - To write new sizes in px instead, turn on **Write new font sizes in px** in Settings → Typography Stylist → Options. It applies to new blocks, new inline font sizes and new paragraph styles. A block, a span or a style saved before you change the setting keeps its unit. With this setting, new sizes do not grow with browser zoom as described above: a new responsive size keeps the slope you set, and the note under the sliders tells you when it does not double at 500% zoom. Fit-to-width lines keep filling their container at every zoom level.
 - **Line Height:** Set the line height.
 - **Letter Spacing:** Change the spacing in steps of 1/1000 em.
 - **First Letter Hang:** Move the first letter into the margin at the start of the line by a value in em, from 0 to 1. This is the left margin in left-to-right text and the right margin in right-to-left text. Use it for a swash capital: the swash goes into the margin, and the main shape of the letter aligns with the text edge. 0 turns it off. Only the first line hangs. In fit-to-width mode, each line has its own value. The hang has no effect when the text is centered or aligned to the end. Some themes cut off content that goes outside its container. If the swash is cut off, examine the published page.
+- **Case:** Change how the letters look: “Default” (the case the theme sets), “Normal” (removes a case the theme sets), “All Caps”, “Lowercase”, “Title Case”, “Small Caps” (lowercase letters become small caps), or “All Small Caps” (capitals become small caps too). The stored text keeps the case you typed, so you can change the setting at any time. For Small Caps and All Small Caps, “Allow fake small caps” lets the browser shrink capitals when the font has no small caps; turn it off to keep such a font in normal case. Title Case capitalizes every word, including short words such as “of” and “the”. Case follows the language of the text: with Turkish, `i` becomes `İ`. All caps are harder to read in long text. In this block, screen readers read the original text; when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter. A paragraph style can keep the setting. The inline format (Method 1) has the same setting for selected text.
 - **OpenType Features:** Turn on features for the whole block. The features are in groups: ligatures, stylistic sets, swashes and alternates, decorative, numerals and figures, capitals and case, positional forms, superscript and ordinals, and other features.
 - **Accessibility:** Choose the screen reader class: `visually-hidden`, `sr-only`, `screen-reader-text`, or a custom class name.
 

@@ -5,6 +5,10 @@
  * These functions have no side effects and can be tested independently.
  */
 
+import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
+import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from '../../assets/js/text-case.js';
+
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
  *
@@ -440,6 +444,19 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			disabledFeatures: [],
 			fontId: null,
 			fontWeight: null,
+			// The weight that renders, from the first span out from the
+			// selection that decides one (resolveSpanStoredFontWeight, #254):
+			// storedFontWeight is a data-fontweight that renders (no
+			// data-style-id on its span, or an inline font-weight with it);
+			// styleFontWeight is the weight of a paragraph style, which then
+			// overrides any data-fontweight on its own span and further up.
+			// fontWeight above stays the raw first data-fontweight.
+			storedFontWeight: null,
+			styleFontWeight: null,
+			// True when the selected text sits in a <strong>/<b> inside the
+			// span that gives styleFontWeight: the UA rule (bolder) then sets
+			// the weight below the style's class (review of #254).
+			boldInsideStyleSpan: false,
 			fontStyle: null,
 			// data-fontstyle only — never the <em>/<i> fallback below. Rendered
 			// consumers (previews, Glyphs face pick) read fontStyle; consumers
@@ -447,6 +464,9 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			// selection inside semantic emphasis can't bake italic into a style.
 			explicitFontStyle: null,
 			fontSize: null,
+			// Unit the detected size is written in now (#233): the zoom notice
+			// (#234) describes px sizes that keep their slope differently
+			fontSizeUnit: null,
 			fontSizeMin: null,
 			fontSizePreferred: null,
 			fontSizeMax: null,
@@ -459,6 +479,9 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			spanStart: spanStart,
 			spanEnd: spanEnd
 		};
+
+		// The span whose paragraph style gives styleFontWeight, if any
+		let styleWeightSpan = null;
 
 		// Walk up from innermost span to collect properties
 		let currentSpan = smallestMatchingSpan;
@@ -520,10 +543,27 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			}
 
 			// FontWeight - inherited from first ancestor that has it
+			// fontWeight keeps the raw data-fontweight (the QFT controls and
+			// apply paths read it). The weight that renders is decided apart:
+			// the first span out from the selection with a stored weight
+			// (storedFontWeight) or a style weight (styleFontWeight) wins
 			if (result.fontWeight === null) {
 				const fontWeight = currentSpan.getAttribute('data-fontweight');
 				if (fontWeight) {
 					result.fontWeight = fontWeight;
+				}
+			}
+			if (result.storedFontWeight === null && result.styleFontWeight === null) {
+				const spanWeight = resolveSpanStoredFontWeight({
+					dataWeight: currentSpan.getAttribute('data-fontweight'),
+					styleAttr: currentSpan.getAttribute('style'),
+					styleId: currentSpan.getAttribute('data-style-id')
+				}, typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null);
+				if (spanWeight.stored) {
+					result.storedFontWeight = spanWeight.stored;
+				} else if (spanWeight.styleWeight) {
+					result.styleFontWeight = spanWeight.styleWeight;
+					styleWeightSpan = currentSpan;
 				}
 			}
 
@@ -541,6 +581,13 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				const fontSize = currentSpan.getAttribute('data-fontsize');
 				if (fontSize) {
 					result.fontSize = fontSize;
+					result.fontSizeUnit = resolveSpanFontSizeUnit({
+						sizeChanged: false,
+						newUnit: getNewFontSizeUnit(),
+						spanStyle: currentSpan.getAttribute('style'),
+						styleId: currentSpan.getAttribute('data-style-id'),
+						styles: typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null
+					});
 					// Also get breakpoints if responsive
 					if (fontSize === 'responsive') {
 						const min = currentSpan.getAttribute('data-fontsize-min');
@@ -628,6 +675,28 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 		// still renders the italic face — previews must know about it
 		if (result.fontStyle === null && smallestMatchingSpan.closest('em, i')) {
 			result.fontStyle = 'italic';
+		}
+
+		// <strong>/<b> below the style span: every selected text node's
+		// closest bold element sits inside that span (same coverage rule as
+		// detectStrongBoldAtRange). Bold outside the span loses to the class.
+		if (styleWeightSpan) {
+			let sawNode = false;
+			let allBold = true;
+			textNodeMap.forEach(({ node, start, end }) => {
+				const overlaps = (cursorStart === cursorEnd)
+					? (cursorStart >= start && cursorStart < end)
+					: (cursorStart < end && cursorEnd > start);
+				if (!overlaps) {
+					return;
+				}
+				sawNode = true;
+				const bold = node.parentElement ? node.parentElement.closest('strong, b') : null;
+				if (!bold || !styleWeightSpan.contains(bold)) {
+					allBold = false;
+				}
+			});
+			result.boldInsideStyleSpan = sawNode && allBold;
 		}
 
 		return result;
@@ -2166,6 +2235,35 @@ export function resolveBlockSelectionRange(selectionStart, selectionEnd, clientI
 }
 
 /**
+ * The two weights the block reports for the selected text (#254).
+ *
+ * - rendered: the weight the text shows at. A paragraph style span closer
+ *   to the selection than any rendering weight span sets it with its CSS
+ *   class — unless the text is in a <strong>/<b> inside that style span,
+ *   which renders bold ('700', the keyword convention). Then a stored
+ *   weight, then semantic bold (<strong>/<b>, detected by the caller only
+ *   when neither is set).
+ * - stored: a data-fontweight on the selected text that renders (see
+ *   resolveSpanStoredFontWeight). A weight from a style, <strong>, the block
+ *   or the theme is inherited, not stored, so consumers that write a span
+ *   into the selection do not copy it.
+ *
+ * @since 2.3.2
+ * @param {Object|null} inlineStyles parseInlineStylesAtCursor() result
+ * @param {string|null} strongBold   detectStrongBoldAtRange() result
+ * @return {{rendered: (string|null), stored: (string|null)}} Weights, null when none
+ */
+export function resolveSelectionFontWeights(inlineStyles, strongBold) {
+	const styleWeight = (inlineStyles && inlineStyles.styleFontWeight) || null;
+	const stored = styleWeight ? null : ((inlineStyles && inlineStyles.storedFontWeight) || null);
+	const styleRendered = styleWeight && inlineStyles.boldInsideStyleSpan ? '700' : styleWeight;
+	return {
+		rendered: styleRendered || stored || strongBold || null,
+		stored
+	};
+}
+
+/**
  * Build the shared editor-state object that the `typost_current_editor_state`
  * filter answers with for the 'qft' editor.
  *
@@ -2205,8 +2303,17 @@ export function buildQftEditorState(s) {
 		// parseInlineStylesAtCursor resolves). Reporting the block attribute
 		// there tells consumers the wrong weight — the Glyphs panel drew its
 		// cells in it and inserted glyphs at it, so a glyph placed in a bold
-		// run came out lighter than the text around it.
-		fontWeight: source.selectionFontWeight || source.fontWeight,
+		// run came out lighter than the text around it. A paragraph style on
+		// the selected text counts too (#254).
+		fontWeight: source.selectionRenderedFontWeight || source.fontWeight,
+		// The weight stored on the selected text itself (a data-fontweight
+		// span not overridden by a closer paragraph style), '' when the text
+		// inherits its weight from a style, <strong>, the block or the theme.
+		// Consumers that write a span into the selection (the Glyphs panel)
+		// write only this one: an inherited weight written inline would
+		// override the style's class and stay behind when the style or the
+		// block weight changes later (#254).
+		selectionFontWeight: source.selectionStoredFontWeight ? String(source.selectionStoredFontWeight) : '',
 		fontSize: source.fontSize,
 		fontSizeMin: source.fontSizeMin,
 		fontSizePreferred: source.fontSizePreferred,
@@ -2226,6 +2333,11 @@ export function buildQftEditorState(s) {
 		// reach an inline span, so the inline editor never reports this key
 		// and the Paragraph Styles diff skips it when absent.
 		initialHang: normalizeHang(source.initialHang),
+		// Case (#214): the block attribute. The Quick Feature Toggles have
+		// no case control for selected text, so a span's own case
+		// (data-textcase, written by the inline editor) is not read here.
+		textCase: normalizeTextCase(source.textCase),
+		fakeSmallCaps: source.fakeSmallCaps !== false,
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,
 		content: source.content || '',
@@ -3028,11 +3140,6 @@ export function sanitizeFontVariationSettings(value) {
 
 // ===== Fit-to-width sizing (fontSize: "fit") =====
 
-// Viewport breakpoints for the responsive clamp() fallback — must stay in
-// sync with the constants of the same name in edit.js and save.js.
-const RESPONSIVE_FONT_MIN_VIEWPORT = 320;  // Mobile baseline
-const RESPONSIVE_FONT_MAX_VIEWPORT = 1920; // Desktop baseline
-
 /**
  * Split serialized RichText HTML into visual-line HTML strings on <br>
  * boundaries. Elements straddling a boundary (a styled span containing a
@@ -3117,16 +3224,95 @@ export function computeFitRatio(referenceSize, measuredWidth) {
  * rather than pre-multiplied, so the emitted string is exactly the stored
  * attribute value — no float artifacts, byte-stable for block validation.
  *
+ * The cap is entered in px and written in the block's unit (#233): px for
+ * blocks saved before rem existed, rem for new blocks.
+ *
+ * A new (rem) line also sizes itself from --typost-fit-width, which falls
+ * back to 100cqi (#235). style.css sets it to a 32rem floor when browser
+ * zoom has made the container narrow, so the line grows with zoom and
+ * wraps at its spaces instead of staying the same size on screen. The word
+ * cap, calc(C * 100cqi), stops that growth where the line's widest word
+ * fills the container, so the wrap never has to break a word: C is W from
+ * computeFitWordRatio() (fitWordSizes) when W > R, and R otherwise. A line
+ * with C = R — one word, or W not measured yet — cannot grow without
+ * breaking a word or overflowing, so it keeps filling its container.
+ * At 100% zoom (no floor) var() is 100cqi and C >= R, so the size is
+ * R × 100cqi and the line fills its container exactly as before.
+ *
+ * Every rem line has the var() form, also with C = R: it keeps rem output
+ * distinct from px output, so a fit block saved before #233 with a
+ * styleClass (no block-level size) still matches the v2 deprecation and is
+ * migrated to px, rather than validating as a rem block. Px lines (blocks
+ * saved before #233) keep calc(R * 100cqi).
+ *
  * @param {number} ratio - Per-line ratio from computeFitRatio()
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number} [wordRatio] - Per-line widest-word ratio (fitWordSizes)
  * @return {string} CSS font-size value, or '' when ratio is unusable
  */
-export function buildFitFontSize(ratio, fitMaxSize) {
+export function buildFitFontSize(ratio, fitMaxSize, unit, wordRatio) {
 	if (!(ratio > 0)) {
 		return '';
 	}
-	const cqi = `calc(${ratio} * 100cqi)`;
-	return fitMaxSize > 0 ? `min(${cqi}, ${fitMaxSize}px)` : cqi;
+	const sizes = resolveFontSizeUnit(unit) === 'rem'
+		? [`calc(${ratio} * var(--typost-fit-width, 100cqi))`, `calc(${wordRatio > ratio ? wordRatio : ratio} * 100cqi)`]
+		: [`calc(${ratio} * 100cqi)`];
+	if (fitMaxSize > 0) {
+		sizes.push(formatFontSizeLength(fitMaxSize, unit));
+	}
+	return sizes.length > 1 ? `min(${sizes.join(', ')})` : sizes[0];
+}
+
+/**
+ * Classes for the fit-to-width measuring probe, from the block's visual
+ * heading in the editor canvas.
+ *
+ * The probe must inherit what the rendered line inherits: the theme's
+ * heading font, letter spacing, case and the paragraph style class. A probe
+ * on the canvas body inherited the body font instead, so in a theme whose
+ * headings use a different font every line of a fit block with no font of
+ * its own was measured too narrow and overflowed its column (4.1% on the
+ * test site). So the probe copies the heading's tag and classes, minus:
+ * - typost-fit: its inline-size containment makes the probe's natural
+ *   width 0;
+ * - typost-hang: an editor-only text-indent that would change the width
+ *   (the measurement accounts for hangs itself);
+ * - RichText and block-editor classes (rich-text, block-editor-*, is-*),
+ *   whose editor rules (white-space, min-width) are not frontend styles.
+ *
+ * @param {string} className - The heading's class attribute
+ * @return {string} Class attribute for the probe
+ */
+export function buildFitProbeClassName(className) {
+	return String(className || '')
+		.split(/\s+/)
+		.filter((name) => name && name !== 'typost-fit' && name !== 'typost-hang' && name !== 'rich-text' &&
+			!/^block-editor-/.test(name) && !/^is-/.test(name))
+		.join(' ');
+}
+
+/**
+ * Fit-to-width ratio for the widest word of a line (#235 word cap).
+ *
+ * The widest word is the line's min-content width: the widest run the
+ * browser cannot break, so a word split across inline spans counts as
+ * one. A hang of h em widens every row of the line by h × size, as in
+ * computeHungFitRatio(). Rounded DOWN to four decimals, unlike the line
+ * ratio: a word sized one rounding step too large would overflow its
+ * container when the line wraps.
+ *
+ * @param {number} referenceSize - Font size the line was measured at (px)
+ * @param {number} wordWidth - Min-content width of the line at that size (px)
+ * @param {number} hang - Hang in em (0 = none)
+ * @return {number|null} Ratio, or null when unmeasurable
+ */
+export function computeFitWordRatio(referenceSize, wordWidth, hang) {
+	const width = wordWidth - (normalizeHang(hang) * referenceSize);
+	if (!(referenceSize > 0) || !(width > 0)) {
+		return null;
+	}
+	return Math.floor((referenceSize / width) * 10000) / 10000;
 }
 
 /**
@@ -3141,14 +3327,17 @@ export function buildFitFontSize(ratio, fitMaxSize) {
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (index = visual line; index 0 is unused, see buildFitLineOpenTag)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number[]} [fitWordSizes] - Per-line widest-word ratios (see buildFitFontSize)
  * @return {string} HTML with each line wrapped in span.typost-line
  */
-export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs) {
+export function buildFitLinesHtml(content, fitLineSizes, fitMaxSize, fitLineHangs, unit, fitWordSizes) {
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+	const words = Array.isArray(fitWordSizes) ? fitWordSizes : [];
 
 	return lines.map((lineHtml, i) => (
-		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`
+		`${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit, words[i])}${lineHtml}</span>`
 	)).join('');
 }
 
@@ -3191,6 +3380,11 @@ export function normalizeHang(value) {
 	// the Paragraph Styles module.
 	return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
 }
+
+// Case (#214): TEXT_CASE_VALUES, normalizeTextCase(), isSmallCapsCase(),
+// caseDeclarations() and caseStyleObject() live in assets/js/text-case.js,
+// shared with the inline editor's separate build.
+export { TEXT_CASE_VALUES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject };
 
 /**
  * Whether a hanging initial shows for a given text alignment.
@@ -3318,11 +3512,13 @@ export function buildFitLinePreviews(content, maxChars) {
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} fitLineHangs - Per-line hangs in em
  * @param {number} index - Visual line index
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number} [wordRatio] - Widest-word ratio (fitWordSizes entry)
  * @return {string} Opening span tag
  */
-export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index) {
+export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit, wordRatio) {
 	const declarations = [];
-	const size = buildFitFontSize(ratio, fitMaxSize);
+	const size = buildFitFontSize(ratio, fitMaxSize, unit, wordRatio);
 	if (size) {
 		declarations.push(`font-size:${size}`);
 	}
@@ -3353,20 +3549,23 @@ export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index) {
  * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
  * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
  * @param {number[]} [fitLineHangs] - Per-line hangs in em (lines 2+)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number[]} [fitWordSizes] - Per-line widest-word ratios (see buildFitFontSize)
  * @return {string} Wrapped editing value for RichText
  */
-export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs) {
+export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, unit, fitWordSizes) {
 	if (!content) {
 		return '';
 	}
 	const lines = splitContentIntoLines(content);
 	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+	const words = Array.isArray(fitWordSizes) ? fitWordSizes : [];
 
 	return lines.map((lineHtml, i) => {
 		if (!lineHtml) {
 			return '';
 		}
-		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i)}${lineHtml}</span>`;
+		return `${buildFitLineOpenTag(sizes[i], fitMaxSize, fitLineHangs, i, unit, words[i])}${lineHtml}</span>`;
 	}).join('<br>');
 }
 
@@ -3439,32 +3638,38 @@ export function stripRedundantFontSizeAttrs(content) {
 /**
  * Build the responsive clamp() font-size expression.
  *
- * IMPORTANT: this must reproduce the legacy inline expression (edit.js /
- * save.js) byte-for-byte — including float artifacts like
- * 1.8124999999999998vw — because save output must stay byte-stable for
- * block validation of already-published posts. The template and arithmetic
- * are copied verbatim; a byte-identity test locks it in.
+ * Wrapper around buildResponsiveClamp() in assets/js/font-size-units.js,
+ * which the inline editor shares. IMPORTANT: the px form must reproduce the
+ * legacy inline expression byte-for-byte — including float artifacts like
+ * 1.8124999999999998vw — because blocks saved before rem existed must keep
+ * validating; a byte-identity test locks it in. The rem form (#233) is new
+ * content: 16 / 32 / 64 gives clamp(1rem, 2rem + 3vw, 4rem).
  *
  * @param {number} fontSizeMin - Mobile size (px, at 320px viewport)
  * @param {number} fontSizePreferred - Preferred size (px, drives rem base)
  * @param {number} fontSizeMax - Desktop size (px, at 1920px viewport)
+ * @param {string} [unit='px'] - 'px' or 'rem'
  * @return {string} clamp() expression
  */
-export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax) {
-	return `clamp(${fontSizeMin}px, ${fontSizePreferred / 16}rem + ${((fontSizeMax - fontSizeMin) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100}vw, ${fontSizeMax}px)`;
+export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit) {
+	return buildResponsiveClampForUnit(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 }
+
+export { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, getNewFontSizeUnit, getResponsiveZoomNotice };
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)
  * font size, as applied by the Quick Feature Toggles "Font Size (for
  * selected text)" control.
  *
+ * A span written now is new content, so its size is written in rem (#233);
+ * spans already in post content are never rewritten by this function.
  * 'responsive' carries the three breakpoint values as data attributes and
  * renders through buildResponsiveClamp() — the same expression the block
- * level uses, so the clamp() string (float artifacts included) is identical
- * wherever the size is written. Any other size string (a fixed px value
- * detected from a paragraph style saved in the inline editor) is emitted
- * as-is. 'inherit' or an empty size means "no inline size": null.
+ * level uses. A fixed px size (from a paragraph style saved in the inline
+ * editor, '24px' or a bare 24) is converted to rem; data-fontsize keeps the
+ * value as given. Any other size string is emitted as-is. 'inherit' or an
+ * empty size means "no inline size": null.
  *
  * The caller passes the size explicitly rather than reading component state,
  * so applying right when the select changes cannot see a stale value (QA
@@ -3475,17 +3680,20 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
  * @param {number} fontSizeMin Mobile size (px)
  * @param {number} fontSizePreferred Preferred size (px)
  * @param {number} fontSizeMax Desktop size (px)
+ * @param {string} [unit] Unit the size is written in. Defaults to the
+ *   site's new-content unit (getNewFontSizeUnit, #248): rem unless the site
+ *   writes px, so a caller that forgets it cannot write rem on a px site
  * @return {{attributes: Object, fontSize: string, styleString: string}|null}
  *   `attributes` are the data attributes for the span, `fontSize` the CSS
  *   value, `styleString` the full `font-size: …` declaration
  */
-export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit = getNewFontSizeUnit()) {
 	if (!size || size === 'inherit') {
 		return null;
 	}
 
 	if (size === 'responsive') {
-		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax);
+		const fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
 		return {
 			attributes: {
 				'data-fontsize': 'responsive',
@@ -3498,10 +3706,14 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
 		};
 	}
 
+	const fixedPx = parseFixedFontSize(size);
+	const fontSize = fixedPx !== null
+		? formatFontSizeLength(fixedPx, unit)
+		: size;
 	return {
 		attributes: { 'data-fontsize': size },
-		fontSize: size,
-		styleString: `font-size: ${size}`
+		fontSize,
+		styleString: `font-size: ${fontSize}`
 	};
 }
 
@@ -3515,14 +3727,18 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
  * glyph adjustments (data-fitscale / data-fitshift) are glyph-level choices,
  * not typography the style describes, and are kept.
  */
+// Case (#214) is style-owned too: a span's own case would otherwise stay
+// in force over the style's class and count as no conflict.
 const PARAGRAPH_STYLE_OWNED_ATTRS = [
 	'data-font-id', 'data-font', 'data-fontweight', 'data-fontstyle',
 	'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max',
-	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings'
+	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings',
+	...CASE_DATA_ATTRIBUTES
 ];
 const PARAGRAPH_STYLE_OWNED_PROPS = [
 	'font-family', 'font-weight', 'font-style', 'font-size',
-	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings'
+	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings',
+	...CASE_CSS_PROPERTIES
 ];
 
 /**
@@ -3906,6 +4122,30 @@ export function findParagraphStyleByClass(styleClass, styles) {
 	return styles.find((style) => style && (String(style.id) === ref || (style.legacyId && String(style.legacyId) === ref))) || null;
 }
 
+export { resolveStyleFontSizeUnit };
+
+/**
+ * The fontSizeUnit a block takes when it leaves its paragraph style (#233):
+ * Detach, or clearing the class of a deleted style.
+ *
+ * Under a styleClass the block writes no size, so a block saved before
+ * #233 validates against the current save and gets the 'rem' default while
+ * the size it shows comes from the style's CSS. Once the class is gone the
+ * block writes its sizes itself; taking the style's unit keeps them
+ * rendering as they did. A deleted style gives px, the pre-#233 output.
+ *
+ * @param {string} styleClass The block's styleClass before it is cleared
+ * @param {Array}  styles     Stored paragraph styles
+ * @return {string|null} 'rem' or 'px', or null when styleClass is not a
+ *   paragraph style class (an extension's class: leave the unit alone)
+ */
+export function resolveDetachFontSizeUnit(styleClass, styles) {
+	if (!styleClass || !/typost-ps-[A-Za-z0-9_-]+/.test(String(styleClass))) {
+		return null;
+	}
+	return resolveStyleFontSizeUnit(findParagraphStyleByClass(styleClass, styles));
+}
+
 /**
  * Does a block's `styleClass` point at a paragraph style that no longer
  * exists?
@@ -3957,7 +4197,7 @@ export function isOrphanStyleClass(styleClass, styles) {
  *
  * @param {Object} attrs      Block attributes.
  * @param {Object} styleProps The style's stored properties.
- * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize).
+ * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize, textCase covers fakeSmallCaps).
  */
 export function stylePropertyOverrides(attrs, styleProps) {
 	const a = attrs || {};
@@ -4005,6 +4245,13 @@ export function stylePropertyOverrides(attrs, styleProps) {
 	}
 	if (normalizeHang(a.initialHang) !== normalizeHang(s.initialHang)) {
 		overrides.initialHang = true;
+	}
+	// One key for both case settings: they render as one set of declarations.
+	// The fake small caps choice only matters with a small caps value.
+	const attrCase = normalizeTextCase(a.textCase);
+	if (attrCase !== normalizeTextCase(s.textCase)
+		|| (isSmallCapsCase(attrCase) && (a.fakeSmallCaps !== false) !== (s.fakeSmallCaps !== false))) {
+		overrides.textCase = true;
 	}
 	return overrides;
 }

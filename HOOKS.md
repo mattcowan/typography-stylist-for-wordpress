@@ -236,6 +236,7 @@ add_filter('typost_editor_data', function($data) {
 `wp_localize_script()` casts scalars to strings, so booleans arrive as `"1"` / `""` — truthy and falsy as expected, but never `true`/`false`. Fields worth knowing about:
 
 - `blockEnterLineBreak` *(since 2.3.0)* — `"1"` when Enter inside a Typography Stylist block inserts a line break (the default), `""` when Enter starts a new block. The editor itself does not read this: the behaviour is driven by core's `splitting` block support, added server-side in `filter_block_splitting_support()`, so `wp.blocks.hasBlockSupport('typost/block', 'splitting', false)` is the authoritative check inside the editor. The localized value is here for extensions that need the user's setting without reaching into the block registry.
+- `newFontSizeUnit` *(since 2.3.2)* — `"rem"` (the default) or `"px"` when Settings → Typography Stylist → Options → "Write new font sizes in px" is on (#248). The unit new content writes its font sizes in. An extension that creates a `typost/block` in code should pass `fontSizeUnit` with this value: block.json's `rem` default also decides how saved blocks parse, so it cannot follow the setting. An extension that writes a new inline font size should write it in this unit. `getNewFontSizeUnit()` in `assets/js/font-size-units.js` reads it.
 
 #### `typost_admin_localize_data`
 
@@ -746,10 +747,12 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
-- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `initialHang`, `layeredConfigId`, `content`, `tagName`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `selectionFontWeight`, `fontStyle`, `explicitFontStyle`, `textCase`, `fakeSmallCaps`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **QFT editor:** `editorType`, `fontId`, `fontWeight`, `selectionFontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `initialHang`, `textCase`, `fakeSmallCaps`, `layeredConfigId`, `content`, `tagName`
 
 *Since 2.3.0* both editors report the font style on two channels (`''` inherit, `'normal'`, `'italic'`, or `'oblique'` — the built-in Font Style controls only offer the first three, but `'oblique'` set by an extension through the apply event round-trips the full pipeline: span serialization, state reporting, and paragraph-style persistence/CSS). `fontStyle` is the *rendered* style at the selection — text italicized by an enclosing `<em>`/`<i>` reports `'italic'` even without its own setting; use it to render the right face (previews, the Glyphs panel's face pick). `explicitFontStyle` is only what was *set* — a `data-fontstyle` span, the popover's Font Style choice, or the block attribute — and is what consumers that persist the value must read: the bundled Paragraph Styles module captures it into saved styles, so semantic emphasis can't be baked into a style whose CSS could neither reproduce nor reset it.
+
+*Since 2.3.2* the font weight also has two channels. `fontWeight` is the weight *rendering* at the selection: a weight span, the paragraph style on the selected text (its `data-style-id`; a `<strong>` inside the style span still renders bold), `<strong>` (QFT), then the block's or the theme's weight. Use it to draw previews and pick the face. `selectionFontWeight` is only the weight *stored* on the selected text, and `''` when the text inherits its weight. A `data-fontweight` counts as stored only when it renders: on a span with no `data-style-id`, or with its own inline `font-weight` (no CSS reads the attribute, and a span under a paragraph style can keep it without the inline declaration). A consumer that writes a span into the selection (the Glyphs panel's insertions) writes only this one: an inherited weight written inline overrides the style's class and stays behind when the style or the block weight changes later (#254).
 
 The `paragraphStyleId` field contains the active paragraph style ID (integer), or `0` if no style is applied. Extensions can use this to detect whether the current selection/block is associated with a saved style.
 
@@ -758,6 +761,8 @@ The `layeredConfigId` field contains the active layered font configuration ID (i
 *Since 2.1.0* the QFT/inspector state also includes `animationConfigId` (integer, `0` when unset) — the active animation configuration ID used by the Animations extension.
 
 *Since 2.3.2* the QFT/inspector state also includes `initialHang` (number in em, `0` when off): how far the block moves its first letter into the margin (First Letter Hang). The inline editor does not report it, because the hang works through `::first-letter`, which cannot reach an inline span. Treat an absent key as "not supported here", not as 0. The per-line values of a fit-to-width block are content, like its line sizes, and are not in the state.
+
+*Since 2.3.3* both editors report `textCase` (`''` Default, `'none'` Normal, `'uppercase'`, `'lowercase'`, `'capitalize'`, `'small-caps'`, or `'all-small-caps'`) and `fakeSmallCaps` (boolean, `true` when unset; only meaningful with the two small caps values). The QFT/inspector state reports the block's setting. The inline editor reports the case stored on the selected span (`data-textcase` / `data-fakesmallcaps`), or the popover's choice while it is open; a theme's case or a case that only comes from a paragraph style's class is not the span's own and reports `''`. Treat an absent key (an older version) as "not supported here".
 
 #### Writing Editor State
 
@@ -774,6 +779,8 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
             features: ['liga', 'dlig', 'ss01'],
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes
             initialHang: 0.15, // Optional (since 2.3.2): first letter hang in em; 'qft'/'inspector' only
+            textCase: 'uppercase', // Optional (since 2.3.3): case; '' Default, 'none' Normal, …
+            fakeSmallCaps: false, // Optional (since 2.3.3): with 'small-caps'/'all-small-caps' only
         },
         source: 'inline', // or 'qft' or 'inspector'
         // Optional: class-based styling (used by the bundled Paragraph Styles module)

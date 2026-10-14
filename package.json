@@ -1,6 +1,6 @@
 {
   "name": "typost",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "WordPress plugin for advanced OpenType typography features in Gutenberg headlines",
   "scripts": {
     "build": "npm run build:block && npm run build:js && npm run build:css",
@@ -15,8 +15,8 @@
     "watch": "npm run watch:js & npm run watch:css",
     "watch:js": "nodemon --watch assets/js --ext js --ignore \"*.min.js\" --exec \"npm run build:js\"",
     "watch:css": "nodemon --watch assets/css --ext css --ignore \"*.min.css\" --exec \"npm run build:css\"",
-    "test": "wp-scripts test-unit-js",
-    "test:watch": "wp-scripts test-unit-js --watch",
+    "test": "wp-scripts test-unit-jest",
+    "test:watch": "wp-scripts test-unit-jest --watch",
     "test:php": "vendor/bin/phpunit",
     "test:php:coverage": "vendor/bin/phpunit --coverage-html coverage",
     "test:e2e": "playwright test",
@@ -31,25 +31,34 @@
     "test:sr:headed": "playwright test -c playwright.nvda.config.js --headed"
   },
   "devDependencies": {
-    "@babel/cli": "^7.28.3",
-    "@babel/core": "^7.28.5",
-    "@babel/preset-env": "^7.28.5",
-    "@babel/preset-react": "^7.28.5",
-    "@guidepup/guidepup": "^0.34.0",
+    "@babel/core": "^7.29.7",
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@guidepup/guidepup": "^0.35.0",
     "@guidepup/playwright": "^0.19.1",
     "@playwright/test": "^1.58.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
-    "@wordpress/scripts": "^31.4.0",
+    "@wordpress/babel-preset-default": "^8.55.0",
+    "@wordpress/jest-preset-default": "^14.2.0",
+    "@wordpress/scripts": "^36.1.0",
     "archiver": "^7.0.1",
+    "babel-jest": "^30.5.0",
     "babelify": "^10.0.0",
     "browserify": "^17.0.1",
     "clean-css-cli": "^5.6.2",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.2",
     "ignore": "^5.3.2",
-    "nodemon": "^3.1.11",
+    "jest": "^30.5.0",
+    "jest-environment-jsdom": "^30.5.0",
+    "nodemon": "^3.1.14",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-test-renderer": "^18.3.1",
-    "terser": "^5.16.0"
+    "terser": "^5.51.2"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.1.2"
   },
   "keywords": [
     "wordpress",

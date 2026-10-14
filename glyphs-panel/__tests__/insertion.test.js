@@ -2,7 +2,7 @@
  * Tests for buildInsertionPayload() — the typost-insert-content payload rules.
  */
 
-const { buildInsertionPayload, buildFeatureSettingsCSS, dispatchInsert } = require('../assets/js/lib/insertion.js');
+const { buildInsertionPayload, buildFeatureSettingsCSS, dispatchInsert, resolveInsertionFontWeight } = require('../assets/js/lib/insertion.js');
 
 describe('buildFeatureSettingsCSS', () => {
 	test('formats tags as "tag" 1, comma-separated', () => {
@@ -374,5 +374,37 @@ describe('dispatchInsert', () => {
 			dispatchInsert('qft', { text: '&', attributes: null }, {})
 		);
 		expect(detail.swap).toBeUndefined();
+	});
+});
+
+describe('resolveInsertionFontWeight (#254)', () => {
+	test('uses the weight stored on the selected text', () => {
+		expect(resolveInsertionFontWeight({ fontWeight: '700', selectionFontWeight: '700' })).toBe('700');
+	});
+
+	test('writes no weight when the selection inherits it', () => {
+		// Paragraph style 400 in a 700 block: fontWeight is the rendered
+		// 400, but nothing is stored on the text, so nothing is written
+		expect(resolveInsertionFontWeight({ fontWeight: '400', selectionFontWeight: '' })).toBe('');
+		expect(resolveInsertionFontWeight({ fontWeight: '700', selectionFontWeight: null })).toBe('');
+	});
+
+	test('a host without selectionFontWeight keeps the old behavior', () => {
+		expect(resolveInsertionFontWeight({ fontWeight: '700' })).toBe('700');
+		expect(resolveInsertionFontWeight({})).toBe('');
+		expect(resolveInsertionFontWeight(null)).toBe('');
+	});
+
+	test('an inherited weight gives a span with no weight', () => {
+		const payload = buildInsertionPayload({
+			text: 'r',
+			featureTag: 'swsh',
+			panelFontId: 12,
+			contextFontId: 12,
+			contextFeatures: [],
+			contextFontWeight: resolveInsertionFontWeight({ fontWeight: '400', selectionFontWeight: '' })
+		});
+		expect(payload.attributes['data-fontweight']).toBeUndefined();
+		expect(payload.attributes.style).not.toContain('font-weight');
 	});
 });
