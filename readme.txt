@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.1
+Stable tag: 2.3.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -315,6 +315,18 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.2 =
+* **Improved: new font sizes follow the default font size of the reader.** New blocks, new inline sizes and new paragraph styles write their sizes in rem. You still enter sizes in px. Content saved before keeps px and looks the same.
+* **Improved: new font sizes grow with browser zoom.** At 500% zoom, a new responsive size is at least two times its size at 100%. A note under the size sliders tells you when a size grows more slowly than set. New fit-to-width lines of two or more words also grow and wrap when a reader zooms in.
+* **New: Options setting to write new font sizes in px.** Use it when the theme changes the root font size. With this setting on, new sizes do not grow with browser zoom.
+* **New: First Letter Hang in the Typography Stylist block.** A swash capital can hang into the margin, while the main shape of the letter aligns with the text edge. A paragraph style keeps the value.
+* **Removed: the "Inline Format: Add aria-label Attributes" setting.** NVDA ignores the label, and the label made NVDA read a styled part of a word in pieces.
+* **Improved: all plugin REST API write requests share one limit** of 50 a minute for each user. Before, most write routes had no limit.
+* **Fixed: fit-to-width blocks.** A block with no font of its own was too wide for its column. A block in a theme that makes the content area only as wide as its content had a width of 0.
+* **Fixed: a fixed inline font size showed at the size of the sliders**, for example 64 from a paragraph style showed at 32px. The font size menu now shows "Fixed" and the size.
+* **Fixed: presets, glyphs and the settings page.** A preset that names a font now applies that font. A glyph from the Glyphs panel gets the weight of the text around it. About 250 strings that had no French or Spanish translation are translated.
+* Full details are in changelog.txt.
+
 = 2.3.1 =
 * **NEW: the Paragraph Styles tab shows a preview of each style.** Each card shows sample text in the style's own font, weight, spacing and OpenType features, and says when a style's font was deleted and replaced.
 * **Improved: the settings page loads only the fonts it shows.** Fonts load only for the open tab, and on the Custom Fonts tab only when a card comes into view. On a test site with 148 fonts, the Custom Fonts tab went from 133 font downloads to 12, and the page HTML from 5.97 MB to 1.84 MB.
@@ -383,6 +395,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.2 =
+New font sizes follow the reader's default font size and grow with browser zoom. Adds First Letter Hang, an Options setting to write new sizes in px, and fixes for fit-to-width, inline font sizes, presets and glyph weights. Content saved before keeps its sizes. No data migration.
 
 = 2.3.1 =
 The settings page loads only the fonts it shows, and the editor loads only the Adobe Fonts kits a post uses. A single post or page prints only the paragraph style CSS it uses. Adds style previews to the Paragraph Styles tab and fixes translations on WordPress 5.8 to 6.4. No data migration.
