@@ -281,6 +281,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [inlineFitShift, setInlineFitShift] = useState(0);
 	const [computedFont, setComputedFont] = useState('');
 	const [inlineFontSize, setInlineFontSize] = useState('inherit');
+	// A fixed size on the selection (64, from a paragraph style) has no
+	// control in the QFT size menu; it is shown as a disabled option (#255)
+	const inlineFixedSizePx = parseFixedFontSize(inlineFontSize);
 	// Unit of the selection's size as it is written now (#233). A size the
 	// author sets here is written in the site's new-content unit (rem, or px
 	// with the #248 setting), and the re-detection that follows the apply
@@ -4200,9 +4203,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 											// A fixed size on the selection (64, from a paragraph
 											// style) has no control here; shown disabled so the
 											// menu does not say Inherit (#255)
-											...(parseFixedFontSize(inlineFontSize) !== null ? [{
+											...(inlineFixedSizePx !== null ? [{
 												/* translators: %s: font size in px */
-												label: sprintf(__('Fixed (%spx)', 'typography-stylist'), parseFixedFontSize(inlineFontSize)),
+												label: sprintf(__('Fixed (%spx)', 'typography-stylist'), inlineFixedSizePx),
 												value: String(inlineFontSize),
 												disabled: true
 											}] : [])
@@ -4210,7 +4213,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 										disabled={fontSize === 'fit'}
 										help={fontSize === 'fit'
 											? __('Inline font sizes are ignored while this block uses Fit to width sizing. Use Relative size below to scale selected text against its fitted line.', 'typography-stylist')
-											: (parseFixedFontSize(inlineFontSize) !== null
+											: (inlineFixedSizePx !== null
 												? __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist')
 												: undefined)}
 									/>

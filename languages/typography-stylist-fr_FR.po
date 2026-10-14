@@ -2411,13 +2411,17 @@ msgid "Fit to Width (blocks only)"
 msgstr "Ajuster à la largeur (blocs uniquement)"
 
 #. translators: %s: font size in px
-#: assets/js/block-editor.js:3710
+#: assets/js/block-editor.js:3721
 #: blocks/typography-stylist/build/index.js:5
 #, js-format
 msgid "Fixed (%spx)"
 msgstr "Fixe (%spx)"
 
-#: assets/js/block-editor.js:3721
+#: assets/js/block-editor.js:3735
+msgid "The paragraph style sets this size. To change the size of this text only, click Detach Style first."
+msgstr "Le style de paragraphe définit cette taille. Pour modifier la taille de ce texte uniquement, cliquez d’abord sur Détacher le style."
+
+#: assets/js/block-editor.js:3736
 #: blocks/typography-stylist/build/index.js:5
 msgid "This text has a fixed size. To change it, choose a responsive size."
 msgstr "Ce texte a une taille fixe. Pour la modifier, choisissez une taille responsive."

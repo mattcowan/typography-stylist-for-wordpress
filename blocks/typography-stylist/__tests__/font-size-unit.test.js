@@ -315,4 +315,33 @@ describe('a fixed inline size stays fixed in the inline editor (#255)', () => {
 		expect(buildInlineFontSizeValue('64', 16, 24, 32, resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: 'rem' }))).toBe('4rem');
 		expect(buildInlineFontSizeValue('64', 16, 24, 32, resolveSpanFontSizeUnit({ sizeChanged: true, newUnit: 'px' }))).toBe('64px');
 	});
+
+	describe('buildInlineFontSizeAttributes (review of #255)', () => {
+		const { buildInlineFontSizeAttributes } = units;
+
+		it('a fixed size records data-fontsize and no slider values', () => {
+			expect(buildInlineFontSizeAttributes(64, 16, 24, 32)).toEqual({ 'data-fontsize': '64' });
+			expect(buildInlineFontSizeAttributes('64px', 16, 24, 32)).toEqual({ 'data-fontsize': '64px' });
+		});
+
+		it('a responsive size records the three slider values', () => {
+			expect(buildInlineFontSizeAttributes('responsive', 16, 32, 64)).toEqual({
+				'data-fontsize': 'responsive',
+				'data-fontsize-min': '16',
+				'data-fontsize-preferred': '32',
+				'data-fontsize-max': '64'
+			});
+		});
+
+		it('fit is recorded as responsive, as its fallback clamp is written', () => {
+			expect(buildInlineFontSizeAttributes('fit', 16, 32, 64)['data-fontsize']).toBe('responsive');
+		});
+
+		it('records nothing for inherit or no size, like the value', () => {
+			['inherit', '', undefined, null].forEach((size) => {
+				expect(buildInlineFontSizeAttributes(size, 16, 24, 32)).toBeNull();
+				expect(buildInlineFontSizeValue(size, 16, 24, 32, 'rem')).toBeNull();
+			});
+		});
+	});
 });

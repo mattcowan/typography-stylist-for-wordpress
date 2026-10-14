@@ -18,7 +18,7 @@ const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes,
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
 // unit the span already has (resolveSpanFontSizeUnit), so older spans are
 // not rewritten.
-const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
+const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttributes, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -158,6 +158,18 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * Escape a value for a double-quoted HTML attribute. escapeHTML() leaves
+     * quotes alone (innerHTML does not escape them in text).
+     */
+    function escapeAttribute(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
     }
 
     /**
@@ -2381,14 +2393,18 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                         styleArray.push(`line-height: ${sanitizedLineHeight}`);
                     }
                 }
-                // A fixed size (64, from a paragraph style) is written as a
-                // length, not dropped (#255)
-                if (fontSize === 'responsive' || parseFixedFontSize(fontSize) !== null) {
-                    // Ensure all numeric values are actually numbers
-                    const minPx = parseFloat(fontSizeMin) || 16;
-                    const prefRem = parseFloat(fontSizePreferred) || 24;
-                    const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: ${buildInlineFontSizeValue(fontSize, minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
+                // The size is written as in an apply: a fixed size (64, from a
+                // paragraph style) as a length, not dropped, in the unit the
+                // rebuild would use — a size the author did not change keeps
+                // the span's unit (#255, review)
+                const minPx = parseFloat(fontSizeMin) || 16;
+                const prefPx = parseFloat(fontSizePreferred) || 24;
+                const maxPx = parseFloat(fontSizeMax) || 32;
+                const sizeValue = buildInlineFontSizeValue(fontSize, minPx, prefPx, maxPx, this.getZoomNoticeUnit());
+                // data-fontsize lets the block read the size back (#255, review)
+                const sizeAttributes = sizeValue ? buildInlineFontSizeAttributes(fontSize, minPx, prefPx, maxPx) : null;
+                if (sizeValue) {
+                    styleArray.push(`font-size: ${sizeValue}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2396,7 +2412,7 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                 // If we have existing HTML content with spans, we need to preserve it
                 if (hasHTMLTags(existingContent)) {
                     // Build the new span's attributes in the modern format
-                    const spanAttributes = {};
+                    const spanAttributes = Object.assign({}, sizeAttributes);
                     if (selectedFeatures.length > 0) {
                         spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
                     }
@@ -2437,8 +2453,11 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                     const beforeText = fullText.substring(0, effectiveStart);
                     const selectedText = fullText.substring(effectiveStart, effectiveEnd);
                     const afterText = fullText.substring(effectiveEnd);
+                    const sizeAttributeString = Object.keys(sizeAttributes || {})
+                        .map((key) => ` ${key}="${escapeAttribute(sizeAttributes[key])}"`)
+                        .join('');
                     contentForBlock = escapeHTML(beforeText) +
-                        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}" style="${styleString}">${escapeHTML(selectedText)}</span>` +
+                        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${styleString}">${escapeHTML(selectedText)}</span>` +
                         escapeHTML(afterText);
                 }
 
@@ -2587,23 +2606,16 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                 styleDecls['line-height'] = lineHeight !== 0 ? String(lineHeight) : null;
             }
             if (pending.keys.has('fontSize')) {
-                if (fontSize !== 'inherit') {
-                    // 'fit' (from a fit-mode paragraph style) has no inline
-                    // meaning — spans serialize its fallback clamp as responsive.
-                    // A fixed size is a length and has no slider values (#255).
-                    const isFixedSize = parseFixedFontSize(fontSize) !== null;
-                    dataAttrs['data-fontsize'] = fontSize === 'fit' ? 'responsive' : String(fontSize);
-                    dataAttrs['data-fontsize-min'] = isFixedSize ? null : String(fontSizeMin);
-                    dataAttrs['data-fontsize-preferred'] = isFixedSize ? null : String(fontSizePreferred);
-                    dataAttrs['data-fontsize-max'] = isFixedSize ? null : String(fontSizeMax);
-                    styleDecls['font-size'] = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
-                } else {
-                    dataAttrs['data-fontsize'] = null;
-                    dataAttrs['data-fontsize-min'] = null;
-                    dataAttrs['data-fontsize-preferred'] = null;
-                    dataAttrs['data-fontsize-max'] = null;
-                    styleDecls['font-size'] = null;
-                }
+                // 'fit' (from a fit-mode paragraph style) has no inline
+                // meaning — spans serialize its fallback clamp as responsive.
+                // A fixed size is a length and has no slider values (#255), so
+                // those are removed (null) like every attribute of no size.
+                const sizeValue = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
+                const sizeAttrs = (sizeValue && buildInlineFontSizeAttributes(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax)) || {};
+                ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'].forEach((key) => {
+                    dataAttrs[key] = sizeAttrs[key] || null;
+                });
+                styleDecls['font-size'] = sizeValue;
             }
             if (pending.keys.has('fontVariationSettings')) {
                 const safeSettings = sanitizeFontVariationSettings(fontVariationSettings || '');
@@ -2815,17 +2827,13 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                 // A fixed size (64, from a paragraph style) is written as a
                 // length in the span's unit, not as a clamp() of the sliders,
                 // which showed it at their 32px (#255).
-                if (fontSize !== 'inherit') {
-                    attributes['data-fontsize'] = fontSize === 'fit' ? 'responsive' : String(fontSize);
-                    if (parseFixedFontSize(fontSize) === null) {
-                        attributes['data-fontsize-min'] = fontSizeMin.toString();
-                        attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
-                        attributes['data-fontsize-max'] = fontSizeMax.toString();
-                    }
+                const sizeValue = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit);
+                if (sizeValue) {
+                    Object.assign(attributes, buildInlineFontSizeAttributes(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax));
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: ${buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit)}`;
+                        styleString += `font-size: ${sizeValue}`;
                     }
                 }
 
@@ -3367,6 +3375,9 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
         render() {
             const { isActive, isInTypostBlock = false } = this.props;
             const { isOpen, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, letterSpacing, lineHeight, wordBoundaryWarning, canConvert, showClearConfirmation, dontShowClearWarning, fontDetectionFailed } = this.state;
+            // A fixed size (64, from a paragraph style) has no control in the
+            // Font Size menu; it is shown as a disabled option (#255)
+            const fixedSizePx = parseFixedFontSize(fontSize);
             const groupedFeatures = this.groupFeatures();
             const presets = typostData.presets || [];
             const fontOptions = this.getFontOptions();
@@ -3705,9 +3716,9 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                                             // A fixed size (64, from a paragraph style) has no
                                             // control here either; shown the same way so the
                                             // menu does not say Inherit (#255)
-                                            ...(parseFixedFontSize(fontSize) !== null ? [{
+                                            ...(fixedSizePx !== null ? [{
                                                 /* translators: %s: font size in px */
-                                                label: sprintf(__('Fixed (%spx)', 'typography-stylist'), parseFixedFontSize(fontSize)),
+                                                label: sprintf(__('Fixed (%spx)', 'typography-stylist'), fixedSizePx),
                                                 value: String(fontSize),
                                                 disabled: true
                                             }] : [])
@@ -3717,8 +3728,12 @@ const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSi
                                             ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist')
                                             : (fontSize === 'fit'
                                                 ? __('This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead.', 'typography-stylist')
-                                                : (parseFixedFontSize(fontSize) !== null
-                                                    ? __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist')
+                                                : (fixedSizePx !== null
+                                                    // Under a style the span writes no inline size, so a
+                                                    // new size shows only after Detach (#255, review)
+                                                    ? (this.state.paragraphStyleId
+                                                        ? __('The paragraph style sets this size. To change the size of this text only, click Detach Style first.', 'typography-stylist')
+                                                        : __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist'))
                                                     : undefined))}
                                     />
 

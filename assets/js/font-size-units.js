@@ -266,6 +266,35 @@ function buildInlineFontSizeValue(size, fontSizeMin, fontSizePreferred, fontSize
 }
 
 /**
+ * The data attributes the inline editor writes for a span's size (#255).
+ *
+ * The twin of buildInlineFontSizeValue(): data-fontsize records the size, so
+ * both editors can read it back (parseInlineStylesAtCursor, getActiveFontSize)
+ * and attribute preservation keeps it. Only a size that is not fixed
+ * carries the three slider values; a fixed size is a length and has none.
+ * 'fit' is recorded as 'responsive', because the span writes the style's
+ * fallback clamp.
+ *
+ * @param {*}      size              Font size value (editor state)
+ * @param {number} fontSizeMin       Mobile size (px)
+ * @param {number} fontSizePreferred Preferred size (px)
+ * @param {number} fontSizeMax       Desktop size (px)
+ * @return {Object|null} Attribute map, or null for 'inherit' or no size
+ */
+function buildInlineFontSizeAttributes(size, fontSizeMin, fontSizePreferred, fontSizeMax) {
+	if (!size || size === 'inherit') {
+		return null;
+	}
+	var attrs = { 'data-fontsize': size === 'fit' ? 'responsive' : String(size) };
+	if (parseFixedFontSize(size) === null) {
+		attrs['data-fontsize-min'] = String(fontSizeMin);
+		attrs['data-fontsize-preferred'] = String(fontSizePreferred);
+		attrs['data-fontsize-max'] = String(fontSizeMax);
+	}
+	return attrs;
+}
+
+/**
  * The zoom notice to show beside responsive size controls (#234), or null.
  *
  * - 'slower': new content (rem) whose slope was limited. The size doubles
@@ -393,6 +422,7 @@ module.exports = {
 	buildResponsiveClamp: buildResponsiveClamp,
 	parseFixedFontSize: parseFixedFontSize,
 	buildInlineFontSizeValue: buildInlineFontSizeValue,
+	buildInlineFontSizeAttributes: buildInlineFontSizeAttributes,
 	getResponsiveZoomLimit: getResponsiveZoomLimit,
 	getResponsiveZoomNotice: getResponsiveZoomNotice,
 	resolveStyleFontSizeUnit: resolveStyleFontSizeUnit,
