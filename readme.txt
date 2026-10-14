@@ -397,7 +397,7 @@ Older releases are documented in changelog.txt (bundled with the plugin) and on 
 == Upgrade Notice ==
 
 = 2.3.2 =
-New font sizes follow the reader's default font size and grow with browser zoom. Adds First Letter Hang, an Options setting to write new sizes in px, and fixes for fit-to-width, inline font sizes, presets and glyph weights. Content saved before keeps its sizes. No data migration.
+By default, new font sizes follow the reader's default font size and grow with browser zoom. A new Options setting writes px without zoom growth. Adds First Letter Hang and fixes for fit-to-width, inline font sizes, presets and glyph weights. Content saved before keeps its sizes. No data migration.
 
 = 2.3.1 =
 The settings page loads only the fonts it shows, and the editor loads only the Adobe Fonts kits a post uses. A single post or page prints only the paragraph style CSS it uses. Adds style previews to the Paragraph Styles tab and fixes translations on WordPress 5.8 to 6.4. No data migration.
