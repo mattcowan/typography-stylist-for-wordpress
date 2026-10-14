@@ -45,6 +45,24 @@ require_once __DIR__ . '/includes/class-typost-font-metadata.php';
 class Typost {
 
     /**
+     * CSS properties the plugin writes into post content that WordPress's
+     * kses CSS filter (safecss_filter_attr()) does not allow by default (#277).
+     * Every other property the editors write (font-family, font-weight,
+     * font-style, font-size, letter-spacing, line-height, text-align,
+     * text-transform, vertical-align and the --typost-* custom properties) is
+     * already on the list.
+     *
+     * @since 2.3.3
+     * @var string[]
+     */
+    const SAFE_CSS_PROPERTIES = array(
+        'font-feature-settings',
+        'font-variation-settings',
+        'font-variant-caps',
+        'font-synthesis-small-caps',
+    );
+
+    /**
      * Instance of this class
      */
     private static $instance = null;
@@ -210,6 +228,9 @@ class Typost {
 
         // Register custom block
         add_action('init', array($this, 'register_block'));
+
+        // Keep the plugin's CSS when kses filters a post (#277)
+        add_filter('safe_style_css', array($this, 'allow_typography_css_properties'));
 
         // Load translations.
         //
@@ -2070,6 +2091,36 @@ class Typost {
         $metadata['supports']['splitting'] = true;
 
         return $metadata;
+    }
+
+    /**
+     * Allow the plugin's CSS properties through kses (#277).
+     *
+     * When a user without the unfiltered_html capability saves a post (an
+     * Author or a Contributor, and every user but a super admin on
+     * multisite), WordPress runs the content through kses, and
+     * safecss_filter_attr() drops each style declaration whose property is
+     * not on this list. Without this filter those users lost OpenType
+     * features, variable font axes and small caps on save, in inline spans
+     * and in Typography Stylist blocks (whose `content` attribute is kses
+     * filtered too). A block whose saved style no longer matches its save()
+     * output then shows as invalid in the editor.
+     *
+     * Only the property names are added: kses still checks every value. It
+     * rejects \ ( & } = and comments outside the CSS functions it knows
+     * (var(), calc(), clamp() and others), and url() is allowed only on its
+     * own list of properties, which these four are not on.
+     *
+     * @since 2.3.3
+     * @param mixed $properties The allowed CSS property names.
+     * @return mixed The list with the plugin's properties added, or the
+     *               input unchanged when it is not an array.
+     */
+    public function allow_typography_css_properties($properties) {
+        if (!is_array($properties)) {
+            return $properties;
+        }
+        return array_values(array_unique(array_merge($properties, self::SAFE_CSS_PROPERTIES)));
     }
 
     /**

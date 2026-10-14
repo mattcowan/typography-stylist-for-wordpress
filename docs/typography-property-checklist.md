@@ -40,6 +40,8 @@ All in [paragraph-styles/](../paragraph-styles/):
 
 ## 5. Frontend PHP
 
+- [ ] **kses**: a post saved by a user without `unfiltered_html` goes through `safecss_filter_attr()`, which drops every declaration whose property is not on the `safe_style_css` list. Run it on a sample declaration of the new property; if it is dropped, add the property to `Typost::SAFE_CSS_PROPERTIES` in [typography-stylist.php](../typography-stylist.php) (#277). `font-feature-settings` and `font-variation-settings` were dropped for those users until 2.3.3, and a block with them became invalid.
+
 - [ ] **Font/asset detection**: if the property affects which assets load (like `fontId` does for @font-face), extend the detection in [typography-stylist.php](../typography-stylist.php). Pure CSS properties (italic, spacing) need nothing here — but a property that selects a different *font file* (e.g. an italic face file) does.
 - [ ] **Caches**: style CSS and editor data are cached (`typost_paragraph_styles_css`, `typost_editor_data_{user}` transients). New data flowing through them is invisible for up to the TTL — check the invalidation paths cover the new writes, and remember the transient can hold pre-fix values right after deploying (cast/parse defensively, as `isFlagEnabled()` does).
 
