@@ -4792,9 +4792,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							{ label: __('All Small Caps', 'typography-stylist'), value: 'all-small-caps' }
 						]}
 						onChange={(value) => setAttributes({ textCase: normalizeTextCase(value) })}
-						help={normalizeTextCase(textCase) === 'capitalize'
+						help={
+							// The All Caps note is help text too, so the select's
+							// aria-describedby carries it to screen readers
+							normalizeTextCase(textCase) === 'capitalize'
 							? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
-							: __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist')}
+							: (normalizeTextCase(textCase) === 'uppercase'
+								? __('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')
+								: __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist'))}
 					/>
 					{isSmallCapsCase(textCase) && (
 						<ToggleControl
@@ -4805,11 +4810,6 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 								? __('When the font has no small caps, the browser makes them by shrinking capitals.', 'typography-stylist')
 								: __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
 						/>
-					)}
-					{normalizeTextCase(textCase) === 'uppercase' && (
-						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: 0 }}>
-							{__('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')}
-						</p>
 					)}
 				</PanelBody>
 
