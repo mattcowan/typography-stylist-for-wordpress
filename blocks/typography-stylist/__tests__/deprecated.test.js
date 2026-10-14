@@ -278,13 +278,18 @@ describe('Typography Stylist - deprecated save (v2, pre-rem #233)', () => {
 	// carry every attribute the pre-rem block had (fit, hang, extensions).
 	// When block.json gains an attribute this fails on purpose: decide
 	// whether v2 needs it (it never writes it) before excluding it here.
-	it('v2 attributes are the block.json schema without fontSizeUnit and fitWordSizes', () => {
+	it('v2 attributes are the block.json schema without the attributes added after #233', () => {
 		const blockJson = require('../block.json');
 		// fitWordSizes (#235) is measured only for rem blocks; a block saved
 		// before #233 never stores it and v2Save never reads it
-		const { fontSizeUnit, fitWordSizes, ...withoutUnit } = blockJson.attributes;
+		// textCase/fakeSmallCaps (#214) came after #233: a pre-rem block never
+		// stores them and v2Save never writes them, so the frozen schema stays
+		// without them (a migrated block takes the Default case)
+		const { fontSizeUnit, fitWordSizes, textCase, fakeSmallCaps, ...withoutUnit } = blockJson.attributes;
 		expect(fontSizeUnit).toEqual({ type: 'string', enum: ['px', 'rem'], default: 'rem' });
 		expect(fitWordSizes).toEqual({ type: 'array', default: [] });
+		expect(textCase).toEqual({ type: 'string', default: '' });
+		expect(fakeSmallCaps).toEqual({ type: 'boolean', default: true });
 		expect(v2.attributes).toEqual(withoutUnit);
 	});
 

@@ -3,7 +3,7 @@
  */
 
 import { RichText } from '@wordpress/block-editor';
-import { buildFitLinesHtml, normalizeHang, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit } from './utils';
+import { buildFitLinesHtml, normalizeHang, buildResponsiveClamp, formatFontSizeLength, resolveFontSizeUnit, caseDeclarations } from './utils';
 
 // Validate and sanitize font-variation-settings value.
 // Ensures each entry matches the "axis" number format (e.g. "wght" 700, "wdth" 100).
@@ -41,6 +41,8 @@ export default function save({ attributes }) {
 		fitWordSizes,
 		initialHang,
 		fitLineHangs,
+		textCase,
+		fakeSmallCaps,
 		fontWeight,
 		fontStyle,
 		letterSpacing,
@@ -99,6 +101,12 @@ export default function save({ attributes }) {
 		if (lineHeight !== 0) {
 			styleArray.push(`line-height: ${lineHeight}`);
 		}
+
+		// Case (#214). Default ('') writes nothing, so blocks saved before
+		// the attribute existed serialize unchanged (block validation).
+		caseDeclarations(textCase, fakeSmallCaps).forEach(([property, value]) => {
+			styleArray.push(`${property}: ${value}`);
+		});
 
 		if (fontSize === 'responsive') {
 			styleArray.push(`font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)}`);

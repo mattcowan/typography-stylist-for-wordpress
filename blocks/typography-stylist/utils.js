@@ -7,6 +7,7 @@
 
 import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
+import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from '../../assets/js/text-case.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -2332,6 +2333,11 @@ export function buildQftEditorState(s) {
 		// reach an inline span, so the inline editor never reports this key
 		// and the Paragraph Styles diff skips it when absent.
 		initialHang: normalizeHang(source.initialHang),
+		// Case (#214): the block attribute. The Quick Feature Toggles have
+		// no case control for selected text, so a span's own case
+		// (data-textcase, written by the inline editor) is not read here.
+		textCase: normalizeTextCase(source.textCase),
+		fakeSmallCaps: source.fakeSmallCaps !== false,
 		layeredConfigId: source.layeredConfigId || 0,
 		animationConfigId: source.animationConfigId || 0,
 		content: source.content || '',
@@ -3375,6 +3381,11 @@ export function normalizeHang(value) {
 	return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
 }
 
+// Case (#214): TEXT_CASE_VALUES, normalizeTextCase(), isSmallCapsCase(),
+// caseDeclarations() and caseStyleObject() live in assets/js/text-case.js,
+// shared with the inline editor's separate build.
+export { TEXT_CASE_VALUES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject };
+
 /**
  * Whether a hanging initial shows for a given text alignment.
  *
@@ -3716,14 +3727,18 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
  * glyph adjustments (data-fitscale / data-fitshift) are glyph-level choices,
  * not typography the style describes, and are kept.
  */
+// Case (#214) is style-owned too: a span's own case would otherwise stay
+// in force over the style's class and count as no conflict.
 const PARAGRAPH_STYLE_OWNED_ATTRS = [
 	'data-font-id', 'data-font', 'data-fontweight', 'data-fontstyle',
 	'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max',
-	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings'
+	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings',
+	...CASE_DATA_ATTRIBUTES
 ];
 const PARAGRAPH_STYLE_OWNED_PROPS = [
 	'font-family', 'font-weight', 'font-style', 'font-size',
-	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings'
+	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings',
+	...CASE_CSS_PROPERTIES
 ];
 
 /**
@@ -4182,7 +4197,7 @@ export function isOrphanStyleClass(styleClass, styles) {
  *
  * @param {Object} attrs      Block attributes.
  * @param {Object} styleProps The style's stored properties.
- * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize).
+ * @return {Object} Map of attribute key → true when it differs (fontSize covers min/preferred/max/fitMaxSize, textCase covers fakeSmallCaps).
  */
 export function stylePropertyOverrides(attrs, styleProps) {
 	const a = attrs || {};
@@ -4230,6 +4245,13 @@ export function stylePropertyOverrides(attrs, styleProps) {
 	}
 	if (normalizeHang(a.initialHang) !== normalizeHang(s.initialHang)) {
 		overrides.initialHang = true;
+	}
+	// One key for both case settings: they render as one set of declarations.
+	// The fake small caps choice only matters with a small caps value.
+	const attrCase = normalizeTextCase(a.textCase);
+	if (attrCase !== normalizeTextCase(s.textCase)
+		|| (isSmallCapsCase(attrCase) && (a.fakeSmallCaps !== false) !== (s.fakeSmallCaps !== false))) {
+		overrides.textCase = true;
 	}
 	return overrides;
 }

@@ -34,7 +34,7 @@ The panel reads the font in your browser, and it reads only the font’s metadat
 
 A paragraph style is a named set of typography settings, like a paragraph style in Adobe InDesign. Save a style one time, then apply it to text in any heading, paragraph, or Typography Stylist block.
 
-* A style holds the font, weight, italic, size, letter spacing, line height, OpenType features, and variable font axes. Fit-to-width sizes can also go into a style.
+* A style holds the font, weight, italic, case (All Caps, Small Caps and others), size, letter spacing, line height, OpenType features, and variable font axes. Fit-to-width sizes can also go into a style.
 * “Browse styles…” shows each style in its own typeface, with your selected words as the sample text. You can search the list, and group it by font family, by size mode, or by recent use.
 * Each style is one CSS class. Change a style and click “Update Style”. All text that uses the style then changes.
 * If the selected text already has its own settings, the editor asks before the style replaces them.

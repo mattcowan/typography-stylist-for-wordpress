@@ -22,6 +22,9 @@
  * @since 2.3.0
  */
 
+var normalizeTextCase = require('./text-case.js').normalizeTextCase;
+var isSmallCapsCase = require('./text-case.js').isSmallCapsCase;
+
 /**
  * Whether three responsive sizes are in order (min ≤ preferred ≤ max).
  *
@@ -101,7 +104,12 @@ function resolveWeightToWrite(facts) {
  *                                        otherwise getEffectiveFontWeight().
  * @param {object}  args.state            Modal state (selectedFeatures, selectedFont,
  *                                        fontSize, fontSizeMin/Preferred/Max,
- *                                        fontWeight, letterSpacing, lineHeight).
+ *                                        fontWeight, letterSpacing, lineHeight,
+ *                                        textCase, fakeSmallCaps). A new block
+ *                                        gets a case only when one is set
+ *                                        (#214), and fakeSmallCaps only as
+ *                                        false with a small caps value; an
+ *                                        existing block takes both.
  * @param {Array}   args.existingFeatures Features already on an existing block.
  * @param {string}  args.fontSizeUnit     Size unit for a new block: the site's
  *                                        new-content unit (#248). Ignored for an
@@ -139,6 +147,22 @@ function buildConvertBlockAttributes(args) {
 	attrs.fontWeight = a.isNewBlock ? (a.effectiveWeight || state.fontWeight || '400') : (state.fontWeight || '400');
 	attrs.letterSpacing = state.letterSpacing || 0;
 	attrs.lineHeight = state.lineHeight || 0;
+	// Case (#214). fakeSmallCaps is false only when it is off for a small
+	// caps value, as paragraph styles store it. A new block gets the case
+	// only when one is set and fakeSmallCaps only when false (the defaults
+	// are '' and true). An existing block takes both from the modal, like
+	// every other property here, so an old "off" cannot stay behind.
+	var textCase = normalizeTextCase(state.textCase);
+	var fakeSmallCaps = !(isSmallCapsCase(textCase) && state.fakeSmallCaps === false);
+	if (!a.isNewBlock) {
+		attrs.textCase = textCase;
+		attrs.fakeSmallCaps = fakeSmallCaps;
+	} else if (textCase) {
+		attrs.textCase = textCase;
+		if (!fakeSmallCaps) {
+			attrs.fakeSmallCaps = false;
+		}
+	}
 	if (a.isNewBlock) {
 		attrs.tagName = a.tagName;
 		setNewBlockFontSizeUnit(attrs, a.fontSizeUnit);
