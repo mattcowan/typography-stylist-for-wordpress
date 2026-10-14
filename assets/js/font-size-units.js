@@ -220,6 +220,52 @@ function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit)
 }
 
 /**
+ * The px value of a fixed font size, or null (#255).
+ *
+ * A fixed size reaches the editors from a paragraph style (a bare number
+ * such as 64) or from a style saved in the inline editor ('64px'). Every
+ * other value ('responsive', 'fit', 'inherit', another unit) is not fixed.
+ *
+ * @param {*} size Font size value (data-fontsize or editor state)
+ * @return {string|null} The px value as written ('64', '12.5'), or null
+ */
+function parseFixedFontSize(size) {
+	if (size === undefined || size === null) {
+		return null;
+	}
+	var match = String(size).match(/^(\d+(?:\.\d+)?)(?:px)?$/);
+	return match && Number(match[1]) > 0 ? match[1] : null;
+}
+
+/**
+ * The CSS font-size value the inline editor writes for a span (#255).
+ *
+ * A fixed size is written as a length in the given unit (64 gives 4rem or
+ * 64px). Any other size that is not 'inherit' is written as the responsive
+ * clamp() of the three slider values: 'responsive', and 'fit' from a
+ * fit-mode paragraph style, which has no inline meaning. Before #255 the
+ * inline editor wrote the clamp for a fixed size too, so a 64 from a style
+ * showed at the sliders' 32px.
+ *
+ * @param {*}      size              Font size value (editor state)
+ * @param {number} fontSizeMin       Mobile size (px)
+ * @param {number} fontSizePreferred Preferred size (px)
+ * @param {number} fontSizeMax       Desktop size (px)
+ * @param {string} [unit='px']       'px' or 'rem' (see resolveFontSizeUnit)
+ * @return {string|null} The value, or null for 'inherit' or no size
+ */
+function buildInlineFontSizeValue(size, fontSizeMin, fontSizePreferred, fontSizeMax, unit) {
+	if (!size || size === 'inherit') {
+		return null;
+	}
+	var fixedPx = parseFixedFontSize(size);
+	if (fixedPx !== null) {
+		return formatFontSizeLength(fixedPx, unit);
+	}
+	return buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, unit);
+}
+
+/**
  * The zoom notice to show beside responsive size controls (#234), or null.
  *
  * - 'slower': new content (rem) whose slope was limited. The size doubles
@@ -345,6 +391,8 @@ module.exports = {
 	pxToRem: pxToRem,
 	formatFontSizeLength: formatFontSizeLength,
 	buildResponsiveClamp: buildResponsiveClamp,
+	parseFixedFontSize: parseFixedFontSize,
+	buildInlineFontSizeValue: buildInlineFontSizeValue,
 	getResponsiveZoomLimit: getResponsiveZoomLimit,
 	getResponsiveZoomNotice: getResponsiveZoomNotice,
 	resolveStyleFontSizeUnit: resolveStyleFontSizeUnit,

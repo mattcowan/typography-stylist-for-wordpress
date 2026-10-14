@@ -2410,6 +2410,18 @@ msgstr "Responsivo (Fluido)"
 msgid "Fit to Width (blocks only)"
 msgstr "Ajustar al ancho (solo bloques)"
 
+#. translators: %s: font size in px
+#: assets/js/block-editor.js:3710
+#: blocks/typography-stylist/build/index.js:5
+#, js-format
+msgid "Fixed (%spx)"
+msgstr "Fijo (%spx)"
+
+#: assets/js/block-editor.js:3721
+#: blocks/typography-stylist/build/index.js:5
+msgid "This text has a fixed size. To change it, choose a responsive size."
+msgstr "Este texto tiene un tamaño fijo. Para cambiarlo, elija un tamaño responsivo."
+
 #: assets/js/block-editor.js:3544
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr "El modo responsivo usa CSS clamp() para un dimensionamiento fluido entre pantallas."

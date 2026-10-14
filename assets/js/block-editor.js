@@ -18,7 +18,7 @@ const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes,
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
 // unit the span already has (resolveSpanFontSizeUnit), so older spans are
 // not rewritten.
-const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
+const { parseFixedFontSize, buildInlineFontSizeValue, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -2381,12 +2381,14 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                         styleArray.push(`line-height: ${sanitizedLineHeight}`);
                     }
                 }
-                if (fontSize === 'responsive') {
+                // A fixed size (64, from a paragraph style) is written as a
+                // length, not dropped (#255)
+                if (fontSize === 'responsive' || parseFixedFontSize(fontSize) !== null) {
                     // Ensure all numeric values are actually numbers
                     const minPx = parseFloat(fontSizeMin) || 16;
                     const prefRem = parseFloat(fontSizePreferred) || 24;
                     const maxPx = parseFloat(fontSizeMax) || 32;
-                    styleArray.push(`font-size: ${buildResponsiveClamp(minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
+                    styleArray.push(`font-size: ${buildInlineFontSizeValue(fontSize, minPx, prefRem, maxPx, getNewFontSizeUnit())}`);
                 }
 
                 const styleString = styleArray.join('; ');
@@ -2587,12 +2589,14 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
             if (pending.keys.has('fontSize')) {
                 if (fontSize !== 'inherit') {
                     // 'fit' (from a fit-mode paragraph style) has no inline
-                    // meaning — spans serialize its fallback clamp as responsive
-                    dataAttrs['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
-                    dataAttrs['data-fontsize-min'] = String(fontSizeMin);
-                    dataAttrs['data-fontsize-preferred'] = String(fontSizePreferred);
-                    dataAttrs['data-fontsize-max'] = String(fontSizeMax);
-                    styleDecls['font-size'] = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
+                    // meaning — spans serialize its fallback clamp as responsive.
+                    // A fixed size is a length and has no slider values (#255).
+                    const isFixedSize = parseFixedFontSize(fontSize) !== null;
+                    dataAttrs['data-fontsize'] = fontSize === 'fit' ? 'responsive' : String(fontSize);
+                    dataAttrs['data-fontsize-min'] = isFixedSize ? null : String(fontSizeMin);
+                    dataAttrs['data-fontsize-preferred'] = isFixedSize ? null : String(fontSizePreferred);
+                    dataAttrs['data-fontsize-max'] = isFixedSize ? null : String(fontSizeMax);
+                    styleDecls['font-size'] = buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, getNewFontSizeUnit());
                 } else {
                     dataAttrs['data-fontsize'] = null;
                     dataAttrs['data-fontsize-min'] = null;
@@ -2807,16 +2811,21 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                 }
 
                 // Add font size. 'fit' (from a fit-mode paragraph style) has no
-                // inline meaning — spans serialize its fallback clamp as responsive
+                // inline meaning — spans serialize its fallback clamp as responsive.
+                // A fixed size (64, from a paragraph style) is written as a
+                // length in the span's unit, not as a clamp() of the sliders,
+                // which showed it at their 32px (#255).
                 if (fontSize !== 'inherit') {
-                    attributes['data-fontsize'] = fontSize === 'fit' ? 'responsive' : fontSize;
-                    attributes['data-fontsize-min'] = fontSizeMin.toString();
-                    attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
-                    attributes['data-fontsize-max'] = fontSizeMax.toString();
+                    attributes['data-fontsize'] = fontSize === 'fit' ? 'responsive' : String(fontSize);
+                    if (parseFixedFontSize(fontSize) === null) {
+                        attributes['data-fontsize-min'] = fontSizeMin.toString();
+                        attributes['data-fontsize-preferred'] = fontSizePreferred.toString();
+                        attributes['data-fontsize-max'] = fontSizeMax.toString();
+                    }
 
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
-                        styleString += `font-size: ${buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit)}`;
+                        styleString += `font-size: ${buildInlineFontSizeValue(fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, sizeUnit)}`;
                     }
                 }
 
@@ -3692,14 +3701,25 @@ const { buildResponsiveClamp, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUn
                                             // the value can still appear here via a fit-mode paragraph
                                             // style. Shown disabled (and only while active) so the
                                             // dropdown reflects the truth instead of a wrong option.
-                                            ...(fontSize === 'fit' ? [{ label: __('Fit to Width (blocks only)', 'typography-stylist'), value: 'fit', disabled: true }] : [])
+                                            ...(fontSize === 'fit' ? [{ label: __('Fit to Width (blocks only)', 'typography-stylist'), value: 'fit', disabled: true }] : []),
+                                            // A fixed size (64, from a paragraph style) has no
+                                            // control here either; shown the same way so the
+                                            // menu does not say Inherit (#255)
+                                            ...(parseFixedFontSize(fontSize) !== null ? [{
+                                                /* translators: %s: font size in px */
+                                                label: sprintf(__('Fixed (%spx)', 'typography-stylist'), parseFixedFontSize(fontSize)),
+                                                value: String(fontSize),
+                                                disabled: true
+                                            }] : [])
                                         ]}
                                         onChange={this.setFontSize}
                                         help={fontSize === 'responsive'
                                             ? __('Responsive mode uses CSS clamp() for fluid sizing across viewports.', 'typography-stylist')
                                             : (fontSize === 'fit'
                                                 ? __('This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead.', 'typography-stylist')
-                                                : undefined)}
+                                                : (parseFixedFontSize(fontSize) !== null
+                                                    ? __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist')
+                                                    : undefined))}
                                     />
 
                                     {fontSize === 'responsive' && (

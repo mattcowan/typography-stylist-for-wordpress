@@ -2442,6 +2442,18 @@ msgstr ""
 msgid "Fit to Width (blocks only)"
 msgstr ""
 
+#. translators: %s: font size in px
+#: assets/js/block-editor.js:3710
+#: blocks/typography-stylist/build/index.js:5
+#, js-format
+msgid "Fixed (%spx)"
+msgstr ""
+
+#: assets/js/block-editor.js:3721
+#: blocks/typography-stylist/build/index.js:5
+msgid "This text has a fixed size. To change it, choose a responsive size."
+msgstr ""
+
 #: assets/js/block-editor.js:3651
 msgid "Responsive mode uses CSS clamp() for fluid sizing across viewports."
 msgstr ""
