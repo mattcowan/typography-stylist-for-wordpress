@@ -305,6 +305,24 @@ describe('Convert to block carries the case', () => {
 		expect(attrs.fakeSmallCaps).toBe(false);
 	});
 
+	test('fakeSmallCaps is stored only as false, with a small caps value', () => {
+		const convert = (state) => buildConvertBlockAttributes({ partialSelection: false, isNewBlock: true, content: 'Kicker', tagName: 'h2', state: { selectedFeatures: [], ...state } });
+		// An earlier "off" choice left in the modal state does not reach All Caps
+		const caps = convert({ textCase: 'uppercase', fakeSmallCaps: false });
+		expect(caps.textCase).toBe('uppercase');
+		expect(caps).not.toHaveProperty('fakeSmallCaps');
+		// Allowed is the block default, so it is not stored
+		expect(convert({ textCase: 'small-caps', fakeSmallCaps: true })).not.toHaveProperty('fakeSmallCaps');
+	});
+
+	test('an existing block takes both values from the modal, so an old "off" does not stay', () => {
+		const update = (state) => buildConvertBlockAttributes({ partialSelection: false, isNewBlock: false, content: 'Kicker', state: { selectedFeatures: [], ...state } });
+		expect(update({ textCase: 'small-caps', fakeSmallCaps: true })).toMatchObject({ textCase: 'small-caps', fakeSmallCaps: true });
+		expect(update({ textCase: 'all-small-caps', fakeSmallCaps: false })).toMatchObject({ textCase: 'all-small-caps', fakeSmallCaps: false });
+		expect(update({ textCase: 'uppercase', fakeSmallCaps: false })).toMatchObject({ textCase: 'uppercase', fakeSmallCaps: true });
+		expect(update({})).toMatchObject({ textCase: '', fakeSmallCaps: true });
+	});
+
 	test('no case set, no case attributes (Default, byte-identical save)', () => {
 		const attrs = buildConvertBlockAttributes({ partialSelection: false, isNewBlock: true, content: 'Kicker', tagName: 'h2', state: { selectedFeatures: [] } });
 		expect(attrs).not.toHaveProperty('textCase');
