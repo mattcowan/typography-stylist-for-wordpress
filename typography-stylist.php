@@ -50,7 +50,8 @@ class Typost {
      * Every other property the editors write (font-family, font-weight,
      * font-style, font-size, letter-spacing, line-height, text-align,
      * text-transform, vertical-align and the --typost-* custom properties) is
-     * already on the list.
+     * already on the list. Features and axes need WordPress 7.0.1 or later
+     * as well; see allow_typography_css_properties().
      *
      * @since 2.3.3
      * @var string[]
@@ -2110,6 +2111,14 @@ class Typost {
      * rejects \ ( & } = and comments outside the CSS functions it knows
      * (var(), calc(), clamp() and others), and url() is allowed only on its
      * own list of properties, which these four are not on.
+     *
+     * Limit: features and axes survive only on WordPress 7.0.1 and later.
+     * Their values carry quotes ("liga" 1), which the serializer writes as
+     * &quot;. From 7.0.1, wp_kses_attr_check() decodes the attribute before
+     * safecss_filter_attr(); before that, the raw value goes in, explode(';')
+     * cuts it inside &quot;, and the pieces fail the & check, filter or not.
+     * No hook runs before that split, so on older versions this filter keeps
+     * only font-variant-caps and font-synthesis-small-caps.
      *
      * @since 2.3.3
      * @param mixed $properties The allowed CSS property names.
