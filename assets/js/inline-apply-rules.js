@@ -22,6 +22,8 @@
  * @since 2.3.0
  */
 
+var normalizeTextCase = require('./text-case.js').normalizeTextCase;
+
 /**
  * Whether three responsive sizes are in order (min ≤ preferred ≤ max).
  *
@@ -101,7 +103,9 @@ function resolveWeightToWrite(facts) {
  *                                        otherwise getEffectiveFontWeight().
  * @param {object}  args.state            Modal state (selectedFeatures, selectedFont,
  *                                        fontSize, fontSizeMin/Preferred/Max,
- *                                        fontWeight, letterSpacing, lineHeight).
+ *                                        fontWeight, letterSpacing, lineHeight,
+ *                                        textCase, fakeSmallCaps). A case is
+ *                                        carried only when one is set (#214).
  * @param {Array}   args.existingFeatures Features already on an existing block.
  * @param {string}  args.fontSizeUnit     Size unit for a new block: the site's
  *                                        new-content unit (#248). Ignored for an
@@ -139,6 +143,11 @@ function buildConvertBlockAttributes(args) {
 	attrs.fontWeight = a.isNewBlock ? (a.effectiveWeight || state.fontWeight || '400') : (state.fontWeight || '400');
 	attrs.letterSpacing = state.letterSpacing || 0;
 	attrs.lineHeight = state.lineHeight || 0;
+	var textCase = normalizeTextCase(state.textCase);
+	if (textCase) {
+		attrs.textCase = textCase;
+		attrs.fakeSmallCaps = state.fakeSmallCaps !== false;
+	}
 	if (a.isNewBlock) {
 		attrs.tagName = a.tagName;
 		setNewBlockFontSizeUnit(attrs, a.fontSizeUnit);

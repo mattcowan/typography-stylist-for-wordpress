@@ -211,13 +211,15 @@ Use this method to style whole words or phrases in a heading, paragraph, or othe
 4. Select the text that you want to style. Select whole words only.
 5. Click “Typography Stylist Features” (the swash “T”) in the block toolbar.
 6. A panel opens. It has these controls:
-   - Font family, font weight, font style, font size, line height, and letter spacing
+   - Font family, font weight, font style, case, font size, line height, and letter spacing
    - “Quick Presets” (only if presets exist)
    - “Glyphs…”, which opens the Glyphs Panel
    - “Browse styles…”, which opens the Paragraph Styles browser
    - “Individual Features”, the OpenType features in groups
 7. Change the settings. Each change applies to the selected text at once. Use Ctrl+Z (Cmd+Z on Mac) to undo a change.
 8. Click “Close” when you are done. To remove the styling from the selection, click “Clear”.
+
+**Case:** The “Case” setting has the same choices as in the Typography Stylist block (see the sidebar settings in Method 2). It changes how the selected letters look; the text keeps the case you typed. Text in these blocks has no hidden copy for screen readers, so some screen readers spell out short words in All Caps letter by letter. When a paragraph style is applied to the text, the style sets the case. To change the case of this text only, click “Detach Style” first. The text keeps the style’s case when you detach it.
 
 **Partial word notice:**
 
@@ -262,7 +264,7 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
 - **Line Height:** Set the line height.
 - **Letter Spacing:** Change the spacing in steps of 1/1000 em.
 - **First Letter Hang:** Move the first letter into the margin at the start of the line by a value in em, from 0 to 1. This is the left margin in left-to-right text and the right margin in right-to-left text. Use it for a swash capital: the swash goes into the margin, and the main shape of the letter aligns with the text edge. 0 turns it off. Only the first line hangs. In fit-to-width mode, each line has its own value. The hang has no effect when the text is centered or aligned to the end. Some themes cut off content that goes outside its container. If the swash is cut off, examine the published page.
-- **Case:** Change how the letters look: “Default” (the case the theme sets), “Normal” (removes a case the theme sets), “All Caps”, “Lowercase”, “Title Case”, “Small Caps” (lowercase letters become small caps), or “All Small Caps” (capitals become small caps too). The stored text keeps the case you typed, so you can change the setting at any time. For Small Caps and All Small Caps, “Allow fake small caps” lets the browser shrink capitals when the font has no small caps; turn it off to keep such a font in normal case. Title Case capitalizes every word, including short words such as “of” and “the”. Case follows the language of the text: with Turkish, `i` becomes `İ`. All caps are harder to read in long text. In this block, screen readers read the original text; when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter. A paragraph style can keep the setting.
+- **Case:** Change how the letters look: “Default” (the case the theme sets), “Normal” (removes a case the theme sets), “All Caps”, “Lowercase”, “Title Case”, “Small Caps” (lowercase letters become small caps), or “All Small Caps” (capitals become small caps too). The stored text keeps the case you typed, so you can change the setting at any time. For Small Caps and All Small Caps, “Allow fake small caps” lets the browser shrink capitals when the font has no small caps; turn it off to keep such a font in normal case. Title Case capitalizes every word, including short words such as “of” and “the”. Case follows the language of the text: with Turkish, `i` becomes `İ`. All caps are harder to read in long text. In this block, screen readers read the original text; when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter. A paragraph style can keep the setting. The inline format (Method 1) has the same setting for selected text.
 - **OpenType Features:** Turn on features for the whole block. The features are in groups: ligatures, stylistic sets, swashes and alternates, decorative, numerals and figures, capitals and case, positional forms, superscript and ordinals, and other features.
 - **Accessibility:** Choose the screen reader class: `visually-hidden`, `sr-only`, `screen-reader-text`, or a custom class name.
 

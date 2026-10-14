@@ -12,7 +12,17 @@ import {
 	caseDeclarations,
 	stylePropertyOverrides,
 	buildQftEditorState,
+	caseStyleObject,
+	patchTypostFormatAttributes,
+	countInlineParagraphStyleConflicts,
+	stripParagraphStyleOverrides,
 } from '../utils';
+import {
+	buildInlineCaseAttributes,
+	readInlineCase,
+	buildInlineCasePatch,
+} from '../../../assets/js/text-case.js';
+import { buildConvertBlockAttributes } from '../../../assets/js/inline-apply-rules.js';
 
 jest.mock('@wordpress/block-editor');
 
@@ -170,5 +180,139 @@ describe('save output', () => {
 	test('under a paragraph style the class supplies the case', () => {
 		const html = renderToString(save({ attributes: { ...base, textCase: 'uppercase', styleClass: 'typost-ps-3' } }));
 		expect(html).not.toContain('text-transform');
+	});
+});
+
+describe('caseStyleObject (editor previews)', () => {
+	test('camelCase keys, same values as caseDeclarations', () => {
+		expect(caseStyleObject('all-small-caps', false)).toEqual({
+			textTransform: 'none',
+			fontVariantCaps: 'all-small-caps',
+			fontSynthesisSmallCaps: 'none',
+		});
+		expect(caseStyleObject('uppercase')).toEqual({ textTransform: 'uppercase', fontVariantCaps: 'normal' });
+	});
+
+	test('Default and unknown values add nothing', () => {
+		expect(caseStyleObject('')).toEqual({});
+		expect(caseStyleObject('junk', false)).toEqual({});
+	});
+});
+
+describe('inline span case (inline editor)', () => {
+	test('Default writes no attributes', () => {
+		expect(buildInlineCaseAttributes('')).toEqual({});
+		expect(buildInlineCaseAttributes('bogus', false)).toEqual({});
+	});
+
+	test('data-fakesmallcaps is written only as "false", only with small caps', () => {
+		expect(buildInlineCaseAttributes('uppercase', false)).toEqual({ 'data-textcase': 'uppercase' });
+		expect(buildInlineCaseAttributes('small-caps', true)).toEqual({ 'data-textcase': 'small-caps' });
+		expect(buildInlineCaseAttributes('small-caps', false)).toEqual({ 'data-textcase': 'small-caps', 'data-fakesmallcaps': 'false' });
+	});
+
+	test('the attributes read back to the same case', () => {
+		[['', true], ['none', true], ['capitalize', true], ['all-small-caps', false], ['small-caps', true]].forEach(([textCase, fake]) => {
+			expect(readInlineCase(buildInlineCaseAttributes(textCase, fake))).toEqual({ textCase, fakeSmallCaps: fake });
+		});
+	});
+
+	test('a span with no case, or an unknown one, reads as Default with fake allowed', () => {
+		expect(readInlineCase(undefined)).toEqual({ textCase: '', fakeSmallCaps: true });
+		expect(readInlineCase({ 'data-textcase': 'UPPERCASE' })).toEqual({ textCase: '', fakeSmallCaps: true });
+	});
+
+	test('a mixed-selection patch replaces another case and keeps the rest of the run', () => {
+		const run = {
+			'data-font-id': '12',
+			'data-textcase': 'small-caps',
+			'data-fakesmallcaps': 'false',
+			style: 'font-family: var(--font-12); text-transform: none; font-variant-caps: small-caps; font-synthesis-small-caps: none',
+		};
+		const patched = patchTypostFormatAttributes(run, buildInlineCasePatch('uppercase', true));
+		expect(patched['data-font-id']).toBe('12');
+		expect(patched['data-textcase']).toBe('uppercase');
+		expect(patched).not.toHaveProperty('data-fakesmallcaps');
+		expect(patched.style).toContain('font-family: var(--font-12)');
+		expect(patched.style).toContain('text-transform: uppercase');
+		expect(patched.style).toContain('font-variant-caps: normal');
+		expect(patched.style).not.toContain('font-synthesis-small-caps');
+	});
+
+	test('a patch back to Default removes every case attribute and declaration', () => {
+		const run = { 'data-textcase': 'uppercase', 'data-fontweight': '700', style: 'font-weight: 700; text-transform: uppercase; font-variant-caps: normal' };
+		const patched = patchTypostFormatAttributes(run, buildInlineCasePatch('', true));
+		expect(patched).toEqual({ 'data-fontweight': '700', style: 'font-weight: 700' });
+	});
+
+	test('a span whose only setting is its case loses the format at Default', () => {
+		const run = { 'data-textcase': 'lowercase', style: 'text-transform: lowercase; font-variant-caps: normal' };
+		expect(patchTypostFormatAttributes(run, buildInlineCasePatch('', true))).toBeNull();
+	});
+});
+
+describe('paragraph styles and an inline span case', () => {
+	const TYPE = 'typost/features';
+	const formats = (length, from, to, attributes) => Array.from({ length }, (unused, i) => (
+		i >= from && i < to ? [{ type: TYPE, attributes }] : undefined
+	));
+
+	test('a span with its own case counts as styling a paragraph style replaces', () => {
+		expect(countInlineParagraphStyleConflicts(formats(10, 2, 6, { 'data-textcase': 'uppercase' }), 0, 10, TYPE)).toBe(1);
+		// Legacy style-only span
+		expect(countInlineParagraphStyleConflicts(formats(10, 2, 6, { style: 'text-transform: uppercase' }), 0, 10, TYPE)).toBe(1);
+	});
+
+	test('applying a style in the block strips the span case so the class shows', () => {
+		// After the style span was applied around a span with its own case
+		const html = '<span class="typost-styled typost-ps-3" data-style-id="3">'
+			+ '<span class="typost-styled" data-textcase="uppercase" style="text-transform: uppercase; font-variant-caps: normal">Kicker</span>'
+			+ '</span>';
+		const result = stripParagraphStyleOverrides(html, 0, 6, '3');
+		expect(result.stripped).toBe(1);
+		expect(result.content).not.toContain('text-transform');
+		expect(result.content).not.toContain('data-textcase');
+		expect(result.content).toContain('data-style-id="3"');
+	});
+
+	test('Detach in the inline editor hands the span case back (inline-shaped state)', () => {
+		// The inline editor reports its span case; Detach dispatches
+		// buildPropertiesFromState(state) with no style, which the inline
+		// handler writes onto the span
+		const inlineState = { editorType: 'inline', fontId: 0, fontWeight: '400', features: [], letterSpacing: 0, lineHeight: 0, fontSize: 'inherit', textCase: 'small-caps', fakeSmallCaps: false };
+		const detail = psUtils.buildApplyEventDetail(null, 'inline', psUtils.buildPropertiesFromState(inlineState));
+		expect(detail.paragraphStyleId).toBe(0);
+		expect(detail.properties.textCase).toBe('small-caps');
+		expect(detail.properties.fakeSmallCaps).toBe(false);
+	});
+
+	test('the inline editor state is compared, so a different span case shows "(modified)"', () => {
+		expect(psUtils.isStyleModified({ textCase: '', fakeSmallCaps: true }, { textCase: 'uppercase' })).toBe(true);
+		expect(psUtils.isStyleModified({ textCase: 'uppercase', fakeSmallCaps: true }, { textCase: 'uppercase' })).toBe(false);
+	});
+});
+
+describe('Convert to block carries the case', () => {
+	test('a whole-block conversion gives the block the case', () => {
+		const attrs = buildConvertBlockAttributes({
+			partialSelection: false,
+			isNewBlock: true,
+			content: 'Kicker',
+			tagName: 'h2',
+			state: { selectedFeatures: [], textCase: 'all-small-caps', fakeSmallCaps: false },
+		});
+		expect(attrs.textCase).toBe('all-small-caps');
+		expect(attrs.fakeSmallCaps).toBe(false);
+	});
+
+	test('no case set, no case attributes (Default, byte-identical save)', () => {
+		const attrs = buildConvertBlockAttributes({ partialSelection: false, isNewBlock: true, content: 'Kicker', tagName: 'h2', state: { selectedFeatures: [] } });
+		expect(attrs).not.toHaveProperty('textCase');
+		expect(attrs).not.toHaveProperty('fakeSmallCaps');
+	});
+
+	test('a partial conversion leaves the case on the span, not the block', () => {
+		const attrs = buildConvertBlockAttributes({ partialSelection: true, isNewBlock: true, content: 'x', tagName: 'h2', state: { textCase: 'uppercase' } });
+		expect(attrs).not.toHaveProperty('textCase');
 	});
 });

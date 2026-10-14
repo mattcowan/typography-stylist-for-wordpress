@@ -747,7 +747,7 @@ var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, '
 ```
 
 The returned state object includes:
-- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `selectionFontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
+- **Inline editor:** `editorType`, `fontId`, `fontWeight`, `selectionFontWeight`, `fontStyle`, `explicitFontStyle`, `textCase`, `fakeSmallCaps`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`
 - **QFT editor:** `editorType`, `fontId`, `fontWeight`, `selectionFontWeight`, `fontStyle`, `explicitFontStyle`, `fontSize`, `fontSizeMin`, `fontSizePreferred`, `fontSizeMax`, `letterSpacing`, `lineHeight`, `features`, `paragraphStyleId`, `fontVariationSettings`, `initialHang`, `textCase`, `fakeSmallCaps`, `layeredConfigId`, `content`, `tagName`
 
 *Since 2.3.0* both editors report the font style on two channels (`''` inherit, `'normal'`, `'italic'`, or `'oblique'` — the built-in Font Style controls only offer the first three, but `'oblique'` set by an extension through the apply event round-trips the full pipeline: span serialization, state reporting, and paragraph-style persistence/CSS). `fontStyle` is the *rendered* style at the selection — text italicized by an enclosing `<em>`/`<i>` reports `'italic'` even without its own setting; use it to render the right face (previews, the Glyphs panel's face pick). `explicitFontStyle` is only what was *set* — a `data-fontstyle` span, the popover's Font Style choice, or the block attribute — and is what consumers that persist the value must read: the bundled Paragraph Styles module captures it into saved styles, so semantic emphasis can't be baked into a style whose CSS could neither reproduce nor reset it.
@@ -762,7 +762,7 @@ The `layeredConfigId` field contains the active layered font configuration ID (i
 
 *Since 2.3.2* the QFT/inspector state also includes `initialHang` (number in em, `0` when off): how far the block moves its first letter into the margin (First Letter Hang). The inline editor does not report it, because the hang works through `::first-letter`, which cannot reach an inline span. Treat an absent key as "not supported here", not as 0. The per-line values of a fit-to-width block are content, like its line sizes, and are not in the state.
 
-*Since 2.3.3* the QFT/inspector state also includes `textCase` (`''` Default, `'none'` Normal, `'uppercase'`, `'lowercase'`, `'capitalize'`, `'small-caps'`, or `'all-small-caps'`) and `fakeSmallCaps` (boolean, `true` when unset; only meaningful with the two small caps values). The inline editor has no case control and does not report either key; an inline span gets a paragraph style's case from the style's CSS class. Treat an absent key as "not supported here".
+*Since 2.3.3* both editors report `textCase` (`''` Default, `'none'` Normal, `'uppercase'`, `'lowercase'`, `'capitalize'`, `'small-caps'`, or `'all-small-caps'`) and `fakeSmallCaps` (boolean, `true` when unset; only meaningful with the two small caps values). The QFT/inspector state reports the block's setting. The inline editor reports the case stored on the selected span (`data-textcase` / `data-fakesmallcaps`), or the popover's choice while it is open; a theme's case or a case that only comes from a paragraph style's class is not the span's own and reports `''`. Treat an absent key (an older version) as "not supported here".
 
 #### Writing Editor State
 
@@ -779,7 +779,7 @@ document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
             features: ['liga', 'dlig', 'ss01'],
             fontVariationSettings: '"wght" 700, "wdth" 100', // Optional: variable font axes
             initialHang: 0.15, // Optional (since 2.3.2): first letter hang in em; 'qft'/'inspector' only
-            textCase: 'uppercase', // Optional (since 2.3.3): case; 'qft'/'inspector' only
+            textCase: 'uppercase', // Optional (since 2.3.3): case; '' Default, 'none' Normal, …
             fakeSmallCaps: false, // Optional (since 2.3.3): with 'small-caps'/'all-small-caps' only
         },
         source: 'inline', // or 'qft' or 'inspector'

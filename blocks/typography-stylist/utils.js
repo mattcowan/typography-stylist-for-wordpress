@@ -7,6 +7,7 @@
 
 import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
 import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
+import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from '../../assets/js/text-case.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -2332,9 +2333,9 @@ export function buildQftEditorState(s) {
 		// reach an inline span, so the inline editor never reports this key
 		// and the Paragraph Styles diff skips it when absent.
 		initialHang: normalizeHang(source.initialHang),
-		// Case (#214), block-level like the hang: the inline editor has no
-		// case control and never reports these keys, so the Paragraph Styles
-		// diff skips them there and Update Style keeps the style's value.
+		// Case (#214): the block attribute. The Quick Feature Toggles have
+		// no case control for selected text, so a span's own case
+		// (data-textcase, written by the inline editor) is not read here.
 		textCase: normalizeTextCase(source.textCase),
 		fakeSmallCaps: source.fakeSmallCaps !== false,
 		layeredConfigId: source.layeredConfigId || 0,
@@ -3380,74 +3381,10 @@ export function normalizeHang(value) {
 	return Number(Math.round(Number(Math.min(n, INITIAL_HANG_MAX) + 'e3')) + 'e-3');
 }
 
-/**
- * Case values a block or paragraph style can store (#214). '' (absent) is
- * Default: the text keeps whatever case the theme gives it, so blocks and
- * styles saved before this setting existed render as before. 'none' is
- * Normal, an explicit reset of a theme's transform or small caps.
- * Mirrors TEXT_CASE_VALUES in ps-utils.js and
- * Typost_Paragraph_Styles::TEXT_CASE_VALUES in PHP.
- */
-export const TEXT_CASE_VALUES = ['none', 'uppercase', 'lowercase', 'capitalize', 'small-caps', 'all-small-caps'];
-
-/**
- * Normalize a stored case value: '' for Default or anything unknown.
- *
- * @param {*} value Raw value.
- * @return {string} One of TEXT_CASE_VALUES, or ''.
- */
-export function normalizeTextCase(value) {
-	return typeof value === 'string' && TEXT_CASE_VALUES.indexOf(value) !== -1 ? value : '';
-}
-
-/**
- * Whether a case value uses font-variant-caps (and so the fake small caps
- * choice applies to it).
- *
- * @param {*} value Case value.
- * @return {boolean} True for Small Caps and All Small Caps.
- */
-export function isSmallCapsCase(value) {
-	const c = normalizeTextCase(value);
-	return c === 'small-caps' || c === 'all-small-caps';
-}
-
-/**
- * CSS declarations for a case setting (#214), as [property, value] pairs.
- *
- * Case is one exclusive choice, so every value sets both mechanisms: a
- * transform resets font-variant-caps and small caps reset text-transform.
- * Otherwise a theme that uppercases headings would turn a Small Caps style
- * into full capitals (smcp leaves capitals alone). font-variant-caps maps
- * to smcp/c2sc and, unlike font-feature-settings, lets the browser fake
- * small caps when the font has none; font-synthesis-small-caps: none turns
- * that off. The block's own feature toggles use font-feature-settings,
- * which is applied after font-variant-caps, so they keep working.
- * Mirrors caseDeclarations() in ps-utils.js and
- * Typost_Paragraph_Styles::case_declarations() in PHP; the order of the
- * pairs is part of the byte-identical style CSS.
- *
- * @param {*}       textCase      Case value.
- * @param {boolean} fakeSmallCaps Allow fake small caps (false = off).
- * @return {Array<Array<string>>} Declarations, empty for Default.
- */
-export function caseDeclarations(textCase, fakeSmallCaps) {
-	const c = normalizeTextCase(textCase);
-	if (!c) {
-		return [];
-	}
-	if (isSmallCapsCase(c)) {
-		return [
-			['text-transform', 'none'],
-			['font-variant-caps', c],
-			['font-synthesis-small-caps', fakeSmallCaps === false ? 'none' : 'auto'],
-		];
-	}
-	return [
-		['text-transform', c],
-		['font-variant-caps', 'normal'],
-	];
-}
+// Case (#214): TEXT_CASE_VALUES, normalizeTextCase(), isSmallCapsCase(),
+// caseDeclarations() and caseStyleObject() live in assets/js/text-case.js,
+// shared with the inline editor's separate build.
+export { TEXT_CASE_VALUES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject };
 
 /**
  * Whether a hanging initial shows for a given text alignment.
@@ -3790,14 +3727,18 @@ export function buildInlineFontSizeSpan(size, fontSizeMin, fontSizePreferred, fo
  * glyph adjustments (data-fitscale / data-fitshift) are glyph-level choices,
  * not typography the style describes, and are kept.
  */
+// Case (#214) is style-owned too: a span's own case would otherwise stay
+// in force over the style's class and count as no conflict.
 const PARAGRAPH_STYLE_OWNED_ATTRS = [
 	'data-font-id', 'data-font', 'data-fontweight', 'data-fontstyle',
 	'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max',
-	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings'
+	'data-letterspacing', 'data-lineheight', 'data-features', 'data-font-variation-settings',
+	...CASE_DATA_ATTRIBUTES
 ];
 const PARAGRAPH_STYLE_OWNED_PROPS = [
 	'font-family', 'font-weight', 'font-style', 'font-size',
-	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings'
+	'letter-spacing', 'line-height', 'font-feature-settings', 'font-variation-settings',
+	...CASE_CSS_PROPERTIES
 ];
 
 /**

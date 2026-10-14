@@ -257,9 +257,9 @@
 		// "(modified)" on every use of a style that has a hang.
 		if (state.initialHang !== undefined && normalizeHang(state.initialHang) !== normalizeHang(styleProps.initialHang)) return true;
 
-		// Case (#214) is block-level too: the inline editor has no case
-		// control and never sends the key, and a style's case reaches
-		// inline spans through its class.
+		// Case (#214). Both core editors report it (a span stores its own
+		// case since the inline editor got a Case control); an editor that
+		// does not send the key is not compared.
 		if (state.textCase !== undefined) {
 			if (normalizeTextCase(state.textCase) !== normalizeTextCase(styleProps.textCase)) return true;
 			if (effectiveFakeSmallCaps(state.textCase, state.fakeSmallCaps) !== effectiveFakeSmallCaps(styleProps.textCase, styleProps.fakeSmallCaps)) return true;
@@ -364,12 +364,13 @@
 	 *
 	 * Some properties are block-level only, and the inline editor does not
 	 * report them in its state: initialHang (#242) works through
-	 * ::first-letter, which cannot reach an inline span, and textCase /
-	 * fakeSmallCaps (#214) have no control in the inline editor. The REST update
+	 * ::first-letter, which cannot reach an inline span. The REST update
 	 * replaces the whole properties object, so building from the inline
 	 * state alone deleted the style's hang from every block that used it
 	 * (PR review). A key the editor does not report is carried from the
 	 * base style; a key it reports, including 0, is the editor's value.
+	 * textCase / fakeSmallCaps (#214) follow the same rule for an editor
+	 * (an extension's) that does not report them; both core editors do.
 	 *
 	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
 	 * style that already writes a size, so its CSS does not change unit
@@ -434,8 +435,10 @@
 	 * hang has no effect on an inline span.
 	 *
 	 * textCase IS normalized (to '' = Default) and fakeSmallCaps (to true),
-	 * for the same reason (#214). The inline editor ignores both: an inline
-	 * span gets the style's case from its class.
+	 * for the same reason (#214). Both editors apply them: the block sets
+	 * its attributes, and the inline editor stores them on the span
+	 * (data-textcase) while the style's class renders the case, so Detach
+	 * keeps it.
 	 *
 	 * fontStyle IS normalized (to '' = inherit): styles express italic as a
 	 * first-class property now, so a style saved without one must reset a

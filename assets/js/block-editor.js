@@ -19,6 +19,8 @@ const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes,
 // unit the span already has (resolveSpanFontSizeUnit), so older spans are
 // not rewritten.
 const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttributes, pxToRem, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation, getResponsiveZoomNotice } = require('./font-size-units.js');
+// Case (#214): the same mapping as the block and the paragraph styles
+const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseAttributes, readInlineCase, buildInlineCasePatch } = require('./text-case.js');
 
 (function(wp) {
     const { registerFormatType, toggleFormat, applyFormat, removeFormat, getActiveFormat, slice, getTextContent, insert } = wp.richText;
@@ -582,6 +584,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             // strip data-fontweight/font-weight instead of writing '400'
             this._clearWeight = false;
 
+            const initialCase = this.getActiveCase();
+
             this.state = {
                 isOpen: false,
                 selectedFeatures: this.getActiveFeatures() || [],
@@ -593,6 +597,9 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 fontSizeMax: this.getActiveFontSizeMax() || 32,
                 fontWeight: this.getActiveFontWeight() || '400',
                 fontStyle: this.getActiveFontStyle() || '',
+                // Case (#214): '' Default, fake small caps allowed when unset
+                textCase: initialCase.textCase,
+                fakeSmallCaps: initialCase.fakeSmallCaps,
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 selectedText: '', // Extracted text for feature previews
@@ -656,6 +663,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             this.setFontSizeMax = this.setFontSizeMax.bind(this);
             this.setFontWeight = this.setFontWeight.bind(this);
             this.setFontStyle = this.setFontStyle.bind(this);
+            this.setTextCase = this.setTextCase.bind(this);
+            this.setFakeSmallCaps = this.setFakeSmallCaps.bind(this);
             this.setLetterSpacing = this.setLetterSpacing.bind(this);
             this.setLineHeight = this.setLineHeight.bind(this);
             this.validateSelection = this.validateSelection.bind(this);
@@ -707,6 +716,10 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                         // Attr/choice-derived only — what persisting consumers
                         // (paragraph style capture/diff) must read instead
                         explicitFontStyle: self.getExplicitFontStyle(),
+                        // The span's own case (#214), so a paragraph style
+                        // captures it and Detach keeps it
+                        textCase: normalizeTextCase(self.state.textCase),
+                        fakeSmallCaps: self.state.fakeSmallCaps !== false,
                         fontSize: self.state.fontSize,
                         fontSizeMin: self.state.fontSizeMin,
                         fontSizePreferred: self.state.fontSizePreferred,
@@ -767,6 +780,7 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                             self._clearWeight = !props.fontWeight;
                         }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
+                        if (props.textCase !== undefined || props.fakeSmallCaps !== undefined) { self._recordChange('textCase'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
                         if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
@@ -777,6 +791,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                         selectedFont: props.fontId !== undefined ? (props.fontId ? self.resolveFontFamily(props.fontId) : '') : self.state.selectedFont,
                         fontWeight: props.fontWeight !== undefined ? (props.fontWeight || '400') : self.state.fontWeight,
                         fontStyle: props.fontStyle !== undefined ? (props.fontStyle || '') : self.state.fontStyle,
+                        textCase: props.textCase !== undefined ? normalizeTextCase(props.textCase) : self.state.textCase,
+                        fakeSmallCaps: props.fakeSmallCaps !== undefined ? props.fakeSmallCaps !== false : self.state.fakeSmallCaps,
                         fontSize: props.fontSize !== undefined ? (props.fontSize || 'inherit') : self.state.fontSize,
                         fontSizeMin: props.fontSizeMin !== undefined ? (props.fontSizeMin || 16) : self.state.fontSizeMin,
                         fontSizePreferred: props.fontSizePreferred !== undefined ? (props.fontSizePreferred || 24) : self.state.fontSizePreferred,
@@ -1339,6 +1355,19 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
         }
 
         /**
+         * The case stored on the active span (#214): data-textcase and
+         * data-fakesmallcaps. '' (Default) and true when the span has none —
+         * a theme's or a paragraph style's case is not the span's own.
+         *
+         * @return {{textCase: string, fakeSmallCaps: boolean}}
+         */
+        getActiveCase() {
+            const { value } = this.props;
+            const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+            return readInlineCase(activeFormat && activeFormat.attributes);
+        }
+
+        /**
          * The font style explicitly SET on the selection — the popover's live
          * Font Style choice while it is open, else the span's data-fontstyle.
          * Never the core Italic (<em>) format: that renders italic on its own,
@@ -1687,6 +1716,7 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             }
 
             const wasOpen = this.state.isOpen;
+            const activeCase = this.getActiveCase();
 
             // Fresh popover session: no property changes recorded yet
             this._resetPendingChanges();
@@ -1706,6 +1736,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 // (700 on a theme-bold heading); it is written only when picked
                 fontWeight: this.getEffectiveFontWeight() || '400',
                 fontStyle: this.getActiveFontStyle() || '',
+                textCase: activeCase.textCase,
+                fakeSmallCaps: activeCase.fakeSmallCaps,
                 letterSpacing: this.getActiveLetterSpacing() || 0,
                 lineHeight: this.getActiveLineHeight() || 0,
                 fontVariationSettings: this.getActiveFontVariationSettings() || '',
@@ -2033,6 +2065,31 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             this._recordChange('fontStyle');
             this.setState({
                 fontStyle: value
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Set the case (#214). Changes only how the text looks; the stored
+         * text keeps the case the author typed.
+         */
+        setTextCase(value) {
+            this._recordChange('textCase');
+            this.setState({
+                textCase: normalizeTextCase(value)
+            }, () => {
+                this.debouncedApplyDropdown();
+            });
+        }
+
+        /**
+         * Allow or forbid fake small caps (#214), for the two small caps cases
+         */
+        setFakeSmallCaps(value) {
+            this._recordChange('textCase');
+            this.setState({
+                fakeSmallCaps: value !== false
             }, () => {
                 this.debouncedApplyDropdown();
             });
@@ -2406,13 +2463,18 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 if (sizeValue) {
                     styleArray.push(`font-size: ${sizeValue}`);
                 }
+                // Case (#214): the span keeps the selection's case, as an apply writes it
+                const caseAttributes = buildInlineCaseAttributes(this.state.textCase, this.state.fakeSmallCaps);
+                caseDeclarations(this.state.textCase, this.state.fakeSmallCaps).forEach(([property, declared]) => {
+                    styleArray.push(`${property}: ${declared}`);
+                });
 
                 const styleString = styleArray.join('; ');
 
                 // If we have existing HTML content with spans, we need to preserve it
                 if (hasHTMLTags(existingContent)) {
                     // Build the new span's attributes in the modern format
-                    const spanAttributes = Object.assign({}, sizeAttributes);
+                    const spanAttributes = Object.assign({}, sizeAttributes, caseAttributes);
                     if (selectedFeatures.length > 0) {
                         spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
                     }
@@ -2453,8 +2515,9 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                     const beforeText = fullText.substring(0, effectiveStart);
                     const selectedText = fullText.substring(effectiveStart, effectiveEnd);
                     const afterText = fullText.substring(effectiveEnd);
-                    const sizeAttributeString = Object.keys(sizeAttributes || {})
-                        .map((key) => ` ${key}="${escapeAttribute(sizeAttributes[key])}"`)
+                    const extraAttributes = Object.assign({}, sizeAttributes, caseAttributes);
+                    const sizeAttributeString = Object.keys(extraAttributes)
+                        .map((key) => ` ${key}="${escapeAttribute(extraAttributes[key])}"`)
                         .join('');
                     contentForBlock = escapeHTML(beforeText) +
                         `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${styleString}">${escapeHTML(selectedText)}</span>` +
@@ -2597,6 +2660,13 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 dataAttrs['data-fontstyle'] = fontStyle || null;
                 styleDecls['font-style'] = fontStyle || null;
             }
+            if (pending.keys.has('textCase')) {
+                // Every case attribute and declaration is set or removed, so
+                // a run that had another case keeps none of it (#214)
+                const casePatch = buildInlineCasePatch(this.state.textCase, this.state.fakeSmallCaps);
+                Object.assign(dataAttrs, casePatch.dataAttrs);
+                Object.assign(styleDecls, casePatch.styleDecls);
+            }
             if (pending.keys.has('letterSpacing')) {
                 dataAttrs['data-letterspacing'] = letterSpacing !== 0 ? String(letterSpacing) : null;
                 styleDecls['letter-spacing'] = letterSpacing !== 0 ? `${letterSpacing / 1000}em` : null;
@@ -2635,7 +2705,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
          */
         _doApplyFeatures() {
             const { value, onChange } = this.props;
-            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const { selectedFeatures, selectedFont, selectedFontId, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fontWeight, fontStyle, textCase, fakeSmallCaps, letterSpacing, lineHeight, savedSelectionStart, savedSelectionEnd, paragraphStyleId, animationId, fontVariationSettings } = this.state;
+            const caseValue = normalizeTextCase(textCase);
 
             // Check if selection was lost due to modal focus and we have saved bounds
             const selectionLost = value.start === value.end && savedSelectionStart !== null && savedSelectionEnd !== null && savedSelectionStart !== savedSelectionEnd;
@@ -2725,7 +2796,7 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 clearWeight: this._clearWeight
             });
 
-            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
+            if (selectedFeatures.length === 0 && !selectedFont && fontSize === 'inherit' && !weightToWrite && !fontStyle && !caseValue && letterSpacing === 0 && lineHeight === 0 && !paragraphStyleId && !animationId && !fontVariationSettings && !rawFeatureSettings) {
                 // Remove format if no features, font, font size, weight, letter spacing, or line height selected
                 if (selectionLost) {
                     onChange(removeFormat(value, FORMAT_TYPE, savedSelectionStart, savedSelectionEnd));
@@ -2801,6 +2872,17 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                     if (!hasActiveStyle) {
                         if (styleString) styleString += '; ';
                         styleString += `font-style: ${fontStyle}`;
+                    }
+                }
+
+                // Add case (#214) — how the letters look; the text keeps its case
+                if (caseValue) {
+                    Object.assign(attributes, buildInlineCaseAttributes(caseValue, fakeSmallCaps));
+                    if (!hasActiveStyle) {
+                        caseDeclarations(caseValue, fakeSmallCaps).forEach(([property, declared]) => {
+                            if (styleString) styleString += '; ';
+                            styleString += `${property}: ${declared}`;
+                        });
                     }
                 }
 
@@ -2963,6 +3045,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                 fontSizePreferred: 24,
                 fontSizeMax: 32,
                 fontWeight: '400',
+                textCase: '',
+                fakeSmallCaps: true,
                 letterSpacing: 0,
                 lineHeight: 0,
                 activePreset: null
@@ -3110,6 +3194,8 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             if (renderedStyle) {
                 previewStyle.fontStyle = renderedStyle;
             }
+            // The chosen case (#214): smcp, c2sc and case look different on capitals
+            Object.assign(previewStyle, caseStyleObject(this.state.textCase, this.state.fakeSmallCaps));
 
             return (
                 <div key={feature.id} className="typost-feature-toggle">
@@ -3698,6 +3784,46 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
                                     />
                                 </div>
 
+                                {/* Case (#214) — how the letters look; the text keeps its case */}
+                                <div className="typost-modal-section typost-textcase-section">
+                                    <h4>{__('Case', 'typography-stylist')}</h4>
+                                    <SelectControl
+                                        label={__('Case', 'typography-stylist')}
+                                        hideLabelFromVision
+                                        value={normalizeTextCase(this.state.textCase)}
+                                        options={[
+                                            { label: __('Default', 'typography-stylist'), value: '' },
+                                            { label: __('Normal', 'typography-stylist'), value: 'none' },
+                                            { label: __('All Caps', 'typography-stylist'), value: 'uppercase' },
+                                            { label: __('Lowercase', 'typography-stylist'), value: 'lowercase' },
+                                            { label: __('Title Case', 'typography-stylist'), value: 'capitalize' },
+                                            { label: __('Small Caps', 'typography-stylist'), value: 'small-caps' },
+                                            { label: __('All Small Caps', 'typography-stylist'), value: 'all-small-caps' }
+                                        ]}
+                                        onChange={this.setTextCase}
+                                        help={this.state.paragraphStyleId
+                                            // Under a style the span writes no inline case,
+                                            // as with the size (#255)
+                                            ? __('The paragraph style sets the case. To change the case of this text only, click Detach Style first.', 'typography-stylist')
+                                            : (normalizeTextCase(this.state.textCase) === 'capitalize'
+                                                ? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
+                                                : (normalizeTextCase(this.state.textCase) === 'uppercase'
+                                                    // No hidden copy here: screen readers read the transformed text
+                                                    ? __('All caps are harder to read in long text, so keep them for short labels. Some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')
+                                                    : __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist')))}
+                                    />
+                                    {isSmallCapsCase(this.state.textCase) && (
+                                        <ToggleControl
+                                            label={__('Allow fake small caps', 'typography-stylist')}
+                                            checked={this.state.fakeSmallCaps !== false}
+                                            onChange={this.setFakeSmallCaps}
+                                            help={this.state.fakeSmallCaps !== false
+                                                ? __('When the font has no small caps, the browser makes them by shrinking capitals.', 'typography-stylist')
+                                                : __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
+                                        />
+                                    )}
+                                </div>
+
                                 {/* Font Size Controls */}
                                 <div className="typost-modal-section typost-fontsize-section">
                                     <h4>{__('Font Size', 'typography-stylist')}</h4>
@@ -4046,6 +4172,16 @@ const { parseFixedFontSize, buildInlineFontSizeValue, buildInlineFontSizeAttribu
             'data-fontsize-preferred': 'data-fontsize-preferred',
             'data-fontsize-max': 'data-fontsize-max',
             'data-fontweight': 'data-fontweight',
+            // Every attribute this editor writes must be registered here to
+            // be readable after a reload: RichText keeps unregistered ones in
+            // format.unregisteredAttributes, which getActiveFormat() callers
+            // and applyFormat() rebuilds never see. data-fontstyle was
+            // missing, so after a reload one feature toggle rebuilt an italic
+            // span without its italic.
+            'data-fontstyle': 'data-fontstyle',
+            // Case (#214)
+            'data-textcase': 'data-textcase',
+            'data-fakesmallcaps': 'data-fakesmallcaps',
             'data-letterspacing': 'data-letterspacing',
             'data-lineheight': 'data-lineheight',
             'data-style-id': 'data-style-id',

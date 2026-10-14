@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -3737,9 +3737,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// style cannot fall back to the theme past the class rule.
 		if (rendersInline('textCase')) {
 			const caseValue = normalizeTextCase(textCase) || (styleOverrides ? 'none' : '');
-			caseDeclarations(caseValue, fakeSmallCaps).forEach(([property, value]) => {
-				styles[property.replace(/-([a-z])/g, (g) => g[1].toUpperCase())] = value;
-			});
+			Object.assign(styles, caseStyleObject(caseValue, fakeSmallCaps));
 		}
 
 		return styles;
@@ -4537,7 +4535,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 																// Render the italic face when the selection is italic
 																// (data-fontstyle span, <em>/<i>, or the block setting) —
 																// italic faces carry their own glyphs and features
-																fontStyle: (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) || inlineFontStyle || fontStyle || undefined
+																fontStyle: (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) || inlineFontStyle || fontStyle || undefined,
+																// The block's case (#214): smcp, c2sc and
+																// case look different on capitals
+																...caseStyleObject(textCase, fakeSmallCaps)
 															}}
 														>
 															{sampleText}
@@ -4807,7 +4808,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					)}
 					{normalizeTextCase(textCase) === 'uppercase' && (
 						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: 0 }}>
-							{__('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when a style with All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')}
+							{__('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')}
 						</p>
 					)}
 				</PanelBody>
