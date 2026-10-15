@@ -437,7 +437,15 @@ final class Typost_Paragraph_Styles {
 	 *  - centered and end-aligned blocks (core's `has-text-align-*` classes)
 	 *    turn the hang off, as the Typography Stylist block does for its
 	 *    inline text-align. Separate rules, so a browser without `:dir()`
-	 *    drops only those.
+	 *    drops only those;
+	 *  - a block's own text direction: the editor writes it as an inline
+	 *    `direction` declaration with no `dir` attribute, which `:dir()`
+	 *    does not see, so the inline declaration decides the end edge there
+	 *    (both spellings, as style.css matches inline text-align). Saved
+	 *    markup has `dir`, so the frontend needs only the `:dir()` rules;
+	 *  - a block with an inline `text-indent` (core's Text indent) gets no
+	 *    hang: in the editor that inline value beats the hang's text-indent,
+	 *    and on the frontend the `::first-letter` margin would add to it.
 	 * Typography Stylist block content (`.wp-block-typost *`) is left to
 	 * style.css, and a drop cap wins over a hang. buildStyleCssBlock() in
 	 * ps-utils.js emits the same text.
@@ -449,11 +457,19 @@ final class Typost_Paragraph_Styles {
 		$cls    = '.typost-styled.typost-ps-' . intval( $id );
 		$amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
 		$tags   = ':is(p, h1, h2, h3, h4, h5, h6)';
-		return "\n\n" . $cls . $tags . ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {' . "\n    margin-inline-start: " . $amount . ";\n}"
-			. "\n\n" . $cls . '.block-editor-rich-text__editable' . $tags . ':not(.wp-block-typost *, .has-drop-cap) {' . "\n    text-indent: " . $amount . ";\n}"
-			. "\n\n" . $cls . ".has-text-align-center {\n    --typost-hang-on: 0;\n}"
-			. "\n\n" . $cls . ".has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}"
-			. "\n\n" . $cls . ".has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}";
+		$off    = " {\n    --typost-hang-on: 0;\n}";
+		$on     = " {\n    --typost-hang-on: 1;\n}";
+		$rtl    = ':is([style*="direction: rtl"], [style*="direction:rtl"])';
+		$ltr    = ':is([style*="direction: ltr"], [style*="direction:ltr"])';
+		return "\n\n" . $cls . $tags . ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {' . "\n    margin-inline-start: " . $amount . ";\n}"
+			. "\n\n" . $cls . '.block-editor-rich-text__editable' . $tags . ':not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {' . "\n    text-indent: " . $amount . ";\n}"
+			. "\n\n" . $cls . '.has-text-align-center' . $off
+			. "\n\n" . $cls . '.has-text-align-right:dir(ltr)' . $off
+			. "\n\n" . $cls . '.has-text-align-left:dir(rtl)' . $off
+			. "\n\n" . $cls . '.has-text-align-right' . $ltr . $off
+			. "\n\n" . $cls . '.has-text-align-left' . $rtl . $off
+			. "\n\n" . $cls . '.has-text-align-right' . $rtl . $on
+			. "\n\n" . $cls . '.has-text-align-left' . $ltr . $on;
 	}
 
 	/**

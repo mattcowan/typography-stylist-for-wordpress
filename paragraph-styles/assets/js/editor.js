@@ -1195,6 +1195,11 @@
 		var currentStyles    = stylesState[0];
 		var setCurrentStyles = stylesState[1];
 		var browseRef        = useRef(null);
+		// Open when the block has a style, decided once. PanelBody reads
+		// initialOpen on every render until the author toggles it, so a live
+		// value closed the panel on Detach, unmounting the Browse button that
+		// onDetach() focuses and dropping keyboard focus to the body (#219 QA)
+		var initialOpenRef   = useRef(!!getCoreBlockStyleRef(props.className));
 
 		useEffect(function() {
 			function onStylesUpdated() {
@@ -1234,7 +1239,7 @@
 		return el(wp.blockEditor.InspectorControls, null,
 			el(wp.components.PanelBody, {
 				title: __('Paragraph Style', 'typost-paragraph-styles'),
-				initialOpen: !!ref,
+				initialOpen: initialOpenRef.current,
 				className: 'typost-ps-core-panel',
 			},
 				ref && el('div', { className: 'typost-ps-badge' },

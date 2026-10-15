@@ -891,13 +891,19 @@ describe('hanging initial (#242)', () => {
 			'    --typost-hang: 0.12;\n' +
 			'}' +
 			// Core Paragraph/Heading rules (#219), only for a style with a hang
-			'\n\n.typost-styled.typost-ps-5:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {\n' +
+			// No hang with an inline text-indent (core Text indent, #219 QA)
+			'\n\n.typost-styled.typost-ps-5:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {\n' +
 			'    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
-			'\n\n.typost-styled.typost-ps-5.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap) {\n' +
+			'\n\n.typost-styled.typost-ps-5.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {\n' +
 			'    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
 			'\n\n.typost-styled.typost-ps-5.has-text-align-center {\n    --typost-hang-on: 0;\n}' +
 			'\n\n.typost-styled.typost-ps-5.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}' +
-			'\n\n.typost-styled.typost-ps-5.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}'
+			'\n\n.typost-styled.typost-ps-5.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}' +
+			// The editor's inline direction decides the end edge (#219 QA)
+			'\n\n.typost-styled.typost-ps-5.has-text-align-right:is([style*="direction: ltr"], [style*="direction:ltr"]) {\n    --typost-hang-on: 0;\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-left:is([style*="direction: rtl"], [style*="direction:rtl"]) {\n    --typost-hang-on: 0;\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-right:is([style*="direction: rtl"], [style*="direction:rtl"]) {\n    --typost-hang-on: 1;\n}' +
+			'\n\n.typost-styled.typost-ps-5.has-text-align-left:is([style*="direction: ltr"], [style*="direction:ltr"]) {\n    --typost-hang-on: 1;\n}'
 		);
 		expect(buildStyleCssBlock({ id: 5, properties: { initialHang: 1 } })).toContain('--typost-hang: 1;');
 		expect(buildStyleCssBlock({ id: 5, properties: { fontId: 9, initialHang: 0 } })).not.toContain('--typost-hang');

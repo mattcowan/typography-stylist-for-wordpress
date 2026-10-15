@@ -43,7 +43,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - In the Typography Stylist block, move the first letter into the margin by a value in em. A swash capital then hangs outside the text edge, and the main shape of the letter aligns with the edge.
 - Only the first line hangs. In fit-to-width mode, each line has its own value.
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
-- A paragraph style can keep the value. A core Paragraph or Heading block that uses the style hangs too, unless it is centered, aligned to the end, or has a drop cap.
+- A paragraph style can keep the value. A core Paragraph or Heading block that uses the style hangs too, unless it is centered, aligned to the end, or has a drop cap or a text indent.
 
 ### Font Sizes in rem (v2.3.2+)
 

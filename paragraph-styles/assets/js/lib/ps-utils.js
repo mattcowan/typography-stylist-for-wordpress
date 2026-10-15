@@ -834,11 +834,21 @@
 		var cls = '.typost-styled.typost-ps-' + id;
 		var amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
 		var tags = ':is(p, h1, h2, h3, h4, h5, h6)';
-		return '\n\n' + cls + tags + ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable)::first-letter {\n    margin-inline-start: ' + amount + ';\n}' +
-			'\n\n' + cls + '.block-editor-rich-text__editable' + tags + ':not(.wp-block-typost *, .has-drop-cap) {\n    text-indent: ' + amount + ';\n}' +
-			'\n\n' + cls + '.has-text-align-center {\n    --typost-hang-on: 0;\n}' +
-			'\n\n' + cls + '.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}' +
-			'\n\n' + cls + '.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}';
+		var off = ' {\n    --typost-hang-on: 0;\n}';
+		var on = ' {\n    --typost-hang-on: 1;\n}';
+		var rtl = ':is([style*="direction: rtl"], [style*="direction:rtl"])';
+		var ltr = ':is([style*="direction: ltr"], [style*="direction:ltr"])';
+		return '\n\n' + cls + tags + ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {\n    margin-inline-start: ' + amount + ';\n}' +
+			'\n\n' + cls + '.block-editor-rich-text__editable' + tags + ':not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {\n    text-indent: ' + amount + ';\n}' +
+			'\n\n' + cls + '.has-text-align-center' + off +
+			'\n\n' + cls + '.has-text-align-right:dir(ltr)' + off +
+			'\n\n' + cls + '.has-text-align-left:dir(rtl)' + off +
+			// A block's own direction is an inline declaration in the editor,
+			// which :dir() does not see; it decides the end edge there
+			'\n\n' + cls + '.has-text-align-right' + ltr + off +
+			'\n\n' + cls + '.has-text-align-left' + rtl + off +
+			'\n\n' + cls + '.has-text-align-right' + rtl + on +
+			'\n\n' + cls + '.has-text-align-left' + ltr + on;
 	}
 
 	/**
