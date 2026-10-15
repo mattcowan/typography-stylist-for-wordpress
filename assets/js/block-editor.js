@@ -1736,6 +1736,11 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * @param {string} selectedText        Selected text ('' for a caret)
          */
         launchExtensionButton(button, savedSelectionStart, savedSelectionEnd, selectedText) {
+            // The format instance can unmount before the commit (the
+            // selected block changed); its selection is stale then
+            if (!this._isMounted) {
+                return;
+            }
             button.onClick({
                 source: 'inline',
                 savedSelectionStart: savedSelectionStart,

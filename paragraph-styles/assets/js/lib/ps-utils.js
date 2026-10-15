@@ -901,6 +901,9 @@
 	/**
 	 * Every class except the ones a paragraph style owns. Other classes
 	 * (a theme's is-style-outline, the author's own) stay in their order.
+	 * A bare `typost-styled` with no `typost-ps-*` is removed too: the two
+	 * classes are one pair that belongs to the style, so a block never
+	 * keeps half of it.
 	 */
 	function withoutStyleClasses(className) {
 		return classTokens(className).filter(function (token) {
