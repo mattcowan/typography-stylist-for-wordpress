@@ -11,7 +11,47 @@ const {
 	buildConvertBlockAttributes,
 	resolvePresetFontState,
 	resolveApplyWeightChoice,
+	resolveSpanExplicitFontId,
 } = require('../../../assets/js/inline-apply-rules.js');
+
+describe('resolveSpanExplicitFontId (review of #278)', () => {
+	const styles = [
+		{ id: '4', properties: { fontId: 36, fontWeight: '600' } },
+		{ id: '9', properties: { textCase: 'uppercase' } },
+	];
+
+	it('a span with no paragraph style reports its data-font-id', () => {
+		expect(resolveSpanExplicitFontId({ dataFontId: '12' }, styles)).toBe(12);
+		expect(resolveSpanExplicitFontId({}, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId(null, styles)).toBe(0);
+	});
+
+	it('a style span with no data-font-id reports the style font (style updated after apply)', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '4' }, styles)).toBe(36);
+		expect(resolveSpanExplicitFontId({ styleId: 4 }, styles)).toBe(36);
+	});
+
+	it('the style font wins over a stale data-font-id that renders nothing', () => {
+		// The apply path writes no inline font-family under a style
+		expect(resolveSpanExplicitFontId({ styleId: '4', dataFontId: '12' }, styles)).toBe(36);
+		expect(resolveSpanExplicitFontId({ styleId: '9', dataFontId: '12' }, styles)).toBe(0);
+	});
+
+	it('a style without a font, or a deleted style, reports 0', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '9' }, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId({ styleId: '77' }, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId({ styleId: '4' }, undefined)).toBe(0);
+	});
+
+	it('an inline font-family declaration beats the class', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '4', dataFontId: '12', styleAttr: 'font-family: var(--font-12)' }, styles)).toBe(12);
+	});
+
+	it('styleId 0 or empty means no style', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '0', dataFontId: '12' }, styles)).toBe(12);
+		expect(resolveSpanExplicitFontId({ styleId: '', dataFontId: '12' }, styles)).toBe(12);
+	});
+});
 
 describe('resolveApplyWeightChoice (apply event weight, #278)', () => {
 	it('a weight from an extension counts as picked; a falsy one clears', () => {

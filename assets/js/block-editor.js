@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, resolveApplyWeightChoice, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, resolveApplyWeightChoice, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -1313,16 +1313,34 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
         }
 
         /**
-         * The font set on the selection: the popover's live font choice while
-         * it is open, else the span's data-font-id. Never the font the text
-         * inherits from the block or the theme (getInheritedFontId), for the
-         * same reason as getSetFontWeight() (#278).
+         * The font set on the selection: a font the author picked in this
+         * popover session, else the span's font, or its paragraph style's
+         * font when the style's class renders it (resolveSpanExplicitFontId,
+         * like the weight in getSetFontWeight()). Never the font the text
+         * inherits from the block or the theme (getInheritedFontId) (#278).
          *
          * @since 2.3.3
          * @return {number} Font ID, or 0 when the selection has none of its own
          */
         getExplicitFontId() {
-            if (this.state && this.state.isOpen) {
+            const open = this.state && this.state.isOpen;
+            if (open && this._pendingChanges.keys.has('font')) {
+                return parseInt(this.state.selectedFontId, 10) || 0;
+            }
+            const { value } = this.props;
+            const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+            if (activeFormat && activeFormat.attributes) {
+                const attrs = activeFormat.attributes;
+                return resolveSpanExplicitFontId({
+                    dataFontId: attrs['data-font-id'],
+                    styleAttr: attrs.style,
+                    styleId: attrs['data-style-id']
+                }, window.typostData && window.typostData.paragraphStyles);
+            }
+            // No inline format at the selection: the popover's font (read
+            // from the selection when it opened, or set by an apply event),
+            // or a styled span in a Typography Stylist block
+            if (open) {
                 return parseInt(this.state.selectedFontId, 10) || 0;
             }
             return this.getActiveFontId() || 0;

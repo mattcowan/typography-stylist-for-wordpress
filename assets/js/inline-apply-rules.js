@@ -323,6 +323,39 @@ function resolveSpanStoredFontWeight(span, styles) {
 	return { stored: stored, styleWeight: stored ? '' : resolveParagraphStyleFontWeight(styles, styleId) };
 }
 
+/**
+ * The font set on one span: its own, or its paragraph style's (#278).
+ *
+ * The font twin of resolveSpanStoredFontWeight(). Under a paragraph style
+ * the apply path writes no inline font-family, so the style's class renders
+ * the font: a span that took a style without a font has no data-font-id,
+ * and keeps none when Update Style later gives the style one, and a span
+ * whose style changed its font keeps the old data-font-id. Reading
+ * data-font-id alone made the Paragraph Styles badge show "(modified)"
+ * there, and Detach dropped the style's font (review of #278). A
+ * data-font-id therefore counts only when the span has no data-style-id,
+ * or its own style attribute declares font-family.
+ *
+ * @since 2.3.3
+ * @param {Object} span            The span's attributes.
+ * @param {string} span.dataFontId Its data-font-id.
+ * @param {string} span.styleAttr  Its style attribute.
+ * @param {*}      span.styleId    Its data-style-id.
+ * @param {Array}  styles          Stored styles (typostData.paragraphStyles).
+ * @return {number} Font ID, or 0 when neither the span nor its style sets one.
+ */
+function resolveSpanExplicitFontId(span, styles) {
+	var attrs = span || {};
+	var styleId = attrs.styleId;
+	var own = parseInt(attrs.dataFontId, 10) || 0;
+	var hasStyle = styleId !== undefined && styleId !== null && styleId !== '' && String(styleId) !== '0';
+	if (!hasStyle || /(^|;)\s*font-family\s*:/i.test(String(attrs.styleAttr || ''))) {
+		return own;
+	}
+	var style = findStyleById(styles, styleId);
+	return (style && style.properties && parseInt(style.properties.fontId, 10)) || 0;
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
@@ -330,5 +363,6 @@ module.exports = {
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
 	resolvePresetFontState: resolvePresetFontState,
 	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
-	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight
+	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight,
+	resolveSpanExplicitFontId: resolveSpanExplicitFontId
 };
