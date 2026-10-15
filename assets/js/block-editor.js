@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, resolveApplyWeightChoice, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId, resolveSetFontWeight } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -700,11 +700,19 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
                         // the author can actually see, instead of falling back
                         // to whichever font happens to be first in the list.
                         fontId: self.state.selectedFontId || self.getInheritedFontId(),
+                        // Only a font set on the text — what persisting
+                        // consumers (paragraph style capture/diff, Detach)
+                        // must read, so the theme's font is never written
+                        // into a style or onto the span (#278)
+                        explicitFontId: self.getExplicitFontId(),
                         // Rendered weight, not the '400' default: a glyph
                         // inserted into a theme-bold headline was coming out
                         // lighter than the text around it, because consumers
                         // wrote this value onto the span they created.
                         fontWeight: self.getEffectiveFontWeight(),
+                        // Set weight only ('' when inherited), for the same
+                        // persisting consumers (#278)
+                        explicitFontWeight: self.getSetFontWeight(),
                         // Only the weight stored on the selected text ('' when
                         // inherited) — what a consumer may write into the
                         // span it creates (#254, see buildQftEditorState)
@@ -769,22 +777,24 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
                         self._resetPendingChanges();
                     } else {
                         if (props.fontId !== undefined) { self._recordChange('font'); }
-                        if (props.fontWeight !== undefined) {
-                            self._recordChange('fontWeight');
-                            // Three states (PR #194 review): a truthy weight from an
-                            // extension (a paragraph style detach hands back the
-                            // state's weight) counts as picked and is written; a falsy
-                            // one is an explicit clear, which strips the weight in
-                            // both apply paths; an absent key leaves it untouched.
-                            self._authorPickedWeight = !!props.fontWeight;
-                            self._clearWeight = !props.fontWeight;
-                        }
+                        if (props.fontWeight !== undefined) { self._recordChange('fontWeight'); }
                         if (props.fontStyle !== undefined) { self._recordChange('fontStyle'); }
                         if (props.textCase !== undefined || props.fakeSmallCaps !== undefined) { self._recordChange('textCase'); }
                         if (props.fontSize !== undefined || props.fontSizeMin !== undefined || props.fontSizePreferred !== undefined || props.fontSizeMax !== undefined) { self._recordChange('fontSize'); }
                         if (props.letterSpacing !== undefined) { self._recordChange('letterSpacing'); }
                         if (props.lineHeight !== undefined) { self._recordChange('lineHeight'); }
                         if (props.fontVariationSettings !== undefined) { self._recordChange('fontVariationSettings'); }
+                    }
+                    // Three states (PR #194 review): a truthy weight from an
+                    // extension counts as picked and is written; a falsy one is
+                    // an explicit clear, which strips the weight in both apply
+                    // paths; an absent key leaves it untouched. Detach hands
+                    // back the style's weight and counts too, although it takes
+                    // the reset branch above (#278).
+                    const weightChoice = resolveApplyWeightChoice(e.detail);
+                    if (weightChoice) {
+                        self._authorPickedWeight = weightChoice.authorPicked;
+                        self._clearWeight = weightChoice.clearWeight;
                     }
                     self.setState({
                         selectedFontId: props.fontId !== undefined ? (props.fontId || 0) : self.state.selectedFontId,
@@ -1265,10 +1275,11 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * the block lightened it, and a glyph inserted by the Glyphs panel
          * came out lighter than the headline around it.
          *
-         * Precedence: a weight stored on the selection (one its paragraph
-         * style does not override, see getStoredFontWeight), then one the
-         * author picked in this popover, then the weight of the paragraph
-         * style on the selection, then the weight actually rendering. The
+         * Precedence: a weight the author picked in this popover (it reaches
+         * the span only after the debounced apply), then a weight stored on
+         * the selection (one its paragraph style does not override, see
+         * getStoredFontWeight), then the weight of the paragraph style on
+         * the selection, then the weight actually rendering. The
          * style comes before the rendered weight because that is read from
          * the block element, which the style span does not change (#254).
          *
@@ -1276,18 +1287,68 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * @return {string} Weight to use
          */
         getEffectiveFontWeight() {
-            const storedWeight = this.getStoredFontWeight();
-            if (storedWeight) {
-                return storedWeight;
+            return this.getSetFontWeight() || this.getBlockInheritedWeight() || this.state.fontWeight;
+        }
+
+        /**
+         * The weight set on the selection: getEffectiveFontWeight() without
+         * the rendered fallback.
+         *
+         * Persisting consumers (Paragraph Styles capture, diff and Detach)
+         * read this as explicitFontWeight. A weight the text inherits from
+         * the block or the theme is not the text's own, and writing it into a
+         * style or onto the span would pin it there (#278).
+         *
+         * @since 2.3.3
+         * @return {string} Weight, or '' when the selection inherits its weight
+         */
+        getSetFontWeight() {
+            // A pick or a clear comes first: it reaches the span only after
+            // the debounced apply, which then resets the pending changes
+            // (PR #280 review). _clearWeight outlives the apply, so it counts
+            // only while the weight change is pending.
+            const pending = this._pendingChanges.keys.has('fontWeight');
+            return resolveSetFontWeight({
+                cleared: pending && !!this._clearWeight,
+                stored: this.getStoredFontWeight(),
+                picked: pending,
+                pickedWeight: this.state.fontWeight,
+                styleWeight: this.getParagraphStyleFontWeight()
+            });
+        }
+
+        /**
+         * The font set on the selection: a font the author picked in this
+         * popover session, else the span's font, or its paragraph style's
+         * font when the style's class renders it (resolveSpanExplicitFontId,
+         * like the weight in getSetFontWeight()). Never the font the text
+         * inherits from the block or the theme (getInheritedFontId) (#278).
+         *
+         * @since 2.3.3
+         * @return {number} Font ID, or 0 when the selection has none of its own
+         */
+        getExplicitFontId() {
+            const open = this.state && this.state.isOpen;
+            if (open && this._pendingChanges.keys.has('font')) {
+                return parseInt(this.state.selectedFontId, 10) || 0;
             }
-            if (this._pendingChanges.keys.has('fontWeight')) {
-                return this.state.fontWeight;
+            const { value } = this.props;
+            const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+            if (activeFormat && activeFormat.attributes) {
+                const attrs = activeFormat.attributes;
+                return resolveSpanExplicitFontId({
+                    dataFontId: attrs['data-font-id'],
+                    styleAttr: attrs.style,
+                    styleId: attrs['data-style-id']
+                }, window.typostData && window.typostData.paragraphStyles);
             }
-            const styleWeight = this.getParagraphStyleFontWeight();
-            if (styleWeight) {
-                return styleWeight;
+            // No inline format at the selection: the popover's font (read
+            // from the selection when it opened, or set by an apply event),
+            // or a styled span in a Typography Stylist block
+            if (open) {
+                return parseInt(this.state.selectedFontId, 10) || 0;
             }
-            return this.getBlockInheritedWeight() || this.state.fontWeight;
+            return this.getActiveFontId() || 0;
         }
 
         /**

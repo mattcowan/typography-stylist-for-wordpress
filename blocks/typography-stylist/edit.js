@@ -1028,6 +1028,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const selectionFontWeights = resolveSelectionFontWeights(inlineStylesAtSelection, strongBoldAtSelection);
 	qftStateRef.current.selectionRenderedFontWeight = selectionFontWeights.rendered;
 	qftStateRef.current.selectionStoredFontWeight = selectionFontWeights.stored;
+	// The style span's own weight, without the <strong> inside it, for the
+	// state's explicitFontWeight (#278)
+	qftStateRef.current.selectionStyleFontWeight = inlineStylesAtSelection?.styleFontWeight || null;
 
 	// Helper to create a Range for the given linear text offsets within a container
 	// Uses buildTextOffsetMap to account for <br> line breaks in offset calculations
