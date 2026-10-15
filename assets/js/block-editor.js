@@ -1303,11 +1303,15 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * @return {string} Weight, or '' when the selection inherits its weight
          */
         getSetFontWeight() {
-            // A pick comes first: it reaches the span only after the
-            // debounced apply (PR #280 review)
+            // A pick or a clear comes first: it reaches the span only after
+            // the debounced apply, which then resets the pending changes
+            // (PR #280 review). _clearWeight outlives the apply, so it counts
+            // only while the weight change is pending.
+            const pending = this._pendingChanges.keys.has('fontWeight');
             return resolveSetFontWeight({
+                cleared: pending && !!this._clearWeight,
                 stored: this.getStoredFontWeight(),
-                picked: this._pendingChanges.keys.has('fontWeight'),
+                picked: pending,
                 pickedWeight: this.state.fontWeight,
                 styleWeight: this.getParagraphStyleFontWeight()
             });

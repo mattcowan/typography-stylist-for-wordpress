@@ -332,8 +332,15 @@ function resolveSpanStoredFontWeight(span, styles) {
  * resolveWeightToWrite(), where a pick also wins over the stored weight.
  * Then the weight stored on the span, then its paragraph style's weight.
  *
+ * A pending clear (an apply event with an empty fontWeight) removes the
+ * span's weight, so neither the pick nor the stored weight counts: the
+ * handler sets the popover weight to '400' for a clear, and the span still
+ * stores the old weight until the apply runs (PR #280 review). The style's
+ * weight still counts, because its class keeps rendering it.
+ *
  * @since 2.3.3
  * @param {Object}  facts              Inputs.
+ * @param {boolean} facts.cleared      Whether a weight clear is pending (not yet applied).
  * @param {string}  facts.stored       The span's stored weight (resolveSpanStoredFontWeight), or ''.
  * @param {boolean} facts.picked       Whether a weight change is pending this session.
  * @param {string}  facts.pickedWeight The popover's weight value.
@@ -342,6 +349,9 @@ function resolveSpanStoredFontWeight(span, styles) {
  */
 function resolveSetFontWeight(facts) {
 	var f = facts || {};
+	if (f.cleared) {
+		return f.styleWeight ? String(f.styleWeight) : '';
+	}
 	if (f.picked && f.pickedWeight) {
 		return String(f.pickedWeight);
 	}

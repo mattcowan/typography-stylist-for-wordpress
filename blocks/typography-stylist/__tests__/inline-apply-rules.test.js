@@ -33,6 +33,17 @@ describe('resolveSetFontWeight (PR #280 review)', () => {
 		expect(resolveSetFontWeight(null)).toBe('');
 	});
 
+	it('a pending clear reports no weight, also on text that stores one', () => {
+		// The apply handler sets the popover weight to '400' for a clear;
+		// that value is not a weight set on the text
+		expect(resolveSetFontWeight({ cleared: true, stored: '700', picked: true, pickedWeight: '400' })).toBe('');
+		expect(resolveSetFontWeight({ cleared: true, picked: true, pickedWeight: '400' })).toBe('');
+	});
+
+	it('after a clear, the paragraph style weight still renders through the class', () => {
+		expect(resolveSetFontWeight({ cleared: true, stored: '700', picked: true, pickedWeight: '400', styleWeight: '600' })).toBe('600');
+	});
+
 	it('a pick with no weight value falls back like no pick', () => {
 		expect(resolveSetFontWeight({ stored: '700', picked: true, pickedWeight: '' })).toBe('700');
 	});
