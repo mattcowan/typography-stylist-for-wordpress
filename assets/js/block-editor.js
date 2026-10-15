@@ -12,7 +12,7 @@ const { FontPicker } = require('./font-picker.js');
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { isValidFontSizeRange, resolveWeightToWrite, resolveApplyWeightChoice, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId } = require('./inline-apply-rules.js');
+const { isValidFontSizeRange, resolveWeightToWrite, resolveApplyWeightChoice, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId, resolveSetFontWeight } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -1275,10 +1275,11 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * the block lightened it, and a glyph inserted by the Glyphs panel
          * came out lighter than the headline around it.
          *
-         * Precedence: a weight stored on the selection (one its paragraph
-         * style does not override, see getStoredFontWeight), then one the
-         * author picked in this popover, then the weight of the paragraph
-         * style on the selection, then the weight actually rendering. The
+         * Precedence: a weight the author picked in this popover (it reaches
+         * the span only after the debounced apply), then a weight stored on
+         * the selection (one its paragraph style does not override, see
+         * getStoredFontWeight), then the weight of the paragraph style on
+         * the selection, then the weight actually rendering. The
          * style comes before the rendered weight because that is read from
          * the block element, which the style span does not change (#254).
          *
@@ -1302,14 +1303,14 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * @return {string} Weight, or '' when the selection inherits its weight
          */
         getSetFontWeight() {
-            const storedWeight = this.getStoredFontWeight();
-            if (storedWeight) {
-                return storedWeight;
-            }
-            if (this._pendingChanges.keys.has('fontWeight')) {
-                return this.state.fontWeight || '';
-            }
-            return this.getParagraphStyleFontWeight();
+            // A pick comes first: it reaches the span only after the
+            // debounced apply (PR #280 review)
+            return resolveSetFontWeight({
+                stored: this.getStoredFontWeight(),
+                picked: this._pendingChanges.keys.has('fontWeight'),
+                pickedWeight: this.state.fontWeight,
+                styleWeight: this.getParagraphStyleFontWeight()
+            });
         }
 
         /**

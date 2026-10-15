@@ -324,6 +324,31 @@ function resolveSpanStoredFontWeight(span, styles) {
 }
 
 /**
+ * The weight set on the selection, for persisting consumers (#278).
+ *
+ * A weight the author picked in this popover session comes first: the pick
+ * reaches the span only after the debounced apply, so until then the span
+ * still stores the old weight (PR #280 review). This matches
+ * resolveWeightToWrite(), where a pick also wins over the stored weight.
+ * Then the weight stored on the span, then its paragraph style's weight.
+ *
+ * @since 2.3.3
+ * @param {Object}  facts              Inputs.
+ * @param {string}  facts.stored       The span's stored weight (resolveSpanStoredFontWeight), or ''.
+ * @param {boolean} facts.picked       Whether a weight change is pending this session.
+ * @param {string}  facts.pickedWeight The popover's weight value.
+ * @param {string}  facts.styleWeight  The paragraph style's weight, or ''.
+ * @return {string} Weight, or '' when the selection inherits its weight.
+ */
+function resolveSetFontWeight(facts) {
+	var f = facts || {};
+	if (f.picked && f.pickedWeight) {
+		return String(f.pickedWeight);
+	}
+	return f.stored ? String(f.stored) : (f.styleWeight ? String(f.styleWeight) : '');
+}
+
+/**
  * The font set on one span: its own, or its paragraph style's (#278).
  *
  * The font twin of resolveSpanStoredFontWeight(). Under a paragraph style
@@ -364,5 +389,6 @@ module.exports = {
 	resolvePresetFontState: resolvePresetFontState,
 	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
 	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight,
-	resolveSpanExplicitFontId: resolveSpanExplicitFontId
+	resolveSpanExplicitFontId: resolveSpanExplicitFontId,
+	resolveSetFontWeight: resolveSetFontWeight
 };

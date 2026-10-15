@@ -12,7 +12,31 @@ const {
 	resolvePresetFontState,
 	resolveApplyWeightChoice,
 	resolveSpanExplicitFontId,
+	resolveSetFontWeight,
 } = require('../../../assets/js/inline-apply-rules.js');
+
+describe('resolveSetFontWeight (PR #280 review)', () => {
+	it('a pick in this popover session wins over the stored weight', () => {
+		// The pick reaches the span only after the debounced apply; until
+		// then the span still stores the old weight
+		expect(resolveSetFontWeight({ stored: '700', picked: true, pickedWeight: '400' })).toBe('400');
+	});
+
+	it('a pick wins over the paragraph style weight', () => {
+		expect(resolveSetFontWeight({ picked: true, pickedWeight: '300', styleWeight: '600' })).toBe('300');
+	});
+
+	it('without a pick: the stored weight, then the style weight, then none', () => {
+		expect(resolveSetFontWeight({ stored: '700', styleWeight: '600' })).toBe('700');
+		expect(resolveSetFontWeight({ styleWeight: '600' })).toBe('600');
+		expect(resolveSetFontWeight({})).toBe('');
+		expect(resolveSetFontWeight(null)).toBe('');
+	});
+
+	it('a pick with no weight value falls back like no pick', () => {
+		expect(resolveSetFontWeight({ stored: '700', picked: true, pickedWeight: '' })).toBe('700');
+	});
+});
 
 describe('resolveSpanExplicitFontId (review of #278)', () => {
 	const styles = [
