@@ -10,7 +10,42 @@ const {
 	resolveWeightToWrite,
 	buildConvertBlockAttributes,
 	resolvePresetFontState,
+	resolveApplyWeightChoice,
 } = require('../../../assets/js/inline-apply-rules.js');
+
+describe('resolveApplyWeightChoice (apply event weight, #278)', () => {
+	it('a weight from an extension counts as picked; a falsy one clears', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '600' } })).toEqual({ authorPicked: true, clearWeight: false });
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '' } })).toEqual({ authorPicked: false, clearWeight: true });
+	});
+
+	it('leaves the weight untouched when the key is absent', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontId: 3 } })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: {}, paragraphStyleId: 0 })).toBeNull();
+		expect(resolveApplyWeightChoice(null)).toBeNull();
+	});
+
+	it('Detach (paragraphStyleId 0) keeps the weight it hands back, also with features', () => {
+		// The Detach payload carries the style's weight and features. The
+		// handler resets its pending changes for it, which used to skip the
+		// weight, so the span lost the style's weight.
+		const detach = { properties: { fontId: 36, fontWeight: '600', features: ['ss01'] }, paragraphStyleId: 0, styleClass: '' };
+		expect(resolveApplyWeightChoice(detach)).toEqual({ authorPicked: true, clearWeight: false });
+		expect(resolveApplyWeightChoice(Object.assign({}, detach, { paragraphStyleId: '0' }))).toEqual({ authorPicked: true, clearWeight: false });
+	});
+
+	it('applying a style does not mark its weight as picked', () => {
+		// Under a style the class renders the weight; normalizeApplyProperties
+		// sends '400' for a style without one
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '400' }, paragraphStyleId: 4 })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700' }, paragraphStyleId: '4' })).toBeNull();
+	});
+
+	it('a features or animation payload replaces the format and keeps the old rule', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700', features: ['liga'] } })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700' }, animationId: 2 })).toBeNull();
+	});
+});
 
 describe('isValidFontSizeRange (inline modal, E-1)', () => {
 	it('accepts sizes in non-decreasing order', () => {

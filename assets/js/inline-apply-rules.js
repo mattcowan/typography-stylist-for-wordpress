@@ -83,6 +83,35 @@ function resolveWeightToWrite(facts) {
 }
 
 /**
+ * How a typost-apply-block-properties event changes the weight flags of the
+ * inline editor, or null to leave them as they are.
+ *
+ * A truthy fontWeight counts as picked, so it is written; a falsy one is an
+ * explicit clear (PR #194 review); an absent key changes nothing. A payload
+ * that replaces the format wholesale (a paragraph style, an animation, a
+ * features list) leaves the flags alone: under a style its class renders
+ * the weight. Detach (paragraphStyleId 0) is the exception, although it
+ * replaces the format too: it hands back the weight the text showed under
+ * the style, and without the pick the span lost that weight (#278).
+ *
+ * @since 2.3.3
+ * @param {object} detail The event detail.
+ * @return {{authorPicked: boolean, clearWeight: boolean}|null} New flags, or null.
+ */
+function resolveApplyWeightChoice(detail) {
+	var props = detail && detail.properties ? detail.properties : {};
+	if (props.fontWeight === undefined) {
+		return null;
+	}
+	var isDetach = detail.paragraphStyleId !== undefined && !(parseInt(detail.paragraphStyleId, 10) > 0);
+	var wholesale = detail.paragraphStyleId !== undefined || detail.animationId !== undefined || props.features !== undefined;
+	if (wholesale && !isDetach) {
+		return null;
+	}
+	return { authorPicked: !!props.fontWeight, clearWeight: !props.fontWeight };
+}
+
+/**
  * Attributes for the block a conversion creates or updates.
  *
  * With a partial selection the span carries every typography property the
@@ -297,6 +326,7 @@ function resolveSpanStoredFontWeight(span, styles) {
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
+	resolveApplyWeightChoice: resolveApplyWeightChoice,
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
 	resolvePresetFontState: resolvePresetFontState,
 	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
