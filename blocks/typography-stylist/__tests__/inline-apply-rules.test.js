@@ -10,7 +10,117 @@ const {
 	resolveWeightToWrite,
 	buildConvertBlockAttributes,
 	resolvePresetFontState,
+	resolveApplyWeightChoice,
+	resolveSpanExplicitFontId,
+	resolveSetFontWeight,
 } = require('../../../assets/js/inline-apply-rules.js');
+
+describe('resolveSetFontWeight (PR #280 review)', () => {
+	it('a pick in this popover session wins over the stored weight', () => {
+		// The pick reaches the span only after the debounced apply; until
+		// then the span still stores the old weight
+		expect(resolveSetFontWeight({ stored: '700', picked: true, pickedWeight: '400' })).toBe('400');
+	});
+
+	it('a pick wins over the paragraph style weight', () => {
+		expect(resolveSetFontWeight({ picked: true, pickedWeight: '300', styleWeight: '600' })).toBe('300');
+	});
+
+	it('without a pick: the stored weight, then the style weight, then none', () => {
+		expect(resolveSetFontWeight({ stored: '700', styleWeight: '600' })).toBe('700');
+		expect(resolveSetFontWeight({ styleWeight: '600' })).toBe('600');
+		expect(resolveSetFontWeight({})).toBe('');
+		expect(resolveSetFontWeight(null)).toBe('');
+	});
+
+	it('a pending clear reports no weight, also on text that stores one', () => {
+		// The apply handler sets the popover weight to '400' for a clear;
+		// that value is not a weight set on the text
+		expect(resolveSetFontWeight({ cleared: true, stored: '700', picked: true, pickedWeight: '400' })).toBe('');
+		expect(resolveSetFontWeight({ cleared: true, picked: true, pickedWeight: '400' })).toBe('');
+	});
+
+	it('after a clear, the paragraph style weight still renders through the class', () => {
+		expect(resolveSetFontWeight({ cleared: true, stored: '700', picked: true, pickedWeight: '400', styleWeight: '600' })).toBe('600');
+	});
+
+	it('a pick with no weight value falls back like no pick', () => {
+		expect(resolveSetFontWeight({ stored: '700', picked: true, pickedWeight: '' })).toBe('700');
+	});
+});
+
+describe('resolveSpanExplicitFontId (review of #278)', () => {
+	const styles = [
+		{ id: '4', properties: { fontId: 36, fontWeight: '600' } },
+		{ id: '9', properties: { textCase: 'uppercase' } },
+	];
+
+	it('a span with no paragraph style reports its data-font-id', () => {
+		expect(resolveSpanExplicitFontId({ dataFontId: '12' }, styles)).toBe(12);
+		expect(resolveSpanExplicitFontId({}, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId(null, styles)).toBe(0);
+	});
+
+	it('a style span with no data-font-id reports the style font (style updated after apply)', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '4' }, styles)).toBe(36);
+		expect(resolveSpanExplicitFontId({ styleId: 4 }, styles)).toBe(36);
+	});
+
+	it('the style font wins over a stale data-font-id that renders nothing', () => {
+		// The apply path writes no inline font-family under a style
+		expect(resolveSpanExplicitFontId({ styleId: '4', dataFontId: '12' }, styles)).toBe(36);
+		expect(resolveSpanExplicitFontId({ styleId: '9', dataFontId: '12' }, styles)).toBe(0);
+	});
+
+	it('a style without a font, or a deleted style, reports 0', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '9' }, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId({ styleId: '77' }, styles)).toBe(0);
+		expect(resolveSpanExplicitFontId({ styleId: '4' }, undefined)).toBe(0);
+	});
+
+	it('an inline font-family declaration beats the class', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '4', dataFontId: '12', styleAttr: 'font-family: var(--font-12)' }, styles)).toBe(12);
+	});
+
+	it('styleId 0 or empty means no style', () => {
+		expect(resolveSpanExplicitFontId({ styleId: '0', dataFontId: '12' }, styles)).toBe(12);
+		expect(resolveSpanExplicitFontId({ styleId: '', dataFontId: '12' }, styles)).toBe(12);
+	});
+});
+
+describe('resolveApplyWeightChoice (apply event weight, #278)', () => {
+	it('a weight from an extension counts as picked; a falsy one clears', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '600' } })).toEqual({ authorPicked: true, clearWeight: false });
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '' } })).toEqual({ authorPicked: false, clearWeight: true });
+	});
+
+	it('leaves the weight untouched when the key is absent', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontId: 3 } })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: {}, paragraphStyleId: 0 })).toBeNull();
+		expect(resolveApplyWeightChoice(null)).toBeNull();
+	});
+
+	it('Detach (paragraphStyleId 0) keeps the weight it hands back, also with features', () => {
+		// The Detach payload carries the style's weight and features. The
+		// handler resets its pending changes for it, which used to skip the
+		// weight, so the span lost the style's weight.
+		const detach = { properties: { fontId: 36, fontWeight: '600', features: ['ss01'] }, paragraphStyleId: 0, styleClass: '' };
+		expect(resolveApplyWeightChoice(detach)).toEqual({ authorPicked: true, clearWeight: false });
+		expect(resolveApplyWeightChoice(Object.assign({}, detach, { paragraphStyleId: '0' }))).toEqual({ authorPicked: true, clearWeight: false });
+	});
+
+	it('applying a style does not mark its weight as picked', () => {
+		// Under a style the class renders the weight; normalizeApplyProperties
+		// sends '400' for a style without one
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '400' }, paragraphStyleId: 4 })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700' }, paragraphStyleId: '4' })).toBeNull();
+	});
+
+	it('a features or animation payload replaces the format and keeps the old rule', () => {
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700', features: ['liga'] } })).toBeNull();
+		expect(resolveApplyWeightChoice({ properties: { fontWeight: '700' }, animationId: 2 })).toBeNull();
+	});
+});
 
 describe('isValidFontSizeRange (inline modal, E-1)', () => {
 	it('accepts sizes in non-decreasing order', () => {

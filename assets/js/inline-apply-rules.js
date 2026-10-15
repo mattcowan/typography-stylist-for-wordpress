@@ -83,6 +83,35 @@ function resolveWeightToWrite(facts) {
 }
 
 /**
+ * How a typost-apply-block-properties event changes the weight flags of the
+ * inline editor, or null to leave them as they are.
+ *
+ * A truthy fontWeight counts as picked, so it is written; a falsy one is an
+ * explicit clear (PR #194 review); an absent key changes nothing. A payload
+ * that replaces the format wholesale (a paragraph style, an animation, a
+ * features list) leaves the flags alone: under a style its class renders
+ * the weight. Detach (paragraphStyleId 0) is the exception, although it
+ * replaces the format too: it hands back the weight the text showed under
+ * the style, and without the pick the span lost that weight (#278).
+ *
+ * @since 2.3.3
+ * @param {object} detail The event detail.
+ * @return {{authorPicked: boolean, clearWeight: boolean}|null} New flags, or null.
+ */
+function resolveApplyWeightChoice(detail) {
+	var props = detail && detail.properties ? detail.properties : {};
+	if (props.fontWeight === undefined) {
+		return null;
+	}
+	var isDetach = detail.paragraphStyleId !== undefined && !(parseInt(detail.paragraphStyleId, 10) > 0);
+	var wholesale = detail.paragraphStyleId !== undefined || detail.animationId !== undefined || props.features !== undefined;
+	if (wholesale && !isDetach) {
+		return null;
+	}
+	return { authorPicked: !!props.fontWeight, clearWeight: !props.fontWeight };
+}
+
+/**
  * Attributes for the block a conversion creates or updates.
  *
  * With a partial selection the span carries every typography property the
@@ -294,11 +323,82 @@ function resolveSpanStoredFontWeight(span, styles) {
 	return { stored: stored, styleWeight: stored ? '' : resolveParagraphStyleFontWeight(styles, styleId) };
 }
 
+/**
+ * The weight set on the selection, for persisting consumers (#278).
+ *
+ * A weight the author picked in this popover session comes first: the pick
+ * reaches the span only after the debounced apply, so until then the span
+ * still stores the old weight (PR #280 review). This matches
+ * resolveWeightToWrite(), where a pick also wins over the stored weight.
+ * Then the weight stored on the span, then its paragraph style's weight.
+ *
+ * A pending clear (an apply event with an empty fontWeight) removes the
+ * span's weight, so neither the pick nor the stored weight counts: the
+ * handler sets the popover weight to '400' for a clear, and the span still
+ * stores the old weight until the apply runs (PR #280 review). The style's
+ * weight still counts, because its class keeps rendering it.
+ *
+ * @since 2.3.3
+ * @param {Object}  facts              Inputs.
+ * @param {boolean} facts.cleared      Whether a weight clear is pending (not yet applied).
+ * @param {string}  facts.stored       The span's stored weight (resolveSpanStoredFontWeight), or ''.
+ * @param {boolean} facts.picked       Whether a weight change is pending this session.
+ * @param {string}  facts.pickedWeight The popover's weight value.
+ * @param {string}  facts.styleWeight  The paragraph style's weight, or ''.
+ * @return {string} Weight, or '' when the selection inherits its weight.
+ */
+function resolveSetFontWeight(facts) {
+	var f = facts || {};
+	if (f.cleared) {
+		return f.styleWeight ? String(f.styleWeight) : '';
+	}
+	if (f.picked && f.pickedWeight) {
+		return String(f.pickedWeight);
+	}
+	return f.stored ? String(f.stored) : (f.styleWeight ? String(f.styleWeight) : '');
+}
+
+/**
+ * The font set on one span: its own, or its paragraph style's (#278).
+ *
+ * The font twin of resolveSpanStoredFontWeight(). Under a paragraph style
+ * the apply path writes no inline font-family, so the style's class renders
+ * the font: a span that took a style without a font has no data-font-id,
+ * and keeps none when Update Style later gives the style one, and a span
+ * whose style changed its font keeps the old data-font-id. Reading
+ * data-font-id alone made the Paragraph Styles badge show "(modified)"
+ * there, and Detach dropped the style's font (review of #278). A
+ * data-font-id therefore counts only when the span has no data-style-id,
+ * or its own style attribute declares font-family.
+ *
+ * @since 2.3.3
+ * @param {Object} span            The span's attributes.
+ * @param {string} span.dataFontId Its data-font-id.
+ * @param {string} span.styleAttr  Its style attribute.
+ * @param {*}      span.styleId    Its data-style-id.
+ * @param {Array}  styles          Stored styles (typostData.paragraphStyles).
+ * @return {number} Font ID, or 0 when neither the span nor its style sets one.
+ */
+function resolveSpanExplicitFontId(span, styles) {
+	var attrs = span || {};
+	var styleId = attrs.styleId;
+	var own = parseInt(attrs.dataFontId, 10) || 0;
+	var hasStyle = styleId !== undefined && styleId !== null && styleId !== '' && String(styleId) !== '0';
+	if (!hasStyle || /(^|;)\s*font-family\s*:/i.test(String(attrs.styleAttr || ''))) {
+		return own;
+	}
+	var style = findStyleById(styles, styleId);
+	return (style && style.properties && parseInt(style.properties.fontId, 10)) || 0;
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
+	resolveApplyWeightChoice: resolveApplyWeightChoice,
 	buildConvertBlockAttributes: buildConvertBlockAttributes,
 	resolvePresetFontState: resolvePresetFontState,
 	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
-	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight
+	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight,
+	resolveSpanExplicitFontId: resolveSpanExplicitFontId,
+	resolveSetFontWeight: resolveSetFontWeight
 };

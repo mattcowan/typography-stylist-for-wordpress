@@ -31,6 +31,38 @@
 	}
 
 	/**
+	 * The font a paragraph style may persist for this editor state (#278).
+	 *
+	 * state.fontId is the RENDERED font: for text with no font of its own,
+	 * both core editors report the font the theme gives it, so the Glyphs
+	 * panel browses the font the author sees. A style must never capture
+	 * that: Detach would write the theme's font onto the span, where it stays
+	 * when the theme changes, and the "(modified)" badge would show on every
+	 * style without a font. Both core editors report explicitFontId (a span
+	 * data-font-id, the popover's pick, or the block attribute); fall back to
+	 * fontId solely for providers that predate the key.
+	 */
+	function persistableFontId(state) {
+		if (state.explicitFontId !== undefined) {
+			return state.explicitFontId || 0;
+		}
+		return state.fontId || state.selectedFontId || 0;
+	}
+
+	/**
+	 * The font weight a paragraph style may persist for this editor state
+	 * (#278). Same reason as persistableFontId(): state.fontWeight is the
+	 * RENDERED weight (a theme-bold heading, <strong>), explicitFontWeight is
+	 * the weight set on the text, '' when it inherits its weight.
+	 */
+	function persistableFontWeight(state) {
+		if (state.explicitFontWeight !== undefined) {
+			return state.explicitFontWeight ? String(state.explicitFontWeight) : '';
+		}
+		return state.fontWeight || state.selectedFontWeight || '';
+	}
+
+	/**
 	 * Translate a string, falling back to the original.
 	 *
 	 * Looked up lazily rather than captured at load: this file is also
@@ -199,13 +231,13 @@
 	function isStyleModified(state, styleProps) {
 		if (!state || !styleProps) return false;
 
-		// Compare fontId
-		var stateFontId = state.fontId || state.selectedFontId || 0;
+		// Compare fontId. Set on the text only, never the theme's (#278)
+		var stateFontId = persistableFontId(state);
 		var styleFontId = styleProps.fontId || 0;
 		if (String(stateFontId) !== String(styleFontId)) return true;
 
-		// Compare fontWeight
-		var stateWeight = state.fontWeight || state.selectedFontWeight || '400';
+		// Compare fontWeight. Set on the text only (#278); unset counts as 400
+		var stateWeight = persistableFontWeight(state) || '400';
 		var styleWeight = styleProps.fontWeight || '400';
 		if (stateWeight !== styleWeight) return true;
 
@@ -285,11 +317,15 @@
 	function buildPropertiesFromState(state, newUnit) {
 		var properties = {};
 		if (!state) return properties;
-		if (state.fontId || state.selectedFontId) {
-			properties.fontId = state.fontId || state.selectedFontId;
+		// Set on the text only: an inherited font or weight is not stored,
+		// so Detach and Save do not write the theme's (#278)
+		var fontId = persistableFontId(state);
+		if (fontId) {
+			properties.fontId = fontId;
 		}
-		if (state.fontWeight || state.selectedFontWeight) {
-			properties.fontWeight = state.fontWeight || state.selectedFontWeight;
+		var fontWeight = persistableFontWeight(state);
+		if (fontWeight) {
+			properties.fontWeight = fontWeight;
 		}
 		// '' means inherit (not stored); 'normal' is a real forced-upright
 		// choice. Explicit only — never <em>-derived italic (see persistableFontStyle)

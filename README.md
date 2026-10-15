@@ -13,6 +13,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 ## Requirements
 
 - WordPress 5.8 or later. The WordPress Font Library features need WordPress 6.5 or later.
+- Users without the “unfiltered_html” capability (Authors and Contributors) need WordPress 7.0.1 or later to save OpenType features and variable font axes. On earlier versions, WordPress removes them from the post when such a user saves it.
 - PHP 7.4 or later.
 - Fonts that contain OpenType features, for the OpenType controls. Size, spacing, and weight work with any font.
 

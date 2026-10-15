@@ -2283,13 +2283,19 @@ export function buildQftEditorState(s) {
 	// panel reflect the actually-selected font. With neither set, fall back to
 	// the font the block inherits from the theme — text with no plugin font is
 	// still rendering in something, and reporting 0 leaves consumers to guess.
-	const activeFontId = source.inlineFontId
+	const explicitFontId = source.inlineFontId
 		? parseInt(source.inlineFontId, 10)
-		: (source.fontId || source.inheritedFontId || 0);
+		: (source.fontId || 0);
+	const activeFontId = explicitFontId || source.inheritedFontId || 0;
 
 	return {
 		editorType: 'qft',
 		fontId: activeFontId,
+		// Only a font set on the text: the span's or the block's, never the
+		// theme's (#278). Persisting consumers (paragraph style capture/diff,
+		// Detach) read this one, so they do not write the theme's font into
+		// content or styles.
+		explicitFontId,
 		// Effective style at the selection wins over the block attribute
 		fontStyle: source.inlineFontStyle || source.fontStyle || '',
 		// Explicit only — a data-fontstyle span or the block attribute, never
@@ -2306,6 +2312,11 @@ export function buildQftEditorState(s) {
 		// run came out lighter than the text around it. A paragraph style on
 		// the selected text counts too (#254).
 		fontWeight: source.selectionRenderedFontWeight || source.fontWeight,
+		// The weight set on the text: the paragraph style span's, a stored
+		// span weight, else the block attribute. Never <strong> bold, which
+		// renders on its own like <em> italic (#278). Persisting consumers
+		// read this one.
+		explicitFontWeight: String(source.selectionStyleFontWeight || source.selectionStoredFontWeight || source.fontWeight || ''),
 		// The weight stored on the selected text itself (a data-fontweight
 		// span not overridden by a closer paragraph style), '' when the text
 		// inherits its weight from a style, <strong>, the block or the theme.
