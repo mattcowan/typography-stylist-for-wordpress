@@ -1703,11 +1703,44 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
                 }
             }
 
-            this.setState({
+            // With the modal closed, state still holds what the last modal
+            // session left (or the defaults). Load the selection's own
+            // properties, as opening the modal does, so the click context
+            // state and an apply or Detach from the launched panel describe
+            // the selected text: a paragraph style applied from the toolbar
+            // otherwise dropped the selection's data-animation-id, and the
+            // style browser showed no active style for it (#219 review).
+            const fresh = !this.state.isOpen;
+            if (fresh) {
+                this._resetPendingChanges();
+                this._authorPickedWeight = false;
+                this._clearWeight = false;
+            }
+
+            // The click context is built after the commit, so the filter
+            // reads the state set here
+            this.setState(Object.assign({
                 savedSelectionStart: savedSelectionStart,
                 savedSelectionEnd: savedSelectionEnd
-            });
+            }, fresh ? this.readSelectionProperties() : {}), () => this.launchExtensionButton(button, savedSelectionStart, savedSelectionEnd, selectedText));
+        }
 
+        /**
+         * Call an extension toolbar button's onClick with the click context.
+         * Split from handleExtensionToolbarClick() so it runs after the
+         * selection's state is committed.
+         *
+         * @param {Object} button              Descriptor from typost_editor_toolbar_buttons
+         * @param {?number} savedSelectionStart Selection start at the click
+         * @param {?number} savedSelectionEnd   Selection end at the click
+         * @param {string} selectedText        Selected text ('' for a caret)
+         */
+        launchExtensionButton(button, savedSelectionStart, savedSelectionEnd, selectedText) {
+            // The format instance can unmount before the commit (the
+            // selected block changed); its selection is stale then
+            if (!this._isMounted) {
+                return;
+            }
             button.onClick({
                 source: 'inline',
                 savedSelectionStart: savedSelectionStart,
@@ -1721,6 +1754,38 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
                 // No host modal was open, so nothing should reopen on close
                 reopenHost: false
             });
+        }
+
+        /**
+         * The selected text's own properties, as the modal loads them on
+         * open. Shared with handleExtensionToolbarClick(), which launches a
+         * panel without opening the modal. Call after _resetPendingChanges():
+         * the weight reads a pending pick first.
+         *
+         * @return {Object} State fields for the selection
+         */
+        readSelectionProperties() {
+            const activeCase = this.getActiveCase();
+            return {
+                selectedFeatures: this.getActiveFeatures() || [],
+                selectedFont: this.resolveActiveFont(),
+                selectedFontId: this.getActiveFontId() || 0,
+                fontSize: this.getActiveFontSize() || 'inherit',
+                fontSizeMin: this.getActiveFontSizeMin() || 16,
+                fontSizePreferred: this.getActiveFontSizePreferred() || 24,
+                fontSizeMax: this.getActiveFontSizeMax() || 32,
+                // The rendered weight, so the select shows what the author sees
+                // (700 on a theme-bold heading); it is written only when picked
+                fontWeight: this.getEffectiveFontWeight() || '400',
+                fontStyle: this.getActiveFontStyle() || '',
+                textCase: activeCase.textCase,
+                fakeSmallCaps: activeCase.fakeSmallCaps,
+                letterSpacing: this.getActiveLetterSpacing() || 0,
+                lineHeight: this.getActiveLineHeight() || 0,
+                fontVariationSettings: this.getActiveFontVariationSettings() || '',
+                paragraphStyleId: this.getActiveStyleId() || 0,
+                animationId: this.getActiveAnimationId() || 0
+            };
         }
 
         togglePopover() {
@@ -1777,7 +1842,6 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
             }
 
             const wasOpen = this.state.isOpen;
-            const activeCase = this.getActiveCase();
 
             // Fresh popover session: no property changes recorded yet
             this._resetPendingChanges();
@@ -1786,22 +1850,7 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
 
             this.setState(state => ({
                 isOpen: !state.isOpen,
-                selectedFeatures: this.getActiveFeatures() || [],
-                selectedFont: this.resolveActiveFont(),
-                selectedFontId: this.getActiveFontId() || 0,
-                fontSize: this.getActiveFontSize() || 'inherit',
-                fontSizeMin: this.getActiveFontSizeMin() || 16,
-                fontSizePreferred: this.getActiveFontSizePreferred() || 24,
-                fontSizeMax: this.getActiveFontSizeMax() || 32,
-                // The rendered weight, so the select shows what the author sees
-                // (700 on a theme-bold heading); it is written only when picked
-                fontWeight: this.getEffectiveFontWeight() || '400',
-                fontStyle: this.getActiveFontStyle() || '',
-                textCase: activeCase.textCase,
-                fakeSmallCaps: activeCase.fakeSmallCaps,
-                letterSpacing: this.getActiveLetterSpacing() || 0,
-                lineHeight: this.getActiveLineHeight() || 0,
-                fontVariationSettings: this.getActiveFontVariationSettings() || '',
+                ...this.readSelectionProperties(),
                 selectedText: !state.isOpen ? extractedText : '',
                 inlineFeatures: computedInlineFeatures,
                 blockInheritedFont: inheritedFont,
