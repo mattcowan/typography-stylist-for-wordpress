@@ -182,12 +182,12 @@ msgstr ""
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""
 
-#: paragraph-styles.php:912
-msgid "Add a Paragraph Styles button to the Typography Stylist block toolbar"
+#: paragraph-styles.php:968
+msgid "Add a Paragraph Styles button to the block toolbar"
 msgstr ""
 
-#: paragraph-styles.php:915
-msgid "Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged."
+#: paragraph-styles.php:971
+msgid "Opens a browser that shows every saved paragraph style in its own typeface, so you can see a style before you apply it. The button shows in Typography Stylist blocks and in other blocks with text. The “Browse styles…” buttons in the sidebar and the editor panels do not change."
 msgstr ""
 
 #: paragraph-styles.php:998
