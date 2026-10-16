@@ -295,7 +295,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, and variable font axes.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, and the First Letter Hang.
 
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
@@ -303,6 +303,22 @@ A paragraph style is a named set of typography settings. It holds the font, weig
 4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
+
+#### Whole Paragraph and Heading Blocks
+
+In a core Paragraph or Heading block, a style can apply to the whole block:
+
+1. Select the block.
+2. In the block sidebar, open “Paragraph Style” and click “Browse styles…”.
+3. Pick the style.
+
+When the “Paragraph Styles Toolbar Button” option is on (Options tab), you can also use the toolbar button. Put the caret in the block, do not select text, click the button, and pick the style. With text selected, the button styles only the selected text. In other blocks, for example a List item, select the text first.
+
+The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove these classes by hand. To remove the style, click “Detach Style” in the “Paragraph Style” panel. The block keeps its own settings and its other classes.
+
+The block’s own sidebar settings, for example font size, letter spacing, and line height, override the style. The theme’s block styles, for example “Outline”, keep working. “Update Style” on text elsewhere also changes these blocks. If the style was deleted, the panel shows “Missing style”. Click “Detach Style” to remove the class.
+
+A First Letter Hang in the style also applies to these blocks. It has no effect when the block is centered, aligned to the end, has a drop cap, or has a text indent.
 
 ---
 
