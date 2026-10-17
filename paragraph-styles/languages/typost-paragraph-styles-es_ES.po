@@ -152,8 +152,8 @@ msgid "Add a Paragraph Styles button to the block toolbar"
 msgstr "Añadir un botón de estilos de párrafo a la barra de herramientas del bloque"
 
 #: paragraph-styles.php:971
-msgid "Opens a browser that shows every saved paragraph style in its own typeface, so you can see a style before you apply it. The button shows in Typography Stylist blocks and in other blocks with text. The “Browse styles…” buttons in the sidebar and the editor panels do not change."
-msgstr "Abre un explorador que muestra cada estilo de párrafo guardado con su propia tipografía, para que puedas ver un estilo antes de aplicarlo. El botón aparece en los bloques Typography Stylist y en los demás bloques con texto. Los botones «Explorar estilos…» de la barra lateral y de los paneles del editor no cambian."
+msgid "Opens a browser that shows every saved paragraph style in its own typeface, so you can see a style before you apply it. The button shows in Typography Stylist blocks, and next to the “Typography Stylist Features” button in other blocks. The Paragraph Style controls in the sidebar and the editor panels do not change."
+msgstr "Abre un explorador que muestra cada estilo de párrafo guardado con su propia tipografía, para que puedas ver un estilo antes de aplicarlo. El botón aparece en los bloques Typography Stylist, y junto al botón «Funciones de Typography Stylist» en los demás bloques. Los controles de Estilo de párrafo de la barra lateral y de los paneles del editor no cambian."
 
 #: paragraph-styles.php:998
 msgid "Style name is required."
