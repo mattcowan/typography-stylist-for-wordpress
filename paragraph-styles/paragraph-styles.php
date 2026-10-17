@@ -965,10 +965,10 @@ final class Typost_Paragraph_Styles {
 					<?php checked( $this->toolbar_button_enabled() ); ?>
 				/>
 				<label for="<?php echo esc_attr( self::TOOLBAR_OPTION ); ?>">
-					<?php esc_html_e( 'Add a Paragraph Styles button to the Typography Stylist block toolbar', 'typost-paragraph-styles' ); ?>
+					<?php esc_html_e( 'Add a Paragraph Styles button to the block toolbar', 'typost-paragraph-styles' ); ?>
 				</label>
 				<p class="description">
-					<?php esc_html_e( 'Opens a browser showing every saved paragraph style rendered in its own typeface, so you can see a style before applying it. The styles dropdown in the sidebar and editor panels is unchanged.', 'typost-paragraph-styles' ); ?>
+					<?php esc_html_e( 'Opens a browser that shows every saved paragraph style in its own typeface, so you can see a style before you apply it. The button shows in Typography Stylist blocks, and next to the “Typography Stylist Features” button in other blocks. The Paragraph Style controls in the sidebar and the editor panels do not change.', 'typost-paragraph-styles' ); ?>
 				</p>
 			</td>
 		</tr>

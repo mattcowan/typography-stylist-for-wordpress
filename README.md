@@ -86,7 +86,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 
 ### Paragraph Styles (built in, v2.3+)
 
-- Save the current typography as a named style, like a paragraph style in Adobe InDesign. A style holds the font, weight, italic, size, letter spacing, line height, OpenType features, and variable font axes.
+- Save the current typography as a named style, like a paragraph style in Adobe InDesign. A style holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, and the First Letter Hang.
 - Fit-to-width blocks can also go into a style. The style keeps the fit mode, its maximum size, and the fallback sizes. If you apply the style to a block, the block changes to fit mode. Inline text uses the fluid fallback size of the style.
 - To apply a style in the inline editor, click “Browse styles…”. In the Quick Feature Toggles and in the block sidebar, use the Paragraph Style list.
 - The style browser shows each style in its own typeface, with your selected words as the sample text. It has a search field and a “Group by” control (font family, size mode, or recently used). You can move through the list with the keyboard and type a first letter to jump to a style. To open the browser from the block toolbar, turn on “Paragraph Styles Toolbar Button” in Options. This setting is off by default.
