@@ -54,13 +54,23 @@ const pkg = JSON.parse(read('package.json'));
 const lock = JSON.parse(read('package-lock.json'));
 const lockRoot = (lock.packages && lock.packages['']) || {};
 
+// Like extract(): a missing lockfile value stops with a message instead of
+// an empty table cell.
+function lockValue(value, label) {
+  if (!value) {
+    console.error(`✗ Could not find ${label} in package-lock.json`);
+    process.exit(1);
+  }
+  return String(value);
+}
+
 const versions = {
   'plugin header (typography-stylist.php)': extract(/^\s*\*\s*Version:\s*(.+)$/m, mainPhp, 'plugin header Version', 'typography-stylist.php'),
   'TYPOST_VERSION (typography-stylist.php)': extract(/define\(\s*'TYPOST_VERSION'\s*,\s*'([^']+)'/, mainPhp, "TYPOST_VERSION", 'typography-stylist.php'),
   'Stable tag (readme.txt)': extract(/^Stable tag:\s*(.+)$/m, readmeTxt, 'Stable tag', 'readme.txt'),
   'version (package.json)': String(pkg.version || ''),
-  'version (package-lock.json)': String(lock.version || ''),
-  'packages[""].version (package-lock.json)': String(lockRoot.version || '')
+  'version (package-lock.json)': lockValue(lock.version, 'version'),
+  'packages[""].version (package-lock.json)': lockValue(lockRoot.version, 'packages[""].version')
 };
 
 function table(expectedByKey) {

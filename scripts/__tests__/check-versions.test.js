@@ -118,13 +118,34 @@ describe( 'consistency mode', () => {
 		expect( output ).toMatch( /version \(package\.json\)\s+2\.3\.3/ );
 	} );
 
-	test( 'fails when the lockfile has no packages[""] entry', () => {
+	test( 'fails with a message when the lockfile has no packages[""] entry', () => {
 		const root = makeProject( ALL( '2.4.0' ) );
 		fs.writeFileSync(
 			path.join( root, 'package-lock.json' ),
 			JSON.stringify( { name: 'typost', version: '2.4.0', lockfileVersion: 3 } )
 		);
-		expect( run( root ).status ).toBe( 1 );
+		const { status, output } = run( root );
+		expect( status ).toBe( 1 );
+		expect( output ).toContain(
+			'✗ Could not find packages[""].version in package-lock.json'
+		);
+	} );
+
+	test( 'fails with a message when the lockfile has no top-level version', () => {
+		const root = makeProject( ALL( '2.4.0' ) );
+		fs.writeFileSync(
+			path.join( root, 'package-lock.json' ),
+			JSON.stringify( {
+				name: 'typost',
+				lockfileVersion: 3,
+				packages: { '': { name: 'typost', version: '2.4.0' } },
+			} )
+		);
+		const { status, output } = run( root );
+		expect( status ).toBe( 1 );
+		expect( output ).toContain(
+			'✗ Could not find version in package-lock.json'
+		);
 	} );
 } );
 
