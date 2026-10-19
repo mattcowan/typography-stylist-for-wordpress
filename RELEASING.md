@@ -131,12 +131,20 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    the `.mo` (`wp i18n make-mo` reports the file count) and in the matching
    `languages/*.json`.
 
+   Every release, even with no string changes: set
+   `Project-Id-Version: Typography Stylist X.Y.Z` in each catalogue that
+   carries it (the core `.pot` and every `.po`, modules included), then run
+   `wp i18n make-mo` in all four `languages/` directories, because the `.mo`
+   carries the header too. The rebuilt `.mo` must hold the same entries as
+   before; only the header changes.
+
 3. Add a changelog entry in `readme.txt` (recent releases) and move older
    entries to `changelog.txt` if the readme section is growing. Entries for
    not-yet-released fixes are parked in `changelog.txt` only (the wp.org
    listing renders readme.txt's whole Changelog section immediately via the
    assets sync, but changelog.txt never reaches the listing) — copy them
-   into readme.txt now, under this release's heading.
+   into readme.txt now, under this release's heading. Add the same section
+   to the `## Changelog` list in `README.md` (`### Version X.Y.Z`).
 4. Push to `main`; wait for **CI** to go green (it runs the version
    consistency check, both test suites, and a production build).
 5. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on

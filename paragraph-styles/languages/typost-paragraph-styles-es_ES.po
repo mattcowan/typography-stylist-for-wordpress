@@ -2,7 +2,7 @@
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: Typography Stylist 2.3.2\n"
+"Project-Id-Version: Typography Stylist 2.3.3\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
 "Last-Translator: \n"
 "Language-Team: \n"
