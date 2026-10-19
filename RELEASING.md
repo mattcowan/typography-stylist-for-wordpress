@@ -86,14 +86,15 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
 
 ## 4. Standard release checklist (stable)
 
-1. **Bump the version in all four places** (check-versions.js enforces this):
+1. **Bump the version in all six places** (check-versions.js enforces this):
    - `typography-stylist.php` — plugin header `Version:`
    - `typography-stylist.php` — `define('TYPOST_VERSION', ...)`
    - `readme.txt` — `Stable tag:`
    - `package.json` — `version`
+   - `package-lock.json` — top-level `version`
+   - `package-lock.json` — `packages[""].version`
 
-   Also bump `package-lock.json` (its top-level and `packages[""]`
-   `version`), and **the version of each bundled module whose JS or CSS
+   Also bump **the version of each bundled module whose JS or CSS
    changed since the last tag** — `TYPOST_GP_VERSION`
    (`glyphs-panel/glyphs-panel.php`), `TYPOST_PS_VERSION`
    (`paragraph-styles/paragraph-styles.php`), `TYPOST_VF_VERSION`
@@ -204,7 +205,7 @@ workflow never touches SVN for a pre-release.
 
 If `main` has moved past the release you need to patch: branch from the
 release tag (`git switch -c hotfix/2.1.2 v2.1.1`), cherry-pick or apply the
-fix, bump to `X.Y.Z+1` in all four places, merge back to `main`, and release
+fix, bump to `X.Y.Z+1` in all six places, merge back to `main`, and release
 as normal. If `main` hasn't diverged, a hotfix is just a small stable
 release.
 

@@ -1,28 +1,30 @@
 /**
  * Version-consistency guard. Zero dependencies.
  *
- * The plugin's version lives in FOUR places that must always agree:
+ * The plugin's version lives in SIX places that must always agree:
  *   1. typography-stylist.php  — plugin header `Version:`
  *   2. typography-stylist.php  — `define('TYPOST_VERSION', '...')`
  *   3. readme.txt              — `Stable tag:`
  *   4. package.json            — `version`
+ *   5. package-lock.json       — top-level `version`
+ *   6. package-lock.json       — `packages[""].version`
  *
  * Modes:
  *   node scripts/check-versions.js
- *     Consistency mode (runs in CI on every push): all four must match
+ *     Consistency mode (runs in CI on every push): all six must match
  *     each other. Exits 1 with a table of mismatches.
  *
  *   node scripts/check-versions.js v2.1.1
- *     Tag mode (runs before a wp.org deploy): all four must equal the tag
+ *     Tag mode (runs before a wp.org deploy): all six must equal the tag
  *     (leading "v" stripped). This is what stops a GitHub Release tagged
  *     v2.1.1 from deploying files that still say 2.1.0 — the #1 wp.org
  *     release mistake, because `Stable tag` decides what wp.org serves.
  *
  *   node scripts/check-versions.js v2.2.0-beta.1 --prerelease
- *     Pre-release mode: header/constant/package.json must equal the BASE
- *     version (2.2.0), and Stable tag must NOT equal it — during a beta the
- *     Stable tag must keep pointing at the last stable release so wp.org
- *     never serves unreleased code.
+ *     Pre-release mode: header/constant/package.json/package-lock.json must
+ *     equal the BASE version (2.2.0), and Stable tag must NOT equal it —
+ *     during a beta the Stable tag must keep pointing at the last stable
+ *     release so wp.org never serves unreleased code.
  *
  * Also warns (never fails) when `Tested up to:` includes a patch version —
  * wp.org convention is major.minor (e.g. 6.9, not 6.9.4).
@@ -49,12 +51,16 @@ function extract(pattern, text, label, file) {
 const mainPhp = read('typography-stylist.php');
 const readmeTxt = read('readme.txt');
 const pkg = JSON.parse(read('package.json'));
+const lock = JSON.parse(read('package-lock.json'));
+const lockRoot = (lock.packages && lock.packages['']) || {};
 
 const versions = {
   'plugin header (typography-stylist.php)': extract(/^\s*\*\s*Version:\s*(.+)$/m, mainPhp, 'plugin header Version', 'typography-stylist.php'),
   'TYPOST_VERSION (typography-stylist.php)': extract(/define\(\s*'TYPOST_VERSION'\s*,\s*'([^']+)'/, mainPhp, "TYPOST_VERSION", 'typography-stylist.php'),
   'Stable tag (readme.txt)': extract(/^Stable tag:\s*(.+)$/m, readmeTxt, 'Stable tag', 'readme.txt'),
-  'version (package.json)': String(pkg.version || '')
+  'version (package.json)': String(pkg.version || ''),
+  'version (package-lock.json)': String(lock.version || ''),
+  'packages[""].version (package-lock.json)': String(lockRoot.version || '')
 };
 
 function table(expectedByKey) {
@@ -79,7 +85,7 @@ if (!tagArg) {
   console.log('Version consistency check:');
   table(null);
   if (!allMatch) {
-    console.error('\n✗ Version mismatch — the four version sources must agree.');
+    console.error('\n✗ Version mismatch — the six version sources must agree.');
     failed = true;
   } else {
     console.log(`\n✓ All version sources agree: ${values[0]}`);
@@ -117,7 +123,7 @@ if (!tagArg) {
       .filter(([k]) => !k.startsWith('Stable tag'))
       .map(([, v]) => v);
     if (!others.every(v => v === base)) {
-      console.error(`\n✗ Plugin header / TYPOST_VERSION / package.json must equal the base version ${base} for a pre-release.`);
+      console.error(`\n✗ Plugin header / TYPOST_VERSION / package.json / package-lock.json must equal the base version ${base} for a pre-release.`);
       failed = true;
     }
     if (stable === base) {
