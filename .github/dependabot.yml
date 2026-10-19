@@ -19,12 +19,21 @@
 #
 # Nothing merges automatically: every pull request runs the CI workflow and
 # waits for review.
+#
+# Each ecosystem has a 7-day cooldown: a version update is offered only when
+# the version is at least 7 days old. A hijacked release is usually found and
+# removed from the registry within days, and a broken release is usually
+# replaced by a fix in the same time. Security updates ignore the cooldown.
+# GitHub's documentation does not say whether the cooldown also applies to a
+# new transitive dependency that an update adds.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
@@ -52,6 +61,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       composer-security:
         applies-to: security-updates
@@ -65,6 +76,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions-security:
         applies-to: security-updates
