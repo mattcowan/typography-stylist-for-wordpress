@@ -91,6 +91,21 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    - `typography-stylist.php` — `define('TYPOST_VERSION', ...)`
    - `readme.txt` — `Stable tag:`
    - `package.json` — `version`
+
+   Also bump `package-lock.json` (its top-level and `packages[""]`
+   `version`), and **the version of each bundled module whose JS or CSS
+   changed since the last tag** — `TYPOST_GP_VERSION`
+   (`glyphs-panel/glyphs-panel.php`), `TYPOST_PS_VERSION`
+   (`paragraph-styles/paragraph-styles.php`), `TYPOST_VF_VERSION`
+   (`variable-fonts/variable-fonts.php`). A module's version is the `?ver=`
+   on its scripts and styles, so without a bump a browser can keep the
+   previous release's files. check-versions.js does not check these. Find
+   the modules with
+   `git diff --name-only v<last>..HEAD -- glyphs-panel/assets paragraph-styles/assets variable-fonts/assets`
+   and bump the patch number of each one listed (2.3.2: `5c0f589`). Each
+   module keeps its JS and CSS under `assets/`. Do not diff the whole module
+   folder: step 2 changes every module's catalogues each release, and PHP
+   or catalogue changes do not change what a browser caches.
 2. **Rebuild the translation catalogues** if any user-facing string changed
    this cycle. The `.po`/`.pot` files are edited by hand; the compiled `.mo`
    and the JavaScript `.json` files are generated, and stale ones ship
@@ -119,12 +134,20 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    the `.mo` (`wp i18n make-mo` reports the file count) and in the matching
    `languages/*.json`.
 
+   Every release, even with no string changes: set
+   `Project-Id-Version: Typography Stylist X.Y.Z` in each catalogue that
+   carries it (the core `.pot` and every `.po`, modules included), then run
+   `wp i18n make-mo` in all four `languages/` directories, because the `.mo`
+   carries the header too. The rebuilt `.mo` must hold the same entries as
+   before; only the header changes.
+
 3. Add a changelog entry in `readme.txt` (recent releases) and move older
    entries to `changelog.txt` if the readme section is growing. Entries for
    not-yet-released fixes are parked in `changelog.txt` only (the wp.org
    listing renders readme.txt's whole Changelog section immediately via the
    assets sync, but changelog.txt never reaches the listing) — copy them
-   into readme.txt now, under this release's heading.
+   into readme.txt now, under this release's heading. Add the same section
+   to the `## Changelog` list in `README.md` (`### Version X.Y.Z`).
 4. Push to `main`; wait for **CI** to go green (it runs the version
    consistency check, both test suites, and a production build).
 5. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on

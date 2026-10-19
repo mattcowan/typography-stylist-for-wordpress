@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.2
+Stable tag: 2.3.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -318,6 +318,15 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.3 =
+* **New: a Case setting** in the Typography Stylist block, in the inline format panel, and in paragraph styles. Choose All Caps, Lowercase, Title Case, Small Caps, All Small Caps, or Normal to remove a case the theme sets. The text keeps the case you typed. Only the look changes.
+* **New: paragraph styles on whole core Paragraph and Heading blocks.** Use the Paragraph Style panel in the block sidebar, or the Paragraph Styles toolbar button with no text selected. The block's own sidebar settings override the style, and the theme's block styles (such as "Outline") keep working.
+* **Fixed: Authors and Contributors lost OpenType features, variable font axes, and small caps when they saved a post.** On WordPress 7.0.1 and later, all of them are kept. On earlier versions, only small caps are kept.
+* **Fixed: paragraph styles used the font and weight of the theme as if you had set them.** A style showed "(modified)" at once, and "Detach Style" and "Save Current Settings as Style" stored the font of the theme. "Detach Style" in the inline format panel now also keeps the weight of the style.
+* **Fixed: italic text lost its italic** in the inline format panel after the post was reloaded.
+* **Fixed: a toolbar button in the inline format, such as Glyphs or Paragraph Styles, read the settings that the format panel last showed**, not the settings of the selected text.
+* Full details are in changelog.txt.
+
 = 2.3.2 =
 * **Improved: new font sizes follow the default font size of the reader.** New blocks, new inline sizes and new paragraph styles write their sizes in rem. You still enter sizes in px. Content saved before keeps px and looks the same.
 * **Improved: new font sizes grow with browser zoom.** At 500% zoom, a new responsive size is at least two times its size at 100%. A note under the size sliders tells you when a size grows more slowly than set. New fit-to-width lines of two or more words also grow and wrap when a reader zooms in.
@@ -398,6 +407,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.3 =
+Adds a Case setting and paragraph styles on whole core Paragraph and Heading blocks. Authors and Contributors now keep OpenType features, variable font axes and small caps when they save a post (features and axes need WordPress 7.0.1 or later). Fixes paragraph styles that stored the theme's font. No data migration.
 
 = 2.3.2 =
 By default, new font sizes follow the reader's default font size and grow with browser zoom. A new Options setting writes px without zoom growth. Adds First Letter Hang and fixes for fit-to-width, inline font sizes, presets and glyph weights. Content saved before keeps its sizes. No data migration.

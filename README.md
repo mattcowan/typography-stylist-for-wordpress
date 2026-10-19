@@ -487,6 +487,16 @@ The front end gets CSS only, with no JavaScript. A font loads only on the pages 
 
 ## Changelog
 
+### Version 2.3.3
+
+- **New: a Case setting** in the Typography Stylist block, in the inline format panel, and in paragraph styles. Choose All Caps, Lowercase, Title Case, Small Caps, All Small Caps, or Normal to remove a case the theme sets. The text keeps the case you typed. Only the look changes.
+- **New: paragraph styles on whole core Paragraph and Heading blocks.** Use the Paragraph Style panel in the block sidebar, or the Paragraph Styles toolbar button with no text selected. The block's own sidebar settings override the style, and the theme's block styles (such as "Outline") keep working.
+- **Fixed: Authors and Contributors lost OpenType features, variable font axes, and small caps when they saved a post.** On WordPress 7.0.1 and later, all of them are kept. On earlier versions, only small caps are kept.
+- **Fixed: paragraph styles used the font and weight of the theme as if you had set them.** A style showed "(modified)" at once, and "Detach Style" and "Save Current Settings as Style" stored the font of the theme. "Detach Style" in the inline format panel now also keeps the weight of the style.
+- **Fixed: italic text lost its italic** in the inline format panel after the post was reloaded.
+- **Fixed: a toolbar button in the inline format, such as Glyphs or Paragraph Styles, read the settings that the format panel last showed**, not the settings of the selected text.
+- Full details are in changelog.txt.
+
 ### Version 2.3.2
 
 - **Improved: new font sizes follow the default font size of the reader.** New blocks, new inline sizes and new paragraph styles write their sizes in rem. You still enter sizes in px. Content saved before keeps px and looks the same.
