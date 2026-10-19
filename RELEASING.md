@@ -101,8 +101,11 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    on its scripts and styles, so without a bump a browser can keep the
    previous release's files. check-versions.js does not check these. Find
    the modules with
-   `git diff --stat v<last>..HEAD -- glyphs-panel paragraph-styles variable-fonts`
-   and bump the patch number of each one listed (2.3.2: `5c0f589`).
+   `git diff --name-only v<last>..HEAD -- glyphs-panel/assets paragraph-styles/assets variable-fonts/assets`
+   and bump the patch number of each one listed (2.3.2: `5c0f589`). Each
+   module keeps its JS and CSS under `assets/`. Do not diff the whole module
+   folder: step 2 changes every module's catalogues each release, and PHP
+   or catalogue changes do not change what a browser caches.
 2. **Rebuild the translation catalogues** if any user-facing string changed
    this cycle. The `.po`/`.pot` files are edited by hand; the compiled `.mo`
    and the JavaScript `.json` files are generated, and stale ones ship
