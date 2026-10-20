@@ -88,6 +88,10 @@ class ParagraphStylesBasedOnTest extends TestCase {
             public function get_param($name) {
                 return array_key_exists($name, $this->params) ? $this->params[$name] : null;
             }
+            // Like WP_REST_Request: true for a key sent as null too
+            public function has_param($name) {
+                return array_key_exists($name, $this->params);
+            }
             #[\ReturnTypeWillChange]
             public function offsetGet($key) {
                 return $this->get_param($key);
@@ -289,6 +293,34 @@ class ParagraphStylesBasedOnTest extends TestCase {
         $this->assertArrayNotHasKey('fontStyle', $edited);
         $this->assertArrayNotHasKey('features', $edited);
         $this->assertSame(1.25, $edited['lineHeight']);
+    }
+
+    public function test_a_first_parent_keeps_the_look_when_the_payload_has_empty_values() {
+        // The whole look of a style without a parent, as a client may send
+        // it: empty values set nothing there and are dropped on sanitize,
+        // and compute_overrides() adds the ones the new parent needs
+        $module = $this->module($this->standaloneAndParent());
+        $module->rest_update_style($this->request(array('id' => 2, 'basedOn' => 1, 'properties' => array(
+            'fontId' => 36, 'fontSize' => '18', 'lineHeight' => 1.2, 'fontStyle' => '', 'features' => array(), 'initialHang' => 0,
+        ))));
+
+        $stored = $this->stored(2)['properties'];
+        $this->assertSame('', $stored['fontStyle']);
+        $this->assertSame(array(), $stored['features']);
+        $this->assertArrayNotHasKey('initialHang', $stored);
+        $resolved = \Typost_Paragraph_Styles::resolve_properties($this->stored(2), $this->options['typost_paragraph_styles']);
+        $this->assertArrayNotHasKey('fontStyle', $resolved);
+        $this->assertArrayNotHasKey('features', $resolved);
+    }
+
+    public function test_based_on_null_removes_the_parent_and_absent_keeps_it() {
+        $module = $this->module($this->useCaseStyles());
+        $module->rest_update_style($this->request(array('id' => 3, 'name' => 'Caption 2')));
+        $this->assertSame(1, $this->stored(3)['basedOn']);
+
+        $module->rest_update_style($this->request(array('id' => 3, 'basedOn' => null)));
+        $this->assertArrayNotHasKey('basedOn', $this->stored(3));
+        $this->assertEquals($this->fixture()['resolve'][1]['expected']['3'], $this->stored(3)['properties']);
     }
 
     public function test_a_first_parent_then_none_gives_the_old_look_back() {

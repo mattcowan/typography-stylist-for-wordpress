@@ -1222,10 +1222,13 @@ final class Typost_Paragraph_Styles {
 			$styles[ $index ]['name'] = $name;
 		}
 
-		// Based On (#200). Absent leaves it as it is; 0 removes it.
+		// Based On (#200). Absent leaves it as it is; 0, '' and null remove
+		// it. has_param(), not a null check: get_param() returns null for an
+		// absent key and for a JSON null alike, and a null sent to detach
+		// used to change nothing (review of #293)
 		$old_based_on = ! empty( $styles[ $index ]['basedOn'] ) ? intval( $styles[ $index ]['basedOn'] ) : 0;
 		$based_on     = $old_based_on;
-		if ( null !== $request->get_param( 'basedOn' ) ) {
+		if ( $request->has_param( 'basedOn' ) ) {
 			$based_on = self::parse_based_on( $request->get_param( 'basedOn' ) );
 			if ( null === $based_on ) {
 				return new WP_REST_Response( array( 'message' => __( 'The style to base this style on does not exist.', 'typost-paragraph-styles' ), 'field' => 'basedOn' ), 400 );
@@ -1244,6 +1247,10 @@ final class Typost_Paragraph_Styles {
 		// (computeStyleOverrides() in ps-utils.js). A change of Based On is
 		// then applied by rebase_properties(), with or without new
 		// properties, so both saves follow one rule.
+		// Empty values are kept only when the style has a parent now: they
+		// unset what that parent sets. A style without one sends its whole
+		// look, where an empty value sets nothing, and a first parent then
+		// gets the empty values it needs from compute_overrides().
 		$properties = $request->get_param( 'properties' );
 		if ( null !== $properties ) {
 			$styles[ $index ]['properties'] = $this->sanitize_properties( $properties, $old_based_on > 0 );
@@ -1949,6 +1956,7 @@ final class Typost_Paragraph_Styles {
 			foreach ( $styles as $candidate ) {
 				if ( isset( $candidate['id'], $candidate['name'] ) && intval( $candidate['id'] ) === intval( $style['basedOn'] ) ) {
 					$parent_name = $candidate['name'];
+					break;
 				}
 			}
 			$inheritance = array(
