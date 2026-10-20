@@ -55,8 +55,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      # The four version sources (plugin header, TYPOST_VERSION, readme
-      # Stable tag, package.json) must always agree — fail fast if not.
+      # The six version sources (plugin header, TYPOST_VERSION, readme
+      # Stable tag, package.json, and the two package-lock.json versions)
+      # must always agree — fail fast if not.
       - run: node scripts/check-versions.js
       - run: npm run build
       # On manual runs, also package an installable zip and attach it as an
