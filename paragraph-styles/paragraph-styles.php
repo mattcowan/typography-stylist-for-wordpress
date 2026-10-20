@@ -1020,6 +1020,15 @@ final class Typost_Paragraph_Styles {
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
+
+		// The admin tab's edit form refreshes a card from this after a save (#221)
+		register_rest_route( self::REST_NAMESPACE, '/paragraph-styles/(?P<id>[\d]+)/admin-card', array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'rest_get_admin_card' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			),
+		) );
 	}
 
 	/**
@@ -1142,19 +1151,7 @@ final class Typost_Paragraph_Styles {
 			$this->editor_on_frontend = true;
 		}
 
-		// Pure logic shared with Jest tests (UMD-lite, exposed as window.typostPSUtils)
-		// wp-i18n: the size labels this file builds are translatable, so the
-		// handle needs its own script translations — they are not inherited
-		// from the editor handle that depends on it.
-		wp_enqueue_script(
-			'typost-paragraph-styles-utils',
-			TYPOST_PS_PLUGIN_URL . 'assets/js/lib/ps-utils.js',
-			array( 'wp-i18n' ),
-			TYPOST_PS_VERSION,
-			true
-		);
-
-		wp_set_script_translations( 'typost-paragraph-styles-utils', 'typost-paragraph-styles', TYPOST_PS_PLUGIN_DIR . 'languages' );
+		$this->enqueue_utils_script();
 
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
@@ -1165,6 +1162,26 @@ final class Typost_Paragraph_Styles {
 		);
 
 		wp_set_script_translations( 'typost-paragraph-styles-editor', 'typost-paragraph-styles', TYPOST_PS_PLUGIN_DIR . 'languages' );
+	}
+
+	/**
+	 * Enqueue the pure logic shared with Jest tests (UMD-lite, exposed as
+	 * window.typostPSUtils). Both editors and the admin tab's edit form use it.
+	 *
+	 * wp-i18n: the size labels this file builds are translatable, so the
+	 * handle needs its own script translations — they are not inherited
+	 * from the handle that depends on it.
+	 */
+	private function enqueue_utils_script() {
+		wp_enqueue_script(
+			'typost-paragraph-styles-utils',
+			TYPOST_PS_PLUGIN_URL . 'assets/js/lib/ps-utils.js',
+			array( 'wp-i18n' ),
+			TYPOST_PS_VERSION,
+			true
+		);
+
+		wp_set_script_translations( 'typost-paragraph-styles-utils', 'typost-paragraph-styles', TYPOST_PS_PLUGIN_DIR . 'languages' );
 	}
 
 	/**
@@ -1179,11 +1196,15 @@ final class Typost_Paragraph_Styles {
 	 * loads a kit when a sample's `data-typost-font-id` comes into view.
 	 */
 	public function enqueue_admin_assets() {
+		// The edit form builds its PATCH payload with the editors' own
+		// buildPropertiesForStyleSave() (#221)
+		$this->enqueue_utils_script();
+
 		wp_enqueue_script(
 			'typost-paragraph-styles-admin',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/admin.js',
 			// wp-a11y: rename/delete are announced through wp.a11y.speak (ADM-2)
-			array( 'jquery', 'wp-i18n', 'wp-a11y' ),
+			array( 'jquery', 'wp-i18n', 'wp-a11y', 'typost-paragraph-styles-utils' ),
 			TYPOST_PS_VERSION,
 			true
 		);
@@ -1209,9 +1230,18 @@ final class Typost_Paragraph_Styles {
 			$this->admin_style_css_added = true;
 		}
 
+		// styles: the edit form fills from the stored properties and keeps
+		// the ones the admin does not touch (#221). newFontSizeUnit: a size
+		// added to a style without one takes the site's new-content unit
+		// (#248), like Update Style in the editor.
+		$new_unit = class_exists( 'Typost' ) && method_exists( 'Typost', 'get_new_font_size_unit' )
+			? Typost::get_instance()->get_new_font_size_unit()
+			: 'rem';
 		wp_localize_script( 'typost-paragraph-styles-admin', 'typostPSAdmin', array(
-			'restUrl' => rest_url( self::REST_NAMESPACE . '/paragraph-styles' ),
-			'nonce'   => wp_create_nonce( 'wp_rest' ),
+			'restUrl'         => rest_url( self::REST_NAMESPACE . '/paragraph-styles' ),
+			'nonce'           => wp_create_nonce( 'wp_rest' ),
+			'styles'          => array_values( $this->get_styles() ),
+			'newFontSizeUnit' => 'px' === $new_unit ? 'px' : 'rem',
 		) );
 	}
 
@@ -1265,6 +1295,324 @@ final class Typost_Paragraph_Styles {
 		}
 
 		return array( 'status' => 'missing', 'name' => '', 'font_id' => 0 );
+	}
+
+	/**
+	 * Font data the admin tab needs, built from core's public API.
+	 *
+	 * Styles store the canonical numeric `font_id`; the entries' `id` is the
+	 * string kit/project slug. Keying the lookup on `id` made every card read
+	 * "Default" (QA finding ADM-1), so it keys on font_id and keeps `id` only
+	 * for entry shapes without one. Shared by the tab and the admin-card
+	 * route (#221), so a refreshed card names fonts exactly like the page.
+	 *
+	 * @param object $instance The Typost instance.
+	 * @return array {
+	 *     @type array $lookup     Font ID => display name, every source.
+	 *     @type array $options    Numeric font ID => display name, sorted by
+	 *                             name: the edit form's font choices.
+	 *     @type array $mappings   Deleted font ID => replacement font ID.
+	 *     @type array $manual_ids Font IDs of manual definitions, as keys.
+	 * }
+	 */
+	public static function build_admin_font_context( $instance ) {
+		$lookup     = array();
+		$options    = array();
+		$manual_ids = array();
+		$add_font   = function ( $font ) use ( &$lookup, &$options ) {
+			if ( ! is_array( $font ) || ! isset( $font['name'] ) ) {
+				return;
+			}
+			if ( isset( $font['font_id'] ) ) {
+				$lookup[ (string) $font['font_id'] ] = $font['name'];
+				if ( absint( $font['font_id'] ) > 0 ) {
+					$options[ absint( $font['font_id'] ) ] = (string) $font['name'];
+				}
+			}
+			if ( isset( $font['id'] ) && ! isset( $lookup[ (string) $font['id'] ] ) ) {
+				$lookup[ (string) $font['id'] ] = $font['name'];
+			}
+		};
+
+		if ( is_object( $instance ) ) {
+			foreach ( (array) $instance->get_custom_fonts() as $font ) {
+				$add_font( $font );
+			}
+			foreach ( (array) $instance->get_adobe_fonts() as $project ) {
+				// An Adobe entry is one family and carries its own font_id;
+				// older entries may also list families under `fonts`.
+				$add_font( $project );
+				if ( isset( $project['fonts'] ) && is_array( $project['fonts'] ) ) {
+					foreach ( $project['fonts'] as $font ) {
+						$add_font( $font );
+					}
+				}
+			}
+			// Manual definitions name a font that the theme or another plugin
+			// loads on the site. Nothing loads it on the settings page, so its
+			// preview gets a note.
+			foreach ( (array) $instance->get_manual_fonts() as $font ) {
+				$add_font( $font );
+				if ( isset( $font['font_id'] ) ) {
+					$manual_ids[ absint( $font['font_id'] ) ] = true;
+				}
+			}
+			// Adopted WP Font Library fonts carry their numeric ID in font_id
+			// (their string id is "wpl-{slug}").
+			if ( method_exists( $instance, 'get_adopted_wp_fonts_by_slug' ) ) {
+				foreach ( (array) $instance->get_adopted_wp_fonts_by_slug() as $font ) {
+					$add_font( $font );
+				}
+			}
+		}
+
+		natcasesort( $options );
+
+		// Deleted font ID => replacement font ID, so a card names the font the
+		// style actually renders in (see resolve_font_label()).
+		$mappings = array();
+		if ( is_object( $instance ) && method_exists( $instance, 'font_sources' ) ) {
+			$replacements = $instance->font_sources()->get_font_replacements();
+			if ( isset( $replacements['mappings'] ) && is_array( $replacements['mappings'] ) ) {
+				$mappings = $replacements['mappings'];
+			}
+		}
+
+		return array(
+			'lookup'     => $lookup,
+			'options'    => $options,
+			'mappings'   => $mappings,
+			'manual_ids' => $manual_ids,
+		);
+	}
+
+	/**
+	 * The text a card shows for a style's font.
+	 *
+	 * @param array $font Result of resolve_font_label().
+	 * @return string
+	 */
+	public static function font_display_name( $font ) {
+		switch ( isset( $font['status'] ) ? $font['status'] : '' ) {
+			case 'found':
+				return $font['name'];
+			case 'replaced':
+				/* translators: %s: name of the font that replaces the style's deleted font */
+				return sprintf( __( '%s (replaces a deleted font)', 'typost-paragraph-styles' ), $font['name'] );
+			case 'missing':
+				return __( 'Deleted font, shown in the default font', 'typost-paragraph-styles' );
+			default:
+				return __( 'Default', 'typost-paragraph-styles' );
+		}
+	}
+
+	/**
+	 * Sample text for the admin preview and its `lang`.
+	 *
+	 * Fixed text, rendered on the server so a later render-time rule engine
+	 * can style it the same way it styles content. It carries ligature
+	 * pairs, a fraction and figures so OpenType features show. `lang` drives
+	 * hyphenation, so it names the admin locale only when the text is
+	 * actually translated.
+	 *
+	 * @return array{0: string, 1: string} Text and lang.
+	 */
+	public static function admin_preview_text() {
+		$source = 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.';
+		/* translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show. */
+		$text = __( 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.', 'typost-paragraph-styles' );
+		$lang = $text === $source ? 'en' : str_replace( '_', '-', get_user_locale() );
+		return array( $text, $lang );
+	}
+
+	/**
+	 * Render a style card's details line (the summary under its name).
+	 *
+	 * Used by the admin tab and by the admin-card route, which returns it
+	 * after the edit form saves (#221), so both render the same markup.
+	 * `data-font-label` carries the font text for the edit form, which
+	 * offers the style's current font even when it was deleted.
+	 *
+	 * @param array $props The style's stored properties.
+	 * @param array $font  Result of resolve_font_label() for the style.
+	 * @return string HTML.
+	 */
+	public static function render_card_details( $props, $font ) {
+		$props     = is_array( $props ) ? $props : array();
+		$font_name = self::font_display_name( $font );
+		$weight    = ! empty( $props['fontWeight'] ) ? $props['fontWeight'] : '400';
+		$features  = isset( $props['features'] ) && is_array( $props['features'] ) ? $props['features'] : array();
+		$rows      = array();
+
+		$rows[] = array( __( 'Font:', 'typost-paragraph-styles' ), $font_name . ' (' . $weight . ')' );
+
+		// Font style — absent means inherit, so only real choices get a label
+		$font_style_labels = array(
+			'italic'  => __( 'Italic', 'typost-paragraph-styles' ),
+			'oblique' => __( 'Oblique', 'typost-paragraph-styles' ),
+			'normal'  => __( 'Normal (upright)', 'typost-paragraph-styles' ),
+		);
+		if ( ! empty( $props['fontStyle'] ) && isset( $font_style_labels[ $props['fontStyle'] ] ) ) {
+			$rows[] = array( __( 'Style:', 'typost-paragraph-styles' ), $font_style_labels[ $props['fontStyle'] ] );
+		}
+
+		// Font size
+		if ( ! empty( $props['fontSize'] ) ) {
+			if ( 'responsive' === $props['fontSize'] ) {
+				$min  = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
+				$pref = isset( $props['fontSizePreferred'] ) ? $props['fontSizePreferred'] : '?';
+				$max  = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
+				/* translators: %1$s: min size, %2$s: preferred size, %3$s: max size */
+				$size_display = sprintf( __( 'Responsive (%1$s/%2$s/%3$spx)', 'typost-paragraph-styles' ), $min, $pref, $max );
+			} elseif ( 'fit' === $props['fontSize'] ) {
+				$min = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
+				$max = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
+				/* translators: %1$s: fallback min size, %2$s: fallback max size */
+				$size_display = sprintf( __( 'Fit to width (fallback %1$s–%2$spx)', 'typost-paragraph-styles' ), $min, $max );
+			} else {
+				/* translators: %s: font size in pixels */
+				$size_display = sprintf( __( '%spx', 'typost-paragraph-styles' ), $props['fontSize'] );
+			}
+			$rows[] = array( __( 'Size:', 'typost-paragraph-styles' ), $size_display );
+		}
+
+		if ( ! empty( $features ) ) {
+			$rows[] = array( __( 'Features:', 'typost-paragraph-styles' ), implode( ', ', $features ) );
+		}
+
+		// Letter spacing and line height share one detail
+		$spacing_rows = array();
+		if ( ! empty( $props['letterSpacing'] ) ) {
+			$em_value = round( $props['letterSpacing'] / 1000, 3 );
+			/* translators: %s: letter spacing in em */
+			$spacing_rows[] = array( __( 'Spacing:', 'typost-paragraph-styles' ), sprintf( __( '%sem', 'typost-paragraph-styles' ), $em_value ) );
+		}
+		if ( ! empty( $props['lineHeight'] ) ) {
+			$spacing_rows[] = array( __( 'Line Height:', 'typost-paragraph-styles' ), (string) $props['lineHeight'] );
+		}
+
+		// Variable font axes, shown as the sanitizer stored them
+		$axes_display = ! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : '';
+
+		// First letter hang (#242)
+		$hang_value = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;
+
+		// Case (#214)
+		$case_display = '';
+		$case_labels  = self::text_case_labels();
+		if ( isset( $props['textCase'] ) && is_string( $props['textCase'] ) && isset( $case_labels[ $props['textCase'] ] ) ) {
+			$case_display = $case_labels[ $props['textCase'] ];
+			if ( in_array( $props['textCase'], array( 'small-caps', 'all-small-caps' ), true ) && isset( $props['fakeSmallCaps'] ) && false === $props['fakeSmallCaps'] ) {
+				/* translators: %s: case setting, such as "Small Caps" */
+				$case_display = sprintf( __( '%s (no fake small caps)', 'typost-paragraph-styles' ), $case_display );
+			}
+		}
+
+		$detail = function ( $pairs ) {
+			$parts = array();
+			foreach ( $pairs as $pair ) {
+				$parts[] = '<strong>' . esc_html( $pair[0] ) . '</strong> ' . esc_html( $pair[1] );
+			}
+			return '<span class="typost-ps-detail">' . implode( '&nbsp;/&nbsp;', $parts ) . '</span>';
+		};
+
+		$html = '';
+		foreach ( $rows as $row ) {
+			$html .= $detail( array( $row ) );
+		}
+		if ( ! empty( $spacing_rows ) ) {
+			$html .= $detail( $spacing_rows );
+		}
+		if ( '' !== $axes_display ) {
+			$html .= $detail( array( array( __( 'Axes:', 'typost-paragraph-styles' ), $axes_display ) ) );
+		}
+		if ( $hang_value > 0 ) {
+			/* translators: %s: hang in em */
+			$html .= $detail( array( array( __( 'First Letter Hang:', 'typost-paragraph-styles' ), sprintf( __( '%sem', 'typost-paragraph-styles' ), $hang_value ) ) ) );
+		}
+		if ( '' !== $case_display ) {
+			$html .= $detail( array( array( __( 'Case:', 'typost-paragraph-styles' ), $case_display ) ) );
+		}
+
+		return '<div class="typost-ps-style-card-details" data-font-label="' . esc_attr( $font_name ) . '">' . $html . '</div>';
+	}
+
+	/**
+	 * Render a style card's preview (#220, #226).
+	 *
+	 * The sample carries the style's own `.typost-ps-{id}` class, so it
+	 * renders through the generated CSS, and `data-typost-font-id` names the
+	 * font the style renders in (after replacements) so core's admin font
+	 * loader adds an Adobe Fonts kit when the sample comes into view.
+	 *
+	 * @param int   $style_id   Style ID.
+	 * @param array $font       Result of resolve_font_label() for the style.
+	 * @param array $manual_ids Font IDs of manual definitions, as keys.
+	 * @return string HTML.
+	 */
+	public static function render_card_preview( $style_id, $font, $manual_ids ) {
+		list( $text, $lang ) = self::admin_preview_text();
+		$style_id = intval( $style_id );
+		$font_id  = isset( $font['font_id'] ) ? absint( $font['font_id'] ) : 0;
+
+		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
+		$html .= '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
+			. ( $font_id ? ' data-typost-font-id="' . esc_attr( $font_id ) . '"' : '' ) . '>' . esc_html( $text ) . '</p>';
+		// Check the font the style renders in: a deleted font can be replaced by a manual one.
+		if ( $font_id && isset( $manual_ids[ $font_id ] ) ) {
+			$html .= '<p class="typost-ps-preview-note">' . esc_html__( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ) . '</p>';
+		}
+		$html .= '</div>';
+		return $html;
+	}
+
+	/**
+	 * Case labels (#214), keyed by stored value.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function text_case_labels() {
+		return array(
+			'none'           => __( 'Normal', 'typost-paragraph-styles' ),
+			'uppercase'      => __( 'All Caps', 'typost-paragraph-styles' ),
+			'lowercase'      => __( 'Lowercase', 'typost-paragraph-styles' ),
+			'capitalize'     => __( 'Title Case', 'typost-paragraph-styles' ),
+			'small-caps'     => __( 'Small Caps', 'typost-paragraph-styles' ),
+			'all-small-caps' => __( 'All Small Caps', 'typost-paragraph-styles' ),
+		);
+	}
+
+	/**
+	 * GET /paragraph-styles/{id}/admin-card
+	 *
+	 * The admin tab's edit form saves through PATCH, then asks for the
+	 * card's details and preview, rendered by the same methods as the page,
+	 * plus the style CSS for every card's preview (#221). One renderer, so a
+	 * property added later shows the same way after a save as after a load.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function rest_get_admin_card( $request ) {
+		$id     = intval( $request['id'] );
+		$styles = $this->get_styles();
+		$index  = $this->find_style_index( $styles, $id );
+
+		if ( false === $index ) {
+			return new WP_REST_Response( array( 'message' => __( 'Style not found.', 'typost-paragraph-styles' ) ), 404 );
+		}
+
+		$style   = $styles[ $index ];
+		$props   = isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array();
+		$context = self::build_admin_font_context( class_exists( 'Typost' ) ? Typost::get_instance() : null );
+		$font    = self::resolve_font_label( isset( $props['fontId'] ) ? $props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+
+		return new WP_REST_Response( array(
+			'style'   => $style,
+			'details' => self::render_card_details( $props, $font ),
+			'preview' => self::render_card_preview( $id, $font, $context['manual_ids'] ),
+			'css'     => $this->get_all_css(),
+		), 200 );
 	}
 
 	// -------------------------------------------------------------------------

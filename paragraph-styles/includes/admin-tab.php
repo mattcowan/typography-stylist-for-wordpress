@@ -14,73 +14,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $styles = Typost_Paragraph_Styles::get_instance()->get_styles();
 
-// Build a flat font lookup (numeric font ID => name) from every source the
-// core plugin exposes through its public API.
-// Styles store the canonical numeric `font_id`; the entries' `id` is the
-// string kit/project slug. Keying on `id` here made every card read
-// "Default" (QA finding ADM-1) — the same mistake the editor-side
-// findFontName had. Key on font_id, keeping id for entry shapes without one.
-$font_lookup = array();
-$add_font    = function ( $font ) use ( &$font_lookup ) {
-	if ( ! is_array( $font ) || ! isset( $font['name'] ) ) {
-		return;
-	}
-	if ( isset( $font['font_id'] ) ) {
-		$font_lookup[ (string) $font['font_id'] ] = $font['name'];
-	}
-	if ( isset( $font['id'] ) && ! isset( $font_lookup[ (string) $font['id'] ] ) ) {
-		$font_lookup[ (string) $font['id'] ] = $font['name'];
-	}
-};
-foreach ( $instance->get_custom_fonts() as $font ) {
-	$add_font( $font );
-}
-foreach ( $instance->get_adobe_fonts() as $project ) {
-	// An Adobe entry is one family and carries its own font_id; older
-	// entries may also list families under `fonts`.
-	$add_font( $project );
-	if ( isset( $project['fonts'] ) && is_array( $project['fonts'] ) ) {
-		foreach ( $project['fonts'] as $font ) {
-			$add_font( $font );
-		}
-	}
-}
-// Manual definitions name a font that the theme or another plugin loads on
-// the site. Nothing loads it on this page, so its preview gets a note.
-$manual_font_ids = array();
-foreach ( $instance->get_manual_fonts() as $font ) {
-	$add_font( $font );
-	if ( isset( $font['font_id'] ) ) {
-		$manual_font_ids[ absint( $font['font_id'] ) ] = true;
-	}
-}
-// Adopted WP Font Library fonts carry their numeric ID in font_id
-// (their string id is "wpl-{slug}").
-foreach ( $instance->get_adopted_wp_fonts_by_slug() as $font ) {
-	if ( isset( $font['font_id'], $font['name'] ) ) {
-		$font_lookup[ $font['font_id'] ] = $font['name'];
-	}
-}
+// Font names, replacement mappings and manual-font IDs from core's public
+// API (shared with the admin-card route, #221).
+$font_context = Typost_Paragraph_Styles::build_admin_font_context( $instance );
 
-// Deleted font ID => replacement font ID, so a card names the font the
-// style actually renders in (see Typost_Paragraph_Styles::resolve_font_label()).
-$font_mappings = array();
-if ( method_exists( $instance, 'font_sources' ) ) {
-	$replacements = $instance->font_sources()->get_font_replacements();
-	if ( isset( $replacements['mappings'] ) && is_array( $replacements['mappings'] ) ) {
-		$font_mappings = $replacements['mappings'];
+// Edit form choices (#221). Features come from core, so the form offers the
+// same list as the editors.
+$form_features         = method_exists( $instance, 'get_available_features' ) ? (array) $instance->get_available_features() : array();
+$form_feature_titles   = method_exists( $instance, 'get_feature_category_titles' ) ? (array) $instance->get_feature_category_titles() : array();
+$form_features_grouped = array();
+foreach ( $form_features as $feature ) {
+	if ( ! isset( $feature['id'], $feature['name'] ) ) {
+		continue;
 	}
+	$category = isset( $feature['category'] ) ? $feature['category'] : 'other';
+	$form_features_grouped[ $category ][] = $feature;
 }
-
-// Preview sample: fixed text, rendered here so a later render-time rule
-// engine can style it the same way it styles content. It carries ligature
-// pairs, a fraction and figures so OpenType features show. `lang` drives
-// hyphenation, so it names the admin locale only when the text is actually
-// translated.
-$preview_source = 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.';
-/* translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show. */
-$preview_text = __( 'The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789.', 'typost-paragraph-styles' );
-$preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-', get_user_locale() );
 ?>
 
 <div class="typost-ps-admin-tab">
@@ -101,103 +50,11 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 				if ( ! isset( $style['name'], $style['id'] ) || '' === $style['name'] ) {
 					continue; // Skip invalid/corrupted entries
 				}
-				$props    = isset( $style['properties'] ) ? $style['properties'] : array();
-				$style_id = isset( $style['id'] ) ? intval( $style['id'] ) : 0;
+				$props    = isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array();
+				$style_id = intval( $style['id'] );
 				$font_id  = isset( $props['fontId'] ) ? absint( $props['fontId'] ) : 0;
-				$font     = Typost_Paragraph_Styles::resolve_font_label( $font_id, $font_lookup, $font_mappings );
-				switch ( $font['status'] ) {
-					case 'found':
-						$font_name = $font['name'];
-						break;
-					case 'replaced':
-						/* translators: %s: name of the font that replaces the style's deleted font */
-						$font_name = sprintf( __( '%s (replaces a deleted font)', 'typost-paragraph-styles' ), $font['name'] );
-						break;
-					case 'missing':
-						$font_name = __( 'Deleted font, shown in the default font', 'typost-paragraph-styles' );
-						break;
-					default:
-						$font_name = __( 'Default', 'typost-paragraph-styles' );
-				}
-				$preview_id = 'typost-ps-preview-' . $style_id;
-				$weight   = ! empty( $props['fontWeight'] ) ? $props['fontWeight'] : '400';
-				$features = isset( $props['features'] ) && is_array( $props['features'] ) ? $props['features'] : array();
-
-				// Font style — absent means inherit, so only real choices get a label
-				$style_display = '';
-				if ( ! empty( $props['fontStyle'] ) ) {
-					$font_style_labels = array(
-						'italic'  => __( 'Italic', 'typost-paragraph-styles' ),
-						'oblique' => __( 'Oblique', 'typost-paragraph-styles' ),
-						'normal'  => __( 'Normal (upright)', 'typost-paragraph-styles' ),
-					);
-					if ( isset( $font_style_labels[ $props['fontStyle'] ] ) ) {
-						$style_display = $font_style_labels[ $props['fontStyle'] ];
-					}
-				}
-
-				// CSS class name
+				$font     = Typost_Paragraph_Styles::resolve_font_label( $font_id, $font_context['lookup'], $font_context['mappings'] );
 				$css_class = 'typost-ps-' . $style_id;
-
-				// Font size display
-				$size_display = '';
-				if ( ! empty( $props['fontSize'] ) ) {
-					if ( $props['fontSize'] === 'responsive' ) {
-						$min  = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
-						$pref = isset( $props['fontSizePreferred'] ) ? $props['fontSizePreferred'] : '?';
-						$max  = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
-						/* translators: %1$s: min size, %2$s: preferred size, %3$s: max size */
-						$size_display = sprintf( __( 'Responsive (%1$s/%2$s/%3$spx)', 'typost-paragraph-styles' ), $min, $pref, $max );
-					} elseif ( $props['fontSize'] === 'fit' ) {
-						$min = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
-						$max = isset( $props['fontSizeMax'] ) ? $props['fontSizeMax'] : '?';
-						/* translators: %1$s: fallback min size, %2$s: fallback max size */
-						$size_display = sprintf( __( 'Fit to width (fallback %1$s–%2$spx)', 'typost-paragraph-styles' ), $min, $max );
-					} else {
-						/* translators: %s: font size in pixels */
-						$size_display = sprintf( __( '%spx', 'typost-paragraph-styles' ), $props['fontSize'] );
-					}
-				}
-
-				// Letter spacing
-				$spacing_display = '';
-				if ( ! empty( $props['letterSpacing'] ) ) {
-					$em_value = round( $props['letterSpacing'] / 1000, 3 );
-					/* translators: %s: letter spacing in em */
-					$spacing_display = sprintf( __( '%sem', 'typost-paragraph-styles' ), $em_value );
-				}
-
-				// Line height
-				$line_height_display = '';
-				if ( ! empty( $props['lineHeight'] ) ) {
-					$line_height_display = (string) $props['lineHeight'];
-				}
-
-				// First letter hang (#242)
-				$hang_display = '';
-				$hang_value   = isset( $props['initialHang'] ) ? Typost_Paragraph_Styles::normalize_hang( $props['initialHang'] ) : 0;
-				if ( $hang_value > 0 ) {
-					/* translators: %s: hang in em */
-					$hang_display = sprintf( __( '%sem', 'typost-paragraph-styles' ), $hang_value );
-				}
-
-				// Case (#214)
-				$case_labels  = array(
-					'none'           => __( 'Normal', 'typost-paragraph-styles' ),
-					'uppercase'      => __( 'All Caps', 'typost-paragraph-styles' ),
-					'lowercase'      => __( 'Lowercase', 'typost-paragraph-styles' ),
-					'capitalize'     => __( 'Title Case', 'typost-paragraph-styles' ),
-					'small-caps'     => __( 'Small Caps', 'typost-paragraph-styles' ),
-					'all-small-caps' => __( 'All Small Caps', 'typost-paragraph-styles' ),
-				);
-				$case_display = '';
-				if ( isset( $props['textCase'] ) && is_string( $props['textCase'] ) && isset( $case_labels[ $props['textCase'] ] ) ) {
-					$case_display = $case_labels[ $props['textCase'] ];
-					if ( in_array( $props['textCase'], array( 'small-caps', 'all-small-caps' ), true ) && isset( $props['fakeSmallCaps'] ) && false === $props['fakeSmallCaps'] ) {
-						/* translators: %s: case setting, such as "Small Caps" */
-						$case_display = sprintf( __( '%s (no fake small caps)', 'typost-paragraph-styles' ), $case_display );
-					}
-				}
 			?>
 				<div class="typost-ps-style-card" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 					<div class="typost-ps-style-card-header">
@@ -212,91 +69,201 @@ $preview_lang = $preview_text === $preview_source ? 'en' : str_replace( '_', '-'
 							</button>
 						</div>
 					</div>
-					<div class="typost-ps-style-card-details">
-						<span class="typost-ps-detail">
-							<strong><?php esc_html_e( 'Font:', 'typost-paragraph-styles' ); ?></strong>
-							<?php echo esc_html( $font_name . ' (' . $weight . ')' ); ?>
-						</span>
-						<?php if ( $style_display ) : ?>
-							<span class="typost-ps-detail">
-								<strong><?php esc_html_e( 'Style:', 'typost-paragraph-styles' ); ?></strong>
-								<?php echo esc_html( $style_display ); ?>
-							</span>
-						<?php endif; ?>
-						<?php if ( $size_display ) : ?>
-							<span class="typost-ps-detail">
-								<strong><?php esc_html_e( 'Size:', 'typost-paragraph-styles' ); ?></strong>
-								<?php echo esc_html( $size_display ); ?>
-							</span>
-						<?php endif; ?>
-						<?php if ( ! empty( $features ) ) : ?>
-							<span class="typost-ps-detail">
-								<strong><?php esc_html_e( 'Features:', 'typost-paragraph-styles' ); ?></strong>
-								<?php echo esc_html( implode( ', ', $features ) ); ?>
-							</span>
-						<?php endif; ?>
-						<?php if ( $spacing_display || $line_height_display ) : ?>
-							<span class="typost-ps-detail">
-								<?php if ( $spacing_display ) : ?>
-									<strong><?php esc_html_e( 'Spacing:', 'typost-paragraph-styles' ); ?></strong>
-									<?php echo esc_html( $spacing_display ); ?>
-								<?php endif; ?>
-								<?php if ( $spacing_display && $line_height_display ) : ?>
-									&nbsp;/&nbsp;
-								<?php endif; ?>
-								<?php if ( $line_height_display ) : ?>
-									<strong><?php esc_html_e( 'Line Height:', 'typost-paragraph-styles' ); ?></strong>
-									<?php echo esc_html( $line_height_display ); ?>
-								<?php endif; ?>
-							</span>
-						<?php endif; ?>
-						<?php if ( $hang_display ) : ?>
-							<span class="typost-ps-detail">
-								<strong><?php esc_html_e( 'First Letter Hang:', 'typost-paragraph-styles' ); ?></strong>
-								<?php echo esc_html( $hang_display ); ?>
-							</span>
-						<?php endif; ?>
-						<?php if ( $case_display ) : ?>
-							<span class="typost-ps-detail">
-								<strong><?php esc_html_e( 'Case:', 'typost-paragraph-styles' ); ?></strong>
-								<?php echo esc_html( $case_display ); ?>
-							</span>
-						<?php endif; ?>
-					</div>
-
 					<?php
+					// Both renderers escape their own output; the admin-card
+					// route returns the same markup after a save (#221).
+					echo Typost_Paragraph_Styles::render_card_details( $props, $font ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_details()
+
 					// Always shown (#226). A font file downloads only while this
 					// tab is open, and core's admin-page.js loads an Adobe Fonts
 					// kit when a sample that needs it comes into view, from
 					// data-typost-font-id (the font the style renders in, after
 					// replacements).
+					echo Typost_Paragraph_Styles::render_card_preview( $style_id, $font, $font_context['manual_ids'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_preview()
 					?>
-					<div class="typost-ps-preview" id="<?php echo esc_attr( $preview_id ); ?>">
-						<p class="typost-ps-preview-sample <?php echo esc_attr( $css_class ); ?>" lang="<?php echo esc_attr( $preview_lang ); ?>"<?php echo $font['font_id'] ? ' data-typost-font-id="' . esc_attr( $font['font_id'] ) . '"' : ''; ?>><?php echo esc_html( $preview_text ); ?></p>
-						<?php // Check the font the style renders in: a deleted font can be replaced by a manual one. ?>
-						<?php if ( isset( $manual_font_ids[ $font['font_id'] ] ) ) : ?>
-							<p class="typost-ps-preview-note"><?php esc_html_e( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ); ?></p>
-						<?php endif; ?>
-					</div>
 
-					<div class="typost-ps-edit-form" style="display: none;">
-						<div class="typost-ps-edit-form-inner">
-							<label>
-								<?php esc_html_e( 'Name:', 'typost-paragraph-styles' ); ?>
-								<input type="text" class="typost-ps-edit-name" value="<?php echo esc_attr( $style['name'] ); ?>" />
-							</label>
-							<div class="typost-ps-edit-actions">
-								<button type="button" class="button button-primary typost-ps-save-edit-btn">
-									<?php esc_html_e( 'Save', 'typost-paragraph-styles' ); ?>
-								</button>
-								<button type="button" class="button typost-ps-cancel-edit-btn">
-									<?php esc_html_e( 'Cancel', 'typost-paragraph-styles' ); ?>
-								</button>
-							</div>
-						</div>
-					</div>
+					<?php // Filled from the template below when Edit is clicked (#221) ?>
+					<div class="typost-ps-edit-form" style="display: none;"></div>
 				</div>
 			<?php endforeach; ?>
 		<?php endif; ?>
 	</div>
+
+	<?php
+	// The edit form (#221), cloned into a card by admin.js when its Edit
+	// button is clicked, so the page carries one copy of the feature list
+	// instead of one per style. IDs get the style ID appended on clone.
+	// Every stored property is here except fontSizeUnit, which the form
+	// keeps: a style that has a size keeps its unit, a size added to a
+	// style without one takes the site's new-content unit.
+	?>
+	<template id="typost-ps-edit-form-template">
+		<form class="typost-ps-edit-form-inner" novalidate>
+			<p class="typost-ps-edit-field">
+				<label for="typost-ps-edit-name"><?php esc_html_e( 'Name:', 'typost-paragraph-styles' ); ?></label>
+				<input type="text" id="typost-ps-edit-name" class="typost-ps-edit-name" data-field="name" required />
+			</p>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Font', 'typost-paragraph-styles' ); ?></legend>
+				<div class="typost-ps-edit-row">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-font"><?php esc_html_e( 'Font family', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-font" data-field="fontId">
+							<option value="0"><?php esc_html_e( 'Default (theme font)', 'typost-paragraph-styles' ); ?></option>
+							<?php foreach ( $font_context['options'] as $option_id => $option_name ) : ?>
+								<option value="<?php echo esc_attr( $option_id ); ?>"><?php echo esc_html( $option_name ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-weight"><?php esc_html_e( 'Weight', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-weight" data-field="fontWeight">
+							<option value=""><?php esc_html_e( 'Default', 'typost-paragraph-styles' ); ?></option>
+							<?php foreach ( array( '100', '200', '300', '400', '500', '600', '700', '800', '900' ) as $weight_option ) : ?>
+								<option value="<?php echo esc_attr( $weight_option ); ?>"><?php echo esc_html( $weight_option ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-font-style"><?php esc_html_e( 'Font style', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-font-style" data-field="fontStyle">
+							<option value=""><?php esc_html_e( 'Default', 'typost-paragraph-styles' ); ?></option>
+							<option value="normal"><?php esc_html_e( 'Normal (upright)', 'typost-paragraph-styles' ); ?></option>
+							<option value="italic"><?php esc_html_e( 'Italic', 'typost-paragraph-styles' ); ?></option>
+							<option value="oblique"><?php esc_html_e( 'Oblique', 'typost-paragraph-styles' ); ?></option>
+						</select>
+					</p>
+				</div>
+			</fieldset>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Size', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-field">
+					<label for="typost-ps-edit-size-mode"><?php esc_html_e( 'Font size', 'typost-paragraph-styles' ); ?></label>
+					<select id="typost-ps-edit-size-mode" data-field="sizeMode">
+						<option value="inherit"><?php esc_html_e( 'Default', 'typost-paragraph-styles' ); ?></option>
+						<option value="fixed"><?php esc_html_e( 'Fixed', 'typost-paragraph-styles' ); ?></option>
+						<option value="responsive"><?php esc_html_e( 'Responsive (fluid)', 'typost-paragraph-styles' ); ?></option>
+						<option value="fit"><?php esc_html_e( 'Fit to width', 'typost-paragraph-styles' ); ?></option>
+					</select>
+				</p>
+				<div class="typost-ps-edit-row" data-show-for-size="fixed">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-size"><?php esc_html_e( 'Size (px)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-size" data-field="fontSize" min="1" step="any" />
+					</p>
+				</div>
+				<div class="typost-ps-edit-row" data-show-for-size="responsive fit">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-size-min"><?php esc_html_e( 'Mobile (px)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-size-min" data-field="fontSizeMin" min="1" step="1" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-size-preferred"><?php esc_html_e( 'Intermediate (px)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-size-preferred" data-field="fontSizePreferred" min="1" step="1" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-size-max"><?php esc_html_e( 'Large (px)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-size-max" data-field="fontSizeMax" min="1" step="1" />
+					</p>
+				</div>
+				<p class="typost-ps-edit-help" data-show-for-size="fit"><?php esc_html_e( 'Fit to width sizes each line to fill the block. The three sizes above are the fallback for browsers without container queries, and for text styled inline.', 'typost-paragraph-styles' ); ?></p>
+				<div class="typost-ps-edit-row" data-show-for-size="fit">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-fit-max"><?php esc_html_e( 'Maximum size (px, 0 = no limit)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-fit-max" data-field="fitMaxSize" min="0" step="1" />
+					</p>
+				</div>
+			</fieldset>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Spacing', 'typost-paragraph-styles' ); ?></legend>
+				<div class="typost-ps-edit-row">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-letter-spacing"><?php esc_html_e( 'Letter spacing (1/1000 em)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-letter-spacing" data-field="letterSpacing" min="-200" max="200" step="1" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-line-height"><?php esc_html_e( 'Line height (0 = default)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-line-height" data-field="lineHeight" min="0" max="5" step="0.05" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-hang"><?php esc_html_e( 'First letter hang (em, 0–1)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-hang" data-field="initialHang" min="0" max="1" step="0.01" />
+					</p>
+				</div>
+			</fieldset>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Case', 'typost-paragraph-styles' ); ?></legend>
+				<div class="typost-ps-edit-row">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-case"><?php esc_html_e( 'Case', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-case" data-field="textCase">
+							<option value=""><?php esc_html_e( 'Default', 'typost-paragraph-styles' ); ?></option>
+							<?php foreach ( Typost_Paragraph_Styles::text_case_labels() as $case_value => $case_label ) : ?>
+								<option value="<?php echo esc_attr( $case_value ); ?>"><?php echo esc_html( $case_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+					<p class="typost-ps-edit-field typost-ps-edit-checkbox" data-show-for-case="small-caps all-small-caps">
+						<input type="checkbox" id="typost-ps-edit-fake-small-caps" data-field="fakeSmallCaps" />
+						<label for="typost-ps-edit-fake-small-caps"><?php esc_html_e( 'Allow fake small caps when the font has none', 'typost-paragraph-styles' ); ?></label>
+					</p>
+				</div>
+			</fieldset>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'OpenType features', 'typost-paragraph-styles' ); ?></legend>
+				<div class="typost-ps-edit-features">
+					<?php foreach ( $form_features_grouped as $category => $category_features ) : ?>
+						<div class="typost-ps-edit-feature-group" role="group" aria-labelledby="typost-ps-edit-features-<?php echo esc_attr( $category ); ?>">
+							<p class="typost-ps-edit-feature-group-title" id="typost-ps-edit-features-<?php echo esc_attr( $category ); ?>">
+								<?php echo esc_html( isset( $form_feature_titles[ $category ] ) ? $form_feature_titles[ $category ] : $category ); ?>
+							</p>
+							<?php foreach ( $category_features as $feature ) :
+								$feature_tag = sanitize_key( $feature['id'] );
+								// Core's feature names come through esc_html__(); decode so they are escaped once.
+								$feature_name = wp_specialchars_decode( $feature['name'], ENT_QUOTES );
+							?>
+								<p class="typost-ps-edit-checkbox">
+									<input type="checkbox" id="typost-ps-edit-feature-<?php echo esc_attr( $feature_tag ); ?>" data-feature value="<?php echo esc_attr( $feature_tag ); ?>" />
+									<label for="typost-ps-edit-feature-<?php echo esc_attr( $feature_tag ); ?>"><?php echo esc_html( $feature_name ); ?> <code><?php echo esc_html( $feature_tag ); ?></code></label>
+								</p>
+							<?php endforeach; ?>
+						</div>
+					<?php endforeach; ?>
+					<?php // Features the style stores that are not in the list above are added here, checked ?>
+					<div class="typost-ps-edit-feature-group" data-extra-features hidden></div>
+				</div>
+			</fieldset>
+
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Variable font axes', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-field">
+					<label for="typost-ps-edit-axes"><?php esc_html_e( 'Axis settings', 'typost-paragraph-styles' ); ?></label>
+					<input type="text" id="typost-ps-edit-axes" data-field="fontVariationSettings" aria-describedby="typost-ps-edit-axes-help" spellcheck="false" />
+					<span class="typost-ps-edit-help" id="typost-ps-edit-axes-help">
+						<?php
+						/* translators: %s: example of font variation settings, such as "wght" 650, "wdth" 80 */
+						printf( esc_html__( 'Four-letter axis tags in quotes, each followed by a number, separated by commas. Example: %s. Leave empty for none.', 'typost-paragraph-styles' ), '<code>"wght" 650, "wdth" 80</code>' );
+						?>
+					</span>
+				</p>
+			</fieldset>
+
+			<?php // The id lets showFormError() add the message to the failing field's description ?>
+			<p class="typost-ps-edit-error" id="typost-ps-edit-error" role="alert" hidden></p>
+
+			<div class="typost-ps-edit-actions">
+				<button type="submit" class="button button-primary typost-ps-save-edit-btn">
+					<?php esc_html_e( 'Save', 'typost-paragraph-styles' ); ?>
+				</button>
+				<button type="button" class="button typost-ps-cancel-edit-btn">
+					<?php esc_html_e( 'Cancel', 'typost-paragraph-styles' ); ?>
+				</button>
+			</div>
+		</form>
+	</template>
 </div>

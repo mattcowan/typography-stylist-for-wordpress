@@ -7,6 +7,9 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 
 == Changelog ==
 
+= 2.3.4 =
+* **New: edit every setting of a paragraph style on the Paragraph Styles tab.** Before, Edit on a style card changed only the name, and other changes needed "Update Style" in the editor. Edit now opens a form with the font, weight, font style, font size (fixed, responsive, or fit to width with its maximum size and fallback sizes), letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes. Save changes the style for every post that uses it on the next page load; the card and its sample update without a page reload. Values that you do not change stay as they were, also a deleted font, a weight that is not in the list, and features that another plugin added. A style that has a size keeps its unit (px or rem); a size added to a style without one takes the unit for new content, as "Update Style" does in the editor. A rename alone still changes only the name. The card now also shows the style's variable font axes (#221).
+
 = 2.3.3 =
 * **New: a Case setting in the Typography Stylist block, in the inline format panel, and in paragraph styles.** Choose All Caps, Lowercase, Title Case, Small Caps, or All Small Caps, or Normal to remove a case the theme sets. The text keeps the case you typed; only the look changes. For small caps you can choose whether the browser may fake them when the font has none. A note says when All Caps can be hard to read. Text that you detach from a paragraph style keeps the style's case. Styles saved before this change look the same as before (#214).
 * **Fixed: italic text lost its italic in the inline format panel.** After the post was reloaded, the Font Style menu showed "Inherit" for text with a visual italic, and the next change in the panel removed the italic. The panel now reads the italic back (#214).

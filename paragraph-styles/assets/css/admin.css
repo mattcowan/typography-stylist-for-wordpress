@@ -134,17 +134,110 @@
 	border-top: 1px solid #dcdcde;
 }
 
-.typost-ps-edit-form-inner label {
+/* Full property form (#221). Fields stack label-over-control and wrap in
+   rows; hidden fields (size mode, small caps) use the hidden attribute. */
+.typost-ps-edit-form-inner [hidden] {
+	display: none !important;
+}
+
+.typost-ps-edit-field {
+	margin: 0 0 8px;
+}
+
+.typost-ps-edit-field > label {
 	display: block;
-	margin-bottom: 8px;
+	margin-bottom: 4px;
 	font-weight: 600;
-	font-size: 14px;
+	font-size: 13px;
 }
 
 .typost-ps-edit-form-inner input[type="text"] {
 	width: 100%;
 	max-width: 400px;
-	margin-top: 4px;
+}
+
+.typost-ps-edit-form-inner input[type="number"] {
+	width: 8em;
+}
+
+.typost-ps-edit-form-inner select {
+	max-width: 100%;
+}
+
+.typost-ps-edit-group {
+	margin: 12px 0 0;
+	padding: 8px 12px 4px;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	min-width: 0;
+}
+
+.typost-ps-edit-group legend {
+	padding: 0 4px;
+	font-weight: 600;
+	font-size: 14px;
+}
+
+.typost-ps-edit-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 16px;
+	align-items: flex-end;
+}
+
+/* A flex item does not shrink below its content by default, so a long
+   font name kept the select wider than a 320px screen */
+.typost-ps-edit-row > .typost-ps-edit-field {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.typost-ps-edit-help {
+	display: block;
+	margin: 0 0 8px;
+	font-size: 13px;
+	color: #50575e;
+}
+
+.typost-ps-edit-checkbox {
+	margin: 0 0 4px;
+	font-size: 13px;
+}
+
+.typost-ps-edit-checkbox input[type="checkbox"] {
+	margin: 0 6px 0 0;
+}
+
+/* A checkbox in a field row sits on the line of the controls beside it */
+.typost-ps-edit-field.typost-ps-edit-checkbox {
+	padding-bottom: 6px;
+}
+
+.typost-ps-edit-field.typost-ps-edit-checkbox > label {
+	display: inline;
+	margin: 0;
+	font-weight: 400;
+}
+
+/* Feature checkboxes: one column per category on wide screens */
+.typost-ps-edit-features {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 8px 16px;
+}
+
+.typost-ps-edit-feature-group-title {
+	margin: 0 0 4px;
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.typost-ps-edit-error {
+	margin: 12px 0 0;
+	padding: 8px 12px;
+	border-left: 4px solid #d63638;
+	background: #fcf0f1;
+	color: #1d2327;
 }
 
 .typost-ps-edit-actions {
@@ -163,4 +256,9 @@
 .typost-ps-style-card.typost-ps-saving {
 	opacity: 0.7;
 	pointer-events: none;
+}
+
+/* Edit fetches the stored style before the form opens */
+.typost-ps-style-card.typost-ps-loading .typost-ps-edit-btn {
+	cursor: progress;
 }

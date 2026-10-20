@@ -60,5 +60,26 @@ if (!class_exists('WP_Error')) {
     }
 }
 
+// Minimal WP_REST_Response stand-in for REST callbacks that build one.
+if (!class_exists('WP_REST_Response')) {
+    class WP_REST_Response {
+        private $data;
+        private $status;
+
+        public function __construct($data = null, $status = 200) {
+            $this->data = $data;
+            $this->status = $status;
+        }
+
+        public function get_data() {
+            return $this->data;
+        }
+
+        public function get_status() {
+            return $this->status;
+        }
+    }
+}
+
 // WordPress test environment setup
 \Brain\Monkey\setUp();
