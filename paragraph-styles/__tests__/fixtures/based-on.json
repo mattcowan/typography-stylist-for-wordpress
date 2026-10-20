@@ -1,0 +1,818 @@
+{
+	"resolve": [
+		{
+			"label": "a style without a parent keeps what it stores, empty values included",
+			"styles": [
+				{
+					"id": 1,
+					"name": "A",
+					"properties": {
+						"fontId": 0,
+						"fontWeight": "700",
+						"letterSpacing": 0
+					}
+				}
+			],
+			"expected": {
+				"1": {
+					"fontId": 0,
+					"fontWeight": "700",
+					"letterSpacing": 0
+				}
+			}
+		},
+		{
+			"label": "use case: Body, Body – First (no hang) and Caption (smaller size)",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"fontId": 5,
+						"fontWeight": "400",
+						"fontSize": "responsive",
+						"fontSizeUnit": "rem",
+						"fontSizeMin": 16,
+						"fontSizePreferred": 18,
+						"fontSizeMax": 20,
+						"lineHeight": 1.6,
+						"features": [
+							"liga",
+							"onum"
+						],
+						"initialHang": 0.1
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"initialHang": 0
+					}
+				},
+				{
+					"id": 3,
+					"name": "Caption",
+					"basedOn": 1,
+					"properties": {
+						"fontSize": "14",
+						"fontSizeUnit": "rem",
+						"letterSpacing": 20
+					}
+				}
+			],
+			"expected": {
+				"1": {
+					"fontId": 5,
+					"fontWeight": "400",
+					"fontSize": "responsive",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 16,
+					"fontSizePreferred": 18,
+					"fontSizeMax": 20,
+					"lineHeight": 1.6,
+					"features": [
+						"liga",
+						"onum"
+					],
+					"initialHang": 0.1
+				},
+				"2": {
+					"fontId": 5,
+					"fontWeight": "400",
+					"fontSize": "responsive",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 16,
+					"fontSizePreferred": 18,
+					"fontSizeMax": 20,
+					"lineHeight": 1.6,
+					"features": [
+						"liga",
+						"onum"
+					]
+				},
+				"3": {
+					"fontId": 5,
+					"fontWeight": "400",
+					"fontSize": "14",
+					"fontSizeUnit": "rem",
+					"lineHeight": 1.6,
+					"features": [
+						"liga",
+						"onum"
+					],
+					"initialHang": 0.1,
+					"letterSpacing": 20
+				}
+			}
+		},
+		{
+			"label": "empty values unset what the parent sets",
+			"styles": [
+				{
+					"id": 1,
+					"name": "P",
+					"properties": {
+						"fontId": 5,
+						"fontWeight": "700",
+						"fontStyle": "italic",
+						"fontSize": "24",
+						"fontSizeUnit": "rem",
+						"features": [
+							"swsh"
+						],
+						"fontVariationSettings": "\"wght\" 500",
+						"initialHang": 0.2,
+						"textCase": "uppercase",
+						"letterSpacing": 50,
+						"lineHeight": 1.3
+					}
+				},
+				{
+					"id": 2,
+					"name": "C",
+					"basedOn": 1,
+					"properties": {
+						"fontId": 0,
+						"fontWeight": "",
+						"fontStyle": "",
+						"fontSize": "inherit",
+						"features": [],
+						"fontVariationSettings": "",
+						"initialHang": 0,
+						"textCase": "",
+						"letterSpacing": 0
+					}
+				}
+			],
+			"expected": {
+				"2": {
+					"lineHeight": 1.3
+				}
+			}
+		},
+		{
+			"label": "the case inherits as a group: Small Caps over no-fake Small Caps allows fake small caps",
+			"styles": [
+				{
+					"id": 1,
+					"name": "P",
+					"properties": {
+						"textCase": "small-caps",
+						"fakeSmallCaps": false,
+						"fontId": 3
+					}
+				},
+				{
+					"id": 2,
+					"name": "C",
+					"basedOn": 1,
+					"properties": {
+						"textCase": "all-small-caps"
+					}
+				}
+			],
+			"expected": {
+				"2": {
+					"fontId": 3,
+					"textCase": "all-small-caps"
+				}
+			}
+		},
+		{
+			"label": "the size inherits as a group: a fixed size drops the parent's fluid trio and fit cap",
+			"styles": [
+				{
+					"id": 1,
+					"name": "P",
+					"properties": {
+						"fontSize": "fit",
+						"fontSizeUnit": "rem",
+						"fontSizeMin": 20,
+						"fontSizePreferred": 40,
+						"fontSizeMax": 80,
+						"fitMaxSize": 120
+					}
+				},
+				{
+					"id": 2,
+					"name": "C",
+					"basedOn": 1,
+					"properties": {
+						"fontSize": "32"
+					}
+				},
+				{
+					"id": 3,
+					"name": "Stray",
+					"basedOn": 1,
+					"properties": {
+						"fitMaxSize": 60,
+						"fontWeight": "600"
+					}
+				}
+			],
+			"expected": {
+				"2": {
+					"fontSize": "32"
+				},
+				"3": {
+					"fontSize": "fit",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 20,
+					"fontSizePreferred": 40,
+					"fontSizeMax": 80,
+					"fitMaxSize": 120,
+					"fontWeight": "600"
+				}
+			}
+		},
+		{
+			"label": "a chain of seven levels",
+			"styles": [
+				{
+					"id": 10,
+					"name": "L1",
+					"properties": {
+						"fontId": 7,
+						"fontWeight": "300",
+						"lineHeight": 1.2
+					}
+				},
+				{
+					"id": 11,
+					"name": "L2",
+					"basedOn": 10,
+					"properties": {
+						"fontWeight": "400"
+					}
+				},
+				{
+					"id": 12,
+					"name": "L3",
+					"basedOn": 11,
+					"properties": {
+						"letterSpacing": 10
+					}
+				},
+				{
+					"id": 13,
+					"name": "L4",
+					"basedOn": 12,
+					"properties": {
+						"features": [
+							"ss01"
+						]
+					}
+				},
+				{
+					"id": 14,
+					"name": "L5",
+					"basedOn": 13,
+					"properties": {
+						"fontStyle": "italic"
+					}
+				},
+				{
+					"id": 15,
+					"name": "L6",
+					"basedOn": 14,
+					"properties": {
+						"textCase": "small-caps",
+						"fakeSmallCaps": false
+					}
+				},
+				{
+					"id": 16,
+					"name": "L7",
+					"basedOn": 15,
+					"properties": {
+						"fontWeight": "700"
+					}
+				}
+			],
+			"expected": {
+				"16": {
+					"fontId": 7,
+					"fontWeight": "700",
+					"lineHeight": 1.2,
+					"letterSpacing": 10,
+					"features": [
+						"ss01"
+					],
+					"fontStyle": "italic",
+					"textCase": "small-caps",
+					"fakeSmallCaps": false
+				}
+			}
+		},
+		{
+			"label": "a loop in stored data stops at the first style seen again",
+			"styles": [
+				{
+					"id": 1,
+					"name": "A",
+					"basedOn": 2,
+					"properties": {
+						"fontWeight": "700"
+					}
+				},
+				{
+					"id": 2,
+					"name": "B",
+					"basedOn": 1,
+					"properties": {
+						"fontId": 4,
+						"fontWeight": "300"
+					}
+				}
+			],
+			"expected": {
+				"1": {
+					"fontId": 4,
+					"fontWeight": "700"
+				},
+				"2": {
+					"fontId": 4,
+					"fontWeight": "300"
+				}
+			}
+		},
+		{
+			"label": "a missing parent leaves the style's own values, empty ones dropped",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Orphan",
+					"basedOn": 99,
+					"properties": {
+						"fontId": 0,
+						"fontWeight": "500"
+					}
+				}
+			],
+			"expected": {
+				"1": {
+					"fontWeight": "500"
+				}
+			}
+		},
+		{
+			"label": "resolution stops after ten levels",
+			"styles": [
+				{
+					"id": 100,
+					"name": "D0",
+					"properties": {
+						"fontId": 9
+					}
+				},
+				{
+					"id": 101,
+					"name": "D1",
+					"properties": {
+						"letterSpacing": 2
+					},
+					"basedOn": 100
+				},
+				{
+					"id": 102,
+					"name": "D2",
+					"properties": {
+						"letterSpacing": 3
+					},
+					"basedOn": 101
+				},
+				{
+					"id": 103,
+					"name": "D3",
+					"properties": {
+						"letterSpacing": 4
+					},
+					"basedOn": 102
+				},
+				{
+					"id": 104,
+					"name": "D4",
+					"properties": {
+						"letterSpacing": 5
+					},
+					"basedOn": 103
+				},
+				{
+					"id": 105,
+					"name": "D5",
+					"properties": {
+						"letterSpacing": 6
+					},
+					"basedOn": 104
+				},
+				{
+					"id": 106,
+					"name": "D6",
+					"properties": {
+						"letterSpacing": 7
+					},
+					"basedOn": 105
+				},
+				{
+					"id": 107,
+					"name": "D7",
+					"properties": {
+						"letterSpacing": 8
+					},
+					"basedOn": 106
+				},
+				{
+					"id": 108,
+					"name": "D8",
+					"properties": {
+						"letterSpacing": 9
+					},
+					"basedOn": 107
+				},
+				{
+					"id": 109,
+					"name": "D9",
+					"properties": {
+						"letterSpacing": 10
+					},
+					"basedOn": 108
+				},
+				{
+					"id": 110,
+					"name": "D10",
+					"properties": {
+						"letterSpacing": 11
+					},
+					"basedOn": 109
+				},
+				{
+					"id": 111,
+					"name": "D11",
+					"properties": {
+						"letterSpacing": 12,
+						"fontWeight": "900"
+					},
+					"basedOn": 110
+				}
+			],
+			"expected": {
+				"111": {
+					"letterSpacing": 12,
+					"fontWeight": "900"
+				},
+				"109": {
+					"letterSpacing": 10,
+					"fontId": 9
+				}
+			}
+		}
+	],
+	"equality": [
+		{
+			"label": "font id as number and string",
+			"key": "fontId",
+			"a": {
+				"fontId": 5
+			},
+			"b": {
+				"fontId": "5"
+			},
+			"equal": true
+		},
+		{
+			"label": "no font and font 0",
+			"key": "fontId",
+			"a": {
+				"fontId": 0
+			},
+			"b": {},
+			"equal": true
+		},
+		{
+			"label": "different fonts",
+			"key": "fontId",
+			"a": {
+				"fontId": 5
+			},
+			"b": {
+				"fontId": 6
+			},
+			"equal": false
+		},
+		{
+			"label": "weight as number and string",
+			"key": "fontWeight",
+			"a": {
+				"fontWeight": "700"
+			},
+			"b": {
+				"fontWeight": 700
+			},
+			"equal": true
+		},
+		{
+			"label": "unset weight is not 400",
+			"key": "fontWeight",
+			"a": {
+				"fontWeight": "400"
+			},
+			"b": {},
+			"equal": false
+		},
+		{
+			"label": "features in another order",
+			"key": "features",
+			"a": {
+				"features": [
+					"onum",
+					"liga"
+				]
+			},
+			"b": {
+				"features": [
+					"liga",
+					"onum"
+				]
+			},
+			"equal": true
+		},
+		{
+			"label": "one feature more",
+			"key": "features",
+			"a": {
+				"features": [
+					"liga",
+					"onum",
+					"ss01"
+				]
+			},
+			"b": {
+				"features": [
+					"liga",
+					"onum"
+				]
+			},
+			"equal": false
+		},
+		{
+			"label": "no features and an empty list",
+			"key": "features",
+			"a": {
+				"features": []
+			},
+			"b": {},
+			"equal": true
+		},
+		{
+			"label": "line height float noise",
+			"key": "lineHeight",
+			"a": {
+				"lineHeight": 1.6
+			},
+			"b": {
+				"lineHeight": 1.6
+			},
+			"equal": true
+		},
+		{
+			"label": "different line heights",
+			"key": "lineHeight",
+			"a": {
+				"lineHeight": 1.6
+			},
+			"b": {
+				"lineHeight": 1.7
+			},
+			"equal": false
+		},
+		{
+			"label": "spacing 0 and none",
+			"key": "letterSpacing",
+			"a": {
+				"letterSpacing": 0
+			},
+			"b": {},
+			"equal": true
+		},
+		{
+			"label": "hang as string",
+			"key": "initialHang",
+			"a": {
+				"initialHang": "0.1"
+			},
+			"b": {
+				"initialHang": 0.1
+			},
+			"equal": true
+		},
+		{
+			"label": "same fixed rem size",
+			"key": "fontSize",
+			"a": {
+				"fontSize": "24",
+				"fontSizeUnit": "rem"
+			},
+			"b": {
+				"fontSize": 24,
+				"fontSizeUnit": "rem"
+			},
+			"equal": true
+		},
+		{
+			"label": "same size in another unit",
+			"key": "fontSize",
+			"a": {
+				"fontSize": "24",
+				"fontSizeUnit": "rem"
+			},
+			"b": {
+				"fontSize": "24"
+			},
+			"equal": false
+		},
+		{
+			"label": "fluid trio differs",
+			"key": "fontSize",
+			"a": {
+				"fontSize": "responsive",
+				"fontSizeMin": 16,
+				"fontSizePreferred": 24,
+				"fontSizeMax": 32
+			},
+			"b": {
+				"fontSize": "responsive",
+				"fontSizeMin": 16,
+				"fontSizePreferred": 24,
+				"fontSizeMax": 40
+			},
+			"equal": false
+		},
+		{
+			"label": "no size and inherit",
+			"key": "fontSize",
+			"a": {
+				"fontSize": "inherit"
+			},
+			"b": {},
+			"equal": true
+		},
+		{
+			"label": "fake small caps off differs",
+			"key": "textCase",
+			"a": {
+				"textCase": "small-caps",
+				"fakeSmallCaps": false
+			},
+			"b": {
+				"textCase": "small-caps"
+			},
+			"equal": false
+		},
+		{
+			"label": "fake small caps has no effect on All Caps",
+			"key": "textCase",
+			"a": {
+				"textCase": "uppercase",
+				"fakeSmallCaps": false
+			},
+			"b": {
+				"textCase": "uppercase"
+			},
+			"equal": true
+		},
+		{
+			"label": "Normal is not Default",
+			"key": "textCase",
+			"a": {
+				"textCase": "none"
+			},
+			"b": {},
+			"equal": false
+		}
+	],
+	"css": [
+		{
+			"label": "Body – First renders Body's values without the hang",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"fontId": 5,
+						"fontWeight": "400",
+						"fontSize": "responsive",
+						"fontSizeUnit": "rem",
+						"fontSizeMin": 16,
+						"fontSizePreferred": 18,
+						"fontSizeMax": 20,
+						"lineHeight": 1.6,
+						"features": [
+							"liga",
+							"onum"
+						],
+						"initialHang": 0.1
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"initialHang": 0
+					}
+				},
+				{
+					"id": 3,
+					"name": "Caption",
+					"basedOn": 1,
+					"properties": {
+						"fontSize": "14",
+						"fontSizeUnit": "rem",
+						"letterSpacing": 20
+					}
+				}
+			],
+			"id": 2,
+			"css": ".typost-ps-2,\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2,\n.typost-styled[data-style-id=\"2\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-5);\n    font-weight: 400;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    line-height: 1.6;\n    font-size: clamp(1rem, 1.125rem + 0.25vw, 1.25rem);\n}"
+		},
+		{
+			"label": "Caption renders Body's font, line height and features with its own size",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"fontId": 5,
+						"fontWeight": "400",
+						"fontSize": "responsive",
+						"fontSizeUnit": "rem",
+						"fontSizeMin": 16,
+						"fontSizePreferred": 18,
+						"fontSizeMax": 20,
+						"lineHeight": 1.6,
+						"features": [
+							"liga",
+							"onum"
+						],
+						"initialHang": 0.1
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"initialHang": 0
+					}
+				},
+				{
+					"id": 3,
+					"name": "Caption",
+					"basedOn": 1,
+					"properties": {
+						"fontSize": "14",
+						"fontSizeUnit": "rem",
+						"letterSpacing": 20
+					}
+				}
+			],
+			"id": 3,
+			"css": ".typost-ps-3,\n.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3,\n.typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-5);\n    font-weight: 400;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    line-height: 1.6;\n    font-size: 0.875rem;\n    --typost-hang: 0.1;\n}\n\n.typost-styled.typost-ps-3:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-3.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-3.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		}
+	],
+	"overrides": [
+		{
+			"label": "keeps only what differs from the parent",
+			"full": { "fontId": 5, "fontWeight": "400", "lineHeight": 1.6, "features": ["liga", "onum"], "letterSpacing": 20 },
+			"parent": { "fontId": 5, "fontWeight": "400", "lineHeight": 1.6, "features": ["onum", "liga"] },
+			"expected": { "letterSpacing": 20 }
+		},
+		{
+			"label": "a first parent: what the parent sets and the look does not is stored empty, so the look stays",
+			"full": { "fontId": 36, "fontSize": "18", "lineHeight": 1.2 },
+			"parent": { "fontId": 37, "fontWeight": "400", "fontStyle": "italic", "fontSize": "20", "lineHeight": 1.5, "features": ["liga"] },
+			"expected": { "fontSize": "18", "fontId": 36, "lineHeight": 1.2, "fontWeight": "", "fontStyle": "", "features": [] }
+		},
+		{
+			"label": "a look with no size or case against a parent with both stores inherit and Default",
+			"full": { "fontId": 5 },
+			"parent": { "fontId": 5, "fontSize": "20", "textCase": "uppercase" },
+			"expected": { "fontSize": "inherit", "textCase": "" }
+		},
+		{
+			"label": "a changed size sends the whole size group",
+			"full": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 18, "fontSizeMax": 24 },
+			"parent": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 18, "fontSizeMax": 20 },
+			"expected": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 18, "fontSizeMax": 24 }
+		},
+		{
+			"label": "small caps without fake small caps differ from small caps with them",
+			"full": { "textCase": "small-caps", "fakeSmallCaps": false },
+			"parent": { "textCase": "small-caps" },
+			"expected": { "textCase": "small-caps", "fakeSmallCaps": false }
+		}
+	]
+}

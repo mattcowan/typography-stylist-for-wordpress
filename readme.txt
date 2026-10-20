@@ -37,10 +37,11 @@ A paragraph style is a named set of typography settings, like a paragraph style 
 * A style holds the font, weight, italic, case (All Caps, Small Caps and others), size, letter spacing, line height, OpenType features, variable font axes, and the First Letter Hang. Fit-to-width sizes can also go into a style.
 * “Browse styles…” shows each style in its own typeface, with your selected words as the sample text. You can search the list, and group it by font family, by size mode, or by recent use.
 * Each style is one CSS class. Change a style and click “Update Style”. All text that uses the style then changes.
+* A style can be based on another style, like “Based On” in InDesign. It uses that style’s value for every setting it does not set itself, so one change to a “Body” style also changes “Caption” and the other styles based on it.
 * If the selected text already has its own settings, the editor asks before the style replaces them.
 * “Detach Style” changes styled text back to independent settings.
 * In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
-* Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes. Every post that uses the style shows the change.
+* Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes, and the style it is based on. Every post that uses the style shows the change.
 
 = Granular typography control =
 
@@ -245,6 +246,8 @@ When you delete a font, you can choose a replacement font. Content that used the
 To style a whole Paragraph or Heading block, open Paragraph Style in the block sidebar and click “Browse styles…”. The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove those two classes by hand; use “Detach Style” instead.
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. The style browser shows 24 styles at a time. A button under the list shows the next styles.
+
+To base a style on another style, click “Edit” on the style in Settings → Typography Stylist → Paragraph Styles and choose a style in “Based on”. The style then uses that style’s value for every setting it does not set itself, and follows later changes to it. The card marks each value as “Inherited” or “Override”, and “Reset to Base” in the Edit form removes all overrides. When you delete a style, the styles based on it keep their look.
 
 = Is this plugin accessible? =
 

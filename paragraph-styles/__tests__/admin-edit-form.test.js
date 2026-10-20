@@ -14,6 +14,7 @@ const {
 	sizeModeOf,
 	updateConditionalFields,
 	fillEditForm,
+	updateResetToBase,
 	readEditForm,
 	validateEditValues,
 	buildEditPayload,
@@ -536,5 +537,155 @@ describe('card refresh', () => {
 		expect(el.parentNode).toBe(document.head);
 		expect(el.textContent).toBe('.typost-ps-1 { font-style: italic; }');
 		expect(replaceStyleCss(document, undefined)).toBeNull();
+	});
+});
+
+describe('Based On (#200)', () => {
+	const { resolveStyleList } = require('../assets/js/lib/ps-utils.js');
+	const { replaceRelatedCards } = require('../assets/js/admin.js');
+
+	// Client shape, as typostPSAdmin.styles carries it
+	const STYLES = resolveStyleList([
+		{ id: 1, name: 'Body', properties: { fontId: 36, fontWeight: '400', lineHeight: 1.6, features: ['liga'] } },
+		{ id: 2, name: 'Caption', basedOn: 1, properties: { fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 20 } },
+		{ id: 3, name: 'Small Caption', basedOn: 2, properties: { fontSize: '12', fontSizeUnit: 'rem' } },
+		{ id: 4, name: 'Display', properties: { fontId: 12, fontWeight: '700' } },
+	]);
+
+	function openChildForm(style) {
+		const template = buildTemplate();
+		const name = template.content.querySelector('[data-field="name"]');
+		const select = document.createElement('select');
+		select.setAttribute('data-field', 'basedOn');
+		select.innerHTML = '<option value="0">None</option>';
+		name.after(select);
+		const reset = document.createElement('button');
+		reset.className = 'typost-ps-reset-base-btn';
+		reset.hidden = true;
+		template.content.querySelector('form').appendChild(reset);
+
+		const container = document.createElement('div');
+		container.appendChild(template.content.cloneNode(true));
+		document.body.appendChild(container);
+		const form = container.querySelector('form');
+		fillEditForm(form, style, '', 'rem', STYLES);
+		return { form, baseline: readEditForm(form) };
+	}
+
+	const optionValues = (form) => Array.from(form.querySelector('[data-field="basedOn"]').options).map((o) => o.value);
+
+	test('lists every style except the style itself and the styles based on it', () => {
+		const { form } = openChildForm(STYLES[0]);
+		expect(optionValues(form)).toEqual(['0', '4']);
+		const caption = openChildForm(STYLES[1]).form;
+		expect(optionValues(caption)).toEqual(['0', '1', '4']);
+		expect(caption.querySelector('[data-field="basedOn"]').value).toBe('1');
+	});
+
+	test('a child shows its resolved values, and Reset to Base only when it has overrides', () => {
+		const { form } = openChildForm(STYLES[1]);
+		expect(form.querySelector('[data-field="fontId"]').value).toBe('36');
+		expect(form.querySelector('.typost-ps-reset-base-btn').hidden).toBe(false);
+		expect(openChildForm(STYLES[0]).form.querySelector('.typost-ps-reset-base-btn').hidden).toBe(true);
+		const bare = resolveStyleList([STYLES[0], { id: 5, name: 'Same as Body', basedOn: 1, properties: {} }])[1];
+		expect(openChildForm(bare).form.querySelector('.typost-ps-reset-base-btn').hidden).toBe(true);
+	});
+
+	test('an untouched child form sends only the name', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({ name: 'Caption' });
+	});
+
+	test('a change to a child sends only what differs from the parent', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		setField(form, 'letterSpacing', 40);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({
+			name: 'Caption',
+			properties: { fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 40 },
+		});
+	});
+
+	test('a value set back to the parent\'s becomes inherited', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		setField(form, 'letterSpacing', 0);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES).properties)
+			.toEqual({ fontSize: '14', fontSizeUnit: 'rem' });
+	});
+
+	test('a Based On change alone sends basedOn and no properties (the server rebases)', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		setField(form, 'basedOn', 4);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({ name: 'Caption', basedOn: 4 });
+		setField(form, 'basedOn', 0);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({ name: 'Caption', basedOn: 0 });
+	});
+
+	// A Based On change with edits sends the edits relative to the current
+	// parent, so the server's rebase treats it like a change alone (review
+	// of #200: the client used to store the whole look against the new
+	// parent, and the result depended on whether another field changed)
+	test('a new parent and a changed value send the change relative to the current parent', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		setField(form, 'basedOn', 4);
+		setField(form, 'fontWeight', '700');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({
+			name: 'Caption',
+			basedOn: 4,
+			properties: { fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 20, fontWeight: '700' },
+		});
+	});
+
+	test('None with a changed value sends the change relative to the current parent', () => {
+		const { form, baseline } = openChildForm(STYLES[1]);
+		setField(form, 'basedOn', 0);
+		setField(form, 'letterSpacing', 40);
+		const payload = buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES);
+		expect(payload.basedOn).toBe(0);
+		expect(payload.properties).toEqual({ fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 40 });
+	});
+
+	test('a first parent with a changed value sends the whole look (the server keeps it)', () => {
+		const { form, baseline } = openChildForm(STYLES[3]);
+		setField(form, 'basedOn', 1);
+		setField(form, 'lineHeight', 1.25);
+		const payload = buildEditPayload(readEditForm(form), baseline, STYLES[3], 'rem', STYLES);
+		expect(payload.basedOn).toBe(1);
+		expect(payload.properties).toEqual({ fontId: 12, fontWeight: '700', lineHeight: 1.25 });
+	});
+
+	test('Reset to Base shows only while the select names the saved parent', () => {
+		const { form } = openChildForm(STYLES[1]);
+		const reset = form.querySelector('.typost-ps-reset-base-btn');
+		setField(form, 'basedOn', 0);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(true);
+		setField(form, 'basedOn', 4);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(true);
+		setField(form, 'basedOn', 1);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(false);
+	});
+
+	test('a style without a parent gets no Reset to Base when a parent is chosen', () => {
+		const { form } = openChildForm(STYLES[3]);
+		setField(form, 'basedOn', 1);
+		updateResetToBase(form, STYLES[3]);
+		expect(form.querySelector('.typost-ps-reset-base-btn').hidden).toBe(true);
+	});
+
+	test('replaceRelatedCards swaps the saved card and the cards based on it', () => {
+		const list = document.createElement('div');
+		list.innerHTML = [1, 2, 3].map((id) =>
+			`<div class="typost-ps-style-card" data-style-id="${id}"><div class="typost-ps-style-card-details">old ${id}</div><div class="typost-ps-preview">p${id}</div></div>`
+		).join('');
+		document.body.appendChild(list);
+		replaceRelatedCards(list, {
+			details: '<div class="typost-ps-style-card-details">new 1</div>',
+			preview: '<div class="typost-ps-preview">np1</div>',
+			related: [{ id: 3, details: '<div class="typost-ps-style-card-details">new 3</div>', preview: '<div class="typost-ps-preview">np3</div>' }],
+		}, 1);
+		const texts = Array.from(list.querySelectorAll('.typost-ps-style-card-details')).map((el) => el.textContent);
+		expect(texts).toEqual(['new 1', 'old 2', 'new 3']);
 	});
 });

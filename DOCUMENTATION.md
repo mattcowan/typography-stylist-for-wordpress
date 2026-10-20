@@ -305,6 +305,21 @@ A paragraph style is a named set of typography settings. It holds the font, weig
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
 
+#### Based On
+
+A style can be based on another style, like “Based On” in Adobe InDesign. For example, “Body” sets the font, size, and line height. “Caption” is based on Body and sets only a smaller size. To use a new body font, change Body. Caption follows.
+
+- To set it, go to Settings → Typography Stylist → Paragraph Styles, click “Edit” on the style, and choose a style in “Based on”. The list leaves out the style itself and the styles based on it.
+- A style uses the value of the style it is based on for every setting it does not set itself. A change to that style changes every style based on it, on every page, with no change to your posts.
+- When you choose a style in “Based on”, the settings that already match it become inherited. If the style was not based on a style before, it keeps its look: a setting it did not have stays unset, and the card says “None” for it. If you change from one style to another, the style keeps the settings it sets itself, and the other settings come from the new style. This is the same with or without other changes in the same save.
+- The Edit form shows the values the style renders, inherited ones included. When you save it, and when you click “Update Style” in the editor, the style stores only the settings that differ from the style it is based on. A setting you change back to the value of that style becomes inherited again. This is also true when you set the same value on purpose: the setting then follows later changes to the style it is based on.
+- A style can remove a setting it inherits. For example, “Body – First” is based on Body and removes its First Letter Hang. The card says “None” for that setting.
+- Each card says which values are inherited and which the style sets itself (“Override”).
+- “Reset to Base” (in the Edit form) removes every setting the style sets itself, so it uses all values of the style it is based on. The button shows only while “Based on” names the saved style.
+- Choose “None” in “Based on” to end the link. The style keeps its look: the values it inherited become its own.
+- When you delete a style, the styles based on it keep their look and are no longer based on it.
+- A chain can have up to 10 styles.
+
 #### Whole Paragraph and Heading Blocks
 
 In a core Paragraph or Heading block, a style can apply to the whole block:
@@ -372,6 +387,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - After a save, the card and its sample show the new settings at once. Every post and block that uses the style shows the change on its next load. An editor that is already open shows it after a reload.
 - The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option). A fixed size in px is a whole number: the form removes the decimals, because the page shows px sizes without them.
 - The form opens with the settings that are saved now. A change that you made in the editor after this page opened is in the form.
+- The form also has “Based on” (see “Based On” under Paragraph Styles). A style that is based on another style shows “Based on” on its card, marks each value as “Inherited” or “Override”, and has a “Reset to Base” button in its form. After a save, the cards of the styles based on it show their new values too.
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab

@@ -20,6 +20,18 @@
  * save the card's details and preview come back from the admin-card route,
  * rendered by the same PHP as the page, with the regenerated style CSS.
  *
+ * Based On (#200): typostPSAdmin.styles comes in the client shape, so a
+ * style based on another fills the form with its resolved values (what it
+ * renders) and carries ownProperties + basedOn. The form's "Based on"
+ * select lists every style except the edited one and the styles based on
+ * it. A save of a child sends only what differs from its current parent
+ * (computeStyleOverrides); a Based On change is applied by the server's
+ * rebase, with or without edits (a first parent keeps the look). The
+ * admin-card response also carries the cards of the styles based on the
+ * saved one and every style in the client shape, because their resolved
+ * values change with it. Reset to Base (in the form, shown only while the
+ * select names the saved parent) sends empty properties.
+ *
  * Focus and announcements (QA finding ADM-2): opening the edit form moves
  * focus to the name field, saving or cancelling returns it to the card's
  * Edit button, deleting moves it to the next card (or the list itself when
@@ -262,17 +274,78 @@
 	}
 
 	/**
+	 * Fill the Based On select (#200): None, then every style except the
+	 * edited one and the styles based on it, in stored order. A parent that
+	 * no longer exists is added so an untouched form keeps the link.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style
+	 * @param {Array}   styles Every style.
+	 */
+	function fillBasedOn(form, style, styles) {
+		var select = field(form, 'basedOn');
+		if (!select) {
+			return;
+		}
+		var utils = getUtils();
+		var list = Array.isArray(styles) ? styles : [];
+		var excluded = {};
+		if (style && style.id !== undefined) {
+			excluded[parseInt(style.id, 10)] = true;
+			(utils ? utils.getStyleDescendantIds(list, style.id) : []).forEach(function(id) {
+				excluded[id] = true;
+			});
+		}
+		list.forEach(function(candidate) {
+			var id = candidate ? parseInt(candidate.id, 10) : 0;
+			if (!id || excluded[id] || !candidate.name) {
+				return;
+			}
+			var option = select.ownerDocument.createElement('option');
+			option.value = String(id);
+			option.textContent = candidate.name;
+			select.appendChild(option);
+		});
+		var parentId = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		selectValue(select, parentId, __('A deleted style', 'typost-paragraph-styles'));
+		updateResetToBase(form, style);
+	}
+
+	/**
+	 * Show Reset to Base only when it does what it says: the style has a
+	 * saved parent, overrides it, and the select still names that parent.
+	 * The button resets against the saved parent, so after another choice
+	 * in the select it would drop that choice (#200 review).
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style The style (client shape).
+	 */
+	function updateResetToBase(form, style) {
+		var reset = form.querySelector('.typost-ps-reset-base-btn');
+		if (!reset) {
+			return;
+		}
+		var select = field(form, 'basedOn');
+		var parentId = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		var own = style && style.ownProperties;
+		var chosen = select ? parseInt(select.value, 10) || 0 : parentId;
+		reset.hidden = !(parentId && own && Object.keys(own).length && chosen === parentId);
+	}
+
+	/**
 	 * Fill a cloned edit form from a stored style.
 	 *
 	 * @param {Element} form      The form element.
-	 * @param {Object}  style     {id, name, properties}.
+	 * @param {Object}  style     {id, name, properties} — properties resolved
+	 *                            for a style based on another (#200).
 	 * @param {string}  fontLabel The card's text for the style's font, used
 	 *                            when the font is not in the list.
 	 * @param {string}  unit      resolveEditFontSizeUnit() for the style: a
 	 *                            px size takes whole steps, as px CSS is
 	 *                            written with whole numbers.
+	 * @param {Array}   [styles]  Every style, for the Based On choices (#200).
 	 */
-	function fillEditForm(form, style, fontLabel, unit) {
+	function fillEditForm(form, style, fontLabel, unit, styles) {
 		var utils = getUtils();
 		var props = (style && style.properties) || {};
 		var mode = sizeModeOf(props.fontSize);
@@ -283,6 +356,7 @@
 		}
 
 		setInput(form, 'name', style && style.name);
+		fillBasedOn(form, style, styles);
 		selectValue(field(form, 'fontId'), parseInt(props.fontId, 10) || 0, fontLabel);
 		selectValue(field(form, 'fontWeight'), props.fontWeight ? String(props.fontWeight) : '');
 		var fontStyle = ['normal', 'italic', 'oblique'].indexOf(props.fontStyle) !== -1 ? props.fontStyle : '';
@@ -383,6 +457,7 @@
 
 		return {
 			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
+			basedOn: parseInt(field(form, 'basedOn') ? field(form, 'basedOn').value : 0, 10) || 0,
 			fontId: parseInt(field(form, 'fontId') ? field(form, 'fontId').value : 0, 10) || 0,
 			fontWeight: field(form, 'fontWeight') ? field(form, 'fontWeight').value : '',
 			fontStyle: field(form, 'fontStyle') ? field(form, 'fontStyle').value : '',
@@ -516,13 +591,23 @@
 	 * the whole set, and a rename must not rewrite properties the form
 	 * cannot represent.
 	 *
+	 * Based On (#200): basedOn is sent when the select changed, and the
+	 * server rebases the style (a first parent and None keep the look; a
+	 * move to another parent keeps the style's own overrides). Changed
+	 * properties are sent relative to the style's current parent, as
+	 * overrides of it (computeStyleOverrides) or the whole look when it has
+	 * none, so the rebase treats a save with edits like one without. The
+	 * compare with the untouched form runs on the whole look, before the
+	 * overrides are taken.
+	 *
 	 * @param {Object} values         readEditForm() now.
 	 * @param {Object} baselineValues readEditForm() right after filling.
-	 * @param {Object} style          The stored style.
+	 * @param {Object} style          The style (client shape).
 	 * @param {string} newUnit        typostPSAdmin.newFontSizeUnit.
-	 * @return {{name: string, properties?: Object}}
+	 * @param {Array}  [styles]       Every style (client shape), to find the parent.
+	 * @return {{name: string, basedOn?: number, properties?: Object}}
 	 */
-	function buildEditPayload(values, baselineValues, style, newUnit) {
+	function buildEditPayload(values, baselineValues, style, newUnit, styles) {
 		var utils = getUtils();
 		var base = (style && style.properties) || {};
 		var unit = resolveEditFontSizeUnit(base, newUnit);
@@ -531,10 +616,55 @@
 		var baseline = baselineValues
 			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues, unit), base, true, newUnit)
 			: null;
+
+		var currentParent = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		var parentId = values.basedOn !== undefined ? (parseInt(values.basedOn, 10) || 0) : currentParent;
+		if (parentId !== currentParent) {
+			payload.basedOn = parentId;
+		}
+
 		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
-			payload.properties = properties;
+			// Relative to the current parent: the server applies a Based On
+			// change itself (rebase_properties()), so a save with edits and a
+			// save without them follow the same rule
+			var parent = null;
+			(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
+				if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
+					parent = candidate;
+				}
+			});
+			payload.properties = parent
+				? utils.computeStyleOverrides(properties, utils.resolveStyleProperties(parent, styles))
+				: properties;
 		}
 		return payload;
+	}
+
+	/**
+	 * Swap the cards that an admin-card response renders: the saved
+	 * style's and those of the styles based on it (#200).
+	 *
+	 * @param {Element} list #typost-ps-styles-list
+	 * @param {Object}  data admin-card response.
+	 * @param {number|string} styleId The saved style.
+	 */
+	function replaceRelatedCards(list, data, styleId) {
+		if (!list || !data) {
+			return;
+		}
+		var cardFor = function(id) {
+			var cards = list.querySelectorAll('.typost-ps-style-card');
+			for (var i = 0; i < cards.length; i++) {
+				if (String(cards[i].getAttribute('data-style-id')) === String(id)) {
+					return cards[i];
+				}
+			}
+			return null;
+		};
+		replaceCardParts(cardFor(styleId), data);
+		(Array.isArray(data.related) ? data.related : []).forEach(function(related) {
+			replaceCardParts(cardFor(related.id), related);
+		});
 	}
 
 	/**
@@ -649,6 +779,7 @@
 		sizeModeOf: sizeModeOf,
 		updateConditionalFields: updateConditionalFields,
 		fillEditForm: fillEditForm,
+		updateResetToBase: updateResetToBase,
 		readEditForm: readEditForm,
 		validateEditValues: validateEditValues,
 		stateFromEditValues: stateFromEditValues,
@@ -658,6 +789,7 @@
 		showFormError: showFormError,
 		clearFormError: clearFormError,
 		replaceCardParts: replaceCardParts,
+		replaceRelatedCards: replaceRelatedCards,
 		replaceStyleCss: replaceStyleCss
 	};
 
@@ -688,6 +820,50 @@
 		return null;
 	}
 
+	// Every style in the client shape, from the admin-card response: the
+	// styles based on a saved one have new resolved values (#200)
+	function storeAllStyles(list) {
+		if (Array.isArray(list)) {
+			styles.splice.apply(styles, [0, styles.length].concat(list));
+		}
+	}
+
+	function removeStyle(styleId) {
+		for (var i = styles.length - 1; i >= 0; i--) {
+			if (String(styles[i].id) === String(styleId)) {
+				styles.splice(i, 1);
+			}
+		}
+	}
+
+	/**
+	 * Render a style's card and the cards of the styles based on it again
+	 * from the admin-card route, with the regenerated CSS; then call done.
+	 * A failed refresh after a successful write reloads the page, so a card
+	 * is never stale.
+	 */
+	function refreshCards(styleId, done) {
+		$.ajax({
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
+			method: 'GET',
+			beforeSend: function(xhr) {
+				xhr.setRequestHeader('X-WP-Nonce', nonce);
+			},
+			success: function(card) {
+				applyCardResponse(styleId, card);
+				done();
+			},
+			error: function() {
+				window.location.reload();
+			}
+		});
+	}
+
+	function hasDescendants(styleId) {
+		var utils = getUtils();
+		return !!utils && utils.getStyleDescendantIds(styles, styleId).length > 0;
+	}
+
 	function storeStyle(style) {
 		for (var i = 0; i < styles.length; i++) {
 			if (String(styles[i].id) === String(style.id)) {
@@ -709,16 +885,24 @@
 
 	/**
 	 * Apply an admin-card response: the stored style, the card's details
-	 * and preview, and the regenerated preview CSS.
+	 * and preview, and the regenerated preview CSS. Based On (#200): also
+	 * every style in the client shape (the styles based on this one have
+	 * new resolved values) and the cards of the styles based on it.
+	 *
+	 * @param {number|string} styleId
+	 * @param {Object}        card    admin-card response.
 	 */
-	function applyCardResponse($card, card) {
-		if (card && card.style) {
+	function applyCardResponse(styleId, card) {
+		if (card && Array.isArray(card.styles)) {
+			storeAllStyles(card.styles);
+		} else if (card && card.style) {
 			storeStyle(card.style);
 		}
-		replaceCardParts($card[0], card);
+		var list = document.getElementById('typost-ps-styles-list');
+		replaceRelatedCards(list, card, styleId);
 		replaceStyleCss(document, card && card.css);
-		if (window.typostAdminFonts) {
-			window.typostAdminFonts.scan($card[0]);
+		if (window.typostAdminFonts && list) {
+			window.typostAdminFonts.scan(list);
 		}
 	}
 
@@ -739,7 +923,7 @@
 		var form    = $container.find('form')[0];
 		var details = $card[0].querySelector('.typost-ps-style-card-details');
 		var unit    = resolveEditFontSizeUnit(style.properties, newUnit);
-		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit);
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles);
 		$(form).data('baseline', readEditForm(form));
 
 		$card.find('.typost-ps-style-actions').hide();
@@ -769,7 +953,7 @@
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
 			},
 			success: function(card) {
-				applyCardResponse($card, card);
+				applyCardResponse(styleId, card);
 			},
 			complete: function() {
 				$card.removeClass('typost-ps-loading');
@@ -781,6 +965,10 @@
 
 	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"]', function() {
 		updateConditionalFields($(this).closest('form')[0]);
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-field="basedOn"]', function() {
+		updateResetToBase($(this).closest('form')[0], findStyle($(this).closest('.typost-ps-style-card').data('style-id')));
 	});
 
 	$(document).on('click', '.typost-ps-cancel-edit-btn', function() {
@@ -813,7 +1001,7 @@
 		}
 		clearFormError(form);
 
-		var payload = buildEditPayload(values, $(form).data('baseline'), style, newUnit);
+		var payload = buildEditPayload(values, $(form).data('baseline'), style, newUnit, styles);
 		var renamed = !!style && payload.name !== style.name;
 
 		$card.addClass('typost-ps-saving');
@@ -835,47 +1023,98 @@
 			success: function(response) {
 				storeStyle(response);
 				$card.find('.typost-ps-style-name').text(response.name);
-				var message = payload.properties || !renamed
+				var message;
+				if (payload.basedOn) {
 					/* translators: %s: style name */
-					? wp.i18n.sprintf(wp.i18n.__('Style “%s” saved.', 'typost-paragraph-styles'), response.name)
+					message = wp.i18n.sprintf(wp.i18n.__('Style “%s” saved. It now inherits from the style it is based on.', 'typost-paragraph-styles'), response.name);
+				} else if (payload.basedOn === 0) {
 					/* translators: %s: style name */
-					: wp.i18n.sprintf(wp.i18n.__('Style renamed to “%s”.', 'typost-paragraph-styles'), response.name);
+					message = wp.i18n.sprintf(wp.i18n.__('Style “%s” saved. It is no longer based on another style.', 'typost-paragraph-styles'), response.name);
+				} else if (payload.properties || !renamed) {
+					/* translators: %s: style name */
+					message = wp.i18n.sprintf(wp.i18n.__('Style “%s” saved.', 'typost-paragraph-styles'), response.name);
+				} else {
+					/* translators: %s: style name */
+					message = wp.i18n.sprintf(wp.i18n.__('Style renamed to “%s”.', 'typost-paragraph-styles'), response.name);
+				}
 
-				if (!payload.properties) {
+				// A rename alone changes no card but the styles based on this
+				// one, whose details name it (#200)
+				if (!payload.properties && payload.basedOn === undefined && !hasDescendants(styleId)) {
 					done();
 					closeEditForm($card);
 					announce(message);
 					return;
 				}
 
-				// The card's details and preview, rendered by the same PHP
+				// The cards' details and previews, rendered by the same PHP
 				// as the page, and the regenerated CSS for the previews
-				$.ajax({
-					url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
-					method: 'GET',
-					beforeSend: function(xhr) {
-						xhr.setRequestHeader('X-WP-Nonce', nonce);
-					},
-					success: function(card) {
-						applyCardResponse($card, card);
-						done();
-						closeEditForm($card);
-						announce(message);
-					},
-					error: function() {
-						// The save went through; reload rather than show a stale card
-						window.location.reload();
-					}
+				refreshCards(styleId, function() {
+					done();
+					closeEditForm($card);
+					announce(message);
 				});
 			},
 			error: function(xhr) {
 				done();
 				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
-				// The route's only 400 is about the name (empty after
-				// sanitizing); a 404, a 429 or a lost connection is not
-				// any field's fault
+				var serverField = xhr && xhr.responseJSON && xhr.responseJSON.field;
+				// A 400 names its field (Based on, #200) or is about the name
+				// (empty after sanitizing); a 404, a 429 or a lost connection
+				// is not any field's fault
 				showFormError(form, {
-					field: xhr && xhr.status === 400 ? 'name' : null,
+					field: xhr && xhr.status === 400 ? (serverField === 'basedOn' ? 'basedOn' : 'name') : null,
+					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
+				});
+			}
+		});
+	});
+
+	// -------------------------------------------------------------------------
+	// Reset to Base (#200)
+	// -------------------------------------------------------------------------
+
+	$(document).on('click', '.typost-ps-reset-base-btn', function() {
+		var form    = $(this).closest('form')[0];
+		var $card   = $(form).closest('.typost-ps-style-card');
+		var styleId = $card.data('style-id');
+		var name    = $card.find('.typost-ps-style-name').text();
+		var $button = $(this);
+
+		if (!confirm(wp.i18n.sprintf(
+			/* translators: %s: style name */
+			wp.i18n.__('Remove every setting “%s” sets itself, so it uses all values of the style it is based on?', 'typost-paragraph-styles'),
+			name
+		))) {
+			return;
+		}
+
+		$card.addClass('typost-ps-saving');
+		$button.prop('disabled', true);
+
+		$.ajax({
+			url: restUrl + '/' + encodeURIComponent(styleId),
+			method: 'PATCH',
+			beforeSend: function(xhr) {
+				xhr.setRequestHeader('X-WP-Nonce', nonce);
+			},
+			contentType: 'application/json',
+			data: JSON.stringify({ properties: {} }),
+			success: function(response) {
+				storeStyle(response);
+				refreshCards(styleId, function() {
+					$card.removeClass('typost-ps-saving');
+					closeEditForm($card);
+					/* translators: %s: style name */
+					announce(wp.i18n.sprintf(wp.i18n.__('Style “%s” reset to the style it is based on.', 'typost-paragraph-styles'), name));
+				});
+			},
+			error: function(xhr) {
+				$card.removeClass('typost-ps-saving');
+				$button.prop('disabled', false);
+				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
+				showFormError(form, {
+					field: '',
 					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
 				});
 			}
@@ -907,9 +1146,16 @@
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
 			},
-			success: function() {
+			success: function(response) {
 				var list   = document.getElementById('typost-ps-styles-list');
 				var target = focusTargetAfterDelete($card[0], list);
+				removeStyle(styleId);
+				// The styles based on the deleted one took its values and lost
+				// the link (#200): their cards drop "Based on" and the labels
+				var detached = response && Array.isArray(response.detached) ? response.detached : [];
+				detached.forEach(function(childId) {
+					refreshCards(childId, function() {});
+				});
 				$card.slideUp(300, function() {
 					$card.remove();
 					// Show empty state if no cards remain
