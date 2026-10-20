@@ -48,11 +48,19 @@ async function openNewPost(page) {
  * the page body (which has hung in headed Firefox) and presses Ctrl+Home.
  * This version only checks the window title through NVDA and Alt+Esc-cycles
  * applications until the browser reports the editor title.
+ *
+ * The title must name Playwright's Firefox ("Nightly"), not only WordPress:
+ * a Slack window titled "… - Making WordPress - Slack" matched the old
+ * pattern, and a run sent its Enter presses there (2026-10-20, PR #293).
+ * NVDA reads the test window as "Typography Stylist ‹ … — Word Press —
+ * Nightly" or "Add Post ‹ … — Word Press — Nightly".
  */
+const BROWSER_TITLE = /^(Add Post|Edit Post|Typography Stylist)\b.*Word ?Press.*Nightly\s*$/i;
+
 async function focusBrowser(page, nvda) {
   await page.bringToFront();
   await delay(300);
-  const wanted = /Add Post|Edit Post|Word ?Press/i;
+  const wanted = BROWSER_TITLE;
   const seen = [];
   let focused = false;
   for (let i = 0; i < 8; i++) {
