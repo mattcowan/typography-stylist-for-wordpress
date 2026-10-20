@@ -276,6 +276,8 @@ class ParagraphStylesBasedOnTest extends TestCase {
         $response = $module->rest_update_style($this->request(array('id' => 1, 'basedOn' => 3)));
 
         $this->assertSame(400, $response->get_status());
+        // The admin form puts the message on the Based on select
+        $this->assertSame('basedOn', $response->get_data()['field']);
         $this->assertSame($styles, $this->options['typost_paragraph_styles']);
     }
 

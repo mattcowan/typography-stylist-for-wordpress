@@ -9,6 +9,7 @@ Each file is one journey:
 - `glyphs-panel.sr.spec.js` — open the Glyphs panel from the block toolbar, Tab to the glyph grid, arrow to an alternate, insert it with Enter, close with Escape.
 - `paragraph-styles-browser.sr.spec.js` — open the Paragraph Styles browser from the block toolbar (focus lands on the style listbox), move the cursor with the arrow keys and first-letter type-ahead, apply the cursor row with Enter.
 - `admin-tabs.sr.spec.js` — Settings → Typography Stylist: arrow through the tablist, change the Admin Color Scheme select, save and clear the font cache with Enter, restore the scheme.
+- `paragraph-styles-admin-edit.sr.spec.js` — Settings → Typography Stylist → Paragraph Styles: open a scratch style's Edit form with Enter, Tab through the first fields, submit an empty name (the field must be read as invalid, with the message), save with Enter on Save. It creates and deletes its own style.
 - `inline-paragraph.sr.spec.js` — the Typography Stylist modal on a paragraph: Tab through the first controls, switch Font Size to Responsive with the arrow keys, cross the size sliders and record what is announced.
 - `inline-modal.sr.spec.js` — open the Typography Stylist modal on a heading, Tab through the first 16 controls, toggle Standard Ligatures with Space, close with Escape.
 

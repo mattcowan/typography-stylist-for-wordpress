@@ -1146,7 +1146,8 @@ final class Typost_Paragraph_Styles {
 		if ( $based_on ) {
 			$error = self::based_on_error( $styles, 0, $based_on );
 			if ( '' !== $error ) {
-				return new WP_REST_Response( array( 'message' => $error ), 400 );
+				// field: the admin form marks the Based on select, not the name
+				return new WP_REST_Response( array( 'message' => $error, 'field' => 'basedOn' ), 400 );
 			}
 		}
 
@@ -1205,7 +1206,8 @@ final class Typost_Paragraph_Styles {
 			if ( $based_on && $based_on !== $old_based_on ) {
 				$error = self::based_on_error( $styles, $id, $based_on );
 				if ( '' !== $error ) {
-					return new WP_REST_Response( array( 'message' => $error ), 400 );
+					// field: the admin form marks the Based on select, not the name
+					return new WP_REST_Response( array( 'message' => $error, 'field' => 'basedOn' ), 400 );
 				}
 			}
 		}

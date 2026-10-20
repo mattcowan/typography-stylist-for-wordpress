@@ -5,10 +5,14 @@
  * Stylist settings page.
  *
  * Edit form (#221): every stored property, not just the name. The form is
- * cloned from one <template> in the tab, filled from the style's stored
- * properties (typostPSAdmin.styles), and saved through the existing PATCH
- * route. The payload comes from ps-utils' buildPropertiesForStyleSave() —
- * the rule Update Style uses in the editor — so fontSizeUnit is kept the
+ * cloned from one <template> in the tab, filled from the style as stored
+ * now, and saved through the existing PATCH route. Edit fetches the style
+ * from the admin-card route first: the copy localized at page load
+ * (typostPSAdmin.styles) can be older than an Update Style made in the
+ * editor since, and the form sends every property, so filling from it
+ * would put the old values back. The payload comes from ps-utils'
+ * buildPropertiesForStyleSave() — the rule Update Style uses in the
+ * editor — so fontSizeUnit is kept the
  * same way: a style with a size keeps its unit, a size added to a style
  * without one takes the site's new-content unit. PATCH replaces the whole
  * properties object, so the form always sends the complete set, and sends
@@ -190,6 +194,35 @@
 		return 'inherit';
 	}
 
+	/**
+	 * The unit a save writes the style's size in: the rule
+	 * buildPropertiesForStyleSave() applies on an update. A style that has a
+	 * size keeps its unit (no stored unit is px, pre-#233); a size added to
+	 * a style without one takes the new-content unit.
+	 *
+	 * @param {Object} properties The stored properties.
+	 * @param {string} newUnit    typostPSAdmin.newFontSizeUnit.
+	 * @return {string} 'px' or 'rem'
+	 */
+	function resolveEditFontSizeUnit(properties, newUnit) {
+		var props = properties || {};
+		if (sizeModeOf(props.fontSize) !== 'inherit') {
+			return props.fontSizeUnit === 'rem' ? 'rem' : 'px';
+		}
+		return newUnit === 'px' ? 'px' : 'rem';
+	}
+
+	/**
+	 * Ask a REST route to answer in the user's language, not the site's
+	 * (determine_locale() reads _locale=user on REST requests).
+	 *
+	 * @param {string} url
+	 * @return {string}
+	 */
+	function withUserLocale(url) {
+		return url + (url.indexOf('?') === -1 ? '?' : '&') + '_locale=user';
+	}
+
 	function field(form, name) {
 		return form.querySelector('[data-field="' + name + '"]');
 	}
@@ -290,12 +323,20 @@
 	 *                            for a style based on another (#200).
 	 * @param {string}  fontLabel The card's text for the style's font, used
 	 *                            when the font is not in the list.
-	 * @param {Array}   [styles]  Every style, for the Based On choices.
+	 * @param {string}  unit      resolveEditFontSizeUnit() for the style: a
+	 *                            px size takes whole steps, as px CSS is
+	 *                            written with whole numbers.
+	 * @param {Array}   [styles]  Every style, for the Based On choices (#200).
 	 */
-	function fillEditForm(form, style, fontLabel, styles) {
+	function fillEditForm(form, style, fontLabel, unit, styles) {
 		var utils = getUtils();
 		var props = (style && style.properties) || {};
 		var mode = sizeModeOf(props.fontSize);
+
+		var sizeInput = field(form, 'fontSize');
+		if (sizeInput) {
+			sizeInput.setAttribute('step', unit === 'px' ? '1' : 'any');
+		}
 
 		setInput(form, 'name', style && style.name);
 		fillBasedOn(form, style, styles);
@@ -420,16 +461,38 @@
 	}
 
 	/**
+	 * A fixed size as a save stores it. px CSS is written with intval()
+	 * (PHP) and phpInt() (JS), so a px size is stored as that whole number:
+	 * the card then shows what renders, and a stored decimal keeps its
+	 * rendered size when another value changes. rem keeps decimals.
+	 *
+	 * @param {string} value The size field's text.
+	 * @param {string} unit  'px' or 'rem'.
+	 * @return {number} NaN when the text is not a number.
+	 */
+	function fixedSizeFor(value, unit) {
+		var size = parseFloat(value);
+		return unit === 'px' ? Math.floor(size) : size;
+	}
+
+	/**
 	 * Check the values before saving.
 	 *
-	 * @param {Object} values readEditForm() result.
+	 * @param {Object} values  readEditForm() result.
+	 * @param {Object} options {baseline: readEditForm() right after filling,
+	 *                         unit: resolveEditFontSizeUnit()}. A field the
+	 *                         author did not change is not checked against
+	 *                         the axis format: a stored value the check
+	 *                         rejects (the editor writes single quotes and
+	 *                         exponents) must not block a rename.
 	 * @return {{field: string, message: string}|null}
 	 */
-	function validateEditValues(values) {
+	function validateEditValues(values, options) {
+		var opts = options || {};
 		if (!values.name) {
 			return { field: 'name', message: __('Enter a name for the style.', 'typost-paragraph-styles') };
 		}
-		if (values.sizeMode === 'fixed' && !(parseFloat(values.fontSize) > 0)) {
+		if (values.sizeMode === 'fixed' && !(fixedSizeFor(values.fontSize, opts.unit) > 0)) {
 			return { field: 'fontSize', message: __('Enter a size greater than 0.', 'typost-paragraph-styles') };
 		}
 		if (values.sizeMode === 'responsive' || values.sizeMode === 'fit') {
@@ -440,7 +503,8 @@
 				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
 			}
 		}
-		if (values.fontVariationSettings) {
+		var axesUnchanged = opts.baseline && opts.baseline.fontVariationSettings === values.fontVariationSettings;
+		if (values.fontVariationSettings && !axesUnchanged) {
 			var bad = values.fontVariationSettings.split(',').some(function(pair) {
 				return !AXIS_PAIR.test(pair.trim());
 			});
@@ -457,13 +521,15 @@
 	 * over the stored ones (0 and Default included).
 	 *
 	 * @param {Object} values readEditForm() result.
+	 * @param {string} unit   resolveEditFontSizeUnit(); px makes a fixed
+	 *                        size whole (fixedSizeFor()).
 	 * @return {Object}
 	 */
-	function stateFromEditValues(values) {
+	function stateFromEditValues(values, unit) {
 		var mode = values.sizeMode;
 		var fontSize = 'inherit';
 		if (mode === 'fixed') {
-			fontSize = String(parseFloat(values.fontSize));
+			fontSize = String(fixedSizeFor(values.fontSize, unit));
 		} else if (mode === 'responsive' || mode === 'fit') {
 			fontSize = mode;
 		}
@@ -526,10 +592,11 @@
 	function buildEditPayload(values, baselineValues, style, newUnit, styles) {
 		var utils = getUtils();
 		var base = (style && style.properties) || {};
+		var unit = resolveEditFontSizeUnit(base, newUnit);
 		var payload = { name: values.name };
-		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(values), base, true, newUnit);
+		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(values, unit), base, true, newUnit);
 		var baseline = baselineValues
-			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues), base, true, newUnit)
+			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues, unit), base, true, newUnit)
 			: null;
 
 		var currentParent = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
@@ -577,6 +644,65 @@
 		(Array.isArray(data.related) ? data.related : []).forEach(function(related) {
 			replaceCardParts(cardFor(related.id), related);
 		});
+	}
+
+	/**
+	 * Hide the form's error and remove the marks showFormError() added.
+	 *
+	 * @param {Element} form
+	 */
+	function clearFormError(form) {
+		var box = form.querySelector('.typost-ps-edit-error');
+		var boxId = box ? box.id : '';
+		Array.prototype.forEach.call(form.querySelectorAll('[aria-invalid]'), function(input) {
+			input.removeAttribute('aria-invalid');
+			var refs = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter(function(ref) {
+				return ref && ref !== boxId;
+			});
+			if (refs.length) {
+				input.setAttribute('aria-describedby', refs.join(' '));
+			} else {
+				input.removeAttribute('aria-describedby');
+			}
+		});
+		if (box) {
+			box.hidden = true;
+			box.textContent = '';
+		}
+	}
+
+	/**
+	 * Show an error in the form. A field error marks the field invalid, adds
+	 * the message to its description (so it is read with the field when
+	 * focus lands there) and focuses it. An error with no field (the server
+	 * refused the save) focuses Save, not a field that is not the cause.
+	 *
+	 * @param {Element} form
+	 * @param {{field: ?string, message: string}} error
+	 */
+	function showFormError(form, error) {
+		clearFormError(form);
+		var box = form.querySelector('.typost-ps-edit-error');
+		if (box) {
+			// Shown before it is filled, so the alert's text change is announced
+			box.hidden = false;
+			box.textContent = error.message;
+		}
+		var input = error.field ? field(form, error.field) : null;
+		if (input) {
+			input.setAttribute('aria-invalid', 'true');
+			if (box && box.id) {
+				var refs = (input.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean);
+				refs.push(box.id);
+				input.setAttribute('aria-describedby', refs.join(' '));
+			}
+			input.focus();
+			return;
+		}
+		var save = form.querySelector('.typost-ps-save-edit-btn');
+		if (save) {
+			save.focus();
+		}
 	}
 
 	/**
@@ -636,6 +762,10 @@
 		validateEditValues: validateEditValues,
 		stateFromEditValues: stateFromEditValues,
 		buildEditPayload: buildEditPayload,
+		resolveEditFontSizeUnit: resolveEditFontSizeUnit,
+		withUserLocale: withUserLocale,
+		showFormError: showFormError,
+		clearFormError: clearFormError,
 		replaceCardParts: replaceCardParts,
 		replaceRelatedCards: replaceRelatedCards,
 		replaceStyleCss: replaceStyleCss
@@ -692,19 +822,13 @@
 	 */
 	function refreshCards(styleId, done) {
 		$.ajax({
-			url: restUrl + '/' + encodeURIComponent(styleId) + '/admin-card',
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
 			method: 'GET',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
 			},
 			success: function(card) {
-				var list = document.getElementById('typost-ps-styles-list');
-				replaceRelatedCards(list, card, styleId);
-				storeAllStyles(card.styles);
-				replaceStyleCss(document, card.css);
-				if (window.typostAdminFonts && list) {
-					window.typostAdminFonts.scan(list);
-				}
+				applyCardResponse(styleId, card);
 				done();
 			},
 			error: function() {
@@ -737,22 +861,30 @@
 		focusEditButton($card[0]);
 	}
 
-	function showFormError(form, error) {
-		var box = form.querySelector('.typost-ps-edit-error');
-		if (box) {
-			// Shown before it is filled, so the alert's text change is announced
-			box.hidden = false;
-			box.textContent = error.message;
+	/**
+	 * Apply an admin-card response: the stored style, the card's details
+	 * and preview, and the regenerated preview CSS. Based On (#200): also
+	 * every style in the client shape (the styles based on this one have
+	 * new resolved values) and the cards of the styles based on it.
+	 *
+	 * @param {number|string} styleId
+	 * @param {Object}        card    admin-card response.
+	 */
+	function applyCardResponse(styleId, card) {
+		if (card && Array.isArray(card.styles)) {
+			storeAllStyles(card.styles);
+		} else if (card && card.style) {
+			storeStyle(card.style);
 		}
-		var input = error.field ? field(form, error.field) : null;
-		if (input) {
-			input.focus();
+		var list = document.getElementById('typost-ps-styles-list');
+		replaceRelatedCards(list, card, styleId);
+		replaceStyleCss(document, card && card.css);
+		if (window.typostAdminFonts && list) {
+			window.typostAdminFonts.scan(list);
 		}
 	}
 
-	$(document).on('click', '.typost-ps-edit-btn', function() {
-		var $card    = $(this).closest('.typost-ps-style-card');
-		var styleId  = $card.data('style-id');
+	function openEditForm($card, styleId) {
 		var template = document.getElementById('typost-ps-edit-form-template');
 		var style    = findStyle(styleId);
 		if (!template || !template.content || !style) {
@@ -762,16 +894,50 @@
 		var fragment = template.content.cloneNode(true);
 		suffixIds(fragment, styleId);
 		var $container = $card.find('.typost-ps-edit-form');
-		$container.empty().append(fragment);
+		// Finish a close still running first: its callback empties the
+		// container, and would empty this form (Escape, then Enter at once)
+		$container.stop(true, true).empty().append(fragment);
 
 		var form    = $container.find('form')[0];
 		var details = $card[0].querySelector('.typost-ps-style-card-details');
-		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', styles);
+		var unit    = resolveEditFontSizeUnit(style.properties, newUnit);
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles);
 		$(form).data('baseline', readEditForm(form));
 
 		$card.find('.typost-ps-style-actions').hide();
 		$container.slideDown(200, function() {
 			focusEditName($card[0]);
+		});
+	}
+
+	$(document).on('click', '.typost-ps-edit-btn', function() {
+		var $button = $(this);
+		var $card   = $button.closest('.typost-ps-style-card');
+		var styleId = $card.data('style-id');
+		if ($card.hasClass('typost-ps-loading')) {
+			return;
+		}
+
+		// Fill from the style as stored now, not the page-load copy: the
+		// form sends every property, so an old copy would undo an Update
+		// Style made in the editor since. If the request fails, open with
+		// the copy the page has; the save reports its own error.
+		$card.addClass('typost-ps-loading');
+		$button.attr('aria-busy', 'true');
+		$.ajax({
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
+			method: 'GET',
+			beforeSend: function(xhr) {
+				xhr.setRequestHeader('X-WP-Nonce', nonce);
+			},
+			success: function(card) {
+				applyCardResponse(styleId, card);
+			},
+			complete: function() {
+				$card.removeClass('typost-ps-loading');
+				$button.removeAttr('aria-busy');
+				openEditForm($card, styleId);
+			}
 		});
 	});
 
@@ -797,14 +963,17 @@
 		var styleId = $card.data('style-id');
 		var style   = findStyle(styleId);
 		var values  = readEditForm(form);
-		var error   = validateEditValues(values);
+		var error   = validateEditValues(values, {
+			baseline: $(form).data('baseline'),
+			unit: resolveEditFontSizeUnit(style && style.properties, newUnit)
+		});
 		var $save   = $(form).find('.typost-ps-save-edit-btn');
 
 		if (error) {
 			showFormError(form, error);
 			return;
 		}
-		$(form).find('.typost-ps-edit-error').prop('hidden', true).text('');
+		clearFormError(form);
 
 		var payload = buildEditPayload(values, $(form).data('baseline'), style, newUnit, styles);
 		var renamed = !!style && payload.name !== style.name;
@@ -863,8 +1032,12 @@
 			error: function(xhr) {
 				done();
 				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
+				var serverField = xhr && xhr.responseJSON && xhr.responseJSON.field;
+				// A 400 names its field (Based on, #200) or is about the name
+				// (empty after sanitizing); a 404, a 429 or a lost connection
+				// is not any field's fault
 				showFormError(form, {
-					field: 'name',
+					field: xhr && xhr.status === 400 ? (serverField === 'basedOn' ? 'basedOn' : 'name') : null,
 					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
 				});
 			}

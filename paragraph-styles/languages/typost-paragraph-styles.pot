@@ -7,7 +7,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T00:47:53+00:00\n"
+"POT-Creation-Date: 2026-10-20T14:37:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-paragraph-styles\n"
@@ -24,7 +24,7 @@ msgid "Manage your saved paragraph styles. These appear in the Typography Stylis
 msgstr ""
 
 #: includes/admin-tab.php:46
-#: assets/js/admin.js:966
+#: assets/js/admin.js:1139
 msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
 msgstr ""
 
@@ -45,7 +45,7 @@ msgid "Based on"
 msgstr ""
 
 #: includes/admin-tab.php:113
-#: paragraph-styles.php:1608
+#: paragraph-styles.php:1610
 #: assets/js/editor.js:1059
 msgid "None"
 msgstr ""
@@ -75,7 +75,7 @@ msgstr ""
 #: includes/admin-tab.php:142
 #: includes/admin-tab.php:156
 #: includes/admin-tab.php:215
-#: paragraph-styles.php:1559
+#: paragraph-styles.php:1561
 #: assets/js/editor.js:135
 msgid "Default"
 msgstr ""
@@ -85,17 +85,17 @@ msgid "Font style"
 msgstr ""
 
 #: includes/admin-tab.php:143
-#: paragraph-styles.php:1622
+#: paragraph-styles.php:1624
 msgid "Normal (upright)"
 msgstr ""
 
 #: includes/admin-tab.php:144
-#: paragraph-styles.php:1620
+#: paragraph-styles.php:1622
 msgid "Italic"
 msgstr ""
 
 #: includes/admin-tab.php:145
-#: paragraph-styles.php:1621
+#: paragraph-styles.php:1623
 msgid "Oblique"
 msgstr ""
 
@@ -187,19 +187,19 @@ msgstr ""
 msgid "Four-letter axis tags in quotes, each followed by a number, separated by commas. Example: %s. Leave empty for none."
 msgstr ""
 
-#: includes/admin-tab.php:271
+#: includes/admin-tab.php:272
 #: assets/js/editor.js:577
 #: assets/js/editor.js:637
 msgid "Save"
 msgstr ""
 
-#: includes/admin-tab.php:274
+#: includes/admin-tab.php:275
 #: assets/js/editor.js:585
 #: assets/js/editor.js:645
 msgid "Cancel"
 msgstr ""
 
-#: includes/admin-tab.php:278
+#: includes/admin-tab.php:279
 msgid "Reset to Base"
 msgstr ""
 
@@ -219,235 +219,235 @@ msgstr ""
 msgid "Style name is required."
 msgstr ""
 
-#: paragraph-styles.php:1188
-#: paragraph-styles.php:1270
-#: paragraph-styles.php:1802
+#: paragraph-styles.php:1189
+#: paragraph-styles.php:1272
+#: paragraph-styles.php:1804
 msgid "Style not found."
 msgstr ""
 
-#: paragraph-styles.php:1195
+#: paragraph-styles.php:1196
 msgid "Style name cannot be empty."
 msgstr ""
 
 #. translators: %s: name of the font that replaces the style's deleted font
-#: paragraph-styles.php:1555
+#: paragraph-styles.php:1557
 #, php-format
 msgid "%s (replaces a deleted font)"
 msgstr ""
 
-#: paragraph-styles.php:1557
+#: paragraph-styles.php:1559
 msgid "Deleted font, shown in the default font"
 msgstr ""
 
 #. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
-#: paragraph-styles.php:1577
+#: paragraph-styles.php:1579
 msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
 msgstr ""
 
-#: paragraph-styles.php:1616
+#: paragraph-styles.php:1618
 msgid "Font:"
 msgstr ""
 
-#: paragraph-styles.php:1625
 #: paragraph-styles.php:1627
+#: paragraph-styles.php:1629
 msgid "Style:"
 msgstr ""
 
 #. translators: %1$s: min size, %2$s: preferred size, %3$s: max size
-#: paragraph-styles.php:1637
+#: paragraph-styles.php:1639
 #, php-format
 msgid "Responsive (%1$s/%2$s/%3$spx)"
 msgstr ""
 
 #. translators: %1$s: fallback min size, %2$s: fallback max size
-#: paragraph-styles.php:1642
+#: paragraph-styles.php:1644
 #, php-format
 msgid "Fit to width (fallback %1$s–%2$spx)"
 msgstr ""
 
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
-#: paragraph-styles.php:1645
+#: paragraph-styles.php:1647
 #: assets/js/lib/ps-utils.js:904
 #, php-format,js-format
 msgid "%spx"
 msgstr ""
 
-#: paragraph-styles.php:1647
 #: paragraph-styles.php:1649
+#: paragraph-styles.php:1651
 msgid "Size:"
 msgstr ""
 
-#: paragraph-styles.php:1653
 #: paragraph-styles.php:1655
+#: paragraph-styles.php:1657
 msgid "Features:"
 msgstr ""
 
 #. translators: %s: letter spacing in em
-#: paragraph-styles.php:1663
 #: paragraph-styles.php:1665
+#: paragraph-styles.php:1667
 msgid "Spacing:"
 msgstr ""
 
 #. translators: %s: letter spacing in em
 #. translators: %s: hang in em
-#: paragraph-styles.php:1663
-#: paragraph-styles.php:1679
+#: paragraph-styles.php:1665
+#: paragraph-styles.php:1681
 #, php-format
 msgid "%sem"
 msgstr ""
 
-#: paragraph-styles.php:1668
 #: paragraph-styles.php:1670
+#: paragraph-styles.php:1672
 msgid "Line Height:"
 msgstr ""
 
 #. translators: %s: case setting, such as "Small Caps"
-#: paragraph-styles.php:1688
+#: paragraph-styles.php:1690
 #, php-format
 msgid "%s (no fake small caps)"
 msgstr ""
 
-#: paragraph-styles.php:1702
+#: paragraph-styles.php:1704
 msgid "Override"
 msgstr ""
 
-#: paragraph-styles.php:1705
+#: paragraph-styles.php:1707
 msgid "Inherited"
 msgstr ""
 
-#: paragraph-styles.php:1718
-#: assets/js/admin.js:276
+#: paragraph-styles.php:1720
+#: assets/js/admin.js:309
 msgid "A deleted style"
 msgstr ""
 
-#: paragraph-styles.php:1719
+#: paragraph-styles.php:1721
 msgid "Based on:"
 msgstr ""
 
-#: paragraph-styles.php:1728
+#: paragraph-styles.php:1730
 msgid "Axes:"
 msgstr ""
 
-#: paragraph-styles.php:1731
+#: paragraph-styles.php:1733
 msgid "First Letter Hang:"
 msgstr ""
 
-#: paragraph-styles.php:1734
+#: paragraph-styles.php:1736
 msgid "Case:"
 msgstr ""
 
-#: paragraph-styles.php:1763
+#: paragraph-styles.php:1765
 msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
 msgstr ""
 
-#: paragraph-styles.php:1776
+#: paragraph-styles.php:1778
 msgid "Normal"
 msgstr ""
 
-#: paragraph-styles.php:1777
+#: paragraph-styles.php:1779
 msgid "All Caps"
 msgstr ""
 
-#: paragraph-styles.php:1778
+#: paragraph-styles.php:1780
 msgid "Lowercase"
 msgstr ""
 
-#: paragraph-styles.php:1779
+#: paragraph-styles.php:1781
 msgid "Title Case"
 msgstr ""
 
-#: paragraph-styles.php:1780
+#: paragraph-styles.php:1782
 msgid "Small Caps"
 msgstr ""
 
-#: paragraph-styles.php:1781
+#: paragraph-styles.php:1783
 msgid "All Small Caps"
 msgstr ""
 
-#: paragraph-styles.php:2465
+#: paragraph-styles.php:2467
 msgid "The style to base this style on does not exist."
 msgstr ""
 
-#: paragraph-styles.php:2468
+#: paragraph-styles.php:2470
 msgid "A style cannot be based on itself or on a style that is based on it."
 msgstr ""
 
 #. translators: %d: largest number of styles in a Based On chain
-#: paragraph-styles.php:2505
+#: paragraph-styles.php:2507
 #, php-format
 msgid "A chain of Based On styles can hold at most %d styles."
 msgstr ""
 
-#: assets/js/admin.js:430
+#: assets/js/admin.js:493
 msgid "Enter a name for the style."
 msgstr ""
 
-#: assets/js/admin.js:433
+#: assets/js/admin.js:496
 msgid "Enter a size greater than 0."
 msgstr ""
 
-#: assets/js/admin.js:440
+#: assets/js/admin.js:503
 msgid "Enter all three sizes, each greater than 0."
 msgstr ""
 
-#: assets/js/admin.js:448
+#: assets/js/admin.js:512
 msgid "Each axis setting needs a four-letter tag in quotes and a number, such as \"wght\" 650."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:834
+#: assets/js/admin.js:1003
 #, js-format
 msgid "Style “%s” saved. It now inherits from the style it is based on."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:837
+#: assets/js/admin.js:1006
 #, js-format
 msgid "Style “%s” saved. It is no longer based on another style."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:840
+#: assets/js/admin.js:1009
 #, js-format
 msgid "Style “%s” saved."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:843
+#: assets/js/admin.js:1012
 #, js-format
 msgid "Style renamed to “%s”."
 msgstr ""
 
-#: assets/js/admin.js:868
-#: assets/js/admin.js:919
+#: assets/js/admin.js:1041
+#: assets/js/admin.js:1092
 msgid "Failed to update style. Please try again."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:887
+#: assets/js/admin.js:1060
 #, js-format
 msgid "Remove every setting “%s” sets itself, so it uses all values of the style it is based on?"
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:910
+#: assets/js/admin.js:1083
 #, js-format
 msgid "Style “%s” reset to the style it is based on."
 msgstr ""
 
-#: assets/js/admin.js:936
+#: assets/js/admin.js:1109
 #, js-format
 msgid "Are you sure you want to delete “%s”? This cannot be undone."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:974
+#: assets/js/admin.js:1147
 #, js-format
 msgid "Style “%s” deleted."
 msgstr ""
 
-#: assets/js/admin.js:979
+#: assets/js/admin.js:1152
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
