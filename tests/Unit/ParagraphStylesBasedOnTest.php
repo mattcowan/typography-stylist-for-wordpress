@@ -255,10 +255,111 @@ class ParagraphStylesBasedOnTest extends TestCase {
         $this->assertSame(200, $response->get_status());
         $stored = $this->stored(2);
         $this->assertSame(1, $stored['basedOn']);
-        // fontId matched Body and is inherited now; the weight it never set inherits too
-        $this->assertSame(array('lineHeight' => 1.4, 'fontSize' => '14', 'fontSizeUnit' => 'rem'), $stored['properties']);
-        $this->assertSame('400', $response->get_data()['properties']['fontWeight']);
+        // fontId matched Body and is inherited now. A first parent keeps the
+        // look, so the weight Caption never set stays unset (review of #200)
+        $this->assertEquals(array('fontSize' => '14', 'fontSizeUnit' => 'rem', 'lineHeight' => 1.4, 'fontWeight' => ''), $stored['properties']);
+        $this->assertArrayNotHasKey('fontWeight', $response->get_data()['properties']);
         $this->assertSame($stored['properties'], $response->get_data()['ownProperties']);
+    }
+
+    /** QA Standalone (upright, no features) and QA Parent (italic, liga), from the PR #293 QA pass. */
+    private function standaloneAndParent() {
+        return array(
+            array('id' => 1, 'name' => 'Parent', 'properties' => array('fontId' => 37, 'fontWeight' => '400', 'fontStyle' => 'italic', 'fontSize' => '20', 'lineHeight' => 1.5, 'features' => array('liga'))),
+            array('id' => 2, 'name' => 'Standalone', 'properties' => array('fontId' => 36, 'fontWeight' => '400', 'fontSize' => '18', 'lineHeight' => 1.2)),
+            array('id' => 3, 'name' => 'Other', 'properties' => array('fontId' => 12, 'lineHeight' => 1.2)),
+        );
+    }
+
+    public function test_a_first_parent_keeps_the_look_with_or_without_other_changes() {
+        // Alone
+        $module = $this->module($this->standaloneAndParent());
+        $module->rest_update_style($this->request(array('id' => 2, 'basedOn' => 1)));
+        $alone = \Typost_Paragraph_Styles::resolve_properties($this->stored(2), $this->options['typost_paragraph_styles']);
+        $this->assertArrayNotHasKey('fontStyle', $alone);
+        $this->assertArrayNotHasKey('features', $alone);
+        $this->assertSame(1, $this->stored(2)['basedOn']);
+
+        // With a line height change: the form sends the whole look (no parent yet)
+        $module = $this->module($this->standaloneAndParent());
+        $module->rest_update_style($this->request(array('id' => 2, 'basedOn' => 1, 'properties' => array(
+            'fontId' => 36, 'fontSize' => '18', 'fontSizeUnit' => 'px', 'lineHeight' => 1.25,
+        ))));
+        $edited = \Typost_Paragraph_Styles::resolve_properties($this->stored(2), $this->options['typost_paragraph_styles']);
+        $this->assertArrayNotHasKey('fontStyle', $edited);
+        $this->assertArrayNotHasKey('features', $edited);
+        $this->assertSame(1.25, $edited['lineHeight']);
+    }
+
+    public function test_a_first_parent_then_none_gives_the_old_look_back() {
+        $module = $this->module($this->standaloneAndParent());
+        $cssBefore = $module->generate_style_css($this->stored(2));
+        $module->rest_update_style($this->request(array('id' => 2, 'basedOn' => 1)));
+        $module->rest_update_style($this->request(array('id' => 2, 'basedOn' => 0)));
+
+        $this->assertArrayNotHasKey('basedOn', $this->stored(2));
+        $this->assertSame($cssBefore, $module->generate_style_css($this->stored(2)));
+    }
+
+    public function test_a_move_to_another_parent_keeps_the_overrides_with_or_without_other_changes() {
+        $styles = $this->standaloneAndParent();
+        $styles[] = array('id' => 4, 'name' => 'Child', 'basedOn' => 1, 'properties' => array('fontWeight' => '700'));
+
+        $module = $this->module($styles);
+        $module->rest_update_style($this->request(array('id' => 4, 'basedOn' => 3)));
+        $this->assertSame(array('fontWeight' => '700'), $this->stored(4)['properties']);
+
+        // The form sends the change relative to the current parent
+        $module = $this->module($styles);
+        $module->rest_update_style($this->request(array('id' => 4, 'basedOn' => 3, 'properties' => array('fontWeight' => '700', 'letterSpacing' => 20))));
+        $this->assertSame(array('fontWeight' => '700', 'letterSpacing' => 20), $this->stored(4)['properties']);
+        $resolved = \Typost_Paragraph_Styles::resolve_properties($this->stored(4), $this->options['typost_paragraph_styles']);
+        $this->assertSame(12, $resolved['fontId']);
+    }
+
+    public function test_a_child_write_drops_values_equal_to_the_parent_for_every_client() {
+        $styles = $this->useCaseStyles();
+        $module = $this->module($styles);
+        // A client that sends back the resolved properties, with one change
+        $resolved = \Typost_Paragraph_Styles::resolve_properties($styles[2], $styles);
+        $resolved['letterSpacing'] = 40;
+        $module->rest_update_style($this->request(array('id' => 3, 'properties' => $resolved)));
+
+        $this->assertEquals(array('fontSize' => '14', 'fontSizeUnit' => 'rem', 'letterSpacing' => 40), $this->stored(3)['properties']);
+    }
+
+    public function test_create_drops_values_equal_to_the_parent() {
+        $this->options['typost_paragraph_styles_next_id'] = 4;
+        $module = $this->module($this->useCaseStyles());
+        $module->rest_create_style($this->request(array('name' => 'Quote', 'basedOn' => 1, 'properties' => array('fontId' => 5, 'fontStyle' => 'italic'))));
+
+        $this->assertSame(array('fontStyle' => 'italic'), $this->stored(4)['properties']);
+    }
+
+    public function test_based_on_must_be_a_style_id() {
+        foreach (array(-1, 'abc', true, false, 1.5, '1.5', '-1', array(1)) as $value) {
+            $styles = $this->useCaseStyles();
+            $module = $this->module($styles);
+            $response = $module->rest_update_style($this->request(array('id' => 3, 'basedOn' => $value)));
+            $this->assertSame(400, $response->get_status(), var_export($value, true));
+            $this->assertSame('basedOn', $response->get_data()['field']);
+            $this->assertSame($styles, $this->options['typost_paragraph_styles'], var_export($value, true));
+
+            $this->options['typost_paragraph_styles_next_id'] = 4;
+            $created = $module->rest_create_style($this->request(array('name' => 'X', 'basedOn' => $value)));
+            $this->assertSame(400, $created->get_status(), var_export($value, true));
+        }
+        $this->assertSame(2, \Typost_Paragraph_Styles::parse_based_on('2'));
+        $this->assertSame(0, \Typost_Paragraph_Styles::parse_based_on(''));
+        $this->assertSame(0, \Typost_Paragraph_Styles::parse_based_on(0));
+    }
+
+    public function test_compute_overrides_matches_the_shared_fixture() {
+        $cases = $this->fixture()['overrides'];
+        $this->assertGreaterThanOrEqual(5, count($cases));
+        foreach ($cases as $case) {
+            $this->assertEquals($case['expected'], \Typost_Paragraph_Styles::compute_overrides($case['full'], $case['parent']), $case['label']);
+        }
     }
 
     public function test_removing_based_on_keeps_the_look() {
@@ -296,8 +397,11 @@ class ParagraphStylesBasedOnTest extends TestCase {
             'initialHang' => 0, 'fontStyle' => '', 'textCase' => '', 'fontVariationSettings' => '', 'features' => array(),
         ))));
 
+        // Body sets the hang and the features, so their empty values stay.
+        // It sets no style, case or axes, so those empty values change
+        // nothing and are dropped (review of #200)
         $this->assertSame(
-            array('fontStyle' => '', 'features' => array(), 'fontVariationSettings' => '', 'initialHang' => 0, 'textCase' => ''),
+            array('features' => array(), 'initialHang' => 0),
             $this->stored(2)['properties']
         );
     }
@@ -373,6 +477,20 @@ class ParagraphStylesBasedOnTest extends TestCase {
         $this->assertStringContainsString('<strong>First Letter Hang:</strong> None<span class="typost-ps-detail-source is-override">Override</span>', $html);
         // The form labels the inherited font
         $this->assertStringContainsString('data-font-label="Fraunces"', $html);
+    }
+
+    public function test_the_font_row_labels_the_family_and_the_weight_apart_when_only_one_is_own() {
+        $styles = array(
+            array('id' => 1, 'name' => 'Body', 'properties' => array('fontId' => 5, 'fontWeight' => '400')),
+            array('id' => 2, 'name' => 'Bold', 'basedOn' => 1, 'properties' => array('fontWeight' => '700')),
+        );
+        $html = \Typost_Paragraph_Styles::render_admin_card_parts(
+            $styles[1],
+            $styles,
+            array('lookup' => array('5' => 'Fraunces'), 'mappings' => array(), 'manual_ids' => array())
+        )['details'];
+
+        $this->assertStringContainsString('<strong>Font:</strong> Fraunces<span class="typost-ps-detail-source is-inherited">Inherited</span> (700)<span class="typost-ps-detail-source is-override">Override</span>', $html);
     }
 
     public function test_a_style_without_a_parent_has_no_labels() {

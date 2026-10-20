@@ -24,12 +24,13 @@
  * style based on another fills the form with its resolved values (what it
  * renders) and carries ownProperties + basedOn. The form's "Based on"
  * select lists every style except the edited one and the styles based on
- * it. A save of a child sends only what differs from the parent
- * (computeStyleOverrides); a Based On change alone sends just basedOn and
- * the server rebases. The admin-card response also carries the cards of
- * the styles based on the saved one and every style in the client shape,
- * because their resolved values change with it. Reset to Base (in the
- * form) sends empty properties.
+ * it. A save of a child sends only what differs from its current parent
+ * (computeStyleOverrides); a Based On change is applied by the server's
+ * rebase, with or without edits (a first parent keeps the look). The
+ * admin-card response also carries the cards of the styles based on the
+ * saved one and every style in the client shape, because their resolved
+ * values change with it. Reset to Base (in the form, shown only while the
+ * select names the saved parent) sends empty properties.
  *
  * Focus and announcements (QA finding ADM-2): opening the edit form moves
  * focus to the name field, saving or cancelling returns it to the card's
@@ -307,12 +308,28 @@
 		});
 		var parentId = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
 		selectValue(select, parentId, __('A deleted style', 'typost-paragraph-styles'));
+		updateResetToBase(form, style);
+	}
 
+	/**
+	 * Show Reset to Base only when it does what it says: the style has a
+	 * saved parent, overrides it, and the select still names that parent.
+	 * The button resets against the saved parent, so after another choice
+	 * in the select it would drop that choice (#200 review).
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style The style (client shape).
+	 */
+	function updateResetToBase(form, style) {
 		var reset = form.querySelector('.typost-ps-reset-base-btn');
-		if (reset) {
-			var own = style && style.ownProperties;
-			reset.hidden = !(parentId && own && Object.keys(own).length);
+		if (!reset) {
+			return;
 		}
+		var select = field(form, 'basedOn');
+		var parentId = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		var own = style && style.ownProperties;
+		var chosen = select ? parseInt(select.value, 10) || 0 : parentId;
+		reset.hidden = !(parentId && own && Object.keys(own).length && chosen === parentId);
 	}
 
 	/**
@@ -574,13 +591,14 @@
 	 * the whole set, and a rename must not rewrite properties the form
 	 * cannot represent.
 	 *
-	 * Based On (#200): basedOn is sent when the select changed. Alone, the
-	 * server rebases the style (matching values become inherited; None
-	 * keeps the look). With changed properties, the form's look is stored
-	 * as overrides of the chosen parent (computeStyleOverrides), so values
-	 * equal to the parent's stay inherited; with None, as the whole look.
-	 * The compare with the untouched form runs on the whole look, before
-	 * the overrides are taken.
+	 * Based On (#200): basedOn is sent when the select changed, and the
+	 * server rebases the style (a first parent and None keep the look; a
+	 * move to another parent keeps the style's own overrides). Changed
+	 * properties are sent relative to the style's current parent, as
+	 * overrides of it (computeStyleOverrides) or the whole look when it has
+	 * none, so the rebase treats a save with edits like one without. The
+	 * compare with the untouched form runs on the whole look, before the
+	 * overrides are taken.
 	 *
 	 * @param {Object} values         readEditForm() now.
 	 * @param {Object} baselineValues readEditForm() right after filling.
@@ -606,9 +624,12 @@
 		}
 
 		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
+			// Relative to the current parent: the server applies a Based On
+			// change itself (rebase_properties()), so a save with edits and a
+			// save without them follow the same rule
 			var parent = null;
 			(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
-				if (parentId && candidate && parseInt(candidate.id, 10) === parentId) {
+				if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
 					parent = candidate;
 				}
 			});
@@ -758,6 +779,7 @@
 		sizeModeOf: sizeModeOf,
 		updateConditionalFields: updateConditionalFields,
 		fillEditForm: fillEditForm,
+		updateResetToBase: updateResetToBase,
 		readEditForm: readEditForm,
 		validateEditValues: validateEditValues,
 		stateFromEditValues: stateFromEditValues,
@@ -943,6 +965,10 @@
 
 	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"]', function() {
 		updateConditionalFields($(this).closest('form')[0]);
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-field="basedOn"]', function() {
+		updateResetToBase($(this).closest('form')[0], findStyle($(this).closest('.typost-ps-style-card').data('style-id')));
 	});
 
 	$(document).on('click', '.typost-ps-cancel-edit-btn', function() {

@@ -103,6 +103,22 @@ final class Typost_Paragraph_Styles {
 	);
 
 	/**
+	 * The value a style based on another stores to unset an inherited
+	 * property outside the groups (#200). Mirrors EMPTY_PROPERTY_VALUES in
+	 * ps-utils.js.
+	 */
+	const EMPTY_PROPERTY_VALUES = array(
+		'fontId'                => 0,
+		'fontWeight'            => '',
+		'fontStyle'             => '',
+		'letterSpacing'         => 0,
+		'lineHeight'            => 0,
+		'features'              => array(),
+		'fontVariationSettings' => '',
+		'initialHang'           => 0,
+	);
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return self
@@ -1135,7 +1151,7 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function rest_create_style( $request ) {
 		$name     = trim( sanitize_text_field( $request->get_param( 'name' ) ) );
-		$based_on = absint( $request->get_param( 'basedOn' ) );
+		$based_on = self::parse_based_on( $request->get_param( 'basedOn' ) );
 
 		if ( empty( $name ) ) {
 			return new WP_REST_Response( array( 'message' => __( 'Style name is required.', 'typost-paragraph-styles' ) ), 400 );
@@ -1143,6 +1159,9 @@ final class Typost_Paragraph_Styles {
 
 		$styles = $this->get_styles();
 
+		if ( null === $based_on ) {
+			return new WP_REST_Response( array( 'message' => __( 'The style to base this style on does not exist.', 'typost-paragraph-styles' ), 'field' => 'basedOn' ), 400 );
+		}
 		if ( $based_on ) {
 			$error = self::based_on_error( $styles, 0, $based_on );
 			if ( '' !== $error ) {
@@ -1153,7 +1172,12 @@ final class Typost_Paragraph_Styles {
 
 		// A style based on another stores only its overrides, which may
 		// include empty values that unset an inherited property (#200).
+		// Values equal to the parent's are dropped here, so every client
+		// gets the same rule, not only the ones that compare first.
 		$properties = $this->sanitize_properties( $request->get_param( 'properties' ), $based_on > 0 );
+		if ( $based_on ) {
+			$properties = self::drop_inherited_properties( $properties, $this->resolved_style_properties( $styles, $based_on ) );
+		}
 
 		$new_id = $this->get_next_id();
 
@@ -1202,7 +1226,10 @@ final class Typost_Paragraph_Styles {
 		$old_based_on = ! empty( $styles[ $index ]['basedOn'] ) ? intval( $styles[ $index ]['basedOn'] ) : 0;
 		$based_on     = $old_based_on;
 		if ( null !== $request->get_param( 'basedOn' ) ) {
-			$based_on = absint( $request->get_param( 'basedOn' ) );
+			$based_on = self::parse_based_on( $request->get_param( 'basedOn' ) );
+			if ( null === $based_on ) {
+				return new WP_REST_Response( array( 'message' => __( 'The style to base this style on does not exist.', 'typost-paragraph-styles' ), 'field' => 'basedOn' ), 400 );
+			}
 			if ( $based_on && $based_on !== $old_based_on ) {
 				$error = self::based_on_error( $styles, $id, $based_on );
 				if ( '' !== $error ) {
@@ -1212,13 +1239,21 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// The client sends the style's own properties relative to its
+		// current parent: with one, only its overrides
+		// (computeStyleOverrides() in ps-utils.js). A change of Based On is
+		// then applied by rebase_properties(), with or without new
+		// properties, so both saves follow one rule.
 		$properties = $request->get_param( 'properties' );
 		if ( null !== $properties ) {
-			// The client sends the style's own properties: with a parent,
-			// only its overrides (computeStyleOverrides() in ps-utils.js)
-			$styles[ $index ]['properties'] = $this->sanitize_properties( $properties, $based_on > 0 );
-		} elseif ( $based_on !== $old_based_on ) {
+			$styles[ $index ]['properties'] = $this->sanitize_properties( $properties, $old_based_on > 0 );
+		}
+		if ( $based_on !== $old_based_on ) {
 			$styles[ $index ]['properties'] = $this->rebase_properties( $styles, $index, $based_on );
+		} elseif ( $based_on && null !== $properties ) {
+			// Values equal to the parent's become inherited for every
+			// client, also one that sends back the resolved properties
+			$styles[ $index ]['properties'] = self::drop_inherited_properties( $styles[ $index ]['properties'], $this->resolved_style_properties( $styles, $based_on ) );
 		}
 
 		if ( $based_on ) {
@@ -1236,12 +1271,19 @@ final class Typost_Paragraph_Styles {
 	/**
 	 * A style's own properties after its Based On changes (#200).
 	 *
-	 * Removing the parent copies the resolved values into the style, so it
-	 * looks the same. A new parent keeps what the style sets, except values
-	 * that equal the new parent's, which become inherited; everything the
-	 * style does not set inherits from the new parent.
+	 * - Removing the parent copies the resolved values into the style, so it
+	 *   looks the same.
+	 * - A first parent (the style had none, or its parent was deleted) keeps
+	 *   the look too: the style stores what differs from the parent, and an
+	 *   empty value for each property the parent sets and the style does not
+	 *   (compute_overrides()). Choosing None afterwards gives the old look
+	 *   back.
+	 * - A move from one parent to another keeps what the style sets, except
+	 *   values that equal the new parent's, which become inherited;
+	 *   everything the style does not set inherits from the new parent.
 	 *
-	 * @param array $styles       Every stored style (before the change).
+	 * @param array $styles       Every stored style, the changed style's own
+	 *                            properties relative to its old parent.
 	 * @param int   $index        Index of the style that changes.
 	 * @param int   $new_based_on The new parent id, 0 for none.
 	 * @return array
@@ -1251,10 +1293,51 @@ final class Typost_Paragraph_Styles {
 		if ( ! $new_based_on ) {
 			return self::compact_properties( self::resolve_properties( $style, $styles ) );
 		}
-		$parent_index = $this->find_style_index( $styles, $new_based_on );
-		$parent       = false === $parent_index ? array() : self::resolve_properties( $styles[ $parent_index ], $styles );
-		$own          = isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array();
+		$parent     = $this->resolved_style_properties( $styles, $new_based_on );
+		$had_parent = ! empty( $style['basedOn'] ) && false !== $this->find_style_index( $styles, intval( $style['basedOn'] ) );
+		if ( ! $had_parent ) {
+			$look = self::compact_properties( self::resolve_properties( $style, $styles ) );
+			return self::compute_overrides( $look, $parent );
+		}
+		$own = isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array();
 		return self::drop_inherited_properties( $own, $parent );
+	}
+
+	/**
+	 * The resolved properties of a stored style, empty when it is missing.
+	 *
+	 * @param array $styles   Every stored style.
+	 * @param int   $style_id Style id.
+	 * @return array
+	 */
+	private function resolved_style_properties( $styles, $style_id ) {
+		$index = $this->find_style_index( $styles, $style_id );
+		return false === $index ? array() : self::resolve_properties( $styles[ $index ], $styles );
+	}
+
+	/**
+	 * Read a `basedOn` request value: the parent id, 0 for none, or null
+	 * when the value is not a style id (#200).
+	 *
+	 * An integer or a string of digits is an id; null and '' mean none.
+	 * Anything else (a negative number, a fraction, a word, a boolean, an
+	 * array) is rejected, so it cannot link a style by accident (-3 became
+	 * style 3) or remove its parent (absint( 'abc' ) is 0).
+	 *
+	 * @param mixed $value Request value.
+	 * @return int|null
+	 */
+	public static function parse_based_on( $value ) {
+		if ( null === $value || '' === $value ) {
+			return 0;
+		}
+		if ( is_int( $value ) ) {
+			return $value >= 0 ? $value : null;
+		}
+		if ( is_string( $value ) && ctype_digit( $value ) ) {
+			return intval( $value );
+		}
+		return null;
 	}
 
 	/**
@@ -1612,10 +1695,18 @@ final class Typost_Paragraph_Styles {
 		$unsets    = function ( $key ) use ( $own ) {
 			return null !== $own && array_key_exists( $key, $own );
 		};
-		// Each row: label, value, the keys it shows (for its source label)
+		// Each row: label, value, the keys it shows (for its source label),
+		// and optionally a second value with its own keys
 		$rows      = array();
 
-		$rows[] = array( __( 'Font:', 'typost-paragraph-styles' ), $font_name . ' (' . $weight . ')', array( 'fontId', 'fontWeight' ) );
+		// One label for the font and its weight, or one each when only one of
+		// them is the style's own (a child that sets only the weight still
+		// follows its parent's font)
+		if ( null !== $own && array_key_exists( 'fontId', $own ) !== array_key_exists( 'fontWeight', $own ) ) {
+			$rows[] = array( __( 'Font:', 'typost-paragraph-styles' ), $font_name, array( 'fontId' ), array( '(' . $weight . ')', array( 'fontWeight' ) ) );
+		} else {
+			$rows[] = array( __( 'Font:', 'typost-paragraph-styles' ), $font_name . ' (' . $weight . ')', array( 'fontId', 'fontWeight' ) );
+		}
 
 		// Font style — absent means inherit, so only real choices get a label
 		$font_style_labels = array(
@@ -1710,7 +1801,12 @@ final class Typost_Paragraph_Styles {
 		$detail = function ( $pairs ) use ( $source ) {
 			$parts = array();
 			foreach ( $pairs as $pair ) {
-				$parts[] = '<strong>' . esc_html( $pair[0] ) . '</strong> ' . esc_html( $pair[1] ) . ( isset( $pair[2] ) ? $source( $pair[2] ) : '' );
+				$part = '<strong>' . esc_html( $pair[0] ) . '</strong> ' . esc_html( $pair[1] ) . ( isset( $pair[2] ) ? $source( $pair[2] ) : '' );
+				// A second value with its own label: [ value, keys ]
+				if ( isset( $pair[3] ) ) {
+					$part .= ' ' . esc_html( $pair[3][0] ) . $source( $pair[3][1] );
+				}
+				$parts[] = $part;
 			}
 			return '<span class="typost-ps-detail">' . implode( '&nbsp;/&nbsp;', $parts ) . '</span>';
 		};
@@ -1838,7 +1934,7 @@ final class Typost_Paragraph_Styles {
 	/**
 	 * A card's details line and preview, as the tab and the admin-card
 	 * route render them. A style based on another (#200) shows its resolved
-	 * values, labelled Inherited or Override, and its resolved font.
+	 * values, labeled Inherited or Override, and its resolved font.
 	 *
 	 * @param array $style   Stored style.
 	 * @param array $styles  Every stored style.
@@ -2331,6 +2427,60 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 		return $own;
+	}
+
+	/**
+	 * The own properties that make a style based on another keep a look.
+	 *
+	 * `$full` is the whole look; the result keeps what differs from the
+	 * parent's resolved properties and stores the empty value of each
+	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
+	 * fontSize 'inherit', textCase ''), so the style still does not set it.
+	 * Used when a style gets its first parent (rebase_properties()). Twin of
+	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
+	 * cases of the shared fixture.
+	 *
+	 * @param array $full   The whole look (resolved, compacted).
+	 * @param array $parent The parent's resolved properties.
+	 * @return array
+	 */
+	public static function compute_overrides( $full, $parent ) {
+		$full   = is_array( $full ) ? $full : array();
+		$parent = is_array( $parent ) ? $parent : array();
+		$out    = array();
+		foreach ( self::BASED_ON_GROUPS as $lead => $keys ) {
+			$mine = self::group_signature( $lead, $full );
+			if ( self::group_signature( $lead, $parent ) === $mine ) {
+				continue;
+			}
+			$no_case = 'textCase' === $lead && ! ( isset( $full['textCase'] ) && in_array( $full['textCase'], self::TEXT_CASE_VALUES, true ) );
+			if ( 'none' === $mine || $no_case ) {
+				$out[ $lead ] = 'fontSize' === $lead ? 'inherit' : '';
+				continue;
+			}
+			foreach ( $keys as $key ) {
+				if ( array_key_exists( $key, $full ) ) {
+					$out[ $key ] = $full[ $key ];
+				}
+			}
+		}
+		$keys = array();
+		foreach ( array_merge( array_keys( $full ), array_keys( $parent ) ) as $key ) {
+			if ( ! self::is_group_key( $key ) ) {
+				$keys[ $key ] = true;
+			}
+		}
+		foreach ( array_keys( $keys ) as $key ) {
+			if ( self::property_values_equal( $key, $full, $parent ) ) {
+				continue;
+			}
+			if ( array_key_exists( $key, $full ) ) {
+				$out[ $key ] = $full[ $key ];
+			} elseif ( array_key_exists( $key, self::EMPTY_PROPERTY_VALUES ) ) {
+				$out[ $key ] = self::EMPTY_PROPERTY_VALUES[ $key ];
+			}
+		}
+		return $out;
 	}
 
 	/**

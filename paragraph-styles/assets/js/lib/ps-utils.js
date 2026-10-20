@@ -460,6 +460,7 @@
 
 	// The value a style based on another stores to unset a property its
 	// parent sets. The groups use fontSize 'inherit' and textCase ''.
+	// Mirrors EMPTY_PROPERTY_VALUES in PHP.
 	var EMPTY_PROPERTY_VALUES = {
 		fontId: 0,
 		fontWeight: '',
@@ -671,6 +672,9 @@
 	 * Update Style). A property the parent sets and `full` does not is
 	 * stored as its empty value (EMPTY_PROPERTY_VALUES, fontSize 'inherit',
 	 * textCase ''), so the style keeps not setting it.
+	 *
+	 * Twin of PHP compute_overrides() (the server's first-parent rebase);
+	 * both read the `overrides` cases of the shared fixture.
 	 *
 	 * @param {Object} full   Properties as buildPropertiesForStyleSave() builds them.
 	 * @param {Object} parent The parent's resolved properties.

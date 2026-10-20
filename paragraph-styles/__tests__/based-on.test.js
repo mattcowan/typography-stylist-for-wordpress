@@ -56,6 +56,18 @@ describe('computeStyleOverrides compares like PHP drop_inherited_properties (sha
 	});
 });
 
+describe('computeStyleOverrides matches PHP compute_overrides (shared fixture)', () => {
+	test('the fixture is read', () => {
+		expect(fixture.overrides.length).toBeGreaterThanOrEqual(5);
+	});
+
+	fixture.overrides.forEach(({ label, full, parent, expected }) => {
+		test(label, () => {
+			expect(computeStyleOverrides(full, parent)).toEqual(expected);
+		});
+	});
+});
+
 describe('child style CSS (shared fixture)', () => {
 	fixture.css.forEach(({ label, styles, id, css }) => {
 		test(label, () => {

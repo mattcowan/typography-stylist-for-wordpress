@@ -14,6 +14,7 @@ const {
 	sizeModeOf,
 	updateConditionalFields,
 	fillEditForm,
+	updateResetToBase,
 	readEditForm,
 	validateEditValues,
 	buildEditPayload,
@@ -619,24 +620,58 @@ describe('Based On (#200)', () => {
 		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({ name: 'Caption', basedOn: 0 });
 	});
 
-	test('a new parent and a changed value store the look as overrides of the new parent', () => {
+	// A Based On change with edits sends the edits relative to the current
+	// parent, so the server's rebase treats it like a change alone (review
+	// of #200: the client used to store the whole look against the new
+	// parent, and the result depended on whether another field changed)
+	test('a new parent and a changed value send the change relative to the current parent', () => {
 		const { form, baseline } = openChildForm(STYLES[1]);
 		setField(form, 'basedOn', 4);
 		setField(form, 'fontWeight', '700');
-		const payload = buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES);
-		expect(payload.basedOn).toBe(4);
-		// Display's weight is inherited, its font is replaced by the look's
-		expect(payload.properties.fontWeight).toBeUndefined();
-		expect(payload.properties.fontId).toBe(36);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES)).toEqual({
+			name: 'Caption',
+			basedOn: 4,
+			properties: { fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 20, fontWeight: '700' },
+		});
 	});
 
-	test('None with a changed value stores the whole look', () => {
+	test('None with a changed value sends the change relative to the current parent', () => {
 		const { form, baseline } = openChildForm(STYLES[1]);
 		setField(form, 'basedOn', 0);
 		setField(form, 'letterSpacing', 40);
 		const payload = buildEditPayload(readEditForm(form), baseline, STYLES[1], 'rem', STYLES);
 		expect(payload.basedOn).toBe(0);
-		expect(payload.properties).toEqual({ fontId: 36, fontWeight: '400', fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 40, lineHeight: 1.6, features: ['liga'] });
+		expect(payload.properties).toEqual({ fontSize: '14', fontSizeUnit: 'rem', letterSpacing: 40 });
+	});
+
+	test('a first parent with a changed value sends the whole look (the server keeps it)', () => {
+		const { form, baseline } = openChildForm(STYLES[3]);
+		setField(form, 'basedOn', 1);
+		setField(form, 'lineHeight', 1.25);
+		const payload = buildEditPayload(readEditForm(form), baseline, STYLES[3], 'rem', STYLES);
+		expect(payload.basedOn).toBe(1);
+		expect(payload.properties).toEqual({ fontId: 12, fontWeight: '700', lineHeight: 1.25 });
+	});
+
+	test('Reset to Base shows only while the select names the saved parent', () => {
+		const { form } = openChildForm(STYLES[1]);
+		const reset = form.querySelector('.typost-ps-reset-base-btn');
+		setField(form, 'basedOn', 0);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(true);
+		setField(form, 'basedOn', 4);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(true);
+		setField(form, 'basedOn', 1);
+		updateResetToBase(form, STYLES[1]);
+		expect(reset.hidden).toBe(false);
+	});
+
+	test('a style without a parent gets no Reset to Base when a parent is chosen', () => {
+		const { form } = openChildForm(STYLES[3]);
+		setField(form, 'basedOn', 1);
+		updateResetToBase(form, STYLES[3]);
+		expect(form.querySelector('.typost-ps-reset-base-btn').hidden).toBe(true);
 	});
 
 	test('replaceRelatedCards swaps the saved card and the cards based on it', () => {
