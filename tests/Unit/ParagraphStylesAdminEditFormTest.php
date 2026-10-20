@@ -42,7 +42,7 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
 
     /** Every data-field the edit form reads; admin.js relies on these names. */
     const FORM_FIELDS = array(
-        'name', 'fontId', 'fontWeight', 'fontStyle', 'sizeMode', 'fontSize',
+        'name', 'basedOn', 'fontId', 'fontWeight', 'fontStyle', 'sizeMode', 'fontSize',
         'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize',
         'letterSpacing', 'lineHeight', 'initialHang', 'textCase', 'fakeSmallCaps',
         'fontVariationSettings',

@@ -51,6 +51,8 @@
 	var findTypeAheadMatch       = utils.findTypeAheadMatch;
 	var buildPropertiesFromState = utils.buildPropertiesFromState;
 	var buildPropertiesForStyleSave = utils.buildPropertiesForStyleSave;
+	var buildStyleUpdateProperties = utils.buildStyleUpdateProperties;
+	var resolveStyleList         = utils.resolveStyleList;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
 	var isCoreStyleBlock         = utils.isCoreStyleBlock;
@@ -412,7 +414,7 @@
 					properties: properties,
 				},
 			}).then(function(newStyle) {
-				var updated = currentStyles.concat([newStyle]);
+				var updated = resolveStyleList(currentStyles.concat([newStyle]));
 				setCurrentStyles(updated);
 				if (window.typostData) {
 					window.typostData.paragraphStyles = updated;
@@ -437,17 +439,21 @@
 			setIsSaving(true);
 
 			var state = getCurrentState();
-			// Keeps block-only properties (the hang) the inline editor cannot report
-			var properties = buildPropertiesForStyleSave(state, activeStyle.properties, true, getNewFontSizeUnit());
+			// Keeps block-only properties (the hang) the inline editor cannot
+			// report. A style based on another sends only what differs from
+			// its parent (#200), so values equal to the parent's stay inherited.
+			var properties = buildStyleUpdateProperties(state, activeStyle, currentStyles, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
 				method: 'PATCH',
 				data: { properties: properties },
 			}).then(function(updatedStyle) {
-				var updated = currentStyles.map(function(s) {
+				// Resolved again: the styles based on this one change with it,
+				// and the rebuilt CSS and the block re-sync read the new values
+				var updated = resolveStyleList(currentStyles.map(function(s) {
 					return String(s.id) === String(updatedStyle.id) ? updatedStyle : s;
-				});
+				}));
 				setCurrentStyles(updated);
 				if (window.typostData) {
 					window.typostData.paragraphStyles = updated;
@@ -476,7 +482,7 @@
 					properties: properties,
 				},
 			}).then(function(newStyle) {
-				var updated = currentStyles.concat([newStyle]);
+				var updated = resolveStyleList(currentStyles.concat([newStyle]));
 				setCurrentStyles(updated);
 				if (window.typostData) {
 					window.typostData.paragraphStyles = updated;

@@ -50,11 +50,10 @@ foreach ( $form_features as $feature ) {
 				if ( ! isset( $style['name'], $style['id'] ) || '' === $style['name'] ) {
 					continue; // Skip invalid/corrupted entries
 				}
-				$props    = isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array();
-				$style_id = intval( $style['id'] );
-				$font_id  = isset( $props['fontId'] ) ? absint( $props['fontId'] ) : 0;
-				$font     = Typost_Paragraph_Styles::resolve_font_label( $font_id, $font_context['lookup'], $font_context['mappings'] );
+				$style_id  = intval( $style['id'] );
 				$css_class = 'typost-ps-' . $style_id;
+				// Resolved values for a style based on another (#200)
+				$card_parts = Typost_Paragraph_Styles::render_admin_card_parts( $style, $styles, $font_context );
 			?>
 				<div class="typost-ps-style-card" data-style-id="<?php echo esc_attr( $style_id ); ?>">
 					<div class="typost-ps-style-card-header">
@@ -72,14 +71,14 @@ foreach ( $form_features as $feature ) {
 					<?php
 					// Both renderers escape their own output; the admin-card
 					// route returns the same markup after a save (#221).
-					echo Typost_Paragraph_Styles::render_card_details( $props, $font ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_details()
+					echo $card_parts['details']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_details()
 
 					// Always shown (#226). A font file downloads only while this
 					// tab is open, and core's admin-page.js loads an Adobe Fonts
 					// kit when a sample that needs it comes into view, from
 					// data-typost-font-id (the font the style renders in, after
 					// replacements).
-					echo Typost_Paragraph_Styles::render_card_preview( $style_id, $font, $font_context['manual_ids'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_preview()
+					echo $card_parts['preview']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in render_card_preview()
 					?>
 
 					<?php // Filled from the template below when Edit is clicked (#221) ?>
@@ -102,6 +101,18 @@ foreach ( $form_features as $feature ) {
 			<p class="typost-ps-edit-field">
 				<label for="typost-ps-edit-name"><?php esc_html_e( 'Name:', 'typost-paragraph-styles' ); ?></label>
 				<input type="text" id="typost-ps-edit-name" class="typost-ps-edit-name" data-field="name" required />
+			</p>
+
+			<?php
+			// Based On (#200). admin.js adds every style except the edited
+			// one and the styles based on it (choosing one would loop).
+			?>
+			<p class="typost-ps-edit-field typost-ps-edit-based-on">
+				<label for="typost-ps-edit-based-on"><?php esc_html_e( 'Based on', 'typost-paragraph-styles' ); ?></label>
+				<select id="typost-ps-edit-based-on" data-field="basedOn" aria-describedby="typost-ps-edit-based-on-help">
+					<option value="0"><?php esc_html_e( 'None', 'typost-paragraph-styles' ); ?></option>
+				</select>
+				<span class="typost-ps-edit-help" id="typost-ps-edit-based-on-help"><?php esc_html_e( 'The style uses the chosen style’s value for every setting it does not set itself, and follows later changes to it. Settings that match the chosen style become inherited. None keeps the current look as the style’s own settings.', 'typost-paragraph-styles' ); ?></span>
 			</p>
 
 			<fieldset class="typost-ps-edit-group">
@@ -261,6 +272,10 @@ foreach ( $form_features as $feature ) {
 				</button>
 				<button type="button" class="button typost-ps-cancel-edit-btn">
 					<?php esc_html_e( 'Cancel', 'typost-paragraph-styles' ); ?>
+				</button>
+				<?php // Shown for a style based on another that sets values of its own (#200) ?>
+				<button type="button" class="button typost-ps-reset-base-btn" hidden>
+					<?php esc_html_e( 'Reset to Base', 'typost-paragraph-styles' ); ?>
 				</button>
 			</div>
 		</form>

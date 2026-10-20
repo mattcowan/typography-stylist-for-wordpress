@@ -443,6 +443,328 @@
 		return properties;
 	}
 
+	// ---------------------------------------------------------------------
+	// Based On (#200)
+	// ---------------------------------------------------------------------
+
+	// Most styles a Based On chain may hold, the style itself included.
+	// Mirrors MAX_BASED_ON_LEVELS in paragraph-styles.php.
+	var MAX_BASED_ON_LEVELS = 10;
+
+	// Property groups that inherit as a whole, keyed by the lead key that
+	// marks a style as setting the group. Mirrors BASED_ON_GROUPS in PHP.
+	var BASED_ON_GROUPS = {
+		fontSize: ['fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize'],
+		textCase: ['textCase', 'fakeSmallCaps'],
+	};
+
+	// The value a style based on another stores to unset a property its
+	// parent sets. The groups use fontSize 'inherit' and textCase ''.
+	var EMPTY_PROPERTY_VALUES = {
+		fontId: 0,
+		fontWeight: '',
+		fontStyle: '',
+		letterSpacing: 0,
+		lineHeight: 0,
+		features: [],
+		fontVariationSettings: '',
+		initialHang: 0,
+	};
+
+	function hasOwn(obj, key) {
+		return !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+	}
+
+	function isGroupKey(key) {
+		return BASED_ON_GROUPS.fontSize.indexOf(key) !== -1 || BASED_ON_GROUPS.textCase.indexOf(key) !== -1;
+	}
+
+	/** What a style stores itself: ownProperties in the client shape (resolveStyleList), else properties. */
+	function ownPropertiesOf(style) {
+		if (!style) return {};
+		var own = style.ownProperties !== undefined ? style.ownProperties : style.properties;
+		return own && typeof own === 'object' ? own : {};
+	}
+
+	/**
+	 * Lay a child's own properties over its parent's resolved ones. Twin of
+	 * PHP merge_properties(): the size and the case inherit as groups, every
+	 * other key one by one.
+	 *
+	 * @param {Object} base Parent's resolved properties.
+	 * @param {Object} own  Child's own properties.
+	 * @return {Object}
+	 */
+	function mergeStyleProperties(base, own) {
+		var out = Object.assign({}, base || {});
+		if (!own || typeof own !== 'object') return out;
+		Object.keys(BASED_ON_GROUPS).forEach(function (lead) {
+			if (!hasOwn(own, lead)) return;
+			BASED_ON_GROUPS[lead].forEach(function (key) {
+				delete out[key];
+				if (hasOwn(own, key)) {
+					out[key] = own[key];
+				}
+			});
+		});
+		Object.keys(own).forEach(function (key) {
+			if (!isGroupKey(key)) {
+				out[key] = own[key];
+			}
+		});
+		return out;
+	}
+
+	/**
+	 * Drop the empty values that unset an inherited property, once resolved.
+	 * Twin of PHP compact_properties(): fontSize 'inherit' drops the size
+	 * group, an unknown or empty textCase the case group, and any other key
+	 * goes when PHP empty() (an empty features list included).
+	 *
+	 * @param {Object} props
+	 * @return {Object}
+	 */
+	function compactStyleProperties(props) {
+		var out = Object.assign({}, props || {});
+		if (hasOwn(out, 'fontSize') && (out.fontSize === null || out.fontSize === undefined || out.fontSize === '' || out.fontSize === 'inherit')) {
+			BASED_ON_GROUPS.fontSize.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'textCase') && TEXT_CASE_VALUES.indexOf(out.textCase) === -1) {
+			BASED_ON_GROUPS.textCase.forEach(function (key) { delete out[key]; });
+		}
+		Object.keys(out).forEach(function (key) {
+			var value = out[key];
+			if (!isGroupKey(key) && (phpFalsy(value) || (Array.isArray(value) && value.length === 0))) {
+				delete out[key];
+			}
+		});
+		return out;
+	}
+
+	/**
+	 * A style's properties resolved through its Based On chain (#200). Twin
+	 * of PHP resolve_properties(): a style without basedOn returns what it
+	 * stores, untouched; otherwise the chain (at most MAX_BASED_ON_LEVELS
+	 * styles, stopping at a missing parent or a loop) is merged from the
+	 * root down and compacted.
+	 *
+	 * Takes styles in either shape: stored, or the client shape where
+	 * ownProperties holds what each style stores.
+	 *
+	 * @param {Object} style  Style.
+	 * @param {Array}  styles Every style.
+	 * @return {Object} Resolved properties.
+	 */
+	function resolveStyleProperties(style, styles) {
+		var own = ownPropertiesOf(style);
+		if (!style || !style.basedOn) return own;
+		var byId = {};
+		(Array.isArray(styles) ? styles : []).forEach(function (candidate) {
+			if (candidate && candidate.id !== undefined && isFinite(candidate.id)) {
+				byId[parseInt(candidate.id, 10)] = candidate;
+			}
+		});
+		var chain = [style];
+		var visited = {};
+		visited[parseInt(style.id, 10) || 0] = true;
+		var current = style;
+		while (current.basedOn && chain.length < MAX_BASED_ON_LEVELS) {
+			var parentId = parseInt(current.basedOn, 10);
+			if (!byId[parentId] || visited[parentId]) break;
+			visited[parentId] = true;
+			current = byId[parentId];
+			chain.push(current);
+		}
+		var resolved = {};
+		for (var i = chain.length - 1; i >= 0; i--) {
+			resolved = mergeStyleProperties(resolved, ownPropertiesOf(chain[i]));
+		}
+		return compactStyleProperties(resolved);
+	}
+
+	/**
+	 * Every style in the client shape: `properties` resolved, plus
+	 * `ownProperties` (what the style stores) for a style based on another.
+	 * Twin of PHP prepare_style_for_client(). Idempotent, so the editor runs
+	 * it over its list after every save: a change to a parent changes the
+	 * resolved properties of every style based on it.
+	 *
+	 * @param {Array} styles Styles, stored or client shape.
+	 * @return {Array}
+	 */
+	function resolveStyleList(styles) {
+		var list = Array.isArray(styles) ? styles : [];
+		return list.map(function (style) {
+			if (!style || !style.basedOn) return style;
+			return Object.assign({}, style, {
+				ownProperties: ownPropertiesOf(style),
+				properties: resolveStyleProperties(style, list),
+			});
+		});
+	}
+
+	// PHP (string) cast for the scalar values styles hold
+	function phpString(value) {
+		if (value === null || value === undefined || value === false) return '';
+		if (value === true) return '1';
+		if (typeof value === 'object') return '';
+		return String(value);
+	}
+
+	/**
+	 * A comparable form of a group, as the CSS generators read it. Twin of
+	 * PHP group_signature().
+	 */
+	function groupSignature(lead, props) {
+		var p = props || {};
+		if (lead === 'textCase') {
+			var c = TEXT_CASE_VALUES.indexOf(p.textCase) !== -1 ? p.textCase : '';
+			return c + '|' + (effectiveFakeSmallCaps(c, p.fakeSmallCaps) ? '1' : '0');
+		}
+		var size = hasOwn(p, 'fontSize') ? phpString(p.fontSize) : '';
+		if (size === '' || size === 'inherit') return 'none';
+		var parts = [size, p.fontSizeUnit === 'rem' ? 'rem' : 'px'];
+		if (size === 'responsive' || size === 'fit') {
+			['fontSizeMin', 'fontSizePreferred', 'fontSizeMax'].forEach(function (key) {
+				parts.push(p[key] !== undefined && p[key] !== null ? String(phpInt(p[key])) : '');
+			});
+		}
+		if (size === 'fit') {
+			parts.push(p.fitMaxSize !== undefined && p.fitMaxSize !== null ? String(phpInt(p.fitMaxSize)) : '0');
+		}
+		return parts.join('|');
+	}
+
+	/**
+	 * Whether a non-group property has the same value in two property sets,
+	 * absent counting as empty. Twin of PHP property_values_equal().
+	 */
+	function propertyValuesEqual(key, a, b) {
+		var va = hasOwn(a, key) ? a[key] : null;
+		var vb = hasOwn(b, key) ? b[key] : null;
+		switch (key) {
+			case 'fontId':
+				return Math.abs(phpInt(va)) === Math.abs(phpInt(vb));
+			case 'letterSpacing':
+				return phpInt(va) === phpInt(vb);
+			case 'lineHeight':
+				return Math.abs((parseFloat(va) || 0) - (parseFloat(vb) || 0)) <= LINE_HEIGHT_TOLERANCE;
+			case 'initialHang':
+				return normalizeHang(va) === normalizeHang(vb);
+			case 'features':
+				var fa = (Array.isArray(va) ? va : []).map(String).sort();
+				var fb = (Array.isArray(vb) ? vb : []).map(String).sort();
+				return fa.join(',') === fb.join(',') && fa.length === fb.length;
+			default:
+				return phpString(va) === phpString(vb);
+		}
+	}
+
+	/**
+	 * The own properties to store for a style based on another (#200).
+	 *
+	 * `full` is the whole look the editor saves; the result keeps only what
+	 * differs from the parent's resolved properties. A value equal to the
+	 * parent's becomes inherited, so a later change to the parent reaches
+	 * the style (the editors save their whole state, so keeping such values
+	 * as overrides would cut every property off from the parent on the first
+	 * Update Style). A property the parent sets and `full` does not is
+	 * stored as its empty value (EMPTY_PROPERTY_VALUES, fontSize 'inherit',
+	 * textCase ''), so the style keeps not setting it.
+	 *
+	 * @param {Object} full   Properties as buildPropertiesForStyleSave() builds them.
+	 * @param {Object} parent The parent's resolved properties.
+	 * @return {Object}
+	 */
+	function computeStyleOverrides(full, parent) {
+		var f = full || {};
+		var p = parent || {};
+		var out = {};
+		Object.keys(BASED_ON_GROUPS).forEach(function (lead) {
+			var mine = groupSignature(lead, f);
+			if (mine === groupSignature(lead, p)) return;
+			if (mine === 'none' || (lead === 'textCase' && !normalizeTextCase(f.textCase))) {
+				out[lead] = lead === 'fontSize' ? 'inherit' : '';
+				return;
+			}
+			BASED_ON_GROUPS[lead].forEach(function (key) {
+				if (hasOwn(f, key)) {
+					out[key] = f[key];
+				}
+			});
+		});
+		var keys = {};
+		Object.keys(f).concat(Object.keys(p)).forEach(function (key) {
+			if (!isGroupKey(key)) keys[key] = true;
+		});
+		Object.keys(keys).forEach(function (key) {
+			if (propertyValuesEqual(key, f, p)) return;
+			if (hasOwn(f, key)) {
+				out[key] = f[key];
+			} else if (hasOwn(EMPTY_PROPERTY_VALUES, key)) {
+				var empty = EMPTY_PROPERTY_VALUES[key];
+				out[key] = Array.isArray(empty) ? [] : empty;
+			}
+		});
+		return out;
+	}
+
+	/**
+	 * Ids of the styles based on a style, directly or through others. Twin
+	 * of PHP descendant_ids(); the admin form leaves them out of its Based
+	 * On choices, because choosing one would make a loop.
+	 *
+	 * @param {Array}         styles  Every style.
+	 * @param {number|string} styleId Style id.
+	 * @return {number[]}
+	 */
+	function getStyleDescendantIds(styles, styleId) {
+		var children = {};
+		(Array.isArray(styles) ? styles : []).forEach(function (style) {
+			if (style && style.basedOn && style.id !== undefined) {
+				var parent = parseInt(style.basedOn, 10);
+				(children[parent] = children[parent] || []).push(parseInt(style.id, 10));
+			}
+		});
+		var root = parseInt(styleId, 10);
+		var found = [];
+		var seen = {};
+		var queue = [root];
+		while (queue.length) {
+			(children[queue.shift()] || []).forEach(function (child) {
+				if (!seen[child] && child !== root) {
+					seen[child] = true;
+					found.push(child);
+					queue.push(child);
+				}
+			});
+		}
+		return found;
+	}
+
+	/**
+	 * The properties Update Style sends for a style (#200): the editor's
+	 * look (buildPropertiesForStyleSave()) for a style without a parent, and
+	 * only the overrides (computeStyleOverrides()) for a style based on
+	 * another. A missing parent sends the whole look.
+	 *
+	 * @param {Object} state     Editor state.
+	 * @param {Object} style     The active style (client shape: resolved properties).
+	 * @param {Array}  styles    Every style.
+	 * @param {string} [newUnit] The site's unit for new sizes.
+	 * @return {Object}
+	 */
+	function buildStyleUpdateProperties(state, style, styles, newUnit) {
+		var full = buildPropertiesForStyleSave(state, style ? style.properties : null, true, newUnit);
+		if (!style || !style.basedOn) return full;
+		var parent = null;
+		(Array.isArray(styles) ? styles : []).forEach(function (candidate) {
+			if (candidate && String(candidate.id) === String(style.basedOn)) parent = candidate;
+		});
+		if (!parent) return full;
+		return computeStyleOverrides(full, resolveStyleProperties(parent, styles));
+	}
+
 	/**
 	 * Normalize a stored style's properties for the apply event.
 	 *
@@ -1421,6 +1743,15 @@
 		findTypeAheadMatch: findTypeAheadMatch,
 		buildPropertiesFromState: buildPropertiesFromState,
 		buildPropertiesForStyleSave: buildPropertiesForStyleSave,
+		MAX_BASED_ON_LEVELS: MAX_BASED_ON_LEVELS,
+		BASED_ON_GROUPS: BASED_ON_GROUPS,
+		mergeStyleProperties: mergeStyleProperties,
+		compactStyleProperties: compactStyleProperties,
+		resolveStyleProperties: resolveStyleProperties,
+		resolveStyleList: resolveStyleList,
+		computeStyleOverrides: computeStyleOverrides,
+		buildStyleUpdateProperties: buildStyleUpdateProperties,
+		getStyleDescendantIds: getStyleDescendantIds,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,
 		buildStylePreviewStyle: buildStylePreviewStyle,
