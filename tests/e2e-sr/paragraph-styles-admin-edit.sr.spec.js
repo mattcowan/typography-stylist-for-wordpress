@@ -93,11 +93,18 @@ test.describe('Paragraph Styles Edit form with NVDA', () => {
       const savePhrase = await nvda.lastSpokenPhrase();
       await nvda.perform(nvda.keyboardCommands.reportCurrentFocus);
       const afterSavePhrase = await nvda.lastSpokenPhrase();
-      const afterSave = await page.evaluate(() => ({
-        focus: document.activeElement && String(document.activeElement.className || ''),
-        spoken: (document.getElementById('a11y-speak-polite') || {}).textContent || '',
-        invalidLeft: document.querySelectorAll('.typost-ps-style-card [aria-invalid]').length,
-      }));
+      // The card details are rendered by the server from the stored style,
+      // so they show both that the save stored the value and that the card
+      // was refreshed
+      const afterSave = await page.evaluate((id) => {
+        const details = document.querySelector(`.typost-ps-style-card[data-style-id="${id}"] .typost-ps-style-card-details`);
+        return {
+          focus: document.activeElement && String(document.activeElement.className || ''),
+          spoken: (document.getElementById('a11y-speak-polite') || {}).textContent || '',
+          invalidLeft: document.querySelectorAll('.typost-ps-style-card [aria-invalid]').length,
+          details: details ? details.textContent.replace(/\s+/g, ' ').trim() : '',
+        };
+      }, styleId);
 
       const log = await h.saveSpeechLog(nvda, 'paragraph-styles-admin-edit', {
         focusTitles, editPhrase, openPhrase, namePhrase, openFocus, firstStops,
@@ -113,6 +120,7 @@ test.describe('Paragraph Styles Edit form with NVDA', () => {
       expect(afterSave.focus, 'focus should return to the Edit button').toContain('typost-ps-edit-btn');
       expect(afterSave.spoken, 'the save should be announced').toMatch(/saved/i);
       expect(afterSave.invalidLeft).toBe(0);
+      expect(afterSave.details, 'the card should show the saved line height').toMatch(/Line Height: 1\.6\b/);
 
       // Screen-reader assertions
       expect(editPhrase, 'Edit should be read as a button').toMatch(/edit.*button|button.*edit/i);
