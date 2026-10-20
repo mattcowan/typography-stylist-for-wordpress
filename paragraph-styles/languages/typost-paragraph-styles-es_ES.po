@@ -478,7 +478,7 @@ msgstr "Ajustes de ejes"
 #: includes/admin-tab.php:250
 #, php-format
 msgid "Four-letter axis tags in quotes, each followed by a number, separated by commas. Example: %s. Leave empty for none."
-msgstr "Etiquetas de eje de cuatro letras entre comillas, cada una seguida de un número, separadas por comas. Ejemplo: %s. Déjelo vacío si no hay ninguno."
+msgstr "Etiquetas de eje de cuatro letras entre comillas, cada una seguida de un número, separadas por comas. Ejemplo: %s. Déjalo vacío si no hay ninguno."
 
 #: paragraph-styles.php:1527
 msgid "Axes:"
@@ -486,15 +486,15 @@ msgstr "Ejes:"
 
 #: assets/js/admin.js:372
 msgid "Enter a name for the style."
-msgstr "Introduzca un nombre para el estilo."
+msgstr "Introduce un nombre para el estilo."
 
 #: assets/js/admin.js:375
 msgid "Enter a size greater than 0."
-msgstr "Introduzca un tamaño mayor que 0."
+msgstr "Introduce un tamaño mayor que 0."
 
 #: assets/js/admin.js:382
 msgid "Enter all three sizes, each greater than 0."
-msgstr "Introduzca los tres tamaños, cada uno mayor que 0."
+msgstr "Introduce los tres tamaños, cada uno mayor que 0."
 
 #: assets/js/admin.js:390
 msgid "Each axis setting needs a four-letter tag in quotes and a number, such as \"wght\" 650."

@@ -253,7 +253,8 @@ foreach ( $form_features as $feature ) {
 				</p>
 			</fieldset>
 
-			<p class="typost-ps-edit-error" role="alert" hidden></p>
+			<?php // The id lets showFormError() add the message to the failing field's description ?>
+			<p class="typost-ps-edit-error" id="typost-ps-edit-error" role="alert" hidden></p>
 
 			<div class="typost-ps-edit-actions">
 				<button type="submit" class="button button-primary typost-ps-save-edit-btn">

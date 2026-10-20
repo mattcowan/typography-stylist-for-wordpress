@@ -370,7 +370,8 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - You can edit, rename or delete a style here.
 - **Edit** opens a form with every setting of the style: name, font, weight, font style, font size (Default, Fixed, Responsive, or Fit to width with its maximum size and fallback sizes), letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes (for example `"wght" 650, "wdth" 80`). Change one value and click Save (or press Enter). The other values stay as they were.
 - After a save, the card and its sample show the new settings at once. Every post and block that uses the style shows the change on its next load. An editor that is already open shows it after a reload.
-- The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option).
+- The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option). A fixed size in px is a whole number: the form removes the decimals, because the page shows px sizes without them.
+- The form opens with the settings that are saved now. A change that you made in the editor after this page opened is in the form.
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab

@@ -17,6 +17,10 @@ const {
 	readEditForm,
 	validateEditValues,
 	buildEditPayload,
+	resolveEditFontSizeUnit,
+	showFormError,
+	clearFormError,
+	withUserLocale,
 	replaceCardParts,
 	replaceStyleCss,
 } = require('../assets/js/admin.js');
@@ -72,19 +76,20 @@ function buildTemplate() {
 			<div data-extra-features hidden></div>
 			<input type="text" id="typost-ps-edit-axes" data-field="fontVariationSettings" aria-describedby="typost-ps-edit-axes-help" />
 			<span id="typost-ps-edit-axes-help">help</span>
-			<p class="typost-ps-edit-error" hidden></p>
+			<p class="typost-ps-edit-error" id="typost-ps-edit-error" role="alert" hidden></p>
+			<button type="submit" class="typost-ps-save-edit-btn">Save</button>
 		</form>`;
 	return template;
 }
 
-function openForm(style, fontLabel = '') {
+function openForm(style, fontLabel = '', unit) {
 	const fragment = buildTemplate().content.cloneNode(true);
 	suffixIds(fragment, style.id);
 	const container = document.createElement('div');
 	container.appendChild(fragment);
 	document.body.appendChild(container);
 	const form = container.querySelector('form');
-	fillEditForm(form, style, fontLabel);
+	fillEditForm(form, style, fontLabel, unit);
 	return { form, baseline: readEditForm(form) };
 }
 
@@ -182,7 +187,7 @@ describe('fill and read', () => {
 		expect(form.querySelector('[data-show-for-size="fit"]').hidden).toBe(true);
 	});
 
-	test('a deleted font and an off-list weight are offered, labelled by the card', () => {
+	test('a deleted font and an off-list weight are offered, labeled by the card', () => {
 		const { form, baseline } = openForm(
 			{ id: 2, name: 'Old', properties: { fontId: 99, fontWeight: '350' } },
 			'Deleted font, shown in the default font'
@@ -211,6 +216,12 @@ describe('fill and read', () => {
 		expect(form.querySelector('[data-show-for-case]').hidden).toBe(true);
 	});
 
+	test('the fixed size takes whole steps for px and any step for rem', () => {
+		const sizeInput = (unit) => openForm({ id: 15, name: 'S', properties: {} }, '', unit).form.querySelector('[data-field="fontSize"]');
+		expect(sizeInput('px').getAttribute('step')).toBe('1');
+		expect(sizeInput('rem').getAttribute('step')).toBe('any');
+	});
+
 	test('changing the size mode shows its fields', () => {
 		const { form } = openForm({ id: 5, name: 'Plain', properties: {} });
 		setField(form, 'sizeMode', 'fit');
@@ -218,6 +229,22 @@ describe('fill and read', () => {
 		expect(form.querySelector('[data-show-for-size="responsive fit"]').hidden).toBe(false);
 		expect(form.querySelector('[data-show-for-size="fit"]').hidden).toBe(false);
 		expect(form.querySelector('[data-show-for-size="fixed"]').hidden).toBe(true);
+	});
+});
+
+describe('resolveEditFontSizeUnit', () => {
+	test.each([
+		[{ fontSize: '24' }, 'rem', 'px'],
+		[{ fontSize: 'fit', fontSizeUnit: 'px' }, 'rem', 'px'],
+		[{ fontSize: '24', fontSizeUnit: 'rem' }, 'px', 'rem'],
+		[{ fontSize: 'responsive', fontSizeUnit: 'rem' }, 'px', 'rem'],
+		[{}, 'rem', 'rem'],
+		[{}, 'px', 'px'],
+		[{ fontSize: '0', fontSizeUnit: 'px' }, 'rem', 'rem'],
+		[undefined, undefined, 'rem'],
+	])('%p with new-content unit %p → %s', (properties, newUnit, unit) => {
+		// The rule buildPropertiesForStyleSave() applies on an update
+		expect(resolveEditFontSizeUnit(properties, newUnit)).toBe(unit);
 	});
 });
 
@@ -286,6 +313,36 @@ describe('buildEditPayload', () => {
 		expect(properties).not.toHaveProperty('fontSizeMin');
 		expect(properties).not.toHaveProperty('fontSizePreferred');
 		expect(properties).not.toHaveProperty('fontSizeMax');
+	});
+
+	test('a fixed px size is stored as the whole number the CSS writes', () => {
+		// The px generators write intval() of the size, so 24.9 renders 24px
+		const style = { id: 12, name: 'Legacy', properties: { fontSize: '24' } };
+		const { form, baseline } = openForm(style, '', 'px');
+		setField(form, 'fontSize', '30.9');
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem').properties).toEqual({ fontSize: '30', fontSizeUnit: 'px' });
+		// 24.9 renders as the stored 24, so nothing changes
+		setField(form, 'fontSize', '24.9');
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem')).toEqual({ name: 'Legacy' });
+	});
+
+	test('a stored decimal px size keeps its rendered size when another value changes', () => {
+		const style = { id: 13, name: 'Legacy', properties: { fontSize: '24.5', lineHeight: 1.2 } };
+		const { form, baseline } = openForm(style, '', 'px');
+		// Untouched, nothing is rewritten
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem')).toEqual({ name: 'Legacy' });
+		setField(form, 'lineHeight', '1.5');
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem').properties).toEqual({ fontSize: '24', fontSizeUnit: 'px', lineHeight: 1.5 });
+	});
+
+	test('a fixed size added to a sizeless style under the px setting is whole', () => {
+		const style = { id: 14, name: 'Plain', properties: {} };
+		const { form, baseline } = openForm(style, '', 'px');
+		setField(form, 'sizeMode', 'fixed');
+		setField(form, 'fontSize', '18.5');
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'px').properties).toEqual({ fontSize: '18', fontSizeUnit: 'px' });
+		// Under the rem setting the decimal stays
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem').properties).toEqual({ fontSize: '18.5', fontSizeUnit: 'rem' });
 	});
 
 	test('clearing values removes them (Default font, weight, style, hang, case, axes)', () => {
@@ -368,6 +425,79 @@ describe('validateEditValues', () => {
 		expect(valuesFor(RICH_STYLE, { fontVariationSettings: 'wght 650' })).toMatchObject({ field: 'fontVariationSettings' });
 		expect(valuesFor(RICH_STYLE, { fontVariationSettings: '"wght" 650, ' })).toMatchObject({ field: 'fontVariationSettings' });
 		expect(valuesFor(RICH_STYLE, { fontVariationSettings: '"weight" 650' })).toMatchObject({ field: 'fontVariationSettings' });
+	});
+
+	test('a stored axis value the check rejects does not block other changes', () => {
+		// Single quotes and exponents come from the editor; the form keeps them
+		const style = { id: 16, name: 'Axes', properties: { fontVariationSettings: "'wght' 450, \"opsz\" 1e-7" } };
+		const { form, baseline } = openForm(style);
+		setField(form, 'name', 'Axes renamed');
+		expect(validateEditValues(readEditForm(form), { baseline })).toBeNull();
+		// Once the author edits the field, it must be valid
+		setField(form, 'fontVariationSettings', "'wght' 500");
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'fontVariationSettings' });
+	});
+
+	test('a fixed px size must be at least 1 once made whole', () => {
+		const { form } = openForm({ id: 17, name: 'Px', properties: { fontSize: '24' } }, '', 'px');
+		setField(form, 'fontSize', '0.5');
+		expect(validateEditValues(readEditForm(form), { unit: 'px' })).toMatchObject({ field: 'fontSize' });
+		expect(validateEditValues(readEditForm(form), { unit: 'rem' })).toBeNull();
+	});
+});
+
+describe('form errors', () => {
+	test('a field error is shown, tied to the field, and focuses it', () => {
+		const { form } = openForm(RICH_STYLE);
+		showFormError(form, { field: 'fontVariationSettings', message: 'Bad axes' });
+		const box = form.querySelector('.typost-ps-edit-error');
+		const axes = form.querySelector('[data-field="fontVariationSettings"]');
+		expect(box.hidden).toBe(false);
+		expect(box.textContent).toBe('Bad axes');
+		expect(document.activeElement).toBe(axes);
+		expect(axes.getAttribute('aria-invalid')).toBe('true');
+		// The help text stays; the error is added
+		expect(axes.getAttribute('aria-describedby').split(' ')).toEqual(['typost-ps-edit-axes-help-4', box.id]);
+	});
+
+	test('a second error moves the marks to the new field', () => {
+		const { form } = openForm(RICH_STYLE);
+		showFormError(form, { field: 'name', message: 'Name needed' });
+		showFormError(form, { field: 'fontSize', message: 'Size needed' });
+		const name = form.querySelector('[data-field="name"]');
+		expect(name.hasAttribute('aria-invalid')).toBe(false);
+		expect(name.hasAttribute('aria-describedby')).toBe(false);
+		expect(form.querySelector('[data-field="fontSize"]').getAttribute('aria-invalid')).toBe('true');
+	});
+
+	test('a server error marks no field and focuses Save', () => {
+		const { form } = openForm(RICH_STYLE);
+		showFormError(form, { field: null, message: 'Too many requests' });
+		expect(form.querySelectorAll('[aria-invalid]')).toHaveLength(0);
+		expect(document.activeElement).toBe(form.querySelector('.typost-ps-save-edit-btn'));
+		expect(form.querySelector('.typost-ps-edit-error').textContent).toBe('Too many requests');
+	});
+
+	test('clearFormError restores the fields and hides the box', () => {
+		const { form } = openForm(RICH_STYLE);
+		showFormError(form, { field: 'fontVariationSettings', message: 'Bad axes' });
+		clearFormError(form);
+		const box = form.querySelector('.typost-ps-edit-error');
+		const axes = form.querySelector('[data-field="fontVariationSettings"]');
+		expect(box.hidden).toBe(true);
+		expect(box.textContent).toBe('');
+		expect(axes.hasAttribute('aria-invalid')).toBe(false);
+		expect(axes.getAttribute('aria-describedby')).toBe('typost-ps-edit-axes-help-4');
+	});
+});
+
+describe('withUserLocale', () => {
+	test.each([
+		['http://example.test/wp-json/typost/v1/paragraph-styles/4/admin-card', 'http://example.test/wp-json/typost/v1/paragraph-styles/4/admin-card?_locale=user'],
+		['http://example.test/?rest_route=/typost/v1/paragraph-styles/4/admin-card', 'http://example.test/?rest_route=/typost/v1/paragraph-styles/4/admin-card&_locale=user'],
+	])('%s', (url, expected) => {
+		// The REST request otherwise renders in the site language
+		expect(withUserLocale(url)).toBe(expected);
 	});
 });
 
