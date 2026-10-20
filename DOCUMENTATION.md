@@ -367,7 +367,10 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - The page loads the font files of a style only when you open this tab. An Adobe Fonts kit loads when a sample that uses it comes into view.
 - If the font of a style was deleted, the style shows the replacement font. If there is no replacement, it shows the default font.
 - Your theme loads the fonts of custom font definitions on the site, not on this page. Thus the sample of such a style can show a fallback font.
-- You can rename or delete a style here.
+- You can edit, rename or delete a style here.
+- **Edit** opens a form with every setting of the style: name, font, weight, font style, font size (Default, Fixed, Responsive, or Fit to width with its maximum size and fallback sizes), letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes (for example `"wght" 650, "wdth" 80`). Change one value and click Save (or press Enter). The other values stay as they were.
+- After a save, the card and its sample show the new settings at once. Every post and block that uses the style shows the change on its next load. An editor that is already open shows it after a reload.
+- The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option).
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab

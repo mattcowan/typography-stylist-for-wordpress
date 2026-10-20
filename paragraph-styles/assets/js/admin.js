@@ -1,8 +1,20 @@
 /**
  * Typography Stylist - Paragraph Styles: Admin Tab JavaScript
  *
- * Handles inline editing and deletion of paragraph styles
- * in the Typography Stylist settings page.
+ * Handles editing and deletion of paragraph styles in the Typography
+ * Stylist settings page.
+ *
+ * Edit form (#221): every stored property, not just the name. The form is
+ * cloned from one <template> in the tab, filled from the style's stored
+ * properties (typostPSAdmin.styles), and saved through the existing PATCH
+ * route. The payload comes from ps-utils' buildPropertiesForStyleSave() —
+ * the rule Update Style uses in the editor — so fontSizeUnit is kept the
+ * same way: a style with a size keeps its unit, a size added to a style
+ * without one takes the site's new-content unit. PATCH replaces the whole
+ * properties object, so the form always sends the complete set, and sends
+ * none at all when no property changed (a rename stays a rename). After a
+ * save the card's details and preview come back from the admin-card route,
+ * rendered by the same PHP as the page, with the regenerated style CSS.
  *
  * Focus and announcements (QA finding ADM-2): opening the edit form moves
  * focus to the name field, saving or cancelling returns it to the card's
@@ -89,11 +101,434 @@
 		return null;
 	}
 
+	// -------------------------------------------------------------------------
+	// Edit form (#221)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * ps-utils: window.typostPSUtils in the browser (an enqueued dependency),
+	 * required directly under Jest.
+	 */
+	function getUtils() {
+		if (typeof window !== 'undefined' && window.typostPSUtils) {
+			return window.typostPSUtils;
+		}
+		if (typeof require === 'function') {
+			return require('./lib/ps-utils.js');
+		}
+		return null;
+	}
+
+	/**
+	 * Named __ so WP-CLI make-pot extracts the literals passed to it (the
+	 * domain argument at each call site is read only by make-pot); falls
+	 * back to the source string under Jest, where no wp global exists.
+	 *
+	 * @param {string} text
+	 * @return {string}
+	 */
+	function __(text) {
+		if (typeof wp !== 'undefined' && wp.i18n && typeof wp.i18n.__ === 'function') {
+			return wp.i18n.__(text, 'typost-paragraph-styles');
+		}
+		return text;
+	}
+
+	// Slider defaults for a size mode the style did not have, the same
+	// fallbacks isStyleModified() uses
+	var SIZE_TRIO_DEFAULTS = { fontSizeMin: 16, fontSizePreferred: 24, fontSizeMax: 32 };
+
+	// Same check as the CSS generators: an axis pair they would drop
+	var AXIS_PAIR = /^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/;
+
+	/**
+	 * Append a suffix to every id in a cloned form and to the attributes
+	 * that point at ids, so each card's labels stay tied to its own fields.
+	 *
+	 * @param {Element|DocumentFragment} root
+	 * @param {string|number} suffix
+	 */
+	function suffixIds(root, suffix) {
+		var tail = '-' + suffix;
+		Array.prototype.forEach.call(root.querySelectorAll('[id]'), function(el) {
+			el.id = el.id + tail;
+		});
+		['for', 'aria-describedby', 'aria-labelledby'].forEach(function(attr) {
+			Array.prototype.forEach.call(root.querySelectorAll('[' + attr + ']'), function(el) {
+				var refs = el.getAttribute(attr).split(/\s+/).filter(Boolean).map(function(ref) {
+					return ref + tail;
+				});
+				el.setAttribute(attr, refs.join(' '));
+			});
+		});
+	}
+
+	/**
+	 * The size mode a stored fontSize stands for.
+	 *
+	 * @param {*} fontSize
+	 * @return {string} 'inherit', 'fixed', 'responsive' or 'fit'
+	 */
+	function sizeModeOf(fontSize) {
+		if (fontSize === 'responsive' || fontSize === 'fit') {
+			return fontSize;
+		}
+		if (fontSize !== undefined && fontSize !== null && fontSize !== '' && isFinite(fontSize) && Number(fontSize) > 0) {
+			return 'fixed';
+		}
+		return 'inherit';
+	}
+
+	function field(form, name) {
+		return form.querySelector('[data-field="' + name + '"]');
+	}
+
+	/**
+	 * Select a value, adding it as an option first when the list lacks it
+	 * (a deleted font, a weight such as 350), so an untouched value saves
+	 * unchanged.
+	 */
+	function selectValue(select, value, label) {
+		if (!select) {
+			return;
+		}
+		var str = String(value);
+		var exists = Array.prototype.some.call(select.options, function(option) {
+			return option.value === str;
+		});
+		if (!exists) {
+			var option = select.ownerDocument.createElement('option');
+			option.value = str;
+			option.textContent = label || str;
+			select.appendChild(option);
+		}
+		select.value = str;
+	}
+
+	function setInput(form, name, value) {
+		var input = field(form, name);
+		if (input) {
+			input.value = value === undefined || value === null ? '' : String(value);
+		}
+	}
+
+	/**
+	 * Show the fields that belong to the chosen size mode and case.
+	 *
+	 * @param {Element} form
+	 */
+	function updateConditionalFields(form) {
+		var mode = field(form, 'sizeMode') ? field(form, 'sizeMode').value : 'inherit';
+		var textCase = field(form, 'textCase') ? field(form, 'textCase').value : '';
+		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-size]'), function(el) {
+			el.hidden = el.getAttribute('data-show-for-size').split(/\s+/).indexOf(mode) === -1;
+		});
+		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-case]'), function(el) {
+			el.hidden = el.getAttribute('data-show-for-case').split(/\s+/).indexOf(textCase) === -1;
+		});
+	}
+
+	/**
+	 * Fill a cloned edit form from a stored style.
+	 *
+	 * @param {Element} form      The form element.
+	 * @param {Object}  style     {id, name, properties}.
+	 * @param {string}  fontLabel The card's text for the style's font, used
+	 *                            when the font is not in the list.
+	 */
+	function fillEditForm(form, style, fontLabel) {
+		var utils = getUtils();
+		var props = (style && style.properties) || {};
+		var mode = sizeModeOf(props.fontSize);
+
+		setInput(form, 'name', style && style.name);
+		selectValue(field(form, 'fontId'), parseInt(props.fontId, 10) || 0, fontLabel);
+		selectValue(field(form, 'fontWeight'), props.fontWeight ? String(props.fontWeight) : '');
+		var fontStyle = ['normal', 'italic', 'oblique'].indexOf(props.fontStyle) !== -1 ? props.fontStyle : '';
+		selectValue(field(form, 'fontStyle'), fontStyle);
+
+		selectValue(field(form, 'sizeMode'), mode);
+		setInput(form, 'fontSize', mode === 'fixed' ? props.fontSize : '');
+		Object.keys(SIZE_TRIO_DEFAULTS).forEach(function(key) {
+			var stored = mode === 'responsive' || mode === 'fit' ? parseInt(props[key], 10) : 0;
+			setInput(form, key, stored > 0 ? stored : SIZE_TRIO_DEFAULTS[key]);
+		});
+		setInput(form, 'fitMaxSize', mode === 'fit' ? (parseInt(props.fitMaxSize, 10) || 0) : 0);
+
+		setInput(form, 'letterSpacing', parseInt(props.letterSpacing, 10) || 0);
+		setInput(form, 'lineHeight', utils ? utils.roundLineHeight(props.lineHeight || 0) : (props.lineHeight || 0));
+		setInput(form, 'initialHang', utils ? utils.normalizeHang(props.initialHang) : 0);
+
+		var textCase = utils ? utils.normalizeTextCase(props.textCase) : (props.textCase || '');
+		selectValue(field(form, 'textCase'), textCase);
+		var fake = field(form, 'fakeSmallCaps');
+		if (fake) {
+			fake.checked = props.fakeSmallCaps !== false;
+		}
+
+		var features = Array.isArray(props.features) ? props.features.map(String) : [];
+		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
+		var known = {};
+		boxes.forEach(function(box) {
+			known[box.value] = true;
+			box.checked = features.indexOf(box.value) !== -1;
+		});
+		// A stored feature the list does not offer (an extension's) stays
+		// checked in its own group, so saving does not drop it.
+		var extra = form.querySelector('[data-extra-features]');
+		features.forEach(function(tag) {
+			if (known[tag] || !extra) {
+				return;
+			}
+			known[tag] = true;
+			var doc = form.ownerDocument;
+			var row = doc.createElement('p');
+			row.className = 'typost-ps-edit-checkbox';
+			var box = doc.createElement('input');
+			box.type = 'checkbox';
+			box.setAttribute('data-feature', '');
+			box.value = tag;
+			box.checked = true;
+			var label = doc.createElement('label');
+			var code = doc.createElement('code');
+			code.textContent = tag;
+			label.appendChild(code);
+			// Wrap rather than for/id: these tags come from stored data
+			label.insertBefore(box, code);
+			label.insertBefore(doc.createTextNode(' '), code);
+			row.appendChild(label);
+			extra.appendChild(row);
+			extra.hidden = false;
+		});
+		// Saving keeps the stored order (it is the CSS order), new picks after
+		form.setAttribute('data-feature-order', JSON.stringify(features));
+
+		setInput(form, 'fontVariationSettings', props.fontVariationSettings || '');
+
+		updateConditionalFields(form);
+	}
+
+	function numberOf(form, name) {
+		var input = field(form, name);
+		var n = input ? parseFloat(input.value) : NaN;
+		return isFinite(n) ? n : 0;
+	}
+
+	/**
+	 * Read the edit form's values.
+	 *
+	 * @param {Element} form
+	 * @return {Object}
+	 */
+	function readEditForm(form) {
+		var order = [];
+		try {
+			order = JSON.parse(form.getAttribute('data-feature-order') || '[]') || [];
+		} catch (e) {
+			order = [];
+		}
+		var checked = Array.prototype.filter.call(form.querySelectorAll('input[data-feature]'), function(box) {
+			return box.checked;
+		}).map(function(box) {
+			return box.value;
+		});
+		var features = order.filter(function(tag) {
+			return checked.indexOf(tag) !== -1;
+		}).concat(checked.filter(function(tag) {
+			return order.indexOf(tag) === -1;
+		}));
+		var fake = field(form, 'fakeSmallCaps');
+		var sizeInput = field(form, 'fontSize');
+
+		return {
+			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
+			fontId: parseInt(field(form, 'fontId') ? field(form, 'fontId').value : 0, 10) || 0,
+			fontWeight: field(form, 'fontWeight') ? field(form, 'fontWeight').value : '',
+			fontStyle: field(form, 'fontStyle') ? field(form, 'fontStyle').value : '',
+			sizeMode: field(form, 'sizeMode') ? field(form, 'sizeMode').value : 'inherit',
+			fontSize: sizeInput ? sizeInput.value.trim() : '',
+			fontSizeMin: numberOf(form, 'fontSizeMin'),
+			fontSizePreferred: numberOf(form, 'fontSizePreferred'),
+			fontSizeMax: numberOf(form, 'fontSizeMax'),
+			fitMaxSize: numberOf(form, 'fitMaxSize'),
+			letterSpacing: numberOf(form, 'letterSpacing'),
+			lineHeight: numberOf(form, 'lineHeight'),
+			initialHang: numberOf(form, 'initialHang'),
+			textCase: field(form, 'textCase') ? field(form, 'textCase').value : '',
+			fakeSmallCaps: fake ? !!fake.checked : true,
+			features: features,
+			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : ''
+		};
+	}
+
+	/**
+	 * Check the values before saving.
+	 *
+	 * @param {Object} values readEditForm() result.
+	 * @return {{field: string, message: string}|null}
+	 */
+	function validateEditValues(values) {
+		if (!values.name) {
+			return { field: 'name', message: __('Enter a name for the style.', 'typost-paragraph-styles') };
+		}
+		if (values.sizeMode === 'fixed' && !(parseFloat(values.fontSize) > 0)) {
+			return { field: 'fontSize', message: __('Enter a size greater than 0.', 'typost-paragraph-styles') };
+		}
+		if (values.sizeMode === 'responsive' || values.sizeMode === 'fit') {
+			var missing = ['fontSizeMin', 'fontSizePreferred', 'fontSizeMax'].filter(function(key) {
+				return !(Math.round(values[key]) >= 1);
+			});
+			if (missing.length) {
+				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
+			}
+		}
+		if (values.fontVariationSettings) {
+			var bad = values.fontVariationSettings.split(',').some(function(pair) {
+				return !AXIS_PAIR.test(pair.trim());
+			});
+			if (bad) {
+				return { field: 'fontVariationSettings', message: __('Each axis setting needs a four-letter tag in quotes and a number, such as "wght" 650.', 'typost-paragraph-styles') };
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Turn form values into the editor state that buildPropertiesFromState()
+	 * reads. The form reports initialHang and textCase, so its values win
+	 * over the stored ones (0 and Default included).
+	 *
+	 * @param {Object} values readEditForm() result.
+	 * @return {Object}
+	 */
+	function stateFromEditValues(values) {
+		var mode = values.sizeMode;
+		var fontSize = 'inherit';
+		if (mode === 'fixed') {
+			fontSize = String(parseFloat(values.fontSize));
+		} else if (mode === 'responsive' || mode === 'fit') {
+			fontSize = mode;
+		}
+		return {
+			explicitFontId: values.fontId || 0,
+			explicitFontWeight: values.fontWeight || '',
+			explicitFontStyle: values.fontStyle || '',
+			fontSize: fontSize,
+			fontSizeMin: Math.round(values.fontSizeMin) || 0,
+			fontSizePreferred: Math.round(values.fontSizePreferred) || 0,
+			fontSizeMax: Math.round(values.fontSizeMax) || 0,
+			fitMaxSize: Math.max(0, Math.round(values.fitMaxSize) || 0),
+			letterSpacing: Math.round(values.letterSpacing) || 0,
+			lineHeight: values.lineHeight > 0 ? values.lineHeight : 0,
+			features: values.features || [],
+			fontVariationSettings: values.fontVariationSettings || '',
+			initialHang: values.initialHang,
+			textCase: values.textCase || '',
+			fakeSmallCaps: values.fakeSmallCaps !== false
+		};
+	}
+
+	function stableStringify(value) {
+		if (Array.isArray(value)) {
+			return '[' + value.map(stableStringify).join(',') + ']';
+		}
+		if (value && typeof value === 'object') {
+			return '{' + Object.keys(value).sort().map(function(key) {
+				return JSON.stringify(key) + ':' + stableStringify(value[key]);
+			}).join(',') + '}';
+		}
+		return JSON.stringify(value);
+	}
+
+	/**
+	 * The PATCH body for a save.
+	 *
+	 * Properties are built like Update Style in the editor
+	 * (buildPropertiesForStyleSave with isUpdate), so fontSizeUnit is kept
+	 * or taken from the site setting by the same rule. They are sent only
+	 * when they differ from what the untouched form builds: PATCH replaces
+	 * the whole set, and a rename must not rewrite properties the form
+	 * cannot represent.
+	 *
+	 * @param {Object} values         readEditForm() now.
+	 * @param {Object} baselineValues readEditForm() right after filling.
+	 * @param {Object} style          The stored style.
+	 * @param {string} newUnit        typostPSAdmin.newFontSizeUnit.
+	 * @return {{name: string, properties?: Object}}
+	 */
+	function buildEditPayload(values, baselineValues, style, newUnit) {
+		var utils = getUtils();
+		var base = (style && style.properties) || {};
+		var payload = { name: values.name };
+		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(values), base, true, newUnit);
+		var baseline = baselineValues
+			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues), base, true, newUnit)
+			: null;
+		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
+			payload.properties = properties;
+		}
+		return payload;
+	}
+
+	/**
+	 * Swap a card's details and preview for freshly rendered ones.
+	 *
+	 * @param {Element} card
+	 * @param {Object}  data admin-card response ({details, preview}).
+	 */
+	function replaceCardParts(card, data) {
+		if (!card || !data) {
+			return;
+		}
+		var details = card.querySelector('.typost-ps-style-card-details');
+		if (details && typeof data.details === 'string' && data.details) {
+			details.outerHTML = data.details;
+		}
+		var preview = card.querySelector('.typost-ps-preview');
+		if (preview && typeof data.preview === 'string' && data.preview) {
+			preview.outerHTML = data.preview;
+		}
+	}
+
+	/**
+	 * Replace the style CSS the page printed for the previews. WordPress
+	 * prints wp_add_inline_style() text as <style id="{handle}-inline-css">;
+	 * replacing it (not appending a rule) drops a property the save removed.
+	 *
+	 * @param {Document} doc
+	 * @param {string}   css
+	 * @return {Element|null}
+	 */
+	function replaceStyleCss(doc, css) {
+		if (typeof css !== 'string') {
+			return null;
+		}
+		var id = 'typost-paragraph-styles-admin-inline-css';
+		var el = doc.getElementById(id);
+		if (!el) {
+			el = doc.createElement('style');
+			el.id = id;
+			doc.head.appendChild(el);
+		}
+		el.textContent = css;
+		return el;
+	}
+
 	var helpers = {
 		announce: announce,
 		focusEditName: focusEditName,
 		focusEditButton: focusEditButton,
-		focusTargetAfterDelete: focusTargetAfterDelete
+		focusTargetAfterDelete: focusTargetAfterDelete,
+		suffixIds: suffixIds,
+		sizeModeOf: sizeModeOf,
+		updateConditionalFields: updateConditionalFields,
+		fillEditForm: fillEditForm,
+		readEditForm: readEditForm,
+		validateEditValues: validateEditValues,
+		stateFromEditValues: stateFromEditValues,
+		buildEditPayload: buildEditPayload,
+		replaceCardParts: replaceCardParts,
+		replaceStyleCss: replaceStyleCss
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -111,31 +546,116 @@
 	// Edit Style
 	// -------------------------------------------------------------------------
 
+	var styles  = Array.isArray(typostPSAdmin.styles) ? typostPSAdmin.styles : [];
+	var newUnit = typostPSAdmin.newFontSizeUnit === 'px' ? 'px' : 'rem';
+
+	function findStyle(styleId) {
+		for (var i = 0; i < styles.length; i++) {
+			if (String(styles[i].id) === String(styleId)) {
+				return styles[i];
+			}
+		}
+		return null;
+	}
+
+	function storeStyle(style) {
+		for (var i = 0; i < styles.length; i++) {
+			if (String(styles[i].id) === String(style.id)) {
+				styles[i] = style;
+				return;
+			}
+		}
+		styles.push(style);
+	}
+
+	function closeEditForm($card) {
+		var $container = $card.find('.typost-ps-edit-form');
+		$container.slideUp(200, function() {
+			$container.empty();
+		});
+		$card.find('.typost-ps-style-actions').show();
+		focusEditButton($card[0]);
+	}
+
+	function showFormError(form, error) {
+		var box = form.querySelector('.typost-ps-edit-error');
+		if (box) {
+			// Shown before it is filled, so the alert's text change is announced
+			box.hidden = false;
+			box.textContent = error.message;
+		}
+		var input = error.field ? field(form, error.field) : null;
+		if (input) {
+			input.focus();
+		}
+	}
+
 	$(document).on('click', '.typost-ps-edit-btn', function() {
-		var $card = $(this).closest('.typost-ps-style-card');
+		var $card    = $(this).closest('.typost-ps-style-card');
+		var styleId  = $card.data('style-id');
+		var template = document.getElementById('typost-ps-edit-form-template');
+		var style    = findStyle(styleId);
+		if (!template || !template.content || !style) {
+			return;
+		}
+
+		var fragment = template.content.cloneNode(true);
+		suffixIds(fragment, styleId);
+		var $container = $card.find('.typost-ps-edit-form');
+		$container.empty().append(fragment);
+
+		var form    = $container.find('form')[0];
+		var details = $card[0].querySelector('.typost-ps-style-card-details');
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '');
+		$(form).data('baseline', readEditForm(form));
+
 		$card.find('.typost-ps-style-actions').hide();
-		$card.find('.typost-ps-edit-form').slideDown(200, function() {
+		$container.slideDown(200, function() {
 			focusEditName($card[0]);
 		});
 	});
 
-	$(document).on('click', '.typost-ps-cancel-edit-btn', function() {
-		var $card = $(this).closest('.typost-ps-style-card');
-		$card.find('.typost-ps-edit-form').slideUp(200);
-		$card.find('.typost-ps-style-actions').show();
-		focusEditButton($card[0]);
+	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"]', function() {
+		updateConditionalFields($(this).closest('form')[0]);
 	});
 
-	$(document).on('click', '.typost-ps-save-edit-btn', function() {
-		var $card   = $(this).closest('.typost-ps-style-card');
-		var styleId = $card.data('style-id');
-		var newName = $card.find('.typost-ps-edit-name').val().trim();
+	$(document).on('click', '.typost-ps-cancel-edit-btn', function() {
+		closeEditForm($(this).closest('.typost-ps-style-card'));
+	});
 
-		if (!newName) {
+	$(document).on('keydown', '.typost-ps-edit-form form', function(event) {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			closeEditForm($(this).closest('.typost-ps-style-card'));
+		}
+	});
+
+	$(document).on('submit', '.typost-ps-edit-form form', function(event) {
+		event.preventDefault();
+		var form    = this;
+		var $card   = $(form).closest('.typost-ps-style-card');
+		var styleId = $card.data('style-id');
+		var style   = findStyle(styleId);
+		var values  = readEditForm(form);
+		var error   = validateEditValues(values);
+		var $save   = $(form).find('.typost-ps-save-edit-btn');
+
+		if (error) {
+			showFormError(form, error);
 			return;
 		}
+		$(form).find('.typost-ps-edit-error').prop('hidden', true).text('');
+
+		var payload = buildEditPayload(values, $(form).data('baseline'), style, newUnit);
+		var renamed = !!style && payload.name !== style.name;
 
 		$card.addClass('typost-ps-saving');
+		$save.prop('disabled', true);
+
+		function done() {
+			$card.removeClass('typost-ps-saving');
+			$save.prop('disabled', false);
+		}
 
 		$.ajax({
 			url: restUrl + '/' + encodeURIComponent(styleId),
@@ -144,20 +664,54 @@
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
 			},
 			contentType: 'application/json',
-			data: JSON.stringify({ name: newName }),
+			data: JSON.stringify(payload),
 			success: function(response) {
+				storeStyle(response);
 				$card.find('.typost-ps-style-name').text(response.name);
-				$card.find('.typost-ps-edit-form').slideUp(200);
-				$card.find('.typost-ps-style-actions').show();
-				$card.removeClass('typost-ps-saving');
-				focusEditButton($card[0]);
-				/* translators: %s: style name */
-				announce(wp.i18n.sprintf(wp.i18n.__('Style renamed to “%s”.', 'typost-paragraph-styles'), response.name));
+				var message = payload.properties || !renamed
+					/* translators: %s: style name */
+					? wp.i18n.sprintf(wp.i18n.__('Style “%s” saved.', 'typost-paragraph-styles'), response.name)
+					/* translators: %s: style name */
+					: wp.i18n.sprintf(wp.i18n.__('Style renamed to “%s”.', 'typost-paragraph-styles'), response.name);
+
+				if (!payload.properties) {
+					done();
+					closeEditForm($card);
+					announce(message);
+					return;
+				}
+
+				// The card's details and preview, rendered by the same PHP
+				// as the page, and the regenerated CSS for the previews
+				$.ajax({
+					url: restUrl + '/' + encodeURIComponent(styleId) + '/admin-card',
+					method: 'GET',
+					beforeSend: function(xhr) {
+						xhr.setRequestHeader('X-WP-Nonce', nonce);
+					},
+					success: function(card) {
+						replaceCardParts($card[0], card);
+						replaceStyleCss(document, card.css);
+						if (window.typostAdminFonts) {
+							window.typostAdminFonts.scan($card[0]);
+						}
+						done();
+						closeEditForm($card);
+						announce(message);
+					},
+					error: function() {
+						// The save went through; reload rather than show a stale card
+						window.location.reload();
+					}
+				});
 			},
-			error: function() {
-				$card.removeClass('typost-ps-saving');
-				alert(wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles'));
-				focusEditName($card[0]);
+			error: function(xhr) {
+				done();
+				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
+				showFormError(form, {
+					field: 'name',
+					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
+				});
 			}
 		});
 	});

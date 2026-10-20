@@ -7,178 +7,185 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-14T18:18:05+00:00\n"
+"POT-Creation-Date: 2026-10-20T00:37:23+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-paragraph-styles\n"
 
-#. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
-#: includes/admin-tab.php:82
-msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
-msgstr ""
-
-#: includes/admin-tab.php:89
-#: paragraph-styles.php:803
-#: assets/js/editor.js:965
-#: assets/js/editor.js:1322
+#: includes/admin-tab.php:38
+#: paragraph-styles.php:859
+#: assets/js/editor.js:1031
+#: assets/js/editor.js:1524
 msgid "Paragraph Styles"
 msgstr ""
 
-#: includes/admin-tab.php:91
+#: includes/admin-tab.php:40
 msgid "Manage your saved paragraph styles. These appear in the Typography Stylist editor for quick application to text."
 msgstr ""
 
-#: includes/admin-tab.php:97
-#: assets/js/admin.js:199
+#: includes/admin-tab.php:46
+#: assets/js/admin.js:752
 msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
 msgstr ""
 
-#. translators: %s: name of the font that replaces the style's deleted font
-#: includes/admin-tab.php:114
-#, php-format
-msgid "%s (replaces a deleted font)"
-msgstr ""
-
-#: includes/admin-tab.php:117
-msgid "Deleted font, shown in the default font"
-msgstr ""
-
-#: includes/admin-tab.php:120
-#: assets/js/editor.js:127
-msgid "Default"
-msgstr ""
-
-#: includes/admin-tab.php:130
-msgid "Italic"
-msgstr ""
-
-#: includes/admin-tab.php:131
-msgid "Oblique"
-msgstr ""
-
-#: includes/admin-tab.php:132
-msgid "Normal (upright)"
-msgstr ""
-
-#. translators: %1$s: min size, %2$s: preferred size, %3$s: max size
-#: includes/admin-tab.php:150
-#, php-format
-msgid "Responsive (%1$s/%2$s/%3$spx)"
-msgstr ""
-
-#. translators: %1$s: fallback min size, %2$s: fallback max size
-#: includes/admin-tab.php:155
-#, php-format
-msgid "Fit to width (fallback %1$s–%2$spx)"
-msgstr ""
-
-#. translators: %s: font size in pixels
-#. translators: %s: font size in pixels.
-#: includes/admin-tab.php:158
-#: assets/js/lib/ps-utils.js:543
-#, php-format,js-format
-msgid "%spx"
-msgstr ""
-
-#. translators: %s: letter spacing in em
-#. translators: %s: hang in em
-#: includes/admin-tab.php:167
-#: includes/admin-tab.php:181
-#, php-format
-msgid "%sem"
-msgstr ""
-
-#: includes/admin-tab.php:186
-msgid "Normal"
-msgstr ""
-
-#: includes/admin-tab.php:187
-msgid "All Caps"
-msgstr ""
-
-#: includes/admin-tab.php:188
-msgid "Lowercase"
-msgstr ""
-
-#: includes/admin-tab.php:189
-msgid "Title Case"
-msgstr ""
-
-#: includes/admin-tab.php:190
-msgid "Small Caps"
-msgstr ""
-
-#: includes/admin-tab.php:191
-msgid "All Small Caps"
-msgstr ""
-
-#. translators: %s: case setting, such as "Small Caps"
-#: includes/admin-tab.php:198
-#, php-format
-msgid "%s (no fake small caps)"
-msgstr ""
-
-#: includes/admin-tab.php:208
+#: includes/admin-tab.php:65
 msgid "Edit"
 msgstr ""
 
-#: includes/admin-tab.php:211
+#: includes/admin-tab.php:68
 msgid "Delete"
 msgstr ""
 
-#: includes/admin-tab.php:217
-msgid "Font:"
-msgstr ""
-
-#: includes/admin-tab.php:222
-msgid "Style:"
-msgstr ""
-
-#: includes/admin-tab.php:228
-msgid "Size:"
-msgstr ""
-
-#: includes/admin-tab.php:234
-msgid "Features:"
-msgstr ""
-
-#: includes/admin-tab.php:241
-msgid "Spacing:"
-msgstr ""
-
-#: includes/admin-tab.php:248
-msgid "Line Height:"
-msgstr ""
-
-#: includes/admin-tab.php:255
-msgid "First Letter Hang:"
-msgstr ""
-
-#: includes/admin-tab.php:261
-msgid "Case:"
-msgstr ""
-
-#: includes/admin-tab.php:278
-msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
-msgstr ""
-
-#: includes/admin-tab.php:285
+#: includes/admin-tab.php:103
 msgid "Name:"
 msgstr ""
 
-#: includes/admin-tab.php:290
-#: assets/js/editor.js:524
-#: assets/js/editor.js:584
+#: includes/admin-tab.php:108
+msgid "Font"
+msgstr ""
+
+#: includes/admin-tab.php:111
+#: assets/js/editor.js:1054
+msgid "Font family"
+msgstr ""
+
+#: includes/admin-tab.php:113
+msgid "Default (theme font)"
+msgstr ""
+
+#: includes/admin-tab.php:120
+msgid "Weight"
+msgstr ""
+
+#: includes/admin-tab.php:122
+#: includes/admin-tab.php:131
+#: includes/admin-tab.php:145
+#: includes/admin-tab.php:204
+#: paragraph-styles.php:1405
+#: assets/js/editor.js:133
+msgid "Default"
+msgstr ""
+
+#: includes/admin-tab.php:129
+msgid "Font style"
+msgstr ""
+
+#: includes/admin-tab.php:132
+#: paragraph-styles.php:1453
+msgid "Normal (upright)"
+msgstr ""
+
+#: includes/admin-tab.php:133
+#: paragraph-styles.php:1451
+msgid "Italic"
+msgstr ""
+
+#: includes/admin-tab.php:134
+#: paragraph-styles.php:1452
+msgid "Oblique"
+msgstr ""
+
+#: includes/admin-tab.php:141
+msgid "Size"
+msgstr ""
+
+#: includes/admin-tab.php:143
+msgid "Font size"
+msgstr ""
+
+#: includes/admin-tab.php:146
+msgid "Fixed"
+msgstr ""
+
+#: includes/admin-tab.php:147
+msgid "Responsive (fluid)"
+msgstr ""
+
+#: includes/admin-tab.php:148
+#: assets/js/lib/ps-utils.js:1257
+msgid "Fit to width"
+msgstr ""
+
+#: includes/admin-tab.php:153
+msgid "Size (px)"
+msgstr ""
+
+#: includes/admin-tab.php:159
+msgid "Mobile (px)"
+msgstr ""
+
+#: includes/admin-tab.php:163
+msgid "Intermediate (px)"
+msgstr ""
+
+#: includes/admin-tab.php:167
+msgid "Large (px)"
+msgstr ""
+
+#: includes/admin-tab.php:171
+msgid "Fit to width sizes each line to fill the block. The three sizes above are the fallback for browsers without container queries, and for text styled inline."
+msgstr ""
+
+#: includes/admin-tab.php:174
+msgid "Maximum size (px, 0 = no limit)"
+msgstr ""
+
+#: includes/admin-tab.php:181
+msgid "Spacing"
+msgstr ""
+
+#: includes/admin-tab.php:184
+msgid "Letter spacing (1/1000 em)"
+msgstr ""
+
+#: includes/admin-tab.php:188
+msgid "Line height (0 = default)"
+msgstr ""
+
+#: includes/admin-tab.php:192
+msgid "First letter hang (em, 0–1)"
+msgstr ""
+
+#: includes/admin-tab.php:199
+#: includes/admin-tab.php:202
+msgid "Case"
+msgstr ""
+
+#: includes/admin-tab.php:212
+msgid "Allow fake small caps when the font has none"
+msgstr ""
+
+#: includes/admin-tab.php:218
+msgid "OpenType features"
+msgstr ""
+
+#: includes/admin-tab.php:243
+msgid "Variable font axes"
+msgstr ""
+
+#: includes/admin-tab.php:245
+msgid "Axis settings"
+msgstr ""
+
+#. translators: %s: example of font variation settings, such as "wght" 650, "wdth" 80
+#: includes/admin-tab.php:250
+#, php-format
+msgid "Four-letter axis tags in quotes, each followed by a number, separated by commas. Example: %s. Leave empty for none."
+msgstr ""
+
+#: includes/admin-tab.php:260
+#: assets/js/editor.js:571
+#: assets/js/editor.js:631
 msgid "Save"
 msgstr ""
 
-#: includes/admin-tab.php:293
-#: assets/js/editor.js:532
-#: assets/js/editor.js:592
+#: includes/admin-tab.php:263
+#: assets/js/editor.js:579
+#: assets/js/editor.js:639
 msgid "Cancel"
 msgstr ""
 
-#: paragraph-styles.php:900
+#: paragraph-styles.php:956
 msgid "Paragraph Styles Toolbar Button"
 msgstr ""
 
@@ -190,207 +197,338 @@ msgstr ""
 msgid "Opens a browser that shows every saved paragraph style in its own typeface, so you can see a style before you apply it. The button shows in Typography Stylist blocks, and next to the “Typography Stylist Features” button in other blocks. The Paragraph Style controls in the sidebar and the editor panels do not change."
 msgstr ""
 
-#: paragraph-styles.php:998
+#: paragraph-styles.php:1063
 msgid "Style name is required."
 msgstr ""
 
-#: paragraph-styles.php:1031
-#: paragraph-styles.php:1066
+#: paragraph-styles.php:1096
+#: paragraph-styles.php:1131
+#: paragraph-styles.php:1602
 msgid "Style not found."
 msgstr ""
 
-#: paragraph-styles.php:1038
+#: paragraph-styles.php:1103
 msgid "Style name cannot be empty."
 msgstr ""
 
-#. translators: %s: style name
-#: assets/js/admin.js:155
+#. translators: %s: name of the font that replaces the style's deleted font
+#: paragraph-styles.php:1401
+#, php-format
+msgid "%s (replaces a deleted font)"
+msgstr ""
+
+#: paragraph-styles.php:1403
+msgid "Deleted font, shown in the default font"
+msgstr ""
+
+#. translators: Sample text for the paragraph style preview. Keep ligature pairs (fi, ffl, ffi, Th, st), a fraction and figures, so OpenType features show.
+#: paragraph-styles.php:1423
+msgid "The quick brown fox jumps over the lazy dog. First affluent offices, 1/2 off: 0123456789."
+msgstr ""
+
+#: paragraph-styles.php:1447
+msgid "Font:"
+msgstr ""
+
+#: paragraph-styles.php:1456
+msgid "Style:"
+msgstr ""
+
+#. translators: %1$s: min size, %2$s: preferred size, %3$s: max size
+#: paragraph-styles.php:1466
+#, php-format
+msgid "Responsive (%1$s/%2$s/%3$spx)"
+msgstr ""
+
+#. translators: %1$s: fallback min size, %2$s: fallback max size
+#: paragraph-styles.php:1471
+#, php-format
+msgid "Fit to width (fallback %1$s–%2$spx)"
+msgstr ""
+
+#. translators: %s: font size in pixels
+#. translators: %s: font size in pixels.
+#: paragraph-styles.php:1474
+#: assets/js/lib/ps-utils.js:582
+#, php-format,js-format
+msgid "%spx"
+msgstr ""
+
+#: paragraph-styles.php:1476
+msgid "Size:"
+msgstr ""
+
+#: paragraph-styles.php:1480
+msgid "Features:"
+msgstr ""
+
+#. translators: %s: letter spacing in em
+#: paragraph-styles.php:1488
+msgid "Spacing:"
+msgstr ""
+
+#. translators: %s: letter spacing in em
+#. translators: %s: hang in em
+#: paragraph-styles.php:1488
+#: paragraph-styles.php:1531
+#, php-format
+msgid "%sem"
+msgstr ""
+
+#: paragraph-styles.php:1491
+msgid "Line Height:"
+msgstr ""
+
+#. translators: %s: case setting, such as "Small Caps"
+#: paragraph-styles.php:1507
+#, php-format
+msgid "%s (no fake small caps)"
+msgstr ""
+
+#: paragraph-styles.php:1527
+msgid "Axes:"
+msgstr ""
+
+#. translators: %s: hang in em
+#: paragraph-styles.php:1531
+msgid "First Letter Hang:"
+msgstr ""
+
+#: paragraph-styles.php:1534
+msgid "Case:"
+msgstr ""
+
+#: paragraph-styles.php:1563
+msgid "Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font."
+msgstr ""
+
+#: paragraph-styles.php:1576
+msgid "Normal"
+msgstr ""
+
+#: paragraph-styles.php:1577
+msgid "All Caps"
+msgstr ""
+
+#: paragraph-styles.php:1578
+msgid "Lowercase"
+msgstr ""
+
+#: paragraph-styles.php:1579
+msgid "Title Case"
+msgstr ""
+
+#: paragraph-styles.php:1580
+msgid "Small Caps"
+msgstr ""
+
+#: paragraph-styles.php:1581
+msgid "All Small Caps"
+msgstr ""
+
+#: assets/js/admin.js:372
+msgid "Enter a name for the style."
+msgstr ""
+
+#: assets/js/admin.js:375
+msgid "Enter a size greater than 0."
+msgstr ""
+
+#: assets/js/admin.js:382
+msgid "Enter all three sizes, each greater than 0."
+msgstr ""
+
+#: assets/js/admin.js:390
+msgid "Each axis setting needs a four-letter tag in quotes and a number, such as \"wght\" 650."
+msgstr ""
+
+#: assets/js/admin.js:672
+#, js-format
+msgid "Style “%s” saved."
+msgstr ""
+
+#: assets/js/admin.js:674
 #, js-format
 msgid "Style renamed to “%s”."
 msgstr ""
 
-#: assets/js/admin.js:159
+#: assets/js/admin.js:712
 msgid "Failed to update style. Please try again."
 msgstr ""
 
-#: assets/js/admin.js:176
+#: assets/js/admin.js:729
 #, js-format
 msgid "Are you sure you want to delete “%s”? This cannot be undone."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:207
+#: assets/js/admin.js:760
 #, js-format
 msgid "Style “%s” deleted."
 msgstr ""
 
-#: assets/js/admin.js:212
+#: assets/js/admin.js:765
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
-#: assets/js/editor.js:321
+#: assets/js/editor.js:368
 msgid "Select a style…"
 msgstr ""
 
-#: assets/js/editor.js:470
+#: assets/js/editor.js:517
 msgid "(modified)"
 msgstr ""
 
-#: assets/js/editor.js:476
-#: assets/js/editor.js:543
-#: assets/js/editor.js:557
+#: assets/js/editor.js:523
+#: assets/js/editor.js:590
+#: assets/js/editor.js:604
+#: assets/js/editor.js:1241
 msgid "Paragraph Style"
 msgstr ""
 
-#: assets/js/editor.js:489
-#: assets/js/editor.js:552
+#: assets/js/editor.js:536
+#: assets/js/editor.js:599
+#: assets/js/editor.js:1258
 msgid "Browse styles…"
 msgstr ""
 
-#: assets/js/editor.js:496
+#: assets/js/editor.js:543
 msgid "Update Style"
 msgstr ""
 
-#: assets/js/editor.js:501
+#: assets/js/editor.js:548
 msgid "Save as New"
 msgstr ""
 
-#: assets/js/editor.js:507
-#: assets/js/editor.js:1016
+#: assets/js/editor.js:554
+#: assets/js/editor.js:1082
+#: assets/js/editor.js:1263
 msgid "Detach Style"
 msgstr ""
 
-#: assets/js/editor.js:512
+#: assets/js/editor.js:559
 msgid "New style name…"
 msgstr ""
 
-#: assets/js/editor.js:569
+#: assets/js/editor.js:616
 msgid "Save Current Settings as Style"
 msgstr ""
 
-#: assets/js/editor.js:572
+#: assets/js/editor.js:619
 msgid "Style name…"
 msgstr ""
 
-#: assets/js/editor.js:584
+#: assets/js/editor.js:631
 msgid "Saving…"
 msgstr ""
 
 #. translators: %d: number of matching styles
-#: assets/js/editor.js:826
+#: assets/js/editor.js:878
 #, js-format
 msgid "%d style matches."
 msgid_plural "%d styles match."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/js/editor.js:948
+#: assets/js/editor.js:1011
+msgid "Select the text to style first. A style applies to a whole block only in Paragraph and Heading blocks."
+msgstr ""
+
+#: assets/js/editor.js:1014
 msgid "No paragraph styles saved yet. Set up the typography you want, and then click “Save Current Settings as Style” in the Paragraph Style panel."
 msgstr ""
 
 #. translators: %s: search text
-#: assets/js/editor.js:951
+#: assets/js/editor.js:1017
 #, js-format
 msgid "No styles match “%s”."
 msgstr ""
 
-#: assets/js/editor.js:958
+#: assets/js/editor.js:1024
 msgid "Paragraph styles"
 msgstr ""
 
-#: assets/js/editor.js:971
+#: assets/js/editor.js:1037
 msgid "Applies to the selected text."
 msgstr ""
 
-#: assets/js/editor.js:972
+#: assets/js/editor.js:1038
 msgid "Applies to the whole block."
 msgstr ""
 
-#: assets/js/editor.js:976
+#: assets/js/editor.js:1042
 msgid "Search styles"
 msgstr ""
 
-#: assets/js/editor.js:980
+#: assets/js/editor.js:1046
 msgid "Style or font name"
 msgstr ""
 
-#: assets/js/editor.js:984
+#: assets/js/editor.js:1050
 msgid "Group by"
 msgstr ""
 
-#: assets/js/editor.js:987
+#: assets/js/editor.js:1053
 msgid "None"
 msgstr ""
 
-#: assets/js/editor.js:988
-msgid "Font family"
-msgstr ""
-
-#: assets/js/editor.js:989
+#: assets/js/editor.js:1055
 msgid "Size mode"
 msgstr ""
 
-#: assets/js/editor.js:994
-#: assets/js/lib/ps-utils.js:987
+#: assets/js/editor.js:1060
+#: assets/js/lib/ps-utils.js:1209
 msgid "Recently used"
 msgstr ""
 
 #. translators: %d: number of styles the button reveals
-#: assets/js/editor.js:1007
+#: assets/js/editor.js:1073
 #, js-format
 msgid "Show %d more style"
 msgid_plural "Show %d more styles"
 msgstr[0] ""
 msgstr[1] ""
 
+#: assets/js/editor.js:1247
+msgid "Missing style"
+msgstr ""
+
+#: assets/js/editor.js:1251
+msgid "The style applies to the whole block. The block’s own settings override it."
+msgstr ""
+
 #. translators: 1: smallest font size, 2: largest font size.
-#: assets/js/lib/ps-utils.js:531
+#: assets/js/lib/ps-utils.js:570
 #, js-format
 msgid "Fluid %1$s–%2$s"
 msgstr ""
 
 #. translators: %s: maximum font size in pixels.
-#: assets/js/lib/ps-utils.js:539
+#: assets/js/lib/ps-utils.js:578
 #, js-format
 msgid "Fit ≤ %spx"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:540
+#: assets/js/lib/ps-utils.js:579
 msgid "Fit"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:989
+#: assets/js/lib/ps-utils.js:1211
 msgid "Other styles"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:1022
+#: assets/js/lib/ps-utils.js:1244
 msgid "No font set"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:1033
+#: assets/js/lib/ps-utils.js:1255
 msgid "Fixed size"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:1034
+#: assets/js/lib/ps-utils.js:1256
 msgid "Responsive"
 msgstr ""
 
-#: assets/js/lib/ps-utils.js:1035
-msgid "Fit to width"
-msgstr ""
-
-#: assets/js/lib/ps-utils.js:1036
+#: assets/js/lib/ps-utils.js:1258
 msgid "Inherited size"
-msgstr ""
-
-#: assets/js/editor.js:1001
-msgid "Select the text to style first. A style applies to a whole block only in Paragraph and Heading blocks."
-msgstr ""
-
-#: assets/js/editor.js:1231
-msgid "Missing style"
-msgstr ""
-
-#: assets/js/editor.js:1235
-msgid "The style applies to the whole block. The block’s own settings override it."
 msgstr ""

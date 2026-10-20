@@ -134,10 +134,24 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
         return $calls;
     }
 
+    /**
+     * The CSS transient holds the given CSS; the styles transient holds a
+     * list (the edit form localizes it, #221).
+     */
+    private function stubTransients($css, $styles = array()) {
+        // Core's options (the new-content unit, fonts) read as their defaults
+        Functions\when('get_option')->alias(function ($key, $default = false) {
+            return $default;
+        });
+        Functions\when('get_transient')->alias(function ($key) use ($css, $styles) {
+            return 'typost_paragraph_styles_css' === $key ? $css : $styles;
+        });
+    }
+
     public function test_style_css_is_added_to_the_admin_style_handle() {
         $module = $this->freshInstance();
         $calls  = $this->stubAdminEnqueue();
-        Functions\when('get_transient')->justReturn('.typost-ps-3 { font-weight: 700; }');
+        $this->stubTransients('.typost-ps-3 { font-weight: 700; }');
 
         $module->enqueue_admin_assets();
 
@@ -150,7 +164,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_repeat_calls_do_not_add_the_style_css_again() {
         $module = $this->freshInstance();
         $calls  = $this->stubAdminEnqueue();
-        Functions\when('get_transient')->justReturn('.typost-ps-3 { font-weight: 700; }');
+        $this->stubTransients('.typost-ps-3 { font-weight: 700; }');
 
         // A precaution, not a live bug: core fires typost_admin_assets once
         // per page load (admin_enqueue_scripts, #226).
@@ -166,7 +180,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
     public function test_no_inline_style_when_there_are_no_styles() {
         $module = $this->freshInstance();
         $calls  = $this->stubAdminEnqueue();
-        Functions\when('get_transient')->justReturn('');
+        $this->stubTransients('');
 
         $module->enqueue_admin_assets();
 
