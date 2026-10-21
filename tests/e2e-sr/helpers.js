@@ -42,24 +42,35 @@ async function openNewPost(page) {
 }
 
 /**
+ * The window title NVDA reads for the test browser: "Typography Stylist ‹ …
+ * — Word Press — Nightly" or "Add Post ‹ … — Word Press — Nightly".
+ *
+ * It must name Playwright's Firefox ("Nightly"), not only WordPress: a Slack
+ * window titled "… - Making WordPress - Slack" matched the old pattern, and a
+ * run sent its Enter presses there (2026-10-20, PR #293). If a Playwright
+ * update renames the browser, focusBrowser() throws with the titles it saw
+ * and sends no keys; update the name here.
+ */
+const BROWSER_TITLE = /^(Add Post|Edit Post|Typography Stylist)\b.*Word ?Press.*Nightly\s*$/i;
+
+/**
  * Bring the Firefox window to the front so NVDA's keystrokes land in it.
  *
  * Guidepup's own navigateToWebContent() does this too, but it also clicks
  * the page body (which has hung in headed Firefox) and presses Ctrl+Home.
  * This version only checks the window title through NVDA and Alt+Esc-cycles
- * applications until the browser reports the editor title.
+ * applications until the browser reports the title in BROWSER_TITLE.
  */
 async function focusBrowser(page, nvda) {
   await page.bringToFront();
   await delay(300);
-  const wanted = /Add Post|Edit Post|Word ?Press/i;
   const seen = [];
   let focused = false;
   for (let i = 0; i < 8; i++) {
     await nvda.perform(nvda.keyboardCommands.reportTitle);
     const title = await nvda.lastSpokenPhrase();
     seen.push(title);
-    if (wanted.test(title)) {
+    if (BROWSER_TITLE.test(title)) {
       focused = true;
       break;
     }

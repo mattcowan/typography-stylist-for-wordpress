@@ -10,6 +10,7 @@ Each file is one journey:
 - `paragraph-styles-browser.sr.spec.js` — open the Paragraph Styles browser from the block toolbar (focus lands on the style listbox), move the cursor with the arrow keys and first-letter type-ahead, apply the cursor row with Enter.
 - `admin-tabs.sr.spec.js` — Settings → Typography Stylist: arrow through the tablist, change the Admin Color Scheme select, save and clear the font cache with Enter, restore the scheme.
 - `paragraph-styles-admin-edit.sr.spec.js` — Settings → Typography Stylist → Paragraph Styles: open a scratch style's Edit form with Enter, Tab through the first fields, submit an empty name (the field must be read as invalid, with the message), save with Enter on Save. It creates and deletes its own style.
+- `paragraph-styles-based-on.sr.spec.js` — Based On on the same tab: Tab to the "Based on" select of a child style (label, value and help text), check that "Reset to Base" hides for another choice and comes back for the saved parent, activate it, and delete a parent style (the child keeps its look and loses the link). It creates and deletes its own styles.
 - `inline-paragraph.sr.spec.js` — the Typography Stylist modal on a paragraph: Tab through the first controls, switch Font Size to Responsive with the arrow keys, cross the size sliders and record what is announced.
 - `inline-modal.sr.spec.js` — open the Typography Stylist modal on a heading, Tab through the first 16 controls, toggle Standard Ligatures with Space, close with Escape.
 
@@ -49,6 +50,8 @@ The run opens a headed Firefox window and takes about six minutes. Do not use th
 
 ## Known harness limits
 
+- `focusBrowser` sends keys only when NVDA reads a window title that matches `BROWSER_TITLE` in `helpers.js`. The title must start with "Add Post", "Edit Post" or "Typography Stylist", contain "WordPress" or "Word Press", and end with "Nightly" (Playwright's Firefox). A title without all three parts does not match, for example a Slack window titled "… - Making WordPress - Slack". When no window matches, the journey stops and sends no keys, and the error lists the titles it saw. If the test window was behind another window, run the journey again. If the test window's title no longer ends with "Nightly", update `BROWSER_TITLE`.
+- Speech after the capture window is not in the log: a `confirm()` that Playwright accepts at once, and a live-region message that comes after a REST round trip. The journeys check those messages in the DOM.
 - One arrow press is sometimes recorded as an empty phrase when NVDA speaks after Guidepup's one-second window. The same cell is announced correctly at the next stop.
 - NVDA's mode toggle (NVDA+Space) plays a sound in this profile and says nothing. `ensureFocusMode` probes the widget instead of trusting the announcement.
 - In NVDA focus mode the first Escape can be consumed by NVDA. `closeModalWithEscape` sends up to two and records how many it took.
