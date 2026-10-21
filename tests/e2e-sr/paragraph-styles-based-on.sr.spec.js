@@ -44,6 +44,7 @@ async function seedStyles(page, prefix) {
   }, prefix);
 }
 
+/** Delete the scratch styles; a style that is already gone is skipped. */
 async function deleteStyles(page, ids) {
   await page.evaluate(async (ids) => {
     for (const id of ids) {
@@ -56,6 +57,7 @@ async function deleteStyles(page, ids) {
   }, ids);
 }
 
+/** A style as the REST API returns it (client shape), or null. */
 async function readStyle(page, id) {
   return page.evaluate(async (id) => {
     const styles = await window.wp.apiFetch({ path: '/typost/v1/paragraph-styles' });
