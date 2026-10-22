@@ -502,6 +502,9 @@
 				setSelectedStyleId(String(newStyle.id));
 				dispatchApply(newStyle, editorSource, undefined, scope.applyTo, savesFromSelection(editorSource, scope));
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [styleName, currentStyles, editorSource]);
@@ -550,6 +553,9 @@
 					}
 				}
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [activeStyle, currentStyles, editorSource]);
@@ -587,6 +593,9 @@
 				setSelectedStyleId(String(newStyle.id));
 				dispatchApply(newStyle, editorSource, undefined, scope.applyTo, savesFromSelection(editorSource, scope));
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [saveAsNewName, currentStyles, editorSource, activeStyle]);
