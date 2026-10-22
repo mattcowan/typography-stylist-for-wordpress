@@ -242,9 +242,22 @@ italic caps + a weight axis, Fraunces for custom SOFT/WONK variable axes),
 installs them through the plugin's own font-kit pipeline via a `runPHP` step,
 and lands in the editor on a demo post whose headline is pre-set in Style
 Script with swashes enabled. It syncs to SVN `assets/blueprints/` like any
-other asset. If the demo ever stops installing fonts, check that the
-raw.githubusercontent.com font URLs inside the blueprint still resolve. To
-test blueprint changes before pushing: paste the JSON after
+other asset. The font URLs are pinned to one google/fonts commit, so a
+rename on that repo's `main` cannot break them; if the demo ever stops
+installing fonts, check that those raw.githubusercontent.com URLs still
+resolve. To move the pin, pick a newer google/fonts commit, replace the SHA
+in all four URLs (they sit in one long `runPHP` line), and check that each
+file still exists at that path. When a demo font does not download, the demo
+still opens, with a paragraph at the top of the post that names the missing
+fonts and asks the visitor to reload. The demo-post step throws when the
+post is not created as ID 1000, so Playground shows "Blueprint execution
+failed" instead of landing on "You attempted to edit an item that does not
+exist". A Live Preview that loads wp-admin with no CSS or JS (every
+`/wp-includes/` and `/wp-admin/` file 403) is not the blueprint:
+Playground's service worker fetches core static files from
+playground.wordpress.net, and its CDN sometimes answers with a "Checking
+your browser..." page (WordPress/wordpress-playground#4419). To test
+blueprint changes before pushing: paste the JSON after
 `https://playground.wordpress.net/?storage=none#` (URL-encoded) in a browser
 (`storage=none` forces a fresh boot instead of restoring your last
 playground). After the first sync that includes it, a committer must flip
