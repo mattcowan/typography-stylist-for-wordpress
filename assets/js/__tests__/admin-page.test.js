@@ -9,11 +9,21 @@ global.jQuery = jest.fn(() => ({ ready: jest.fn(), on: jest.fn() }));
 
 const {
 	formatDetectWeightsSummary,
+	withUserLocale,
 	mergeAdminRefreshData,
 	resolvePreviewSelection,
 	attachDismissButtons,
 	clearSettingsMessages,
 } = require('../admin-page.js');
+
+describe('withUserLocale', () => {
+	test.each([
+		['http://example.test/wp-json/typost/v1/admin/refresh', 'http://example.test/wp-json/typost/v1/admin/refresh?_locale=user'],
+		['http://example.test/?rest_route=/typost/v1/admin/refresh', 'http://example.test/?rest_route=/typost/v1/admin/refresh&_locale=user'],
+	])('%s', (url, expected) => {
+		expect(withUserLocale(url)).toBe(expected);
+	});
+});
 
 describe('formatDetectWeightsSummary', () => {
 	const template = 'Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.';

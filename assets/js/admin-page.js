@@ -21,6 +21,17 @@ function typostFormatDetectWeightsSummary(response, template) {
 }
 
 /**
+ * Ask a REST route to answer in the user's language, not the site's
+ * (determine_locale() reads _locale=user on REST requests).
+ *
+ * @param {string} url
+ * @return {string}
+ */
+function typostWithUserLocale(url) {
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + '_locale=user';
+}
+
+/**
  * Merge an admin refresh REST payload into the typostAdmin data object.
  *
  * Only the known data keys are copied; anything else in the payload (HTML
@@ -421,6 +432,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof t
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
+        withUserLocale: typostWithUserLocale,
         mergeAdminRefreshData: typostMergeAdminRefreshData,
         resolvePreviewSelection: typostResolvePreviewSelection,
         attachDismissButtons: typostAttachDismissButtons,
@@ -689,7 +701,7 @@ jQuery(document).ready(function($) {
         adminRefreshInFlight = true;
 
         $.ajax({
-            url: typostAdmin.restUrl + 'admin/refresh',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'admin/refresh'),
             method: 'GET',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
