@@ -764,7 +764,7 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
                     // attributes). The block editor asks first; so does this
                     // one now (QA finding PS-2). A cancel is reported so the
                     // panel that dispatched the apply can drop its badge.
-                    if (e.detail.paragraphStyleId && !self.confirmParagraphStyleOverride()) {
+                    if (e.detail.paragraphStyleId && !self.confirmParagraphStyleOverride(!!e.detail.savedFromSelection)) {
                         document.dispatchEvent(new CustomEvent('typost-paragraph-style-apply-cancelled', {
                             detail: { source: 'inline', paragraphStyleId: e.detail.paragraphStyleId }
                         }));
@@ -1922,8 +1922,15 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
          * false when they cancelled. The range is the live selection, or the
          * bounds saved when the modal took focus (the same fallback
          * _doApplyFeatures uses).
+         *
+         * A style just saved from the selection (savedFromSelection) was
+         * built from the run's own values, so with one run it replaces
+         * nothing the author can see and the question is skipped (#303).
+         * A selection across runs still asks.
+         *
+         * @param {boolean} savedFromSelection Whether the style was saved from this selection
          */
-        confirmParagraphStyleOverride() {
+        confirmParagraphStyleOverride(savedFromSelection) {
             const { value } = this.props;
             const { savedSelectionStart, savedSelectionEnd } = this.state;
             const shared = window.typostSharedUtils || {};
@@ -1935,6 +1942,10 @@ const { normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, b
             const end = selectionLost ? savedSelectionEnd : value.end;
             const conflicts = shared.countInlineParagraphStyleConflicts(value.formats, start, end, FORMAT_TYPE);
             if (conflicts === 0) {
+                return true;
+            }
+            if (savedFromSelection && typeof shared.isMixedFormatSelection === 'function' &&
+                !shared.isMixedFormatSelection(value.formats, start, end, FORMAT_TYPE)) {
                 return true;
             }
             return window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));

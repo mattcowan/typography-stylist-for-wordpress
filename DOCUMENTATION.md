@@ -305,6 +305,8 @@ A paragraph style is a named set of typography settings. It holds the font, weig
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
 
+In a Typography Stylist block, the Paragraph Style panel in the Quick Feature Toggles works on the selected text, like the other controls there. With text selected, “Save Current Settings as Style” makes the style from the settings of the selected text, and only that text gets the style. A style made from selected text does not include the First Letter Hang, which applies to the whole block, or the case, which the Quick Feature Toggles do not set for selected text. “Update Style” and “Detach Style” work on the style of the selected text. With only the caret in the block, the panel works on the whole block. The Paragraph Style panel in the block sidebar always works on the whole block.
+
 #### Based On
 
 A style can be based on another style, like “Based On” in Adobe InDesign. For example, “Body” sets the font, size, and line height. “Caption” is based on Body and sets only a smaller size. To use a new body font, change Body. Caption follows.

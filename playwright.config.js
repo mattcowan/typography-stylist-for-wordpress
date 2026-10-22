@@ -20,6 +20,14 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    // Firefox moves focus where Chromium does not: it takes focus from a
+    // button that becomes disabled, and RichText's selection write can move
+    // it into the canvas. Tests tagged @firefox check focus there too (#303).
+    {
+      name: 'firefox-focus',
+      use: { ...devices['Desktop Firefox'] },
+      grep: /@firefox/,
+    },
   ],
 
   // Run WordPress login before all tests

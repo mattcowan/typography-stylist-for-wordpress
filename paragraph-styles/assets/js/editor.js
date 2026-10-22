@@ -38,6 +38,7 @@
 	var findFontName             = utils.findFontName;
 	var isStyleModified          = utils.isStyleModified;
 	var resolveBrowserActiveStyleId = utils.resolveBrowserActiveStyleId;
+	var resolvePanelScope        = utils.resolvePanelScope;
 	var filterParagraphStyles    = utils.filterParagraphStyles;
 	var BROWSER_PAGE_SIZE        = utils.BROWSER_PAGE_SIZE;
 	var buildBrowserSampleText   = utils.buildBrowserSampleText;
@@ -138,10 +139,18 @@
 	// Dispatch the apply event for a style (or a detach when style is null).
 	// applyTo 'selection' scopes it to the selected text; omitted means
 	// block-level, which is what a paragraph style normally describes.
-	function dispatchApply(style, editorSource, detachProperties, applyTo) {
+	// savedFromSelection: the style was just saved from the selected text.
+	function dispatchApply(style, editorSource, detachProperties, applyTo, savedFromSelection) {
 		document.dispatchEvent(new CustomEvent('typost-apply-block-properties', {
-			detail: buildApplyEventDetail(style, editorSource, detachProperties, applyTo),
+			detail: buildApplyEventDetail(style, editorSource, detachProperties, applyTo, savedFromSelection),
 		}));
+	}
+
+	// Whether a Save in this panel builds the style from selected text: the
+	// inline editor always works on its selection, the Quick Feature Toggles
+	// with text selected (#303)
+	function savesFromSelection(editorSource, scope) {
+		return editorSource === 'inline' || scope.applyTo === 'selection';
 	}
 
 	// -------------------------------------------------------------------------
@@ -229,6 +238,55 @@
 		var saveAsNewName      = saveAsNewNameState[0];
 		var setSaveAsNewName   = saveAsNewNameState[1];
 
+		// Most actions here remove the control that was used: the panel
+		// switches between its badge and its select, Update Style shows only
+		// while the style is modified, and the save forms close. Focus then
+		// fell to the page body, where Escape no longer closed the modal.
+		// After such an action focus goes back into the panel: the open save
+		// form's name field, else the badge, else the first control.
+		var panelRef        = useRef(null);
+		var refocusRef      = useRef(false);
+		var refocusTimerRef = useRef(null);
+		var savingRef       = useRef(false);
+		savingRef.current   = isSaving;
+		function keepFocusInPanel() {
+			refocusRef.current = true;
+		}
+		useEffect(function() {
+			var root = panelRef.current;
+			if (!refocusRef.current || !root) return;
+			var doc = root.ownerDocument;
+			// The used control is still there (Update Style waits for its
+			// request): try again on the next render
+			if (root.contains(doc.activeElement)) return;
+			// One action can render several times (this legacy root renders
+			// each state change in a promise callback on its own), and an
+			// in-between view may not be the last one: act once they are done
+			clearTimeout(refocusTimerRef.current);
+			refocusTimerRef.current = setTimeout(function() {
+				// While a save request runs, its view is not the last one:
+				// Firefox drops focus from the Save button when it is
+				// disabled, focus goes to the name field, and the field goes
+				// when the form closes on success. Keep the flag until then.
+				refocusRef.current = savingRef.current;
+				var panel = panelRef.current;
+				var active = doc.activeElement;
+				// The panel is gone, or the author has moved focus elsewhere
+				if (!panel || (active && active !== doc.body)) return;
+				var target = panel.querySelector('.typost-ps-save-form input') ||
+					panel.querySelector('.typost-ps-badge') ||
+					panel.querySelector('button:not([disabled]), select:not([disabled]), input:not([disabled])');
+				if (target) {
+					target.focus();
+				}
+			}, 0);
+		});
+		useEffect(function() {
+			return function() {
+				clearTimeout(refocusTimerRef.current);
+			};
+		}, []);
+
 		// Sync styles from typostData on mount and when notified of external changes.
 		useEffect(function() {
 			setCurrentStyles(getStyles());
@@ -241,14 +299,14 @@
 			};
 		}, []);
 
-		// Detect active style from editor state
+		// Detect active style from editor state: the selection's style in
+		// the Quick Feature Toggles with text selected, else the block's (#303)
 		useEffect(function() {
 			if (!window.typostHooks) return;
-			var editorType = editorSource === 'inspector' ? 'qft' : editorSource;
-			var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType);
-			if (state && state.paragraphStyleId) {
-				setActiveStyleId(state.paragraphStyleId);
-				setSelectedStyleId(String(state.paragraphStyleId));
+			var styleId = resolvePanelScope(editorSource, getCurrentState()).activeStyleId;
+			if (styleId) {
+				setActiveStyleId(styleId);
+				setSelectedStyleId(String(styleId));
 			}
 		}, [editorSource]);
 
@@ -256,7 +314,9 @@
 		// host asked before replacing the selection's own styling and the
 		// author said no) can put the badge back. The host reports the cancel
 		// through typost-paragraph-style-apply-cancelled; without this the
-		// panel kept showing a style that was never applied.
+		// panel kept showing a style that was never applied. Only the inline
+		// panel (its style browser's picks) uses it; the block's panels read
+		// the style back from the editor state instead.
 		var lastActiveRef = useRef({ id: 0, selected: '' });
 		function rememberActive() {
 			lastActiveRef.current = { id: activeStyleId, selected: selectedStyleId };
@@ -265,6 +325,16 @@
 			var editorType = editorSource === 'inspector' ? 'qft' : editorSource;
 			function onCancelled(e) {
 				if (!e.detail || e.detail.source !== editorType) return;
+				if (editorSource !== 'inline') {
+					// Nothing was applied, so the block reports the style that
+					// is really there. The Inspector's panel reads the same
+					// 'qft' state and hears this cancel too, and a style
+					// saved from a selection was never picked here (#303)
+					var styleId = resolvePanelScope(editorSource, getCurrentState()).activeStyleId;
+					setActiveStyleId(styleId);
+					setSelectedStyleId(styleId ? String(styleId) : '');
+					return;
+				}
 				setActiveStyleId(lastActiveRef.current.id);
 				setSelectedStyleId(lastActiveRef.current.selected);
 			}
@@ -342,7 +412,7 @@
 			var compute = function() {
 				if (cancelled) return;
 				var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType);
-				var next = isStyleModified(state, activeStyle.properties);
+				var next = isStyleModified(resolvePanelScope(editorSource, state).state, activeStyle.properties);
 				setModified(function(prev) { return prev === next ? prev : next; });
 			};
 			// The apply that made this style active is dispatched as an event and
@@ -393,18 +463,21 @@
 			}
 			if (!style || !style.properties) return;
 
-			rememberActive();
+			keepFocusInPanel();
 			setActiveStyleId(style.id);
-			dispatchApply(style, editorSource);
-		}, [currentStyles, editorSource, activeStyleId, selectedStyleId]);
+			dispatchApply(style, editorSource, undefined, resolvePanelScope(editorSource, getCurrentState()).applyTo);
+		}, [currentStyles, editorSource]);
 
 		// Handle save new style
 		var onSave = useCallback(function() {
 			if (!styleName.trim()) return;
+			keepFocusInPanel();
 			setIsSaving(true);
 
-			var state = getCurrentState();
-			var properties = buildPropertiesFromState(state, getNewFontSizeUnit());
+			// With text selected in the Quick Feature Toggles, the style is
+			// built from that text and applied to it only (#303)
+			var scope = resolvePanelScope(editorSource, getCurrentState());
+			var properties = buildPropertiesFromState(scope.state, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',
@@ -427,8 +500,11 @@
 				// Apply the new style
 				setActiveStyleId(newStyle.id);
 				setSelectedStyleId(String(newStyle.id));
-				dispatchApply(newStyle, editorSource);
+				dispatchApply(newStyle, editorSource, undefined, scope.applyTo, savesFromSelection(editorSource, scope));
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [styleName, currentStyles, editorSource]);
@@ -436,13 +512,15 @@
 		// Handle "Update Style" — PATCH existing style with current settings
 		var onUpdateStyle = useCallback(function() {
 			if (!activeStyle) return;
+			keepFocusInPanel();
 			setIsSaving(true);
 
-			var state = getCurrentState();
 			// Keeps block-only properties (the hang) the inline editor cannot
-			// report. A style based on another sends only what differs from
-			// its parent (#200), so values equal to the parent's stay inherited.
-			var properties = buildStyleUpdateProperties(state, activeStyle, currentStyles, getNewFontSizeUnit());
+			// report, nor a selection in the Quick Feature Toggles (#303). A
+			// style based on another sends only what differs from its parent
+			// (#200), so values equal to the parent's stay inherited.
+			var scope = resolvePanelScope(editorSource, getCurrentState());
+			var properties = buildStyleUpdateProperties(scope.state, activeStyle, currentStyles, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
@@ -460,7 +538,24 @@
 					document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated'));
 				}
 				setIsSaving(false);
+				// The Quick Feature Toggles wrote the change onto the styled
+				// text as its own declaration, which beats the style's class.
+				// The style holds it now, so apply the style to the text again:
+				// core clears the declaration (asking first only when the
+				// selection has more than one set of values), and a later
+				// change to the style reaches the text again (#303 review).
+				if (scope.applyTo === 'selection') {
+					for (var i = 0; i < updated.length; i++) {
+						if (String(updated[i].id) === String(updatedStyle.id)) {
+							dispatchApply(updated[i], editorSource, undefined, scope.applyTo, true);
+							break;
+						}
+					}
+				}
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [activeStyle, currentStyles, editorSource]);
@@ -468,11 +563,12 @@
 		// Handle "Save as New"
 		var onSaveAsNew = useCallback(function() {
 			if (!saveAsNewName.trim()) return;
+			keepFocusInPanel();
 			setIsSaving(true);
 
-			var state = getCurrentState();
+			var scope = resolvePanelScope(editorSource, getCurrentState());
 			// A variant of the active style keeps its block-only properties too
-			var properties = buildPropertiesForStyleSave(state, activeStyle ? activeStyle.properties : null, false, getNewFontSizeUnit());
+			var properties = buildPropertiesForStyleSave(scope.state, activeStyle ? activeStyle.properties : null, false, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles',
@@ -495,23 +591,34 @@
 				// Switch to the new style
 				setActiveStyleId(newStyle.id);
 				setSelectedStyleId(String(newStyle.id));
-				dispatchApply(newStyle, editorSource);
+				dispatchApply(newStyle, editorSource, undefined, scope.applyTo, savesFromSelection(editorSource, scope));
 			}).catch(function() {
+				// Nothing changed and focus is still in the form: no refocus
+				// is due later
+				refocusRef.current = false;
 				setIsSaving(false);
 			});
 		}, [saveAsNewName, currentStyles, editorSource, activeStyle]);
 
 		// Handle "Detach Style" — remove class association, keep inline styles
 		var onDetachStyle = useCallback(function() {
+			keepFocusInPanel();
 			setActiveStyleId(0);
 			setSelectedStyleId('');
 
+			var scope = resolvePanelScope(editorSource, getCurrentState());
+			if (scope.applyTo === 'selection') {
+				// The selected text only, as the style browser does (#303).
+				// Core writes the style's values onto the text in its place
+				// (detachParagraphStyleFromSelection), so it needs none here
+				dispatchApply(null, editorSource, {}, scope.applyTo);
+				return;
+			}
 			// Re-apply current settings as inline styles (no paragraph style)
-			var state = getCurrentState();
 			// No unit: a detached block or span takes the style's unit in the
 			// editor (resolveDetachFontSizeUnit / resolveSpanFontSizeUnit), and
 			// neither apply handler reads fontSizeUnit from the properties
-			dispatchApply(null, editorSource, buildPropertiesFromState(state));
+			dispatchApply(null, editorSource, buildPropertiesFromState(scope.state));
 		}, [editorSource]);
 
 		// ---- Render ----
@@ -523,13 +630,15 @@
 				badgeLabel += ' ' + __('(modified)', 'typost-paragraph-styles');
 			}
 
-			return el('div', { className: 'typost-ps-panel' },
+			return el('div', { className: 'typost-ps-panel', ref: panelRef },
 				el('div', { className: 'typost-ps-panel-inner' },
 					el('div', { className: 'typost-ps-panel-label' },
 						__('Paragraph Style', 'typost-paragraph-styles')
 					),
-					// Style badge
-					el('div', { className: 'typost-ps-badge' + (modified ? ' typost-ps-badge--modified' : '') },
+					// Style badge. Focusable from script only, so focus can
+					// land on it (and a screen reader read the style) after
+					// the action that showed it
+					el('div', { className: 'typost-ps-badge' + (modified ? ' typost-ps-badge--modified' : ''), tabIndex: -1 },
 						el('span', { className: 'typost-ps-badge-name' }, badgeLabel),
 						el('span', { className: 'typost-ps-badge-class' }, '.typost-ps-' + activeStyle.id)
 					),
@@ -578,6 +687,7 @@
 							el(Button, {
 								variant: 'link',
 								onClick: function() {
+									keepFocusInPanel();
 									setIsSaveAsNew(false);
 									setSaveAsNewName('');
 								},
@@ -590,7 +700,7 @@
 		}
 
 		// No active style — show dropdown + save option
-		return el('div', { className: 'typost-ps-panel' },
+		return el('div', { className: 'typost-ps-panel', ref: panelRef },
 			el('div', { className: 'typost-ps-panel-inner' },
 				el('div', { className: 'typost-ps-panel-label' },
 					__('Paragraph Style', 'typost-paragraph-styles')
@@ -617,7 +727,10 @@
 				!isShowSave && el(Button, {
 					variant: 'secondary',
 					className: 'typost-ps-save-btn',
-					onClick: function() { setShowSave(true); },
+					onClick: function() {
+						keepFocusInPanel();
+						setShowSave(true);
+					},
 					size: 'small',
 				}, __('Save Current Settings as Style', 'typost-paragraph-styles')),
 				isShowSave && el('div', { className: 'typost-ps-save-form' },
@@ -638,6 +751,7 @@
 						el(Button, {
 							variant: 'link',
 							onClick: function() {
+								keepFocusInPanel();
 								setShowSave(false);
 								setStyleName('');
 							},
@@ -945,8 +1059,9 @@
 			var state = window.typostHooks
 				? window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType)
 				: {};
-			// No unit, as in onDetachStyle: the editor takes the style's unit
-			dispatchApply(null, editorSource, buildPropertiesFromState(state));
+			// No unit, as in onDetachStyle: the editor takes the style's unit.
+			// The block's own font, weight and font style, as in the panel
+			dispatchApply(null, editorSource, buildPropertiesFromState(resolvePanelScope(editorSource, state).state));
 			props.onClose();
 		}, [props.onClose, props.onApplied, props.clientId, applyTo, editorSource, editorType, isCoreBlock]);
 
@@ -1413,6 +1528,8 @@
 			'.typost-ps-panel .components-base-control { margin-bottom: 0; }',
 			// Style badge
 			'.typost-ps-badge { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f0f6fc; border: 1px solid #c8d8e8; border-radius: 4px; margin-bottom: 10px; }',
+			// Focus lands on the badge after an action removes its control
+			'.typost-ps-badge:focus { outline: 2px solid #007cba; outline-offset: 1px; }',
 			'.typost-ps-badge--modified { background: #fef8ee; border-color: #e0c8a0; }',
 			'.typost-ps-badge-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
 			'.typost-ps-badge-class { font-size: 11px; font-family: monospace; color: #757575; }',

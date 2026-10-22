@@ -17,10 +17,10 @@ This installs Playwright and all required dependencies (already listed in `devDe
 ### 2. Install Playwright Browsers
 
 ```bash
-npx playwright install chromium
+npx playwright install chromium firefox
 ```
 
-This downloads the Chromium browser binary required for running tests.
+This downloads the Chromium and Firefox browser binaries required for running tests. The `firefox-focus` project runs only the tests tagged `@firefox`, which check keyboard focus in Firefox.
 
 ### 3. Configure Credentials
 
