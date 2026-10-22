@@ -5,9 +5,9 @@
  * These functions have no side effects and can be tested independently.
  */
 
-import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit } from '../../assets/js/font-size-units.js';
+import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit, buildInlineFontSizeValue, buildInlineFontSizeAttributes } from '../../assets/js/font-size-units.js';
 import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
-import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from '../../assets/js/text-case.js';
+import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseAttributes } from '../../assets/js/text-case.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -2287,6 +2287,15 @@ export function buildQftEditorState(s) {
 		? parseInt(source.inlineFontId, 10)
 		: (source.fontId || 0);
 	const activeFontId = explicitFontId || source.inheritedFontId || 0;
+	// An expanded range the Quick Feature Toggles apply to (#303)
+	const range = source.selectionRange;
+	const hasSelection = !!(range && range.end > range.start);
+	const styles = source.paragraphStyles ||
+		(typeof window !== 'undefined' && window.typostData ? window.typostData.paragraphStyles : null);
+	let selectionStyleId = parseInt(source.selectionStyleId, 10) || 0;
+	if (source.selectionStyleId === undefined && hasSelection) {
+		selectionStyleId = findCoveringParagraphStyleId(source.content, range.start, range.end);
+	}
 
 	return {
 		editorType: 'qft',
@@ -2336,9 +2345,27 @@ export function buildQftEditorState(s) {
 		paragraphStyleId: styleIdMatch ? parseInt(styleIdMatch[1], 10) : 0,
 		// Style on the selected text itself (a data-style-id span), as
 		// opposed to the block-level style above. Consumers that apply to a
-		// selection (the toolbar style browser) read this one, so they do not
-		// report the block's style as "active" for text that carries none.
-		selectionParagraphStyleId: parseInt(source.selectionStyleId, 10) || 0,
+		// selection (the toolbar style browser, the Quick Feature Toggles'
+		// Paragraph Style panel) read this one, so they do not report the
+		// block's style as "active" for text that carries none.
+		selectionParagraphStyleId: selectionStyleId,
+		// Text is selected in this block (#303). The Paragraph Style panel
+		// in the Quick Feature Toggles then works on the selection: it
+		// captures and diffs `selection` (the values set on the selected
+		// text, resolveSelectionStyleState) and applies with applyTo
+		// 'selection'. The other keys keep their meaning.
+		hasSelection,
+		selection: hasSelection ? resolveSelectionStyleState(source.content, range.start, range.end, styles) : null,
+		// The block's own font, weight and font style, for the panels that
+		// work on the whole block. The explicit keys above take them from
+		// the selected text first, so the Inspector's panel showed
+		// "(modified)" for a selected word with its own weight, and its
+		// Save stored that weight for the whole block.
+		block: {
+			explicitFontId: source.fontId || 0,
+			explicitFontWeight: String(source.fontWeight || ''),
+			explicitFontStyle: source.fontStyle || ''
+		},
 		fontVariationSettings: source.fontVariationSettings || '',
 		// Hanging initial (#242), block-level only: ::first-letter cannot
 		// reach an inline span, so the inline editor never reports this key
@@ -3881,6 +3908,45 @@ export function countParagraphStyleConflicts(htmlContent, start, end) {
 }
 
 /**
+ * Whether the whole selection carries one set of styling (#303).
+ *
+ * True when every span.typost-styled that the selection touches covers the
+ * whole selection, so a style saved from the selection's values
+ * (resolveSelectionStyleState) describes all of it. Applying that style then
+ * replaces nothing the author can see, and the conflict confirm is skipped.
+ * A span with a case of its own makes it false: the capture leaves case out,
+ * so the style would replace it.
+ *
+ * @since 2.3.4
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @returns {boolean}
+ */
+export function selectionHasOneStyleSet(htmlContent, start, end) {
+	if (!htmlContent || !(end > start)) {
+		return false;
+	}
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
+	return Array.prototype.slice.call(container.querySelectorAll('span.typost-styled')).every((span) => {
+		const range = spanTextRange(span, textMap, breakMap);
+		if (!range || range.end <= start || range.start >= end) {
+			return true;
+		}
+		if (range.start > start || range.end < end) {
+			return false;
+		}
+		const declared = parseStyleString(span.getAttribute('style'));
+		return !CASE_DATA_ATTRIBUTES.some((attr) => span.hasAttribute(attr)) &&
+			!CASE_CSS_PROPERTIES.some((prop) => prop in declared);
+	});
+}
+
+/**
  * The paragraph style that covers a whole selection: the data-style-id on
  * the innermost span containing [start, end) or on one of its ancestors.
  *
@@ -3927,6 +3993,385 @@ export function findCoveringParagraphStyleId(htmlContent, start, end) {
 		node = node.parentNode;
 	}
 	return 0;
+}
+
+/**
+ * The style values set on the selected text itself, as an editor state the
+ * Paragraph Styles panel can capture and diff (#303).
+ *
+ * The Quick Feature Toggles style the selection, so their panel must save a
+ * style from the selection, not from the block. Only values set on the text
+ * count: a value the text inherits from the block or the theme is not
+ * stored, in the same way the inline editor on a core block captures only
+ * its span (#278).
+ *
+ * The values are read from the innermost span.typost-styled that overlaps
+ * the selection (the rule parseInlineStylesAtCursor() uses, so a selection
+ * across runs gives the values the controls show), then outward through its
+ * ancestors. For each property the first span that renders it wins:
+ *
+ * - A span without a data-style-id renders its data-* attributes (and the
+ *   letter-spacing, line-height and font-feature-settings declarations the
+ *   parser also reads).
+ * - On a span with a data-style-id a data-* attribute renders only when the
+ *   span's style attribute declares the property, because that declaration
+ *   beats the style's class (see resolveSpanStoredFontWeight). Then the
+ *   style itself sets every property it stores. A span that the selection
+ *   apply wrapped carries only the data-style-id, so its values come from
+ *   the style and the "(modified)" check reads it as unmodified.
+ *
+ * Raw data-feature-settings (glyph alternates) and data-fitscale sizes are
+ * glyph-level, as in spanHasParagraphStyleOverrides(), and are not read.
+ * The hang (block-only, #242) and case (no Quick Feature Toggles control for
+ * selected text, #214) keys are left out, so the diff skips them and Update
+ * Style keeps the style's own values.
+ *
+ * @since 2.3.4
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @param {Array}  styles      Stored paragraph styles
+ * @returns {Object|null} Editor state; null for no content or a caret only
+ */
+export function resolveSelectionStyleState(htmlContent, start, end, styles) {
+	if (!htmlContent || !(end > start)) {
+		return null;
+	}
+	const state = {
+		fontId: 0,
+		fontWeight: '',
+		fontStyle: '',
+		fontSize: 'inherit',
+		fontSizeMin: 0,
+		fontSizePreferred: 0,
+		fontSizeMax: 0,
+		fitMaxSize: 0,
+		letterSpacing: 0,
+		lineHeight: 0,
+		features: [],
+		fontVariationSettings: ''
+	};
+	const done = {};
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		const textMap = buildTextOffsetMap(container, doc);
+
+		// The innermost overlapping span (same rule as parseInlineStylesAtCursor)
+		let span = null;
+		let spanLength = Infinity;
+		container.querySelectorAll('span.typost-styled').forEach((candidate) => {
+			let candidateStart = Infinity;
+			let candidateEnd = -1;
+			textMap.forEach(({ node, start: nodeStart, end: nodeEnd }) => {
+				if (candidate.contains(node)) {
+					candidateStart = Math.min(candidateStart, nodeStart);
+					candidateEnd = Math.max(candidateEnd, nodeEnd);
+				}
+			});
+			if (!(start < candidateEnd && end > candidateStart)) {
+				return;
+			}
+			const length = candidateEnd - candidateStart;
+			if (length < spanLength || (length === spanLength && span && span.contains(candidate))) {
+				span = candidate;
+				spanLength = length;
+			}
+		});
+
+		while (span) {
+			const styleAttr = span.getAttribute('style') || '';
+			const declared = parseStyleString(styleAttr);
+			const styleId = span.getAttribute('data-style-id');
+			const hasStyle = !!styleId && styleId !== '0';
+			const paragraphStyle = hasStyle ? findParagraphStyleByClass(`typost-ps-${styleId}`, styles) : null;
+			const props = (paragraphStyle && paragraphStyle.properties) || {};
+			const renders = (cssProperty) => !hasStyle || cssProperty in declared;
+
+			if (!done.fontId) {
+				const own = renders('font-family') ? parseInt(span.getAttribute('data-font-id'), 10) || 0 : 0;
+				const fontId = own || parseInt(props.fontId, 10) || 0;
+				if (fontId) {
+					state.fontId = fontId;
+					done.fontId = true;
+				}
+			}
+			if (!done.fontWeight) {
+				const weight = resolveSpanStoredFontWeight({
+					dataWeight: span.getAttribute('data-fontweight'),
+					styleAttr,
+					styleId
+				}, styles);
+				if (weight.stored || weight.styleWeight) {
+					state.fontWeight = String(weight.stored || weight.styleWeight);
+					done.fontWeight = true;
+				}
+			}
+			if (!done.fontStyle) {
+				const fontStyle = (renders('font-style') && span.getAttribute('data-fontstyle')) || props.fontStyle || '';
+				if (fontStyle) {
+					state.fontStyle = fontStyle;
+					done.fontStyle = true;
+				}
+			}
+			if (!done.fontSize) {
+				const ownSize = renders('font-size') ? span.getAttribute('data-fontsize') : null;
+				if (ownSize === 'responsive') {
+					state.fontSize = 'responsive';
+					state.fontSizeMin = parseInt(span.getAttribute('data-fontsize-min'), 10) || 0;
+					state.fontSizePreferred = parseInt(span.getAttribute('data-fontsize-preferred'), 10) || 0;
+					state.fontSizeMax = parseInt(span.getAttribute('data-fontsize-max'), 10) || 0;
+					done.fontSize = true;
+				} else if (parseFixedFontSize(ownSize) !== null) {
+					state.fontSize = parseFixedFontSize(ownSize);
+					done.fontSize = true;
+				} else if (props.fontSize === 'responsive' || props.fontSize === 'fit') {
+					state.fontSize = props.fontSize;
+					state.fontSizeMin = props.fontSizeMin || 0;
+					state.fontSizePreferred = props.fontSizePreferred || 0;
+					state.fontSizeMax = props.fontSizeMax || 0;
+					state.fitMaxSize = props.fitMaxSize || 0;
+					done.fontSize = true;
+				} else if (parseFixedFontSize(props.fontSize) !== null) {
+					state.fontSize = props.fontSize;
+					done.fontSize = true;
+				}
+			}
+			if (!done.letterSpacing) {
+				const attr = renders('letter-spacing') ? span.getAttribute('data-letterspacing') : null;
+				const declaredEm = !attr && declared['letter-spacing'] ? String(declared['letter-spacing']).match(/^(-?[\d.]+)em$/) : null;
+				if (attr || declaredEm) {
+					state.letterSpacing = attr ? parseInt(attr, 10) || 0 : Math.round(parseFloat(declaredEm[1]) * 1000);
+					done.letterSpacing = true;
+				} else if (props.letterSpacing) {
+					state.letterSpacing = props.letterSpacing;
+					done.letterSpacing = true;
+				}
+			}
+			if (!done.lineHeight) {
+				const attr = renders('line-height') ? span.getAttribute('data-lineheight') : null;
+				const declaredValue = !attr && declared['line-height'] ? parseFloat(declared['line-height']) : NaN;
+				if (attr || !isNaN(declaredValue)) {
+					state.lineHeight = attr ? parseFloat(attr) || 0 : declaredValue;
+					done.lineHeight = true;
+				} else if (props.lineHeight) {
+					state.lineHeight = props.lineHeight;
+					done.lineHeight = true;
+				}
+			}
+			if (!done.features) {
+				const attr = renders('font-feature-settings') ? span.getAttribute('data-features') : null;
+				// The parser's fallback: tags from the declaration, unless it
+				// only mirrors a raw glyph alternate
+				const declaredSettings = !attr && !span.hasAttribute('data-feature-settings') ? declared['font-feature-settings'] : null;
+				if (attr || declaredSettings) {
+					state.features = attr
+						? attr.split(',').map((tag) => tag.trim()).filter(Boolean)
+						: (String(declaredSettings).match(/"[^"]+"\s+1/g) || []).map((pair) => pair.match(/"([^"]+)"/)[1]);
+					done.features = true;
+				} else if (Array.isArray(props.features) && props.features.length) {
+					state.features = props.features.slice();
+					done.features = true;
+				}
+			}
+			if (!done.fontVariationSettings) {
+				const fvs = (renders('font-variation-settings') && span.getAttribute('data-font-variation-settings')) || props.fontVariationSettings || '';
+				if (fvs) {
+					state.fontVariationSettings = fvs;
+					done.fontVariationSettings = true;
+				}
+			}
+
+			span = span.parentElement ? span.parentElement.closest('span.typost-styled') : null;
+		}
+	} catch (error) {
+		// Unparseable content: report the selection as setting nothing
+	}
+
+	// Set on the text only, so the explicit keys the panel reads (#278)
+	// carry the same values as the rendered ones
+	state.explicitFontId = state.fontId;
+	state.explicitFontWeight = state.fontWeight;
+	state.explicitFontStyle = state.fontStyle;
+	return state;
+}
+
+// The span form of each style-owned property: the data attributes it is
+// stored in and the CSS properties that render it. A span that declares one
+// of the CSS properties keeps its own value of that property.
+const DETACH_SPAN_GROUPS = [
+	{ key: 'font', attrs: ['data-font-id', 'data-font'], css: ['font-family'] },
+	{ key: 'fontWeight', attrs: ['data-fontweight'], css: ['font-weight'] },
+	{ key: 'fontStyle', attrs: ['data-fontstyle'], css: ['font-style'] },
+	{ key: 'fontSize', attrs: ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'], css: ['font-size'] },
+	{ key: 'letterSpacing', attrs: ['data-letterspacing'], css: ['letter-spacing'] },
+	{ key: 'lineHeight', attrs: ['data-lineheight'], css: ['line-height'] },
+	{ key: 'features', attrs: ['data-features'], css: ['font-feature-settings'] },
+	{ key: 'fontVariationSettings', attrs: ['data-font-variation-settings'], css: ['font-variation-settings'] },
+	{ key: 'textCase', attrs: CASE_DATA_ATTRIBUTES, css: CASE_CSS_PROPERTIES }
+];
+
+/**
+ * A style's values in span form, per DETACH_SPAN_GROUPS key: the data
+ * attributes and declarations the Quick Feature Toggles write for them.
+ * Validated like the style CSS generators, so a value the style's CSS does
+ * not render is not written either.
+ *
+ * @param {Object} props Style properties
+ * @param {string} unit  Size unit of the style ('px' or 'rem')
+ * @returns {Object} key → {attrs, declarations}
+ */
+function buildDetachedSpanValues(props, unit) {
+	const p = props || {};
+	const values = {};
+	const fontId = Math.abs(parseInt(p.fontId, 10) || 0);
+	if (fontId) {
+		values.font = { attrs: { 'data-font-id': String(fontId) }, declarations: { 'font-family': `var(--font-${fontId})` } };
+	}
+	const weightText = String(p.fontWeight === undefined || p.fontWeight === null ? '' : p.fontWeight).trim();
+	const weightNumber = Number(weightText);
+	const weight = weightText !== '' && isFinite(weightNumber) && weightNumber >= 1 && weightNumber <= 1000
+		? String(parseInt(weightText, 10))
+		: (['normal', 'bold', 'lighter', 'bolder'].indexOf(weightText) !== -1 ? weightText : '');
+	if (weight) {
+		values.fontWeight = { attrs: { 'data-fontweight': weight }, declarations: { 'font-weight': weight } };
+	}
+	if (['normal', 'italic', 'oblique'].indexOf(p.fontStyle) !== -1) {
+		values.fontStyle = { attrs: { 'data-fontstyle': p.fontStyle }, declarations: { 'font-style': p.fontStyle } };
+	}
+	const hasTrio = p.fontSizeMin !== undefined && p.fontSizePreferred !== undefined && p.fontSizeMax !== undefined;
+	if (parseFixedFontSize(p.fontSize) !== null || ((p.fontSize === 'responsive' || p.fontSize === 'fit') && hasTrio)) {
+		values.fontSize = {
+			attrs: buildInlineFontSizeAttributes(p.fontSize, p.fontSizeMin, p.fontSizePreferred, p.fontSizeMax),
+			declarations: { 'font-size': buildInlineFontSizeValue(p.fontSize, p.fontSizeMin, p.fontSizePreferred, p.fontSizeMax, unit) }
+		};
+	}
+	const spacing = parseInt(p.letterSpacing, 10) || 0;
+	if (spacing) {
+		values.letterSpacing = { attrs: { 'data-letterspacing': String(spacing) }, declarations: { 'letter-spacing': `${spacing / 1000}em` } };
+	}
+	const lineHeight = parseFloat(p.lineHeight) || 0;
+	if (lineHeight) {
+		values.lineHeight = { attrs: { 'data-lineheight': String(lineHeight) }, declarations: { 'line-height': String(lineHeight) } };
+	}
+	const tags = (Array.isArray(p.features) ? p.features : []).filter((tag) => /^[a-z0-9_-]+$/i.test(String(tag)));
+	if (tags.length) {
+		values.features = {
+			attrs: { 'data-features': tags.join(',') },
+			declarations: { 'font-feature-settings': tags.map((tag) => `"${tag}" 1`).join(', ') }
+		};
+	}
+	const axes = String(p.fontVariationSettings || '').split(',')
+		.map((pair) => pair.trim().match(/^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/))
+		.filter(Boolean)
+		.map((match) => `"${match[1]}" ${parseFloat(match[2])}`);
+	if (axes.length) {
+		values.fontVariationSettings = {
+			attrs: { 'data-font-variation-settings': axes.join(', ') },
+			declarations: { 'font-variation-settings': axes.join(', ') }
+		};
+	}
+	const caseRules = caseDeclarations(p.textCase, p.fakeSmallCaps);
+	if (caseRules.length) {
+		const declarations = {};
+		caseRules.forEach(([prop, value]) => {
+			declarations[prop] = value;
+		});
+		values.textCase = { attrs: buildInlineCaseAttributes(p.textCase, p.fakeSmallCaps), declarations };
+	}
+	return values;
+}
+
+/**
+ * Detach a paragraph style from the selected text and keep its look (#303).
+ *
+ * Every span.typost-styled that the selection touches and that carries a
+ * data-style-id loses it, and gets the style's values as its own data
+ * attributes and declarations, in the form the Quick Feature Toggles write
+ * (sizes in the style's unit, so they render as the style did). A property
+ * the span declares itself keeps the span's value: that declaration beat
+ * the style's class, so it is what the text shows. A data attribute the
+ * span kept without its declaration rendered nothing and is replaced or
+ * removed. Spans inside keep their own styling. A deleted style only loses
+ * its data-style-id, and a span left with nothing is unwrapped.
+ *
+ * Like removePropertyFromSelection(), a style span that reaches past the
+ * selection is detached as a whole. It looks the same afterwards. One
+ * exception: in a fit-to-width block the written data-fontsize is ignored
+ * (style.css), as every inline size is there, while the style's class size
+ * was not.
+ *
+ * @since 2.3.4
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @param {Array}  styles      Stored paragraph styles
+ * @returns {{success: boolean, content: string}} success: false when no
+ *          style span is in the selection
+ */
+export function detachParagraphStyleFromSelection(htmlContent, start, end, styles) {
+	if (!htmlContent || !(end > start)) {
+		return { success: false, content: htmlContent };
+	}
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const entries = buildTextOffsetMap(container, doc).concat(buildBreakOffsetMap(container, doc));
+	const targets = new Set();
+	entries.forEach(({ node, start: nodeStart, end: nodeEnd }) => {
+		if (!(nodeEnd > start && nodeStart < end)) {
+			return;
+		}
+		let parent = node.parentElement;
+		while (parent && parent !== container) {
+			if (parent.classList && parent.classList.contains('typost-styled') && parent.getAttribute('data-style-id')) {
+				targets.add(parent);
+			}
+			parent = parent.parentElement;
+		}
+	});
+	if (!targets.size) {
+		return { success: false, content: htmlContent };
+	}
+
+	targets.forEach((span) => {
+		const style = findParagraphStyleByClass(`typost-ps-${span.getAttribute('data-style-id')}`, styles);
+		span.removeAttribute('data-style-id');
+		if (!style) {
+			return;
+		}
+		const values = buildDetachedSpanValues(style.properties, resolveStyleFontSizeUnit(style));
+		const declared = parseStyleString(span.getAttribute('style'));
+		DETACH_SPAN_GROUPS.forEach((group) => {
+			if (group.css.some((prop) => prop in declared)) {
+				return;
+			}
+			group.attrs.forEach((attr) => span.removeAttribute(attr));
+			const value = values[group.key];
+			if (!value) {
+				return;
+			}
+			Object.keys(value.attrs).forEach((attr) => span.setAttribute(attr, value.attrs[attr]));
+			Object.assign(declared, value.declarations);
+		});
+		if (Object.keys(declared).length) {
+			span.setAttribute('style', buildStyleString(declared));
+		}
+	});
+
+	// A span with nothing left (a style without values) is unwrapped
+	targets.forEach((span) => {
+		const left = Array.prototype.some.call(span.attributes, (attr) => attr.name !== 'class');
+		if (!left && span.parentNode) {
+			while (span.firstChild) {
+				span.parentNode.insertBefore(span.firstChild, span);
+			}
+			span.parentNode.removeChild(span);
+		}
+	});
+
+	return { success: true, content: container.innerHTML };
 }
 
 /**

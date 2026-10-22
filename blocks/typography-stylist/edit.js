@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -481,12 +481,13 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				}
 				// Selection-scoped paragraph style. Styles are block-level by
 				// nature, so this only happens when the sender explicitly asks
-				// for it (applyTo: 'selection') — the sidebar dropdown and the
-				// existing panels stay block-level. Without it, styling one
+				// for it (applyTo: 'selection'): the style browser and the
+				// Quick Feature Toggles' panel with text selected (#303). The
+				// Inspector's panel stays block-level. Without it, styling one
 				// selected word restyled every neighbouring word that happened
 				// to carry no explicit styling of its own.
 				if (e.detail.applyTo === 'selection' && e.detail.paragraphStyleId !== undefined && applyParagraphStyleRef.current) {
-					if (applyParagraphStyleRef.current(e.detail.paragraphStyleId)) {
+					if (applyParagraphStyleRef.current(e.detail.paragraphStyleId, !!e.detail.savedFromSelection)) {
 						return;
 					}
 					// No usable selection — fall through to the block-level path
@@ -978,6 +979,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		() => resolveQftApplyRange(selectionStart, selectionEnd, clientId, capturedSelection),
 		[selectionStart?.offset, selectionEnd?.offset, selectionStart?.clientId, selectionEnd?.clientId, clientId, capturedSelection] // eslint-disable-line react-hooks/exhaustive-deps -- object identities intentionally reduced to offsets
 	);
+	// The same range for the shared editor state: with text selected, the
+	// Paragraph Style panel in the Quick Feature Toggles saves and applies
+	// styles on that text, not on the block (#303)
+	qftStateRef.current.selectionRange = resolvedApplyRange && resolvedApplyRange.end > resolvedApplyRange.start ? resolvedApplyRange : null;
 
 	// Unified inline styles detection at current cursor/selection position
 	// Detects ALL properties: features, fontId, fontWeight, fontSize, letterSpacing, lineHeight, fitScale, fitShift
@@ -2881,11 +2886,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	 * string is written (that is what keeps "Update Style" able to restyle
 	 * every use at once).
 	 *
+	 * Detaching writes the style's values onto the text in place of its
+	 * data-style-id (detachParagraphStyleFromSelection), so the text keeps
+	 * its look, as Detach does on the whole block.
+	 *
 	 * @since 2.3.0
-	 * @param {number} styleId Paragraph style ID (0 detaches)
+	 * @param {number}  styleId            Paragraph style ID (0 detaches)
+	 * @param {boolean} savedFromSelection The style was just saved from this selection (#303)
 	 * @return {boolean} Whether the style was applied inline
 	 */
-	const applyInlineParagraphStyle = (styleId) => {
+	const applyInlineParagraphStyle = (styleId, savedFromSelection = false) => {
 		if (!content || !resolvedApplyRange) return false;
 
 		const start = resolvedApplyRange.start;
@@ -2894,11 +2904,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 		const id = parseInt(styleId, 10);
 
-		// Detaching: strip the attribute from the selection
+		// Detaching: replace the style with its values on the selection
 		if (!id) {
-			const removed = removePropertyFromSelection(content, start, end, 'data-style-id', '');
-			if (removed.success) {
-				setAttributes({ content: removed.content });
+			const detached = detachParagraphStyleFromSelection(content, start, end, window.typostData && window.typostData.paragraphStyles);
+			if (detached.success) {
+				setAttributes({ content: detached.content });
 				originalContentRef.current = null;
 				return true;
 			}
@@ -2910,8 +2920,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// inline declarations beat the style's CSS class in the cascade, so
 		// the style visibly skipped it. Ask before replacing that styling;
 		// a cancel counts as handled so the style is NOT applied block-level.
+		// A style just saved from a selection with one set of values was
+		// built from that styling, so it replaces nothing visible and the
+		// question is skipped (#303); the strip below still runs.
 		const conflicts = countParagraphStyleConflicts(content, start, end);
-		if (conflicts > 0) {
+		if (conflicts > 0 && !(savedFromSelection && selectionHasOneStyleSet(content, start, end))) {
 			const proceed = window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));
 			if (!proceed) {
 				// Tell the panel that dispatched the apply, so its badge does

@@ -816,6 +816,88 @@ describe('resolveBrowserActiveStyleId (browser scope indicator)', () => {
 	});
 });
 
+describe('resolvePanelScope (#303)', () => {
+	const { resolvePanelScope } = require('../assets/js/lib/ps-utils.js');
+	const selectionState = { fontWeight: '700', explicitFontWeight: '700' };
+	const withSelection = {
+		paragraphStyleId: 4,
+		selectionParagraphStyleId: 7,
+		explicitFontWeight: '400',
+		hasSelection: true,
+		selection: selectionState,
+	};
+
+	test('the Quick Feature Toggles panel with text selected works on the selection', () => {
+		expect(resolvePanelScope('qft', withSelection)).toEqual({
+			applyTo: 'selection',
+			state: selectionState,
+			activeStyleId: 7,
+		});
+	});
+
+	test('the Quick Feature Toggles panel with only a caret is block-level', () => {
+		const caret = { paragraphStyleId: 4, selectionParagraphStyleId: 0, hasSelection: false, selection: null };
+		expect(resolvePanelScope('qft', caret)).toEqual({ applyTo: undefined, state: caret, activeStyleId: 4 });
+	});
+
+	test('the Inspector panel is block-level with text selected', () => {
+		expect(resolvePanelScope('inspector', withSelection)).toEqual({ applyTo: undefined, state: withSelection, activeStyleId: 4 });
+	});
+
+	test('the inline panel keeps its host state and needs no flag', () => {
+		const inline = { paragraphStyleId: 5, selectionParagraphStyleId: 5, hasSelection: true };
+		expect(resolvePanelScope('inline', inline)).toEqual({ applyTo: undefined, state: inline, activeStyleId: 5 });
+	});
+
+	test('a selection without a selection state captures nothing, never the block', () => {
+		const scope = resolvePanelScope('qft', { paragraphStyleId: 4, explicitFontWeight: '400', hasSelection: true });
+		expect(scope.applyTo).toBe('selection');
+		expect(scope.state).toEqual({});
+		expect(scope.activeStyleId).toBe(0);
+	});
+
+	test('a state that predates the keys is block-level', () => {
+		expect(resolvePanelScope('qft', { paragraphStyleId: 4 })).toEqual({ applyTo: undefined, state: { paragraphStyleId: 4 }, activeStyleId: 4 });
+		expect(resolvePanelScope('qft', null).applyTo).toBeUndefined();
+	});
+
+	test('block-level in the block takes the block\'s own font, weight and font style', () => {
+		const state = {
+			paragraphStyleId: 4,
+			explicitFontId: 40,
+			explicitFontWeight: '700',
+			explicitFontStyle: 'italic',
+			letterSpacing: 20,
+			hasSelection: false,
+			block: { explicitFontId: 12, explicitFontWeight: '300', explicitFontStyle: '' },
+		};
+		['qft', 'inspector'].forEach((source) => {
+			const scope = resolvePanelScope(source, state);
+			expect([scope.state.explicitFontId, scope.state.explicitFontWeight, scope.state.explicitFontStyle]).toEqual([12, '300', '']);
+			expect(scope.state.letterSpacing).toBe(20);
+		});
+		// The state itself is not changed
+		expect(state.explicitFontWeight).toBe('700');
+		// The inline editor has no block of its own
+		expect(resolvePanelScope('inline', state).state.explicitFontWeight).toBe('700');
+	});
+});
+
+describe('buildApplyEventDetail: savedFromSelection (#303)', () => {
+	const { buildApplyEventDetail } = require('../assets/js/lib/ps-utils.js');
+	const style = { id: 9, properties: { fontWeight: '700' } };
+
+	test('marks a style just saved from the selection', () => {
+		expect(buildApplyEventDetail(style, 'qft', undefined, 'selection', true).savedFromSelection).toBe(true);
+		expect(buildApplyEventDetail(style, 'inline', undefined, undefined, true).savedFromSelection).toBe(true);
+	});
+
+	test('a picked style and a detach carry no mark', () => {
+		expect(buildApplyEventDetail(style, 'qft', undefined, 'selection')).not.toHaveProperty('savedFromSelection');
+		expect(buildApplyEventDetail(null, 'qft', {}, 'selection', true)).not.toHaveProperty('savedFromSelection');
+	});
+});
+
 describe('filterParagraphStyles (browser search)', () => {
 	const styles = [
 		{ id: 2, name: 'Display Swash', properties: { fontId: 1 } },

@@ -841,14 +841,22 @@
 	 * normalizeApplyProperties). Detaching sends the given properties
 	 * as-is — it intentionally re-applies the current editor state as
 	 * inline styling, so there is no stale state to reset.
+	 *
+	 * savedFromSelection marks a style the panel has just saved from the
+	 * selected text (Save, Save as New). The host then skips its "replaces
+	 * that styling" question when the selection has one set of values: the
+	 * style was built from them (#303).
 	 */
-	function buildApplyEventDetail(style, editorSource, detachProperties, applyTo) {
+	function buildApplyEventDetail(style, editorSource, detachProperties, applyTo, savedFromSelection) {
 		var source = editorSource === 'inspector' ? 'inspector' : editorSource;
 		// 'selection' asks the host to wrap the selected text rather than
 		// restyle the whole block. Only set when the caller knows a selection
 		// was captured; anything else stays block-level, which is what a
 		// paragraph style normally means.
 		var scope = applyTo === 'selection' ? { applyTo: 'selection' } : {};
+		if (style && savedFromSelection) {
+			scope.savedFromSelection = true;
+		}
 
 		if (!style) {
 			return Object.assign({
@@ -1196,6 +1204,44 @@
 			return parseInt(s.selectionParagraphStyleId, 10) || 0;
 		}
 		return parseInt(s.paragraphStyleId, 10) || 0;
+	}
+
+	/**
+	 * What the Paragraph Style panel works on (#303).
+	 *
+	 * Every other control in the Quick Feature Toggles styles the selected
+	 * text, so with text selected their panel does too: it captures and
+	 * diffs the values set on the selection (state.selection), shows the
+	 * style on the selection, and applies with applyTo 'selection'. With
+	 * only a caret it stays block-level. The Inspector's panel is always
+	 * block-level, and the inline editor's host applies to its own saved
+	 * selection, so neither needs the flag.
+	 *
+	 * Block-level in the Typography Stylist block ('qft' with a caret,
+	 * 'inspector') reads the block's own font, weight and font style
+	 * (state.block), not the selected text's, which the shared explicit keys
+	 * report first.
+	 *
+	 * @param {string} editorSource 'qft' | 'inspector' | 'inline'
+	 * @param {Object} state        Editor state from typost_current_editor_state
+	 * @return {{applyTo: (string|undefined), state: Object, activeStyleId: number}}
+	 *   applyTo for buildApplyEventDetail, the state to capture and diff,
+	 *   and the style to show as active (0 for none)
+	 */
+	function resolvePanelScope(editorSource, state) {
+		var s = state || {};
+		var onSelection = editorSource === 'qft' && !!s.hasSelection;
+		var blockState = s;
+		if ((editorSource === 'qft' || editorSource === 'inspector') && s.block) {
+			blockState = Object.assign({}, s, s.block);
+		}
+		return {
+			applyTo: onSelection ? 'selection' : undefined,
+			// Never the block's values with text selected: an empty
+			// selection state captures nothing, which is what the text sets
+			state: onSelection ? (s.selection || {}) : blockState,
+			activeStyleId: resolveBrowserActiveStyleId(s, onSelection),
+		};
 	}
 
 	// -------------------------------------------------------------------------
@@ -1724,6 +1770,7 @@
 		isSmallCapsCase: isSmallCapsCase,
 		caseDeclarations: caseDeclarations,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
+		resolvePanelScope: resolvePanelScope,
 		CORE_STYLE_BLOCKS: CORE_STYLE_BLOCKS,
 		isCoreStyleBlock: isCoreStyleBlock,
 		getCoreBlockStyleRef: getCoreBlockStyleRef,
