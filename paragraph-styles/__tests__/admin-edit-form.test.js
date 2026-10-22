@@ -502,6 +502,18 @@ describe('withUserLocale', () => {
 	});
 });
 
+describe('admin-card requests are JSON requests (#296)', () => {
+	// determine_locale() ignores _locale=user unless the request sends a JSON
+	// Accept or Content-Type header; dataType: 'json' sets the Accept header.
+	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../assets/js/admin.js'), 'utf8');
+	const calls = source.split('$.ajax({').slice(1).map((rest) => rest.slice(0, rest.indexOf('});'))).filter((call) => call.includes('withUserLocale('));
+
+	test('both admin-card requests send dataType json', () => {
+		expect(calls).toHaveLength(2);
+		calls.forEach((call) => expect(call).toMatch(/\bdataType: 'json',/));
+	});
+});
+
 describe('card refresh', () => {
 	test('replaceCardParts swaps the details and the preview', () => {
 		const card = document.createElement('div');

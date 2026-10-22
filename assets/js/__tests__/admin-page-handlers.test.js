@@ -113,7 +113,8 @@ describe('Replacements tab: toggle global load (E-15)', () => {
 		expect($.ajax).toHaveBeenCalledTimes(1);
 		const settings = $.ajax.mock.calls[0][0];
 		expect(settings.method).toBe('PATCH');
-		expect(settings.url).toBe('/wp-json/typost/v1/font-replacements/42');
+		expect(settings.url).toBe('/wp-json/typost/v1/font-replacements/42?_locale=user');
+		expect(settings.dataType).toBe('json');
 		expect(JSON.parse(settings.data)).toEqual({ global_load: true });
 
 		// jQuery invokes ajax callbacks with the settings object as `this`

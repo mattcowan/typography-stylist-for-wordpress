@@ -25,6 +25,22 @@ describe('withUserLocale', () => {
 	});
 });
 
+describe('REST requests ask for the user\'s language (#296)', () => {
+	// determine_locale() reads _locale=user only on a JSON request, so every
+	// call needs the URL parameter and dataType: 'json' (the Accept header).
+	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../admin-page.js'), 'utf8');
+	const calls = source.split('$.ajax({').slice(1).map((rest) => rest.slice(0, rest.indexOf('});')));
+
+	test('the file makes REST calls', () => {
+		expect(calls.length).toBeGreaterThan(20);
+	});
+
+	test.each(calls.map((call) => [call.match(/url: (.*),/)[1], call]))('%s', (url, call) => {
+		expect(url).toMatch(/^typostWithUserLocale\(typostAdmin\.restUrl \+ .*\)$/);
+		expect(call).toMatch(/\bdataType: 'json',/);
+	});
+});
+
 describe('formatDetectWeightsSummary', () => {
 	const template = 'Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.';
 
