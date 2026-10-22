@@ -25,6 +25,8 @@ function typostFormatDetectWeightsSummary(response, template) {
  * determine_locale() reads _locale=user only on a JSON request
  * (wp_is_json_request(): a JSON Accept or Content-Type header), so the
  * request must also send one — dataType: 'json' sets the Accept header.
+ * The Paragraph Styles and Variable Fonts admin scripts keep twins; a
+ * parity test keeps them equal.
  *
  * @param {string} url
  * @return {string}

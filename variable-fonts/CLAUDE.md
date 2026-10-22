@@ -23,6 +23,7 @@ Self-contained module added in v2.1, structured like the Glyphs Panel: it consum
 ## Conventions
 
 - REST capability is deliberately `manage_options` (axes are site-wide config), unlike core's `edit_posts` font CRUD — rationale documented at `check_permissions()`.
+- `admin.js` sends every REST call through its `withUserLocale()` (twin of core's `typostWithUserLocale()`, held equal by a parity test in core's `admin-page.test.js`) with `dataType: 'json'`, so the re-detect error shown next to the button uses the admin's language (#296). `__tests__/admin-requests.test.js` fails on a call that skips either.
 - `REGISTERED_AXES` lives once, as a class constant on `Typost_Variable_Fonts`; the parser references it.
 - No `error_log()` (repo policy) — parser failures degrade silently to "no axes".
 - Pure JS logic lives in `assets/js/lib/variation-utils.js` (UMD-lite: `window.typostVFUtils` + CommonJS export), enqueued as a dependency of `editor.js` and covered by Jest in `__tests__/` (auto-collected by core `npm test`).
