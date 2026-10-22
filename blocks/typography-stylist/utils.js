@@ -4293,8 +4293,9 @@ function buildDetachedSpanValues(props, unit) {
  * the span declares itself keeps the span's value: that declaration beat
  * the style's class, so it is what the text shows. A data attribute the
  * span kept without its declaration rendered nothing and is replaced or
- * removed. Spans inside keep their own styling. A deleted style only loses
- * its data-style-id, and a span left with nothing is unwrapped.
+ * removed. Spans inside keep their own styling. A deleted style writes no
+ * values (its span still loses those data attributes), and a span left with
+ * nothing is unwrapped.
  *
  * Like removePropertyFromSelection(), a style span that reaches past the
  * selection is detached as a whole. It looks the same afterwards. One
@@ -4338,10 +4339,10 @@ export function detachParagraphStyleFromSelection(htmlContent, start, end, style
 	targets.forEach((span) => {
 		const style = findParagraphStyleByClass(`typost-ps-${span.getAttribute('data-style-id')}`, styles);
 		span.removeAttribute('data-style-id');
-		if (!style) {
-			return;
-		}
-		const values = buildDetachedSpanValues(style.properties, resolveStyleFontSizeUnit(style));
+		// A deleted style writes no values, but its span still loses the
+		// data attributes that rendered nothing: read as the span's own
+		// once the data-style-id is gone, a later capture would store them
+		const values = style ? buildDetachedSpanValues(style.properties, resolveStyleFontSizeUnit(style)) : {};
 		const declared = parseStyleString(span.getAttribute('style'));
 		DETACH_SPAN_GROUPS.forEach((group) => {
 			if (group.css.some((prop) => prop in declared)) {

@@ -478,6 +478,15 @@ describe('detachParagraphStyleFromSelection', () => {
 		expect(own).toBe('<span class="typost-styled" data-letterspacing="50" style="letter-spacing: 0.05em">T</span>he');
 	});
 
+	test('a deleted style\'s span loses the data attributes that rendered nothing (PR #311 review)', () => {
+		// data-letterspacing="10" has no declaration: under the data-style-id it
+		// rendered nothing, so after Detach it must not read as the span's value
+		const html = '<span class="typost-styled" data-style-id="99" data-letterspacing="10" data-fontweight="700" style="font-weight: 700">T</span>he';
+		const result = detachParagraphStyleFromSelection(html, 0, 1, DETACH_STYLES).content;
+		expect(result).toBe('<span class="typost-styled" data-fontweight="700" style="font-weight: 700">T</span>he');
+		expect(resolveSelectionStyleState(result, 0, 1, DETACH_STYLES).letterSpacing).toBe(0);
+	});
+
 	test('does nothing without a style span in the selection', () => {
 		const html = 'The <span class="typost-styled" data-style-id="3">quick</span>';
 		expect(detachParagraphStyleFromSelection(html, 0, 3, DETACH_STYLES)).toEqual({ success: false, content: html });
