@@ -15,6 +15,20 @@
     var registeredAxes = (window.typostVFAdmin || {}).registeredAxes || {};
 
     /**
+     * Ask a REST route to answer in the user's language, not the site's.
+     * determine_locale() reads _locale=user only on a JSON request
+     * (wp_is_json_request(): a JSON Accept or Content-Type header), so the
+     * request must also send one — dataType: 'json' sets the Accept header.
+     * Twin of core's typostWithUserLocale(); a parity test keeps them equal.
+     *
+     * @param {string} url
+     * @return {string}
+     */
+    function withUserLocale(url) {
+        return url + (url.indexOf('?') === -1 ? '?' : '&') + '_locale=user';
+    }
+
+    /**
      * Create a new empty axis row HTML string.
      *
      * @return {string} HTML for a new axis row.
@@ -227,7 +241,8 @@
     function saveAxesRequest(fontStringId, payload) {
         var run = saveChain.then(function() {
             return Promise.resolve($.ajax({
-                url: typostVFAdmin.restUrl + fontStringId,
+                url: withUserLocale(typostVFAdmin.restUrl + fontStringId),
+                dataType: 'json',
                 method: 'POST',
                 data: JSON.stringify(payload),
                 contentType: 'application/json',
@@ -253,7 +268,8 @@
      */
     function detectViaServer(fontStringId) {
         return Promise.resolve($.ajax({
-            url: typostVFAdmin.restUrl + fontStringId + '/redetect',
+            url: withUserLocale(typostVFAdmin.restUrl + fontStringId + '/redetect'),
+            dataType: 'json',
             method: 'POST',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostVFAdmin.nonce);
@@ -558,7 +574,8 @@
                     // request via waitUntil() makes core hold its reload
                     // until the save settles (no more racing a timeout).
                     var deleteRequest = $.ajax({
-                        url: typostVFAdmin.restUrl + fontId,
+                        url: withUserLocale(typostVFAdmin.restUrl + fontId),
+                        dataType: 'json',
                         method: 'DELETE',
                         beforeSend: function(xhr) {
                             xhr.setRequestHeader('X-WP-Nonce', typostVFAdmin.nonce);

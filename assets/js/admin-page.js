@@ -21,6 +21,21 @@ function typostFormatDetectWeightsSummary(response, template) {
 }
 
 /**
+ * Ask a REST route to answer in the user's language, not the site's.
+ * determine_locale() reads _locale=user only on a JSON request
+ * (wp_is_json_request(): a JSON Accept or Content-Type header), so the
+ * request must also send one — dataType: 'json' sets the Accept header.
+ * The Paragraph Styles and Variable Fonts admin scripts keep twins; a
+ * parity test keeps them equal.
+ *
+ * @param {string} url
+ * @return {string}
+ */
+function typostWithUserLocale(url) {
+    return url + (url.indexOf('?') === -1 ? '?' : '&') + '_locale=user';
+}
+
+/**
  * Merge an admin refresh REST payload into the typostAdmin data object.
  *
  * Only the known data keys are copied; anything else in the payload (HTML
@@ -421,6 +436,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof t
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
+        withUserLocale: typostWithUserLocale,
         mergeAdminRefreshData: typostMergeAdminRefreshData,
         resolvePreviewSelection: typostResolvePreviewSelection,
         attachDismissButtons: typostAttachDismissButtons,
@@ -689,7 +705,8 @@ jQuery(document).ready(function($) {
         adminRefreshInFlight = true;
 
         $.ajax({
-            url: typostAdmin.restUrl + 'admin/refresh',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'admin/refresh'),
+            dataType: 'json',
             method: 'GET',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -797,7 +814,8 @@ jQuery(document).ready(function($) {
 
         // Upload via REST API
         $.ajax({
-            url: typostAdmin.restUrl + 'fonts',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'fonts'),
+            dataType: 'json',
             method: 'POST',
             data: formData,
             processData: false,
@@ -926,7 +944,8 @@ jQuery(document).ready(function($) {
 
         var fontId = currentVisibilityFontId;
         $.ajax({
-            url: typostAdmin.restUrl + 'font-feature-visibility/' + fontId,
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-feature-visibility/' + fontId),
+            dataType: 'json',
             method: 'POST',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -1058,7 +1077,8 @@ jQuery(document).ready(function($) {
         });
 
         $.ajax({
-            url: typostAdmin.restUrl + 'font-feature-visibility/' + fontNumericId,
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-feature-visibility/' + fontNumericId),
+            dataType: 'json',
             method: 'POST',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -1149,7 +1169,8 @@ jQuery(document).ready(function($) {
                     }
                 });
                 $.ajax({
-                    url: typostAdmin.restUrl + 'font-order',
+                    url: typostWithUserLocale(typostAdmin.restUrl + 'font-order'),
+                    dataType: 'json',
                     method: 'POST',
                     beforeSend: function(xhr) {
                         xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -1356,7 +1377,8 @@ jQuery(document).ready(function($) {
 
         // Add via REST API
         $.ajax({
-            url: typostAdmin.restUrl + 'adobe-fonts',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'adobe-fonts'),
+            dataType: 'json',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
@@ -1433,7 +1455,8 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/load-on-all-pages'),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
@@ -1505,7 +1528,8 @@ jQuery(document).ready(function($) {
 
         // Add via REST API
         $.ajax({
-            url: typostAdmin.restUrl + 'manual-fonts',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'manual-fonts'),
+            dataType: 'json',
             method: 'POST',
             data: JSON.stringify(data),
             contentType: 'application/json',
@@ -1574,7 +1598,8 @@ jQuery(document).ready(function($) {
 
         // Update via REST API
         $.ajax({
-            url: typostAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'fonts/' + fontId + '/load-on-all-pages'),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({
                 load_on_all_pages: loadOnAllPages
@@ -1655,7 +1680,8 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
-            url: typostAdmin.restUrl + 'fonts/' + fontId + '/fallback',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'fonts/' + fontId + '/fallback'),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks, available_weights: availableWeights }),
             contentType: 'application/json',
@@ -1751,7 +1777,8 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
-            url: typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'adobe-fonts/' + fontId + '/fallback'),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({ fallbacks: fallbacks, available_weights: availableWeights }),
             contentType: 'application/json',
@@ -1801,7 +1828,8 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($btn, typostAdmin.strings.saving)) { return; }
 
         $.ajax({
-            url: typostAdmin.restUrl + 'manual-fonts/' + fontId,
+            url: typostWithUserLocale(typostAdmin.restUrl + 'manual-fonts/' + fontId),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({
                 font_family: fontFamily,
@@ -1999,7 +2027,8 @@ jQuery(document).ready(function($) {
 
         if (replacementId) {
             var replacementPromise = $.ajax({
-                url: typostAdmin.restUrl + 'font-replacements',
+                url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements'),
+                dataType: 'json',
                 method: 'POST',
                 data: JSON.stringify({
                     deleted_id: deleteFontContext.fontNumericId,
@@ -2026,7 +2055,8 @@ jQuery(document).ready(function($) {
 
             // Otherwise, proceed with font deletion
             $.ajax({
-                url: typostAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId,
+                url: typostWithUserLocale(typostAdmin.restUrl + deleteFontContext.endpoint + '/' + deleteFontContext.fontId),
+                dataType: 'json',
                 method: 'DELETE',
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -2088,7 +2118,8 @@ jQuery(document).ready(function($) {
 
     function loadReplacementsList() {
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements'),
+            dataType: 'json',
             method: 'GET',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -2143,7 +2174,8 @@ jQuery(document).ready(function($) {
      */
     function loadUnassignedFonts() {
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements/orphans',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements/orphans'),
+            dataType: 'json',
             method: 'GET',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -2201,7 +2233,8 @@ jQuery(document).ready(function($) {
         if (!confirm(adminString('confirmRemoveReplacement', 'Remove this font replacement mapping?'))) return;
 
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements/' + deletedId),
+            dataType: 'json',
             method: 'DELETE',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -2225,7 +2258,8 @@ jQuery(document).ready(function($) {
         var globalLoad = $checkbox.is(':checked');
 
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements/' + deletedId,
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements/' + deletedId),
+            dataType: 'json',
             method: 'PATCH',
             data: JSON.stringify({
                 global_load: globalLoad
@@ -2264,7 +2298,8 @@ jQuery(document).ready(function($) {
 
         // Get existing replacement mappings
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements'),
+            dataType: 'json',
             method: 'GET',
             beforeSend: function(xhr) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
@@ -2338,7 +2373,8 @@ jQuery(document).ready(function($) {
 
         // Create the replacement mapping
         $.ajax({
-            url: typostAdmin.restUrl + 'font-replacements',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements'),
+            dataType: 'json',
             method: 'POST',
             data: JSON.stringify({
                 deleted_id: parseInt(deletedId),
@@ -2373,7 +2409,8 @@ jQuery(document).ready(function($) {
 
     function wplRestCall(path, method, onSuccess, onError) {
         $.ajax({
-            url: typostAdmin.restUrl + path,
+            url: typostWithUserLocale(typostAdmin.restUrl + path),
+            dataType: 'json',
             method: method,
             contentType: 'application/json',
             beforeSend: function(xhr) {
@@ -2545,7 +2582,8 @@ jQuery(document).ready(function($) {
         });
 
         $.ajax({
-            url: typostAdmin.restUrl + 'admin/options',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'admin/options'),
+            dataType: 'json',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify($.extend(payload, {
@@ -2588,7 +2626,8 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
         $.ajax({
-            url: typostAdmin.restUrl + 'admin/accessibility',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'admin/accessibility'),
+            dataType: 'json',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -2620,7 +2659,8 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($submit, typostAdmin.strings.savingSettings)) { return; }
 
         $.ajax({
-            url: typostAdmin.restUrl + 'admin/clear-cache',
+            url: typostWithUserLocale(typostAdmin.restUrl + 'admin/clear-cache'),
+            dataType: 'json',
             method: 'POST',
             contentType: 'application/json',
             beforeSend: function(xhr) {

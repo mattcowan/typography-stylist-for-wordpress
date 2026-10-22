@@ -214,8 +214,11 @@
 	}
 
 	/**
-	 * Ask a REST route to answer in the user's language, not the site's
-	 * (determine_locale() reads _locale=user on REST requests).
+	 * Ask a REST route to answer in the user's language, not the site's.
+	 * determine_locale() reads _locale=user only on a JSON request
+	 * (wp_is_json_request(): a JSON Accept or Content-Type header), so the
+	 * request must also send one — dataType: 'json' sets the Accept header.
+	 * Twin of core's typostWithUserLocale(); a parity test keeps them equal.
 	 *
 	 * @param {string} url
 	 * @return {string}
@@ -845,6 +848,7 @@
 	function refreshCards(styleId, done) {
 		$.ajax({
 			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
+			dataType: 'json',
 			method: 'GET',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
@@ -948,6 +952,7 @@
 		$button.attr('aria-busy', 'true');
 		$.ajax({
 			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId) + '/admin-card'),
+			dataType: 'json',
 			method: 'GET',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
@@ -1013,7 +1018,8 @@
 		}
 
 		$.ajax({
-			url: restUrl + '/' + encodeURIComponent(styleId),
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId)),
+			dataType: 'json',
 			method: 'PATCH',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
@@ -1093,7 +1099,8 @@
 		$button.prop('disabled', true);
 
 		$.ajax({
-			url: restUrl + '/' + encodeURIComponent(styleId),
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId)),
+			dataType: 'json',
 			method: 'PATCH',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);
@@ -1141,7 +1148,8 @@
 		$card.addClass('typost-ps-deleting');
 
 		$.ajax({
-			url: restUrl + '/' + encodeURIComponent(styleId),
+			url: withUserLocale(restUrl + '/' + encodeURIComponent(styleId)),
+			dataType: 'json',
 			method: 'DELETE',
 			beforeSend: function(xhr) {
 				xhr.setRequestHeader('X-WP-Nonce', nonce);

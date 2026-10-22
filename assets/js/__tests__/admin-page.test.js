@@ -9,11 +9,56 @@ global.jQuery = jest.fn(() => ({ ready: jest.fn(), on: jest.fn() }));
 
 const {
 	formatDetectWeightsSummary,
+	withUserLocale,
 	mergeAdminRefreshData,
 	resolvePreviewSelection,
 	attachDismissButtons,
 	clearSettingsMessages,
 } = require('../admin-page.js');
+
+describe('withUserLocale', () => {
+	test.each([
+		['http://example.test/wp-json/typost/v1/admin/refresh', 'http://example.test/wp-json/typost/v1/admin/refresh?_locale=user'],
+		['http://example.test/?rest_route=/typost/v1/admin/refresh', 'http://example.test/?rest_route=/typost/v1/admin/refresh&_locale=user'],
+	])('%s', (url, expected) => {
+		expect(withUserLocale(url)).toBe(expected);
+	});
+});
+
+describe('withUserLocale twins', () => {
+	// The Paragraph Styles and Variable Fonts modules keep their own copy.
+	// The Variable Fonts script is an IIFE with no exports, so its copy is
+	// read from the source and evaluated.
+	const path = require('path');
+	const psWithUserLocale = require(path.resolve(__dirname, '../../../paragraph-styles/assets/js/admin.js')).withUserLocale;
+	const vfSource = require('fs').readFileSync(path.resolve(__dirname, '../../../variable-fonts/assets/js/admin.js'), 'utf8');
+	const vfWithUserLocale = new Function(vfSource.match(/function withUserLocale\(url\) \{[\s\S]*?\n {4}\}/)[0] + '\nreturn withUserLocale;')();
+
+	test.each([
+		'http://example.test/wp-json/typost/v1/admin/refresh',
+		'http://example.test/?rest_route=/typost/v1/admin/refresh',
+		'/wp-json/typost/v1/paragraph-styles/4',
+	])('%s', (url) => {
+		expect(psWithUserLocale(url)).toBe(withUserLocale(url));
+		expect(vfWithUserLocale(url)).toBe(withUserLocale(url));
+	});
+});
+
+describe('REST requests ask for the user\'s language (#296)', () => {
+	// determine_locale() reads _locale=user only on a JSON request, so every
+	// call needs the URL parameter and dataType: 'json' (the Accept header).
+	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../admin-page.js'), 'utf8');
+	const calls = source.split('$.ajax({').slice(1).map((rest) => rest.slice(0, rest.indexOf('});')));
+
+	test('the file makes REST calls', () => {
+		expect(calls.length).toBeGreaterThan(20);
+	});
+
+	test.each(calls.map((call) => [call.match(/url: (.*),/)[1], call]))('%s', (url, call) => {
+		expect(url).toMatch(/^typostWithUserLocale\(typostAdmin\.restUrl \+ .*\)$/);
+		expect(call).toMatch(/\bdataType: 'json',/);
+	});
+});
 
 describe('formatDetectWeightsSummary', () => {
 	const template = 'Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.';

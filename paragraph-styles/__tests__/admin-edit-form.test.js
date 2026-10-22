@@ -502,6 +502,23 @@ describe('withUserLocale', () => {
 	});
 });
 
+describe('REST requests ask for the user\'s language (#296)', () => {
+	// determine_locale() reads _locale=user only on a JSON request, so every
+	// call needs the URL parameter and dataType: 'json' (the Accept header).
+	// The save, Reset to Base and delete error messages are shown in the form.
+	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../assets/js/admin.js'), 'utf8');
+	const calls = source.split('$.ajax({').slice(1).map((rest) => rest.slice(0, rest.indexOf('});')));
+
+	test('the file makes its five REST calls', () => {
+		expect(calls).toHaveLength(5);
+	});
+
+	test.each(calls.map((call) => [call.match(/url: (.*),/)[1], call]))('%s', (url, call) => {
+		expect(url).toMatch(/^withUserLocale\(restUrl \+ .*\)$/);
+		expect(call).toMatch(/\bdataType: 'json',/);
+	});
+});
+
 describe('card refresh', () => {
 	test('replaceCardParts swaps the details and the preview', () => {
 		const card = document.createElement('div');
