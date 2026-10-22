@@ -2888,7 +2888,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	 *
 	 * Detaching writes the style's values onto the text in place of its
 	 * data-style-id (detachParagraphStyleFromSelection), so the text keeps
-	 * its look, as Detach does on the whole block.
+	 * its look, as Detach does on the whole block. A selection with no
+	 * style on it detaches nothing, and the block keeps its style.
 	 *
 	 * @since 2.3.0
 	 * @param {number}  styleId            Paragraph style ID (0 detaches)
@@ -2910,9 +2911,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			if (detached.success) {
 				setAttributes({ content: detached.content });
 				originalContentRef.current = null;
-				return true;
 			}
-			return false;
+			// No style on the selected text means nothing to detach. Still
+			// handled: falling through would detach the block's style
+			// instead (#303 review)
+			return true;
 		}
 
 		// Text inside the selection that carries styling of its own (a first
@@ -2924,6 +2927,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// built from that styling, so it replaces nothing visible and the
 		// question is skipped (#303); the strip below still runs.
 		const conflicts = countParagraphStyleConflicts(content, start, end);
+		// The selection already carries this style and nothing overrides it
+		// (Update Style re-applies the style it just saved): nothing to do,
+		// and re-wrapping would only split the style's span (#303 review)
+		if (conflicts === 0 && findCoveringParagraphStyleId(content, start, end) === id) {
+			return true;
+		}
 		if (conflicts > 0 && !(savedFromSelection && selectionHasOneStyleSet(content, start, end))) {
 			const proceed = window.confirm(__('Some of the selected text has styling of its own (font, weight, size, spacing, or features). Applying the paragraph style replaces that styling so the whole selection matches the style. Continue?', 'typography-stylist'));
 			if (!proceed) {

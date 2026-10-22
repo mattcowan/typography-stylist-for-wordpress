@@ -113,45 +113,101 @@ async function saveStyleFromPanel(page, modal, name) {
 	return (await response).json();
 }
 
+// Delete the test's styles and the draft that post-new.php autosaves as
+// soon as the content changes
+async function cleanUp(page, createdStyleIds) {
+	for (const id of createdStyleIds.splice(0)) {
+		await page.evaluate((styleId) => wp.apiFetch({ path: `/typost/v1/paragraph-styles/${styleId}`, method: 'DELETE' }).catch(() => {}), id);
+	}
+	await page.evaluate(() => {
+		const postId = wp.data.select('core/editor').getCurrentPostId();
+		return postId ? wp.apiFetch({ path: `/wp/v2/posts/${postId}?force=true`, method: 'DELETE' }).catch(() => {}) : null;
+	}).catch(() => {});
+}
+
+async function saveFromOneLetter(page, createdStyleIds) {
+	await openNewPost(page);
+	const clientId = await insertBlock(page, 'The quick brown fox');
+	const weightBefore = await restOfTextWeight(page, clientId);
+
+	await selectFirstLetter(page, clientId);
+	const modal = await openQuickFeatureToggles(page);
+	await modal.getByLabel('Font Weight (for selected text)').selectOption('700');
+	await expect.poll(async () => (await readBlock(page, clientId)).content).toContain('data-fontweight="700"');
+
+	const style = await saveStyleFromPanel(page, modal, `ZZ #303 one letter ${Date.now()}`);
+	createdStyleIds.push(style.id);
+	await page.waitForTimeout(1000);
+
+	const after = await readBlock(page, clientId);
+	// The block keeps no style of its own
+	expect(after.styleClass).toBe('');
+	// The letter carries the new style
+	expect(await styledText(page, clientId, style.id)).toBe('T');
+	// The rest of the text looks as it did
+	expect(await restOfTextWeight(page, clientId)).toBe(weightBefore);
+	// The style was made from the letter's one set of values: no question
+	expect(page.__dialogs).toEqual([]);
+	// Focus stays in the panel, on the new style's badge, and Escape
+	// closes the dialog from there
+	await expect.poll(() => focusInModal(page)).toBe(true);
+	await page.keyboard.press('Escape');
+	await expect(modal).toHaveCount(0);
+}
+
+async function updateAndDetach(page, createdStyleIds) {
+	await openNewPost(page);
+	const clientId = await insertBlock(page, 'The quick brown fox');
+	await selectFirstLetter(page, clientId);
+	const modal = await openQuickFeatureToggles(page);
+	await modal.getByLabel('Font Weight (for selected text)').selectOption('700');
+	await expect.poll(async () => (await readBlock(page, clientId)).content).toContain('data-fontweight="700"');
+	const style = await saveStyleFromPanel(page, modal, `ZZ #303 detach ${Date.now()}`);
+	createdStyleIds.push(style.id);
+	const badge = modal.locator('.typost-ps-badge-name');
+	await expect(badge).toHaveText(style.name);
+
+	// Change the styled letter, then Update Style
+	await modal.getByRole('spinbutton', { name: 'Letter Spacing (for selected text)' }).fill('120');
+	await expect(badge).toHaveText(`${style.name} (modified)`);
+	await modal.getByRole('button', { name: 'Update Style' }).click();
+	await expect(badge).toHaveText(style.name);
+	// The style holds the change now, so the letter's own declaration is
+	// cleared and a later change to the style reaches it
+	await expect.poll(async () => (await readBlock(page, clientId)).content).not.toContain('data-letterspacing');
+	expect(await styledText(page, clientId, style.id)).toBe('T');
+	expect(page.__dialogs).toEqual([]);
+	await expect.poll(() => focusInModal(page)).toBe(true);
+
+	// Detach: the letter keeps the style's values as its own
+	await modal.getByRole('button', { name: 'Detach Style' }).click();
+	await expect.poll(async () => (await readBlock(page, clientId)).content).not.toContain('data-style-id');
+	const letter = await page.evaluate((id) => {
+		const holder = document.createElement('div');
+		holder.innerHTML = String(wp.data.select('core/block-editor').getBlockAttributes(id).content);
+		const span = holder.querySelector('span.typost-styled');
+		return span ? { text: span.textContent, weight: span.getAttribute('data-fontweight'), style: span.getAttribute('style') } : null;
+	}, clientId);
+	expect(letter.text).toBe('T');
+	expect(letter.weight).toBe('700');
+	expect(letter.style).toContain('font-weight: 700');
+	expect(letter.style).toContain('letter-spacing: 0.12em');
+	await expect.poll(() => focusInModal(page)).toBe(true);
+	// Escape closes the dialog from there
+	await page.keyboard.press('Escape');
+	await expect(modal).toHaveCount(0);
+}
+
 test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text selection', () => {
 	const createdStyleIds = [];
 
 	test.afterEach(async ({ page }) => {
-		for (const id of createdStyleIds.splice(0)) {
-			await page.evaluate((styleId) => wp.apiFetch({ path: `/typost/v1/paragraph-styles/${styleId}`, method: 'DELETE' }).catch(() => {}), id);
-		}
-		// post-new.php autosaves a draft as soon as the content changes
-		await page.evaluate(() => {
-			const postId = wp.data.select('core/editor').getCurrentPostId();
-			return postId ? wp.apiFetch({ path: `/wp/v2/posts/${postId}?force=true`, method: 'DELETE' }).catch(() => {}) : null;
-		}).catch(() => {});
+		await cleanUp(page, createdStyleIds);
 	});
 
-	test('Save Current Settings as Style styles only the selected letter', async ({ page }) => {
-		await openNewPost(page);
-		const clientId = await insertBlock(page, 'The quick brown fox');
-		const weightBefore = await restOfTextWeight(page, clientId);
-
-		await selectFirstLetter(page, clientId);
-		const modal = await openQuickFeatureToggles(page);
-		await modal.getByLabel('Font Weight (for selected text)').selectOption('700');
-		await expect.poll(async () => (await readBlock(page, clientId)).content).toContain('data-fontweight="700"');
-
-		const style = await saveStyleFromPanel(page, modal, `ZZ #303 one letter ${Date.now()}`);
-		createdStyleIds.push(style.id);
-		await page.waitForTimeout(1000);
-
-		const after = await readBlock(page, clientId);
-		// The block keeps no style of its own
-		expect(after.styleClass).toBe('');
-		// The letter carries the new style
-		expect(await styledText(page, clientId, style.id)).toBe('T');
-		// The rest of the text looks as it did
-		expect(await restOfTextWeight(page, clientId)).toBe(weightBefore);
-		// The style was made from the letter's one set of values: no question
-		expect(page.__dialogs).toEqual([]);
-		// Focus stays in the panel, on the new style's badge
-		await expect.poll(() => focusInModal(page)).toBe(true);
+	// @firefox: also run by the firefox-focus project (playwright.config.js)
+	test('Save Current Settings as Style styles only the selected letter @firefox', async ({ page }) => {
+		await saveFromOneLetter(page, createdStyleIds);
 	});
 
 	test('Saving from a selection with more than one set of values still asks', async ({ page }) => {
@@ -170,42 +226,8 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		expect(await styledText(page, clientId, style.id)).toBe('Th');
 	});
 
-	test('Update Style and Detach Style keep focus in the panel, and Detach keeps the look', async ({ page }) => {
-		await openNewPost(page);
-		const clientId = await insertBlock(page, 'The quick brown fox');
-		await selectFirstLetter(page, clientId);
-		const modal = await openQuickFeatureToggles(page);
-		await modal.getByLabel('Font Weight (for selected text)').selectOption('700');
-		await expect.poll(async () => (await readBlock(page, clientId)).content).toContain('data-fontweight="700"');
-		const style = await saveStyleFromPanel(page, modal, `ZZ #303 detach ${Date.now()}`);
-		createdStyleIds.push(style.id);
-		const badge = modal.locator('.typost-ps-badge-name');
-		await expect(badge).toHaveText(style.name);
-
-		// Change the styled letter, then Update Style
-		await modal.getByRole('spinbutton', { name: 'Letter Spacing (for selected text)' }).fill('120');
-		await expect(badge).toHaveText(`${style.name} (modified)`);
-		await modal.getByRole('button', { name: 'Update Style' }).click();
-		await expect(badge).toHaveText(style.name);
-		await expect.poll(() => focusInModal(page)).toBe(true);
-
-		// Detach: the letter keeps the style's weight as its own
-		await modal.getByRole('button', { name: 'Detach Style' }).click();
-		await expect.poll(async () => (await readBlock(page, clientId)).content).not.toContain('data-style-id');
-		const letter = await page.evaluate((id) => {
-			const holder = document.createElement('div');
-			holder.innerHTML = String(wp.data.select('core/block-editor').getBlockAttributes(id).content);
-			const span = holder.querySelector('span.typost-styled');
-			return span ? { text: span.textContent, weight: span.getAttribute('data-fontweight'), style: span.getAttribute('style') } : null;
-		}, clientId);
-		expect(letter.text).toBe('T');
-		expect(letter.weight).toBe('700');
-		expect(letter.style).toContain('font-weight: 700');
-		expect(letter.style).toContain('letter-spacing: 0.12em');
-		await expect.poll(() => focusInModal(page)).toBe(true);
-		// Escape closes the dialog from there
-		await page.keyboard.press('Escape');
-		await expect(modal).toHaveCount(0);
+	test('Update Style and Detach Style keep focus in the panel, and Detach keeps the look @firefox', async ({ page }) => {
+		await updateAndDetach(page, createdStyleIds);
 	});
 
 	test('The block sidebar panel compares the block, not the selected text', async ({ page }) => {

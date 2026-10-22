@@ -247,6 +247,8 @@
 		var panelRef        = useRef(null);
 		var refocusRef      = useRef(false);
 		var refocusTimerRef = useRef(null);
+		var savingRef       = useRef(false);
+		savingRef.current   = isSaving;
 		function keepFocusInPanel() {
 			refocusRef.current = true;
 		}
@@ -262,7 +264,11 @@
 			// in-between view may not be the last one: act once they are done
 			clearTimeout(refocusTimerRef.current);
 			refocusTimerRef.current = setTimeout(function() {
-				refocusRef.current = false;
+				// While a save request runs, its view is not the last one:
+				// Firefox drops focus from the Save button when it is
+				// disabled, focus goes to the name field, and the field goes
+				// when the form closes on success. Keep the flag until then.
+				refocusRef.current = savingRef.current;
 				var panel = panelRef.current;
 				var active = doc.activeElement;
 				// The panel is gone, or the author has moved focus elsewhere
@@ -510,8 +516,8 @@
 			// report, nor a selection in the Quick Feature Toggles (#303). A
 			// style based on another sends only what differs from its parent
 			// (#200), so values equal to the parent's stay inherited.
-			var state = resolvePanelScope(editorSource, getCurrentState()).state;
-			var properties = buildStyleUpdateProperties(state, activeStyle, currentStyles, getNewFontSizeUnit());
+			var scope = resolvePanelScope(editorSource, getCurrentState());
+			var properties = buildStyleUpdateProperties(scope.state, activeStyle, currentStyles, getNewFontSizeUnit());
 
 			wp.apiFetch({
 				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
@@ -529,6 +535,20 @@
 					document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated'));
 				}
 				setIsSaving(false);
+				// The Quick Feature Toggles wrote the change onto the styled
+				// text as its own declaration, which beats the style's class.
+				// The style holds it now, so apply the style to the text again:
+				// core clears the declaration (asking first only when the
+				// selection has more than one set of values), and a later
+				// change to the style reaches the text again (#303 review).
+				if (scope.applyTo === 'selection') {
+					for (var i = 0; i < updated.length; i++) {
+						if (String(updated[i].id) === String(updatedStyle.id)) {
+							dispatchApply(updated[i], editorSource, undefined, scope.applyTo, true);
+							break;
+						}
+					}
+				}
 			}).catch(function() {
 				setIsSaving(false);
 			});
