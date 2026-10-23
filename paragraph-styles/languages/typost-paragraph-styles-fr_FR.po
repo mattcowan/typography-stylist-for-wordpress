@@ -96,11 +96,25 @@ msgstr "%spx"
 msgid "%sem"
 msgstr "%sem"
 
-#: includes/admin-tab.php:64
+#. translators: %s: style name
+#: includes/admin-tab.php:67
+#: assets/js/admin.js:136
+#, php-format,js-format
+msgid "Edit “%s”"
+msgstr "Modifier « %s »"
+
+#: includes/admin-tab.php:69
 msgid "Edit"
 msgstr "Modifier"
 
-#: includes/admin-tab.php:67
+#. translators: %s: style name
+#: includes/admin-tab.php:74
+#: assets/js/admin.js:138
+#, php-format,js-format
+msgid "Delete “%s”"
+msgstr "Supprimer « %s »"
+
+#: includes/admin-tab.php:76
 msgid "Delete"
 msgstr "Supprimer"
 

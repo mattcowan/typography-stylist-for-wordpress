@@ -262,6 +262,26 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         $this->assertStringNotContainsString('fontSizeUnit', $html);
     }
 
+    public function test_card_buttons_carry_the_escaped_style_name() {
+        // #295: a list of buttons tells the cards apart. Real escaping here,
+        // so a name with quotes or markup cannot leave the attribute.
+        Functions\when('esc_attr')->alias(function ($text) {
+            return htmlspecialchars($text, ENT_QUOTES);
+        });
+        $html = $this->renderTab(
+            array(
+                array('id' => 1, 'name' => 'Body', 'properties' => array()),
+                array('id' => 2, 'name' => 'Pull "quote" <b>&', 'properties' => array()),
+            ),
+            $this->fontsInstance()
+        );
+
+        $this->assertStringContainsString('aria-label="Edit “Body”"', $html);
+        $this->assertStringContainsString('aria-label="Delete “Body”"', $html);
+        $this->assertStringContainsString('aria-label="Edit “Pull &quot;quote&quot; &lt;b&gt;&amp;”"', $html);
+        $this->assertStringContainsString('aria-label="Delete “Pull &quot;quote&quot; &lt;b&gt;&amp;”"', $html);
+    }
+
     public function test_admin_assets_localize_the_styles_and_new_content_unit() {
         $module = $this->freshInstance();
         Functions\when('wp_enqueue_script')->justReturn(null);
