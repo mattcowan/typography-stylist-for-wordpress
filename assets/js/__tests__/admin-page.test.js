@@ -60,6 +60,67 @@ describe('REST requests ask for the user\'s language (#296)', () => {
 	});
 });
 
+describe('decodeEntities (#307)', () => {
+	const { decodeEntities } = require('../admin-page.js');
+
+	test.each([
+		// esc_html__() output, as typostAdmin.strings and WP_Error messages arrive.
+		['Paramètres d&#039;accessibilité enregistrés avec succès.', 'Paramètres d\'accessibilité enregistrés avec succès.'],
+		['Polices &amp; styles', 'Polices & styles'],
+		['&quot;Titre&quot;', '"Titre"'],
+		// Strings that show correctly now keep showing correctly.
+		['Veuillez coller le code d\'intégration Adobe Fonts.', 'Veuillez coller le code d\'intégration Adobe Fonts.'],
+		['Saved', 'Saved'],
+		['', ''],
+	])('%s', (input, expected) => {
+		expect(decodeEntities(input)).toBe(expected);
+	});
+
+	test('returns non-string values as is', () => {
+		expect(decodeEntities(undefined)).toBeUndefined();
+		expect(decodeEntities(null)).toBeNull();
+	});
+
+	test('adds no markup: encoded tags come back as text, real tags stay literal', () => {
+		window.typostXss = false;
+		expect(decodeEntities('&lt;b&gt;x&lt;/b&gt;')).toBe('<b>x</b>');
+		expect(decodeEntities('<img src=x onerror="window.typostXss=true">&amp;')).toBe('<img src=x onerror="window.typostXss=true">&');
+		expect(window.typostXss).toBe(false);
+		delete window.typostXss;
+	});
+
+	test('decodes the busy label', () => {
+		const { beginBusy, endBusy } = require('../admin-page.js');
+		const el = document.createElement('button');
+		el.textContent = 'Save';
+		beginBusy(el, 'Enregistrement d&#039;abord…');
+		expect(el.textContent).toBe('Enregistrement d\'abord…');
+		endBusy(el, 'Ajouter l&#039;élément');
+		expect(el.textContent).toBe('Ajouter l\'élément');
+	});
+
+	describe('every text sink decodes first (source scan)', () => {
+		const source = require('fs').readFileSync(require('path').resolve(__dirname, '../admin-page.js'), 'utf8');
+		const lines = source.split('\n').filter((line) => !/^\s*(\*|\/\/)/.test(line));
+
+		test('every alert() and confirm() decodes its message', () => {
+			const dialogs = lines.filter((line) => /\b(alert|confirm)\(/.test(line));
+			expect(dialogs.length).toBeGreaterThan(10);
+			dialogs.forEach((line) => {
+				expect(line).toMatch(/\b(alert|confirm)\(typostDecodeEntities\(/);
+			});
+		});
+
+		test('every .text() of a localized string or server message decodes it', () => {
+			const sinks = lines.filter((line) => /\.text\(/.test(line) && /typostAdmin\.strings|adminString\(|wplErrorMessage\(|\b(msg|warning|errorMsg)\b/.test(line));
+			expect(sinks.length).toBeGreaterThan(10);
+			sinks.forEach((line) => {
+				expect(line).toMatch(/\.text\(typostDecodeEntities\(/);
+			});
+		});
+	});
+});
+
 describe('formatDetectWeightsSummary', () => {
 	const template = 'Weights detected for %1$s font(s); %2$s kept all weights; %3$s could not be checked.';
 

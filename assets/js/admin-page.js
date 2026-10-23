@@ -36,6 +36,31 @@ function typostWithUserLocale(url) {
 }
 
 /**
+ * Decode the HTML entities in a localized string or a server message before
+ * it is shown as text (#307).
+ *
+ * typostAdmin.strings is a nested array, and WP_Scripts::localize() decodes
+ * entities only in top-level values, so the esc_html__() output reaches the
+ * browser encoded ("d&#039;accessibilité"). The REST routes build their
+ * WP_Error messages with esc_html__() too. The .html() paths need the
+ * encoded form and keep it; every .text(), textContent, alert() and
+ * confirm() path calls this first. A textarea's content is parsed as text,
+ * so no element is created and nothing runs; the result still goes into
+ * the page only as text, so a translation cannot add markup.
+ *
+ * @param {*} text The string to decode. Any other value is returned as is.
+ * @return {*} The decoded string.
+ */
+function typostDecodeEntities(text) {
+    if (typeof text !== 'string' || text.indexOf('&') === -1 || typeof document === 'undefined') {
+        return text;
+    }
+    var textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+}
+
+/**
  * Merge an admin refresh REST payload into the typostAdmin data object.
  *
  * Only the known data keys are copied; anything else in the payload (HTML
@@ -111,7 +136,7 @@ function typostAttachDismissButtons(scope, label, dismiss) {
         button.className = 'notice-dismiss';
         var text = document.createElement('span');
         text.className = 'screen-reader-text';
-        text.textContent = label || 'Dismiss this notice.';
+        text.textContent = typostDecodeEntities(label) || 'Dismiss this notice.';
         button.appendChild(text);
         button.addEventListener('click', function(event) {
             event.preventDefault();
@@ -139,7 +164,8 @@ function typostAttachDismissButtons(scope, label, dismiss) {
  * second activation while the first request is in flight.
  *
  * @param {jQuery|Element} control  The button or checkbox.
- * @param {string}         [busyText] Label to show while busy (buttons).
+ * @param {string}         [busyText] Label to show while busy (buttons);
+ *                                    entities are decoded.
  * @return {boolean} False when the control is already busy (caller returns).
  */
 function typostBeginBusy(control, busyText) {
@@ -155,7 +181,7 @@ function typostBeginBusy(control, busyText) {
     el.classList.add('typost-busy');
     if (typeof busyText === 'string' && el.tagName !== 'INPUT') {
         el.setAttribute('data-typost-label', el.textContent);
-        el.textContent = busyText;
+        el.textContent = typostDecodeEntities(busyText);
     }
     return true;
 }
@@ -164,7 +190,8 @@ function typostBeginBusy(control, busyText) {
  * Clear the busy state set by typostBeginBusy(); focus is untouched.
  *
  * @param {jQuery|Element} control The button or checkbox.
- * @param {string}         [text]  Label to restore (default: the one saved).
+ * @param {string}         [text]  Label to restore (default: the one saved);
+ *                                 entities are decoded.
  */
 function typostEndBusy(control, text) {
     var el = (control && control.jquery) ? control[0] : control;
@@ -176,7 +203,7 @@ function typostEndBusy(control, text) {
     el.classList.remove('typost-busy');
     var saved = el.getAttribute('data-typost-label');
     if (typeof text === 'string') {
-        el.textContent = text;
+        el.textContent = typostDecodeEntities(text);
     } else if (saved !== null) {
         el.textContent = saved;
     }
@@ -407,7 +434,7 @@ function typostBuildFeatureVisibilityFieldsets(doc, features, categoryTitles, di
             input.checked = disabled.indexOf(feature.id) === -1;
             var name = doc.createElement('span');
             name.className = 'typost-form-visibility-feature-name';
-            name.textContent = feature.name || feature.id;
+            name.textContent = typostDecodeEntities(feature.name) || feature.id;
             var code = doc.createElement('code');
             code.className = 'typost-form-visibility-feature-code';
             code.textContent = feature.id;
@@ -437,6 +464,7 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         formatDetectWeightsSummary: typostFormatDetectWeightsSummary,
         withUserLocale: typostWithUserLocale,
+        decodeEntities: typostDecodeEntities,
         mergeAdminRefreshData: typostMergeAdminRefreshData,
         resolvePreviewSelection: typostResolvePreviewSelection,
         attachDismissButtons: typostAttachDismissButtons,
@@ -546,6 +574,7 @@ jQuery(document).ready(function($) {
         if (!$region.length || !message) {
             return;
         }
+        message = typostDecodeEntities(message);
         $region.text('');
         setTimeout(function() {
             $region.text(message);
@@ -757,7 +786,7 @@ jQuery(document).ready(function($) {
 
         // Validate file type
         if (!file.name.endsWith('.zip')) {
-            alert(typostAdmin.strings.selectZip);
+            alert(typostDecodeEntities(typostAdmin.strings.selectZip));
             $(this).val('');
             return;
         }
@@ -809,7 +838,7 @@ jQuery(document).ready(function($) {
         if (!typostBeginBusy($btn, typostAdmin.strings.uploading)) { return; }
         $progress.show();
         $progressFill.css('width', '0%');
-        $progressText.text(typostAdmin.strings.uploadingZip);
+        $progressText.text(typostDecodeEntities(typostAdmin.strings.uploadingZip));
         $progressBar.attr('aria-valuenow', '0');
 
         // Upload via REST API
@@ -831,13 +860,13 @@ jQuery(document).ready(function($) {
                         var percentComplete = Math.round((e.loaded / e.total) * 100);
                         $progressFill.css('width', percentComplete + '%');
                         $progressBar.attr('aria-valuenow', percentComplete);
-                        $progressText.text(typostAdmin.strings.uploading + ' ' + percentComplete + '%');
+                        $progressText.text(typostDecodeEntities(typostAdmin.strings.uploading) + ' ' + percentComplete + '%');
                     }
                 }, false);
                 return xhr;
             },
             success: function(response) {
-                $progressText.text(typostAdmin.strings.processing);
+                $progressText.text(typostDecodeEntities(typostAdmin.strings.processing));
                 $progressFill.css('width', '100%');
                 $progressBar.attr('aria-valuenow', '100');
 
@@ -849,7 +878,7 @@ jQuery(document).ready(function($) {
                 if (warnings.length) {
                     var $warningNotice = $('<div>').addClass('notice notice-warning inline');
                     warnings.forEach(function(warning) {
-                        $warningNotice.append($('<p>').text(warning));
+                        $warningNotice.append($('<p>').text(typostDecodeEntities(warning)));
                     });
                     $message.append($warningNotice);
                 }
@@ -961,14 +990,14 @@ jQuery(document).ready(function($) {
 
                 // Flash "Saved" indicator
                 var $indicator = $('#typost-visibility-save-indicator');
-                $indicator.text(typostAdmin.strings.featureVisibilitySaved || 'Saved').addClass('typost-save-visible');
+                $indicator.text(typostDecodeEntities(typostAdmin.strings.featureVisibilitySaved) || 'Saved').addClass('typost-save-visible');
                 setTimeout(function() {
                     $indicator.removeClass('typost-save-visible');
                 }, 2000);
             },
             error: function() {
                 var $indicator = $('#typost-visibility-save-indicator');
-                $indicator.text(typostAdmin.strings.featureVisibilityError || 'Error saving').addClass('typost-save-visible');
+                $indicator.text(typostDecodeEntities(typostAdmin.strings.featureVisibilityError) || 'Error saving').addClass('typost-save-visible');
                 setTimeout(function() {
                     $indicator.removeClass('typost-save-visible');
                 }, 3000);
@@ -1093,12 +1122,12 @@ jQuery(document).ready(function($) {
                 typostAdmin.fontFeatureVisibility[fontNumericId] = { disabled_features: disabledFeatures };
 
                 var $indicator = $section.find('.typost-form-visibility-save-indicator');
-                $indicator.text(typostAdmin.strings.featureVisibilitySaved || 'Saved').addClass('typost-save-visible');
+                $indicator.text(typostDecodeEntities(typostAdmin.strings.featureVisibilitySaved) || 'Saved').addClass('typost-save-visible');
                 setTimeout(function() { $indicator.removeClass('typost-save-visible'); }, 2000);
             },
             error: function() {
                 var $indicator = $section.find('.typost-form-visibility-save-indicator');
-                $indicator.text(typostAdmin.strings.featureVisibilityError || 'Error saving').addClass('typost-save-visible');
+                $indicator.text(typostDecodeEntities(typostAdmin.strings.featureVisibilityError) || 'Error saving').addClass('typost-save-visible');
                 setTimeout(function() { $indicator.removeClass('typost-save-visible'); }, 3000);
             }
         });
@@ -1179,7 +1208,7 @@ jQuery(document).ready(function($) {
                     data: JSON.stringify({ order: order }),
                     error: function() {
                         if (typostAdmin.strings && typostAdmin.strings.orderSaveError) {
-                            window.alert(typostAdmin.strings.orderSaveError);
+                            window.alert(typostDecodeEntities(typostAdmin.strings.orderSaveError));
                         }
                     }
                 });
@@ -1481,7 +1510,7 @@ jQuery(document).ready(function($) {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
-                alert(errorMsg);
+                alert(typostDecodeEntities(errorMsg));
             },
             complete: function() {
                 // Re-enable checkbox
@@ -1624,7 +1653,7 @@ jQuery(document).ready(function($) {
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMsg = xhr.responseJSON.message;
                 }
-                alert(errorMsg);
+                alert(typostDecodeEntities(errorMsg));
             },
             complete: function() {
                 // Re-enable checkbox
@@ -2073,7 +2102,7 @@ jQuery(document).ready(function($) {
                     // the dismiss button WordPress only adds at page load.
                     $('.typost-font-deleted-notice').remove();
                     var $message = $('<div class="notice notice-success is-dismissible typost-font-deleted-notice" style="margin: 20px 0;"><p></p></div>');
-                    $message.find('p').text(typostAdmin.strings.deleteFontSuccess);
+                    $message.find('p').text(typostDecodeEntities(typostAdmin.strings.deleteFontSuccess));
                     $('.wrap h1').after($message);
                     attachDismissButtons($message[0]);
 
@@ -2085,12 +2114,12 @@ jQuery(document).ready(function($) {
                     }, 1200);
                 },
                 error: function() {
-                    alert(typostAdmin.strings.deleteFontFailed);
+                    alert(typostDecodeEntities(typostAdmin.strings.deleteFontFailed));
                     typostEndBusy($btn, originalLabel);
                 }
             });
         }).fail(function() {
-            alert(typostAdmin.strings.replacementFailed);
+            alert(typostDecodeEntities(typostAdmin.strings.replacementFailed));
             typostEndBusy($btn, originalLabel);
         });
     });
@@ -2130,7 +2159,7 @@ jQuery(document).ready(function($) {
                 var globalLoad = data.global_load || [];
 
                 if (Object.keys(mappings).length === 0) {
-                    $list.html($('<p class="typost-no-replacements"></p>').text(adminString('noReplacements', 'No font replacements configured.')));
+                    $list.html($('<p class="typost-no-replacements"></p>').text(typostDecodeEntities(adminString('noReplacements', 'No font replacements configured.'))));
                     $('#typost-unassigned-fonts').hide();
                     return;
                 }
@@ -2210,8 +2239,8 @@ jQuery(document).ready(function($) {
         $('#typost-replacement-font-select').val(currentReplacementId);
 
         // Change modal title and button text
-        $('#typost-delete-font-modal .typost-modal-header h2').text(adminString('editReplacementTitle', 'Edit Font Replacement'));
-        $('.typost-modal-confirm-delete').text(adminString('updateReplacement', 'Update Replacement'));
+        $('#typost-delete-font-modal .typost-modal-header h2').text(typostDecodeEntities(adminString('editReplacementTitle', 'Edit Font Replacement')));
+        $('.typost-modal-confirm-delete').text(typostDecodeEntities(adminString('updateReplacement', 'Update Replacement')));
         $('#typost-delete-font-modal .typost-modal-description').html(
             '<p>' + formatString(
                 adminString('editReplacementDescription', 'Select a new replacement font for ID %s.'),
@@ -2226,11 +2255,11 @@ jQuery(document).ready(function($) {
 
         // Validate ID
         if (!deletedId || deletedId == 0 || deletedId === '0') {
-            alert(adminString('invalidFontId', 'Invalid font ID. Please refresh the page and try again.'));
+            alert(typostDecodeEntities(adminString('invalidFontId', 'Invalid font ID. Please refresh the page and try again.')));
             return;
         }
 
-        if (!confirm(adminString('confirmRemoveReplacement', 'Remove this font replacement mapping?'))) return;
+        if (!confirm(typostDecodeEntities(adminString('confirmRemoveReplacement', 'Remove this font replacement mapping?')))) return;
 
         $.ajax({
             url: typostWithUserLocale(typostAdmin.restUrl + 'font-replacements/' + deletedId),
@@ -2243,7 +2272,7 @@ jQuery(document).ready(function($) {
                 loadReplacementsList();
             },
             error: function() {
-                alert(adminString('removeReplacementError', 'Failed to remove replacement.'));
+                alert(typostDecodeEntities(adminString('removeReplacementError', 'Failed to remove replacement.')));
             }
         });
     });
@@ -2269,7 +2298,7 @@ jQuery(document).ready(function($) {
                 xhr.setRequestHeader('X-WP-Nonce', typostAdmin.nonce);
             },
             error: function() {
-                alert(adminString('globalLoadUpdateError', 'Failed to update global load setting.'));
+                alert(typostDecodeEntities(adminString('globalLoadUpdateError', 'Failed to update global load setting.')));
                 // Revert checkbox
                 $checkbox.prop('checked', !globalLoad);
             }
@@ -2448,7 +2477,7 @@ jQuery(document).ready(function($) {
 
     // Remove a single font from the WP Font Library
     $(document).on('click', '.typost-wpl-unregister', function() {
-        if (!window.confirm(typostAdmin.strings.wplConfirmRemove)) {
+        if (!window.confirm(typostDecodeEntities(typostAdmin.strings.wplConfirmRemove))) {
             return;
         }
 
@@ -2481,10 +2510,10 @@ jQuery(document).ready(function($) {
             var msg = typostAdmin.strings.wplBulkDone
                 .replace('%1$s', String(registered))
                 .replace('%2$s', String(failed));
-            $btn.after($('<p role="status"></p>').text(msg));
+            $btn.after($('<p role="status"></p>').text(typostDecodeEntities(msg)));
             setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
-            alert(wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError));
+            alert(typostDecodeEntities(wplErrorMessage(xhr, typostAdmin.strings.wplRegisterError)));
             typostEndBusy($btn, originalText);
         });
     });
@@ -2504,10 +2533,10 @@ jQuery(document).ready(function($) {
 
         wplRestCall('fonts/detect-weights/bulk', 'POST', function(response) {
             var msg = typostFormatDetectWeightsSummary(response, typostAdmin.strings.detectWeightsDone);
-            $message.html($('<p></p>').text(msg));
+            $message.html($('<p></p>').text(typostDecodeEntities(msg)));
             setTimeout(function() { refreshAdminFontData(); }, 1500);
         }, function(xhr) {
-            $message.html($('<p></p>').text(wplErrorMessage(xhr, typostAdmin.strings.detectWeightsError)));
+            $message.html($('<p></p>').text(typostDecodeEntities(wplErrorMessage(xhr, typostAdmin.strings.detectWeightsError))));
             typostEndBusy($btn, originalText);
         });
     });
@@ -2540,7 +2569,7 @@ jQuery(document).ready(function($) {
             $form.find('p.submit').first().after($msg);
         }
         typostClearSettingsMessages(document, $msg[0]);
-        var $notice = $('<div></div>').addClass('notice inline notice-' + type).append($('<p></p>').text(text));
+        var $notice = $('<div></div>').addClass('notice inline notice-' + type).append($('<p></p>').text(typostDecodeEntities(text)));
         $msg.empty().append($notice);
     }
 
