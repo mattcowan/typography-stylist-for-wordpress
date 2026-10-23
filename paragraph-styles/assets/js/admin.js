@@ -679,6 +679,32 @@
 	}
 
 	/**
+	 * Whether the edit form holds a change that a save would store (#300).
+	 * Reset to Base saves no overrides and closes the form, so it asks a
+	 * different question when this is true. Properties are compared the way
+	 * buildEditPayload() compares them (built, against the untouched form),
+	 * so a change typed and then undone counts as none; the name counts too,
+	 * because the reset drops a typed name with the form.
+	 *
+	 * @param {Object}  values         readEditForm() now.
+	 * @param {?Object} baselineValues readEditForm() when the form opened;
+	 *                                 none counts as a change.
+	 * @param {Object}  style          The style (client shape).
+	 * @param {string}  newUnit        Site setting for new content.
+	 * @param {Array}   [styles]       All styles (client shape).
+	 * @return {boolean}
+	 */
+	function hasUnsavedEditChanges(values, baselineValues, style, newUnit, styles) {
+		if (!baselineValues) {
+			return true;
+		}
+		var payload = buildEditPayload(values, baselineValues, style, newUnit, styles);
+		return payload.properties !== undefined
+			|| payload.basedOn !== undefined
+			|| values.name !== baselineValues.name;
+	}
+
+	/**
 	 * Swap the cards that an admin-card response renders: the saved
 	 * style's and those of the styles based on it (#200).
 	 *
@@ -823,6 +849,7 @@
 		validateEditValues: validateEditValues,
 		stateFromEditValues: stateFromEditValues,
 		buildEditPayload: buildEditPayload,
+		hasUnsavedEditChanges: hasUnsavedEditChanges,
 		resolveEditFontSizeUnit: resolveEditFontSizeUnit,
 		withUserLocale: withUserLocale,
 		showFormError: showFormError,
@@ -1124,11 +1151,18 @@
 		var name    = $card.find('.typost-ps-style-name').text();
 		var $button = $(this);
 
-		if (!confirm(wp.i18n.sprintf(
+		// Cancel keeps the form open with its changes (#300). An if, not a
+		// ternary: make-pot reads a translators comment only right above
+		// the call.
+		var question;
+		if (hasUnsavedEditChanges(readEditForm(form), $(form).data('baseline'), findStyle(styleId), newUnit, styles)) {
 			/* translators: %s: style name */
-			wp.i18n.__('Remove every setting “%s” sets itself, so it uses all values of the style it is based on?', 'typost-paragraph-styles'),
-			name
-		))) {
+			question = wp.i18n.__('The changes in this form are not saved, and Reset to Base discards them. Remove every setting “%s” sets itself, so it uses all values of the style it is based on?', 'typost-paragraph-styles');
+		} else {
+			/* translators: %s: style name */
+			question = wp.i18n.__('Remove every setting “%s” sets itself, so it uses all values of the style it is based on?', 'typost-paragraph-styles');
+		}
+		if (!confirm(wp.i18n.sprintf(question, name))) {
 			return;
 		}
 

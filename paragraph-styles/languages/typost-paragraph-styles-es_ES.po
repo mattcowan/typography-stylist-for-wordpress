@@ -613,7 +613,13 @@ msgid "Style “%s” saved. It is no longer based on another style."
 msgstr "Estilo «%s» guardado. Ya no se basa en otro estilo."
 
 #. translators: %s: style name
-#: assets/js/admin.js:1060
+#: assets/js/admin.js:1160
+#, js-format
+msgid "The changes in this form are not saved, and Reset to Base discards them. Remove every setting “%s” sets itself, so it uses all values of the style it is based on?"
+msgstr "Los cambios de este formulario no están guardados, y «Restablecer a la base» los descarta. ¿Quitar todos los ajustes que «%s» define por sí mismo, para que use todos los valores del estilo en el que se basa?"
+
+#. translators: %s: style name
+#: assets/js/admin.js:1163
 #, js-format
 msgid "Remove every setting “%s” sets itself, so it uses all values of the style it is based on?"
 msgstr "¿Quitar todos los ajustes que «%s» define por sí mismo, para que use todos los valores del estilo en el que se basa?"
