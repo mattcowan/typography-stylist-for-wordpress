@@ -190,8 +190,10 @@ function typostBeginBusy(control, busyText) {
  * Clear the busy state set by typostBeginBusy(); focus is untouched.
  *
  * @param {jQuery|Element} control The button or checkbox.
- * @param {string}         [text]  Label to restore (default: the one saved);
- *                                 entities are decoded.
+ * @param {string}         [text]  Label to restore (default: the one saved),
+ *                                 shown as is: callers pass either a label
+ *                                 read back with .text() (already decoded)
+ *                                 or a localized string they decode first.
  */
 function typostEndBusy(control, text) {
     var el = (control && control.jquery) ? control[0] : control;
@@ -203,7 +205,7 @@ function typostEndBusy(control, text) {
     el.classList.remove('typost-busy');
     var saved = el.getAttribute('data-typost-label');
     if (typeof text === 'string') {
-        el.textContent = typostDecodeEntities(text);
+        el.textContent = text;
     } else if (saved !== null) {
         el.textContent = saved;
     }
@@ -906,7 +908,7 @@ jQuery(document).ready(function($) {
             },
             complete: function() {
                 $('.typost-upload-form').attr('aria-busy', 'false');
-                typostEndBusy($btn, typostAdmin.strings.uploadButton);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.uploadButton));
             }
         });
     });
@@ -1443,7 +1445,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                typostEndBusy($btn, typostAdmin.strings.addAdobeFontButton);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.addAdobeFontButton));
             }
         });
     });
@@ -1586,7 +1588,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                typostEndBusy($btn, typostAdmin.strings.addManualFontButton);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.addManualFontButton));
             }
         });
     });
@@ -1729,7 +1731,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                typostEndBusy($btn, typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.saveChanges));
             }
         });
     });
@@ -1826,7 +1828,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                typostEndBusy($btn, typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.saveChanges));
             }
         });
     });
@@ -1881,7 +1883,7 @@ jQuery(document).ready(function($) {
                 $message.html('<div class="notice notice-error inline"><p>' + errorMsg + '</p></div>');
             },
             complete: function() {
-                typostEndBusy($btn, typostAdmin.strings.saveChanges);
+                typostEndBusy($btn, typostDecodeEntities(typostAdmin.strings.saveChanges));
             }
         });
     });
@@ -2419,7 +2421,7 @@ jQuery(document).ready(function($) {
                 $('#typost-new-replacement-id').val('');
                 loadReplacementsList();
                 populateAddReplacementForm();
-                typostEndBusy($btn, adminString('addReplacementButton', 'Add Replacement'));
+                typostEndBusy($btn, typostDecodeEntities(adminString('addReplacementButton', 'Add Replacement')));
             },
             error: function(xhr) {
                 var errorMsg = adminString('addReplacementError', 'Failed to add replacement mapping.');
@@ -2427,7 +2429,7 @@ jQuery(document).ready(function($) {
                     errorMsg = xhr.responseJSON.message;
                 }
                 $message.html('<p class="notice notice-error">' + errorMsg + '</p>');
-                typostEndBusy($btn, adminString('addReplacementButton', 'Add Replacement'));
+                typostEndBusy($btn, typostDecodeEntities(adminString('addReplacementButton', 'Add Replacement')));
             }
         });
     });

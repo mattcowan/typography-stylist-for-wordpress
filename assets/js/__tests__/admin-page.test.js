@@ -95,8 +95,19 @@ describe('decodeEntities (#307)', () => {
 		el.textContent = 'Save';
 		beginBusy(el, 'Enregistrement d&#039;abord…');
 		expect(el.textContent).toBe('Enregistrement d\'abord…');
-		endBusy(el, 'Ajouter l&#039;élément');
-		expect(el.textContent).toBe('Ajouter l\'élément');
+		endBusy(el);
+		expect(el.textContent).toBe('Save');
+	});
+
+	test('restores a label read back with .text() without decoding it again', () => {
+		const { beginBusy, endBusy } = require('../admin-page.js');
+		const el = document.createElement('button');
+		// The button shows the literal text "&lt;h2&gt;" (encoded twice in the HTML).
+		el.textContent = 'Use &lt;h2&gt;';
+		const originalLabel = el.textContent;
+		beginBusy(el, 'Saving…');
+		endBusy(el, originalLabel);
+		expect(el.textContent).toBe('Use &lt;h2&gt;');
 	});
 
 	describe('every text sink decodes first (source scan)', () => {
@@ -111,11 +122,64 @@ describe('decodeEntities (#307)', () => {
 			});
 		});
 
-		test('every .text() of a localized string or server message decodes it', () => {
-			const sinks = lines.filter((line) => /\.text\(/.test(line) && /typostAdmin\.strings|adminString\(|wplErrorMessage\(|\b(msg|warning|errorMsg)\b/.test(line));
-			expect(sinks.length).toBeGreaterThan(10);
-			sinks.forEach((line) => {
-				expect(line).toMatch(/\.text\(typostDecodeEntities\(/);
+		// Values that are not esc_html__() output: text read back from the DOM
+		// (already decoded), numbers, file names, __() category titles, and
+		// values the function has already decoded.
+		const allowedSinkValues = [
+			/^text;/, // typostEndBusy(): callers decode (see its docblock)
+			/^saved;/, // typostEndBusy(): data-typost-label, read from the DOM
+			/^''[);]/,
+			/^titles\[cat\] \|\|/, // __() category titles: not entity-encoded
+			/^feature\.id;/,
+			/^message\)/, // announce(): decoded on entry
+			/^css \|\| '';/,
+			/^file\.name\)/,
+			/^'\(' \+ formatFileSize\(/,
+			/^(size|saved|width) \+ 'px'\)/,
+			/^(customText|defaultText|baselineDefault)\)/, // the author's preview text
+			/^deleteModalDefaults\.title\)/, // read with .text() at load
+		];
+
+		// The start of every value passed to .text() or assigned to textContent,
+		// whitespace collapsed, so a call split over lines is seen too.
+		function findTextSinks(code) {
+			const sinkPattern = /\.text\(\s*(?!\))|\.textContent\s*=(?!=)\s*/g;
+			const sinks = [];
+			while (sinkPattern.exec(code) !== null) {
+				sinks.push(code.slice(sinkPattern.lastIndex, sinkPattern.lastIndex + 80).replace(/\s+/g, ' '));
+			}
+			return sinks;
+		}
+
+		function findUncheckedSinks(code) {
+			return findTextSinks(code).filter((arg) => !/^typostDecodeEntities\(/.test(arg) && !allowedSinkValues.some((re) => re.test(arg)));
+		}
+
+		test('every .text() and textContent sink decodes its value or is a known non-localized value', () => {
+			const code = lines.join('\n');
+			expect(findTextSinks(code).length).toBeGreaterThan(30);
+			expect(findUncheckedSinks(code)).toEqual([]);
+		});
+
+		test('the sink scan catches a sink that skips the decoder (control)', () => {
+			const planted = [
+				"$el.text(successMsg);",
+				"$el.text(\n    typostAdmin.strings.saved\n);",
+				"el.textContent = typostAdmin.strings.saved;",
+				"$el.text(typostDecodeEntities(successMsg));",
+			].join('\n');
+			expect(findUncheckedSinks(planted)).toEqual([
+				expect.stringMatching(/^successMsg\);/),
+				expect.stringMatching(/^typostAdmin\.strings\.saved \);/),
+				expect.stringMatching(/^typostAdmin\.strings\.saved;/),
+			]);
+		});
+
+		test('every typostEndBusy() label is decoded or read back from the DOM', () => {
+			const calls = lines.filter((line) => /typostEndBusy\(\$\w+(\.find\([^)]*\))?, /.test(line));
+			expect(calls.length).toBeGreaterThan(15);
+			calls.forEach((line) => {
+				expect(line).toMatch(/typostEndBusy\([^,]+, (typostDecodeEntities\(|originalLabel\)|originalText\)|deleteModalDefaults\.confirmLabel\))/);
 			});
 		});
 	});
