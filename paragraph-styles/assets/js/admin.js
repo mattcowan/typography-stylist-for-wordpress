@@ -139,10 +139,16 @@
 		};
 		Object.keys(labels).forEach(function(selector) {
 			var button = card.querySelector(selector);
-			if (button) {
-				// A function replacement keeps a "$" in the name literal
-				button.setAttribute('aria-label', labels[selector].replace('%s', function() { return String(name); }));
+			if (!button) {
+				return;
 			}
+			// wp.i18n.sprintf also reads a translator's %1$s, as PHP's
+			// sprintf() does on page load. Without it (Jest), a function
+			// replacement keeps a "$" in the name literal.
+			var label = (typeof wp !== 'undefined' && wp.i18n && typeof wp.i18n.sprintf === 'function')
+				? wp.i18n.sprintf(labels[selector], String(name))
+				: labels[selector].replace('%s', function() { return String(name); });
+			button.setAttribute('aria-label', label);
 		});
 	}
 

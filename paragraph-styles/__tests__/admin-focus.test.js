@@ -122,6 +122,15 @@ describe('setCardButtonNames (#295)', () => {
 		expect(card.querySelector('.typost-ps-delete-btn').getAttribute('aria-label')).toBe('Supprimer « Titre »');
 	});
 
+	test('reads a translator\'s numbered placeholder through wp.i18n.sprintf', () => {
+		const { sprintf } = require('@wordpress/i18n');
+		window.wp = { i18n: { sprintf, __: (text) => ({ 'Edit “%s”': 'Modifier « %1$s »', 'Delete “%s”': 'Supprimer « %1$s »' }[text] || text) } };
+		const card = buildList(['Body']).querySelector('.typost-ps-style-card');
+		setCardButtonNames(card, 'A "$&" <b>');
+		expect(card.querySelector('.typost-ps-edit-btn').getAttribute('aria-label')).toBe('Modifier « A "$&" <b> »');
+		expect(card.querySelector('.typost-ps-delete-btn').getAttribute('aria-label')).toBe('Supprimer « A "$&" <b> »');
+	});
+
 	test('does nothing without a card', () => {
 		expect(() => setCardButtonNames(null, 'Body')).not.toThrow();
 	});
