@@ -60,10 +60,19 @@ foreach ( $form_features as $feature ) {
 						<h3 class="typost-ps-style-name"><?php echo esc_html( $style['name'] ); ?></h3>
 						<code class="typost-ps-css-class">.<?php echo esc_html( $css_class ); ?></code>
 						<div class="typost-ps-style-actions">
-							<button type="button" class="button typost-ps-edit-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>">
+							<?php // The style name is in each button's accessible name (#295); admin.js updates it after a rename ?>
+							<button type="button" class="button typost-ps-edit-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>"
+								aria-label="<?php
+								/* translators: %s: style name */
+								echo esc_attr( sprintf( __( 'Edit “%s”', 'typost-paragraph-styles' ), $style['name'] ) );
+								?>">
 								<?php esc_html_e( 'Edit', 'typost-paragraph-styles' ); ?>
 							</button>
-							<button type="button" class="button typost-ps-delete-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>">
+							<button type="button" class="button typost-ps-delete-btn" data-style-id="<?php echo esc_attr( $style_id ); ?>"
+								aria-label="<?php
+								/* translators: %s: style name */
+								echo esc_attr( sprintf( __( 'Delete “%s”', 'typost-paragraph-styles' ), $style['name'] ) );
+								?>">
 								<?php esc_html_e( 'Delete', 'typost-paragraph-styles' ); ?>
 							</button>
 						</div>

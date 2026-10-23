@@ -117,6 +117,35 @@
 		return null;
 	}
 
+	/**
+	 * Put the style name in the accessible names of a card's Edit and Delete
+	 * buttons (#295), so a screen reader's list of buttons tells the cards
+	 * apart. The visible text stays "Edit" and "Delete", which the names
+	 * start with. admin-tab.php writes the same names at page load; this
+	 * runs after a rename.
+	 *
+	 * @param {Element|null} card .typost-ps-style-card element
+	 * @param {string}       name The style name
+	 */
+	function setCardButtonNames(card, name) {
+		if (!card) {
+			return;
+		}
+		var labels = {
+			/* translators: %s: style name */
+			'.typost-ps-edit-btn': __('Edit “%s”', 'typost-paragraph-styles'),
+			/* translators: %s: style name */
+			'.typost-ps-delete-btn': __('Delete “%s”', 'typost-paragraph-styles')
+		};
+		Object.keys(labels).forEach(function(selector) {
+			var button = card.querySelector(selector);
+			if (button) {
+				// A function replacement keeps a "$" in the name literal
+				button.setAttribute('aria-label', labels[selector].replace('%s', function() { return String(name); }));
+			}
+		});
+	}
+
 	// -------------------------------------------------------------------------
 	// Edit form (#221)
 	// -------------------------------------------------------------------------
@@ -778,6 +807,7 @@
 		focusEditName: focusEditName,
 		focusEditButton: focusEditButton,
 		focusTargetAfterDelete: focusTargetAfterDelete,
+		setCardButtonNames: setCardButtonNames,
 		suffixIds: suffixIds,
 		sizeModeOf: sizeModeOf,
 		updateConditionalFields: updateConditionalFields,
@@ -1029,6 +1059,7 @@
 			success: function(response) {
 				storeStyle(response);
 				$card.find('.typost-ps-style-name').text(response.name);
+				setCardButtonNames($card[0], response.name);
 				var message;
 				if (payload.basedOn) {
 					/* translators: %s: style name */

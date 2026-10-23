@@ -8,6 +8,7 @@ const {
 	focusEditName,
 	focusEditButton,
 	focusTargetAfterDelete,
+	setCardButtonNames,
 } = require('../assets/js/admin.js');
 
 function buildCard(id, name) {
@@ -88,6 +89,41 @@ describe('focusTargetAfterDelete', () => {
 
 	test('returns null without a list', () => {
 		expect(focusTargetAfterDelete(document.createElement('div'), null)).toBeNull();
+	});
+});
+
+describe('setCardButtonNames (#295)', () => {
+	test('names both buttons after the style and keeps the visible text', () => {
+		const list = buildList(['Body', 'Caption']);
+		const card = list.querySelectorAll('.typost-ps-style-card')[1];
+		setCardButtonNames(card, 'Pull quote');
+		const edit = card.querySelector('.typost-ps-edit-btn');
+		const del = card.querySelector('.typost-ps-delete-btn');
+		expect(edit.getAttribute('aria-label')).toBe('Edit “Pull quote”');
+		expect(del.getAttribute('aria-label')).toBe('Delete “Pull quote”');
+		expect(edit.textContent).toBe('Edit');
+		expect(del.textContent).toBe('Delete');
+		// The other card is untouched
+		expect(list.querySelector('.typost-ps-edit-btn').hasAttribute('aria-label')).toBe(false);
+	});
+
+	test('keeps quotes, markup and "$" in the name as text', () => {
+		const card = buildList(['Body']).querySelector('.typost-ps-style-card');
+		setCardButtonNames(card, 'A "$&" <b>x</b>');
+		expect(card.querySelector('.typost-ps-edit-btn').getAttribute('aria-label')).toBe('Edit “A "$&" <b>x</b>”');
+		expect(card.querySelectorAll('b')).toHaveLength(0);
+	});
+
+	test('uses the translation when wp.i18n is present', () => {
+		window.wp = { i18n: { __: (text) => ({ 'Edit “%s”': 'Modifier « %s »', 'Delete “%s”': 'Supprimer « %s »' }[text] || text) } };
+		const card = buildList(['Body']).querySelector('.typost-ps-style-card');
+		setCardButtonNames(card, 'Titre');
+		expect(card.querySelector('.typost-ps-edit-btn').getAttribute('aria-label')).toBe('Modifier « Titre »');
+		expect(card.querySelector('.typost-ps-delete-btn').getAttribute('aria-label')).toBe('Supprimer « Titre »');
+	});
+
+	test('does nothing without a card', () => {
+		expect(() => setCardButtonNames(null, 'Body')).not.toThrow();
 	});
 });
 
