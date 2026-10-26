@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.3
+Stable tag: 2.3.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -321,6 +321,16 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.4 =
+* **New: edit every setting of a paragraph style on the Paragraph Styles tab.** Edit on a style card opens a form with the font, weight, font style, size, letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes. Save changes the style on every post that uses it.
+* **New: a paragraph style can be based on another style**, as with "Based On" in Adobe InDesign. The style uses the values of the other style for each setting that it does not set itself, and follows later changes to that style. "Reset to Base" removes the settings of the style itself, and tells you when the Edit form has changes that are not saved.
+* **Fixed: with text selected, the Paragraph Style panel in the Quick Feature Toggles applied a style to the whole Typography Stylist block.** It now works on the selected text only, and "Detach Style" on selected text keeps the look of the style.
+* **Fixed: fonts that the plugin registered in the WordPress Font Library had no family name in the Library.** When an administrator opens the dashboard after the update, the plugin repairs these fonts one time.
+* **Fixed: on the settings page, some messages showed HTML codes instead of apostrophes and quotation marks, and some parts used the site language instead of your profile language.**
+* **Improved: the Edit and Delete buttons on each Paragraph Styles card include the name of the style for screen readers.**
+* **Before you go back to an earlier version,** choose "None" in "Based on" for each style that is based on another style. Earlier versions show such a style with only its own settings.
+* Full details are in changelog.txt.
+
 = 2.3.3 =
 * **New: a Case setting** in the Typography Stylist block, in the inline format panel, and in paragraph styles. Choose All Caps, Lowercase, Title Case, Small Caps, All Small Caps, or Normal to remove a case the theme sets. The text keeps the case you typed. Only the look changes.
 * **New: paragraph styles on whole core Paragraph and Heading blocks.** Use the Paragraph Style panel in the block sidebar, or the Paragraph Styles toolbar button with no text selected. The block's own sidebar settings override the style, and the theme's block styles (such as "Outline") keep working.
@@ -410,6 +420,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.4 =
+Adds an Edit form for every paragraph style setting, and styles based on other styles. Repairs Font Library fonts that the plugin registered. Before you go back to an earlier version, choose "None" in "Based on" for each style based on another style.
 
 = 2.3.3 =
 Adds a Case setting and paragraph styles on whole core Paragraph and Heading blocks. Authors and Contributors now keep OpenType features, variable font axes and small caps when they save a post (features and axes need WordPress 7.0.1 or later). Fixes paragraph styles that stored the theme's font. No data migration.

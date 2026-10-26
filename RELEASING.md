@@ -216,6 +216,17 @@ the release deploy rsyncs readme.txt into trunk + the tag and syncs
 `.wordpress-org/` → `assets/`. This section is for updating those **between**
 releases.
 
+**Check readme.txt first.** The sync writes `readme.txt` into trunk **and**
+`tags/<Stable tag>/`, and the listing renders from that tag. When `main`'s
+readme.txt already describes the next, unreleased version (its features,
+its changelog, a release PR that is merged but not yet published), a sync
+puts that text on the listing of the current version, whose download does
+not have those features. This happened once, from a blueprint-only sync
+run while 2.3.4 was in progress. Before every sync, diff `readme.txt`
+against the last release tag. If it holds unreleased text, make a branch
+from `main`, restore `readme.txt` from the tag, make only the change you
+want, and run the workflow from that branch. Do not merge that branch.
+
 Edit `readme.txt` or files in `.wordpress-org/` (banners, icons,
 screenshots), push to `main`, then run the workflow by hand: **Actions →
 WP.org Readme/Assets Sync → Run workflow** (branch `main`). It updates

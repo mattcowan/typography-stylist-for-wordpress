@@ -488,6 +488,17 @@ The front end gets CSS only, with no JavaScript. A font loads only on the pages 
 
 ## Changelog
 
+### Version 2.3.4
+
+- **New: edit every setting of a paragraph style on the Paragraph Styles tab.** Edit on a style card opens a form with the font, weight, font style, size, letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes. Save changes the style on every post that uses it.
+- **New: a paragraph style can be based on another style**, as with "Based On" in Adobe InDesign. The style uses the values of the other style for each setting that it does not set itself, and follows later changes to that style. "Reset to Base" removes the settings of the style itself, and tells you when the Edit form has changes that are not saved.
+- **Fixed: with text selected, the Paragraph Style panel in the Quick Feature Toggles applied a style to the whole Typography Stylist block.** It now works on the selected text only, and "Detach Style" on selected text keeps the look of the style.
+- **Fixed: fonts that the plugin registered in the WordPress Font Library had no family name in the Library.** When an administrator opens the dashboard after the update, the plugin repairs these fonts one time.
+- **Fixed: on the settings page, some messages showed HTML codes instead of apostrophes and quotation marks, and some parts used the site language instead of your profile language.**
+- **Improved: the Edit and Delete buttons on each Paragraph Styles card include the name of the style for screen readers.**
+- **Before you go back to an earlier version,** choose "None" in "Based on" for each style that is based on another style. Earlier versions show such a style with only its own settings.
+- Full details are in changelog.txt.
+
 ### Version 2.3.3
 
 - **New: a Case setting** in the Typography Stylist block, in the inline format panel, and in paragraph styles. Choose All Caps, Lowercase, Title Case, Small Caps, All Small Caps, or Normal to remove a case the theme sets. The text keeps the case you typed. Only the look changes.
