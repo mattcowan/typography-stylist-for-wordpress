@@ -291,7 +291,7 @@ class FontLibraryBridgeTest extends TestCase {
 
         $repaired = $this->bridge()->repair_registered_font_json();
 
-        $this->assertSame(1, $repaired, 'Only the family post was broken; the faces only lost "\/" escapes');
+        $this->assertSame(['repaired' => 1, 'failed' => 0], $repaired, 'Only the family post was broken; the faces only lost "\/" escapes');
         $data = json_decode($family->post_content, true);
         $this->assertSame('"Playfair Display", serif', $data['fontFamily']);
         $this->assertSame('playfair-display', $data['slug']);
@@ -310,7 +310,7 @@ class FontLibraryBridgeTest extends TestCase {
 
         $repaired = $this->bridge()->repair_registered_font_json();
 
-        $this->assertSame(3, $repaired);
+        $this->assertSame(['repaired' => 3, 'failed' => 0], $repaired);
         $this->assertSame('Café', json_decode($this->posts[$registered['post_id']]->post_content, true)['fontFamily']);
         foreach ($this->facePosts($registered['post_id']) as $face) {
             $data = json_decode($face->post_content, true);
@@ -325,7 +325,7 @@ class FontLibraryBridgeTest extends TestCase {
         // A family the user made in the Font Library UI has no marker
         unset($this->post_meta[$registered['post_id']]['_typost_font_id']);
 
-        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame(['repaired' => 0, 'failed' => 0], $this->bridge()->repair_registered_font_json());
         $this->assertSame($legacy, $this->posts[$registered['post_id']]->post_content);
     }
 
@@ -334,7 +334,7 @@ class FontLibraryBridgeTest extends TestCase {
         $legacy = $this->posts[$registered['post_id']]->post_content;
         $this->post_meta[$registered['post_id']]['_typost_font_id'] = 999;
 
-        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame(['repaired' => 0, 'failed' => 0], $this->bridge()->repair_registered_font_json());
         $this->assertSame($legacy, $this->posts[$registered['post_id']]->post_content);
     }
 
@@ -350,17 +350,26 @@ class FontLibraryBridgeTest extends TestCase {
             return $p->post_content;
         }, $this->posts);
 
-        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame(['repaired' => 0, 'failed' => 0], $this->bridge()->repair_registered_font_json());
         $this->assertSame($before, array_map(function ($p) {
             return $p->post_content;
         }, $this->posts));
+    }
+
+    public function test_repair_counts_a_rewrite_that_wp_update_post_refuses() {
+        $registered = $this->registerWithLegacyContent($this->sampleEntry());
+        $legacy = $this->posts[$registered['post_id']]->post_content;
+        Functions\when('wp_update_post')->justReturn(0);
+
+        $this->assertSame(['repaired' => 0, 'failed' => 1], $this->bridge()->repair_registered_font_json());
+        $this->assertSame($legacy, $this->posts[$registered['post_id']]->post_content);
     }
 
     public function test_repair_does_nothing_without_font_library() {
         $this->registerWithLegacyContent($this->sampleEntry());
         Functions\when('post_type_exists')->justReturn(false);
 
-        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame(['repaired' => 0, 'failed' => 0], $this->bridge()->repair_registered_font_json());
     }
 
     public function test_register_font_is_idempotent_when_post_exists() {

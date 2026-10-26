@@ -17,16 +17,22 @@ class FontLibraryJsonRepairTriggerTest extends TestCase {
     /** @var array Simulated wp_options storage */
     private $options = array();
 
+    /** @var array Autoload argument passed for each option */
+    private $autoload = array();
+
     protected function setUp(): void {
         parent::setUp();
         $this->options = array();
+        $this->autoload = array();
         $options = &$this->options;
 
         Functions\when('get_option')->alias(function ($key, $default = false) use (&$options) {
             return array_key_exists($key, $options) ? $options[$key] : $default;
         });
-        Functions\when('update_option')->alias(function ($key, $value) use (&$options) {
+        $autoload = &$this->autoload;
+        Functions\when('update_option')->alias(function ($key, $value, $autoload_arg = null) use (&$options, &$autoload) {
             $options[$key] = $value;
+            $autoload[$key] = $autoload_arg;
             return true;
         });
         Functions\when('post_type_exists')->justReturn(true);
@@ -38,7 +44,14 @@ class FontLibraryJsonRepairTriggerTest extends TestCase {
             require_once TYPOST_PLUGIN_DIR . '/typography-stylist.php';
             $loaded = true;
         }
-        return \Typost::get_instance();
+        $plugin = \Typost::get_instance();
+        // Fresh modules, so no font list cached by an earlier test leaks in
+        foreach (array('font_sources', 'font_library_bridge') as $prop) {
+            $ref = new \ReflectionProperty(\Typost::class, $prop);
+            $ref->setAccessible(true);
+            $ref->setValue($plugin, null);
+        }
+        return $plugin;
     }
 
     public function test_runs_once_and_stores_the_flag() {
@@ -47,6 +60,7 @@ class FontLibraryJsonRepairTriggerTest extends TestCase {
         $this->getPluginInstance()->maybe_repair_font_library_json();
 
         $this->assertTrue($this->options['typost_font_library_json_repaired']);
+        $this->assertFalse($this->autoload['typost_font_library_json_repaired'], 'The flag is read only on admin requests, so it is not autoloaded');
     }
 
     public function test_does_not_run_again_after_the_flag_is_stored() {
@@ -58,6 +72,36 @@ class FontLibraryJsonRepairTriggerTest extends TestCase {
 
         $this->getPluginInstance()->maybe_repair_font_library_json();
 
+        $this->assertTrue($this->options['typost_font_library_json_repaired']);
+    }
+
+    public function test_runs_again_after_a_failed_rewrite() {
+        Functions\when('current_user_can')->justReturn(true);
+        // One owned family whose JSON does not decode, and a rewrite that fails
+        $this->options['typost_custom_fonts'] = array(array(
+            'id'         => 'kit-a',
+            'name'       => 'EB Garamond',
+            'font_id'    => 7,
+            'wp_post_id' => 100,
+            'font_faces' => array(),
+        ));
+        Functions\when('get_post')->justReturn((object) array(
+            'ID'           => 100,
+            'post_type'    => 'wp_font_family',
+            'post_name'    => 'eb-garamond',
+            'post_content' => '{"fontFamily":""EB Garamond""}',
+        ));
+        Functions\when('get_post_meta')->justReturn('7');
+        Functions\when('get_posts')->justReturn(array());
+        Functions\when('wp_json_encode')->alias('json_encode');
+        Functions\when('wp_slash')->alias('addslashes');
+        Functions\expect('wp_update_post')->twice()->andReturn(0, 100);
+
+        $plugin = $this->getPluginInstance();
+        $plugin->maybe_repair_font_library_json();
+        $this->assertArrayNotHasKey('typost_font_library_json_repaired', $this->options, 'A failed rewrite must leave the flag unset');
+
+        $plugin->maybe_repair_font_library_json();
         $this->assertTrue($this->options['typost_font_library_json_repaired']);
     }
 

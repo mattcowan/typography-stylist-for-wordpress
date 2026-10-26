@@ -292,8 +292,10 @@ class Typost {
     /**
      * Repair the JSON of Font Library posts registered before #310
      *
-     * Runs once, on the first admin request by a user who can manage
-     * options (the capability that registration itself requires). See
+     * Runs on an admin request by a user who can manage options (the
+     * capability that registration itself requires) until a run has no
+     * failed rewrite. The repair skips posts that need none, so a retry only
+     * touches the posts that failed. See
      * Typost_Font_Library_Bridge::repair_registered_font_json().
      *
      * @since 2.3.4
@@ -303,9 +305,11 @@ class Typost {
             return;
         }
 
-        $this->font_library_bridge()->repair_registered_font_json();
+        $counts = $this->font_library_bridge()->repair_registered_font_json();
 
-        update_option('typost_font_library_json_repaired', true);
+        if (0 === $counts['failed']) {
+            update_option('typost_font_library_json_repaired', true, false);
+        }
     }
 
     /**

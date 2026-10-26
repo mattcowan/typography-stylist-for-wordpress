@@ -457,15 +457,24 @@ class Typost_Font_Library_Bridge {
      * backslashes removed. A post that lost only "\/" escapes decodes to the
      * same values and is left alone, as is anything the user changed.
      *
+     * The rewrite goes through wp_update_post(), so content_save_pre applies
+     * as it does at registration and in core's font REST controllers: for a
+     * user without unfiltered_html (multisite admins), kses turns a bare "&"
+     * in a face URL into "&amp;". Upload URLs do not normally have one.
+     *
      * @since 2.3.4
-     * @return int Number of posts rewritten
+     * @return array {repaired: int, failed: int} Posts rewritten, and posts
+     *               that needed a rewrite but wp_update_post() refused
      */
     public function repair_registered_font_json() {
+        $counts = array(
+            'repaired' => 0,
+            'failed'   => 0,
+        );
         if (!$this->is_available()) {
-            return 0;
+            return $counts;
         }
 
-        $repaired = 0;
         foreach ($this->sources->get_custom_fonts() as $entry) {
             if (empty($entry['wp_post_id']) || empty($entry['font_id'])) {
                 continue;
@@ -479,9 +488,7 @@ class Typost_Font_Library_Bridge {
             }
 
             $family_content = $this->build_font_family_post_content($entry, $post->post_name);
-            if ($this->repair_post_json($post, $family_content)) {
-                $repaired++;
-            }
+            $this->count_repair($counts, $this->repair_post_json($post, $family_content));
 
             // Faces are matched by title, which registration built from the
             // same face content and which never held a backslash
@@ -504,17 +511,31 @@ class Typost_Font_Library_Bridge {
                 'post_status'    => 'any',
             ));
             foreach ($face_posts as $face_post) {
-                if (isset($faces_by_title[$face_post->post_title]) && $this->repair_post_json($face_post, $faces_by_title[$face_post->post_title])) {
-                    $repaired++;
+                if (isset($faces_by_title[$face_post->post_title])) {
+                    $this->count_repair($counts, $this->repair_post_json($face_post, $faces_by_title[$face_post->post_title]));
                 }
             }
         }
 
-        if ($repaired > 0) {
+        if ($counts['repaired'] > 0) {
             $this->clear_snapshot_cache();
         }
 
-        return $repaired;
+        return $counts;
+    }
+
+    /**
+     * Add one repair_post_json() result to the repair counts
+     *
+     * @param array     $counts {repaired, failed}, updated in place
+     * @param bool|null $result repair_post_json() result
+     */
+    private function count_repair(array &$counts, $result) {
+        if (true === $result) {
+            $counts['repaired']++;
+        } elseif (false === $result) {
+            $counts['failed']++;
+        }
     }
 
     /**
@@ -522,7 +543,8 @@ class Typost_Font_Library_Bridge {
      *
      * @param WP_Post $post     Family or face post
      * @param array   $expected Content the plugin builds for it now
-     * @return bool Whether the post was rewritten
+     * @return bool|null True when rewritten, false when the rewrite failed,
+     *                   null when the post needs none
      */
     private function repair_post_json($post, array $expected) {
         $stored = (string) $post->post_content;
@@ -531,7 +553,7 @@ class Typost_Font_Library_Bridge {
 
         if (is_array($decoded)) {
             if ($decoded === $expected || stripslashes($json) !== $stored) {
-                return false;
+                return null;
             }
         }
 
