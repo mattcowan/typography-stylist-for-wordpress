@@ -319,6 +319,46 @@ class FontLibraryBridgeTest extends TestCase {
         }
     }
 
+    /**
+     * Two faces with one title: same family, style and weight, other files
+     */
+    private function entryWithSameTitleFaces() {
+        $entry = $this->sampleEntry();
+        $entry['name'] = 'Café';
+        $entry['fallbacks'] = '';
+        $entry['font_faces'] = [
+            ['family' => 'Café', 'weight' => '400', 'style' => 'normal', 'src' => "url('https://cdn.example.com/cafe-book.woff2')"],
+            ['family' => 'Café', 'weight' => '400', 'style' => 'normal', 'src' => "url('https://cdn.example.com/cafe-regular.woff2')"],
+        ];
+        return $entry;
+    }
+
+    public function test_repair_keeps_each_face_with_a_shared_title_on_its_own_files() {
+        $registered = $this->registerWithLegacyContent($this->entryWithSameTitleFaces());
+
+        $this->assertSame(['repaired' => 3, 'failed' => 0], $this->bridge()->repair_registered_font_json());
+        $repaired = array_map(function ($face) {
+            $data = json_decode($face->post_content, true);
+            return $data['fontFamily'] . ' ' . $data['src'][0];
+        }, $this->facePosts($registered['post_id']));
+        sort($repaired);
+        $this->assertSame([
+            'Café https://cdn.example.com/cafe-book.woff2',
+            'Café https://cdn.example.com/cafe-regular.woff2',
+        ], $repaired);
+    }
+
+    public function test_repair_skips_a_shared_title_face_that_matches_no_candidate() {
+        $registered = $this->registerWithLegacyContent($this->entryWithSameTitleFaces());
+        // Broken content that neither face was registered from: a guess
+        // would give this post the files of the other face
+        $face = $this->facePosts($registered['post_id'])[0];
+        $face->post_content = '{"fontFamily":""Other""}';
+
+        $this->assertSame(['repaired' => 2, 'failed' => 0], $this->bridge()->repair_registered_font_json());
+        $this->assertSame('{"fontFamily":""Other""}', $face->post_content);
+    }
+
     public function test_repair_never_touches_families_without_ownership_meta() {
         $registered = $this->registerWithLegacyContent($this->sampleEntry());
         $legacy = $this->posts[$registered['post_id']]->post_content;

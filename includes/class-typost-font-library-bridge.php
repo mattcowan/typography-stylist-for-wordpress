@@ -491,7 +491,9 @@ class Typost_Font_Library_Bridge {
             $this->count_repair($counts, $this->repair_post_json($post, $family_content));
 
             // Faces are matched by title, which registration built from the
-            // same face content and which never held a backslash
+            // same face content and which never held a backslash. Two faces
+            // can share a title (same family, style and weight, other files),
+            // so each title keeps every candidate.
             $faces_by_title = array();
             $base_url = isset($entry['upload_url']) ? $entry['upload_url'] : '';
             $entry_faces = (isset($entry['font_faces']) && is_array($entry['font_faces'])) ? $entry['font_faces'] : array();
@@ -501,7 +503,7 @@ class Typost_Font_Library_Bridge {
                 }
                 $face_content = $this->build_font_face_post_content($face, $base_url);
                 if (!empty($face_content['src'])) {
-                    $faces_by_title[trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight'])] = $face_content;
+                    $faces_by_title[trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight'])][] = $face_content;
                 }
             }
             $face_posts = get_posts(array(
@@ -511,8 +513,10 @@ class Typost_Font_Library_Bridge {
                 'post_status'    => 'any',
             ));
             foreach ($face_posts as $face_post) {
-                if (isset($faces_by_title[$face_post->post_title])) {
-                    $this->count_repair($counts, $this->repair_post_json($face_post, $faces_by_title[$face_post->post_title]));
+                $candidates = isset($faces_by_title[$face_post->post_title]) ? $faces_by_title[$face_post->post_title] : array();
+                $expected = $this->pick_face_content($face_post, $candidates);
+                if (null !== $expected) {
+                    $this->count_repair($counts, $this->repair_post_json($face_post, $expected));
                 }
             }
         }
@@ -522,6 +526,33 @@ class Typost_Font_Library_Bridge {
         }
 
         return $counts;
+    }
+
+    /**
+     * Choose the face content a face post was registered from
+     *
+     * With one candidate for the post's title, that is the face. With more,
+     * the face is the candidate whose content the post already holds, or
+     * whose JSON with backslashes removed is the post's content (the #310
+     * damage). A post that matches none of several candidates is skipped,
+     * so it never gets the files of another face.
+     *
+     * @param WP_Post $face_post  Face post
+     * @param array[] $candidates Face contents with the post's title
+     * @return array|null The face content, or null when none is certain
+     */
+    private function pick_face_content($face_post, array $candidates) {
+        if (1 === count($candidates)) {
+            return $candidates[0];
+        }
+        $stored = (string) $face_post->post_content;
+        $decoded = json_decode($stored, true);
+        foreach ($candidates as $candidate) {
+            if ($decoded === $candidate || stripslashes(wp_json_encode($candidate)) === $stored) {
+                return $candidate;
+            }
+        }
+        return null;
     }
 
     /**

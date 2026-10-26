@@ -307,6 +307,9 @@ class Typost {
 
         $counts = $this->font_library_bridge()->repair_registered_font_json();
 
+        // Without the Font Library (WordPress before 6.5) the repair finds
+        // nothing and the flag is stored: registration needs the Library,
+        // so such a site has no registered posts to repair
         if (0 === $counts['failed']) {
             update_option('typost_font_library_json_repaired', true, false);
         }
