@@ -755,7 +755,15 @@ describe('Reset to Base confirm (#300, source scan)', () => {
 	// The handler is jQuery wiring, so its choice of question is checked in
 	// the source: the unsaved-changes question when the form has changes.
 	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../assets/js/admin.js'), 'utf8');
-	const handler = source.slice(source.indexOf("on('click', '.typost-ps-reset-base-btn'"), source.indexOf('// Delete Style'));
+	const start = source.indexOf("on('click', '.typost-ps-reset-base-btn'");
+	const end = source.indexOf('// Delete Style');
+	const handler = source.slice(start, end);
+
+	test('finds the handler between its markers', () => {
+		// A renamed marker gives -1, and the slice would scan the wrong text
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+	});
 
 	test('the handler asks hasUnsavedEditChanges() with the form\'s baseline before it confirms', () => {
 		expect(handler).toMatch(/hasUnsavedEditChanges\(readEditForm\(form\), \$\(form\)\.data\('baseline'\)/);
