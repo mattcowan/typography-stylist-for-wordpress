@@ -352,12 +352,16 @@ class Typost_Font_Library_Bridge {
 
         $content = $this->build_font_family_post_content($entry, $slug);
 
+        // wp_insert_post() unslashes its input, so the JSON is slashed first,
+        // as core's REST controllers do. Unslashed, the quotes around a family
+        // name with a space broke the JSON, and a non-ASCII escape lost its
+        // backslash and decoded to the wrong name (#310).
         $post_id = wp_insert_post(array(
             'post_type'    => 'wp_font_family',
             'post_status'  => 'publish',
             'post_title'   => sanitize_text_field($entry['name']),
             'post_name'    => $slug,
-            'post_content' => wp_json_encode($content),
+            'post_content' => wp_slash(wp_json_encode($content)),
         ), true);
 
         if (is_wp_error($post_id) || !$post_id) {
@@ -383,7 +387,7 @@ class Typost_Font_Library_Bridge {
                 'post_status'  => 'publish',
                 'post_parent'  => (int) $post_id,
                 'post_title'   => trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight']),
-                'post_content' => wp_json_encode($face_content),
+                'post_content' => wp_slash(wp_json_encode($face_content)),
             ));
         }
 
@@ -436,6 +440,160 @@ class Typost_Font_Library_Bridge {
         $this->clear_snapshot_cache();
 
         return true;
+    }
+
+    /**
+     * Repair the post content that registration stored before #310
+     *
+     * register_font() used to pass unslashed JSON to wp_insert_post(), which
+     * removed every backslash: a quoted family name ("EB Garamond", added
+     * for any name with a space) broke the family JSON, and a non-ASCII
+     * escape decoded to the wrong name. This rebuilds the content from the
+     * plugin's font entry, for family posts the entry owns (the same
+     * _typost_font_id check as unregister_font()) and their face posts.
+     *
+     * A post is rewritten only when its JSON does not decode, or when it
+     * decodes to something else and is exactly the rebuilt JSON with the
+     * backslashes removed. A post that lost only "\/" escapes decodes to the
+     * same values and is left alone, as is anything the user changed.
+     *
+     * The rewrite goes through wp_update_post(), so content_save_pre applies
+     * as it does at registration and in core's font REST controllers: for a
+     * user without unfiltered_html (multisite admins), kses turns a bare "&"
+     * in a face URL into "&amp;". Upload URLs do not normally have one.
+     *
+     * @since 2.3.4
+     * @return array {repaired: int, failed: int} Posts rewritten, and posts
+     *               that needed a rewrite but wp_update_post() refused
+     */
+    public function repair_registered_font_json() {
+        $counts = array(
+            'repaired' => 0,
+            'failed'   => 0,
+        );
+        if (!$this->is_available()) {
+            return $counts;
+        }
+
+        foreach ($this->sources->get_custom_fonts() as $entry) {
+            if (empty($entry['wp_post_id']) || empty($entry['font_id'])) {
+                continue;
+            }
+            $post = get_post((int) $entry['wp_post_id']);
+            if (!$post || 'wp_font_family' !== $post->post_type) {
+                continue;
+            }
+            if ((int) get_post_meta($post->ID, '_typost_font_id', true) !== (int) $entry['font_id']) {
+                continue;
+            }
+
+            $family_content = $this->build_font_family_post_content($entry, $post->post_name);
+            $this->count_repair($counts, $this->repair_post_json($post, $family_content));
+
+            // Faces are matched by title, which registration built from the
+            // same face content and which never held a backslash. Two faces
+            // can share a title (same family, style and weight, other files),
+            // so each title keeps every candidate.
+            $faces_by_title = array();
+            $base_url = isset($entry['upload_url']) ? $entry['upload_url'] : '';
+            $entry_faces = (isset($entry['font_faces']) && is_array($entry['font_faces'])) ? $entry['font_faces'] : array();
+            foreach ($entry_faces as $face) {
+                if (!is_array($face)) {
+                    continue;
+                }
+                $face_content = $this->build_font_face_post_content($face, $base_url);
+                if (!empty($face_content['src'])) {
+                    $faces_by_title[trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight'])][] = $face_content;
+                }
+            }
+            $face_posts = get_posts(array(
+                'post_type'      => 'wp_font_face',
+                'post_parent'    => $post->ID,
+                'posts_per_page' => -1,
+                'post_status'    => 'any',
+            ));
+            foreach ($face_posts as $face_post) {
+                $candidates = isset($faces_by_title[$face_post->post_title]) ? $faces_by_title[$face_post->post_title] : array();
+                $expected = $this->pick_face_content($face_post, $candidates);
+                if (null !== $expected) {
+                    $this->count_repair($counts, $this->repair_post_json($face_post, $expected));
+                }
+            }
+        }
+
+        if ($counts['repaired'] > 0) {
+            $this->clear_snapshot_cache();
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Choose the face content a face post was registered from
+     *
+     * With one candidate for the post's title, that is the face. With more,
+     * the face is the candidate whose content the post already holds, or
+     * whose JSON with backslashes removed is the post's content (the #310
+     * damage). A post that matches none of several candidates is skipped,
+     * so it never gets the files of another face.
+     *
+     * @param WP_Post $face_post  Face post
+     * @param array[] $candidates Face contents with the post's title
+     * @return array|null The face content, or null when none is certain
+     */
+    private function pick_face_content($face_post, array $candidates) {
+        if (1 === count($candidates)) {
+            return $candidates[0];
+        }
+        $stored = (string) $face_post->post_content;
+        $decoded = json_decode($stored, true);
+        foreach ($candidates as $candidate) {
+            if ($decoded === $candidate || stripslashes(wp_json_encode($candidate)) === $stored) {
+                return $candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Add one repair_post_json() result to the repair counts
+     *
+     * @param array     $counts {repaired, failed}, updated in place
+     * @param bool|null $result repair_post_json() result
+     */
+    private function count_repair(array &$counts, $result) {
+        if (true === $result) {
+            $counts['repaired']++;
+        } elseif (false === $result) {
+            $counts['failed']++;
+        }
+    }
+
+    /**
+     * Rewrite one post's JSON content when it carries the #310 damage
+     *
+     * @param WP_Post $post     Family or face post
+     * @param array   $expected Content the plugin builds for it now
+     * @return bool|null True when rewritten, false when the rewrite failed,
+     *                   null when the post needs none
+     */
+    private function repair_post_json($post, array $expected) {
+        $stored = (string) $post->post_content;
+        $json = wp_json_encode($expected);
+        $decoded = json_decode($stored, true);
+
+        if (is_array($decoded)) {
+            if ($decoded === $expected || stripslashes($json) !== $stored) {
+                return null;
+            }
+        }
+
+        $result = wp_update_post(array(
+            'ID'           => $post->ID,
+            'post_content' => wp_slash($json),
+        ), true);
+
+        return $result && !is_wp_error($result);
     }
 
     /**
