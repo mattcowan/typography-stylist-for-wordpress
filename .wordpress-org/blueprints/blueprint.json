@@ -43,7 +43,9 @@
         {
             "step": "setSiteOptions",
             "options": {
-                "blogname": "Typography Stylist Demo"
+                "blogname": "Typography Stylist Demo",
+                "typost_glyphs_toolbar_button": "1",
+                "typost_ps_toolbar_button": "1"
             }
         }
     ],
