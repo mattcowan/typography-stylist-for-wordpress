@@ -22,6 +22,7 @@ delete_option('typost_font_replacements');
 delete_option('typost_font_feature_visibility');
 delete_option('typost_font_order');
 delete_option('typost_htaccess_verified');
+delete_option('typost_font_library_json_repaired');
 delete_option('typost_enable_aria_labels'); // Removed option; sites that used it may still store it.
 
 // REST write-limit window, one row per user who has written (since 2.3.2).

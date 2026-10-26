@@ -352,12 +352,16 @@ class Typost_Font_Library_Bridge {
 
         $content = $this->build_font_family_post_content($entry, $slug);
 
+        // wp_insert_post() unslashes its input, so the JSON is slashed first,
+        // as core's REST controllers do. Unslashed, the quotes around a family
+        // name with a space broke the JSON, and a non-ASCII escape lost its
+        // backslash and decoded to the wrong name (#310).
         $post_id = wp_insert_post(array(
             'post_type'    => 'wp_font_family',
             'post_status'  => 'publish',
             'post_title'   => sanitize_text_field($entry['name']),
             'post_name'    => $slug,
-            'post_content' => wp_json_encode($content),
+            'post_content' => wp_slash(wp_json_encode($content)),
         ), true);
 
         if (is_wp_error($post_id) || !$post_id) {
@@ -383,7 +387,7 @@ class Typost_Font_Library_Bridge {
                 'post_status'  => 'publish',
                 'post_parent'  => (int) $post_id,
                 'post_title'   => trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight']),
-                'post_content' => wp_json_encode($face_content),
+                'post_content' => wp_slash(wp_json_encode($face_content)),
             ));
         }
 
@@ -436,6 +440,107 @@ class Typost_Font_Library_Bridge {
         $this->clear_snapshot_cache();
 
         return true;
+    }
+
+    /**
+     * Repair the post content that registration stored before #310
+     *
+     * register_font() used to pass unslashed JSON to wp_insert_post(), which
+     * removed every backslash: a quoted family name ("EB Garamond", added
+     * for any name with a space) broke the family JSON, and a non-ASCII
+     * escape decoded to the wrong name. This rebuilds the content from the
+     * plugin's font entry, for family posts the entry owns (the same
+     * _typost_font_id check as unregister_font()) and their face posts.
+     *
+     * A post is rewritten only when its JSON does not decode, or when it
+     * decodes to something else and is exactly the rebuilt JSON with the
+     * backslashes removed. A post that lost only "\/" escapes decodes to the
+     * same values and is left alone, as is anything the user changed.
+     *
+     * @since 2.3.4
+     * @return int Number of posts rewritten
+     */
+    public function repair_registered_font_json() {
+        if (!$this->is_available()) {
+            return 0;
+        }
+
+        $repaired = 0;
+        foreach ($this->sources->get_custom_fonts() as $entry) {
+            if (empty($entry['wp_post_id']) || empty($entry['font_id'])) {
+                continue;
+            }
+            $post = get_post((int) $entry['wp_post_id']);
+            if (!$post || 'wp_font_family' !== $post->post_type) {
+                continue;
+            }
+            if ((int) get_post_meta($post->ID, '_typost_font_id', true) !== (int) $entry['font_id']) {
+                continue;
+            }
+
+            $family_content = $this->build_font_family_post_content($entry, $post->post_name);
+            if ($this->repair_post_json($post, $family_content)) {
+                $repaired++;
+            }
+
+            // Faces are matched by title, which registration built from the
+            // same face content and which never held a backslash
+            $faces_by_title = array();
+            $base_url = isset($entry['upload_url']) ? $entry['upload_url'] : '';
+            $entry_faces = (isset($entry['font_faces']) && is_array($entry['font_faces'])) ? $entry['font_faces'] : array();
+            foreach ($entry_faces as $face) {
+                if (!is_array($face)) {
+                    continue;
+                }
+                $face_content = $this->build_font_face_post_content($face, $base_url);
+                if (!empty($face_content['src'])) {
+                    $faces_by_title[trim($face_content['fontFamily'] . '; ' . $face_content['fontStyle'] . '; ' . $face_content['fontWeight'])] = $face_content;
+                }
+            }
+            $face_posts = get_posts(array(
+                'post_type'      => 'wp_font_face',
+                'post_parent'    => $post->ID,
+                'posts_per_page' => -1,
+                'post_status'    => 'any',
+            ));
+            foreach ($face_posts as $face_post) {
+                if (isset($faces_by_title[$face_post->post_title]) && $this->repair_post_json($face_post, $faces_by_title[$face_post->post_title])) {
+                    $repaired++;
+                }
+            }
+        }
+
+        if ($repaired > 0) {
+            $this->clear_snapshot_cache();
+        }
+
+        return $repaired;
+    }
+
+    /**
+     * Rewrite one post's JSON content when it carries the #310 damage
+     *
+     * @param WP_Post $post     Family or face post
+     * @param array   $expected Content the plugin builds for it now
+     * @return bool Whether the post was rewritten
+     */
+    private function repair_post_json($post, array $expected) {
+        $stored = (string) $post->post_content;
+        $json = wp_json_encode($expected);
+        $decoded = json_decode($stored, true);
+
+        if (is_array($decoded)) {
+            if ($decoded === $expected || stripslashes($json) !== $stored) {
+                return false;
+            }
+        }
+
+        $result = wp_update_post(array(
+            'ID'           => $post->ID,
+            'post_content' => wp_slash($json),
+        ), true);
+
+        return $result && !is_wp_error($result);
     }
 
     /**

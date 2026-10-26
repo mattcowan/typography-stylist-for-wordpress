@@ -67,7 +67,19 @@ class FontLibraryBridgeTest extends TestCase {
             }
             return $candidate;
         });
-        Functions\when('wp_insert_post')->alias(function ($args) use (&$posts, &$next_post_id) {
+        // Core unslashes wp_insert_post() and wp_update_post() input, so the
+        // doubles do too: a caller that skips wp_slash() loses its
+        // backslashes here as it does on a real site (#310).
+        $unslash = function ($args) {
+            return array_map(function ($value) {
+                return is_string($value) ? stripslashes($value) : $value;
+            }, $args);
+        };
+        Functions\when('wp_slash')->alias(function ($value) {
+            return is_string($value) ? addslashes($value) : $value;
+        });
+        Functions\when('wp_insert_post')->alias(function ($args) use (&$posts, &$next_post_id, $unslash) {
+            $args = $unslash($args);
             $id = $next_post_id++;
             $post = (object) array_merge([
                 'ID' => $id,
@@ -80,6 +92,17 @@ class FontLibraryBridgeTest extends TestCase {
             ], $args);
             $post->ID = $id;
             $posts[$id] = $post;
+            return $id;
+        });
+        Functions\when('wp_update_post')->alias(function ($args) use (&$posts, $unslash) {
+            $args = $unslash($args);
+            $id = (int) $args['ID'];
+            if (!isset($posts[$id])) {
+                return 0;
+            }
+            foreach ($args as $key => $value) {
+                $posts[$id]->$key = $value;
+            }
             return $id;
         });
         Functions\when('get_post')->alias(function ($id) use (&$posts) {
@@ -211,6 +234,133 @@ class FontLibraryBridgeTest extends TestCase {
             return 'wp_font_face' === $p->post_type && (int) $p->post_parent === (int) $result['post_id'];
         });
         $this->assertCount(2, $faces);
+        foreach ($faces as $face) {
+            $face_data = json_decode($face->post_content, true);
+            $this->assertIsArray($face_data, 'Each face post must store JSON that decodes');
+            $this->assertSame('Playfair Display', $face_data['fontFamily']);
+        }
+    }
+
+    public function test_register_font_keeps_non_ascii_family_names() {
+        $entry = $this->sampleEntry();
+        $entry['name'] = 'Café';
+        $entry['font_faces'][0]['family'] = 'Café';
+        $entry['font_faces'][1]['family'] = 'Café';
+
+        $result = $this->bridge()->register_font($entry);
+
+        $family = json_decode($this->posts[$result['post_id']]->post_content, true);
+        $this->assertSame('Café, serif', $family['fontFamily']);
+        foreach ($this->facePosts($result['post_id']) as $face) {
+            $this->assertSame('Café', json_decode($face->post_content, true)['fontFamily']);
+        }
+    }
+
+    /**
+     * Register the entry, then store its posts the way versions before
+     * #310 did: wp_json_encode() output with every backslash removed.
+     *
+     * @return array {entry, post_id} with the entry saved as registered
+     */
+    private function registerWithLegacyContent(array $entry) {
+        $bridge = $this->bridge();
+        $result = $bridge->register_font($entry);
+        $family = $this->posts[$result['post_id']];
+        $family->post_content = stripslashes(json_encode($bridge->build_font_family_post_content($entry, $family->post_name)));
+        foreach ($this->facePosts($result['post_id']) as $face) {
+            $face->post_content = stripslashes(json_encode(json_decode($face->post_content, true)));
+        }
+
+        $entry['wp_post_id'] = $result['post_id'];
+        $entry['wp_slug'] = $result['slug'];
+        $this->options['typost_custom_fonts'] = [$entry];
+
+        return ['entry' => $entry, 'post_id' => $result['post_id']];
+    }
+
+    private function facePosts($family_id) {
+        return array_values(array_filter($this->posts, function ($p) use ($family_id) {
+            return 'wp_font_face' === $p->post_type && (int) $p->post_parent === (int) $family_id;
+        }));
+    }
+
+    public function test_repair_rebuilds_owned_family_with_invalid_json() {
+        $registered = $this->registerWithLegacyContent($this->sampleEntry());
+        $family = $this->posts[$registered['post_id']];
+        $this->assertNull(json_decode($family->post_content, true), 'Precondition: legacy family JSON does not decode');
+
+        $repaired = $this->bridge()->repair_registered_font_json();
+
+        $this->assertSame(1, $repaired, 'Only the family post was broken; the faces only lost "\/" escapes');
+        $data = json_decode($family->post_content, true);
+        $this->assertSame('"Playfair Display", serif', $data['fontFamily']);
+        $this->assertSame('playfair-display', $data['slug']);
+        $this->assertSame('Playfair Display', $data['name']);
+    }
+
+    public function test_repair_restores_non_ascii_names_in_family_and_faces() {
+        $entry = $this->sampleEntry();
+        $entry['name'] = 'Café';
+        $entry['fallbacks'] = '';
+        $entry['font_faces'][0]['family'] = 'Café';
+        $entry['font_faces'][1]['family'] = 'Café';
+        $registered = $this->registerWithLegacyContent($entry);
+        // Legacy content decodes, but with the wrong name: the "u00e9" escape lost its backslash
+        $this->assertSame('Cafu00e9', json_decode($this->posts[$registered['post_id']]->post_content, true)['fontFamily']);
+
+        $repaired = $this->bridge()->repair_registered_font_json();
+
+        $this->assertSame(3, $repaired);
+        $this->assertSame('Café', json_decode($this->posts[$registered['post_id']]->post_content, true)['fontFamily']);
+        foreach ($this->facePosts($registered['post_id']) as $face) {
+            $data = json_decode($face->post_content, true);
+            $this->assertSame('Café', $data['fontFamily']);
+            $this->assertNotEmpty($data['src']);
+        }
+    }
+
+    public function test_repair_never_touches_families_without_ownership_meta() {
+        $registered = $this->registerWithLegacyContent($this->sampleEntry());
+        $legacy = $this->posts[$registered['post_id']]->post_content;
+        // A family the user made in the Font Library UI has no marker
+        unset($this->post_meta[$registered['post_id']]['_typost_font_id']);
+
+        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame($legacy, $this->posts[$registered['post_id']]->post_content);
+    }
+
+    public function test_repair_never_touches_a_family_owned_by_another_font() {
+        $registered = $this->registerWithLegacyContent($this->sampleEntry());
+        $legacy = $this->posts[$registered['post_id']]->post_content;
+        $this->post_meta[$registered['post_id']]['_typost_font_id'] = 999;
+
+        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame($legacy, $this->posts[$registered['post_id']]->post_content);
+    }
+
+    public function test_repair_leaves_valid_posts_unchanged() {
+        $result = $this->bridge()->register_font($this->sampleEntry());
+        $entry = $this->sampleEntry();
+        $entry['wp_post_id'] = $result['post_id'];
+        $this->options['typost_custom_fonts'] = [$entry];
+        // A face that lost only its "\/" escapes still decodes to the same URLs
+        $face = $this->facePosts($result['post_id'])[0];
+        $face->post_content = stripslashes($face->post_content);
+        $before = array_map(function ($p) {
+            return $p->post_content;
+        }, $this->posts);
+
+        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
+        $this->assertSame($before, array_map(function ($p) {
+            return $p->post_content;
+        }, $this->posts));
+    }
+
+    public function test_repair_does_nothing_without_font_library() {
+        $this->registerWithLegacyContent($this->sampleEntry());
+        Functions\when('post_type_exists')->justReturn(false);
+
+        $this->assertSame(0, $this->bridge()->repair_registered_font_json());
     }
 
     public function test_register_font_is_idempotent_when_post_exists() {

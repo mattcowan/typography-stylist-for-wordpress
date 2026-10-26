@@ -223,6 +223,9 @@ class Typost {
         // Ensure .htaccess exists for existing installations
         add_action('admin_init', array($this, 'maybe_create_htaccess'), 1);
 
+        // Repair Font Library posts registered before #310, once
+        add_action('admin_init', array($this, 'maybe_repair_font_library_json'));
+
         // Add REST API endpoints
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         add_filter('rest_dispatch_request', array($this, 'enforce_rest_rate_limit'), 10, 4);
@@ -284,6 +287,25 @@ class Typost {
 
         // Mark as verified so we don't check again
         update_option('typost_htaccess_verified', true, false);
+    }
+
+    /**
+     * Repair the JSON of Font Library posts registered before #310
+     *
+     * Runs once, on the first admin request by a user who can manage
+     * options (the capability that registration itself requires). See
+     * Typost_Font_Library_Bridge::repair_registered_font_json().
+     *
+     * @since 2.3.4
+     */
+    public function maybe_repair_font_library_json() {
+        if (get_option('typost_font_library_json_repaired', false) || !current_user_can('manage_options')) {
+            return;
+        }
+
+        $this->font_library_bridge()->repair_registered_font_json();
+
+        update_option('typost_font_library_json_repaired', true);
     }
 
     /**
