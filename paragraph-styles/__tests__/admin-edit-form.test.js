@@ -705,4 +705,69 @@ describe('Based On (#200)', () => {
 		const texts = Array.from(list.querySelectorAll('.typost-ps-style-card-details')).map((el) => el.textContent);
 		expect(texts).toEqual(['new 1', 'old 2', 'new 3']);
 	});
+
+	describe('hasUnsavedEditChanges (#300: Reset to Base asks about unsaved changes)', () => {
+		const { hasUnsavedEditChanges } = require('../assets/js/admin.js');
+		const unsaved = (form, baseline) => hasUnsavedEditChanges(readEditForm(form), baseline, STYLES[1], 'rem', STYLES);
+
+		test('an untouched form has none', () => {
+			const { form, baseline } = openChildForm(STYLES[1]);
+			expect(unsaved(form, baseline)).toBe(false);
+		});
+
+		test('a property change counts', () => {
+			const { form, baseline } = openChildForm(STYLES[1]);
+			setField(form, 'letterSpacing', 40);
+			expect(unsaved(form, baseline)).toBe(true);
+		});
+
+		test('a change typed and then undone counts as none', () => {
+			const { form, baseline } = openChildForm(STYLES[1]);
+			setField(form, 'letterSpacing', 40);
+			setField(form, 'letterSpacing', 20);
+			setFeature(form, 'swsh', true);
+			setFeature(form, 'swsh', false);
+			expect(unsaved(form, baseline)).toBe(false);
+		});
+
+		test('a value written differently but built the same counts as none', () => {
+			const { form, baseline } = openChildForm(STYLES[1]);
+			setField(form, 'lineHeight', '1.60');
+			expect(unsaved(form, baseline)).toBe(false);
+		});
+
+		test('a typed name counts, because the reset closes the form', () => {
+			const { form, baseline } = openChildForm(STYLES[1]);
+			setField(form, 'name', 'Caption small');
+			expect(unsaved(form, baseline)).toBe(true);
+			setField(form, 'name', 'Caption ');
+			expect(unsaved(form, baseline)).toBe(false);
+		});
+
+		test('no baseline counts as a change', () => {
+			const { form } = openChildForm(STYLES[1]);
+			expect(hasUnsavedEditChanges(readEditForm(form), undefined, STYLES[1], 'rem', STYLES)).toBe(true);
+		});
+	});
+});
+
+describe('Reset to Base confirm (#300, source scan)', () => {
+	// The handler is jQuery wiring, so its choice of question is checked in
+	// the source: the unsaved-changes question when the form has changes.
+	const source = require('fs').readFileSync(require('path').resolve(__dirname, '../assets/js/admin.js'), 'utf8');
+	const start = source.indexOf("on('click', '.typost-ps-reset-base-btn'");
+	const end = source.indexOf('// Delete Style');
+	const handler = source.slice(start, end);
+
+	test('finds the handler between its markers', () => {
+		// A renamed marker gives -1, and the slice would scan the wrong text
+		expect(start).toBeGreaterThan(-1);
+		expect(end).toBeGreaterThan(start);
+	});
+
+	test('the handler asks hasUnsavedEditChanges() with the form\'s baseline before it confirms', () => {
+		expect(handler).toMatch(/hasUnsavedEditChanges\(readEditForm\(form\), \$\(form\)\.data\('baseline'\)/);
+		expect(handler.indexOf('hasUnsavedEditChanges(')).toBeLessThan(handler.indexOf('confirm('));
+		expect(handler).toContain('The changes in this form are not saved, and Reset to Base discards them.');
+	});
 });

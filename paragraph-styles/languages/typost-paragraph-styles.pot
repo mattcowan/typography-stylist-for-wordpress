@@ -7,7 +7,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-23T16:13:15+00:00\n"
+"POT-Creation-Date: 2026-10-23T18:19:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-paragraph-styles\n"
@@ -24,7 +24,7 @@ msgid "Manage your saved paragraph styles. These appear in the Typography Stylis
 msgstr ""
 
 #: includes/admin-tab.php:46
-#: assets/js/admin.js:1204
+#: assets/js/admin.js:1244
 msgid "No paragraph styles saved yet. Create styles from the Typography Stylist editor when editing a post."
 msgstr ""
 
@@ -338,7 +338,7 @@ msgid "Inherited"
 msgstr ""
 
 #: paragraph-styles.php:1823
-#: assets/js/admin.js:342
+#: assets/js/admin.js:348
 msgid "A deleted style"
 msgstr ""
 
@@ -396,75 +396,81 @@ msgstr ""
 msgid "A chain of Based On styles can hold at most %d styles."
 msgstr ""
 
-#: assets/js/admin.js:542
+#: assets/js/admin.js:548
 msgid "Enter a name for the style."
 msgstr ""
 
-#: assets/js/admin.js:545
+#: assets/js/admin.js:551
 msgid "Enter a size greater than 0."
 msgstr ""
 
-#: assets/js/admin.js:552
+#: assets/js/admin.js:558
 msgid "Enter all three sizes, each greater than 0."
 msgstr ""
 
-#: assets/js/admin.js:561
+#: assets/js/admin.js:567
 msgid "Each axis setting needs a four-letter tag in quotes and a number, such as \"wght\" 650."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1066
+#: assets/js/admin.js:1099
 #, js-format
 msgid "Style “%s” saved. It now inherits from the style it is based on."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1069
+#: assets/js/admin.js:1102
 #, js-format
 msgid "Style “%s” saved. It is no longer based on another style."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1072
+#: assets/js/admin.js:1105
 #, js-format
 msgid "Style “%s” saved."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1075
+#: assets/js/admin.js:1108
 #, js-format
 msgid "Style renamed to “%s”."
 msgstr ""
 
-#: assets/js/admin.js:1104
-#: assets/js/admin.js:1156
+#: assets/js/admin.js:1137
+#: assets/js/admin.js:1196
 msgid "Failed to update style. Please try again."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1123
+#: assets/js/admin.js:1160
+#, js-format
+msgid "The changes in this form are not saved, and Reset to Base discards them. Remove every setting “%s” sets itself, so it uses all values of the style it is based on?"
+msgstr ""
+
+#. translators: %s: style name
+#: assets/js/admin.js:1163
 #, js-format
 msgid "Remove every setting “%s” sets itself, so it uses all values of the style it is based on?"
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1147
+#: assets/js/admin.js:1187
 #, js-format
 msgid "Style “%s” reset to the style it is based on."
 msgstr ""
 
-#: assets/js/admin.js:1173
+#: assets/js/admin.js:1213
 #, js-format
 msgid "Are you sure you want to delete “%s”? This cannot be undone."
 msgstr ""
 
 #. translators: %s: style name
-#: assets/js/admin.js:1212
+#: assets/js/admin.js:1252
 #, js-format
 msgid "Style “%s” deleted."
 msgstr ""
 
-#: assets/js/admin.js:1217
+#: assets/js/admin.js:1257
 msgid "Failed to delete style. Please try again."
 msgstr ""
 
