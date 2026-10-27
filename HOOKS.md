@@ -408,7 +408,7 @@ add_filter('typost_force_enqueue_paragraph_style_ids', function($ids) {
 
 - No First Letter Hang moves a letter or a line into the margin. This applies to Typography Stylist blocks and to core Paragraph and Heading blocks with a paragraph style.
 - Fit-to-width lines that had a hang get smaller, so they still fill the block and do not go past its end edge. This also applies to content saved before 2.3.5.
-- The OpenType features of the plugin are reset to `font-feature-settings: normal` (class only, see below). The font keeps its default features, such as standard ligatures and kerning. The Case setting (All Caps, Small Caps and others) does not change.
+- The OpenType features of the plugin are reset to `font-feature-settings: normal` (class only, see below). The reset applies to every `.typost-styled` element and its descendants, so it also removes features that your theme sets on those elements (for example `onum` on headings). The font keeps its default features, such as standard ligatures and kerning. The Case setting (All Caps, Small Caps and others) does not change.
 
 Add the `typost-plain` class to the element, or to an ancestor, such as `<body>`:
 
