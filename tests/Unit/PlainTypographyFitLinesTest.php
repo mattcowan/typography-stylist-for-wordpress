@@ -96,11 +96,29 @@ class PlainTypographyFitLinesTest extends TestCase {
         $this->assertSame($line, $this->render($line, 'core/heading'));
     }
 
-    public function test_a_control_line_among_other_classes_is_matched() {
+    public function test_typost_line_is_matched_between_other_classes() {
         // Control for the class match above: typost-line with other classes
         $html = '<span class="a typost-line b" style="font-size:calc(0.5 * 100cqi)">x</span>';
 
         $this->assertStringContainsString('--typost-fit-ratio:0.5', $this->render($html));
+    }
+
+    public function test_px_line_with_a_px_cap_takes_the_ratio_not_the_cap() {
+        // buildFitFontSize() writes the ratio term first and the cap last
+        $size = 'min(calc(0.4606 * 100cqi), 64px)';
+        $html = '<span class="typost-line" style="font-size:' . $size . '">April</span>';
+
+        $this->assertSame(
+            '<span class="typost-line" style="font-size:' . $size . ';--typost-fit-ratio:0.4606;--typost-fit-size:' . $size . '">April</span>',
+            $this->render($html)
+        );
+    }
+
+    public function test_rem_line_with_a_rem_cap_takes_the_ratio() {
+        $size = 'min(calc(0.4606 * var(--typost-fit-width, 100cqi)), calc(0.4606 * 100cqi), 4rem)';
+        $html = '<span class="typost-line" style="font-size:' . $size . '">April</span>';
+
+        $this->assertStringContainsString(';--typost-fit-ratio:0.4606;', $this->render($html));
     }
 
     public function test_input_that_is_not_block_html_is_returned_unchanged() {

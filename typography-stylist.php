@@ -2189,7 +2189,9 @@ class Typost {
             || false === strpos($block_content, 'typost-line')) {
             return $block_content;
         }
-        $result = preg_replace_callback('/<span\b[^>]*>/i', function ($match) {
+        // Only tags that mention typost-line reach the callback, which then
+        // checks the class word exactly
+        $result = preg_replace_callback('/<span\b[^>]*typost-line[^>]*>/i', function ($match) {
             return self::add_plain_properties_to_fit_line_tag($match[0]);
         }, $block_content);
         return null === $result ? $block_content : $result;
