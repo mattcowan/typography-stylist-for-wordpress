@@ -100,13 +100,16 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    (`paragraph-styles/paragraph-styles.php`), `TYPOST_VF_VERSION`
    (`variable-fonts/variable-fonts.php`). A module's version is the `?ver=`
    on its scripts and styles, so without a bump a browser can keep the
-   previous release's files. check-versions.js does not check these. Find
-   the modules with
-   `git diff --name-only v<last>..HEAD -- glyphs-panel/assets paragraph-styles/assets variable-fonts/assets`
-   and bump the patch number of each one listed (2.3.2: `5c0f589`). Each
-   module keeps its JS and CSS under `assets/`. Do not diff the whole module
-   folder: step 2 changes every module's catalogues each release, and PHP
-   or catalogue changes do not change what a browser caches.
+   previous release's files. Run `node scripts/check-versions.js --modules`:
+   it compares each module's `assets/` with the previous stable tag (the
+   highest `vX.Y.Z` tag lower than this version, betas excluded) and marks
+   each module whose files changed but whose constant did not. Bump the
+   patch number of each module it marks (2.3.2: `5c0f589`). It checks only
+   `assets/`, because step 2 changes every module's catalogues each release,
+   and PHP or catalogue changes do not change what a browser caches. CI runs
+   the same check on a `release/*` PR, and the deploy runs it again in tag
+   mode, so a missed bump fails before the release ships (#287). The check
+   needs the tags: run `git fetch --tags` first if your clone has none.
 2. **Rebuild the translation catalogues** if any user-facing string changed
    this cycle. The `.po`/`.pot` files are edited by hand; the compiled `.mo`
    and the JavaScript `.json` files are generated, and stale ones ship
@@ -150,7 +153,8 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    into readme.txt now, under this release's heading. Add the same section
    to the `## Changelog` list in `README.md` (`### Version X.Y.Z`).
 4. Push to `main`; wait for **CI** to go green (it runs the version
-   consistency check, both test suites, and a production build).
+   consistency check, both test suites, and a production build; on a
+   `release/*` PR it also runs the module version check from step 1).
 5. **GitHub → Releases → Draft a new release**: create tag `vX.Y.Z` on
    `main`, title it, write the release notes (users see these — the
    changelog entry is a good start). Leave "Set as a pre-release" UNCHECKED.
@@ -223,9 +227,11 @@ its changelog, a release PR that is merged but not yet published), a sync
 puts that text on the listing of the current version, whose download does
 not have those features. This happened once, from a blueprint-only sync
 run while 2.3.4 was in progress. Before every sync, diff `readme.txt`
-against the last release tag. If it holds unreleased text, make a branch
-from `main`, restore `readme.txt` from the tag, make only the change you
-want, and run the workflow from that branch. Do not merge that branch.
+against the last release tag: `git diff v<last release> -- readme.txt`
+(for example `git diff v2.3.4 -- readme.txt`). If it holds unreleased
+text, make a branch from `main`, restore `readme.txt` from the tag, make
+only the change you want, and run the workflow from that branch. Do not
+merge that branch.
 
 Edit `readme.txt` or files in `.wordpress-org/` (banners, icons,
 screenshots), push to `main`, then run the workflow by hand: **Actions →

@@ -29,6 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The version guard compares each module's assets/ with the
+          # previous stable tag, so it needs history and tags (#287).
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -36,7 +40,9 @@ jobs:
       - run: npm ci
 
       # Fail BEFORE touching SVN if the plugin header, TYPOST_VERSION,
-      # readme Stable tag, and package.json don't match the release tag.
+      # readme Stable tag, and package.json don't match the release tag, or
+      # if a module's assets/ changed since the previous stable tag without
+      # a bump of its version constant.
       - name: Version guard (stable)
         if: ${{ !github.event.release.prerelease }}
         run: node scripts/check-versions.js "${{ github.event.release.tag_name }}"

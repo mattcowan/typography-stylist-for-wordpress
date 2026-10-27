@@ -7,6 +7,13 @@
 # contains() ignores case and matches a substring, so "@Claude Review" and
 # "@claude reviewed" also start a run. "@claude" alone does not.
 #
+# On a PR from a fork, ask for a review in a PR comment only (#306). GitHub
+# gives pull_request_review_comment and pull_request_review runs from a fork
+# no secrets and a read-only GITHUB_TOKEN, so a request in a review comment
+# or a review body fails to authenticate. issue_comment runs in this
+# repository, so a PR comment works. Do not add a second workflow that holds
+# credentials for the fork events: the PR comment already covers that case.
+#
 # GitHub runs issue_comment workflows only from the default branch, and the
 # app token exchange rejects a workflow that differs from it. So
 # "@claude review" does nothing on the PR that adds or changes this file
