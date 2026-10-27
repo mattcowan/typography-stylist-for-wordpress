@@ -129,6 +129,11 @@
 	margin-bottom: 0;
 }
 
+/* Glyph size (#321): short labels, so it takes less room than the filters */
+.typost-glyphs-toolbar .components-base-control.typost-glyphs-size {
+	flex: 0 1 160px;
+}
+
 /* Windowed grid */
 .typost-glyphs-grid {
 	overflow-y: auto;

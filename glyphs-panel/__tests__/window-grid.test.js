@@ -2,7 +2,92 @@
  * Tests for computeWindow() / computeColumns() — grid virtualization math.
  */
 
-const { computeWindow, computeColumns } = require('../assets/js/lib/window-grid.js');
+const {
+	computeWindow,
+	computeColumns,
+	computePageRows,
+	CELL_SIZES,
+	DEFAULT_CELL_SIZE,
+	CELL_SIZE_STORAGE_KEY,
+	normalizeCellSize,
+	glyphFontSize,
+	fitCellSize,
+	readCellSize,
+	writeCellSize,
+} = require('../assets/js/lib/window-grid.js');
+
+describe('glyph size (#321)', () => {
+	function memoryStorage(initial = {}) {
+		const data = { ...initial };
+		return {
+			data,
+			getItem: (key) => (key in data ? data[key] : null),
+			setItem: (key, value) => { data[key] = String(value); },
+		};
+	}
+
+	test('the default is the size the panel always had', () => {
+		expect(DEFAULT_CELL_SIZE).toBe(56);
+		expect(CELL_SIZES).toContain(56);
+		expect(glyphFontSize(56)).toBe(26);
+	});
+
+	test('the glyph scales with the cell', () => {
+		expect(glyphFontSize(128)).toBe(59);
+		expect(glyphFontSize(40)).toBe(19);
+	});
+
+	test.each([
+		['72', 72],
+		[96, 96],
+		['57', 56],
+		['abc', 56],
+		[null, 56],
+		[undefined, 56],
+	])('normalizeCellSize(%p) is %p', (value, expected) => {
+		expect(normalizeCellSize(value)).toBe(expected);
+	});
+
+	test('a size wider than the grid is capped at the grid width', () => {
+		expect(fitCellSize(128, 100.7)).toBe(100);
+		expect(fitCellSize(56, 600)).toBe(56);
+		expect(fitCellSize(128, 0)).toBe(128);
+	});
+
+	test('a capped size gives one full column', () => {
+		const width = 100;
+		expect(computeColumns(width, fitCellSize(128, width))).toBe(1);
+	});
+
+	test('reads back the size it wrote', () => {
+		const storage = memoryStorage();
+		expect(readCellSize(storage)).toBe(56);
+		expect(writeCellSize(storage, 96)).toBe(true);
+		expect(storage.data[CELL_SIZE_STORAGE_KEY]).toBe('96');
+		expect(readCellSize(storage)).toBe(96);
+	});
+
+	test('ignores a stored value that is not a size', () => {
+		expect(readCellSize(memoryStorage({ [CELL_SIZE_STORAGE_KEY]: '9999' }))).toBe(56);
+	});
+
+	test('missing or throwing storage reads the default and does not throw', () => {
+		const throwing = {
+			getItem: () => { throw new Error('blocked'); },
+			setItem: () => { throw new Error('blocked'); },
+		};
+		expect(readCellSize(null)).toBe(56);
+		expect(readCellSize(throwing)).toBe(56);
+		expect(writeCellSize(null, 72)).toBe(false);
+		expect(writeCellSize(throwing, 72)).toBe(false);
+	});
+
+	test('Page Down moves the rows that fit the grid at each size', () => {
+		expect(CELL_SIZES.map((cell) => computePageRows(360, cell))).toEqual([9, 6, 5, 3, 2]);
+		expect(computePageRows(100, 128)).toBe(1); // never less than 1
+		expect(computePageRows(0, 56)).toBe(1);
+	});
+});
 
 describe('computeColumns', () => {
 	test('floors columns to fit', () => {
