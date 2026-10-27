@@ -30,6 +30,27 @@ h6 .typost-styled {
     font-feature-settings: inherit;
 }
 
+/* Plain typography switch (#315)
+ * A theme puts .typost-plain on any ancestor (for example from a reader's
+ * "simplify typography" preference). It sets --typost-plain, which turns
+ * off every First Letter Hang (block style.css and the paragraph-style
+ * rules read it), and resets the OpenType features the plugin writes. A
+ * theme may set --typost-plain: 1 itself instead; that removes the hangs
+ * only, because a custom property cannot switch font-feature-settings.
+ * !important beats the inline style of a span or block. Case and small caps
+ * from the Case setting (font-variant-caps, text-transform) are kept.
+ * Fit-to-width lines are not re-measured, so a line whose features changed
+ * its glyph widths can differ slightly from the block width. */
+.typost-plain {
+    --typost-plain: 1;
+}
+
+.typost-plain .typost-styled,
+.typost-plain .typost-styled * {
+    -webkit-font-feature-settings: normal !important;
+    font-feature-settings: normal !important;
+}
+
 /* Print styles - ensure features are preserved */
 @media print {
     .typost-styled {

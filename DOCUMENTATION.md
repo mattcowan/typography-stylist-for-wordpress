@@ -758,7 +758,14 @@ fetch('/wp-json/typost/v1/adobe-fonts', {
 .typost-ps-1 {
     /* One class for each paragraph style */
 }
+
+/* Plain typography switch (since 2.3.5). Put it on any ancestor. */
+.typost-plain {
+    /* No First Letter Hang, OpenType features reset to normal */
+}
 ```
+
+A theme can add `typost-plain` for a reader who wants plain text. See [HOOKS.md](HOOKS.md#plain-typography-switch).
 
 #### Data Attributes
 

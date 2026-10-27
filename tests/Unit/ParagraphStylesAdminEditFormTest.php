@@ -180,7 +180,7 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
             return $default;
         });
         Functions\when('get_transient')->alias(function ($key) use ($styles, $css) {
-            return 'typost_paragraph_styles_css' === $key ? $css : $styles;
+            return \Typost_Paragraph_Styles::CSS_CACHE_KEY === $key ? $css : $styles;
         });
     }
 

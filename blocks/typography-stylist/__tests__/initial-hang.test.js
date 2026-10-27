@@ -261,3 +261,53 @@ describe('save output', () => {
 		expect(html).toContain('--typost-line-hang:0.1');
 	});
 });
+
+describe('plain typography switch (#315)', () => {
+	const fs = require('fs');
+	const path = require('path');
+	const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+
+	// style.css divides a hung fit line's size by (1 + R × hang) when the
+	// switch is on. Ink of a line at size s is s × (measured / ref).
+	const ref = 100;
+	const container = 760;
+
+	it.each([
+		[480, 0.2],
+		[910, 0.05],
+		[300, 1],
+	])('a line measured %ipx wide with a %f em hang fills the block once the hang is off', (measured, hang) => {
+		const ratio = computeHungFitRatio(ref, measured, hang);
+		const size = ratio * container;
+		const plainSize = size / (1 + ratio * hang);
+
+		// Hung: ink minus the hang fills the container
+		expect(size * (measured / ref) - hang * size).toBeCloseTo(container, -1);
+		// Plain, no hang: the whole ink fills it, not hang × size more
+		expect(plainSize * (measured / ref)).toBeCloseTo(container, -1);
+		expect(size * (measured / ref) - container).toBeGreaterThan(hang * size * 0.99);
+	});
+
+	it('a line held below R × 100cqi by its cap stays inside too', () => {
+		const ratio = computeHungFitRatio(ref, 480, 0.2);
+		const capped = Math.min(ratio * container, 120);
+		expect((capped / (1 + ratio * 0.2)) * 4.8).toBeLessThanOrEqual(container);
+	});
+
+	it('gates every hang margin on --typost-plain', () => {
+		const margins = css.match(/margin-inline-start: calc\(var\(--typost-(?:line-)?hang, 0\)[^;]*;/g);
+		expect(margins).toHaveLength(3);
+		margins.forEach((rule) => {
+			expect(rule).toContain('* (1 - var(--typost-plain, 0)) * -1em');
+		});
+	});
+
+	it('divides both fit-line sizes by the hang each line was measured with', () => {
+		expect(css).toContain('.typost-line[style*="--typost-fit-ratio"] {\n\tfont-size: calc(var(--typost-fit-size) / (1 + var(--typost-fit-ratio) * var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * var(--typost-plain, 0))) !important;');
+		expect(css).toContain('.typost-line[style*="--typost-fit-ratio"]:first-child {\n\tfont-size: calc(var(--typost-fit-size) / (1 + var(--typost-fit-ratio) * var(--typost-hang, 0) * var(--typost-hang-on, 1) * var(--typost-plain, 0))) !important;');
+	});
+
+	it('turns the switch off in the editor', () => {
+		expect(css).toMatch(/\.wp-block-typost\.block-editor-block-list__block \{\n\t--typost-plain: 0;\n\}/);
+	});
+});

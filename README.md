@@ -44,6 +44,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - Only the first line hangs. In fit-to-width mode, each line has its own value.
 - The plugin does not wrap the letter in an element, so screen readers read the word as one word.
 - A paragraph style can keep the value. A core Paragraph or Heading block that uses the style hangs too, unless it is centered, aligned to the end, or has a drop cap or a text indent.
+- A theme can turn off all hangs and the OpenType features of the plugin for a reader who wants plain text. Add the `typost-plain` class to an element. All plugin content in that element changes at once. Fit-to-width lines stay inside the block. See [HOOKS.md](HOOKS.md#plain-typography-switch).
 
 ### Font Sizes in rem (v2.3.2+)
 

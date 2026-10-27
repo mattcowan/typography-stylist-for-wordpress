@@ -975,7 +975,8 @@ describe('hanging initial (#242)', () => {
 			// Core Paragraph/Heading rules (#219), only for a style with a hang
 			// No hang with an inline text-indent (core Text indent, #219 QA)
 			'\n\n.typost-styled.typost-ps-5:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {\n' +
-			'    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
+			// The plain typography switch turns the frontend hang off (#315)
+			'    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}' +
 			'\n\n.typost-styled.typost-ps-5.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {\n' +
 			'    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}' +
 			'\n\n.typost-styled.typost-ps-5.has-text-align-center {\n    --typost-hang-on: 0;\n}' +

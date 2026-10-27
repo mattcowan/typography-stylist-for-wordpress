@@ -242,20 +242,55 @@
  * the end side, where moving the first letter would only shift the line.
  * The block writes its alignment as an inline text-align (with a space in
  * the editor's React style, without one in saved markup). Mirrored in JS by
- * initialHangApplies() in utils.js, which fit measurement uses. */
+ * initialHangApplies() in utils.js, which fit measurement uses.
+ *
+ * --typost-plain (#315) is the documented plain typography switch: a theme
+ * sets it to 1 on any ancestor (frontend.css sets it for .typost-plain), and
+ * every hang becomes 0. --typost-hang-on stays internal: the fit-size rules
+ * below still need it to know which lines were measured as hung. */
 .wp-block-typost > .typost-styled:not(.typost-block-content, .typost-fit)::first-letter {
-	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
+	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);
 }
 
 .wp-block-typost .typost-fit .typost-line {
-	margin-inline-start: calc(var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * -1em);
+	margin-inline-start: calc(var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);
 }
 
 /* Line 1 is always the first child: save wraps every line, and the editing
  * value leaves an empty line 1 unwrapped (its <br> is then the first child,
  * so no other line takes line 1's value). */
 .wp-block-typost .typost-fit > .typost-line:first-child {
-	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
+	margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);
+}
+
+/* Plain typography keeps hung fit lines inside the block (#315).
+ * measureFitLines() sized a hung line so its ink minus the hang fills the
+ * container: R = ref / (measured - hang * ref). With the hang removed the
+ * line is hang × font-size too wide; at font-size / (1 + R × hang) it fills
+ * the container exactly. A line held below R × 100cqi by its cap or word
+ * cap shrinks by the same factor, so it also stays inside.
+ *
+ * R and the line's size are only literals in its inline font-size, which
+ * CSS cannot read, so Typost::add_fit_line_plain_properties() (a
+ * render_block filter) copies them into --typost-fit-ratio and
+ * --typost-fit-size at render time. Saved markup is unchanged, content saved
+ * before #315 is covered, and the editor (no render_block) never matches.
+ * !important beats the inline font-size; with --typost-plain at 0 (or a
+ * line measured unhung, --typost-hang-on 0) the divisor is 1 and the size is
+ * the inline value. */
+.wp-block-typost .typost-fit .typost-line[style*="--typost-fit-ratio"] {
+	font-size: calc(var(--typost-fit-size) / (1 + var(--typost-fit-ratio) * var(--typost-line-hang, 0) * var(--typost-hang-on, 1) * var(--typost-plain, 0))) !important;
+}
+
+.wp-block-typost .typost-fit > .typost-line[style*="--typost-fit-ratio"]:first-child {
+	font-size: calc(var(--typost-fit-size) / (1 + var(--typost-fit-ratio) * var(--typost-hang, 0) * var(--typost-hang-on, 1) * var(--typost-plain, 0))) !important;
+}
+
+/* The switch is frontend only: authors see the hang they set. The editor
+ * wrapper always carries block-editor-block-list__block, saved markup never
+ * does. */
+.wp-block-typost.block-editor-block-list__block {
+	--typost-plain: 0;
 }
 
 .wp-block-typost > :is(.typost-styled, .typost-block-content):is([style*="text-align:center"], [style*="text-align: center"]) {
