@@ -135,6 +135,62 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         $this->assertStringContainsString('Small Caps (no fake small caps)', $html);
     }
 
+    /**
+     * @dataProvider rem_size_cases
+     */
+    public function test_details_show_the_rem_value_for_a_rem_style( $props, $expected ) {
+        $this->freshInstance();
+        $html = \Typost_Paragraph_Styles::render_card_details(
+            $props + array('fontSizeUnit' => 'rem'),
+            array('status' => 'default', 'name' => '', 'font_id' => 0)
+        );
+        $this->assertStringContainsString($expected, $html);
+    }
+
+    public static function rem_size_cases() {
+        return array(
+            'fixed'      => array(array('fontSize' => 20), '20px (1.25rem)'),
+            'responsive' => array(
+                array('fontSize' => 'responsive', 'fontSizeMin' => 16, 'fontSizePreferred' => 24, 'fontSizeMax' => 64),
+                'Responsive (16px (1rem) / 24px (1.5rem) / 64px (4rem))',
+            ),
+            'fit'        => array(
+                array('fontSize' => 'fit', 'fontSizeMin' => 18, 'fontSizePreferred' => 32, 'fontSizeMax' => 72),
+                'Fit to width (fallback 18px (1.125rem) – 72px (4.5rem))',
+            ),
+            'missing'    => array(array('fontSize' => 'responsive', 'fontSizeMin' => 16), 'Responsive (16px (1rem) / ? / ?)'),
+        );
+    }
+
+    /**
+     * @dataProvider px_size_cases
+     */
+    public function test_details_keep_the_px_text_for_px_and_older_styles( $props, $expected ) {
+        $this->freshInstance();
+        foreach (array(array('fontSizeUnit' => 'px'), array()) as $unit) {
+            $html = \Typost_Paragraph_Styles::render_card_details(
+                $props + $unit,
+                array('status' => 'default', 'name' => '', 'font_id' => 0)
+            );
+            $this->assertStringContainsString($expected, $html);
+            $this->assertStringNotContainsString('rem', $html);
+        }
+    }
+
+    public static function px_size_cases() {
+        return array(
+            'fixed'      => array(array('fontSize' => 20), '20px'),
+            'responsive' => array(
+                array('fontSize' => 'responsive', 'fontSizeMin' => 16, 'fontSizePreferred' => 24, 'fontSizeMax' => 64),
+                'Responsive (16/24/64px)',
+            ),
+            'fit'        => array(
+                array('fontSize' => 'fit', 'fontSizeMin' => 18, 'fontSizePreferred' => 32, 'fontSizeMax' => 72),
+                'Fit to width (fallback 18–72px)',
+            ),
+        );
+    }
+
     public function test_details_for_an_empty_style_name_the_default_font() {
         $this->freshInstance();
         $html = \Typost_Paragraph_Styles::render_card_details(array(), array('status' => 'default', 'name' => '', 'font_id' => 0));

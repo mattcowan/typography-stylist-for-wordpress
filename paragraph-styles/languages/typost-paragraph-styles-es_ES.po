@@ -80,6 +80,24 @@ msgstr "Adaptable (%1$s/%2$s/%3$spx)"
 msgid "Fit to width (fallback %1$s–%2$spx)"
 msgstr "Ajustado al ancho (alternativa %1$s–%2$spx)"
 
+#. translators: %1$s: size in pixels, %2$s: the same size in rem
+#: paragraph-styles.php:1744
+#, php-format
+msgid "%1$spx (%2$srem)"
+msgstr "%1$spx (%2$srem)"
+
+#. translators: %1$s: min size, %2$s: preferred size, %3$s: max size, each as "20px (1.25rem)"
+#: paragraph-styles.php:1748
+#, php-format
+msgid "Responsive (%1$s / %2$s / %3$s)"
+msgstr "Adaptable (%1$s / %2$s / %3$s)"
+
+#. translators: %1$s: fallback min size, %2$s: fallback max size, each as "20px (1.25rem)"
+#: paragraph-styles.php:1751
+#, php-format
+msgid "Fit to width (fallback %1$s – %2$s)"
+msgstr "Ajustado al ancho (alternativa %1$s – %2$s)"
+
 #. translators: %s: font size in pixels
 #. translators: %s: font size in pixels.
 #: paragraph-styles.php:1647

@@ -330,7 +330,7 @@ In a core Paragraph or Heading block, a style can apply to the whole block:
 2. In the block sidebar, open “Paragraph Style” and click “Browse styles…”.
 3. Pick the style.
 
-When the “Paragraph Styles Toolbar Button” option is on (Options tab), you can also use the toolbar button. Put the caret in the block, do not select text, click the button, and pick the style. With text selected, the button styles only the selected text. In other blocks, for example a List item, select the text first.
+You can also use the Paragraph Styles toolbar button (on by default; the “Paragraph Styles Toolbar Button” setting on the Options tab removes it). Put the caret in the block, do not select text, click the button, and pick the style. With text selected, the button styles only the selected text. In other blocks, for example a List item, select the text first.
 
 The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove these classes by hand. To remove the style, click “Detach Style” in the “Paragraph Style” panel. The block keeps its own settings and its other classes.
 
@@ -425,7 +425,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - **Enter Key in Typography Stylist Blocks:** Enter adds a line break inside the block (the default), or Enter starts a new block, as in a core heading.
 - **Archive Page Font Detection:** Check the full post content on archive pages, so that fonts load there too.
 - **WordPress Font Library:** Register new uploads in the Font Library automatically (WordPress 6.5+).
-- **Glyphs Toolbar Button** and **Paragraph Styles Toolbar Button:** Add buttons to the block toolbar. Both are off by default.
+- **Glyphs Toolbar Button** and **Paragraph Styles Toolbar Button:** Add buttons to the block toolbar. Both are on by default. A button that you turn off stays off.
 - **Clear Font Cache:** Remove the saved font detection results. The plugin finds the fonts again on the next page load.
 - **Show Editor Tips Again:** Show the tips notice in the editor panels again, in this browser.
 
