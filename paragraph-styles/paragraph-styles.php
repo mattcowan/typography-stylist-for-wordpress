@@ -64,7 +64,9 @@ final class Typost_Paragraph_Styles {
 	const CACHE_KEY = 'typost_paragraph_styles_cache';
 
 	/** @var string Transient key for caching generated CSS */
-	const CSS_CACHE_KEY = 'typost_paragraph_styles_css';
+	// Renamed when the generated CSS changes (v2: #315), so an update never
+	// serves CSS cached by the previous version for up to 12 hours.
+	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v2';
 
 	/** @var string Option storing whether the block toolbar gets a direct styles button */
 	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
@@ -472,7 +474,8 @@ final class Typost_Paragraph_Styles {
 	 * or Heading carrying the style class needs its own rules, so a style
 	 * with a hang adds them (a style without one adds nothing, which keeps
 	 * a theme's `::first-letter` margin and paragraph indent untouched):
-	 *  - frontend: `::first-letter` gets the negative start margin;
+	 *  - frontend: `::first-letter` gets the negative start margin, which
+	 *    the plain typography switch (`--typost-plain: 1`, #315) turns off;
 	 *  - editor (`.block-editor-rich-text__editable`): `text-indent`, because
 	 *    `::first-letter` on a contenteditable puts Home after the first
 	 *    letter in Chromium (the reason style.css uses text-indent there);
@@ -498,12 +501,13 @@ final class Typost_Paragraph_Styles {
 	private static function core_block_hang_css( $id ) {
 		$cls    = '.typost-styled.typost-ps-' . intval( $id );
 		$amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
+		$plain  = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em)';
 		$tags   = ':is(p, h1, h2, h3, h4, h5, h6)';
 		$off    = " {\n    --typost-hang-on: 0;\n}";
 		$on     = " {\n    --typost-hang-on: 1;\n}";
 		$rtl    = ':is([style*="direction: rtl"], [style*="direction:rtl"])';
 		$ltr    = ':is([style*="direction: ltr"], [style*="direction:ltr"])';
-		return "\n\n" . $cls . $tags . ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {' . "\n    margin-inline-start: " . $amount . ";\n}"
+		return "\n\n" . $cls . $tags . ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {' . "\n    margin-inline-start: " . $plain . ";\n}"
 			. "\n\n" . $cls . '.block-editor-rich-text__editable' . $tags . ':not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {' . "\n    text-indent: " . $amount . ";\n}"
 			. "\n\n" . $cls . '.has-text-align-center' . $off
 			. "\n\n" . $cls . '.has-text-align-right:dir(ltr)' . $off

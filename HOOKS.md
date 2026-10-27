@@ -7,6 +7,8 @@ This document describes all action and filter hooks available in Typography Styl
 - [PHP Hooks](#php-hooks)
   - [Actions](#php-actions)
   - [Filters](#php-filters)
+- [Theme CSS Switches](#theme-css-switches)
+  - [Plain Typography Switch](#plain-typography-switch)
 - [JavaScript Hooks](#javascript-hooks)
   - [The `window.typostHooks` System](#the-windowtyposthooks-system)
   - [Inline Editor Hook Points](#inline-editor-hook-points)
@@ -395,6 +397,44 @@ add_filter('typost_force_enqueue_paragraph_style_ids', function($ids) {
 - The result is memoized per request. Callbacks must return stable output for a given request.
 - You do not need this filter for blocks. The plugin scans the queried post, the synced patterns in it, and, on a classic theme, the block widgets. It also records the styles of every block as it renders. A block theme renders its template parts before `wp_head`, so their styles print in the head. A block that renders after `wp_head` (for example a block in a custom query loop) gets its rules in a second `<style>` element at the end of `wp_footer`. Markup that is not a block, such as a classic text widget or a template file, needs this filter.
 - Content loaded by AJAX does not run `wp_head` or `wp_footer`, so it can use only the rules that the page that loads it printed. A "load more" button on an archive is safe, because archives print every style. If a single post or page loads content by AJAX (for example related posts), add the style IDs of that content with this filter. The core Query Loop block's own pagination is not affected: it copies the `<style>` elements of the page it loads.
+
+---
+
+## Theme CSS Switches
+
+### Plain Typography Switch
+
+*Since 2.3.5.* Use this switch when your theme lets a reader choose plain text, for example a "Simplify typography" toggle in a reader panel. Turn it on for an element, and all plugin content in that element changes:
+
+- No First Letter Hang moves a letter or a line into the margin. This applies to Typography Stylist blocks and to core Paragraph and Heading blocks with a paragraph style.
+- Fit-to-width lines that had a hang get smaller, so they still fill the block and do not go past its end edge. This also applies to content saved before 2.3.5.
+- The OpenType features of the plugin are reset to `font-feature-settings: normal` (class only, see below). The reset applies to every `.typost-styled` element and its descendants, so it also removes features that your theme sets on those elements (for example `onum` on headings). The font keeps its default features, such as standard ligatures and kerning. The Case setting (All Caps, Small Caps and others) does not change. Small caps from the `smcp` and `c2sc` feature toggles are features, so they are reset.
+- The feature reset does not apply to block editor content, also when a page shows the editor on the frontend.
+
+Add the `typost-plain` class to the element, or to an ancestor, such as `<body>`:
+
+```js
+// Reader panel toggle
+toggle.addEventListener('change', () => {
+    document.body.classList.toggle('typost-plain', toggle.checked);
+});
+```
+
+You can also set the custom property `--typost-plain: 1` in your own CSS. The property removes the hangs only, because a custom property cannot change `font-feature-settings`:
+
+```css
+/* Hangs off, features kept */
+.my-reader-mode {
+    --typost-plain: 1;
+}
+```
+
+**Details:**
+- The change applies at once, with no page reload. The frontend loads no script for it.
+- With the switch off, content looks the same as before 2.3.5, and saved blocks stay valid.
+- The switch works on the frontend only. The editor shows the hang that the author set.
+- Fit-to-width lines are not measured again. When the feature reset changes the width of letters (for example a swash capital in place of a plain capital), a line can be a little wider or narrower than the block. A theme rule such as `* { font-feature-settings: normal !important }` has the same result.
+- Do not use `--typost-hang-on`. It is internal, and the plugin sets it for centered and end-aligned text.
 
 ---
 

@@ -236,6 +236,9 @@ class Typost {
         // Keep the plugin's CSS when kses filters a post (#277)
         add_filter('safe_style_css', array($this, 'allow_typography_css_properties'));
 
+        // Let the plain typography switch keep hung fit lines inside the block (#315)
+        add_filter('render_block', array($this, 'add_fit_line_plain_properties'), 10, 2);
+
         // Load translations.
         //
         // On WordPress 6.7+ just-in-time loading already finds the bundled
@@ -2159,6 +2162,68 @@ class Typost {
             return $properties;
         }
         return array_values(array_unique(array_merge($properties, self::SAFE_CSS_PROPERTIES)));
+    }
+
+    /**
+     * Give each fit-to-width line of a rendered Typography Stylist block the
+     * values the plain typography switch needs (#315).
+     *
+     * A hung fit line is sized so that its ink minus the hang fills the
+     * block. When a theme turns the switch on (`.typost-plain` or
+     * `--typost-plain: 1`), style.css removes the hang and divides the line's
+     * size by (1 + ratio × hang), which needs the ratio and the size. Both are
+     * only literals in the line's inline font-size, so this filter copies them
+     * into `--typost-fit-ratio` and `--typost-fit-size` at render time. Saved
+     * markup does not change (no deprecation), content saved before #315 is
+     * covered, and the frontend loads no script. With the switch off the
+     * divisor is 1, so the rendered size is unchanged.
+     *
+     * @since 2.3.5
+     * @param string $block_content The rendered block HTML.
+     * @param array  $block         The parsed block.
+     * @return string The HTML, with the properties on each fit line.
+     */
+    public function add_fit_line_plain_properties($block_content, $block) {
+        if (!is_string($block_content) || !is_array($block)
+            || !isset($block['blockName']) || 'typost/block' !== $block['blockName']
+            || false === strpos($block_content, 'typost-line')) {
+            return $block_content;
+        }
+        // Only tags that mention typost-line reach the callback, which then
+        // checks the class word exactly
+        $result = preg_replace_callback('/<span\b[^>]*typost-line[^>]*>/i', function ($match) {
+            return self::add_plain_properties_to_fit_line_tag($match[0]);
+        }, $block_content);
+        return null === $result ? $block_content : $result;
+    }
+
+    /**
+     * Add the plain typography properties to one opening tag, when it is a
+     * fit line (class `typost-line` with a ratio-based font-size).
+     *
+     * The values are copied as raw attribute text: they came from the same
+     * attribute, so they need no new escaping. A tag that already has the
+     * properties, or whose size does not start with `calc(R *`, is returned
+     * unchanged.
+     *
+     * @since 2.3.5
+     * @param string $tag An opening `<span …>` tag.
+     * @return string The tag.
+     */
+    public static function add_plain_properties_to_fit_line_tag($tag) {
+        if (!preg_match('/\sclass="(?:[^"]*\s)?typost-line(?:\s[^"]*)?"/i', $tag)
+            || !preg_match('/\sstyle="([^"]*)"/i', $tag, $style, PREG_OFFSET_CAPTURE)) {
+            return $tag;
+        }
+        $css = $style[1][0];
+        if (false !== strpos($css, '--typost-fit-ratio')
+            || !preg_match('/(?:^|;)\s*font-size\s*:\s*([^;]+?)\s*(?:;|$)/i', $css, $size)
+            || !preg_match('/^(?:min\(\s*)?calc\(\s*(\d*\.?\d+)\s*\*/i', $size[1], $ratio)
+            || !((float) $ratio[1] > 0)) {
+            return $tag;
+        }
+        $added = rtrim($css, "; \t") . ';--typost-fit-ratio:' . $ratio[1] . ';--typost-fit-size:' . $size[1];
+        return substr_replace($tag, $added, $style[1][1], strlen($css));
     }
 
     /**

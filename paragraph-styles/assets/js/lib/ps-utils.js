@@ -1167,12 +1167,13 @@
 	function coreBlockHangCss(id) {
 		var cls = '.typost-styled.typost-ps-' + id;
 		var amount = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em)';
+		var plain = 'calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em)';
 		var tags = ':is(p, h1, h2, h3, h4, h5, h6)';
 		var off = ' {\n    --typost-hang-on: 0;\n}';
 		var on = ' {\n    --typost-hang-on: 1;\n}';
 		var rtl = ':is([style*="direction: rtl"], [style*="direction:rtl"])';
 		var ltr = ':is([style*="direction: ltr"], [style*="direction:ltr"])';
-		return '\n\n' + cls + tags + ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {\n    margin-inline-start: ' + amount + ';\n}' +
+		return '\n\n' + cls + tags + ':not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*="text-indent"])::first-letter {\n    margin-inline-start: ' + plain + ';\n}' +
 			'\n\n' + cls + '.block-editor-rich-text__editable' + tags + ':not(.wp-block-typost *, .has-drop-cap, [style*="text-indent"]) {\n    text-indent: ' + amount + ';\n}' +
 			'\n\n' + cls + '.has-text-align-center' + off +
 			'\n\n' + cls + '.has-text-align-right:dir(ltr)' + off +

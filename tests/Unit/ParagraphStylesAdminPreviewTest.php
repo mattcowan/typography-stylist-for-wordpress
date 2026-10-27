@@ -144,7 +144,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
             return $default;
         });
         Functions\when('get_transient')->alias(function ($key) use ($css, $styles) {
-            return 'typost_paragraph_styles_css' === $key ? $css : $styles;
+            return \Typost_Paragraph_Styles::CSS_CACHE_KEY === $key ? $css : $styles;
         });
     }
 
