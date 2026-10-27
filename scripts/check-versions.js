@@ -234,8 +234,17 @@ function checkModules(releaseVersion) {
       continue;
     }
     // Only a file that is absent at the tag makes a new module. Any other
-    // failure to read the old constant must not pass as "new".
-    if (!git(['cat-file', '-e', `${previous.name}:${mod.file}`]).ok) {
+    // failure to read the old constant must not pass as "new". ls-tree, not
+    // cat-file -e: cat-file exits 128 for a missing path and for a git error
+    // alike, while ls-tree prints nothing for a missing path and fails only
+    // on an error.
+    const inTag = git(['ls-tree', '--name-only', previous.name, '--', mod.file]);
+    if (!inTag.ok) {
+      console.error(`  ${mod.dir}  ✗ git could not list ${mod.file} at ${previous.name}`);
+      moduleFailed = true;
+      continue;
+    }
+    if (inTag.out === '') {
       console.log(`  ${mod.dir}  new since ${previous.name}, ${mod.constant} ${now}  ✓`);
       continue;
     }
