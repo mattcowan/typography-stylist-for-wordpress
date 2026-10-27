@@ -49,6 +49,13 @@ final class Typost_Glyphs_Panel {
 	 */
 	const TOOLBAR_OPTION = 'typost_glyphs_toolbar_button';
 
+	/**
+	 * Flag: the one-time switch that turned the toolbar button on has run (#322).
+	 *
+	 * @since 2.3.5
+	 */
+	const TOOLBAR_DEFAULT_ON_FLAG = 'typost_glyphs_toolbar_button_default_on';
+
 	/** @var self|null */
 	private static $instance = null;
 
@@ -92,19 +99,39 @@ final class Typost_Glyphs_Panel {
 		// Optional toolbar button setting (Options tab)
 		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
 		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
+		add_action( 'admin_init', array( $this, 'maybe_turn_on_toolbar_button' ) );
 	}
 
 	/**
 	 * Whether the direct-access toolbar button is enabled.
 	 *
-	 * Off by default: the panel is reachable from inside both editors already,
-	 * and an unrequested extra toolbar button on every rich text block would be
-	 * a surprise on upgrade.
+	 * On by default since 2.3.5 (#322): with the button off, most authors
+	 * never find the glyph browser from the toolbar.
 	 *
 	 * @return bool
 	 */
 	private function toolbar_button_enabled() {
-		return (bool) get_option( self::TOOLBAR_OPTION, false );
+		return (bool) get_option( self::TOOLBAR_OPTION, true );
+	}
+
+	/**
+	 * Turn the toolbar button on once, on the first admin request after the
+	 * update to 2.3.5 (#322).
+	 *
+	 * Every Options save stores '0' for an unchecked box, so a site that
+	 * turned the button off on purpose looks the same as one that never
+	 * turned it on. The button is turned on for every site one time, and the
+	 * flag then keeps whatever the author sets. Same pattern as core's
+	 * maybe_repair_font_library_json().
+	 *
+	 * @since 2.3.5
+	 */
+	public function maybe_turn_on_toolbar_button() {
+		if ( get_option( self::TOOLBAR_DEFAULT_ON_FLAG, false ) ) {
+			return;
+		}
+		update_option( self::TOOLBAR_OPTION, '1' );
+		update_option( self::TOOLBAR_DEFAULT_ON_FLAG, true, false );
 	}
 
 	/**

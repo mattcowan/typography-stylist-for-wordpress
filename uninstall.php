@@ -36,9 +36,11 @@ delete_option('typost_paragraph_styles');
 delete_option('typost_paragraph_styles_next_id');
 delete_option('typost_font_face_version');
 delete_option('typost_ps_toolbar_button');
+delete_option('typost_ps_toolbar_button_default_on');
 
 // Glyphs Panel module (bundled in v2.0)
 delete_option('typost_glyphs_toolbar_button');
+delete_option('typost_glyphs_toolbar_button_default_on');
 
 // Variable Fonts module (bundled in v2.1)
 delete_option('typost_variable_font_axes');

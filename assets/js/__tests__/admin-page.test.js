@@ -14,7 +14,82 @@ const {
 	resolvePreviewSelection,
 	attachDismissButtons,
 	clearSettingsMessages,
+	createRefreshQueue,
 } = require('../admin-page.js');
+
+describe('createRefreshQueue (#308)', () => {
+	// Records each started refresh; finish(i, failed) completes the i-th one.
+	function setup() {
+		const runs = [];
+		const request = createRefreshQueue((message, done) => {
+			runs.push({ message, done });
+		});
+		return { runs, request, finish: (i, failed) => runs[i].done(failed) };
+	}
+
+	test('runs a request at once when nothing is running', () => {
+		const { runs, request } = setup();
+		request('Font deleted.');
+		expect(runs).toHaveLength(1);
+		expect(runs[0].message).toBe('Font deleted.');
+	});
+
+	test('a request during a refresh runs one more refresh after it', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request();
+		expect(runs).toHaveLength(1);
+		finish(0);
+		expect(runs).toHaveLength(2);
+		expect(runs[1].message).toBe('');
+	});
+
+	test('three requests during one refresh give exactly one more refresh', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request();
+		request();
+		request();
+		finish(0);
+		expect(runs).toHaveLength(2);
+		finish(1);
+		expect(runs).toHaveLength(2);
+	});
+
+	test('keeps the message of a request that arrives during a refresh', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request('Font deleted.');
+		request();
+		request('Font deleted.');
+		request('Other.');
+		finish(0);
+		expect(runs[1].message).toBe('Font deleted. Other.');
+	});
+
+	test('drops the follow-up when the refresh failed (the page reloads)', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request('Font deleted.');
+		finish(0, true);
+		expect(runs).toHaveLength(1);
+		request();
+		expect(runs).toHaveLength(2);
+		expect(runs[1].message).toBe('');
+	});
+
+	test('a request after the follow-up started waits for it', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request();
+		finish(0);
+		request('Late.');
+		expect(runs).toHaveLength(2);
+		finish(1);
+		expect(runs).toHaveLength(3);
+		expect(runs[2].message).toBe('Late.');
+	});
+});
 
 describe('withUserLocale', () => {
 	test.each([

@@ -243,6 +243,58 @@ function typostClearSettingsMessages(root, keep) {
 }
 
 /**
+ * Serializes the font list refresh (#308).
+ *
+ * At most one refresh is in flight. A request that arrives while one runs is
+ * kept, and one more refresh runs when the current one finishes — several
+ * such requests give one more refresh, not one each. Without this, the
+ * running refresh could return data from before the second action (a second
+ * card saved while the first card's refresh was in flight), and nothing
+ * refreshed again.
+ *
+ * Messages from the waiting requests are joined (duplicates once) and passed
+ * to the follow-up refresh, so an announcement such as "Font deleted." is not
+ * lost. When a refresh fails, the page reloads, so the follow-up is dropped.
+ *
+ * @param {function(string, function(boolean=))} run Starts one refresh with
+ *        the joined message ('' for none) and calls the given `done` when it
+ *        finishes; `done(true)` reports a failure.
+ * @return {function(string=)} Requests a refresh, with an optional message.
+ */
+function typostCreateRefreshQueue(run) {
+    var running = false;
+    var pending = false;
+    var pendingMessages = [];
+
+    function start(messages) {
+        running = true;
+        run(messages.join(' '), function(failed) {
+            running = false;
+            if (!pending) {
+                return;
+            }
+            var next = pendingMessages;
+            pending = false;
+            pendingMessages = [];
+            if (!failed) {
+                start(next);
+            }
+        });
+    }
+
+    return function(message) {
+        if (!running) {
+            start(message ? [message] : []);
+            return;
+        }
+        pending = true;
+        if (message && pendingMessages.indexOf(message) === -1) {
+            pendingMessages.push(message);
+        }
+    };
+}
+
+/**
  * Adobe Fonts kit stylesheet URLs for a numeric font ID.
  *
  * Several entries can share one kit (one project, several families), and
@@ -471,6 +523,7 @@ if (typeof module !== 'undefined' && module.exports) {
         resolvePreviewSelection: typostResolvePreviewSelection,
         attachDismissButtons: typostAttachDismissButtons,
         clearSettingsMessages: typostClearSettingsMessages,
+        createRefreshQueue: typostCreateRefreshQueue,
         beginBusy: typostBeginBusy,
         endBusy: typostEndBusy,
         adobeCssUrlsForFontId: typostAdobeCssUrlsForFontId,
@@ -720,21 +773,16 @@ jQuery(document).ready(function($) {
         }
     }
 
-    var adminRefreshInFlight = false;
-
     /**
-     * Fetch fresh fragments/data and update the page in place.
+     * Fetch fresh fragments/data and update the page in place. A request made
+     * while a refresh runs is queued (typostCreateRefreshQueue, #308).
      *
      * @param {string} [extraMessage] Prepended to the polite announcement —
      *        pass only when the triggering action has no aria-live message
      *        of its own (e.g. font deletion).
      */
-    function refreshAdminFontData(extraMessage) {
-        if (adminRefreshInFlight) {
-            return;
-        }
-        adminRefreshInFlight = true;
-
+    var refreshAdminFontData = typostCreateRefreshQueue(function(extraMessage, done) {
+        var failed = false;
         $.ajax({
             url: typostWithUserLocale(typostAdmin.restUrl + 'admin/refresh'),
             dataType: 'json',
@@ -753,16 +801,17 @@ jQuery(document).ready(function($) {
             error: function() {
                 // The server-side change already happened but the page could
                 // not re-render — fall back to a reload rather than sit stale.
+                failed = true;
                 announce(typostAdmin.strings.refreshError);
                 setTimeout(function() {
                     location.reload();
                 }, 800);
             },
             complete: function() {
-                adminRefreshInFlight = false;
+                done(failed);
             }
         });
-    }
+    });
 
     // File selection handling
     var selectedFile = null;

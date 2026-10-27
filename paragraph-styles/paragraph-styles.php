@@ -71,6 +71,9 @@ final class Typost_Paragraph_Styles {
 	/** @var string Option storing whether the block toolbar gets a direct styles button */
 	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
 
+	/** @var string Flag: the one-time switch that turned the toolbar button on has run (#322) */
+	const TOOLBAR_DEFAULT_ON_FLAG = 'typost_ps_toolbar_button_default_on';
+
 	/** @var string REST namespace (shared with core plugin) */
 	const REST_NAMESPACE = 'typost/v1';
 
@@ -154,6 +157,7 @@ final class Typost_Paragraph_Styles {
 		// Optional toolbar button setting (Options tab)
 		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
 		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
+		add_action( 'admin_init', array( $this, 'maybe_turn_on_toolbar_button' ) );
 
 		// Editor data
 		add_filter( 'typost_editor_data', array( $this, 'add_editor_data' ) );
@@ -1031,15 +1035,34 @@ final class Typost_Paragraph_Styles {
 	/**
 	 * Whether the direct-access toolbar button is enabled.
 	 *
-	 * Off by default: the styles dropdown already sits in the Inspector sidebar
-	 * and both editor panels, so an extra toolbar button on upgrade would be
-	 * unrequested.
+	 * On by default since 2.3.5 (#322): with the button off, most authors
+	 * never find the styles browser from the toolbar.
 	 *
 	 * @since 1.2.0
 	 * @return bool
 	 */
 	private function toolbar_button_enabled() {
-		return (bool) get_option( self::TOOLBAR_OPTION, false );
+		return (bool) get_option( self::TOOLBAR_OPTION, true );
+	}
+
+	/**
+	 * Turn the toolbar button on once, on the first admin request after the
+	 * update to 2.3.5 (#322).
+	 *
+	 * Every Options save stores '0' for an unchecked box, so a site that
+	 * turned the button off on purpose looks the same as one that never
+	 * turned it on. The button is turned on for every site one time, and the
+	 * flag then keeps whatever the author sets. Same pattern as core's
+	 * maybe_repair_font_library_json().
+	 *
+	 * @since 2.3.5
+	 */
+	public function maybe_turn_on_toolbar_button() {
+		if ( get_option( self::TOOLBAR_DEFAULT_ON_FLAG, false ) ) {
+			return;
+		}
+		update_option( self::TOOLBAR_OPTION, '1' );
+		update_option( self::TOOLBAR_DEFAULT_ON_FLAG, true, false );
 	}
 
 	/**
@@ -1731,8 +1754,32 @@ final class Typost_Paragraph_Styles {
 			$rows[] = array( __( 'Style:', 'typost-paragraph-styles' ), $none, array( 'fontStyle' ) );
 		}
 
-		// Font size
-		if ( ! empty( $props['fontSize'] ) ) {
+		// Font size. A rem style (#233) shows each size as "20px (1.25rem)",
+		// the block Inspector's readout (#297); a px style, and one saved
+		// before #233 with no unit, keeps the px-only text.
+		$size_in_rem = isset( $props['fontSizeUnit'] ) && 'rem' === $props['fontSizeUnit'];
+		if ( ! empty( $props['fontSize'] ) && $size_in_rem ) {
+			$size_label = function ( $key ) use ( $props ) {
+				if ( ! isset( $props[ $key ] ) || ! is_numeric( $props[ $key ] ) ) {
+					return '?';
+				}
+				/* translators: %1$s: size in pixels, %2$s: the same size in rem */
+				return sprintf( __( '%1$spx (%2$srem)', 'typost-paragraph-styles' ), $props[ $key ], self::px_to_rem( $props[ $key ] ) );
+			};
+			if ( 'responsive' === $props['fontSize'] ) {
+				/* translators: %1$s: min size, %2$s: preferred size, %3$s: max size, each as "20px (1.25rem)" */
+				$size_display = sprintf( __( 'Responsive (%1$s / %2$s / %3$s)', 'typost-paragraph-styles' ), $size_label( 'fontSizeMin' ), $size_label( 'fontSizePreferred' ), $size_label( 'fontSizeMax' ) );
+			} elseif ( 'fit' === $props['fontSize'] ) {
+				/* translators: %1$s: fallback min size, %2$s: fallback max size, each as "20px (1.25rem)" */
+				$size_display = sprintf( __( 'Fit to width (fallback %1$s – %2$s)', 'typost-paragraph-styles' ), $size_label( 'fontSizeMin' ), $size_label( 'fontSizeMax' ) );
+			} elseif ( is_numeric( $props['fontSize'] ) ) {
+				$size_display = $size_label( 'fontSize' );
+			} else {
+				/* translators: %s: font size in pixels */
+				$size_display = sprintf( __( '%spx', 'typost-paragraph-styles' ), $props['fontSize'] );
+			}
+			$rows[] = array( __( 'Size:', 'typost-paragraph-styles' ), $size_display, array( 'fontSize' ) );
+		} elseif ( ! empty( $props['fontSize'] ) ) {
 			if ( 'responsive' === $props['fontSize'] ) {
 				$min  = isset( $props['fontSizeMin'] ) ? $props['fontSizeMin'] : '?';
 				$pref = isset( $props['fontSizePreferred'] ) ? $props['fontSizePreferred'] : '?';
