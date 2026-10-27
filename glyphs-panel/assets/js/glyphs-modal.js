@@ -859,7 +859,8 @@
 			}
 		}
 
-		// After a glyph size change the rows move: bring the active glyph back
+		// After a cell size change (a Glyph size pick, or a resize that changes
+		// the cap from fitCellSize) the rows move: bring the active glyph back
 		// into view so keyboard users keep their place
 		var lastCellRef = useRef(cell);
 		useEffect(function() {
