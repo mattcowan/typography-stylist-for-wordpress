@@ -417,6 +417,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - Browse every glyph of a font without editing a post.
 - See the alternates of a character and the feature tags that make them.
 - Click a glyph to copy it.
+- Use “Glyph size” to make the glyphs larger or smaller, for example to compare similar alternates. The panel keeps the size in this browser, for the Glyphs tab and for the Glyphs panel in the editor.
 
 ### Options Tab
 

@@ -35,8 +35,18 @@
 	var sprintf = wp.i18n.sprintf;
 	var _n = wp.i18n._n;
 
-	var CELL_SIZE = 56;
 	var OVERSCAN_ROWS = 3;
+
+	/**
+	 * window.localStorage, or null where reading it throws (blocked site data).
+	 */
+	function glyphSizeStorage() {
+		try {
+			return window.localStorage || null;
+		} catch (e) {
+			return null;
+		}
+	}
 
 	// Word-boundary notice: ids and the delay before it is announced (long
 	// enough for "Glyphs, dialog" to be read first; see GlyphsModal).
@@ -316,6 +326,15 @@
 		var gridSizeState = useState({ width: 600, height: 360 });
 		var gridSize = gridSizeState[0];
 		var setGridSize = gridSizeState[1];
+
+		// Glyph size (#321): the picked cell size, remembered in this browser
+		// for every launch point (inline, Quick Feature Toggles, toolbar, the
+		// Settings Glyphs tab)
+		var cellSizeState = useState(function() {
+			return lib.readCellSize(glyphSizeStorage());
+		});
+		var cellSize = cellSizeState[0];
+		var setCellSize = cellSizeState[1];
 
 		var gridRef = useRef(null);
 		// Character whose alternates the last insertion came from (null when the
@@ -608,9 +627,10 @@
 			return function() { clearTimeout(timer); };
 		}, [items.length, meta]);
 
-		// Windowing
-		var columns = lib.computeColumns(gridSize.width, CELL_SIZE);
-		var win = lib.computeWindow(scrollTop, gridSize.height, CELL_SIZE, columns, items.length, OVERSCAN_ROWS);
+		// Windowing, at the picked glyph size (capped at the grid width)
+		var cell = lib.fitCellSize(cellSize, gridSize.width);
+		var columns = lib.computeColumns(gridSize.width, cell);
+		var win = lib.computeWindow(scrollTop, gridSize.height, cell, columns, items.length, OVERSCAN_ROWS);
 
 		// Cell font style
 		var cellFontFamily = selectedFont
@@ -764,6 +784,19 @@
 				: sprintf(/* translators: %s: character */ __('Inserted “%s”', 'typost-glyphs-panel'), text));
 		}
 
+		// Glyph size options: one label per lib.CELL_SIZES entry, in the same
+		// order. A size added there needs a label here, or it shows as a number.
+		var glyphSizeLabels = [
+			__('Small', 'typost-glyphs-panel'),
+			__('Medium (default)', 'typost-glyphs-panel'),
+			__('Large', 'typost-glyphs-panel'),
+			__('Extra large', 'typost-glyphs-panel'),
+			__('Largest', 'typost-glyphs-panel')
+		];
+		var glyphSizeOptions = lib.CELL_SIZES.map(function(size, i) {
+			return { value: String(size), label: glyphSizeLabels[i] || String(size) };
+		});
+
 		// Feature filter options
 		var featureOptions = [{ value: '', label: __('All glyphs', 'typost-glyphs-panel') }];
 		if (meta && meta.features) {
@@ -816,8 +849,8 @@
 			if (!gridRef.current) {
 				return;
 			}
-			var rowTop = Math.floor(index / cols) * CELL_SIZE;
-			var rowBottom = rowTop + CELL_SIZE;
+			var rowTop = Math.floor(index / cols) * cell;
+			var rowBottom = rowTop + cell;
 			var viewTop = gridRef.current.scrollTop;
 			var viewBottom = viewTop + gridRef.current.clientHeight;
 			if (rowTop < viewTop) {
@@ -826,6 +859,35 @@
 				gridRef.current.scrollTop = rowBottom - gridRef.current.clientHeight;
 			}
 		}
+
+		// After a cell size or column count change (a Glyph size pick, or a
+		// resize) the rows move: keep the author's place. The active glyph
+		// stays in view when it was in view (keyboard users); otherwise the
+		// glyph at the top of the view stays at the top (a mouse user who
+		// scrolled without picking one). `scrollTop` still holds the offset
+		// from before the change, because no scroll event has run yet.
+		var lastLayoutRef = useRef({ cell: cell, columns: cols });
+		useEffect(function() {
+			var prev = lastLayoutRef.current;
+			if (prev.cell === cell && prev.columns === cols) {
+				return;
+			}
+			lastLayoutRef.current = { cell: cell, columns: cols };
+			var next = lib.resolveLayoutChangeScroll({
+				prevCell: prev.cell,
+				prevColumns: prev.columns,
+				scrollTop: scrollTop,
+				viewportHeight: gridSize.height,
+				activeIndex: activeIndex,
+				cell: cell,
+				columns: cols
+			});
+			if (next.keepActive) {
+				ensureIndexVisible(activeIndex);
+			} else if (gridRef.current) {
+				gridRef.current.scrollTop = next.scrollTop;
+			}
+		}, [cell, cols]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on a layout change only
 
 		function moveFocus(index) {
 			var clamped = Math.max(0, Math.min(items.length - 1, index));
@@ -840,7 +902,7 @@
 			if (!items.length) {
 				return;
 			}
-			var pageRows = Math.max(1, Math.floor(gridSize.height / CELL_SIZE));
+			var pageRows = lib.computePageRows(gridSize.height, cell);
 			switch (e.key) {
 				case 'ArrowRight': moveFocus(activeIndex + 1); break;
 				case 'ArrowLeft': moveFocus(activeIndex - 1); break;
@@ -1039,6 +1101,23 @@
 						options: blockOptions,
 						onChange: setBlockFilter,
 						__nextHasNoMarginBottom: true
+					}),
+					// 5. Glyph size (#321) — in both views, so similar alternates
+					// can be enlarged; a native select, so a screen reader reads
+					// the new size as the author changes it
+					el(SelectControl, {
+						label: __('Glyph size', 'typost-glyphs-panel'),
+						className: 'typost-glyphs-size',
+						__next40pxDefaultSize: true,
+						hideLabelFromVision: false,
+						value: String(cellSize),
+						options: glyphSizeOptions,
+						onChange: function(value) {
+							var size = lib.normalizeCellSize(value);
+							setCellSize(size);
+							lib.writeCellSize(glyphSizeStorage(), size);
+						},
+						__nextHasNoMarginBottom: true
 					})
 				),
 
@@ -1083,8 +1162,9 @@
 										'aria-colindex': cIdx + 1,
 										tabIndex: -1,
 										style: {
-											width: CELL_SIZE + 'px',
-											height: CELL_SIZE + 'px',
+											width: cell + 'px',
+											height: cell + 'px',
+											fontSize: lib.glyphFontSize(cell) + 'px',
 											fontFamily: cellFontFamily,
 											fontWeight: context.fontWeight || 'normal',
 											fontStyle: cellFontStyle,

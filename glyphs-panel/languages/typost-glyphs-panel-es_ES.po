@@ -225,6 +225,30 @@ msgstr "Característica OpenType"
 msgid "Unicode block"
 msgstr "Bloque Unicode"
 
+#: assets/js/glyphs-modal.js:1090
+msgid "Glyph size"
+msgstr "Tamaño de los glifos"
+
+#: assets/js/glyphs-modal.js:789
+msgid "Small"
+msgstr "Pequeño"
+
+#: assets/js/glyphs-modal.js:790
+msgid "Medium (default)"
+msgstr "Mediano (predeterminado)"
+
+#: assets/js/glyphs-modal.js:791
+msgid "Large"
+msgstr "Grande"
+
+#: assets/js/glyphs-modal.js:792
+msgid "Extra large"
+msgstr "Muy grande"
+
+#: assets/js/glyphs-modal.js:793
+msgid "Largest"
+msgstr "El más grande"
+
 #. translators: %s: the characters typed
 #: assets/js/glyphs-modal.js:1110
 #, js-format

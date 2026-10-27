@@ -129,6 +129,13 @@
 	margin-bottom: 0;
 }
 
+/* Glyph size (#321): short labels, so it takes less room than the filters.
+   180px leaves room for the longest label, "Medium (default)" (122px of
+   text beside the select's 42px of padding and arrow); 160px clipped it. */
+.typost-glyphs-toolbar .components-base-control.typost-glyphs-size {
+	flex: 0 1 180px;
+}
+
 /* Windowed grid */
 .typost-glyphs-grid {
 	overflow-y: auto;

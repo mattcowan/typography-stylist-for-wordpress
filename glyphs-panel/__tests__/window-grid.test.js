@@ -2,7 +2,129 @@
  * Tests for computeWindow() / computeColumns() — grid virtualization math.
  */
 
-const { computeWindow, computeColumns } = require('../assets/js/lib/window-grid.js');
+const {
+	computeWindow,
+	computeColumns,
+	computePageRows,
+	resolveLayoutChangeScroll,
+	CELL_SIZES,
+	DEFAULT_CELL_SIZE,
+	CELL_SIZE_STORAGE_KEY,
+	normalizeCellSize,
+	glyphFontSize,
+	fitCellSize,
+	readCellSize,
+	writeCellSize,
+} = require('../assets/js/lib/window-grid.js');
+
+describe('glyph size (#321)', () => {
+	function memoryStorage(initial = {}) {
+		const data = { ...initial };
+		return {
+			data,
+			getItem: (key) => (key in data ? data[key] : null),
+			setItem: (key, value) => { data[key] = String(value); },
+		};
+	}
+
+	test('the default is the size the panel always had', () => {
+		expect(DEFAULT_CELL_SIZE).toBe(56);
+		expect(CELL_SIZES).toContain(56);
+		expect(glyphFontSize(56)).toBe(26);
+	});
+
+	test('the glyph scales with the cell', () => {
+		expect(glyphFontSize(128)).toBe(59);
+		expect(glyphFontSize(40)).toBe(19);
+	});
+
+	test.each([
+		['72', 72],
+		[96, 96],
+		['57', 56],
+		['abc', 56],
+		[null, 56],
+		[undefined, 56],
+	])('normalizeCellSize(%p) is %p', (value, expected) => {
+		expect(normalizeCellSize(value)).toBe(expected);
+	});
+
+	test('a size wider than the grid is capped at the grid width', () => {
+		expect(fitCellSize(128, 100.7)).toBe(100);
+		expect(fitCellSize(56, 600)).toBe(56);
+		expect(fitCellSize(128, 0)).toBe(128);
+	});
+
+	test('a capped size gives one full column', () => {
+		const width = 100;
+		expect(computeColumns(width, fitCellSize(128, width))).toBe(1);
+	});
+
+	test('reads back the size it wrote', () => {
+		const storage = memoryStorage();
+		expect(readCellSize(storage)).toBe(56);
+		expect(writeCellSize(storage, 96)).toBe(true);
+		expect(storage.data[CELL_SIZE_STORAGE_KEY]).toBe('96');
+		expect(readCellSize(storage)).toBe(96);
+	});
+
+	test('ignores a stored value that is not a size', () => {
+		expect(readCellSize(memoryStorage({ [CELL_SIZE_STORAGE_KEY]: '9999' }))).toBe(56);
+	});
+
+	test('missing or throwing storage reads the default and does not throw', () => {
+		const throwing = {
+			getItem: () => { throw new Error('blocked'); },
+			setItem: () => { throw new Error('blocked'); },
+		};
+		expect(readCellSize(null)).toBe(56);
+		expect(readCellSize(throwing)).toBe(56);
+		expect(writeCellSize(null, 72)).toBe(false);
+		expect(writeCellSize(throwing, 72)).toBe(false);
+	});
+
+	describe('resolveLayoutChangeScroll (PR #328 review)', () => {
+		// 16 columns of 56px, a 448px-high view: rows 0–7 show at scrollTop 0
+		const base = { prevCell: 56, prevColumns: 16, viewportHeight: 448, cell: 96, columns: 9 };
+
+		test('a mouse user who scrolled keeps the glyph at the top of the view', () => {
+			// Scrolled to row 50 (glyph 800), active glyph still 0
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 50 * 56, activeIndex: 0 });
+			expect(result.keepActive).toBe(false);
+			// Glyph 800 is in row 88 at 9 columns (800 / 9 = 88.9)
+			expect(result.scrollTop).toBe(88 * 96);
+		});
+
+		test('a keyboard user keeps the active glyph in view', () => {
+			// Active glyph 820 is in row 51, inside the view that starts at row 50
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 50 * 56, activeIndex: 820 });
+			expect(result).toEqual({ keepActive: true, scrollTop: null });
+		});
+
+		test('at the top of the grid, the first glyph stays in view', () => {
+			expect(resolveLayoutChangeScroll({ ...base, scrollTop: 0, activeIndex: 0 }).keepActive).toBe(true);
+		});
+
+		test('a row cut off at the bottom of the view does not count as in view', () => {
+			// Row 8 starts at 448: below a view of 0–448
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 0, activeIndex: 8 * 16 });
+			expect(result.keepActive).toBe(false);
+			expect(result.scrollTop).toBe(0);
+		});
+
+		test('a column change alone, after a resize, also keeps the top glyph', () => {
+			const result = resolveLayoutChangeScroll({ ...base, cell: 56, columns: 8, scrollTop: 10 * 56, activeIndex: 0 });
+			// Glyph 160 is in row 20 at 8 columns
+			expect(result.scrollTop).toBe(20 * 56);
+		});
+	});
+
+	test('Page Down moves the rows that fit the grid at each size', () => {
+		expect(CELL_SIZES.map((cell) => computePageRows(360, cell))).toEqual([9, 6, 5, 3, 2]);
+		expect(computePageRows(100, 128)).toBe(1); // never less than 1
+		expect(computePageRows(0, 56)).toBe(1);
+	});
+});
 
 describe('computeColumns', () => {
 	test('floors columns to fit', () => {

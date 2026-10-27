@@ -79,9 +79,12 @@
     margin-top: 20px;
 }
 
-/* Override WP nav-tab float with flexbox for modern layout */
+/* Override WP nav-tab float with flexbox for modern layout. The tabs wrap
+   onto more lines when they do not fit, so the page never scrolls sideways
+   (at 320px they ran to 856px: WCAG 1.4.10 Reflow). */
 .typost-admin-tabs.nav-tab-wrapper {
     display: flex;
+    flex-wrap: wrap;
     padding-top: 0;
 }
 
@@ -266,8 +269,15 @@
     font-size: var(--typost-font-size-base);
 }
 
+/* The element selector matches core's `.wp-core-ui select { max-width:
+   25rem }` specificity, so this later rule wins: 400px (core's cap) on a
+   wide screen, and no wider than the container in a narrow window, where a
+   long font name pushed the select past a 320px window (Reflow) */
+select.typost-font-select {
+    max-width: min(400px, 100%);
+}
+
 .typost-font-select {
-    max-width: 400px;
     padding: 8px;
     font-size: var(--typost-font-size-base);
     border: 1px solid var(--typost-border-input);
@@ -1765,6 +1775,26 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     .typost-wpl-family {
         display: none;
     }
+
+    /* The type pills and the Manage button cannot shrink, so in a narrow
+       window they move to a second line under the font name instead of
+       running past the card (Reflow). The name keeps the first line next
+       to the drag handle. */
+    .typost-font-header {
+        flex-wrap: wrap;
+        row-gap: 4px;
+        padding-bottom: 8px;
+    }
+
+    /* The basis leaves room for the drag handle (about 41px wide), so the
+       name stays next to it and only the pills wrap */
+    .typost-font-expand-toggle {
+        flex: 1 1 calc(100% - 60px);
+    }
+
+    .typost-wpl-manage-btn {
+        margin: 0 6px 0 20px;
+    }
 }
 
 /* ── Type badges ─────────────────────────────────────────────────────── */
@@ -1912,6 +1942,13 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 
 .typost-add-replacement-section .typost-form-field {
     margin-bottom: 15px;
+}
+
+/* The font selects size to their longest font name; keep them inside the
+   section in a narrow window (Reflow). 25rem keeps core's
+   `.wp-core-ui select` cap on a wide screen. */
+.typost-add-replacement-section select {
+    max-width: min(25rem, 100%);
 }
 
 .typost-add-replacement-section .typost-message {

@@ -74,7 +74,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 
 - The Glyphs Panel shows every character and every OpenType feature of a font, like the Glyphs panel in Adobe Illustrator.
 - Search by character, by `U+` codepoint, or by glyph name. Filter by Unicode block or by OpenType feature. The feature filter includes the stylistic sets.
-- Click “Glyphs…” in the inline editor or in the Typography Stylist block to insert a glyph into your text. The Glyphs tab in the settings lets you browse a font and copy glyphs.
+- Click “Glyphs…” in the inline editor or in the Typography Stylist block to insert a glyph into your text. The Glyphs tab in the settings lets you browse a font and copy glyphs. “Glyph size” makes the glyphs larger or smaller, and the panel keeps that size in your browser.
 - The block toolbar has a Glyphs button. To remove it, turn off “Glyphs Toolbar Button” in Options.
 - The panel reads the font in the browser, only when you open it, and it reads only the metadata. It does not extract or store glyph outlines.
 
