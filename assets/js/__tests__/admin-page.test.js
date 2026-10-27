@@ -97,6 +97,9 @@ describe('createRefreshQueue (#308)', () => {
 		request();
 		finish(0);
 		finish(0);
+		// Without the guard, the second finish(0) marks the queue idle while
+		// the follow-up still runs, and this request starts a third run
+		request('Late.');
 		expect(runs).toHaveLength(2);
 	});
 
