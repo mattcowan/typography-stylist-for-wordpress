@@ -784,7 +784,8 @@
 				: sprintf(/* translators: %s: character */ __('Inserted “%s”', 'typost-glyphs-panel'), text));
 		}
 
-		// Glyph size options, in lib.CELL_SIZES order
+		// Glyph size options: one label per lib.CELL_SIZES entry, in the same
+		// order. A size added there needs a label here, or it shows as a number.
 		var glyphSizeLabels = [
 			__('Small', 'typost-glyphs-panel'),
 			__('Medium (default)', 'typost-glyphs-panel'),
@@ -859,17 +860,34 @@
 			}
 		}
 
-		// After a cell size change (a Glyph size pick, or a resize that changes
-		// the cap from fitCellSize) the rows move: bring the active glyph back
-		// into view so keyboard users keep their place
-		var lastCellRef = useRef(cell);
+		// After a cell size or column count change (a Glyph size pick, or a
+		// resize) the rows move: keep the author's place. The active glyph
+		// stays in view when it was in view (keyboard users); otherwise the
+		// glyph at the top of the view stays at the top (a mouse user who
+		// scrolled without picking one). `scrollTop` still holds the offset
+		// from before the change, because no scroll event has run yet.
+		var lastLayoutRef = useRef({ cell: cell, columns: cols });
 		useEffect(function() {
-			if (lastCellRef.current === cell) {
+			var prev = lastLayoutRef.current;
+			if (prev.cell === cell && prev.columns === cols) {
 				return;
 			}
-			lastCellRef.current = cell;
-			ensureIndexVisible(activeIndex);
-		}, [cell]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on a size change only
+			lastLayoutRef.current = { cell: cell, columns: cols };
+			var next = lib.resolveLayoutChangeScroll({
+				prevCell: prev.cell,
+				prevColumns: prev.columns,
+				scrollTop: scrollTop,
+				viewportHeight: gridSize.height,
+				activeIndex: activeIndex,
+				cell: cell,
+				columns: cols
+			});
+			if (next.keepActive) {
+				ensureIndexVisible(activeIndex);
+			} else if (gridRef.current) {
+				gridRef.current.scrollTop = next.scrollTop;
+			}
+		}, [cell, cols]); // eslint-disable-line react-hooks/exhaustive-deps -- runs on a layout change only
 
 		function moveFocus(index) {
 			var clamped = Math.max(0, Math.min(items.length - 1, index));

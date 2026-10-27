@@ -6,6 +6,7 @@ const {
 	computeWindow,
 	computeColumns,
 	computePageRows,
+	resolveLayoutChangeScroll,
 	CELL_SIZES,
 	DEFAULT_CELL_SIZE,
 	CELL_SIZE_STORAGE_KEY,
@@ -80,6 +81,42 @@ describe('glyph size (#321)', () => {
 		expect(readCellSize(throwing)).toBe(56);
 		expect(writeCellSize(null, 72)).toBe(false);
 		expect(writeCellSize(throwing, 72)).toBe(false);
+	});
+
+	describe('resolveLayoutChangeScroll (PR #328 review)', () => {
+		// 16 columns of 56px, a 448px-high view: rows 0–7 show at scrollTop 0
+		const base = { prevCell: 56, prevColumns: 16, viewportHeight: 448, cell: 96, columns: 9 };
+
+		test('a mouse user who scrolled keeps the glyph at the top of the view', () => {
+			// Scrolled to row 50 (glyph 800), active glyph still 0
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 50 * 56, activeIndex: 0 });
+			expect(result.keepActive).toBe(false);
+			// Glyph 800 is in row 88 at 9 columns (800 / 9 = 88.9)
+			expect(result.scrollTop).toBe(88 * 96);
+		});
+
+		test('a keyboard user keeps the active glyph in view', () => {
+			// Active glyph 820 is in row 51, inside the view that starts at row 50
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 50 * 56, activeIndex: 820 });
+			expect(result).toEqual({ keepActive: true, scrollTop: null });
+		});
+
+		test('at the top of the grid, the first glyph stays in view', () => {
+			expect(resolveLayoutChangeScroll({ ...base, scrollTop: 0, activeIndex: 0 }).keepActive).toBe(true);
+		});
+
+		test('a row cut off at the bottom of the view does not count as in view', () => {
+			// Row 8 starts at 448: below a view of 0–448
+			const result = resolveLayoutChangeScroll({ ...base, scrollTop: 0, activeIndex: 8 * 16 });
+			expect(result.keepActive).toBe(false);
+			expect(result.scrollTop).toBe(0);
+		});
+
+		test('a column change alone, after a resize, also keeps the top glyph', () => {
+			const result = resolveLayoutChangeScroll({ ...base, cell: 56, columns: 8, scrollTop: 10 * 56, activeIndex: 0 });
+			// Glyph 160 is in row 20 at 8 columns
+			expect(result.scrollTop).toBe(20 * 56);
+		});
 	});
 
 	test('Page Down moves the rows that fit the grid at each size', () => {

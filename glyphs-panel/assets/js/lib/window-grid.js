@@ -72,6 +72,41 @@
 		return Math.max(1, Math.floor((viewportHeight || 0) / size));
 	}
 
+	/**
+	 * Where to scroll after the cell size or the column count changes, so the
+	 * author keeps their place. When the active glyph was in view (a keyboard
+	 * user moved to it), keep it in view. Otherwise (a mouse user scrolled
+	 * without picking a glyph, so the active glyph is still the first one),
+	 * keep the glyph that was at the top of the view at the top.
+	 *
+	 * @param {Object} layout
+	 * @param {number} layout.prevCell       Cell size before the change (px)
+	 * @param {number} layout.prevColumns    Columns before the change
+	 * @param {number} layout.scrollTop      Scroll offset before the change (px)
+	 * @param {number} layout.viewportHeight Visible grid height (px)
+	 * @param {number} layout.activeIndex    Active glyph index
+	 * @param {number} layout.cell           Cell size after the change (px)
+	 * @param {number} layout.columns        Columns after the change
+	 * @return {{keepActive: boolean, scrollTop: (number|null)}} keepActive: scroll
+	 *         the active glyph into view; else set scrollTop.
+	 */
+	function resolveLayoutChangeScroll(layout) {
+		var prevCell = Math.max(1, layout.prevCell || 1);
+		var prevCols = Math.max(1, Math.floor(layout.prevColumns) || 1);
+		var cell = Math.max(1, layout.cell || 1);
+		var cols = Math.max(1, Math.floor(layout.columns) || 1);
+		var top = Math.max(0, layout.scrollTop || 0);
+		var height = Math.max(0, layout.viewportHeight || 0);
+		var active = Math.max(0, layout.activeIndex || 0);
+
+		var activeTop = Math.floor(active / prevCols) * prevCell;
+		if (activeTop >= top && activeTop + prevCell <= top + height) {
+			return { keepActive: true, scrollTop: null };
+		}
+		var firstVisible = Math.floor(top / prevCell) * prevCols;
+		return { keepActive: false, scrollTop: Math.floor(firstVisible / cols) * cell };
+	}
+
 	// Glyph size control (#321). The cell sizes the author can pick, square,
 	// in px; 56 is the size the panel always had.
 	var CELL_SIZES = [40, 56, 72, 96, 128];
@@ -157,6 +192,7 @@
 		computeWindow: computeWindow,
 		computeColumns: computeColumns,
 		computePageRows: computePageRows,
+		resolveLayoutChangeScroll: resolveLayoutChangeScroll,
 		CELL_SIZES: CELL_SIZES,
 		DEFAULT_CELL_SIZE: DEFAULT_CELL_SIZE,
 		CELL_SIZE_STORAGE_KEY: CELL_SIZE_STORAGE_KEY,
