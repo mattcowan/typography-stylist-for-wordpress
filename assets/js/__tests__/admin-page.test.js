@@ -78,6 +78,28 @@ describe('createRefreshQueue (#308)', () => {
 		expect(runs[1].message).toBe('');
 	});
 
+	test('a run that throws does not block later requests', () => {
+		let calls = 0;
+		const request = createRefreshQueue(() => {
+			calls++;
+			if (calls === 1) {
+				throw new Error('bad config');
+			}
+		});
+		request();
+		request();
+		expect(calls).toBe(2);
+	});
+
+	test('a done callback called twice finishes the run once', () => {
+		const { runs, request, finish } = setup();
+		request();
+		request();
+		finish(0);
+		finish(0);
+		expect(runs).toHaveLength(2);
+	});
+
 	test('a request after the follow-up started waits for it', () => {
 		const { runs, request, finish } = setup();
 		request();

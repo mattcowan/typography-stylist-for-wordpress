@@ -267,8 +267,12 @@ function typostCreateRefreshQueue(run) {
     var pendingMessages = [];
 
     function start(messages) {
-        running = true;
-        run(messages.join(' '), function(failed) {
+        var finished = false;
+        function done(failed) {
+            if (finished) {
+                return;
+            }
+            finished = true;
             running = false;
             if (!pending) {
                 return;
@@ -279,7 +283,15 @@ function typostCreateRefreshQueue(run) {
             if (!failed) {
                 start(next);
             }
-        });
+        }
+        running = true;
+        // A run that throws before its request starts must not leave the
+        // queue "running" forever, with every later request queued unseen.
+        try {
+            run(messages.join(' '), done);
+        } catch (e) {
+            done(true);
+        }
     }
 
     return function(message) {
