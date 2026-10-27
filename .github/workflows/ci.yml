@@ -50,6 +50,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history and tags: the module version check on release/*
+          # PRs compares with the previous stable tag, and the default
+          # shallow checkout has no tags (#287).
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -59,6 +64,13 @@ jobs:
       # Stable tag, package.json, and the two package-lock.json versions)
       # must always agree — fail fast if not.
       - run: node scripts/check-versions.js
+      # On a release PR, also fail when a bundled module's assets/ changed
+      # since the previous stable tag but its version constant did not —
+      # before the GitHub Release is published. The deploy runs the same
+      # check again in tag mode.
+      - name: Module version check (release PRs)
+        if: startsWith(github.head_ref, 'release/')
+        run: node scripts/check-versions.js --modules
       - run: npm run build
       # On manual runs, also package an installable zip and attach it as an
       # artifact (kept 7 days) — grab a test build from any branch on demand.

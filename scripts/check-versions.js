@@ -26,18 +26,44 @@
  *     during a beta the Stable tag must keep pointing at the last stable
  *     release so wp.org never serves unreleased code.
  *
+ *   node scripts/check-versions.js --modules
+ *     Consistency mode plus the module check below (runs in CI on a
+ *     release/* pull request, before the GitHub Release is published).
+ *
+ * Module check (#287; always on in tag and pre-release mode): each bundled
+ * module's version constant is the `?ver=` on its scripts and styles, so
+ * when files under `<module>/assets/` changed since the previous stable tag,
+ * the constant must differ from the one at that tag, or browsers can keep
+ * the previous release's files. Only `assets/` counts: every release
+ * changes each module's catalogs, and those are not cached by browsers.
+ * The previous stable tag is the highest `vX.Y.Z` (or `X.Y.Z`) tag with no
+ * pre-release suffix that is lower than the version being released. The
+ * check needs the tags: a shallow checkout has none, and the check then
+ * fails rather than passes.
+ *
  * Also warns (never fails) when `Tested up to:` includes a patch version —
  * wp.org convention is major.minor (e.g. 6.9, not 6.9.4).
  */
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 const rootDir = path.join(__dirname, '..');
 const read = f => fs.readFileSync(path.join(rootDir, f), 'utf8');
 
 const args = process.argv.slice(2);
 const prerelease = args.includes('--prerelease');
+const checkModulesFlag = args.includes('--modules');
 const tagArg = args.find(a => !a.startsWith('--')) || null;
+
+// Bundled modules with their own version constant (see RELEASING.md §4).
+// moduleConstant() reads only the form define( 'NAME', 'x.y.z' ) with single
+// quotes; another form fails the check with "could not find", never passes.
+const MODULES = [
+  { dir: 'glyphs-panel', file: 'glyphs-panel/glyphs-panel.php', constant: 'TYPOST_GP_VERSION' },
+  { dir: 'paragraph-styles', file: 'paragraph-styles/paragraph-styles.php', constant: 'TYPOST_PS_VERSION' },
+  { dir: 'variable-fonts', file: 'variable-fonts/variable-fonts.php', constant: 'TYPOST_VF_VERSION' }
+];
 
 function extract(pattern, text, label, file) {
   const m = text.match(pattern);
@@ -144,6 +170,109 @@ if (!tagArg) {
       console.log(`\n✓ Pre-release versions OK (Stable tag stays at ${stable})`);
     }
   }
+}
+
+function git(gitArgs) {
+  const result = spawnSync('git', gitArgs, { cwd: rootDir, encoding: 'utf8' });
+  return { ok: result.status === 0, out: (result.stdout || '').trim() };
+}
+
+function parseStable(version) {
+  const m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  return m ? m.slice(1).map(Number) : null;
+}
+
+function compareVersions(a, b) {
+  for (let i = 0; i < 3; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return 0;
+}
+
+function moduleConstant(text, constant) {
+  const m = text.match(new RegExp(`define\\(\\s*'${constant}'\\s*,\\s*'([^']+)'`));
+  return m ? m[1] : null;
+}
+
+// Returns true when the module check failed.
+function checkModules(releaseVersion) {
+  const current = parseStable(releaseVersion);
+  if (!current) {
+    console.error(`\n✗ Module version check: cannot read the release version ${releaseVersion}.`);
+    return true;
+  }
+  const tags = git(['tag', '--list']);
+  const previous = (tags.ok ? tags.out.split('\n') : [])
+    .map(name => ({ name: name.trim(), version: parseStable(name.trim()) }))
+    .filter(t => t.version && compareVersions(t.version, current) < 0)
+    .sort((a, b) => compareVersions(b.version, a.version))[0];
+  if (!previous) {
+    console.error(`\n✗ Module version check: no stable tag lower than ${releaseVersion} was found, so the changed modules cannot be found. A shallow checkout has no tags: check out with fetch-depth: 0.`);
+    return true;
+  }
+
+  console.log(`\nModule version check against ${previous.name}:`);
+  let moduleFailed = false;
+  for (const mod of MODULES) {
+    const assets = `${mod.dir}/assets`;
+    const diff = git(['diff', '--name-only', previous.name, '--', assets]);
+    const untracked = git(['ls-files', '--others', '--exclude-standard', '--', assets]);
+    if (!diff.ok || !untracked.ok) {
+      console.error(`  ${mod.dir}  ✗ git could not compare ${assets} with ${previous.name}`);
+      moduleFailed = true;
+      continue;
+    }
+    const changed = [diff.out, untracked.out].filter(Boolean).join('\n').split('\n').filter(Boolean);
+    const now = moduleConstant(read(mod.file), mod.constant);
+    if (!now) {
+      console.error(`  ${mod.dir}  ✗ could not find ${mod.constant} in ${mod.file}`);
+      moduleFailed = true;
+      continue;
+    }
+    if (changed.length === 0) {
+      console.log(`  ${mod.dir}  no assets/ changes, ${mod.constant} ${now}  ✓`);
+      continue;
+    }
+    // Only a file that is absent at the tag makes a new module. Any other
+    // failure to read the old constant must not pass as "new". ls-tree, not
+    // cat-file -e: cat-file exits 128 for a missing path and for a git error
+    // alike, while ls-tree prints nothing for a missing path and fails only
+    // on an error.
+    const inTag = git(['ls-tree', '--name-only', previous.name, '--', mod.file]);
+    if (!inTag.ok) {
+      console.error(`  ${mod.dir}  ✗ git could not list ${mod.file} at ${previous.name}`);
+      moduleFailed = true;
+      continue;
+    }
+    if (inTag.out === '') {
+      console.log(`  ${mod.dir}  new since ${previous.name}, ${mod.constant} ${now}  ✓`);
+      continue;
+    }
+    const atTag = git(['show', `${previous.name}:${mod.file}`]);
+    const before = atTag.ok ? moduleConstant(atTag.out, mod.constant) : null;
+    if (before === null) {
+      console.error(`  ${mod.dir}  ✗ could not read ${mod.constant} from ${mod.file} at ${previous.name}`);
+      moduleFailed = true;
+    } else if (before === now) {
+      console.error(`  ${mod.dir}  ${changed.length} assets/ file(s) changed, ${mod.constant} still ${now}  ✗ bump it`);
+      moduleFailed = true;
+    } else {
+      console.log(`  ${mod.dir}  ${changed.length} assets/ file(s) changed, ${mod.constant} ${before} → ${now}  ✓`);
+    }
+  }
+  if (moduleFailed) {
+    console.error(`\n✗ A module's scripts or styles changed since ${previous.name} but its version constant did not. Bump the patch number of each module marked ✗ (RELEASING.md §4 step 1).`);
+  } else {
+    console.log('\n✓ Module versions OK');
+  }
+  return moduleFailed;
+}
+
+if (tagArg || checkModulesFlag) {
+  const releaseVersion = tagArg
+    ? tagArg.replace(/^v/, '').replace(/[-+].*$/, '')
+    : versions['plugin header (typography-stylist.php)'];
+  if (checkModules(releaseVersion)) failed = true;
 }
 
 // Advisory: Tested up to should be major.minor
