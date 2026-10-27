@@ -360,6 +360,37 @@ describe( 'module version check (#287)', () => {
 		expect( output ).toMatch( /paragraph-styles {2}1 assets\/ file\(s\) changed, TYPOST_PS_VERSION still 1\.0\.0 {2}✗/ );
 	} );
 
+	test( 'passes a module that did not exist at the previous tag', () => {
+		const root = makeReleaseProject( '2.4.0' );
+		fs.rmSync( path.join( root, 'variable-fonts' ), { recursive: true } );
+		git( root, [ 'add', '-A' ] );
+		git( root, [ 'commit', '-q', '--amend', '-m', 'v2.3.3' ] );
+		git( root, [ 'tag', '-f', 'v2.3.3' ] );
+		writeModule( root, 'variable-fonts', '1.0.0' );
+		commit( root );
+		const { status, output } = run( root, [ 'v2.4.0' ] );
+		expect( status ).toBe( 0 );
+		expect( output ).toContain( 'variable-fonts  new since v2.3.3' );
+	} );
+
+	test( 'fails when the module file exists at the tag but its constant cannot be read there', () => {
+		const root = makeReleaseProject( '2.4.0' );
+		fs.writeFileSync(
+			path.join( root, 'glyphs-panel', 'glyphs-panel.php' ),
+			"<?php\ndefine( \"TYPOST_GP_VERSION\", '1.0.0' );\n"
+		);
+		git( root, [ 'add', '-A' ] );
+		git( root, [ 'commit', '-q', '--amend', '-m', 'v2.3.3' ] );
+		git( root, [ 'tag', '-f', 'v2.3.3' ] );
+		writeModule( root, 'glyphs-panel', '1.0.1' );
+		changeAssets( root, 'glyphs-panel' );
+		commit( root );
+		const { status, output } = run( root, [ 'v2.4.0' ] );
+		expect( status ).toBe( 1 );
+		expect( output ).toContain( 'could not read TYPOST_GP_VERSION from glyphs-panel/glyphs-panel.php at v2.3.3' );
+		expect( output ).not.toContain( 'glyphs-panel  new since' );
+	} );
+
 	test( 'fails with a clear message when the checkout has no tags', () => {
 		const root = makeProject( ALL( '2.4.0' ) );
 		for ( const dir of Object.keys( MODULE_FILES ) ) {

@@ -57,6 +57,8 @@ const checkModulesFlag = args.includes('--modules');
 const tagArg = args.find(a => !a.startsWith('--')) || null;
 
 // Bundled modules with their own version constant (see RELEASING.md §4).
+// moduleConstant() reads only the form define( 'NAME', 'x.y.z' ) with single
+// quotes; another form fails the check with "could not find", never passes.
 const MODULES = [
   { dir: 'glyphs-panel', file: 'glyphs-panel/glyphs-panel.php', constant: 'TYPOST_GP_VERSION' },
   { dir: 'paragraph-styles', file: 'paragraph-styles/paragraph-styles.php', constant: 'TYPOST_PS_VERSION' },
@@ -231,11 +233,17 @@ function checkModules(releaseVersion) {
       console.log(`  ${mod.dir}  no assets/ changes, ${mod.constant} ${now}  ✓`);
       continue;
     }
+    // Only a file that is absent at the tag makes a new module. Any other
+    // failure to read the old constant must not pass as "new".
+    if (!git(['cat-file', '-e', `${previous.name}:${mod.file}`]).ok) {
+      console.log(`  ${mod.dir}  new since ${previous.name}, ${mod.constant} ${now}  ✓`);
+      continue;
+    }
     const atTag = git(['show', `${previous.name}:${mod.file}`]);
     const before = atTag.ok ? moduleConstant(atTag.out, mod.constant) : null;
     if (before === null) {
-      // The module is new since the tag: its version is new too.
-      console.log(`  ${mod.dir}  new since ${previous.name}, ${mod.constant} ${now}  ✓`);
+      console.error(`  ${mod.dir}  ✗ could not read ${mod.constant} from ${mod.file} at ${previous.name}`);
+      moduleFailed = true;
     } else if (before === now) {
       console.error(`  ${mod.dir}  ${changed.length} assets/ file(s) changed, ${mod.constant} still ${now}  ✗ bump it`);
       moduleFailed = true;
