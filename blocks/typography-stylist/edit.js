@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveHangTextAlign, styleAlignmentToTextAlign, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveHangTextAlign, styleAlignmentToTextAlign, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseApply, normalizeInlineCaseSpans } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -301,6 +301,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [previewFontSizeMax, setPreviewFontSizeMax] = useState(64);
 	const [inlineFontWeight, setInlineFontWeight] = useState('inherit');
 	const [inlineFontStyle, setInlineFontStyle] = useState('');
+	// Case of the selected text (#309): '' = Default (none on the text)
+	const [inlineTextCase, setInlineTextCase] = useState('');
+	const [inlineFakeSmallCaps, setInlineFakeSmallCaps] = useState(true);
+	// The shown case only comes from a paragraph style's class: nothing on
+	// the text itself to reset (#309 review)
+	const [inlineCaseFromStyle, setInlineCaseFromStyle] = useState(false);
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
@@ -1364,6 +1370,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			setInlineFitShift(0);
 			setInlineFontWeight('inherit');
 			setInlineFontStyle('');
+			setInlineTextCase('');
+			setInlineFakeSmallCaps(true);
+			setInlineCaseFromStyle(false);
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
 			setInlineFontSizeUnit(getNewFontSizeUnit());
@@ -1396,6 +1405,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		if (detected.fontStyle) {
 			setInlineFontStyle(detected.fontStyle);
 		}
+		// Always set: a case shown for the last selection must not stay on
+		// text without one (#309)
+		setInlineTextCase(detected.textCase || '');
+		setInlineFakeSmallCaps(detected.fakeSmallCaps !== false);
+		setInlineCaseFromStyle(!!detected.textCaseFromStyle);
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
 		}
@@ -1711,7 +1725,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	 *
 	 * @since 2.3.0
 	 * @param {string} property One of lineHeight, letterSpacing, fitScale,
-	 *   fitShift, fontWeight, fontStyle, fontFamily, fontSize
+	 *   fitShift, fontWeight, fontStyle, textCase, fontFamily, fontSize
 	 */
 	const revertInlineControl = (property) => {
 		const detected = inlineStylesAtSelection || {};
@@ -1734,6 +1748,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				break;
 			case 'fontStyle':
 				setInlineFontStyle(detected.fontStyle || '');
+				break;
+			case 'textCase':
+				setInlineTextCase(detected.textCase || '');
+				setInlineFakeSmallCaps(detected.fakeSmallCaps !== false);
+				setInlineCaseFromStyle(!!detected.textCaseFromStyle);
 				break;
 			case 'fontFamily':
 				setInlineFontFamily(detected.fontId || '');
@@ -3121,6 +3140,100 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
+	// Apply a case to the selected text only (#309). Same strategies as
+	// applyInlineFontStyle, with the span form of the inline format panel
+	// (#214): data-textcase, data-fakesmallcaps and the case declarations.
+	// The writers merge over a span's old values, so
+	// normalizeInlineCaseSpans() then rebuilds each touched span's case from
+	// its data attributes and drops what the old case left behind.
+	const applyInlineCase = (value, fake) => {
+		const apply = buildInlineCaseApply(value, fake);
+		if (!content || !apply || !resolvedApplyRange) return;
+
+		const start = resolvedApplyRange.start;
+		const end = resolvedApplyRange.end;
+		const finish = (html) => {
+			setAttributes({ content: normalizeInlineCaseSpans(html, start, end) });
+			originalContentRef.current = null;
+			// The text now has a case of its own, also over a style
+			setInlineCaseFromStyle(false);
+		};
+
+		// COLLAPSED CURSOR: Update parent span in-place
+		if (start === end) {
+			const result = updateSpanPropertyInPlace(
+				content,
+				start,
+				'data-textcase',
+				apply.attributes['data-textcase'],
+				apply.firstDeclaration[0],
+				apply.firstDeclaration[1],
+				{ 'data-fakesmallcaps': apply.attributes['data-fakesmallcaps'] }
+			);
+			if (result.success) {
+				finish(result.content);
+			}
+			return;
+		}
+
+		// SELECTION: Check if we should split parent span
+		if (inlineStylesAtSelection && inlineStylesAtSelection.textCase) {
+			const result = splitSpanAndApply(content, start, end, 'data-textcase', apply.attributes, apply.styleString);
+			if (result.success) {
+				finish(result.content);
+				return;
+			}
+		}
+
+		// STRATEGY: Try Range method first, fallback to string manipulation
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const container = doc.body.firstChild;
+		const range = getRangeForOffsets(container, start, end, doc);
+		const validation = validateRangeMatchesSelection(
+			range,
+			capturedSelection?.text || '',
+			capturedSelection?.length || 0
+		);
+
+		if (validation.valid && applyOrMergeStyling(range, apply.attributes, apply.styleString, doc)) {
+			finish(container.innerHTML);
+			return;
+		}
+
+		const fallbackResult = applyStylingSafeStringMethod(content, start, end, apply.attributes, apply.styleString);
+		if (fallbackResult.success) {
+			finish(fallbackResult.content);
+		} else {
+			// Both methods failed - report it and put the control back
+			reportInlineApplyFailure(fallbackResult.error, () => revertInlineControl('textCase'));
+		}
+	};
+
+	// Reset the case of the selected text (remove it from content). On a
+	// paragraph style span the style's case comes back (#309 review), so
+	// the control is read again from the result instead of set to Default.
+	const resetInlineCase = () => {
+		if (!content || !inlineTextCase || inlineCaseFromStyle || !resolvedApplyRange) return;
+
+		const { start, end } = resolvedApplyRange;
+		// data-textcase removes the whole case group (removePropertyFromSpan)
+		const result = removePropertyFromSelection(
+			content,
+			start,
+			end,
+			'data-textcase',
+			'text-transform',
+			window.typostData && window.typostData.paragraphStyles
+		);
+		if (!result.success) return;
+		setAttributes({ content: result.content });
+		const after = parseInlineStylesAtCursor(result.content, start, end);
+		setInlineTextCase((after && after.textCase) || '');
+		setInlineFakeSmallCaps(!after || after.fakeSmallCaps !== false);
+		setInlineCaseFromStyle(!!(after && after.textCaseFromStyle));
+	};
+
 	// Apply font family to selected text only (inline)
 	const applyInlineFontFamily = () => {
 		if (!content || !inlineFontFamily) return;
@@ -4224,6 +4337,71 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									)}
 								</div>
 
+								{/* Case Control (#309): the selected text only. The block's
+								    case stays in the sidebar. Screen readers read the
+								    hidden heading, so a span's case changes only the look */}
+								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
+									<SelectControl
+										label={__('Case (for selected text)', 'typography-stylist')}
+										value={normalizeTextCase(inlineTextCase)}
+										options={[
+											{ label: __('Default', 'typography-stylist'), value: '' },
+											{ label: __('Normal', 'typography-stylist'), value: 'none' },
+											{ label: __('All Caps', 'typography-stylist'), value: 'uppercase' },
+											{ label: __('Lowercase', 'typography-stylist'), value: 'lowercase' },
+											{ label: __('Title Case', 'typography-stylist'), value: 'capitalize' },
+											{ label: __('Small Caps', 'typography-stylist'), value: 'small-caps' },
+											{ label: __('All Small Caps', 'typography-stylist'), value: 'all-small-caps' }
+										]}
+										onChange={(value) => {
+											const next = normalizeTextCase(value);
+											if (next) {
+												setInlineTextCase(next);
+												applyInlineCase(next, inlineFakeSmallCaps);
+											} else if (inlineCaseFromStyle) {
+												// The style's class sets the case: there is
+												// nothing on the text to remove, so the control
+												// keeps showing the case that renders
+												revertInlineControl('textCase');
+											} else {
+												resetInlineCase();
+											}
+										}}
+										help={
+											inlineCaseFromStyle
+											? __('The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first.', 'typography-stylist')
+											: normalizeTextCase(inlineTextCase) === 'capitalize'
+											? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
+											: (normalizeTextCase(inlineTextCase) === 'uppercase'
+												? __('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')
+												: __('Changes how the text looks only. The text keeps the case you typed. Default keeps the case the theme sets; Normal removes it.', 'typography-stylist'))}
+									/>
+									{isSmallCapsCase(inlineTextCase) && (
+										<ToggleControl
+											label={__('Allow fake small caps', 'typography-stylist')}
+											checked={inlineFakeSmallCaps !== false}
+											onChange={(value) => {
+												setInlineFakeSmallCaps(value);
+												applyInlineCase(inlineTextCase, value);
+											}}
+											help={inlineFakeSmallCaps !== false
+												? __('When the font has no small caps, the browser makes them by shrinking capitals.', 'typography-stylist')
+												: __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
+										/>
+									)}
+									{inlineTextCase && !inlineCaseFromStyle && (
+										<Button
+											variant="secondary"
+											onClick={resetInlineCase}
+											isDestructive
+											style={{ marginTop: '8px', fontSize: '11px', padding: '2px 8px', height: 'auto' }}
+											icon="undo"
+										>
+											{__('Reset Case', 'typography-stylist')}
+										</Button>
+									)}
+								</div>
+
 								{/* Font Size Control */}
 								<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 									<SelectControl
@@ -4571,9 +4749,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 																// (data-fontstyle span, <em>/<i>, or the block setting) —
 																// italic faces carry their own glyphs and features
 																fontStyle: (inlineStylesAtSelection && inlineStylesAtSelection.fontStyle) || inlineFontStyle || fontStyle || undefined,
-																// The block's case (#214): smcp, c2sc and
+																// The case of the selected text (#309),
+																// else the block's (#214): smcp, c2sc and
 																// case look different on capitals
-																...caseStyleObject(textCase, fakeSmallCaps)
+																...(inlineTextCase
+																	? caseStyleObject(inlineTextCase, inlineFakeSmallCaps)
+																	: caseStyleObject(textCase, fakeSmallCaps))
 															}}
 														>
 															{sampleText}

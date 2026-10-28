@@ -2562,6 +2562,18 @@ msgid "Reset Font Style"
 msgstr "Restablecer el estilo de fuente"
 
 #: blocks/typography-stylist/build/index.js:5
+msgid "Case (for selected text)"
+msgstr "Mayúsculas y minúsculas (para el texto seleccionado)"
+
+#: blocks/typography-stylist/build/index.js:5
+msgid "Reset Case"
+msgstr "Restablecer mayúsculas y minúsculas"
+
+#: blocks/typography-stylist/build/index.js:5
+msgid "The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first."
+msgstr "El estilo de párrafo define estas mayúsculas y minúsculas. Para cambiarlas en el texto seleccionado, elija otra opción. Para que sean propias del texto, haga clic primero en «Desvincular estilo»."
+
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size (for selected text)"
 msgstr "Tamaño de Fuente (para el texto seleccionado)"
 

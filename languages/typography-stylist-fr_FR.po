@@ -2562,6 +2562,18 @@ msgid "Reset Font Style"
 msgstr "Réinitialiser le style de police"
 
 #: blocks/typography-stylist/build/index.js:5
+msgid "Case (for selected text)"
+msgstr "Casse (pour le texte sélectionné)"
+
+#: blocks/typography-stylist/build/index.js:5
+msgid "Reset Case"
+msgstr "Réinitialiser la casse"
+
+#: blocks/typography-stylist/build/index.js:5
+msgid "The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first."
+msgstr "Le style de paragraphe définit cette casse. Pour la modifier dans le texte sélectionné, choisissez une autre casse. Pour en faire la casse propre du texte, cliquez d’abord sur « Détacher le style »."
+
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size (for selected text)"
 msgstr "Taille de Police (pour le texte sélectionné)"
 
