@@ -480,6 +480,10 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			// allowed). null when no span sets a case.
 			textCase: null,
 			fakeSmallCaps: null,
+			// True when that case only renders through a paragraph style's
+			// class: the span has a data-style-id and declares no case
+			// property, so the text has no case of its own to reset
+			textCaseFromStyle: false,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
 			spanEnd: spanEnd
@@ -673,6 +677,9 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				if (spanCase) {
 					result.textCase = spanCase;
 					result.fakeSmallCaps = currentSpan.getAttribute('data-fakesmallcaps') !== 'false';
+					const declared = parseStyleString(currentSpan.getAttribute('style'));
+					result.textCaseFromStyle = !!currentSpan.getAttribute('data-style-id') &&
+						!CASE_CSS_PROPERTIES.some((prop) => prop in declared);
 				}
 			}
 
@@ -2545,14 +2552,20 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
  * the span at the caret — walking up to the ancestor that carries it —
  * mirroring how updateSpanPropertyInPlace applies at a caret.
  *
+ * Case on a paragraph style span (#309 review): 'data-textcase' on a span
+ * with a data-style-id removes the span's own case declarations and puts
+ * back the style's case attributes (none when the style has no case or is
+ * deleted), so detection reports the case the class still renders.
+ *
  * @param {string} htmlContent - Block HTML content
  * @param {number} startOffset - Selection start offset
  * @param {number} endOffset - Selection end offset
  * @param {string} dataAttribute - Data attribute to remove (e.g., 'data-letterspacing')
  * @param {string} styleProperty - Style property to remove (e.g., 'letter-spacing')
+ * @param {Array}  [styles] - Stored paragraph styles, for the case restore above
  * @return {Object} - { success: boolean, content: string }
  */
-export function removePropertyFromSelection(htmlContent, startOffset, endOffset, dataAttribute, styleProperty) {
+export function removePropertyFromSelection(htmlContent, startOffset, endOffset, dataAttribute, styleProperty, styles) {
 	if (!htmlContent) {
 		return { success: false, content: htmlContent };
 	}
@@ -2620,6 +2633,28 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 
 	// Remove property from each span found in selection
 	spansAtSelection.forEach(span => {
+		if (dataAttribute === 'data-textcase' && span.getAttribute('data-style-id')) {
+			const style = findParagraphStyleByClass(`typost-ps-${span.getAttribute('data-style-id')}`, styles);
+			const props = (style && style.properties) || {};
+			const declared = parseStyleString(span.getAttribute('style'));
+			CASE_CSS_PROPERTIES.forEach((prop) => {
+				delete declared[prop];
+			});
+			if (Object.keys(declared).length) {
+				span.setAttribute('style', buildStyleString(declared));
+			} else {
+				span.removeAttribute('style');
+			}
+			const attrs = buildInlineCaseAttributes(props.textCase, props.fakeSmallCaps);
+			CASE_DATA_ATTRIBUTES.forEach((name) => {
+				if (attrs[name]) {
+					span.setAttribute(name, attrs[name]);
+				} else {
+					span.removeAttribute(name);
+				}
+			});
+			return; // The data-style-id stays, so the span stays
+		}
 		const shouldUnwrap = removePropertyFromSpan(span, dataAttribute, styleProperty);
 
 		if (shouldUnwrap && span.parentNode) {
@@ -3211,12 +3246,25 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
 		'letter-spacing': ['data-letterspacing'],
 		'line-height': ['data-lineheight'],
 		'vertical-align': ['data-fitshift'],
-		'font-variation-settings': ['data-font-variation-settings']
+		'font-variation-settings': ['data-font-variation-settings'],
+		// Case (#309): one setting in three declarations, stripped together
+		'text-transform': CASE_DATA_ATTRIBUTES,
+		'font-variant-caps': [],
+		'font-synthesis-small-caps': []
 	};
 	const strippedProps = Object.keys(cascadeProps).filter((prop) => prop in appliedDecls);
 	// Axis values are font-specific: a font change also invalidates them
 	if ('font-family' in appliedDecls && strippedProps.indexOf('font-variation-settings') === -1) {
 		strippedProps.push('font-variation-settings');
+	}
+	// A case replaces an inner case as a whole: All Caps writes no
+	// font-synthesis-small-caps, but an inner Small Caps one must still go
+	if ('text-transform' in appliedDecls) {
+		CASE_CSS_PROPERTIES.forEach((prop) => {
+			if (strippedProps.indexOf(prop) === -1) {
+				strippedProps.push(prop);
+			}
+		});
 	}
 
 	const appliedFeatures = (attributes && attributes['data-features'] ? String(attributes['data-features']) : '')

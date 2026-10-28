@@ -2680,6 +2680,10 @@ msgid "Reset Case"
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:5
+msgid "The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size (for selected text)"
 msgstr ""
 

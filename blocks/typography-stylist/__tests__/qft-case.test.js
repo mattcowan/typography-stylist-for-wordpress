@@ -167,6 +167,18 @@ describe('applying a case to selected text', () => {
 		expect(span.style).toEqual({ 'text-transform': 'lowercase', 'font-variant-caps': 'normal' });
 	});
 
+	test('a case over a span with its own case: the inner case goes, so the new one shows', () => {
+		// A selection past the end of a span takes the string path
+		const before = `<span class="typost-styled" data-textcase="small-caps" data-fakesmallcaps="false" data-fontweight="700" style="font-weight: 700; ${SMALL_NO_FAKE}">quick</span> fox`;
+		const apply = buildInlineCaseApply('uppercase', true);
+		const result = applyStylingSafeStringMethod(before, 0, 9, apply.attributes, apply.styleString);
+		expect(result.success).toBe(true);
+		const spans = spansOf(normalizeInlineCaseSpans(result.content, 0, 9));
+		expect(spans[0]).toEqual({ text: 'quick fox', attrs: { 'data-textcase': 'uppercase' }, style: { 'text-transform': 'uppercase', 'font-variant-caps': 'normal' } });
+		// The inner span keeps its weight and loses its case
+		expect(spans[1]).toEqual({ text: 'quick', attrs: { 'data-fontweight': '700' }, style: { 'font-weight': '700' } });
+	});
+
 	test('other properties of the span stay', () => {
 		const before = `<span class="typost-styled" data-fontweight="700" style="font-weight: 700">The</span>`;
 		const { doc, container, range } = rangeFor(before, 0, 3);
@@ -204,6 +216,53 @@ describe('resetting the case of selected text', () => {
 		const [span] = spansOf(removePropertyFromSelection(html, 0, 3, 'data-textcase', 'text-transform').content);
 		expect(span.attrs).toEqual({ 'data-fontweight': '700' });
 		expect(span.style).toEqual({ 'font-weight': '700' });
+	});
+});
+
+describe('a case from a paragraph style (#309 review)', () => {
+	const STYLES = [
+		{ id: 437, properties: { textCase: 'uppercase', fontWeight: '700' } },
+		{ id: 438, properties: { fontWeight: '700' } }
+	];
+
+	test('detection says the case comes only from the style', () => {
+		const html = 'Hello <span class="typost-styled typost-ps-437" data-style-id="437" data-textcase="uppercase">wonderful</span> world';
+		const detected = parseInlineStylesAtCursor(html, 6, 15);
+		expect(detected.textCase).toBe('uppercase');
+		expect(detected.textCaseFromStyle).toBe(true);
+	});
+
+	test('a case declared over the style is the text\'s own', () => {
+		const html = `<span class="typost-styled typost-ps-437" data-style-id="437" data-textcase="lowercase" style="text-transform: lowercase; font-variant-caps: normal">wonderful</span>`;
+		expect(parseInlineStylesAtCursor(html, 0, 9).textCaseFromStyle).toBe(false);
+	});
+
+	test('reset of an override puts the style\'s case back, and the span stays', () => {
+		const html = `<span class="typost-styled typost-ps-437" data-style-id="437" data-textcase="small-caps" data-fakesmallcaps="false" style="${SMALL_NO_FAKE}">wonderful</span>`;
+		const result = removePropertyFromSelection(html, 0, 9, 'data-textcase', 'text-transform', STYLES);
+		expect(result.content).toBe('<span class="typost-styled typost-ps-437" data-style-id="437" data-textcase="uppercase">wonderful</span>');
+		const detected = parseInlineStylesAtCursor(result.content, 0, 9);
+		expect(detected.textCase).toBe('uppercase');
+		expect(detected.textCaseFromStyle).toBe(true);
+	});
+
+	test('reset over a style without a case removes the case, and the span stays', () => {
+		const html = `<span class="typost-styled typost-ps-438" data-style-id="438" data-textcase="uppercase" style="${UPPER}">wonderful</span>`;
+		const result = removePropertyFromSelection(html, 0, 9, 'data-textcase', 'text-transform', STYLES);
+		expect(result.content).toBe('<span class="typost-styled typost-ps-438" data-style-id="438">wonderful</span>');
+	});
+
+	test('reset over a deleted style removes the case, and the span stays', () => {
+		const html = `<span class="typost-styled typost-ps-999" data-style-id="999" data-textcase="uppercase" style="${UPPER}">wonderful</span>`;
+		const result = removePropertyFromSelection(html, 0, 9, 'data-textcase', 'text-transform', STYLES);
+		expect(result.content).toBe('<span class="typost-styled typost-ps-999" data-style-id="999">wonderful</span>');
+	});
+
+	test('other properties declared on the style span stay', () => {
+		const html = `<span class="typost-styled typost-ps-437" data-style-id="437" data-letterspacing="80" data-textcase="lowercase" style="letter-spacing: 0.08em; text-transform: lowercase; font-variant-caps: normal">wonderful</span>`;
+		const [span] = spansOf(removePropertyFromSelection(html, 0, 9, 'data-textcase', 'text-transform', STYLES).content);
+		expect(span.attrs).toEqual({ 'data-style-id': '437', 'data-letterspacing': '80', 'data-textcase': 'uppercase' });
+		expect(span.style).toEqual({ 'letter-spacing': '0.08em' });
 	});
 });
 

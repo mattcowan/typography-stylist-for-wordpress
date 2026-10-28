@@ -304,6 +304,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// Case of the selected text (#309): '' = Default (none on the text)
 	const [inlineTextCase, setInlineTextCase] = useState('');
 	const [inlineFakeSmallCaps, setInlineFakeSmallCaps] = useState(true);
+	// The shown case only comes from a paragraph style's class: nothing on
+	// the text itself to reset (#309 review)
+	const [inlineCaseFromStyle, setInlineCaseFromStyle] = useState(false);
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
@@ -1359,6 +1362,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			setInlineFontStyle('');
 			setInlineTextCase('');
 			setInlineFakeSmallCaps(true);
+			setInlineCaseFromStyle(false);
 			setInlineFontFamily('');
 			setInlineFontSize('inherit');
 			setInlineFontSizeUnit(getNewFontSizeUnit());
@@ -1395,6 +1399,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		// text without one (#309)
 		setInlineTextCase(detected.textCase || '');
 		setInlineFakeSmallCaps(detected.fakeSmallCaps !== false);
+		setInlineCaseFromStyle(!!detected.textCaseFromStyle);
 		if (detected.fontId) {
 			setInlineFontFamily(detected.fontId);
 		}
@@ -1737,6 +1742,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			case 'textCase':
 				setInlineTextCase(detected.textCase || '');
 				setInlineFakeSmallCaps(detected.fakeSmallCaps !== false);
+				setInlineCaseFromStyle(!!detected.textCaseFromStyle);
 				break;
 			case 'fontFamily':
 				setInlineFontFamily(detected.fontId || '');
@@ -3139,6 +3145,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const finish = (html) => {
 			setAttributes({ content: normalizeInlineCaseSpans(html, start, end) });
 			originalContentRef.current = null;
+			// The text now has a case of its own, also over a style
+			setInlineCaseFromStyle(false);
 		};
 
 		// COLLAPSED CURSOR: Update parent span in-place
@@ -3192,26 +3200,28 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	};
 
-	// Reset the case of the selected text (remove it from content)
+	// Reset the case of the selected text (remove it from content). On a
+	// paragraph style span the style's case comes back (#309 review), so
+	// the control is read again from the result instead of set to Default.
 	const resetInlineCase = () => {
-		if (!content || !inlineTextCase) return;
+		if (!content || !inlineTextCase || inlineCaseFromStyle || !resolvedApplyRange) return;
 
-		setInlineTextCase('');
-		setInlineFakeSmallCaps(true);
-
-		if (resolvedApplyRange) {
-			// data-textcase removes the whole case group (removePropertyFromSpan)
-			const result = removePropertyFromSelection(
-				content,
-				resolvedApplyRange.start,
-				resolvedApplyRange.end,
-				'data-textcase',
-				'text-transform'
-			);
-			if (result.success) {
-				setAttributes({ content: result.content });
-			}
-		}
+		const { start, end } = resolvedApplyRange;
+		// data-textcase removes the whole case group (removePropertyFromSpan)
+		const result = removePropertyFromSelection(
+			content,
+			start,
+			end,
+			'data-textcase',
+			'text-transform',
+			window.typostData && window.typostData.paragraphStyles
+		);
+		if (!result.success) return;
+		setAttributes({ content: result.content });
+		const after = parseInlineStylesAtCursor(result.content, start, end);
+		setInlineTextCase((after && after.textCase) || '');
+		setInlineFakeSmallCaps(!after || after.fakeSmallCaps !== false);
+		setInlineCaseFromStyle(!!(after && after.textCaseFromStyle));
 	};
 
 	// Apply font family to selected text only (inline)
@@ -4335,15 +4345,22 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 										]}
 										onChange={(value) => {
 											const next = normalizeTextCase(value);
-											setInlineTextCase(next);
 											if (next) {
+												setInlineTextCase(next);
 												applyInlineCase(next, inlineFakeSmallCaps);
+											} else if (inlineCaseFromStyle) {
+												// The style's class sets the case: there is
+												// nothing on the text to remove, so the control
+												// keeps showing the case that renders
+												revertInlineControl('textCase');
 											} else {
 												resetInlineCase();
 											}
 										}}
 										help={
-											normalizeTextCase(inlineTextCase) === 'capitalize'
+											inlineCaseFromStyle
+											? __('The paragraph style sets this case. To change it for the selected text, choose another case. To make it the text’s own case, click “Detach Style” first.', 'typography-stylist')
+											: normalizeTextCase(inlineTextCase) === 'capitalize'
 											? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
 											: (normalizeTextCase(inlineTextCase) === 'uppercase'
 												? __('All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations.', 'typography-stylist')
@@ -4362,7 +4379,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 												: __('When the font has no small caps, the text stays in normal case.', 'typography-stylist')}
 										/>
 									)}
-									{inlineTextCase && (
+									{inlineTextCase && !inlineCaseFromStyle && (
 										<Button
 											variant="secondary"
 											onClick={resetInlineCase}
