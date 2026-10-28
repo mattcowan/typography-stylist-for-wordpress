@@ -342,7 +342,7 @@ A First Letter Hang in the style also applies to these blocks. It has no effect 
 
 ## Admin Interface Guide
 
-Go to Settings → Typography Stylist. The screen has eight tabs, in this order:
+Go to Settings → Typography Stylist. The screen has nine tabs, in this order:
 
 1. Custom Fonts
 2. Paragraph Styles
@@ -351,7 +351,8 @@ Go to Settings → Typography Stylist. The screen has eight tabs, in this order:
 5. Options
 6. Accessibility
 7. Replacement Fonts
-8. Help
+8. Export & Import
+9. Help
 
 The page updates in place after each action. It does not reload.
 
@@ -448,6 +449,35 @@ The screen reader class is a setting of each Typography Stylist block, in its Ac
 - Map the ID of a deleted font to a replacement font. Content that still refers to the old ID then uses the replacement.
 - Choose if a replacement font loads on every page (“Load replacement globally”).
 - See the font IDs that have no replacement yet (“Unassigned Font IDs”).
+
+### Export & Import Tab
+
+Move paragraph styles from one site to another, for example from a staging site to production, or reuse a house set of styles on each new site.
+
+**Export**
+
+1. Under “What to export”, keep “Paragraph styles” checked. Choose “All”, or “Only the ones I choose” and check the styles. A style that a chosen style is based on is added to the file, and the tab tells you which ones.
+2. Optional: check “All fonts on this site” to add every Adobe Fonts project and font definition, also the ones no exported style uses. The fonts that the exported styles use are always in the file.
+3. Click “Download export file”. The file is named after the site and the date, for example `typography-my-site-2026-10-28.json`.
+
+The file names each font by its family and where it comes from (uploaded, Adobe Fonts, custom font definition, WordPress Font Library), not by the font ID of this site. Uploaded font files are never in the file.
+
+**Import**
+
+1. Upload the fonts the styles use to the other site first, when they are uploaded font kits.
+2. Choose the file and click “Preview import”. Nothing is saved yet.
+3. Check the **Fonts** table. Each font in the file shows the font on this site that the imported styles will use:
+   - **Found:** one font on this site matches.
+   - **More than one font matches:** choose the right one. The import does not start until you do.
+   - **Not on this site, can be added:** an Adobe Fonts project or a custom font definition. “Add it to this site” adds it from the file.
+   - **Not found:** upload the font first, or choose another font on this site. With “None”, the styles use the theme font.
+   You can choose any font on this site for any font in the file.
+4. Check the **Paragraph styles** table. A style whose name already exists is skipped. To import it anyway, choose “Add with a new name” (a free name is filled in) or “Overwrite the style on this site”. Overwriting changes every post that uses that style, and the table names the other styles that are based on it and change too.
+5. Read the notes under “Check before you import”, then click “Import”.
+
+The result lists the styles that were added, renamed, overwritten and skipped, the fonts that were added, and the fonts that were not found. It also warns when a style uses OpenType features that are hidden for its new font in Feature Visibility, or variable font axes that the font does not define. Click “Import another file” to reload the page, so the Paragraph Styles tab lists the imported styles.
+
+Imported styles get new IDs, so content on the other site that already uses a style never changes. A style keeps the style it is based on. Only administrators can import. Presets, options and per-font settings are not in the file yet.
 
 ### Help Tab
 
@@ -788,6 +818,9 @@ typography-stylist/
 ├── typography-stylist.php            # Main plugin file
 ├── includes/
 │   ├── admin-page.php                # Settings page
+│   ├── admin-export-tab.php          # Export & Import tab
+│   ├── class-typost-export.php       # Export file, sections, import
+│   ├── class-typost-export-fonts.php # Fonts in export files (descriptors, matching)
 │   ├── class-typost-font-sources.php # Font storage and font IDs
 │   ├── class-typost-font-library-bridge.php  # WordPress Font Library integration
 │   └── class-typost-font-metadata.php        # Font file metadata
@@ -795,6 +828,7 @@ typography-stylist/
 │   ├── js/
 │   │   ├── block-editor.js           # Inline editor
 │   │   ├── admin-page.js             # Settings page
+│   │   ├── admin-export.js           # Export & Import tab
 │   │   ├── editor-font-kits.js       # Adobe Fonts kits in the editor
 │   │   ├── font-options.js           # Font list helpers
 │   │   ├── font-picker.js            # Searchable font menus

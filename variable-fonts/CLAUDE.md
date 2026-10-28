@@ -20,6 +20,10 @@ Self-contained module added in v2.1, structured like the Glyphs Panel: it consum
    - **Re-detect** (`POST .../variable-font-axes/{id}/redetect`) re-runs the server parser for uploaded kits and *returns* the axes without writing the option; `admin.js` repopulates the rows and the user saves. Remote sources (Adobe, manual) and WOFF2-only kits fall through to the browser parser via the Glyphs Panel loader. The button confirms before replacing rows that already exist.
 3. **Editor** → `typost_editor_data` filter injects `variableFontAxes` keyed by **numeric** `font_id` (`add_editor_data()` maps string→numeric across all four sources, including adopted WP Library fonts) → `editor.js` renders sliders via `typostHooks` (`typost_weight_control` filter+action, `typost_inline_after_font_controls`, `typost_qft_after_font_controls`, `typost_inspector_after_font_weight`) → dispatches `typost-apply-block-properties` with `properties.fontVariationSettings`. How core applies it depends on `source`: `'inline'` and `'qft'` scope it to the current text selection (inline `data-font-variation-settings` span; QFT falls back to the block attribute when the caret isn't in styled text), `'inspector'` sets the block attribute. Panels initialize from the host-provided `state.fontVariationSettings` when present (`resolveInitialSettings()`), falling back to the top-document selection walk only for the inline surface.
 
+## Import warnings (#205)
+
+`font_axis_tags()` answers core's `typost_font_axis_tags` filter: the axis tags defined for a **numeric** font ID (through `get_fonts_map()`, the string → numeric map `add_editor_data()` also uses), an empty array for a font without axes. Core's import uses it to warn when an imported paragraph style sets an axis the mapped font does not define. The axis definitions themselves are not exported yet (planned for #205 step 2).
+
 ## Conventions
 
 - REST capability is deliberately `manage_options` (axes are site-wide config), unlike core's `edit_posts` font CRUD — rationale documented at `check_permissions()`.
