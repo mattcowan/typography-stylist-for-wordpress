@@ -187,6 +187,127 @@
 		return typeof value === 'string' && TEXT_CASE_VALUES.indexOf(value) !== -1 ? value : '';
 	}
 
+	// Alignment values a style can store (#207); absent = Default. Start and
+	// end follow the text direction. Mirrors ALIGNMENT_VALUES in PHP.
+	var ALIGNMENT_VALUES = ['start', 'center', 'end', 'justify'];
+
+	// Last line alignment of justified text; absent = start, the browser's
+	// default. Mirrors ALIGN_LAST_VALUES in PHP.
+	var ALIGN_LAST_VALUES = ['center', 'end', 'justify'];
+
+	// Line breaking, written as text-wrap; absent = normal. Mirrors
+	// TEXT_WRAP_VALUES in PHP.
+	var TEXT_WRAP_VALUES = ['balance', 'pretty'];
+
+	// A block that sets its own alignment keeps it, and a fit-to-width block
+	// never takes it (see ALIGNMENT_GUARD in PHP)
+	var ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
+
+	/** '' for Default or an unknown value, otherwise the alignment. */
+	function normalizeAlignment(value) {
+		return typeof value === 'string' && ALIGNMENT_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	/** The last line alignment as stored: only with justify, '' = start. */
+	function normalizeAlignLast(alignment, value) {
+		return normalizeAlignment(alignment) === 'justify' && typeof value === 'string' && ALIGN_LAST_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	/** '' for normal or an unknown value, otherwise the line breaking value. */
+	function normalizeTextWrap(value) {
+		return typeof value === 'string' && TEXT_WRAP_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	/**
+	 * A style's alignment (#207) as a block alignment value, for Detach
+	 * (PR #329 review): the block keeps the alignment it showed under the
+	 * style. Start and End follow the text direction. Twin of
+	 * styleAlignmentToTextAlign() in the block's utils.js (a parity test
+	 * holds them together).
+	 *
+	 * @param {string}  alignment The style's alignment.
+	 * @param {boolean} isRtl     Right-to-left text.
+	 * @return {string} 'left', 'center', 'right', 'justify', or '' for none.
+	 */
+	function alignmentToBlockAlign(alignment, isRtl) {
+		switch (normalizeAlignment(alignment)) {
+			case 'center':
+			case 'justify':
+				return normalizeAlignment(alignment);
+			case 'start':
+				return isRtl ? 'right' : 'left';
+			case 'end':
+				return isRtl ? 'left' : 'right';
+			default:
+				return '';
+		}
+	}
+
+	/**
+	 * The attribute change that keeps a style's alignment on a core
+	 * Paragraph or Heading block when the style is detached (PR #329
+	 * review), or null for none.
+	 *
+	 * Core stores the text alignment three ways by block and version:
+	 * `style.typography.textAlign` (the typography support, WordPress 7.x),
+	 * a `textAlign` attribute (Heading before it), or an `align` attribute
+	 * (Paragraph before it). `align` is the text alignment only on a block
+	 * type without `supports.align`: with it, `align` is the block alignment
+	 * (wide, full), which the WordPress 7.1 Heading has. A block that
+	 * already has a text alignment keeps it. Core has no rule for
+	 * `has-text-align-justify`, so Justify is not kept on core blocks.
+	 *
+	 * @param {Object}  blockType The registered block type (attributes, supports).
+	 * @param {Object}  attrs     The block's attributes.
+	 * @param {string}  alignment The detached style's alignment.
+	 * @param {boolean} isRtl     Right-to-left text.
+	 * @return {?Object} Attributes to set.
+	 */
+	function buildCoreBlockAlignUpdate(blockType, attrs, alignment, isRtl) {
+		var value = alignmentToBlockAlign(alignment, isRtl);
+		if (!value || value === 'justify' || !blockType) return null;
+		var a = attrs || {};
+		var defs = blockType.attributes || {};
+		var style = a.style && typeof a.style === 'object' ? a.style : {};
+		var typography = style.typography && typeof style.typography === 'object' ? style.typography : {};
+		var supports = blockType.supports || {};
+		if (supports.typography && supports.typography.textAlign) {
+			if (typography.textAlign) return null;
+			return { style: Object.assign({}, style, { typography: Object.assign({}, typography, { textAlign: value }) }) };
+		}
+		if (hasOwn(defs, 'textAlign')) {
+			return a.textAlign ? null : { textAlign: value };
+		}
+		if (hasOwn(defs, 'align') && !supports.align) {
+			return a.align ? null : { align: value };
+		}
+		return null;
+	}
+
+	/**
+	 * The alignment declarations of a style (#207), for its guarded rule.
+	 * Twin of PHP alignment_declarations(): text-align-last only with
+	 * justify, and a centered or end-aligned style with a hang turns the
+	 * hang off.
+	 *
+	 * @param {Object} props Resolved properties.
+	 * @param {number} hang  The style's normalized hang.
+	 * @return {string[]}
+	 */
+	function alignmentDeclarations(props, hang) {
+		var alignment = normalizeAlignment(props.alignment);
+		if (!alignment) return [];
+		var rules = ['text-align: ' + alignment];
+		var last = normalizeAlignLast(alignment, props.alignLast);
+		if (last) {
+			rules.push('text-align-last: ' + last);
+		}
+		if (hang > 0 && (alignment === 'center' || alignment === 'end')) {
+			rules.push('--typost-hang-on: 0');
+		}
+		return rules;
+	}
+
 	/** True for the case values that use font-variant-caps. */
 	function isSmallCapsCase(value) {
 		var c = normalizeTextCase(value);
@@ -297,6 +418,16 @@
 			if (effectiveFakeSmallCaps(state.textCase, state.fakeSmallCaps) !== effectiveFakeSmallCaps(styleProps.textCase, styleProps.fakeSmallCaps)) return true;
 		}
 
+		// Alignment, word spacing and line breaking (#207): only the admin
+		// Edit form reports them (the editors have no control for them), so
+		// an editor's badge never compares them.
+		if (state.alignment !== undefined) {
+			if (normalizeAlignment(state.alignment) !== normalizeAlignment(styleProps.alignment)) return true;
+			if (normalizeAlignLast(state.alignment, state.alignLast) !== normalizeAlignLast(styleProps.alignment, styleProps.alignLast)) return true;
+		}
+		if (state.wordSpacing !== undefined && phpInt(state.wordSpacing) !== phpInt(styleProps.wordSpacing)) return true;
+		if (state.textWrap !== undefined && normalizeTextWrap(state.textWrap) !== normalizeTextWrap(styleProps.textWrap)) return true;
+
 		return false;
 	}
 
@@ -391,6 +522,23 @@
 				properties.fakeSmallCaps = false;
 			}
 		}
+		// Alignment (#207): Default is never stored, the last line only for
+		// justified text and never as start
+		var alignment = normalizeAlignment(state.alignment);
+		if (alignment) {
+			properties.alignment = alignment;
+			var alignLast = normalizeAlignLast(alignment, state.alignLast);
+			if (alignLast) {
+				properties.alignLast = alignLast;
+			}
+		}
+		if (state.wordSpacing && phpInt(state.wordSpacing)) {
+			properties.wordSpacing = phpInt(state.wordSpacing);
+		}
+		var textWrap = normalizeTextWrap(state.textWrap);
+		if (textWrap) {
+			properties.textWrap = textWrap;
+		}
 		return properties;
 	}
 
@@ -407,6 +555,8 @@
 	 * base style; a key it reports, including 0, is the editor's value.
 	 * textCase / fakeSmallCaps (#214) follow the same rule for an editor
 	 * (an extension's) that does not report them; both core editors do.
+	 * alignment / alignLast, wordSpacing and textWrap (#207) too: no editor
+	 * reports them, only the admin Edit form.
 	 *
 	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
 	 * style that already writes a size, so its CSS does not change unit
@@ -434,6 +584,21 @@
 				properties.fakeSmallCaps = false;
 			}
 		}
+		// Alignment, word spacing and line breaking (#207) have no editor
+		// control, so the editors never report them and Update Style / Save
+		// as New keep the style's own
+		if ((!state || state.alignment === undefined) && normalizeAlignment(base.alignment)) {
+			properties.alignment = normalizeAlignment(base.alignment);
+			if (normalizeAlignLast(base.alignment, base.alignLast)) {
+				properties.alignLast = normalizeAlignLast(base.alignment, base.alignLast);
+			}
+		}
+		if ((!state || state.wordSpacing === undefined) && phpInt(base.wordSpacing)) {
+			properties.wordSpacing = phpInt(base.wordSpacing);
+		}
+		if ((!state || state.textWrap === undefined) && normalizeTextWrap(base.textWrap)) {
+			properties.textWrap = normalizeTextWrap(base.textWrap);
+		}
 		// Same test as the CSS generators: only these write a size ('0' does not)
 		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
 			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
@@ -456,10 +621,12 @@
 	var BASED_ON_GROUPS = {
 		fontSize: ['fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize'],
 		textCase: ['textCase', 'fakeSmallCaps'],
+		alignment: ['alignment', 'alignLast'],
 	};
 
 	// The value a style based on another stores to unset a property its
-	// parent sets. The groups use fontSize 'inherit' and textCase ''.
+	// parent sets. The groups use fontSize 'inherit', textCase '' and
+	// alignment ''.
 	// Mirrors EMPTY_PROPERTY_VALUES in PHP.
 	var EMPTY_PROPERTY_VALUES = {
 		fontId: 0,
@@ -470,6 +637,8 @@
 		features: [],
 		fontVariationSettings: '',
 		initialHang: 0,
+		wordSpacing: 0,
+		textWrap: '',
 	};
 
 	function hasOwn(obj, key) {
@@ -477,7 +646,9 @@
 	}
 
 	function isGroupKey(key) {
-		return BASED_ON_GROUPS.fontSize.indexOf(key) !== -1 || BASED_ON_GROUPS.textCase.indexOf(key) !== -1;
+		return Object.keys(BASED_ON_GROUPS).some(function (lead) {
+			return BASED_ON_GROUPS[lead].indexOf(key) !== -1;
+		});
 	}
 
 	/** What a style stores itself: ownProperties in the client shape (resolveStyleList), else properties. */
@@ -532,6 +703,9 @@
 		}
 		if (hasOwn(out, 'textCase') && TEXT_CASE_VALUES.indexOf(out.textCase) === -1) {
 			BASED_ON_GROUPS.textCase.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'alignment') && ALIGNMENT_VALUES.indexOf(out.alignment) === -1) {
+			BASED_ON_GROUPS.alignment.forEach(function (key) { delete out[key]; });
 		}
 		Object.keys(out).forEach(function (key) {
 			var value = out[key];
@@ -618,6 +792,10 @@
 	 */
 	function groupSignature(lead, props) {
 		var p = props || {};
+		if (lead === 'alignment') {
+			var a = normalizeAlignment(p.alignment);
+			return a ? a + '|' + normalizeAlignLast(a, p.alignLast) : 'none';
+		}
 		if (lead === 'textCase') {
 			var c = TEXT_CASE_VALUES.indexOf(p.textCase) !== -1 ? p.textCase : '';
 			return c + '|' + (effectiveFakeSmallCaps(c, p.fakeSmallCaps) ? '1' : '0');
@@ -647,6 +825,7 @@
 			case 'fontId':
 				return Math.abs(phpInt(va)) === Math.abs(phpInt(vb));
 			case 'letterSpacing':
+			case 'wordSpacing':
 				return phpInt(va) === phpInt(vb);
 			case 'lineHeight':
 				return Math.abs((parseFloat(va) || 0) - (parseFloat(vb) || 0)) <= LINE_HEIGHT_TOLERANCE;
@@ -671,7 +850,7 @@
 	 * as overrides would cut every property off from the parent on the first
 	 * Update Style). A property the parent sets and `full` does not is
 	 * stored as its empty value (EMPTY_PROPERTY_VALUES, fontSize 'inherit',
-	 * textCase ''), so the style keeps not setting it.
+	 * textCase '', alignment ''), so the style keeps not setting it.
 	 *
 	 * Twin of PHP compute_overrides() (the server's first-parent rebase);
 	 * both read the `overrides` cases of the shared fixture.
@@ -791,6 +970,11 @@
 	 *   editor's apply handler reads it: a block keeps its own unit, which
 	 *   only matters once the block has no styleClass.
 	 * - Extension-owned keys (layeredConfigId, animationConfigId).
+	 * - alignment, alignLast, wordSpacing, textWrap (#207) — style-only:
+	 *   neither editor has a control or an attribute for them, so they
+	 *   render only through the style's class and have nothing to reset.
+	 *   (The block's own textAlign attribute is separate and overrides the
+	 *   style's alignment.)
 	 *
 	 * initialHang IS normalized (to 0): a style without a hang must remove a
 	 * lingering hang on apply. The inline editor ignores the key, because a
@@ -1135,7 +1319,22 @@
 			rules.push(caseRules[k][0] + ': ' + caseRules[k][1]);
 		}
 
-		if (!rules.length) return '';
+		// Alignment, word spacing and line breaking (#207), never for fit
+		// to width. Same rules and order as the PHP twin.
+		var alignRules = [];
+		if (props.fontSize !== 'fit') {
+			if (!phpFalsy(props.wordSpacing)) {
+				rules.push('word-spacing: ' + (phpInt(props.wordSpacing) / 1000) + 'em');
+			}
+			if (normalizeTextWrap(props.textWrap)) {
+				// text-wrap-mode: inherit keeps a nowrap context (see PHP)
+				rules.push('text-wrap: ' + props.textWrap);
+				rules.push('text-wrap-mode: inherit');
+			}
+			alignRules = alignmentDeclarations(props, hang);
+		}
+
+		if (!rules.length && !alignRules.length) return '';
 
 		// Same three selectors as generate_style_css() in PHP, byte for byte:
 		// a plain `.typost-ps-N` for previews, then the block-level and
@@ -1149,7 +1348,14 @@
 			selector += ',\n' + selectorSet(String(style.legacyId));
 		}
 
-		var css = selector + ' {\n    ' + rules.join(';\n    ') + ';\n}';
+		var css = rules.length ? selector + ' {\n    ' + rules.join(';\n    ') + ';\n}' : '';
+		// Guarded so a block with its own alignment keeps it (PHP twin)
+		if (alignRules.length) {
+			var guarded = selector.split(',\n').map(function (part) {
+				return part + ALIGNMENT_GUARD;
+			}).join(',\n');
+			css += (css ? '\n\n' : '') + guarded + ' {\n    ' + alignRules.join(';\n    ') + ';\n}';
+		}
 		if (hang > 0) {
 			css += coreBlockHangCss(id);
 		}
@@ -1770,6 +1976,14 @@
 		normalizeTextCase: normalizeTextCase,
 		isSmallCapsCase: isSmallCapsCase,
 		caseDeclarations: caseDeclarations,
+		normalizeAlignment: normalizeAlignment,
+		normalizeAlignLast: normalizeAlignLast,
+		normalizeTextWrap: normalizeTextWrap,
+		alignmentToBlockAlign: alignmentToBlockAlign,
+		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
+		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
+		ALIGN_LAST_VALUES: ALIGN_LAST_VALUES,
+		TEXT_WRAP_VALUES: TEXT_WRAP_VALUES,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
 		resolvePanelScope: resolvePanelScope,
 		CORE_STYLE_BLOCKS: CORE_STYLE_BLOCKS,

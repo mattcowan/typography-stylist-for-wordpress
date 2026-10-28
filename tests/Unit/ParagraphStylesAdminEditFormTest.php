@@ -45,6 +45,7 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         'name', 'basedOn', 'fontId', 'fontWeight', 'fontStyle', 'sizeMode', 'fontSize',
         'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize',
         'letterSpacing', 'lineHeight', 'initialHang', 'textCase', 'fakeSmallCaps',
+        'alignment', 'alignLast', 'wordSpacing', 'textWrap',
         'fontVariationSettings',
     );
 

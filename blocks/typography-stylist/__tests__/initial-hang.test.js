@@ -8,6 +8,8 @@ import { renderToString } from '@wordpress/element';
 import {
 	normalizeHang,
 	initialHangApplies,
+	resolveHangTextAlign,
+	styleAlignmentToTextAlign,
 	resolveFitLineHang,
 	computeHungFitRatio,
 	computeFitRatio,
@@ -64,6 +66,42 @@ describe('normalizeHang', () => {
 	test('matches the PHP twin on overflow and surrounding whitespace', () => {
 		expect(normalizeHang('1e999')).toBe(0);
 		expect(normalizeHang(' 0.15 ')).toBe(0.15);
+	});
+});
+
+describe('styleAlignmentToTextAlign (Detach keeps the alignment, PR #329 review)', () => {
+	test('Justify stays justify on the block, which renders it inline', () => {
+		expect(styleAlignmentToTextAlign('justify', false)).toBe('justify');
+	});
+
+	test('matches its twin in the Paragraph Styles module for every value', () => {
+		const { alignmentToBlockAlign } = require('../../../paragraph-styles/assets/js/lib/ps-utils.js');
+		['', 'start', 'center', 'end', 'justify', 'left', undefined].forEach((value) => {
+			[false, true].forEach((rtl) => {
+				expect(styleAlignmentToTextAlign(value, rtl)).toBe(alignmentToBlockAlign(value, rtl));
+			});
+		});
+	});
+});
+
+describe('resolveHangTextAlign (PR #329 review)', () => {
+	test('the block\'s own alignment wins', () => {
+		expect(resolveHangTextAlign('left', 'center', false, false)).toBe('left');
+	});
+
+	test('a centered or end-aligned style turns the hang off for the notice', () => {
+		expect(initialHangApplies(resolveHangTextAlign('', 'center', false, false), false)).toBe(false);
+		expect(initialHangApplies(resolveHangTextAlign('', 'end', false, false), false)).toBe(false);
+		expect(initialHangApplies(resolveHangTextAlign('', 'end', false, true), true)).toBe(false);
+	});
+
+	test('start and justify keep the hang', () => {
+		expect(initialHangApplies(resolveHangTextAlign('', 'start', false, false), false)).toBe(true);
+		expect(initialHangApplies(resolveHangTextAlign('', 'justify', false, false), false)).toBe(true);
+	});
+
+	test('a fit block ignores the style\'s alignment, as the guarded rule does', () => {
+		expect(resolveHangTextAlign('', 'center', true, false)).toBe('');
 	});
 });
 

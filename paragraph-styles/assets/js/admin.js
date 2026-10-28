@@ -296,13 +296,32 @@
 	}
 
 	/**
-	 * Show the fields that belong to the chosen size mode and case.
+	 * Show the fields that belong to the chosen size mode, case and
+	 * alignment. The justify note (#207) also joins the alignment select's
+	 * description while it shows, and leaves it when hidden: a hidden
+	 * element named by aria-describedby is still read.
 	 *
 	 * @param {Element} form
 	 */
 	function updateConditionalFields(form) {
 		var mode = field(form, 'sizeMode') ? field(form, 'sizeMode').value : 'inherit';
 		var textCase = field(form, 'textCase') ? field(form, 'textCase').value : '';
+		// A fit style uses no alignment (its fields are hidden)
+		var alignment = mode === 'fit' ? '' : (field(form, 'alignment') ? field(form, 'alignment').value : '');
+		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-align]'), function(el) {
+			el.hidden = el.getAttribute('data-show-for-align').split(/\s+/).indexOf(alignment) === -1;
+		});
+		var alignSelect = field(form, 'alignment');
+		var note = form.querySelector('.typost-ps-edit-justify-note');
+		if (alignSelect && note && note.id) {
+			var ids = (alignSelect.getAttribute('aria-describedby') || '').split(/\s+/).filter(function(id) {
+				return id && id !== note.id;
+			});
+			if (!note.hidden) {
+				ids.push(note.id);
+			}
+			alignSelect.setAttribute('aria-describedby', ids.join(' '));
+		}
 		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-size]'), function(el) {
 			el.hidden = el.getAttribute('data-show-for-size').split(/\s+/).indexOf(mode) === -1;
 		});
@@ -419,6 +438,12 @@
 			fake.checked = props.fakeSmallCaps !== false;
 		}
 
+		var alignment = utils ? utils.normalizeAlignment(props.alignment) : (props.alignment || '');
+		selectValue(field(form, 'alignment'), alignment);
+		selectValue(field(form, 'alignLast'), utils ? utils.normalizeAlignLast(alignment, props.alignLast) : (props.alignLast || ''));
+		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
+		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
+
 		var features = Array.isArray(props.features) ? props.features.map(String) : [];
 		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
 		var known = {};
@@ -510,6 +535,10 @@
 			initialHang: numberOf(form, 'initialHang'),
 			textCase: field(form, 'textCase') ? field(form, 'textCase').value : '',
 			fakeSmallCaps: fake ? !!fake.checked : true,
+			alignment: field(form, 'alignment') ? field(form, 'alignment').value : '',
+			alignLast: field(form, 'alignLast') ? field(form, 'alignLast').value : '',
+			wordSpacing: numberOf(form, 'wordSpacing'),
+			textWrap: field(form, 'textWrap') ? field(form, 'textWrap').value : '',
 			features: features,
 			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : ''
 		};
@@ -572,8 +601,9 @@
 
 	/**
 	 * Turn form values into the editor state that buildPropertiesFromState()
-	 * reads. The form reports initialHang and textCase, so its values win
-	 * over the stored ones (0 and Default included).
+	 * reads. The form reports initialHang, textCase, alignment, wordSpacing
+	 * and textWrap, so its values win over the stored ones (0, Default and
+	 * Normal included).
 	 *
 	 * @param {Object} values readEditForm() result.
 	 * @param {string} unit   resolveEditFontSizeUnit(); px makes a fixed
@@ -603,7 +633,11 @@
 			fontVariationSettings: values.fontVariationSettings || '',
 			initialHang: values.initialHang,
 			textCase: values.textCase || '',
-			fakeSmallCaps: values.fakeSmallCaps !== false
+			fakeSmallCaps: values.fakeSmallCaps !== false,
+			alignment: values.alignment || '',
+			alignLast: values.alignLast || '',
+			wordSpacing: Math.round(values.wordSpacing) || 0,
+			textWrap: values.textWrap || ''
 		};
 	}
 
@@ -650,12 +684,21 @@
 		var base = (style && style.properties) || {};
 		var unit = resolveEditFontSizeUnit(base, newUnit);
 		var payload = { name: values.name };
-		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(values, unit), base, true, newUnit);
-		var baseline = baselineValues
-			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues, unit), base, true, newUnit)
-			: null;
 
 		var currentParent = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		var parent = null;
+		(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
+			if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
+				parent = candidate;
+			}
+		});
+		var parentProps = parent ? utils.resolveStyleProperties(parent, styles) : null;
+
+		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(fitOwnValues(values, parentProps), unit), base, true, newUnit);
+		var baseline = baselineValues
+			? utils.buildPropertiesForStyleSave(stateFromEditValues(fitOwnValues(baselineValues, parentProps), unit), base, true, newUnit)
+			: null;
+
 		var parentId = values.basedOn !== undefined ? (parseInt(values.basedOn, 10) || 0) : currentParent;
 		if (parentId !== currentParent) {
 			payload.basedOn = parentId;
@@ -665,17 +708,39 @@
 			// Relative to the current parent: the server applies a Based On
 			// change itself (rebase_properties()), so a save with edits and a
 			// save without them follow the same rule
-			var parent = null;
-			(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
-				if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
-					parent = candidate;
-				}
-			});
-			payload.properties = parent
-				? utils.computeStyleOverrides(properties, utils.resolveStyleProperties(parent, styles))
+			payload.properties = parentProps
+				? utils.computeStyleOverrides(properties, parentProps)
 				: properties;
 		}
 		return payload;
+	}
+
+	/**
+	 * Form values without the settings fit to width hides (PR #329 review).
+	 *
+	 * In fit mode the form hides alignment, the last line, word spacing and
+	 * line breaking, and the CSS writes none of them, but their fields keep
+	 * whatever they held. A fit style sets none of them itself: with no
+	 * parent they are dropped, and a style based on another takes the
+	 * parent's values, so the save stores no override (an empty value would
+	 * unset the parent's value, and it would come back as "None" when the
+	 * style leaves fit mode).
+	 *
+	 * @param {Object}  values      readEditForm() result.
+	 * @param {?Object} parentProps The parent's resolved properties, or null.
+	 * @return {Object} The values, a copy when in fit mode.
+	 */
+	function fitOwnValues(values, parentProps) {
+		if (!values || values.sizeMode !== 'fit') {
+			return values;
+		}
+		var p = parentProps || {};
+		return Object.assign({}, values, {
+			alignment: p.alignment || '',
+			alignLast: p.alignLast || '',
+			wordSpacing: p.wordSpacing || 0,
+			textWrap: p.textWrap || ''
+		});
 	}
 
 	/**
@@ -1031,7 +1096,7 @@
 		});
 	});
 
-	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"]', function() {
+	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"]', function() {
 		updateConditionalFields($(this).closest('form')[0]);
 	});
 
