@@ -65,6 +65,13 @@ class ParagraphStylesAlignmentTest extends TestCase {
         $this->assertGreaterThanOrEqual(8, count($this->fixtureCases()));
     }
 
+    public function test_sanitize_holds_word_spacing_to_the_form_range() {
+        // PR #329 review: a REST request cannot store word-spacing: 2000em
+        $this->assertSame(1000, $this->sanitize(array('wordSpacing' => 2000000))['wordSpacing']);
+        $this->assertSame(-500, $this->sanitize(array('wordSpacing' => -9000))['wordSpacing']);
+        $this->assertSame(40, $this->sanitize(array('wordSpacing' => '40'))['wordSpacing']);
+    }
+
     public function test_sanitize_keeps_valid_values() {
         $clean = $this->sanitize(array(
             'alignment'   => 'justify',

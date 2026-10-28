@@ -848,6 +848,41 @@ describe('alignment, word spacing and line breaking (#207)', () => {
 		expect(select.getAttribute('aria-describedby')).toBe('typost-ps-edit-alignment-help-7');
 	});
 
+	test('switching to fit to width stops storing the hidden settings (PR #329 review)', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'sizeMode', 'fit');
+		const props = buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties;
+		expect(props.fontSize).toBe('fit');
+		['alignment', 'alignLast', 'wordSpacing', 'textWrap'].forEach((key) => {
+			expect(props).not.toHaveProperty(key);
+		});
+	});
+
+	test('a fit style based on another stores no override for a hidden setting (PR #329 review)', () => {
+		const { resolveStyleList } = require('../assets/js/lib/ps-utils.js');
+		const styles = resolveStyleList([
+			{ id: 1, name: 'Body', properties: { fontWeight: '400', alignment: 'center', textWrap: 'pretty' } },
+			{ id: 2, name: 'Fit head', basedOn: 1, properties: { fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 } },
+		]);
+		// Client shape: properties are already resolved through the parent
+		const { form, baseline } = openForm(styles[1]);
+		// The hidden field changed (it held a value from before fit)
+		setField(form, 'alignment', 'end');
+		setField(form, 'fontWeight', '700');
+		const props = buildEditPayload(readEditForm(form), baseline, styles[1], 'rem', styles).properties;
+		expect(props.fontWeight).toBe('700');
+		['alignment', 'alignLast', 'wordSpacing', 'textWrap'].forEach((key) => {
+			expect(props).not.toHaveProperty(key);
+		});
+	});
+
+	test('an untouched fit form is not an unsaved change (PR #329 review)', () => {
+		const fitStyle = { id: 7, name: 'Fit', properties: { fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0, alignment: 'center' } };
+		const { form, baseline } = openForm(fitStyle);
+		const { hasUnsavedEditChanges } = require('../assets/js/admin.js');
+		expect(hasUnsavedEditChanges(readEditForm(form), baseline, fitStyle, 'rem')).toBe(false);
+	});
+
 	test('fit to width hides the settings and the justify note', () => {
 		const { form } = openForm(STYLE);
 		setField(form, 'sizeMode', 'fit');

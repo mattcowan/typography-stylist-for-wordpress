@@ -17,7 +17,64 @@ const {
 	normalizeAlignment,
 	normalizeAlignLast,
 	normalizeTextWrap,
+	alignmentToBlockAlign,
+	buildCoreBlockAlignUpdate,
 } = require('../assets/js/lib/ps-utils');
+
+describe('Detach keeps the alignment on a core block (PR #329 review)', () => {
+	// The three ways core stores a block's text alignment. The WordPress 7.1
+	// Heading also has an `align` attribute: the block alignment (wide,
+	// full) from supports.align, which must not be used (measured in the
+	// editor: an earlier version set align: 'center' there)
+	const WP71 = { attributes: { align: { type: 'string' } }, supports: { align: ['wide', 'full'], typography: { textAlign: true } } };
+	const OLD_HEADING = { attributes: { textAlign: { type: 'string' } }, supports: {} };
+	const OLD_PARAGRAPH = { attributes: { align: { type: 'string' } }, supports: {} };
+
+	test('maps Start and End by text direction', () => {
+		expect(alignmentToBlockAlign('start', false)).toBe('left');
+		expect(alignmentToBlockAlign('end', false)).toBe('right');
+		expect(alignmentToBlockAlign('start', true)).toBe('right');
+		expect(alignmentToBlockAlign('end', true)).toBe('left');
+		expect(alignmentToBlockAlign('center', false)).toBe('center');
+		expect(alignmentToBlockAlign('', false)).toBe('');
+		expect(alignmentToBlockAlign('left', false)).toBe('');
+	});
+
+	test('uses the typography support on WordPress 7.x, and keeps the rest of style', () => {
+		const attrs = { style: { typography: { fontSize: '2rem' }, color: { text: '#000' } } };
+		expect(buildCoreBlockAlignUpdate(WP71, attrs, 'center', false)).toEqual({
+			style: { typography: { fontSize: '2rem', textAlign: 'center' }, color: { text: '#000' } },
+		});
+	});
+
+	test('uses the textAlign or align attribute on older versions', () => {
+		expect(buildCoreBlockAlignUpdate(OLD_HEADING, {}, 'end', false)).toEqual({ textAlign: 'right' });
+		expect(buildCoreBlockAlignUpdate(OLD_PARAGRAPH, {}, 'start', true)).toEqual({ align: 'right' });
+	});
+
+	test('a wide block still gets its text alignment', () => {
+		expect(buildCoreBlockAlignUpdate(WP71, { align: 'wide' }, 'center', false)).toEqual({
+			style: { typography: { textAlign: 'center' } },
+		});
+	});
+
+	test('align is not the text alignment on a block type with block alignment support', () => {
+		const layoutOnly = { attributes: { align: { type: 'string' } }, supports: { align: ['wide', 'full'] } };
+		expect(buildCoreBlockAlignUpdate(layoutOnly, {}, 'center', false)).toBeNull();
+	});
+
+	test('a block with its own alignment keeps it', () => {
+		expect(buildCoreBlockAlignUpdate(WP71, { style: { typography: { textAlign: 'left' } } }, 'center', false)).toBeNull();
+		expect(buildCoreBlockAlignUpdate(OLD_HEADING, { textAlign: 'left' }, 'center', false)).toBeNull();
+	});
+
+	test('Justify, no alignment, or an unknown block type change nothing', () => {
+		// Core has no rule for has-text-align-justify
+		expect(buildCoreBlockAlignUpdate(WP71, {}, 'justify', false)).toBeNull();
+		expect(buildCoreBlockAlignUpdate(WP71, {}, '', false)).toBeNull();
+		expect(buildCoreBlockAlignUpdate(null, {}, 'center', false)).toBeNull();
+	});
+});
 
 const fixture = require('./fixtures/alignment-css.json');
 
@@ -32,6 +89,40 @@ describe('buildStyleCssBlock (shared fixture)', () => {
 			if (legacyId) style.legacyId = legacyId;
 			expect(buildStyleCssBlock(style)).toBe(css);
 		});
+	});
+
+	describe('the alignment guard matches the right elements (PR #329 review)', () => {
+		// The first selector of the guarded rule, run against real elements
+		const css = buildStyleCssBlock({ id: 8, properties: { alignment: 'center' } });
+		const selector = css.split(',\n')[0];
+		const el = (html) => {
+			const host = document.createElement('div');
+			host.innerHTML = html;
+			return host.firstElementChild;
+		};
+
+		test.each([
+			['plain styled text', '<p class="typost-ps-8">x</p>'],
+			['text-align-last of its own only', '<p class="typost-ps-8" style="text-align-last: center">x</p>'],
+			['a custom property with text-align in its name', '<p class="typost-ps-8" style="--x-text-align: 1">x</p>']
+		])('applies to %s', (label, html) => {
+			expect(el(html).matches(selector)).toBe(true);
+		});
+
+		test.each([
+			['an inline text-align (saved form)', '<p class="typost-ps-8" style="font-weight:700;text-align:center">x</p>'],
+			['an inline text-align (editor form)', '<p class="typost-ps-8" style="font-weight: 700; text-align: center">x</p>'],
+			['an inline text-align first', '<p class="typost-ps-8" style="text-align: right">x</p>'],
+			['a core alignment class', '<p class="typost-ps-8 has-text-align-center">x</p>'],
+			['a fit-to-width block', '<h2 class="typost-styled typost-fit typost-ps-8">x</h2>']
+		])('skips %s', (label, html) => {
+			expect(el(html).matches(selector)).toBe(false);
+		});
+	});
+
+	test('line breaking hands the wrap mode back to the parent (PR #329 review)', () => {
+		const css = buildStyleCssBlock({ id: 8, properties: { textWrap: 'balance' } });
+		expect(css).toContain('text-wrap: balance;\n    text-wrap-mode: inherit;');
 	});
 
 	test('no declaration uses !important (WCAG 1.4.12: user word spacing must still win)', () => {

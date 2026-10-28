@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveHangTextAlign, styleAlignmentToTextAlign, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -469,7 +469,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		const handleApplyBlockProperties = (e) => {
 			if (e.detail && (e.detail.source === 'qft' || e.detail.source === 'inspector') && e.detail.properties) {
 				const props = e.detail.properties;
-				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId, styleClass: curStyleClass } = blockPropsRef.current;
+				const { fontIdMap: idMap, fontWeight: curWeight, getClosestWeight: closestWeight, clientId: curClientId, isPopoverOpen: popoverOpen, selectedBlockClientId: selectedId, styleClass: curStyleClass, textAlign: curTextAlign } = blockPropsRef.current;
 				// Targeting guard: every Typography Stylist block registers this
 				// listener, so only the block the extension UI actually targets
 				// may handle the event. Extensions don't know clientIds, so the
@@ -544,6 +544,16 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						const detachUnit = resolveDetachFontSizeUnit(curStyleClass, window.typostData && window.typostData.paragraphStyles);
 						if (detachUnit) {
 							newAttrs.fontSizeUnit = detachUnit;
+						}
+						// Detach keeps the style's alignment (#207, PR #329
+						// review) on a block without its own; a fit block
+						// never took it (the style rule skips .typost-fit)
+						const detachedStyle = findParagraphStyleByClass(curStyleClass, window.typostData && window.typostData.paragraphStyles);
+						const detachedProps = (detachedStyle && detachedStyle.properties) || {};
+						const keptAlign = styleAlignmentToTextAlign(detachedProps.alignment, isRTL());
+						const isFitNow = (props.fontSize !== undefined ? props.fontSize : blockPropsRef.current.fontSize) === 'fit';
+						if (keptAlign && !curTextAlign && !isFitNow) {
+							newAttrs.textAlign = keptAlign;
 						}
 					}
 				}
@@ -1990,7 +2000,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that
@@ -5008,7 +5018,14 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							/>
 						);
 					})}
-					{!initialHangApplies(textAlign, isRTL()) && (
+					{/* The block's own alignment, else the style's (#207), which the
+					    guarded style rule skips on fit blocks (PR #329 review) */}
+					{!initialHangApplies(resolveHangTextAlign(
+						textAlign,
+						activeParagraphStyle && activeParagraphStyle.properties ? activeParagraphStyle.properties.alignment : '',
+						fontSize === 'fit',
+						isRTL()
+					), isRTL()) && (
 						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
 							{__('The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it.', 'typography-stylist')}
 						</p>

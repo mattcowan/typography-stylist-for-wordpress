@@ -3425,6 +3425,66 @@ export function normalizeHang(value) {
 export { TEXT_CASE_VALUES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject };
 
 /**
+ * A paragraph style's alignment (#207) as a block textAlign value, for
+ * Detach (PR #329 review): the block keeps the alignment it showed under
+ * the style, as it keeps the style's case and size unit.
+ *
+ * Start and End follow the text direction, so they become left or right.
+ * Justify stays justify: the block stores and renders it, though the
+ * toolbar has no Justify button. Twin: alignmentToBlockAlign() in the
+ * Paragraph Styles module's ps-utils.js (core Paragraph and Heading).
+ *
+ * @param {string}  alignment The style's alignment ('', start, center, end, justify).
+ * @param {boolean} isRtl     Right-to-left text.
+ * @return {string} A textAlign value, '' for none.
+ */
+export function styleAlignmentToTextAlign(alignment, isRtl) {
+	switch (alignment) {
+		case 'center':
+		case 'justify':
+			return alignment;
+		case 'start':
+			return isRtl ? 'right' : 'left';
+		case 'end':
+			return isRtl ? 'left' : 'right';
+		default:
+			return '';
+	}
+}
+
+/**
+ * The alignment that decides whether the hang shows, as a textAlign value
+ * for initialHangApplies() (PR #329 review).
+ *
+ * The block's own textAlign wins. Without one, a paragraph style's
+ * alignment (#207) applies, except on a fit-to-width block, which the
+ * style's guarded alignment rule skips. Start and Justify keep the hang;
+ * End is the right edge in left-to-right text.
+ *
+ * @param {string}  textAlign      Block textAlign ('' when unset).
+ * @param {string}  styleAlignment The style's alignment ('', start, center, end, justify).
+ * @param {boolean} isFit          The block is fit to width.
+ * @param {boolean} isRtl          Right-to-left text.
+ * @return {string} A textAlign value, '' for start.
+ */
+export function resolveHangTextAlign(textAlign, styleAlignment, isFit, isRtl) {
+	if (textAlign) {
+		return textAlign;
+	}
+	// The style's guarded alignment rule skips fit blocks (.typost-fit)
+	if (isFit) {
+		return '';
+	}
+	if (styleAlignment === 'center') {
+		return 'center';
+	}
+	if (styleAlignment === 'end') {
+		return isRtl ? 'left' : 'right';
+	}
+	return '';
+}
+
+/**
  * Whether a hanging initial shows for a given text alignment.
  *
  * The hang moves the first letter past the start edge, which only reads as

@@ -199,8 +199,9 @@
 	// TEXT_WRAP_VALUES in PHP.
 	var TEXT_WRAP_VALUES = ['balance', 'pretty'];
 
-	// A block that sets its own alignment keeps it (see ALIGNMENT_GUARD in PHP)
-	var ALIGNMENT_GUARD = ':not([style*="text-align"], [class*="has-text-align-"])';
+	// A block that sets its own alignment keeps it, and a fit-to-width block
+	// never takes it (see ALIGNMENT_GUARD in PHP)
+	var ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
 	/** '' for Default or an unknown value, otherwise the alignment. */
 	function normalizeAlignment(value) {
@@ -215,6 +216,72 @@
 	/** '' for normal or an unknown value, otherwise the line breaking value. */
 	function normalizeTextWrap(value) {
 		return typeof value === 'string' && TEXT_WRAP_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	/**
+	 * A style's alignment (#207) as a block alignment value, for Detach
+	 * (PR #329 review): the block keeps the alignment it showed under the
+	 * style. Start and End follow the text direction. Twin of
+	 * styleAlignmentToTextAlign() in the block's utils.js (a parity test
+	 * holds them together).
+	 *
+	 * @param {string}  alignment The style's alignment.
+	 * @param {boolean} isRtl     Right-to-left text.
+	 * @return {string} 'left', 'center', 'right', 'justify', or '' for none.
+	 */
+	function alignmentToBlockAlign(alignment, isRtl) {
+		switch (normalizeAlignment(alignment)) {
+			case 'center':
+			case 'justify':
+				return normalizeAlignment(alignment);
+			case 'start':
+				return isRtl ? 'right' : 'left';
+			case 'end':
+				return isRtl ? 'left' : 'right';
+			default:
+				return '';
+		}
+	}
+
+	/**
+	 * The attribute change that keeps a style's alignment on a core
+	 * Paragraph or Heading block when the style is detached (PR #329
+	 * review), or null for none.
+	 *
+	 * Core stores the text alignment three ways by block and version:
+	 * `style.typography.textAlign` (the typography support, WordPress 7.x),
+	 * a `textAlign` attribute (Heading before it), or an `align` attribute
+	 * (Paragraph before it). `align` is the text alignment only on a block
+	 * type without `supports.align`: with it, `align` is the block alignment
+	 * (wide, full), which the WordPress 7.1 Heading has. A block that
+	 * already has a text alignment keeps it. Core has no rule for
+	 * `has-text-align-justify`, so Justify is not kept on core blocks.
+	 *
+	 * @param {Object}  blockType The registered block type (attributes, supports).
+	 * @param {Object}  attrs     The block's attributes.
+	 * @param {string}  alignment The detached style's alignment.
+	 * @param {boolean} isRtl     Right-to-left text.
+	 * @return {?Object} Attributes to set.
+	 */
+	function buildCoreBlockAlignUpdate(blockType, attrs, alignment, isRtl) {
+		var value = alignmentToBlockAlign(alignment, isRtl);
+		if (!value || value === 'justify' || !blockType) return null;
+		var a = attrs || {};
+		var defs = blockType.attributes || {};
+		var style = a.style && typeof a.style === 'object' ? a.style : {};
+		var typography = style.typography && typeof style.typography === 'object' ? style.typography : {};
+		var supports = blockType.supports || {};
+		if (supports.typography && supports.typography.textAlign) {
+			if (typography.textAlign) return null;
+			return { style: Object.assign({}, style, { typography: Object.assign({}, typography, { textAlign: value }) }) };
+		}
+		if (hasOwn(defs, 'textAlign')) {
+			return a.textAlign ? null : { textAlign: value };
+		}
+		if (hasOwn(defs, 'align') && !supports.align) {
+			return a.align ? null : { align: value };
+		}
+		return null;
 	}
 
 	/**
@@ -1260,7 +1327,9 @@
 				rules.push('word-spacing: ' + (phpInt(props.wordSpacing) / 1000) + 'em');
 			}
 			if (normalizeTextWrap(props.textWrap)) {
+				// text-wrap-mode: inherit keeps a nowrap context (see PHP)
 				rules.push('text-wrap: ' + props.textWrap);
+				rules.push('text-wrap-mode: inherit');
 			}
 			alignRules = alignmentDeclarations(props, hang);
 		}
@@ -1910,6 +1979,8 @@
 		normalizeAlignment: normalizeAlignment,
 		normalizeAlignLast: normalizeAlignLast,
 		normalizeTextWrap: normalizeTextWrap,
+		alignmentToBlockAlign: alignmentToBlockAlign,
+		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
 		ALIGN_LAST_VALUES: ALIGN_LAST_VALUES,
 		TEXT_WRAP_VALUES: TEXT_WRAP_VALUES,

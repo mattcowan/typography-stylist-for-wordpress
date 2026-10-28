@@ -113,11 +113,18 @@ final class Typost_Paragraph_Styles {
 	/**
 	 * Guard on the alignment rule (#207): a block that sets its own
 	 * alignment keeps it. The Typography Stylist block writes it as an
-	 * inline text-align (also under a style), core Paragraph and Heading
-	 * blocks as a has-text-align-* class. Mirrors ALIGNMENT_GUARD in
-	 * ps-utils.js.
+	 * inline text-align (also under a style; `text-align:center` saved,
+	 * `text-align: center` in the editor), core Paragraph and Heading
+	 * blocks as a has-text-align-* class. Only a text-align declaration
+	 * counts: at the start of the style attribute or after a `;`, so
+	 * `text-align-last` or a custom property such as `--x-text-align` does
+	 * not turn the rule off. A fit-to-width block (`typost-fit`) never takes
+	 * it: each of its lines fills the width, and measurement decides line
+	 * 1's hang from the block's own alignment, so a style's
+	 * `--typost-hang-on: 0` would leave line 1 short (PR #329 review).
+	 * Mirrors ALIGNMENT_GUARD in ps-utils.js.
 	 */
-	const ALIGNMENT_GUARD = ':not([style*="text-align"], [class*="has-text-align-"])';
+	const ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
 	/**
 	 * Most styles a Based On chain may hold, the style itself included (#200).
@@ -457,8 +464,14 @@ final class Typost_Paragraph_Styles {
 			if ( ! empty( $props['wordSpacing'] ) ) {
 				$css_rules[] = 'word-spacing: ' . ( intval( $props['wordSpacing'] ) / 1000 ) . 'em';
 			}
-			if ( isset( $props['textWrap'] ) && in_array( $props['textWrap'], self::TEXT_WRAP_VALUES, true ) ) {
+			if ( '' !== self::normalize_text_wrap( isset( $props['textWrap'] ) ? $props['textWrap'] : '' ) ) {
+				// The shorthand also sets text-wrap-mode to wrap, which would
+				// break text inside a nowrap context (a fit-to-width line, a
+				// theme's nowrap nav). text-wrap-mode: inherit gives the mode
+				// back to the parent; browsers that know only the single
+				// text-wrap property ignore it (PR #329 review).
 				$css_rules[] = 'text-wrap: ' . $props['textWrap'];
+				$css_rules[] = 'text-wrap-mode: inherit';
 			}
 			$align_rules = self::alignment_declarations( $props, $hang );
 		}
@@ -533,6 +546,40 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * '' for Default or an unknown value, otherwise the alignment (#207).
+	 * Mirrors normalizeAlignment() in ps-utils.js.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return string
+	 */
+	private static function normalize_alignment( $value ) {
+		return is_string( $value ) && in_array( $value, self::ALIGNMENT_VALUES, true ) ? $value : '';
+	}
+
+	/**
+	 * The last line alignment as stored: only with justify, '' = start
+	 * (#207). Mirrors normalizeAlignLast() in ps-utils.js.
+	 *
+	 * @param mixed $alignment The style's alignment.
+	 * @param mixed $value     Stored last line value.
+	 * @return string
+	 */
+	private static function normalize_align_last( $alignment, $value ) {
+		return 'justify' === self::normalize_alignment( $alignment ) && is_string( $value ) && in_array( $value, self::ALIGN_LAST_VALUES, true ) ? $value : '';
+	}
+
+	/**
+	 * '' for normal or an unknown value, otherwise the line breaking value
+	 * (#207). Mirrors normalizeTextWrap() in ps-utils.js.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return string
+	 */
+	private static function normalize_text_wrap( $value ) {
+		return is_string( $value ) && in_array( $value, self::TEXT_WRAP_VALUES, true ) ? $value : '';
+	}
+
+	/**
 	 * The alignment declarations of a style (#207), for its guarded rule.
 	 *
 	 * `text-align-last` only with justified text. A centered or end-aligned
@@ -546,13 +593,14 @@ final class Typost_Paragraph_Styles {
 	 * @return string[] Declarations.
 	 */
 	private static function alignment_declarations( $props, $hang ) {
-		$alignment = isset( $props['alignment'] ) && in_array( $props['alignment'], self::ALIGNMENT_VALUES, true ) ? $props['alignment'] : '';
+		$alignment = self::normalize_alignment( isset( $props['alignment'] ) ? $props['alignment'] : '' );
 		if ( '' === $alignment ) {
 			return array();
 		}
 		$rules = array( 'text-align: ' . $alignment );
-		if ( 'justify' === $alignment && isset( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
-			$rules[] = 'text-align-last: ' . $props['alignLast'];
+		$last  = self::normalize_align_last( $alignment, isset( $props['alignLast'] ) ? $props['alignLast'] : '' );
+		if ( '' !== $last ) {
+			$rules[] = 'text-align-last: ' . $last;
 		}
 		if ( $hang > 0 && in_array( $alignment, array( 'center', 'end' ), true ) ) {
 			$rules[] = '--typost-hang-on: 0';
@@ -1929,7 +1977,7 @@ final class Typost_Paragraph_Styles {
 			$align_labels = self::alignment_labels();
 			if ( isset( $props['alignment'] ) && is_string( $props['alignment'] ) && isset( $align_labels[ $props['alignment'] ] ) ) {
 				$align_display = $align_labels[ $props['alignment'] ];
-				if ( 'justify' === $props['alignment'] && isset( $props['alignLast'] ) && is_string( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
+				if ( '' !== self::normalize_align_last( $props['alignment'], isset( $props['alignLast'] ) ? $props['alignLast'] : '' ) ) {
 					/* translators: 1: alignment, such as "Justify"; 2: last line alignment, such as "Center" */
 					$align_display = sprintf( __( '%1$s (last line: %2$s)', 'typost-paragraph-styles' ), $align_display, $align_labels[ $props['alignLast'] ] );
 				}
@@ -2367,22 +2415,27 @@ final class Typost_Paragraph_Styles {
 
 		// Alignment (#207): Default ('') is never stored; alignLast only
 		// with justified text, and never as start (the default).
-		if ( isset( $raw['alignment'] ) && in_array( $raw['alignment'], self::ALIGNMENT_VALUES, true ) ) {
-			$clean['alignment'] = $raw['alignment'];
-			if ( 'justify' === $raw['alignment'] && isset( $raw['alignLast'] ) && in_array( $raw['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
-				$clean['alignLast'] = $raw['alignLast'];
+		$raw_alignment = self::normalize_alignment( isset( $raw['alignment'] ) ? $raw['alignment'] : '' );
+		if ( '' !== $raw_alignment ) {
+			$clean['alignment'] = $raw_alignment;
+			$raw_last           = self::normalize_align_last( $raw_alignment, isset( $raw['alignLast'] ) ? $raw['alignLast'] : '' );
+			if ( '' !== $raw_last ) {
+				$clean['alignLast'] = $raw_last;
 			}
 		} elseif ( $keep_empty && isset( $raw['alignment'] ) && '' === $raw['alignment'] ) {
 			$clean['alignment'] = '';
 		}
 
-		// Word spacing in thousandths of an em, like letterSpacing; can be negative
+		// Word spacing in thousandths of an em, like letterSpacing; can be
+		// negative. Held to the Edit form's range (-0.5em to 1em), so a REST
+		// request cannot store a value that breaks every page using the
+		// style (PR #329 review)
 		if ( isset( $raw['wordSpacing'] ) ) {
-			$clean['wordSpacing'] = intval( $raw['wordSpacing'] );
+			$clean['wordSpacing'] = max( -500, min( 1000, intval( $raw['wordSpacing'] ) ) );
 		}
 
 		// Line breaking: normal ('') is never stored unless it unsets an inherited value
-		if ( isset( $raw['textWrap'] ) && in_array( $raw['textWrap'], self::TEXT_WRAP_VALUES, true ) ) {
+		if ( '' !== self::normalize_text_wrap( isset( $raw['textWrap'] ) ? $raw['textWrap'] : '' ) ) {
 			$clean['textWrap'] = $raw['textWrap'];
 		} elseif ( $keep_empty && isset( $raw['textWrap'] ) && '' === $raw['textWrap'] ) {
 			$clean['textWrap'] = '';
@@ -2759,12 +2812,11 @@ final class Typost_Paragraph_Styles {
 	 */
 	private static function group_signature( $lead, $props ) {
 		if ( 'alignment' === $lead ) {
-			$alignment = isset( $props['alignment'] ) && in_array( $props['alignment'], self::ALIGNMENT_VALUES, true ) ? $props['alignment'] : '';
+			$alignment = self::normalize_alignment( isset( $props['alignment'] ) ? $props['alignment'] : '' );
 			if ( '' === $alignment ) {
 				return 'none';
 			}
-			$last = 'justify' === $alignment && isset( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ? $props['alignLast'] : '';
-			return $alignment . '|' . $last;
+			return $alignment . '|' . self::normalize_align_last( $alignment, isset( $props['alignLast'] ) ? $props['alignLast'] : '' );
 		}
 		if ( 'textCase' === $lead ) {
 			$case = isset( $props['textCase'] ) && in_array( $props['textCase'], self::TEXT_CASE_VALUES, true ) ? $props['textCase'] : '';

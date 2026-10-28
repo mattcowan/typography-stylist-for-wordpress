@@ -684,12 +684,21 @@
 		var base = (style && style.properties) || {};
 		var unit = resolveEditFontSizeUnit(base, newUnit);
 		var payload = { name: values.name };
-		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(values, unit), base, true, newUnit);
-		var baseline = baselineValues
-			? utils.buildPropertiesForStyleSave(stateFromEditValues(baselineValues, unit), base, true, newUnit)
-			: null;
 
 		var currentParent = style && style.basedOn ? parseInt(style.basedOn, 10) || 0 : 0;
+		var parent = null;
+		(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
+			if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
+				parent = candidate;
+			}
+		});
+		var parentProps = parent ? utils.resolveStyleProperties(parent, styles) : null;
+
+		var properties = utils.buildPropertiesForStyleSave(stateFromEditValues(fitOwnValues(values, parentProps), unit), base, true, newUnit);
+		var baseline = baselineValues
+			? utils.buildPropertiesForStyleSave(stateFromEditValues(fitOwnValues(baselineValues, parentProps), unit), base, true, newUnit)
+			: null;
+
 		var parentId = values.basedOn !== undefined ? (parseInt(values.basedOn, 10) || 0) : currentParent;
 		if (parentId !== currentParent) {
 			payload.basedOn = parentId;
@@ -699,17 +708,39 @@
 			// Relative to the current parent: the server applies a Based On
 			// change itself (rebase_properties()), so a save with edits and a
 			// save without them follow the same rule
-			var parent = null;
-			(Array.isArray(styles) ? styles : []).forEach(function(candidate) {
-				if (currentParent && candidate && parseInt(candidate.id, 10) === currentParent) {
-					parent = candidate;
-				}
-			});
-			payload.properties = parent
-				? utils.computeStyleOverrides(properties, utils.resolveStyleProperties(parent, styles))
+			payload.properties = parentProps
+				? utils.computeStyleOverrides(properties, parentProps)
 				: properties;
 		}
 		return payload;
+	}
+
+	/**
+	 * Form values without the settings fit to width hides (PR #329 review).
+	 *
+	 * In fit mode the form hides alignment, the last line, word spacing and
+	 * line breaking, and the CSS writes none of them, but their fields keep
+	 * whatever they held. A fit style sets none of them itself: with no
+	 * parent they are dropped, and a style based on another takes the
+	 * parent's values, so the save stores no override (an empty value would
+	 * unset the parent's value, and it would come back as "None" when the
+	 * style leaves fit mode).
+	 *
+	 * @param {Object}  values      readEditForm() result.
+	 * @param {?Object} parentProps The parent's resolved properties, or null.
+	 * @return {Object} The values, a copy when in fit mode.
+	 */
+	function fitOwnValues(values, parentProps) {
+		if (!values || values.sizeMode !== 'fit') {
+			return values;
+		}
+		var p = parentProps || {};
+		return Object.assign({}, values, {
+			alignment: p.alignment || '',
+			alignLast: p.alignLast || '',
+			wordSpacing: p.wordSpacing || 0,
+			textWrap: p.textWrap || ''
+		});
 	}
 
 	/**
