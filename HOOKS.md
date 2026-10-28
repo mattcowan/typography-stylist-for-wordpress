@@ -21,6 +21,7 @@ This document describes all action and filter hooks available in Typography Styl
   - [Lifecycle Hooks](#lifecycle-hooks)
   - [State Communication](#state-communication)
 - [Admin Tab Extensibility](#admin-tab-extensibility)
+- [Export Sections](#export-sections)
 - [Extension Examples](#extension-examples)
   - [Vanilla DOM Example](#vanilla-dom-example)
   - [React (wp.element) Example](#react-wpelement-example)
@@ -378,6 +379,38 @@ add_filter('typost_content_font_ids', function($ids, $content) {
 - Return an array of positive integer font IDs; invalid entries are discarded. IDs resolve through the font-replacement chain like every other detected font.
 - Results are cached per post for 12 hours with the rest of the detection. When the data behind your IDs changes, call `Typost::get_instance()->clear_font_detection_cache()`. Call it on saves, not on every request: under a persistent object cache (Redis, Memcached) it flushes the whole object cache, because the wildcard transient deletes cannot reach the cached copies.
 - Unlike `typost_force_enqueue_font_ids`, this loads fonts only on pages whose content references them.
+
+#### `typost_export_sections`
+
+*Since 2.3.5.* Add a section to the export file that Settings → Typography Stylist → Export & Import writes and reads (#205). The bundled Paragraph Styles module registers the `paragraphStyles` section with this filter. See [Export Sections](#export-sections) for the section definition and the rules a section must follow.
+
+```php
+add_filter('typost_export_sections', function($sections) {
+    $sections[] = array(
+        'id'         => 'myExtension',
+        'label'      => __('My extension settings', 'my-extension'),
+        'capability' => 'manage_options',
+        'options'    => array('typost_my_extension_settings'),
+        'export'     => 'my_extension_export',
+        'preview'    => 'my_extension_preview',
+        'import'     => 'my_extension_import',
+    );
+    return $sections;
+});
+```
+
+#### `typost_font_axis_tags`
+
+*Since 2.3.5.* The variable font axis tags defined for a font, by numeric font ID. Import uses it to warn when an imported paragraph style sets an axis that the font on the receiving site does not define. The bundled Variable Fonts module answers from its axis definitions (an empty array for a font with none). `null`, the default, means "unknown", and import then gives no axis warning.
+
+```php
+add_filter('typost_font_axis_tags', function($tags, $font_id) {
+    if (42 === $font_id) {
+        return array('wght', 'opsz');
+    }
+    return $tags;
+}, 10, 2);
+```
 
 #### `typost_force_enqueue_paragraph_style_ids`
 
@@ -925,6 +958,56 @@ Tabs support deep-linking: `?page=typography-stylist&tab=my-tab`. The tab ID in 
 ### Tab Switching
 
 The admin page's JavaScript automatically handles tab switching for all registered tabs — no additional JS is needed for tab navigation.
+
+---
+
+## Export Sections
+
+*Since 2.3.5 (#205).* Settings → Typography Stylist → Export & Import writes one JSON file in sections and imports it on another site. A section is registered with the `typost_export_sections` filter as an array:
+
+| Key | Type | Description |
+|---|---|---|
+| `id` | string | Key in the file's `sections` object. Letters, digits and `_`, starting with a letter. |
+| `label` | string | Name shown in the export and import UI. |
+| `capability` | string | Needed to export the section (default `manage_options`). Import always needs `manage_options`. |
+| `options` | string[] | The `typost_*` options the section carries. The export registry test reads this list. |
+| `export` | callable | `fn( Typost_Export_Fonts $fonts, array $args ): array{data: mixed, notes?: string[]}\|WP_Error`. `$args['items']` holds the ids the author picked, when the section offers `items`. |
+| `preview` | callable | `fn( mixed $data, Typost_Export_Fonts $fonts ): array\|WP_Error`. What the import UI shows. Return `items` (each with a `name`) for the default list. |
+| `import` | callable | `fn( mixed $data, array $choices, Typost_Export_Fonts $fonts, bool $dry_run ): array\|WP_Error`. |
+| `items` | callable, optional | `fn(): array{id, name, parent?}[]`: the things the author can pick on export. `parent` is the id the item needs with it; the UI says it is added. |
+| `fontKeys` | callable, optional | `fn( mixed $data ): array<string, string[]>`: file font key → names of the items that use it, for the preview's "Used by". Also decides which fonts import: a font that only left-out sections use is not imported. Without it, your section's fonts import as chosen even when the author leaves the section out. |
+| `priority` | int, optional | Import order, lower first (default 50; paragraph styles use 20). |
+
+**File format:**
+
+```json
+{
+  "format": "typost-export",
+  "version": 1,
+  "plugin": "2.3.5",
+  "exported": "2026-10-28",
+  "fonts": { "f1": { "source": "adobe", "name": "Proxima Nova", "family": "Proxima Nova", "kit": "abc1234", "cssUrl": "https://use.typekit.net/abc1234.css" } },
+  "sections": { "paragraphStyles": [ { "key": "s1", "name": "Body", "basedOn": null, "properties": { "fontId": "f1", "lineHeight": 1.5 } } ] }
+}
+```
+
+A newer `version` is rejected, and a section the receiving site does not know is listed as not imported while the rest of the file imports.
+
+**Rules for a section:**
+
+- **Never write a site ID.** A font ID, a style ID, an attachment ID or a term ID only means something on the site that made it. For a font, call `$fonts->key_for_font_id( $id )` on export and write the key it returns (`null` = the font no longer exists); on import, `$fonts->import_font_id( $key )` gives the font ID on this site, 0 when it is not there. Give your own references file-local keys, the way paragraph styles write `s1` and `basedOn: "s1"`.
+- **Write nothing on a dry run.** Import calls `import` twice: first with `$dry_run = true` for every section, then, after fonts are added, with `false`. A `WP_Error` from either call stops the import, so return every error from the dry run. A file a section rejects must save nothing.
+- **Sanitize every value** as the code that saves it today does: the file comes from another site.
+- **List your options** in `options`, or add them to `Typost_Export::NOT_EXPORTED` with the reason. `tests/Unit/ExportRegistryTest.php` fails when an option `uninstall.php` deletes is in neither list, so a new option cannot ship without a decision about export.
+- **Never change existing data unless the author chose to.** Paragraph styles skip a style whose name exists unless the author picks "Overwrite".
+
+**REST routes** (all `POST`, rate-limited like every `typost/v1` write):
+
+- `typost/v1/export` — `{sections: string[], allFonts: bool, sectionArgs: {id: {items: []}}}` → `{file, notes, filename}`. Needs `edit_posts`, the capability of each section, and `manage_options` for `allFonts`.
+- `typost/v1/import/preview` — `{fileText}` → fonts (status `found`, `ambiguous`, `addable` or `not_found`, with candidates, `usedBy` names and the `sections` that use the font), each section's preview, `unknownSections`, `siteFonts`. Needs `manage_options`. Saves nothing.
+- `typost/v1/import` — `{fileText, choices: {fonts: {key: {action: 'map'|'add'|'none', target?}}, sections: {id: choices}, include: string[]}}` → `{fonts: {added, notFound}, sections: {id: result}, notImported}`. Needs `manage_options`. A font or section choice left out takes the preview's default. A font that only sections missing from `include` use is not imported (no choice needed, nothing added); a font that no section uses imports as chosen.
+
+**Fonts** are matched by Adobe Fonts project and family, then WordPress Font Library slug and family, then family, then display name (case-insensitive). When more than one font matches at the first step that finds any, the font is "ambiguous" and the author must pick. Adobe Fonts families and font definitions can be added from the file (`Typost::add_adobe_font_entry()`, `Typost::add_manual_font_entry()`); a Library font is adopted. Uploaded font files are never in the file.
 
 ---
 

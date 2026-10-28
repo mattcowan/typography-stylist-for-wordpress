@@ -648,6 +648,59 @@ msgstr "¿Quitar todos los ajustes que «%s» define por sí mismo, para que use
 msgid "Style “%s” reset to the style it is based on."
 msgstr "Estilo «%s» restablecido al estilo en el que se basa."
 
+#. translators: 1: name of the style added to the export, 2: name of the style based on it
+#: includes/class-typost-ps-transfer.php:148
+#, php-format
+msgid "“%1$s” was added because “%2$s” is based on it."
+msgstr "Se ha añadido «%1$s», porque «%2$s» se basa en él."
+
+#: includes/class-typost-ps-transfer.php:229
+msgid "The paragraph styles in this file cannot be read. Nothing was saved."
+msgstr "Los estilos de párrafo de este archivo no se pueden leer. No se ha guardado nada."
+
+#. translators: 1: style name, 2: why its Based On chain is rejected
+#: includes/class-typost-ps-transfer.php:274
+#: includes/class-typost-ps-transfer.php:808
+#, php-format
+msgid "“%1$s”: %2$s Nothing was saved."
+msgstr "«%1$s»: %2$s No se ha guardado nada."
+
+#: includes/class-typost-ps-transfer.php:519
+msgid "There is no style with this name to overwrite."
+msgstr "No hay ningún estilo con este nombre que sobrescribir."
+
+#: includes/class-typost-ps-transfer.php:522
+msgid "Another style in the file already overwrites this style."
+msgstr "Otro estilo del archivo ya sobrescribe este estilo."
+
+#. translators: %s: style name
+#: includes/class-typost-ps-transfer.php:536
+#, php-format
+msgid "A style named “%s” already exists. Skip this style, add it with a new name, or overwrite the style on this site."
+msgstr "Ya existe un estilo llamado «%s». Omite este estilo, añádelo con un nombre nuevo o sobrescribe el estilo de este sitio."
+
+#: includes/class-typost-ps-transfer.php:541
+msgid "The choice for this style is not valid."
+msgstr "La elección para este estilo no es válida."
+
+#. translators: 1: imported style name, 2: name of the style on this site it is based on
+#: includes/class-typost-ps-transfer.php:616
+#, php-format
+msgid "“%1$s” is based on “%2$s” on this site, which is not the same as in the file, so “%1$s” looks different from the file."
+msgstr "«%1$s» se basa en el estilo «%2$s» de este sitio, que no es igual al del archivo, así que «%1$s» se ve distinto que en el archivo."
+
+#. translators: 1: style name, 2: list of OpenType feature codes, 3: font name
+#: includes/class-typost-ps-transfer.php:650
+#, php-format
+msgid "“%1$s” uses OpenType features that are hidden for %3$s in Feature Visibility, so the font may not have them: %2$s."
+msgstr "«%1$s» usa características OpenType que están ocultas para %3$s en Visibilidad de características, así que puede que la fuente no las tenga: %2$s."
+
+#. translators: 1: style name, 2: list of variable font axis tags, 3: font name
+#: includes/class-typost-ps-transfer.php:664
+#, php-format
+msgid "“%1$s” sets variable font axes that are not defined for %3$s, so the font may not have them: %2$s."
+msgstr "«%1$s» ajusta ejes de fuente variable que no están definidos para %3$s, así que puede que la fuente no los tenga: %2$s."
+
 #: paragraph-styles.php:1924
 msgid "Word Spacing:"
 msgstr "Espaciado entre palabras:"

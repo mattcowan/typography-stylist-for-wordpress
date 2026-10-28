@@ -38,6 +38,8 @@ if (!defined('TYPOST_PLUGIN_BASENAME')) {
 require_once __DIR__ . '/includes/class-typost-font-sources.php';
 require_once __DIR__ . '/includes/class-typost-font-library-bridge.php';
 require_once __DIR__ . '/includes/class-typost-font-metadata.php';
+require_once __DIR__ . '/includes/class-typost-export-fonts.php';
+require_once __DIR__ . '/includes/class-typost-export.php';
 
 /**
  * Main plugin class
@@ -102,6 +104,7 @@ class Typost {
      */
     private $font_sources = null;
     private $font_library_bridge = null;
+    private $export = null;
 
     /**
      * Frontend font detection state (for archive pages)
@@ -163,6 +166,19 @@ class Typost {
     }
 
     /**
+     * Get the export and import module (#205)
+     *
+     * @since 2.3.5
+     * @return Typost_Export
+     */
+    public function export() {
+        if (null === $this->export) {
+            $this->export = new Typost_Export($this);
+        }
+        return $this->export;
+    }
+
+    /**
      * Get the WP Font Library bridge module
      *
      * @since 2.1.0
@@ -212,6 +228,11 @@ class Typost {
 
         // Add admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
+
+        // Export & Import tab (#205)
+        add_filter('typost_admin_tabs', array($this->export(), 'register_admin_tab'));
+        add_action('typost_admin_tab_content_export', array($this->export(), 'render_admin_tab'));
+        add_action('typost_admin_assets', array($this->export(), 'enqueue_admin_assets'));
 
         // Register settings
         add_action('admin_init', array($this, 'register_settings'));
@@ -2541,6 +2562,9 @@ class Typost {
                 return current_user_can('manage_options');
             },
         ));
+
+        // Export and import (#205)
+        $this->export()->register_rest_routes();
 
         /**
          * Fires after core REST API routes are registered.
@@ -5456,24 +5480,8 @@ class Typost {
         $font_entries = array();
         foreach ($font_families_input as $family) {
             $family_slug = sanitize_title($family);
-            $composite_font_id = $kit_id . '-' . $family_slug;
-
-            $font_entry = array(
-                'id' => sanitize_key($composite_font_id),
-                'name' => sanitize_text_field($family), // Use family name as font name
-                'font_id' => $this->generate_font_id(),
-                'font_family' => sanitize_text_field($family), // Single family per entry
-                'kit_id' => sanitize_key($kit_id),       // Link back to original kit
-                'kit_name' => sanitize_text_field($kit_name), // For display/grouping
-                'css_url' => $parsed['css_url'],         // Same CSS URL for all fonts in kit
-                'added_date' => current_time('mysql')
-            );
-
-            if ($detected_weights !== false && isset($detected_weights[$family_slug])) {
-                $font_entry['available_weights'] = $detected_weights[$family_slug];
-            }
-
-            $font_entries[] = $font_entry;
+            $weights = ($detected_weights !== false && isset($detected_weights[$family_slug])) ? $detected_weights[$family_slug] : null;
+            $font_entries[] = $this->build_adobe_font_entry($kit_id, $kit_name, $parsed['css_url'], $family, $weights);
         }
 
         // Add all font entries from the kit
@@ -5491,6 +5499,77 @@ class Typost {
             'fonts' => $font_entries,
             'count' => count($font_entries)
         ));
+    }
+
+    /**
+     * Build one Adobe Fonts entry (one family of a project)
+     *
+     * Shared by the add endpoint and import (#205), so both store the same
+     * shape. Allocates a font ID.
+     *
+     * @since 2.3.5
+     * @param string     $kit_id   Stored kit ID ("adobe-{project}").
+     * @param string     $kit_name Project name for display.
+     * @param string     $css_url  Normalized Typekit stylesheet URL.
+     * @param string     $family   Family name.
+     * @param array|null $weights  Available weights, null = all.
+     * @return array
+     */
+    private function build_adobe_font_entry($kit_id, $kit_name, $css_url, $family, $weights = null) {
+        $font_entry = array(
+            'id' => sanitize_key($kit_id . '-' . sanitize_title($family)),
+            'name' => sanitize_text_field($family), // Use family name as font name
+            'font_id' => $this->generate_font_id(),
+            'font_family' => sanitize_text_field($family), // Single family per entry
+            'kit_id' => sanitize_key($kit_id),       // Link back to original kit
+            'kit_name' => sanitize_text_field($kit_name), // For display/grouping
+            'css_url' => $css_url,                   // Same CSS URL for all fonts in kit
+            'added_date' => current_time('mysql')
+        );
+
+        if (is_array($weights)) {
+            $font_entry['available_weights'] = $weights;
+        }
+
+        return $font_entry;
+    }
+
+    /**
+     * Add one Adobe Fonts family from an import file (#205)
+     *
+     * The project's stylesheet URL comes from the file, checked against the
+     * same Typekit URL rule as the add endpoint. A project already on this
+     * site keeps its stored URL and name; the family is added to it.
+     *
+     * @since 2.3.5
+     * @param array $descriptor Sanitized font descriptor (Typost_Export_Fonts::sanitize_descriptor()).
+     * @return array|false The stored entry, or false when the URL is not a Typekit stylesheet.
+     */
+    public function add_adobe_font_entry($descriptor) {
+        $parsed = $this->parse_adobe_fonts_code(isset($descriptor['cssUrl']) ? (string) $descriptor['cssUrl'] : '');
+        if (!$parsed || empty($descriptor['family'])) {
+            return false;
+        }
+        $kit_id = 'adobe-' . $parsed['kit_id'];
+        $css_url = $parsed['css_url'];
+        $kit_name = !empty($descriptor['kitName']) ? $descriptor['kitName'] : 'Adobe Fonts ' . $parsed['kit_id'];
+
+        $fonts = $this->get_adobe_fonts();
+        foreach ($fonts as $font) {
+            if (isset($font['kit_id']) && $font['kit_id'] === $kit_id) {
+                $css_url = isset($font['css_url']) ? $font['css_url'] : $css_url;
+                $kit_name = isset($font['kit_name']) ? $font['kit_name'] : $kit_name;
+                break;
+            }
+        }
+
+        $weights = !empty($descriptor['availableWeights']) ? $this->sanitize_available_weights($descriptor['availableWeights']) : null;
+        $entry = $this->build_adobe_font_entry($kit_id, $kit_name, $css_url, $descriptor['family'], $weights ? $weights : null);
+        $fonts[] = $entry;
+        update_option('typost_adobe_fonts', $fonts);
+        $this->clear_cache();
+
+        return $entry;
     }
 
     /**
@@ -5943,15 +6022,36 @@ class Typost {
             return new WP_Error('missing_data', esc_html__('Name and font family are required', 'typography-stylist'), array('status' => 400));
         }
 
+        $new_font = $this->store_manual_font_entry(
+            $params['name'],
+            $params['font_family'],
+            isset($params['fallbacks']) ? $params['fallbacks'] : ''
+        );
+
+        return rest_ensure_response(array('success' => true, 'font' => $new_font));
+    }
+
+    /**
+     * Store a manual font definition and allocate its font ID
+     *
+     * Shared by the add endpoint and import (#205).
+     *
+     * @since 2.3.5
+     * @param string $name        Display name.
+     * @param string $font_family CSS font-family name.
+     * @param string $fallbacks   Fallback stack.
+     * @return array The stored entry.
+     */
+    private function store_manual_font_entry($name, $font_family, $fallbacks) {
         // Generate unique ID
-        $font_id = 'manual-' . sanitize_key(strtolower(str_replace(' ', '-', $params['name']))) . '-' . time();
+        $font_id = 'manual-' . sanitize_key(strtolower(str_replace(' ', '-', $name))) . '-' . time();
 
         $new_font = array(
             'id' => $font_id,
-            'name' => sanitize_text_field($params['name']),
+            'name' => sanitize_text_field($name),
             'font_id' => $this->generate_font_id(),
-            'font_family' => sanitize_text_field($params['font_family']),
-            'fallbacks' => isset($params['fallbacks']) ? sanitize_text_field($params['fallbacks']) : '',
+            'font_family' => sanitize_text_field($font_family),
+            'fallbacks' => sanitize_text_field($fallbacks),
             'added_date' => current_time('mysql')
         );
 
@@ -5962,7 +6062,22 @@ class Typost {
         // Clear cache
         $this->clear_cache();
 
-        return rest_ensure_response(array('success' => true, 'font' => $new_font));
+        return $new_font;
+    }
+
+    /**
+     * Add a manual font definition from an import file (#205)
+     *
+     * @since 2.3.5
+     * @param array $descriptor Sanitized font descriptor (Typost_Export_Fonts::sanitize_descriptor()).
+     * @return array|false The stored entry, or false without a name and family.
+     */
+    public function add_manual_font_entry($descriptor) {
+        $family = !empty($descriptor['fontFamily']) ? $descriptor['fontFamily'] : (isset($descriptor['family']) ? $descriptor['family'] : '');
+        if (empty($descriptor['name']) || '' === $family) {
+            return false;
+        }
+        return $this->store_manual_font_entry($descriptor['name'], $family, isset($descriptor['fallbacks']) ? $descriptor['fallbacks'] : '');
     }
 
     /**

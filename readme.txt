@@ -42,6 +42,7 @@ A paragraph style is a named set of typography settings, like a paragraph style 
 * “Detach Style” changes styled text back to independent settings.
 * In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
 * Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes, and the style it is based on. Every post that uses the style shows the change.
+* Move styles to another site with Settings → Typography Stylist → Export & Import. The file names each font by its family, and import matches it to a font on the other site. You see every style and font before anything is saved.
 
 = Granular typography control =
 
@@ -248,6 +249,15 @@ To style a whole Paragraph or Heading block, open Paragraph Style in the block s
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. The style browser shows 24 styles at a time. A button under the list shows the next styles.
 
 To base a style on another style, click “Edit” on the style in Settings → Typography Stylist → Paragraph Styles and choose a style in “Based on”. The style then uses that style’s value for every setting it does not set itself, and follows later changes to it. The card marks each value as “Inherited” or “Override”, and “Reset to Base” in the Edit form removes all overrides. When you delete a style, the styles based on it keep their look.
+
+= How do I move paragraph styles to another site? =
+
+1. On the first site, go to Settings → Typography Stylist → Export & Import. Choose all styles or only some, and click “Download export file”. The styles that the chosen styles are based on are added to the file.
+2. On the other site, upload the fonts that the styles use, if they are uploaded font kits. Adobe Fonts projects and custom font definitions can come from the file.
+3. On the other site, open the same tab, choose the file, and click “Preview import”. The preview shows each font and the font on this site that it matches. If more than one font matches, choose one. It also shows each style. A style whose name already exists is skipped unless you choose “Add with a new name” or “Overwrite the style on this site”.
+4. Click “Import”. The result lists the styles that were added and the fonts that were not found. A style whose font was not found uses the theme font.
+
+Imported styles get new IDs, so content on the other site that already uses a style ID never changes. Only administrators can import.
 
 = Is this plugin accessible? =
 

@@ -2168,3 +2168,140 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
 .typost-admin-wrap .typost-busy:hover {
     pointer-events: none;
 }
+
+/* Export & Import tab (#205) */
+.typost-export-panel {
+    margin: 16px 0 24px;
+    padding: 12px 16px 4px;
+    background: var(--typost-bg-surface, #fff);
+    border: 1px solid var(--typost-border-subtle, #dcdcde);
+    border-radius: 4px;
+}
+
+.typost-export-panel h3 {
+    margin-top: 8px;
+}
+
+.typost-export-sections,
+.typost-export-items {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.typost-export-sections > legend {
+    font-weight: 600;
+    margin-bottom: 4px;
+    padding: 0;
+}
+
+.typost-export-items {
+    margin: 0 0 8px 24px;
+}
+
+.typost-export-scope-option {
+    display: inline-block;
+    margin-right: 16px;
+}
+
+.typost-export-item-list {
+    margin: 4px 0 0;
+    max-height: 18em;
+    overflow-y: auto;
+    padding: 4px 8px;
+    border: 1px solid var(--typost-border-subtle, #dcdcde);
+    background: var(--typost-bg-surface-alt, #fafafa);
+}
+
+.typost-export-notes ul,
+.typost-import-warnings {
+    margin: 8px 0;
+    padding: 8px 12px 8px 28px;
+    list-style: disc;
+    background: var(--typost-bg-info, #f0f6fc);
+    border-left: 4px solid var(--typost-color-primary, #2271b1);
+}
+
+.typost-import-warnings {
+    background: var(--typost-color-warning-bg, #fcf9e8);
+    border-left-color: var(--typost-color-warning-border, #dba617);
+}
+
+.typost-export-error:not(:empty) {
+    margin: 8px 0;
+    padding: 8px 12px;
+    color: var(--typost-color-danger, #b32d2e);
+    border-left: 4px solid var(--typost-color-danger, #b32d2e);
+    background: var(--typost-bg-surface, #fff);
+}
+
+.typost-export-error ul {
+    margin: 0 0 0 16px;
+    list-style: disc;
+}
+
+.typost-export-error p {
+    margin: 0;
+}
+
+.typost-import-preview h3:focus,
+.typost-import-result h3:focus {
+    outline: 2px solid var(--typost-color-primary, #2271b1);
+    outline-offset: 2px;
+}
+
+.typost-import-table {
+    margin: 8px 0 16px;
+}
+
+.typost-import-table th[scope="row"] {
+    font-weight: 600;
+}
+
+.typost-import-table select,
+.typost-import-rename {
+    max-width: 100%;
+}
+
+.typost-import-rename {
+    display: block;
+    margin-top: 4px;
+}
+
+.typost-import-rename[hidden] {
+    display: none;
+}
+
+.typost-import-note {
+    display: block;
+    font-weight: 400;
+    color: var(--typost-text-secondary, #646970);
+}
+
+.typost-import-status {
+    margin: 0 0 4px;
+}
+
+.typost-import-status.is-ambiguous,
+.typost-import-status.is-not_found {
+    color: var(--typost-color-warning-text, #996800);
+    font-weight: 600;
+}
+
+.typost-import-table [aria-invalid="true"] {
+    border-color: var(--typost-color-danger, #b32d2e);
+    box-shadow: 0 0 0 1px var(--typost-color-danger, #b32d2e);
+}
+
+.typost-import-actions .button + .button {
+    margin-left: 8px;
+}
+
+/* The tables scroll inside the panel on a narrow window, so the page does not. */
+@media (max-width: 600px) {
+    .typost-import-table {
+        display: block;
+        overflow-x: auto;
+    }
+}
