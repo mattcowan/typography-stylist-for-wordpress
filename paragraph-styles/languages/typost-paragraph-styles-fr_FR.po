@@ -649,54 +649,132 @@ msgid "Style “%s” reset to the style it is based on."
 msgstr "Style « %s » rétabli sur le style sur lequel il est basé."
 
 #. translators: 1: name of the style added to the export, 2: name of the style based on it
-#: paragraph-styles/includes/class-typost-ps-transfer.php:148
+#: includes/class-typost-ps-transfer.php:148
 #, php-format
 msgid "“%1$s” was added because “%2$s” is based on it."
 msgstr "« %1$s » a été ajouté, car « %2$s » est basé sur ce style."
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:229
+#: includes/class-typost-ps-transfer.php:229
 msgid "The paragraph styles in this file cannot be read. Nothing was saved."
 msgstr "Les styles de paragraphe de ce fichier ne peuvent pas être lus. Rien n’a été enregistré."
 
 #. translators: 1: style name, 2: why its Based On chain is rejected
-#: paragraph-styles/includes/class-typost-ps-transfer.php:274
-#: paragraph-styles/includes/class-typost-ps-transfer.php:808
+#: includes/class-typost-ps-transfer.php:274
+#: includes/class-typost-ps-transfer.php:808
 #, php-format
 msgid "“%1$s”: %2$s Nothing was saved."
 msgstr "« %1$s » : %2$s Rien n’a été enregistré."
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:519
+#: includes/class-typost-ps-transfer.php:519
 msgid "There is no style with this name to overwrite."
 msgstr "Il n’existe aucun style portant ce nom à remplacer."
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:522
+#: includes/class-typost-ps-transfer.php:522
 msgid "Another style in the file already overwrites this style."
 msgstr "Un autre style du fichier remplace déjà ce style."
 
 #. translators: %s: style name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:536
+#: includes/class-typost-ps-transfer.php:536
 #, php-format
 msgid "A style named “%s” already exists. Skip this style, add it with a new name, or overwrite the style on this site."
 msgstr "Un style nommé « %s » existe déjà. Ignorez ce style, ajoutez-le sous un nouveau nom, ou remplacez le style de ce site."
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:541
+#: includes/class-typost-ps-transfer.php:541
 msgid "The choice for this style is not valid."
 msgstr "Le choix pour ce style n’est pas valide."
 
 #. translators: 1: imported style name, 2: name of the style on this site it is based on
-#: paragraph-styles/includes/class-typost-ps-transfer.php:616
+#: includes/class-typost-ps-transfer.php:616
 #, php-format
 msgid "“%1$s” is based on “%2$s” on this site, which is not the same as in the file, so “%1$s” looks different from the file."
 msgstr "« %1$s » est basé sur le style « %2$s » de ce site, qui n’est pas identique à celui du fichier : « %1$s » aura donc un aspect différent de celui du fichier."
 
 #. translators: 1: style name, 2: list of OpenType feature codes, 3: font name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:650
+#: includes/class-typost-ps-transfer.php:650
 #, php-format
 msgid "“%1$s” uses OpenType features that are hidden for %3$s in Feature Visibility, so the font may not have them: %2$s."
 msgstr "« %1$s » utilise des fonctionnalités OpenType masquées pour %3$s dans Visibilité des fonctionnalités, la police ne les possède donc peut-être pas : %2$s."
 
 #. translators: 1: style name, 2: list of variable font axis tags, 3: font name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:664
+#: includes/class-typost-ps-transfer.php:664
 #, php-format
 msgid "“%1$s” sets variable font axes that are not defined for %3$s, so the font may not have them: %2$s."
 msgstr "« %1$s » définit des axes de police variable qui ne sont pas définis pour %3$s, la police ne les possède donc peut-être pas : %2$s."
+
+#: paragraph-styles.php:1924
+msgid "Word Spacing:"
+msgstr "Espacement des mots :"
+
+#. translators: 1: alignment, such as "Justify"; 2: last line alignment, such as "Center"
+#: paragraph-styles.php:1934
+#, php-format
+msgid "%1$s (last line: %2$s)"
+msgstr "%1$s (dernière ligne : %2$s)"
+
+#: paragraph-styles.php:2017
+msgid "Alignment:"
+msgstr "Alignement :"
+
+#: paragraph-styles.php:2020
+msgid "Line Breaking:"
+msgstr "Coupure des lignes :"
+
+#: paragraph-styles.php:2079
+msgid "Start"
+msgstr "Début"
+
+#: paragraph-styles.php:2080
+msgid "Center"
+msgstr "Centre"
+
+#: paragraph-styles.php:2081
+msgid "End"
+msgstr "Fin"
+
+#: paragraph-styles.php:2082
+msgid "Justify"
+msgstr "Justifié"
+
+#: paragraph-styles.php:2093
+msgid "Balance lines"
+msgstr "Équilibrer les lignes"
+
+#: paragraph-styles.php:2094
+msgid "Avoid short last lines"
+msgstr "Éviter les dernières lignes courtes"
+
+#: includes/admin-tab.php:243
+msgid "Alignment and line breaking"
+msgstr "Alignement et coupure des lignes"
+
+#: includes/admin-tab.php:244
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use alignment, word spacing or line breaking."
+msgstr "L’ajustement à la largeur fixe lui-même la largeur de chaque ligne : un style ajusté à la largeur n’utilise donc ni l’alignement, ni l’espacement des mots, ni la coupure des lignes."
+
+#: includes/admin-tab.php:247
+msgid "Alignment"
+msgstr "Alignement"
+
+#: includes/admin-tab.php:254
+msgid "Start and End follow the text direction. A block’s own alignment setting overrides this."
+msgstr "Début et Fin suivent le sens du texte. Le réglage d’alignement propre à un bloc a la priorité."
+
+#: includes/admin-tab.php:257
+msgid "Last line"
+msgstr "Dernière ligne"
+
+#: includes/admin-tab.php:265
+msgid "Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia. Consider turning on hyphenation, which makes the gaps smaller."
+msgstr "Le texte justifié a des espaces inégaux entre les mots, ce qui le rend plus difficile à lire pour certaines personnes, dont beaucoup de personnes dyslexiques. Pensez à activer la césure, qui réduit ces espaces."
+
+#: includes/admin-tab.php:268
+msgid "Word spacing (1/1000 em)"
+msgstr "Espacement des mots (1/1000 em)"
+
+#: includes/admin-tab.php:272
+msgid "Line breaking"
+msgstr "Coupure des lignes"
+
+#: includes/admin-tab.php:279
+msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
+msgstr "Équilibrer les lignes donne des longueurs proches aux lignes d’un titre court. Éviter les dernières lignes courtes convient au texte courant. Un navigateur qui ne prend pas en charge ce choix coupe les lignes normalement."

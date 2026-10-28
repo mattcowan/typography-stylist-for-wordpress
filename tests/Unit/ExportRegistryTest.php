@@ -128,6 +128,10 @@ class ExportRegistryTest extends ExportTestCase {
             'initialHang'           => 0.5,
             'textCase'              => 'small-caps',
             'fakeSmallCaps'         => false,
+            'alignment'             => 'justify',
+            'alignLast'             => 'center',
+            'wordSpacing'           => 120,
+            'textWrap'              => 'balance',
         );
     }
 
@@ -163,6 +167,9 @@ class ExportRegistryTest extends ExportTestCase {
             'fontVariationSettings' => '',
             'initialHang'           => 0,
             'textCase'              => '',
+            'alignment'             => '',
+            'wordSpacing'           => 0,
+            'textWrap'              => '',
         );
         $this->site->manual = array(array('id' => 'manual-a', 'name' => 'Brand', 'font_id' => 3, 'font_family' => 'Brand'));
         $module = $this->module(array(

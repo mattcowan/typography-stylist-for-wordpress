@@ -651,54 +651,132 @@ msgid "Inherited size"
 msgstr ""
 
 #. translators: 1: name of the style added to the export, 2: name of the style based on it
-#: paragraph-styles/includes/class-typost-ps-transfer.php:148
+#: includes/class-typost-ps-transfer.php:148
 #, php-format
 msgid "“%1$s” was added because “%2$s” is based on it."
 msgstr ""
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:229
+#: includes/class-typost-ps-transfer.php:229
 msgid "The paragraph styles in this file cannot be read. Nothing was saved."
 msgstr ""
 
 #. translators: 1: style name, 2: why its Based On chain is rejected
-#: paragraph-styles/includes/class-typost-ps-transfer.php:274
-#: paragraph-styles/includes/class-typost-ps-transfer.php:808
+#: includes/class-typost-ps-transfer.php:274
+#: includes/class-typost-ps-transfer.php:808
 #, php-format
 msgid "“%1$s”: %2$s Nothing was saved."
 msgstr ""
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:519
+#: includes/class-typost-ps-transfer.php:519
 msgid "There is no style with this name to overwrite."
 msgstr ""
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:522
+#: includes/class-typost-ps-transfer.php:522
 msgid "Another style in the file already overwrites this style."
 msgstr ""
 
 #. translators: %s: style name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:536
+#: includes/class-typost-ps-transfer.php:536
 #, php-format
 msgid "A style named “%s” already exists. Skip this style, add it with a new name, or overwrite the style on this site."
 msgstr ""
 
-#: paragraph-styles/includes/class-typost-ps-transfer.php:541
+#: includes/class-typost-ps-transfer.php:541
 msgid "The choice for this style is not valid."
 msgstr ""
 
 #. translators: 1: imported style name, 2: name of the style on this site it is based on
-#: paragraph-styles/includes/class-typost-ps-transfer.php:616
+#: includes/class-typost-ps-transfer.php:616
 #, php-format
 msgid "“%1$s” is based on “%2$s” on this site, which is not the same as in the file, so “%1$s” looks different from the file."
 msgstr ""
 
 #. translators: 1: style name, 2: list of OpenType feature codes, 3: font name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:650
+#: includes/class-typost-ps-transfer.php:650
 #, php-format
 msgid "“%1$s” uses OpenType features that are hidden for %3$s in Feature Visibility, so the font may not have them: %2$s."
 msgstr ""
 
 #. translators: 1: style name, 2: list of variable font axis tags, 3: font name
-#: paragraph-styles/includes/class-typost-ps-transfer.php:664
+#: includes/class-typost-ps-transfer.php:664
 #, php-format
 msgid "“%1$s” sets variable font axes that are not defined for %3$s, so the font may not have them: %2$s."
+msgstr ""
+
+#: paragraph-styles.php:1924
+msgid "Word Spacing:"
+msgstr ""
+
+#. translators: 1: alignment, such as "Justify"; 2: last line alignment, such as "Center"
+#: paragraph-styles.php:1934
+#, php-format
+msgid "%1$s (last line: %2$s)"
+msgstr ""
+
+#: paragraph-styles.php:2017
+msgid "Alignment:"
+msgstr ""
+
+#: paragraph-styles.php:2020
+msgid "Line Breaking:"
+msgstr ""
+
+#: paragraph-styles.php:2079
+msgid "Start"
+msgstr ""
+
+#: paragraph-styles.php:2080
+msgid "Center"
+msgstr ""
+
+#: paragraph-styles.php:2081
+msgid "End"
+msgstr ""
+
+#: paragraph-styles.php:2082
+msgid "Justify"
+msgstr ""
+
+#: paragraph-styles.php:2093
+msgid "Balance lines"
+msgstr ""
+
+#: paragraph-styles.php:2094
+msgid "Avoid short last lines"
+msgstr ""
+
+#: includes/admin-tab.php:243
+msgid "Alignment and line breaking"
+msgstr ""
+
+#: includes/admin-tab.php:244
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use alignment, word spacing or line breaking."
+msgstr ""
+
+#: includes/admin-tab.php:247
+msgid "Alignment"
+msgstr ""
+
+#: includes/admin-tab.php:254
+msgid "Start and End follow the text direction. A block’s own alignment setting overrides this."
+msgstr ""
+
+#: includes/admin-tab.php:257
+msgid "Last line"
+msgstr ""
+
+#: includes/admin-tab.php:265
+msgid "Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia. Consider turning on hyphenation, which makes the gaps smaller."
+msgstr ""
+
+#: includes/admin-tab.php:268
+msgid "Word spacing (1/1000 em)"
+msgstr ""
+
+#: includes/admin-tab.php:272
+msgid "Line breaking"
+msgstr ""
+
+#: includes/admin-tab.php:279
+msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr ""

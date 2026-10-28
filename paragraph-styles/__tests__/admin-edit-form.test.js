@@ -70,6 +70,26 @@ function buildTemplate() {
 				<input type="checkbox" id="typost-ps-edit-fake" data-field="fakeSmallCaps" />
 				<label for="typost-ps-edit-fake">Allow fake small caps</label>
 			</p>
+			<p data-show-for-size="fit">Fit uses no alignment</p>
+			<div data-show-for-size="inherit fixed responsive">
+				<select id="typost-ps-edit-alignment" data-field="alignment" aria-describedby="typost-ps-edit-alignment-help">
+					<option value="">Default</option>
+					${['start', 'center', 'end', 'justify'].map((a) => `<option value="${a}">${a}</option>`).join('')}
+				</select>
+				<span id="typost-ps-edit-alignment-help">Start and End follow the text direction.</span>
+				<p data-show-for-align="justify">
+					<select data-field="alignLast">
+						${['', 'center', 'end', 'justify'].map((a) => `<option value="${a}">${a || 'start'}</option>`).join('')}
+					</select>
+				</p>
+			</div>
+			<p class="typost-ps-edit-justify-note" id="typost-ps-edit-justify-note" data-show-for-align="justify">Justified text is harder to read</p>
+			<div data-show-for-size="inherit fixed responsive">
+				<input type="number" data-field="wordSpacing" />
+				<select data-field="textWrap">
+					<option value="">Normal</option><option value="balance">Balance lines</option><option value="pretty">Avoid short last lines</option>
+				</select>
+			</div>
 			<div role="group" aria-labelledby="typost-ps-edit-features-ligatures">
 				<p id="typost-ps-edit-features-ligatures">Ligatures</p>
 				${FEATURES.map((f) => `<input type="checkbox" data-feature value="${f}" />`).join('')}
@@ -769,5 +789,107 @@ describe('Reset to Base confirm (#300, source scan)', () => {
 		expect(handler).toMatch(/hasUnsavedEditChanges\(readEditForm\(form\), \$\(form\)\.data\('baseline'\)/);
 		expect(handler.indexOf('hasUnsavedEditChanges(')).toBeLessThan(handler.indexOf('confirm('));
 		expect(handler).toContain('The changes in this form are not saved, and Reset to Base discards them.');
+	});
+});
+
+describe('alignment, word spacing and line breaking (#207)', () => {
+	const STYLE = {
+		id: 7,
+		name: 'Body',
+		properties: { fontWeight: '400', alignment: 'justify', alignLast: 'center', wordSpacing: 40, textWrap: 'pretty' },
+	};
+
+	test('the form fills from the style and an untouched form sends no properties', () => {
+		const { form, baseline } = openForm(STYLE);
+		const values = readEditForm(form);
+		expect(values.alignment).toBe('justify');
+		expect(values.alignLast).toBe('center');
+		expect(values.wordSpacing).toBe(40);
+		expect(values.textWrap).toBe('pretty');
+		expect(buildEditPayload(values, baseline, STYLE, 'rem')).toEqual({ name: 'Body' });
+	});
+
+	test('changing a setting sends the whole set with the new value', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'textWrap', 'balance');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({
+			fontWeight: '400', alignment: 'justify', alignLast: 'center', wordSpacing: 40, textWrap: 'balance',
+		});
+	});
+
+	test('Default alignment, 0 and Normal remove the settings', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'alignment', '');
+		setField(form, 'wordSpacing', '0');
+		setField(form, 'textWrap', '');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({ fontWeight: '400' });
+	});
+
+	test('a last line is not stored once the text is no longer justified', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'alignment', 'center');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({
+			fontWeight: '400', alignment: 'center', wordSpacing: 40, textWrap: 'pretty',
+		});
+	});
+
+	test('the last line and the justify note show only for Justify, and the note joins the description', () => {
+		const { form } = openForm(STYLE);
+		const select = form.querySelector('[data-field="alignment"]');
+		const note = form.querySelector('.typost-ps-edit-justify-note');
+		expect(note.hidden).toBe(false);
+		expect(form.querySelector('[data-field="alignLast"]').closest('[data-show-for-align]').hidden).toBe(false);
+		expect(select.getAttribute('aria-describedby')).toBe('typost-ps-edit-alignment-help-7 typost-ps-edit-justify-note-7');
+
+		setField(form, 'alignment', 'start');
+		updateConditionalFields(form);
+		expect(note.hidden).toBe(true);
+		expect(form.querySelector('[data-field="alignLast"]').closest('[data-show-for-align]').hidden).toBe(true);
+		expect(select.getAttribute('aria-describedby')).toBe('typost-ps-edit-alignment-help-7');
+	});
+
+	test('switching to fit to width stops storing the hidden settings (PR #329 review)', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'sizeMode', 'fit');
+		const props = buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties;
+		expect(props.fontSize).toBe('fit');
+		['alignment', 'alignLast', 'wordSpacing', 'textWrap'].forEach((key) => {
+			expect(props).not.toHaveProperty(key);
+		});
+	});
+
+	test('a fit style based on another stores no override for a hidden setting (PR #329 review)', () => {
+		const { resolveStyleList } = require('../assets/js/lib/ps-utils.js');
+		const styles = resolveStyleList([
+			{ id: 1, name: 'Body', properties: { fontWeight: '400', alignment: 'center', textWrap: 'pretty' } },
+			{ id: 2, name: 'Fit head', basedOn: 1, properties: { fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0 } },
+		]);
+		// Client shape: properties are already resolved through the parent
+		const { form, baseline } = openForm(styles[1]);
+		// The hidden field changed (it held a value from before fit)
+		setField(form, 'alignment', 'end');
+		setField(form, 'fontWeight', '700');
+		const props = buildEditPayload(readEditForm(form), baseline, styles[1], 'rem', styles).properties;
+		expect(props.fontWeight).toBe('700');
+		['alignment', 'alignLast', 'wordSpacing', 'textWrap'].forEach((key) => {
+			expect(props).not.toHaveProperty(key);
+		});
+	});
+
+	test('an untouched fit form is not an unsaved change (PR #329 review)', () => {
+		const fitStyle = { id: 7, name: 'Fit', properties: { fontSize: 'fit', fontSizeUnit: 'rem', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fitMaxSize: 0, alignment: 'center' } };
+		const { form, baseline } = openForm(fitStyle);
+		const { hasUnsavedEditChanges } = require('../assets/js/admin.js');
+		expect(hasUnsavedEditChanges(readEditForm(form), baseline, fitStyle, 'rem')).toBe(false);
+	});
+
+	test('fit to width hides the settings and the justify note', () => {
+		const { form } = openForm(STYLE);
+		setField(form, 'sizeMode', 'fit');
+		updateConditionalFields(form);
+		form.querySelectorAll('[data-show-for-size="inherit fixed responsive"]').forEach((el) => {
+			expect(el.hidden).toBe(true);
+		});
+		expect(form.querySelector('.typost-ps-edit-justify-note').hidden).toBe(true);
 	});
 });

@@ -296,7 +296,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, and the First Letter Hang.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, and line breaking.
 
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
@@ -304,6 +304,19 @@ A paragraph style is a named set of typography settings. It holds the font, weig
 4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
+
+#### Alignment, word spacing and line breaking
+
+A style can also set how its text is aligned, how wide the spaces between words are, and how lines break. Set them in the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+
+- **Alignment:** Start, Center, End, or Justify. Start and End follow the text direction: Start is left in English and right in Arabic or Hebrew. The alignment setting of a block (in the block toolbar) overrides the style's alignment. Alignment applies to whole blocks only: when you apply the style to selected text, the text keeps the alignment of its block.
+- **Last line:** for justified text, the alignment of the last line: Start (the default), Center, End, or Justify.
+- **Word spacing:** extra space between words, in thousandths of an em. A negative value makes the spaces smaller. The style does not use `!important`, so a text-spacing tool or a reader's style sheet that sets word spacing with `!important` overrides it (WCAG 1.4.12).
+- **Line breaking:** “Balance lines” gives the lines of a short heading similar lengths, so a two-line heading does not end with one word. Chrome balances up to 6 lines, Firefox up to 10, so use it for headings, not body text. “Avoid short last lines” suits body text: it avoids a last line with one word, and Safari also evens out the right edge of the paragraph. Firefox does not support it yet and uses normal line breaks.
+- Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia (WCAG 1.4.8). The form shows a note when you choose Justify. Hyphenation makes the gaps smaller.
+- A Fit to width style uses none of these settings: fit sets the width of each line itself.
+- A centered or end-aligned style with a First Letter Hang does not hang the first letter, as for a centered block.
+- “Detach Style” keeps the alignment: the block gets it as its own alignment, unless the block already has one. Start and End become left or right, by the text direction. A core Paragraph or Heading block does not keep Justify, because WordPress has no justify alignment for these blocks. Word spacing and line breaking are removed, because a block has no setting to keep them.
 
 In a Typography Stylist block, the Paragraph Style panel in the Quick Feature Toggles works on the selected text, like the other controls there. With text selected, “Save Current Settings as Style” makes the style from the settings of the selected text, and only that text gets the style. A style made from selected text includes the case of that text. It does not include the First Letter Hang, which applies to the whole block. “Update Style” and “Detach Style” work on the style of the selected text. With only the caret in the block, the panel works on the whole block. The Paragraph Style panel in the block sidebar always works on the whole block.
 

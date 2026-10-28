@@ -184,7 +184,23 @@
 		if (!clientId || !window.wp || !wp.data) return;
 		var current = getBlockClassName(clientId);
 		var next = style ? applyStyleToClassName(current, style.id) : removeStyleFromClassName(current);
-		wp.data.dispatch('core/block-editor').updateBlockAttributes(clientId, { className: next });
+		var update = { className: next };
+		if (!style) {
+			// Detach keeps the style's alignment (#207, PR #329 review) on a
+			// block without one of its own, in the attribute its version uses
+			var detached = findStyleByRef(getStyles(), getCoreBlockStyleRef(current));
+			var editor = wp.data.select('core/block-editor');
+			var blockType = window.wp.blocks && wp.blocks.getBlockType ? wp.blocks.getBlockType(editor.getBlockName(clientId)) : null;
+			var isRtl = !!(wp.i18n && wp.i18n.isRTL && wp.i18n.isRTL());
+			var alignUpdate = detached
+				? utils.buildCoreBlockAlignUpdate(blockType, editor.getBlockAttributes(clientId), (detached.properties || {}).alignment, isRtl)
+				: null;
+			if (alignUpdate) {
+				Object.assign(update, alignUpdate);
+			}
+		}
+		// One attribute change, so Detach stays one undo step
+		wp.data.dispatch('core/block-editor').updateBlockAttributes(clientId, update);
 		if (style) {
 			// Core no longer loads every Adobe Fonts kit in the editor (#230)
 			var kits = window.typostFontKits;
