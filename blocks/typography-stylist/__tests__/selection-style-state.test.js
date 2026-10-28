@@ -33,7 +33,9 @@ const UNSET = {
 	letterSpacing: 0,
 	lineHeight: 0,
 	features: [],
-	fontVariationSettings: ''
+	fontVariationSettings: '',
+	textCase: '',
+	fakeSmallCaps: true
 };
 
 describe('resolveSelectionStyleState', () => {
@@ -165,12 +167,56 @@ describe('resolveSelectionStyleState', () => {
 		expect(resolveSelectionStyleState(html, 0, 3, STYLES).fontWeight).toBe('700');
 	});
 
-	test('reports no hang and no case, which are not selection properties', () => {
+	test('reports no hang, which is not a selection property, and the style\'s case (#309)', () => {
 		const html = '<span class="typost-styled" data-style-id="6">T</span>he';
 		const state = resolveSelectionStyleState(html, 0, 1, STYLES);
 		expect(state).not.toHaveProperty('initialHang');
-		expect(state).not.toHaveProperty('textCase');
+		expect(state.textCase).toBe('small-caps');
+		expect(state.fakeSmallCaps).toBe(true);
 		expect(state.fontWeight).toBe('600');
+	});
+
+	describe('case of the selected text (#309)', () => {
+		test('a span with its own case reports it', () => {
+			const html = '<span class="typost-styled" data-textcase="all-small-caps" data-fakesmallcaps="false" ' +
+				'style="text-transform: none; font-variant-caps: all-small-caps; font-synthesis-small-caps: none">T</span>he';
+			const state = resolveSelectionStyleState(html, 0, 1, STYLES);
+			expect(state.textCase).toBe('all-small-caps');
+			expect(state.fakeSmallCaps).toBe(false);
+		});
+
+		test('a case declared on a style span beats the style', () => {
+			const html = '<span class="typost-styled" data-style-id="6" data-textcase="uppercase" ' +
+				'style="text-transform: uppercase; font-variant-caps: normal">T</span>he';
+			expect(resolveSelectionStyleState(html, 0, 1, STYLES).textCase).toBe('uppercase');
+		});
+
+		test('a style span\'s data-textcase without a declaration is the style\'s own case', () => {
+			// The inline editor stores the style's case on the span for detection
+			const html = '<span class="typost-styled" data-style-id="3" data-textcase="uppercase">T</span>he';
+			expect(resolveSelectionStyleState(html, 0, 1, STYLES).textCase).toBe('');
+		});
+
+		test('an inner span\'s case wins over an outer one', () => {
+			const html = '<span class="typost-styled" data-textcase="uppercase" style="text-transform: uppercase; font-variant-caps: normal">' +
+				'<span class="typost-styled" data-textcase="lowercase" style="text-transform: lowercase; font-variant-caps: normal">T</span>he</span>';
+			expect(resolveSelectionStyleState(html, 0, 1, STYLES).textCase).toBe('lowercase');
+		});
+
+		test('a style saved from the selection stores its case', () => {
+			const html = '<span class="typost-styled" data-textcase="small-caps" data-fakesmallcaps="false" ' +
+				'style="text-transform: none; font-variant-caps: small-caps; font-synthesis-small-caps: none">T</span>he';
+			const state = resolveSelectionStyleState(html, 0, 1, STYLES);
+			expect(psUtils.buildPropertiesFromState(state)).toEqual({ textCase: 'small-caps', fakeSmallCaps: false });
+		});
+
+		test('the "(modified)" check compares the case', () => {
+			const html = '<span class="typost-styled" data-textcase="uppercase" style="text-transform: uppercase; font-variant-caps: normal">T</span>he';
+			const state = resolveSelectionStyleState(html, 0, 1, STYLES);
+			expect(psUtils.isStyleModified(state, { textCase: 'uppercase' })).toBe(false);
+			expect(psUtils.isStyleModified(state, { textCase: 'lowercase' })).toBe(true);
+			expect(psUtils.isStyleModified(state, {})).toBe(true);
+		});
 	});
 });
 
@@ -366,9 +412,9 @@ describe('selectionHasOneStyleSet', () => {
 		expect(selectionHasOneStyleSet('The quick', 0, 3)).toBe(true);
 	});
 
-	test('a span with its own case is not: the capture leaves case out', () => {
+	test('a span with its own case is one set: the capture includes case (#309)', () => {
 		const html = '<span class="typost-styled" data-textcase="uppercase" style="text-transform: uppercase; font-variant-caps: normal">T</span>he';
-		expect(selectionHasOneStyleSet(html, 0, 1)).toBe(false);
+		expect(selectionHasOneStyleSet(html, 0, 1)).toBe(true);
 	});
 
 	test('a caret or no content is not a selection', () => {
