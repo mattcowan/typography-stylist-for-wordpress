@@ -456,8 +456,10 @@ final class Typost_Paragraph_Styles {
 
 		// Alignment, word spacing and line breaking (#207). Not for fit to
 		// width: fit sets each line's width itself, and word spacing would
-		// change the widths it measured. No !important, so a user style
-		// sheet that changes word spacing (WCAG 1.4.12) still wins.
+		// change the widths it measured. No !important, so a block's own
+		// inline word-spacing beats the style, and a text-spacing tool or
+		// user style sheet that sets it with !important overrides it
+		// (WCAG 1.4.12).
 		$is_fit      = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
 		$align_rules = array();
 		if ( ! $is_fit ) {

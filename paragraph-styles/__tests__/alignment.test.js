@@ -125,7 +125,7 @@ describe('buildStyleCssBlock (shared fixture)', () => {
 		expect(css).toContain('text-wrap: balance;\n    text-wrap-mode: inherit;');
 	});
 
-	test('no declaration uses !important (WCAG 1.4.12: user word spacing must still win)', () => {
+	test('no declaration uses !important (WCAG 1.4.12: a text-spacing override must still win)', () => {
 		fixture.cases.forEach(({ css }) => {
 			expect(css).not.toMatch(/!important/);
 		});

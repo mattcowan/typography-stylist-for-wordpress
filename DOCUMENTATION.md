@@ -311,7 +311,7 @@ A style can also set how its text is aligned, how wide the spaces between words 
 
 - **Alignment:** Start, Center, End, or Justify. Start and End follow the text direction: Start is left in English and right in Arabic or Hebrew. The alignment setting of a block (in the block toolbar) overrides the style's alignment. Alignment applies to whole blocks only: when you apply the style to selected text, the text keeps the alignment of its block.
 - **Last line:** for justified text, the alignment of the last line: Start (the default), Center, End, or Justify.
-- **Word spacing:** extra space between words, in thousandths of an em. A negative value makes the spaces smaller. A reader's own style sheet that sets word spacing still wins (WCAG 1.4.12).
+- **Word spacing:** extra space between words, in thousandths of an em. A negative value makes the spaces smaller. The style does not use `!important`, so a text-spacing tool or a reader's style sheet that sets word spacing with `!important` overrides it (WCAG 1.4.12).
 - **Line breaking:** “Balance lines” gives the lines of a short heading similar lengths, so a two-line heading does not end with one word. Chrome balances up to 6 lines, Firefox up to 10, so use it for headings, not body text. “Avoid short last lines” suits body text: it avoids a last line with one word, and Safari also evens out the right edge of the paragraph. Firefox does not support it yet and uses normal line breaks.
 - Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia (WCAG 1.4.8). The form shows a note when you choose Justify. Hyphenation makes the gaps smaller.
 - A Fit to width style uses none of these settings: fit sets the width of each line itself.
