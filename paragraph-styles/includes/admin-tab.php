@@ -234,6 +234,53 @@ foreach ( $form_features as $feature ) {
 				</div>
 			</fieldset>
 
+			<?php
+			// Alignment, word spacing and line breaking (#207). Fit to width
+			// sets each line's width itself, so a fit style writes none of
+			// them and the fields are hidden in fit mode.
+			?>
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Alignment and line breaking', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" data-show-for-size="fit"><?php esc_html_e( 'Fit to width sets the width of each line itself, so a Fit to width style does not use alignment, word spacing or line breaking.', 'typost-paragraph-styles' ); ?></p>
+				<div class="typost-ps-edit-row" data-show-for-size="inherit fixed responsive">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-alignment"><?php esc_html_e( 'Alignment', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-alignment" data-field="alignment" aria-describedby="typost-ps-edit-alignment-help">
+							<option value=""><?php esc_html_e( 'Default', 'typost-paragraph-styles' ); ?></option>
+							<?php foreach ( Typost_Paragraph_Styles::alignment_labels() as $align_value => $align_label ) : ?>
+								<option value="<?php echo esc_attr( $align_value ); ?>"><?php echo esc_html( $align_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-alignment-help"><?php esc_html_e( 'Start and End follow the text direction. A block’s own alignment setting overrides this.', 'typost-paragraph-styles' ); ?></span>
+					</p>
+					<p class="typost-ps-edit-field" data-show-for-align="justify">
+						<label for="typost-ps-edit-align-last"><?php esc_html_e( 'Last line', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-align-last" data-field="alignLast">
+							<?php foreach ( Typost_Paragraph_Styles::alignment_labels() as $align_value => $align_label ) : ?>
+								<option value="<?php echo esc_attr( 'start' === $align_value ? '' : $align_value ); ?>"><?php echo esc_html( $align_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</p>
+				</div>
+				<p class="typost-ps-edit-help typost-ps-edit-justify-note" id="typost-ps-edit-justify-note" data-show-for-align="justify"><?php esc_html_e( 'Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia. Consider turning on hyphenation, which makes the gaps smaller.', 'typost-paragraph-styles' ); ?></p>
+				<div class="typost-ps-edit-row" data-show-for-size="inherit fixed responsive">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-word-spacing"><?php esc_html_e( 'Word spacing (1/1000 em)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-word-spacing" data-field="wordSpacing" min="-500" max="1000" step="1" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-text-wrap"><?php esc_html_e( 'Line breaking', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-text-wrap" data-field="textWrap" aria-describedby="typost-ps-edit-text-wrap-help">
+							<option value=""><?php esc_html_e( 'Normal', 'typost-paragraph-styles' ); ?></option>
+							<?php foreach ( Typost_Paragraph_Styles::text_wrap_labels() as $wrap_value => $wrap_label ) : ?>
+								<option value="<?php echo esc_attr( $wrap_value ); ?>"><?php echo esc_html( $wrap_label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-text-wrap-help"><?php esc_html_e( 'Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks.', 'typost-paragraph-styles' ); ?></span>
+					</p>
+				</div>
+			</fieldset>
+
 			<fieldset class="typost-ps-edit-group">
 				<legend><?php esc_html_e( 'OpenType features', 'typost-paragraph-styles' ); ?></legend>
 				<div class="typost-ps-edit-features">

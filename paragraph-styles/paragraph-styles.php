@@ -91,6 +91,35 @@ final class Typost_Paragraph_Styles {
 	const TEXT_CASE_VALUES = array( 'none', 'uppercase', 'lowercase', 'capitalize', 'small-caps', 'all-small-caps' );
 
 	/**
+	 * @var string[] Alignment values a style can store (#207); absent =
+	 * Default (the block's or the theme's). Start and end follow the text
+	 * direction. Mirrors ALIGNMENT_VALUES in ps-utils.js.
+	 */
+	const ALIGNMENT_VALUES = array( 'start', 'center', 'end', 'justify' );
+
+	/**
+	 * @var string[] Last line alignment values for justified text (#207);
+	 * absent = start, the browser's default for justified text. Mirrors
+	 * ALIGN_LAST_VALUES in ps-utils.js.
+	 */
+	const ALIGN_LAST_VALUES = array( 'center', 'end', 'justify' );
+
+	/**
+	 * @var string[] Line breaking values (#207), written as `text-wrap`;
+	 * absent = normal. Mirrors TEXT_WRAP_VALUES in ps-utils.js.
+	 */
+	const TEXT_WRAP_VALUES = array( 'balance', 'pretty' );
+
+	/**
+	 * Guard on the alignment rule (#207): a block that sets its own
+	 * alignment keeps it. The Typography Stylist block writes it as an
+	 * inline text-align (also under a style), core Paragraph and Heading
+	 * blocks as a has-text-align-* class. Mirrors ALIGNMENT_GUARD in
+	 * ps-utils.js.
+	 */
+	const ALIGNMENT_GUARD = ':not([style*="text-align"], [class*="has-text-align-"])';
+
+	/**
 	 * Most styles a Based On chain may hold, the style itself included (#200).
 	 * Resolution stops there, so bad data in the option cannot loop.
 	 * Mirrors MAX_BASED_ON_LEVELS in ps-utils.js.
@@ -104,7 +133,8 @@ final class Typost_Paragraph_Styles {
 	 */
 	const BASED_ON_GROUPS = array(
 		'fontSize' => array( 'fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize' ),
-		'textCase' => array( 'textCase', 'fakeSmallCaps' ),
+		'textCase'  => array( 'textCase', 'fakeSmallCaps' ),
+		'alignment' => array( 'alignment', 'alignLast' ),
 	);
 
 	/**
@@ -121,6 +151,8 @@ final class Typost_Paragraph_Styles {
 		'features'              => array(),
 		'fontVariationSettings' => '',
 		'initialHang'           => 0,
+		'wordSpacing'           => 0,
+		'textWrap'              => '',
 	);
 
 	/**
@@ -415,7 +447,23 @@ final class Typost_Paragraph_Styles {
 			$css_rules[] = $declaration[0] . ': ' . $declaration[1];
 		}
 
-		if ( empty( $css_rules ) ) {
+		// Alignment, word spacing and line breaking (#207). Not for fit to
+		// width: fit sets each line's width itself, and word spacing would
+		// change the widths it measured. No !important, so a user style
+		// sheet that changes word spacing (WCAG 1.4.12) still wins.
+		$is_fit      = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
+		$align_rules = array();
+		if ( ! $is_fit ) {
+			if ( ! empty( $props['wordSpacing'] ) ) {
+				$css_rules[] = 'word-spacing: ' . ( intval( $props['wordSpacing'] ) / 1000 ) . 'em';
+			}
+			if ( isset( $props['textWrap'] ) && in_array( $props['textWrap'], self::TEXT_WRAP_VALUES, true ) ) {
+				$css_rules[] = 'text-wrap: ' . $props['textWrap'];
+			}
+			$align_rules = self::alignment_declarations( $props, $hang );
+		}
+
+		if ( empty( $css_rules ) && empty( $align_rules ) ) {
 			return '';
 		}
 
@@ -457,17 +505,59 @@ final class Typost_Paragraph_Styles {
 			);
 		}
 
-		$css = sprintf(
-			"%s {\n    %s;\n}",
-			$selector,
-			implode( ";\n    ", $css_rules )
-		);
+		$css = '';
+		if ( ! empty( $css_rules ) ) {
+			$css = sprintf(
+				"%s {\n    %s;\n}",
+				$selector,
+				implode( ";\n    ", $css_rules )
+			);
+		}
+
+		// The alignment goes in its own rule, guarded so a block with its
+		// own alignment keeps it (see ALIGNMENT_GUARD): an inline text-align
+		// wins anyway, but core's has-text-align-* classes are (0,1,0) and
+		// the last line alignment and the hang switch would still apply.
+		if ( ! empty( $align_rules ) ) {
+			$guarded = implode( ",\n", array_map( function ( $part ) {
+				return $part . self::ALIGNMENT_GUARD;
+			}, explode( ",\n", $selector ) ) );
+			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
+		}
 
 		if ( $hang > 0 ) {
 			$css .= self::core_block_hang_css( $id );
 		}
 
 		return $css;
+	}
+
+	/**
+	 * The alignment declarations of a style (#207), for its guarded rule.
+	 *
+	 * `text-align-last` only with justified text. A centered or end-aligned
+	 * style with a First Letter Hang also turns the hang off, as the block
+	 * does for its own centered or end-aligned text: moving the first
+	 * letter would only shift the line. Mirrors alignmentDeclarations() in
+	 * ps-utils.js.
+	 *
+	 * @param array $props Resolved properties.
+	 * @param float $hang  The style's normalized hang.
+	 * @return string[] Declarations.
+	 */
+	private static function alignment_declarations( $props, $hang ) {
+		$alignment = isset( $props['alignment'] ) && in_array( $props['alignment'], self::ALIGNMENT_VALUES, true ) ? $props['alignment'] : '';
+		if ( '' === $alignment ) {
+			return array();
+		}
+		$rules = array( 'text-align: ' . $alignment );
+		if ( 'justify' === $alignment && isset( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
+			$rules[] = 'text-align-last: ' . $props['alignLast'];
+		}
+		if ( $hang > 0 && in_array( $alignment, array( 'center', 'end' ), true ) ) {
+			$rules[] = '--typost-hang-on: 0';
+		}
+		return $rules;
 	}
 
 	/**
@@ -1821,6 +1911,40 @@ final class Typost_Paragraph_Styles {
 			$spacing_rows[] = array( __( 'Line Height:', 'typost-paragraph-styles' ), $none, array( 'lineHeight' ) );
 		}
 
+		// Alignment, word spacing and line breaking (#207). A fit to width
+		// style writes none of them (generate_style_css()), so its card does
+		// not list them either.
+		$is_fit        = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
+		$align_display = '';
+		$wrap_display  = '';
+		if ( ! $is_fit ) {
+			if ( ! empty( $props['wordSpacing'] ) ) {
+				$word_em = round( $props['wordSpacing'] / 1000, 3 );
+				/* translators: %s: word spacing in em */
+				$spacing_rows[] = array( __( 'Word Spacing:', 'typost-paragraph-styles' ), sprintf( __( '%sem', 'typost-paragraph-styles' ), $word_em ), array( 'wordSpacing' ) );
+			} elseif ( $unsets( 'wordSpacing' ) ) {
+				$spacing_rows[] = array( __( 'Word Spacing:', 'typost-paragraph-styles' ), $none, array( 'wordSpacing' ) );
+			}
+
+			$align_labels = self::alignment_labels();
+			if ( isset( $props['alignment'] ) && is_string( $props['alignment'] ) && isset( $align_labels[ $props['alignment'] ] ) ) {
+				$align_display = $align_labels[ $props['alignment'] ];
+				if ( 'justify' === $props['alignment'] && isset( $props['alignLast'] ) && is_string( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
+					/* translators: 1: alignment, such as "Justify"; 2: last line alignment, such as "Center" */
+					$align_display = sprintf( __( '%1$s (last line: %2$s)', 'typost-paragraph-styles' ), $align_display, $align_labels[ $props['alignLast'] ] );
+				}
+			} elseif ( $unsets( 'alignment' ) ) {
+				$align_display = $none;
+			}
+
+			$wrap_labels = self::text_wrap_labels();
+			if ( isset( $props['textWrap'] ) && is_string( $props['textWrap'] ) && isset( $wrap_labels[ $props['textWrap'] ] ) ) {
+				$wrap_display = $wrap_labels[ $props['textWrap'] ];
+			} elseif ( $unsets( 'textWrap' ) ) {
+				$wrap_display = $none;
+			}
+		}
+
 		// Variable font axes, shown as the sanitizer stored them
 		$axes_display = ! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
 
@@ -1889,6 +2013,12 @@ final class Typost_Paragraph_Styles {
 		if ( '' !== $case_display ) {
 			$html .= $detail( array( array( __( 'Case:', 'typost-paragraph-styles' ), $case_display, array( 'textCase' ) ) ) );
 		}
+		if ( '' !== $align_display ) {
+			$html .= $detail( array( array( __( 'Alignment:', 'typost-paragraph-styles' ), $align_display, array( 'alignment' ) ) ) );
+		}
+		if ( '' !== $wrap_display ) {
+			$html .= $detail( array( array( __( 'Line Breaking:', 'typost-paragraph-styles' ), $wrap_display, array( 'textWrap' ) ) ) );
+		}
 
 		return '<div class="typost-ps-style-card-details" data-font-label="' . esc_attr( $font_name ) . '">' . $html . '</div>';
 	}
@@ -1935,6 +2065,33 @@ final class Typost_Paragraph_Styles {
 			'capitalize'     => __( 'Title Case', 'typost-paragraph-styles' ),
 			'small-caps'     => __( 'Small Caps', 'typost-paragraph-styles' ),
 			'all-small-caps' => __( 'All Small Caps', 'typost-paragraph-styles' ),
+		);
+	}
+
+	/**
+	 * Alignment labels (#207), keyed by stored value. Also the last line
+	 * labels (ALIGN_LAST_VALUES is a subset).
+	 *
+	 * @return array<string,string>
+	 */
+	public static function alignment_labels() {
+		return array(
+			'start'   => __( 'Start', 'typost-paragraph-styles' ),
+			'center'  => __( 'Center', 'typost-paragraph-styles' ),
+			'end'     => __( 'End', 'typost-paragraph-styles' ),
+			'justify' => __( 'Justify', 'typost-paragraph-styles' ),
+		);
+	}
+
+	/**
+	 * Line breaking labels (#207), keyed by stored value.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function text_wrap_labels() {
+		return array(
+			'balance' => __( 'Balance lines', 'typost-paragraph-styles' ),
+			'pretty'  => __( 'Avoid short last lines', 'typost-paragraph-styles' ),
 		);
 	}
 
@@ -2099,8 +2256,9 @@ final class Typost_Paragraph_Styles {
 	 * @param array|null $raw        Raw properties from request.
 	 * @param bool       $keep_empty Keep the empty values a style based on
 	 *                               another stores to unset an inherited
-	 *                               property (#200): `fontStyle`, `textCase`
-	 *                               and `fontVariationSettings` as '', and
+	 *                               property (#200): `fontStyle`, `textCase`,
+	 *                               `alignment`, `textWrap` and
+	 *                               `fontVariationSettings` as '', and
 	 *                               `initialHang` as 0. Other keys keep their
 	 *                               empty values either way.
 	 * @return array Sanitized properties.
@@ -2205,6 +2363,29 @@ final class Typost_Paragraph_Styles {
 			}
 		} elseif ( $keep_empty && isset( $raw['textCase'] ) && '' === $raw['textCase'] ) {
 			$clean['textCase'] = '';
+		}
+
+		// Alignment (#207): Default ('') is never stored; alignLast only
+		// with justified text, and never as start (the default).
+		if ( isset( $raw['alignment'] ) && in_array( $raw['alignment'], self::ALIGNMENT_VALUES, true ) ) {
+			$clean['alignment'] = $raw['alignment'];
+			if ( 'justify' === $raw['alignment'] && isset( $raw['alignLast'] ) && in_array( $raw['alignLast'], self::ALIGN_LAST_VALUES, true ) ) {
+				$clean['alignLast'] = $raw['alignLast'];
+			}
+		} elseif ( $keep_empty && isset( $raw['alignment'] ) && '' === $raw['alignment'] ) {
+			$clean['alignment'] = '';
+		}
+
+		// Word spacing in thousandths of an em, like letterSpacing; can be negative
+		if ( isset( $raw['wordSpacing'] ) ) {
+			$clean['wordSpacing'] = intval( $raw['wordSpacing'] );
+		}
+
+		// Line breaking: normal ('') is never stored unless it unsets an inherited value
+		if ( isset( $raw['textWrap'] ) && in_array( $raw['textWrap'], self::TEXT_WRAP_VALUES, true ) ) {
+			$clean['textWrap'] = $raw['textWrap'];
+		} elseif ( $keep_empty && isset( $raw['textWrap'] ) && '' === $raw['textWrap'] ) {
+			$clean['textWrap'] = '';
 		}
 
 		return $clean;
@@ -2447,6 +2628,11 @@ final class Typost_Paragraph_Styles {
 				unset( $props[ $key ] );
 			}
 		}
+		if ( array_key_exists( 'alignment', $props ) && ! in_array( $props['alignment'], self::ALIGNMENT_VALUES, true ) ) {
+			foreach ( self::BASED_ON_GROUPS['alignment'] as $key ) {
+				unset( $props[ $key ] );
+			}
+		}
 		foreach ( $props as $key => $value ) {
 			if ( ! self::is_group_key( $key ) && empty( $value ) ) {
 				unset( $props[ $key ] );
@@ -2494,7 +2680,8 @@ final class Typost_Paragraph_Styles {
 	 * `$full` is the whole look; the result keeps what differs from the
 	 * parent's resolved properties and stores the empty value of each
 	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
-	 * fontSize 'inherit', textCase ''), so the style still does not set it.
+	 * fontSize 'inherit', textCase '', alignment ''), so the style still
+	 * does not set it.
 	 * Used when a style gets its first parent (rebase_properties()). Twin of
 	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
 	 * cases of the shared fixture.
@@ -2543,7 +2730,7 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Whether a key belongs to the size or the case group.
+	 * Whether a key belongs to the size, the case or the alignment group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool
@@ -2562,13 +2749,23 @@ final class Typost_Paragraph_Styles {
 	 *
 	 * Size: 'none' when no size is set; else the mode, the unit (absent is
 	 * px), the trio for responsive and fit, and the cap for fit. Case: the
-	 * case value and whether fake small caps are allowed. Twin: groupSignature().
+	 * case value and whether fake small caps are allowed. Alignment (#207):
+	 * 'none' when not set, else the value and the last line alignment of
+	 * justified text. Twin: groupSignature().
 	 *
-	 * @param string $lead  'fontSize' or 'textCase'.
+	 * @param string $lead  'fontSize', 'textCase' or 'alignment'.
 	 * @param array  $props Properties.
 	 * @return string
 	 */
 	private static function group_signature( $lead, $props ) {
+		if ( 'alignment' === $lead ) {
+			$alignment = isset( $props['alignment'] ) && in_array( $props['alignment'], self::ALIGNMENT_VALUES, true ) ? $props['alignment'] : '';
+			if ( '' === $alignment ) {
+				return 'none';
+			}
+			$last = 'justify' === $alignment && isset( $props['alignLast'] ) && in_array( $props['alignLast'], self::ALIGN_LAST_VALUES, true ) ? $props['alignLast'] : '';
+			return $alignment . '|' . $last;
+		}
 		if ( 'textCase' === $lead ) {
 			$case = isset( $props['textCase'] ) && in_array( $props['textCase'], self::TEXT_CASE_VALUES, true ) ? $props['textCase'] : '';
 			$fake = ! ( in_array( $case, array( 'small-caps', 'all-small-caps' ), true ) && isset( $props['fakeSmallCaps'] ) && false === $props['fakeSmallCaps'] );
@@ -2609,6 +2806,7 @@ final class Typost_Paragraph_Styles {
 			case 'fontId':
 				return abs( (int) $va ) === abs( (int) $vb );
 			case 'letterSpacing':
+			case 'wordSpacing':
 				return (int) $va === (int) $vb;
 			case 'lineHeight':
 				return abs( (float) $va - (float) $vb ) <= 0.0005;

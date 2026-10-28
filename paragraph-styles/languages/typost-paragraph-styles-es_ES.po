@@ -647,3 +647,81 @@ msgstr "¿Quitar todos los ajustes que «%s» define por sí mismo, para que use
 #, js-format
 msgid "Style “%s” reset to the style it is based on."
 msgstr "Estilo «%s» restablecido al estilo en el que se basa."
+
+#: paragraph-styles.php:1924
+msgid "Word Spacing:"
+msgstr "Espaciado entre palabras:"
+
+#. translators: 1: alignment, such as "Justify"; 2: last line alignment, such as "Center"
+#: paragraph-styles.php:1934
+#, php-format
+msgid "%1$s (last line: %2$s)"
+msgstr "%1$s (última línea: %2$s)"
+
+#: paragraph-styles.php:2017
+msgid "Alignment:"
+msgstr "Alineación:"
+
+#: paragraph-styles.php:2020
+msgid "Line Breaking:"
+msgstr "Saltos de línea:"
+
+#: paragraph-styles.php:2079
+msgid "Start"
+msgstr "Inicio"
+
+#: paragraph-styles.php:2080
+msgid "Center"
+msgstr "Centro"
+
+#: paragraph-styles.php:2081
+msgid "End"
+msgstr "Final"
+
+#: paragraph-styles.php:2082
+msgid "Justify"
+msgstr "Justificado"
+
+#: paragraph-styles.php:2093
+msgid "Balance lines"
+msgstr "Equilibrar las líneas"
+
+#: paragraph-styles.php:2094
+msgid "Avoid short last lines"
+msgstr "Evitar últimas líneas cortas"
+
+#: includes/admin-tab.php:243
+msgid "Alignment and line breaking"
+msgstr "Alineación y saltos de línea"
+
+#: includes/admin-tab.php:244
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use alignment, word spacing or line breaking."
+msgstr "Ajustar al ancho fija por sí mismo el ancho de cada línea, por lo que un estilo ajustado al ancho no usa la alineación, el espaciado entre palabras ni los saltos de línea."
+
+#: includes/admin-tab.php:247
+msgid "Alignment"
+msgstr "Alineación"
+
+#: includes/admin-tab.php:254
+msgid "Start and End follow the text direction. A block’s own alignment setting overrides this."
+msgstr "Inicio y Final siguen la dirección del texto. El ajuste de alineación propio de un bloque tiene prioridad."
+
+#: includes/admin-tab.php:257
+msgid "Last line"
+msgstr "Última línea"
+
+#: includes/admin-tab.php:265
+msgid "Justified text has uneven gaps between words, which makes it harder to read for some people, including many people with dyslexia. Consider turning on hyphenation, which makes the gaps smaller."
+msgstr "El texto justificado tiene espacios desiguales entre las palabras, lo que lo hace más difícil de leer para algunas personas, entre ellas muchas personas con dislexia. Considere activar la división de palabras, que reduce esos espacios."
+
+#: includes/admin-tab.php:268
+msgid "Word spacing (1/1000 em)"
+msgstr "Espaciado entre palabras (1/1000 em)"
+
+#: includes/admin-tab.php:272
+msgid "Line breaking"
+msgstr "Saltos de línea"
+
+#: includes/admin-tab.php:279
+msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
+msgstr "Equilibrar las líneas da longitudes parecidas a las líneas de un título corto. Evitar últimas líneas cortas es adecuado para el texto principal. Un navegador que no admite la opción usa saltos de línea normales."

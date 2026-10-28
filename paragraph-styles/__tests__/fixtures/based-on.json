@@ -468,6 +468,20 @@
 					"fontId": 9
 				}
 			}
+		},
+		{
+			"label": "alignment inherits as a group (#207): a child's own alignment drops the parent's last line; word spacing and line breaking inherit one by one",
+			"styles": [
+				{ "id": 1, "name": "Body", "properties": { "alignment": "justify", "alignLast": "center", "wordSpacing": 50, "textWrap": "pretty" } },
+				{ "id": 2, "name": "Body Left", "basedOn": 1, "properties": { "alignment": "start" } },
+				{ "id": 3, "name": "Body Plain", "basedOn": 1, "properties": { "alignment": "", "wordSpacing": 0, "textWrap": "" } },
+				{ "id": 4, "name": "Body Tight", "basedOn": 1, "properties": { "wordSpacing": -20 } }
+			],
+			"expected": {
+				"2": { "alignment": "start", "wordSpacing": 50, "textWrap": "pretty" },
+				"3": {},
+				"4": { "alignment": "justify", "alignLast": "center", "wordSpacing": -20, "textWrap": "pretty" }
+			}
 		}
 	],
 	"equality": [
@@ -691,7 +705,11 @@
 			},
 			"b": {},
 			"equal": false
-		}
+		},
+		{ "label": "word spacing as number and string", "key": "wordSpacing", "a": { "wordSpacing": 50 }, "b": { "wordSpacing": "50" }, "equal": true },
+		{ "label": "no word spacing and word spacing 0", "key": "wordSpacing", "a": { "wordSpacing": 0 }, "b": {}, "equal": true },
+		{ "label": "no line breaking and an empty one", "key": "textWrap", "a": { "textWrap": "" }, "b": {}, "equal": true },
+		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false }
 	],
 	"css": [
 		{
@@ -813,6 +831,18 @@
 			"full": { "textCase": "small-caps", "fakeSmallCaps": false },
 			"parent": { "textCase": "small-caps" },
 			"expected": { "textCase": "small-caps", "fakeSmallCaps": false }
+		},
+		{
+			"label": "alignment (#207): what the parent sets and the look does not is stored empty",
+			"full": { "fontId": 5 },
+			"parent": { "fontId": 5, "alignment": "justify", "alignLast": "center", "wordSpacing": 50, "textWrap": "balance" },
+			"expected": { "alignment": "", "wordSpacing": 0, "textWrap": "" }
+		},
+		{
+			"label": "alignment (#207): the same alignment with another last line is the whole group",
+			"full": { "alignment": "justify", "alignLast": "end", "textWrap": "balance" },
+			"parent": { "alignment": "justify", "alignLast": "center", "textWrap": "balance" },
+			"expected": { "alignment": "justify", "alignLast": "end" }
 		}
 	]
 }
