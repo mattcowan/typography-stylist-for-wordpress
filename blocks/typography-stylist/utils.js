@@ -475,6 +475,11 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 			fitScale: null,
 			fitShift: null,
 			fontVariationSettings: null,
+			// Case (#309): the data-textcase of the first span out from the
+			// selection that has one, and its data-fakesmallcaps (absent =
+			// allowed). null when no span sets a case.
+			textCase: null,
+			fakeSmallCaps: null,
 			spanText: smallestMatchingSpan.textContent || '',
 			spanStart: spanStart,
 			spanEnd: spanEnd
@@ -662,6 +667,15 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
 				}
 			}
 
+			// Case - inherited from first ancestor that has it (#309)
+			if (result.textCase === null) {
+				const spanCase = normalizeTextCase(currentSpan.getAttribute('data-textcase'));
+				if (spanCase) {
+					result.textCase = spanCase;
+					result.fakeSmallCaps = currentSpan.getAttribute('data-fakesmallcaps') !== 'false';
+				}
+			}
+
 			// Walk up to parent span.typost-styled (if any)
 			// Use parentElement.closest() to skip the current span and find the next ancestor
 			if (currentSpan.parentElement) {
@@ -715,9 +729,11 @@ export function parseInlineStylesAtCursor(htmlContent, cursorStart, cursorEnd) {
  * @param {string} newValue - New attribute value
  * @param {string} styleProperty - CSS property name
  * @param {string} styleValue - CSS value
+ * @param {Object} [extraAttributes] - More attributes for the same span; a
+ *        null value removes that attribute (the case's data-fakesmallcaps, #309)
  * @return {Object} { success: boolean, content: string }
  */
-export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDataAttr, newValue, styleProperty, styleValue) {
+export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDataAttr, newValue, styleProperty, styleValue, extraAttributes) {
 	try {
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
@@ -770,6 +786,14 @@ export function updateSpanPropertyInPlace(htmlContent, cursorOffset, propertyDat
 		// Update the property
 		const previousValue = spanWithProperty.getAttribute(propertyDataAttr);
 		spanWithProperty.setAttribute(propertyDataAttr, newValue);
+		Object.keys(extraAttributes || {}).forEach((name) => {
+			const value = extraAttributes[name];
+			if (value === null || value === undefined) {
+				spanWithProperty.removeAttribute(name);
+			} else {
+				spanWithProperty.setAttribute(name, String(value));
+			}
+		});
 
 		// A font CHANGE leaves any legacy family-name attribute stale
 		// (rendering keys off data-font-id since v1.1.6); same-font re-applies
@@ -2371,9 +2395,9 @@ export function buildQftEditorState(s) {
 		// reach an inline span, so the inline editor never reports this key
 		// and the Paragraph Styles diff skips it when absent.
 		initialHang: normalizeHang(source.initialHang),
-		// Case (#214): the block attribute. The Quick Feature Toggles have
-		// no case control for selected text, so a span's own case
-		// (data-textcase, written by the inline editor) is not read here.
+		// Case (#214): the block attribute. The case of the selected text
+		// (#309) is in `selection`, which the Paragraph Style panel reads
+		// when text is selected; the panels for the whole block read this.
 		textCase: normalizeTextCase(source.textCase),
 		fakeSmallCaps: source.fakeSmallCaps !== false,
 		layeredConfigId: source.layeredConfigId || 0,
@@ -2470,6 +2494,15 @@ export function removePropertyFromSpan(span, dataAttribute, styleProperty) {
 	// Parse the style, drop the removed property, rebuild (or remove when empty)
 	const styleObj = parseStyleString(span.getAttribute('style'));
 	delete styleObj[styleProperty];
+
+	// Case is one setting stored in two attributes and up to three
+	// declarations (#309): removing it removes all of them
+	if (dataAttribute === 'data-textcase') {
+		CASE_DATA_ATTRIBUTES.forEach((attr) => span.removeAttribute(attr));
+		CASE_CSS_PROPERTIES.forEach((prop) => {
+			delete styleObj[prop];
+		});
+	}
 
 	if (Object.keys(styleObj).length > 0) {
 		span.setAttribute('style', buildStyleString(styleObj));
@@ -2602,6 +2635,118 @@ export function removePropertyFromSelection(htmlContent, startOffset, endOffset,
 		success: true,
 		content: container.innerHTML
 	};
+}
+
+/**
+ * What the Quick Feature Toggles write for a case on selected text (#309).
+ *
+ * The span form matches the inline format panel (#214): data-textcase, the
+ * caseDeclarations() CSS, and data-fakesmallcaps="false" only with a small
+ * caps value. Here data-fakesmallcaps is always given ('true' when fake small
+ * caps are allowed), because the span writers merge new attributes over the
+ * old ones: without it, a span that had "false" would keep it.
+ * normalizeInlineCaseSpans() removes the 'true' afterwards.
+ *
+ * @since 2.3.5
+ * @param {*}       textCase      Case value.
+ * @param {boolean} fakeSmallCaps Allow fake small caps (false = off).
+ * @return {{attributes: Object, styleString: string, firstDeclaration: Array<string>}|null}
+ *         null for Default, which writes nothing (reset removes the case)
+ */
+export function buildInlineCaseApply(textCase, fakeSmallCaps) {
+	const c = normalizeTextCase(textCase);
+	if (!c) {
+		return null;
+	}
+	const declarations = caseDeclarations(c, fakeSmallCaps);
+	return {
+		attributes: {
+			'data-textcase': c,
+			'data-fakesmallcaps': isSmallCapsCase(c) && fakeSmallCaps === false ? 'false' : 'true'
+		},
+		styleString: declarations.map(([prop, value]) => `${prop}: ${value}`).join('; '),
+		firstDeclaration: declarations[0]
+	};
+}
+
+/**
+ * Make the case of the spans at a selection match their data attributes
+ * (#309).
+ *
+ * The span writers merge declarations, so a case change can leave a
+ * declaration of the old case behind (font-synthesis-small-caps after Small
+ * Caps → All Caps), and they write data-fakesmallcaps="true" from
+ * buildInlineCaseApply(). For each span.typost-styled with a data-textcase
+ * that overlaps [start, end) (or holds the caret when start === end), the
+ * case declarations are rebuilt from data-textcase and data-fakesmallcaps,
+ * and data-fakesmallcaps is kept only as "false" with a small caps value.
+ * A span with a data-style-id that declares no case property is left alone:
+ * it stores the style's case for detection only, and its class renders it.
+ *
+ * @since 2.3.5
+ * @param {string} htmlContent Block content
+ * @param {number} start       Selection start (text offset)
+ * @param {number} end         Selection end (text offset, exclusive)
+ * @return {string} Content, unchanged when no span needed a change
+ */
+export function normalizeInlineCaseSpans(htmlContent, start, end) {
+	if (!htmlContent) {
+		return htmlContent;
+	}
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(`<div>${htmlContent}</div>`, 'text/html');
+	const container = doc.body.firstChild;
+	const textMap = buildTextOffsetMap(container, doc);
+	const breakMap = buildBreakOffsetMap(container, doc);
+	let changed = false;
+	container.querySelectorAll('span.typost-styled[data-textcase]').forEach((span) => {
+		const range = spanTextRange(span, textMap, breakMap);
+		if (!range) {
+			return;
+		}
+		const overlaps = start === end
+			? start >= range.start && start < range.end
+			: start < range.end && end > range.start;
+		if (!overlaps) {
+			return;
+		}
+		const declared = parseStyleString(span.getAttribute('style'));
+		if (span.getAttribute('data-style-id') && !CASE_CSS_PROPERTIES.some((prop) => prop in declared)) {
+			return;
+		}
+		const c = normalizeTextCase(span.getAttribute('data-textcase'));
+		const fake = span.getAttribute('data-fakesmallcaps') !== 'false';
+		const attrs = buildInlineCaseAttributes(c, fake);
+		const wanted = {};
+		caseDeclarations(c, fake).forEach(([prop, value]) => {
+			wanted[prop] = value;
+		});
+		// A span already in the right form is left byte for byte
+		const consistent = CASE_DATA_ATTRIBUTES.every((name) => span.getAttribute(name) === (attrs[name] || null)) &&
+			CASE_CSS_PROPERTIES.every((prop) => (declared[prop] || null) === (wanted[prop] || null));
+		if (consistent) {
+			return;
+		}
+		// setAttribute keeps an attribute's position; only a stale one goes
+		CASE_DATA_ATTRIBUTES.forEach((name) => {
+			if (attrs[name]) {
+				span.setAttribute(name, attrs[name]);
+			} else {
+				span.removeAttribute(name);
+			}
+		});
+		CASE_CSS_PROPERTIES.forEach((prop) => {
+			delete declared[prop];
+		});
+		Object.assign(declared, wanted);
+		if (Object.keys(declared).length) {
+			span.setAttribute('style', buildStyleString(declared));
+		} else {
+			span.removeAttribute('style');
+		}
+		changed = true;
+	});
+	return changed ? container.innerHTML : htmlContent;
 }
 
 /**
@@ -3914,8 +4059,8 @@ export function countParagraphStyleConflicts(htmlContent, start, end) {
  * whole selection, so a style saved from the selection's values
  * (resolveSelectionStyleState) describes all of it. Applying that style then
  * replaces nothing the author can see, and the conflict confirm is skipped.
- * A span with a case of its own makes it false: the capture leaves case out,
- * so the style would replace it.
+ * A span's own case counts like any other value: the capture includes it
+ * since the Quick Feature Toggles got a case control (#309).
  *
  * @since 2.3.4
  * @param {string} htmlContent Block content
@@ -3937,12 +4082,7 @@ export function selectionHasOneStyleSet(htmlContent, start, end) {
 		if (!range || range.end <= start || range.start >= end) {
 			return true;
 		}
-		if (range.start > start || range.end < end) {
-			return false;
-		}
-		const declared = parseStyleString(span.getAttribute('style'));
-		return !CASE_DATA_ATTRIBUTES.some((attr) => span.hasAttribute(attr)) &&
-			!CASE_CSS_PROPERTIES.some((prop) => prop in declared);
+		return !(range.start > start || range.end < end);
 	});
 }
 
@@ -4022,9 +4162,10 @@ export function findCoveringParagraphStyleId(htmlContent, start, end) {
  *
  * Raw data-feature-settings (glyph alternates) and data-fitscale sizes are
  * glyph-level, as in spanHasParagraphStyleOverrides(), and are not read.
- * The hang (block-only, #242) and case (no Quick Feature Toggles control for
- * selected text, #214) keys are left out, so the diff skips them and Update
- * Style keeps the style's own values.
+ * The hang key (block-only, #242) is left out, so the diff skips it and
+ * Update Style keeps the style's own value. Case (#309) is read like the
+ * others: a span renders its own data-textcase when it has no data-style-id,
+ * or when it declares a case property over the style's class.
  *
  * @since 2.3.4
  * @param {string} htmlContent Block content
@@ -4049,7 +4190,9 @@ export function resolveSelectionStyleState(htmlContent, start, end, styles) {
 		letterSpacing: 0,
 		lineHeight: 0,
 		features: [],
-		fontVariationSettings: ''
+		fontVariationSettings: '',
+		textCase: '',
+		fakeSmallCaps: true
 	};
 	const done = {};
 	try {
@@ -4180,6 +4323,21 @@ export function resolveSelectionStyleState(htmlContent, start, end, styles) {
 				if (fvs) {
 					state.fontVariationSettings = fvs;
 					done.fontVariationSettings = true;
+				}
+			}
+			if (!done.textCase) {
+				// The case is one group: its own when the span renders it,
+				// else the style's
+				const rendersCase = !hasStyle || CASE_CSS_PROPERTIES.some((prop) => prop in declared);
+				const ownCase = rendersCase ? normalizeTextCase(span.getAttribute('data-textcase')) : '';
+				if (ownCase) {
+					state.textCase = ownCase;
+					state.fakeSmallCaps = span.getAttribute('data-fakesmallcaps') !== 'false';
+					done.textCase = true;
+				} else if (normalizeTextCase(props.textCase)) {
+					state.textCase = normalizeTextCase(props.textCase);
+					state.fakeSmallCaps = props.fakeSmallCaps !== false;
+					done.textCase = true;
 				}
 			}
 

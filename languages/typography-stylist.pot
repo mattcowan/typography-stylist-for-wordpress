@@ -2672,6 +2672,14 @@ msgid "Reset Font Style"
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:5
+msgid "Case (for selected text)"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:5
+msgid "Reset Case"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:5
 msgid "Font Size (for selected text)"
 msgstr ""
 
