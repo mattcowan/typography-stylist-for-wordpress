@@ -93,6 +93,9 @@ final class Typost_Variable_Fonts {
 		// Editor data.
 		add_filter( 'typost_editor_data', array( $this, 'add_editor_data' ) );
 
+		// Axis tags for core's import warnings (#205).
+		add_filter( 'typost_font_axis_tags', array( $this, 'font_axis_tags' ), 10, 2 );
+
 		// REST routes.
 		add_action( 'typost_register_rest_routes', array( $this, 'register_rest_routes' ) );
 
@@ -461,35 +464,7 @@ final class Typost_Variable_Fonts {
 	 */
 	public function add_editor_data( $data ) {
 		$all_axes  = $this->get_all_axes();
-		$fonts_map = array(); // string id → numeric font_id
-
-		if ( class_exists( 'Typost' ) ) {
-			$typost = Typost::get_instance();
-
-			foreach ( $typost->get_custom_fonts() as $font ) {
-				if ( isset( $font['id'], $font['font_id'] ) ) {
-					$fonts_map[ $font['id'] ] = $font['font_id'];
-				}
-			}
-			foreach ( $typost->get_adobe_fonts() as $font ) {
-				if ( isset( $font['id'], $font['font_id'] ) ) {
-					$fonts_map[ $font['id'] ] = $font['font_id'];
-				}
-			}
-			foreach ( $typost->get_manual_fonts() as $font ) {
-				if ( isset( $font['id'], $font['font_id'] ) ) {
-					$fonts_map[ $font['id'] ] = $font['font_id'];
-				}
-			}
-			// Adopted WP Font Library fonts (core 2.1.0+): string ids "wpl-{slug}".
-			if ( method_exists( $typost, 'font_sources' ) ) {
-				foreach ( $typost->font_sources()->get_adopted_wp_fonts() as $font ) {
-					if ( isset( $font['id'], $font['font_id'] ) ) {
-						$fonts_map[ $font['id'] ] = $font['font_id'];
-					}
-				}
-			}
-		}
+		$fonts_map = $this->get_fonts_map();
 
 		$axes_by_numeric_id = array();
 		foreach ( $all_axes as $string_id => $axes ) {
@@ -514,6 +489,68 @@ final class Typost_Variable_Fonts {
 		$data['variableFontAxes']  = $axes_by_numeric_id;
 		$data['variableFontFlags'] = $flags_by_numeric_id;
 		return $data;
+	}
+
+	/**
+	 * String font ID => numeric font_id, across all four sources.
+	 *
+	 * @return array
+	 */
+	private function get_fonts_map() {
+		$fonts_map = array();
+		if ( ! class_exists( 'Typost' ) ) {
+			return $fonts_map;
+		}
+		$typost = Typost::get_instance();
+
+		foreach ( $typost->get_custom_fonts() as $font ) {
+			if ( isset( $font['id'], $font['font_id'] ) ) {
+				$fonts_map[ $font['id'] ] = $font['font_id'];
+			}
+		}
+		foreach ( $typost->get_adobe_fonts() as $font ) {
+			if ( isset( $font['id'], $font['font_id'] ) ) {
+				$fonts_map[ $font['id'] ] = $font['font_id'];
+			}
+		}
+		foreach ( $typost->get_manual_fonts() as $font ) {
+			if ( isset( $font['id'], $font['font_id'] ) ) {
+				$fonts_map[ $font['id'] ] = $font['font_id'];
+			}
+		}
+		// Adopted WP Font Library fonts (core 2.1.0+): string ids "wpl-{slug}".
+		if ( method_exists( $typost, 'font_sources' ) ) {
+			foreach ( $typost->font_sources()->get_adopted_wp_fonts() as $font ) {
+				if ( isset( $font['id'], $font['font_id'] ) ) {
+					$fonts_map[ $font['id'] ] = $font['font_id'];
+				}
+			}
+		}
+		return $fonts_map;
+	}
+
+	/**
+	 * Axis tags defined for a numeric font ID, for core's import warnings
+	 * (#205). A font with no axis definitions gives an empty list: the
+	 * module is loaded, so "none defined" is known.
+	 *
+	 * @since 1.3.5 (core 2.3.5)
+	 * @param string[]|null $tags    Tags from an earlier filter.
+	 * @param int           $font_id Numeric font ID.
+	 * @return string[]|null
+	 */
+	public function font_axis_tags( $tags, $font_id ) {
+		$tags = is_array( $tags ) ? $tags : array();
+		foreach ( $this->get_fonts_map() as $string_id => $numeric_id ) {
+			if ( intval( $numeric_id ) === intval( $font_id ) ) {
+				foreach ( $this->get_axes_for_font( $string_id ) as $axis ) {
+					if ( ! empty( $axis['tag'] ) ) {
+						$tags[] = (string) $axis['tag'];
+					}
+				}
+			}
+		}
+		return array_values( array_unique( $tags ) );
 	}
 
 	// -------------------------------------------------------------------------

@@ -34,6 +34,8 @@ if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
  * Singleton class that hooks into Typography Stylist's extensibility system
  * to provide paragraph style presets with CSS class-based rendering.
  */
+require_once __DIR__ . '/includes/class-typost-ps-transfer.php';
+
 final class Typost_Paragraph_Styles {
 
 	/** @var self|null */
@@ -169,6 +171,9 @@ final class Typost_Paragraph_Styles {
 
 		// REST routes
 		add_action( 'typost_register_rest_routes', array( $this, 'register_rest_routes' ) );
+
+		// Export and import (#205)
+		add_filter( 'typost_export_sections', array( new Typost_PS_Transfer( $this ), 'register_section' ) );
 
 		// Assets
 		add_action( 'typost_editor_assets', array( $this, 'enqueue_editor_assets' ) );
@@ -2075,6 +2080,32 @@ final class Typost_Paragraph_Styles {
 		if ( class_exists( 'Typost' ) && method_exists( 'Typost', 'clear_font_detection_cache' ) ) {
 			Typost::get_instance()->clear_font_detection_cache();
 		}
+	}
+
+	/**
+	 * Save the styles an import built and move the ID counter past them
+	 * (#205). The counter never goes back, so an ID is never handed out
+	 * twice, even for a deleted style.
+	 *
+	 * @param array $styles  Every style after the import.
+	 * @param int   $next_id The next free ID.
+	 */
+	public function save_imported_styles( $styles, $next_id ) {
+		if ( intval( $next_id ) > intval( get_option( self::COUNTER_KEY, 1 ) ) ) {
+			update_option( self::COUNTER_KEY, intval( $next_id ) );
+		}
+		$this->save_styles( $styles );
+	}
+
+	/**
+	 * The REST create route's sanitizing, for imported styles (#205).
+	 *
+	 * @param array|null $raw        Raw properties.
+	 * @param bool       $keep_empty Keep the empty values of a style with a parent.
+	 * @return array
+	 */
+	public function sanitize_style_properties( $raw, $keep_empty = false ) {
+		return $this->sanitize_properties( $raw, $keep_empty );
 	}
 
 	/**
