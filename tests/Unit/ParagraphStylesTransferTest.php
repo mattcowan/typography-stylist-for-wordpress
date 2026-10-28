@@ -349,6 +349,27 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->assertSame(array('Note', 'note (2)'), array_column($this->storedStyles(), 'name'));
     }
 
+    public function test_a_name_a_default_rename_takes_is_renamed_too() {
+        $file = $this->parse(json_encode(array(
+            'format'   => 'typost-export',
+            'version'  => 1,
+            'sections' => array('paragraphStyles' => array(
+                array('key' => 'a', 'name' => 'Body', 'properties' => array()),
+                array('key' => 'b', 'name' => 'Body', 'properties' => array()),
+                array('key' => 'c', 'name' => 'Body (2)', 'properties' => array()),
+            )),
+        )));
+        $this->registerSection($this->module(array(), 1));
+
+        $items = $this->export()->preview($file)['sections']['paragraphStyles']['preview']['items'];
+        $this->assertSame(array('add', 'rename', 'rename'), array_column($items, 'action'));
+
+        // The defaults import with no choice sent.
+        $result = $this->export()->import($file, array());
+        $this->assertIsArray($result);
+        $this->assertSame(array('Body', 'Body (2)', 'Body (2) (2)'), array_column($this->storedStyles(), 'name'));
+    }
+
     /**
      * @dataProvider invalidChoices
      */

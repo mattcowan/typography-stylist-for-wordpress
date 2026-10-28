@@ -408,6 +408,8 @@ final class Typost_PS_Transfer {
 					'action' => 'rename',
 					'name'   => $suggested,
 				);
+				// A later style with the suggested name must not add it too.
+				$in_file[ self::lower( $suggested ) ] = true;
 			} else {
 				$out[ $item['key'] ] = array( 'action' => 'add' );
 			}

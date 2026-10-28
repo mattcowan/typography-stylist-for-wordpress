@@ -16,8 +16,9 @@
 	// ---------------------------------------------------------------------
 
 	/**
-	 * Fill a translated template: %1$s / %2$s by position, then each %s
-	 * and %d in order.
+	 * Fill a translated template: %1$s / %2$s by position, and each %s
+	 * and %d in order. One pass, so a value that holds "%s" (a style name
+	 * from the file) is never filled in again.
 	 *
 	 * @param {string} template
 	 * @param {Array}  args
@@ -26,15 +27,10 @@
 	function formatString(template, args) {
 		var next = 0;
 		args = args || [];
-		return String(template)
-			.replace(/%(\d+)\$[sd]/g, function (match, n) {
-				var value = args[parseInt(n, 10) - 1];
-				return value === undefined ? match : String(value);
-			})
-			.replace(/%[sd]/g, function (match) {
-				var value = args[next++];
-				return value === undefined ? match : String(value);
-			});
+		return String(template).replace(/%(?:(\d+)\$)?[sd]/g, function (match, n) {
+			var value = n ? args[parseInt(n, 10) - 1] : args[next++];
+			return value === undefined ? match : String(value);
+		});
 	}
 
 	/**

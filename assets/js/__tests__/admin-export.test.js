@@ -52,6 +52,11 @@ describe( 'formatString', () => {
 	it( 'does not read a value as a pattern', () => {
 		expect( formatString( '%s', [ '$&' ] ) ).toBe( '$&' );
 	} );
+
+	it( 'does not fill a placeholder inside a value', () => {
+		expect( formatString( '%2$s / %1$s', [ 'a', 'x%sy' ] ) ).toBe( 'x%sy / a' );
+		expect( formatString( '%1$s and %s', [ 'Intro %d', 'b' ] ) ).toBe( 'Intro %d and Intro %d' );
+	} );
 } );
 
 describe( 'addedParents', () => {
