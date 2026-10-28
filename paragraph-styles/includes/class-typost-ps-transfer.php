@@ -59,9 +59,44 @@ final class Typost_PS_Transfer {
 			'preview'    => array( $this, 'preview' ),
 			'import'     => array( $this, 'import' ),
 			'fontKeys'   => array( $this, 'font_keys' ),
+			'items'      => array( $this, 'items' ),
 			'priority'   => 20,
 		);
 		return $sections;
+	}
+
+	/**
+	 * The styles the export UI lists, each with the style it is based on.
+	 *
+	 * @return array[] {id, name, parent}
+	 */
+	public function items() {
+		$styles = $this->module->get_styles();
+		$ids    = array();
+		foreach ( $styles as $style ) {
+			if ( isset( $style['id'] ) ) {
+				$ids[ intval( $style['id'] ) ] = true;
+			}
+		}
+		$out = array();
+		foreach ( $styles as $style ) {
+			if ( ! isset( $style['id'], $style['name'] ) ) {
+				continue;
+			}
+			$parent = ! empty( $style['basedOn'] ) && isset( $ids[ intval( $style['basedOn'] ) ] ) ? intval( $style['basedOn'] ) : 0;
+			$out[]  = array(
+				'id'     => intval( $style['id'] ),
+				'name'   => (string) $style['name'],
+				'parent' => $parent,
+			);
+		}
+		usort(
+			$out,
+			function ( $a, $b ) {
+				return strnatcasecmp( $a['name'], $b['name'] );
+			}
+		);
+		return $out;
 	}
 
 	// -------------------------------------------------------------------------
@@ -73,7 +108,7 @@ final class Typost_PS_Transfer {
 	 * based on.
 	 *
 	 * @param Typost_Export_Fonts $fonts Fonts helper.
-	 * @param array               $args  {styles: int[]} Empty = every style.
+	 * @param array               $args  {items: int[]} Style IDs; empty = every style.
 	 * @return array{data: array, notes: string[]}
 	 */
 	public function export( $fonts, $args ) {
@@ -86,8 +121,8 @@ final class Typost_PS_Transfer {
 		}
 
 		$picked = array();
-		if ( ! empty( $args['styles'] ) && is_array( $args['styles'] ) ) {
-			foreach ( $args['styles'] as $id ) {
+		if ( ! empty( $args['items'] ) && is_array( $args['items'] ) ) {
+			foreach ( $args['items'] as $id ) {
 				if ( is_numeric( $id ) && isset( $by_id[ intval( $id ) ] ) ) {
 					$picked[ intval( $id ) ] = true;
 				}

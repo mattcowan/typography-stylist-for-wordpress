@@ -135,6 +135,12 @@ class Typost_Export {
      * - `fontKeys`   (callable, optional) fn( mixed $data ): array<string,string[]>
      *                File font key => names of the items that use it, for
      *                the preview's "used by".
+     * - `items`      (callable, optional) fn(): array{id, name, parent?}[].
+     *                The things the export UI lets the author pick from
+     *                (styles); the picked ids reach `export` as
+     *                $args['items']. `parent` is the id the item needs
+     *                with it (a style's Based On), so the UI can say it is
+     *                added.
      * - `priority`   (int, optional) Import order, lower first. Default 50.
      *
      * @return array<string,array>
@@ -454,6 +460,146 @@ class Typost_Export {
             'fonts'       => $font_result,
             'sections'    => $results ? $results : new stdClass(),
             'notImported' => $not_imported,
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin tab
+    // -------------------------------------------------------------------------
+
+    /**
+     * Add the Export & Import tab, before Help.
+     *
+     * @param array[] $tabs Tabs.
+     * @return array[]
+     */
+    public function register_admin_tab($tabs) {
+        $tabs = is_array($tabs) ? $tabs : array();
+        $tabs[] = array('id' => 'export', 'label' => __('Export & Import', 'typography-stylist'), 'priority' => 90);
+        return $tabs;
+    }
+
+    /**
+     * Render the Export & Import tab.
+     *
+     * @param object $instance Typost instance.
+     */
+    public function render_admin_tab($instance) {
+        $sections = array();
+        foreach ($this->get_sections() as $id => $section) {
+            if (!current_user_can($section['capability'])) {
+                continue;
+            }
+            $items = array();
+            if (!empty($section['items']) && is_callable($section['items'])) {
+                $items = (array) call_user_func($section['items']);
+            }
+            $sections[$id] = array('label' => $section['label'], 'items' => $items);
+        }
+        require_once __DIR__ . '/admin-export-tab.php';
+        typost_render_export_tab($sections, current_user_can('manage_options'));
+    }
+
+    /**
+     * Enqueue the tab's script on the settings page.
+     *
+     * Hand-written ES5 with no build step, like editor-font-kits.js. Its
+     * strings are a flat object of their own: WP_Scripts::localize()
+     * decodes entities only in top-level values, so these arrive as plain
+     * text and the script puts them in the page with textContent only.
+     */
+    public function enqueue_admin_assets() {
+        wp_enqueue_script(
+            'typost-admin-export',
+            TYPOST_PLUGIN_URL . 'assets/js/admin-export.js',
+            array('jquery', 'typost-admin'),
+            TYPOST_VERSION,
+            true
+        );
+        wp_localize_script('typost-admin-export', 'typostExportData', array(
+            'restUrl' => rest_url('typost/v1/'),
+            'nonce'   => wp_create_nonce('wp_rest'),
+        ));
+        wp_localize_script('typost-admin-export', 'typostExportL10n', self::script_strings());
+    }
+
+    /**
+     * The tab script's strings.
+     *
+     * @return array<string,string>
+     */
+    public static function script_strings() {
+        return array(
+            /* translators: 1: name of the style added to the export, 2: name of the style based on it */
+            'parentAdded'        => __('“%1$s” is added too, because “%2$s” is based on it.', 'typography-stylist'),
+            'nothingChosen'      => __('Choose what to export.', 'typography-stylist'),
+            'noItemsChosen'      => __('Choose at least one item, or choose “All”.', 'typography-stylist'),
+            'exporting'          => __('Exporting…', 'typography-stylist'),
+            'exported'           => __('The export file was downloaded.', 'typography-stylist'),
+            'requestFailed'      => __('The request failed. Check your connection and try again.', 'typography-stylist'),
+            'noFile'             => __('Choose an export file to import.', 'typography-stylist'),
+            'fileUnreadable'     => __('This file cannot be read.', 'typography-stylist'),
+            'previewing'         => __('Reading the file…', 'typography-stylist'),
+            'previewHeading'     => __('What this file holds', 'typography-stylist'),
+            /* translators: 1: date the file was exported, 2: plugin version that exported it */
+            'fileInfo'           => __('Exported on %1$s by Typography Stylist %2$s. Nothing is saved until you choose Import.', 'typography-stylist'),
+            /* translators: %s: comma-separated list of section names in the file */
+            'unknownSections'    => __('This site cannot import these parts of the file, so they are left out: %s.', 'typography-stylist'),
+            'fontsHeading'       => __('Fonts', 'typography-stylist'),
+            'fontsIntro'         => __('Each font in the file, and the font on this site that the imported styles will use.', 'typography-stylist'),
+            'colFont'            => __('Font in the file', 'typography-stylist'),
+            'colUsedBy'          => __('Used by', 'typography-stylist'),
+            'colOnSite'          => __('On this site', 'typography-stylist'),
+            'statusFound'        => __('Found', 'typography-stylist'),
+            'statusAmbiguous'    => __('More than one font matches. Choose one.', 'typography-stylist'),
+            'statusAddable'      => __('Not on this site. It can be added from the file.', 'typography-stylist'),
+            'statusNotFound'     => __('Not found. Upload the font first, or choose a font on this site.', 'typography-stylist'),
+            'chooseFont'         => __('Choose a font…', 'typography-stylist'),
+            'groupMatches'       => __('Matching fonts', 'typography-stylist'),
+            'groupAllFonts'      => __('All fonts on this site', 'typography-stylist'),
+            'addFont'            => __('Add it to this site', 'typography-stylist'),
+            'noFont'             => __('None (use the theme font)', 'typography-stylist'),
+            /* translators: %s: font name */
+            'fontSelectLabel'    => __('Font on this site for “%s”', 'typography-stylist'),
+            'notUsed'            => __('Not used by a style in the file', 'typography-stylist'),
+            'includeSection'     => __('Import this part', 'typography-stylist'),
+            'colName'            => __('Name in the file', 'typography-stylist'),
+            'colBasedOn'         => __('Based on', 'typography-stylist'),
+            'colAction'          => __('Import as', 'typography-stylist'),
+            'existsAs'           => __('A style with this name exists.', 'typography-stylist'),
+            /* translators: %s: comma-separated list of style names */
+            'overwriteAffects'   => __('Overwriting it also changes the styles based on it: %s.', 'typography-stylist'),
+            'actionAdd'          => __('Add', 'typography-stylist'),
+            'actionSkip'         => __('Skip', 'typography-stylist'),
+            'actionRename'       => __('Add with a new name', 'typography-stylist'),
+            'actionOverwrite'    => __('Overwrite the style on this site', 'typography-stylist'),
+            /* translators: %s: style name */
+            'actionLabel'        => __('Import “%s” as', 'typography-stylist'),
+            /* translators: %s: style name */
+            'renameLabel'        => __('New name for “%s”', 'typography-stylist'),
+            'warningsHeading'    => __('Check before you import', 'typography-stylist'),
+            'import'             => __('Import', 'typography-stylist'),
+            'cancel'             => __('Cancel', 'typography-stylist'),
+            'importing'          => __('Importing…', 'typography-stylist'),
+            /* translators: %s: font name */
+            'errorChooseFont'    => __('Choose a font on this site for “%s”.', 'typography-stylist'),
+            /* translators: %s: style name */
+            'errorRenameEmpty'   => __('Enter a new name for “%s”.', 'typography-stylist'),
+            /* translators: 1: style name, 2: the new name */
+            'errorRenameTaken'   => __('“%2$s” is already used. Enter another name for “%1$s”.', 'typography-stylist'),
+            'resultHeading'      => __('Import finished', 'typography-stylist'),
+            'resultAdded'        => __('Added', 'typography-stylist'),
+            'resultRenamed'      => __('Added with a new name', 'typography-stylist'),
+            /* translators: 1: name in the file, 2: name on this site */
+            'resultRenamedItem'  => __('“%1$s” as “%2$s”', 'typography-stylist'),
+            'resultOverwritten'  => __('Overwritten', 'typography-stylist'),
+            'resultSkipped'      => __('Skipped', 'typography-stylist'),
+            'resultFontsAdded'   => __('Fonts added to this site', 'typography-stylist'),
+            'resultFontsMissing' => __('Fonts not found (the styles use the theme font)', 'typography-stylist'),
+            'resultNotImported'  => __('Parts of the file this site cannot import', 'typography-stylist'),
+            'resultWarnings'     => __('Check these styles', 'typography-stylist'),
+            'resultNothing'      => __('Nothing was imported.', 'typography-stylist'),
+            'importAnother'      => __('Import another file', 'typography-stylist'),
         );
     }
 

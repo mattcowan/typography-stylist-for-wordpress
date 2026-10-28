@@ -59,14 +59,14 @@ class ParagraphStylesTransferTest extends ExportTestCase {
 
     public function test_exporting_a_child_adds_its_parents_and_says_so() {
         $module = $this->sourceSite();
-        $result = $this->exportWith($module, array('sections' => array('paragraphStyles'), 'sectionArgs' => array('paragraphStyles' => array('styles' => array(7)))));
+        $result = $this->exportWith($module, array('sections' => array('paragraphStyles'), 'sectionArgs' => array('paragraphStyles' => array('items' => array(7)))));
 
         $this->assertSame(array('Body', 'Body – First'), array_column($result['file']['sections']['paragraphStyles'], 'name'));
         $this->assertSame(array('“Body” was added because “Body – First” is based on it.'), $result['notes']);
     }
 
     public function test_a_selection_without_parents_exports_only_what_was_picked() {
-        $result = $this->exportWith($this->sourceSite(), array('sections' => array('paragraphStyles'), 'sectionArgs' => array('paragraphStyles' => array('styles' => array(9)))));
+        $result = $this->exportWith($this->sourceSite(), array('sections' => array('paragraphStyles'), 'sectionArgs' => array('paragraphStyles' => array('items' => array(9)))));
         $this->assertSame(array('Kicker'), array_column($result['file']['sections']['paragraphStyles'], 'name'));
         $this->assertSame(array(), $result['notes']);
         $this->assertSame(array(), (array) $result['file']['fonts']);

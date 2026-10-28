@@ -229,6 +229,11 @@ class Typost {
         // Add admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
 
+        // Export & Import tab (#205)
+        add_filter('typost_admin_tabs', array($this->export(), 'register_admin_tab'));
+        add_action('typost_admin_tab_content_export', array($this->export(), 'render_admin_tab'));
+        add_action('typost_admin_assets', array($this->export(), 'enqueue_admin_assets'));
+
         // Register settings
         add_action('admin_init', array($this, 'register_settings'));
 
