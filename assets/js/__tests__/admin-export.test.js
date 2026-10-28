@@ -11,10 +11,12 @@ const {
 	fontChoiceFromValue,
 	fontSelectOptions,
 	styleActions,
+	fontLeftOut,
 	collectErrors,
 	buildImportChoices,
 	resultGroups,
 	errorMessage,
+	exportTabUrl,
 } = require( '../admin-export' );
 
 const l10n = {
@@ -200,6 +202,37 @@ describe( 'collectErrors and buildImportChoices', () => {
 
 	it( 'leaves out a section the author unchecked', () => {
 		expect( buildImportChoices( preview, state( { include: { paragraphStyles: false } } ) ).include ).toEqual( [] );
+	} );
+
+	describe( 'a font only left-out sections use', () => {
+		const withSections = {
+			...preview,
+			fonts: [ { key: 'f1', name: 'Inter', sections: [ 'paragraphStyles' ] }, { key: 'f2', name: 'Lora', sections: [] } ],
+		};
+		const leftOut = state( { fonts: { f1: '', f2: 'none' }, include: { paragraphStyles: false } } );
+
+		it( 'is left out only when every section that uses it is', () => {
+			expect( fontLeftOut( withSections.fonts[ 0 ], leftOut ) ).toBe( true );
+			expect( fontLeftOut( withSections.fonts[ 0 ], state() ) ).toBe( false );
+			// A font no section uses is never left out.
+			expect( fontLeftOut( withSections.fonts[ 1 ], leftOut ) ).toBe( false );
+			// Rows from a preview without `sections` behave as before.
+			expect( fontLeftOut( { key: 'f1' }, leftOut ) ).toBe( false );
+		} );
+
+		it( 'needs no choice and is not sent', () => {
+			expect( collectErrors( withSections, leftOut, l10n ) ).toEqual( [] );
+			expect( buildImportChoices( withSections, leftOut ).fonts ).toEqual( { f2: { action: 'none' } } );
+		} );
+	} );
+} );
+
+describe( 'exportTabUrl', () => {
+	it( 'opens this tab, keeping the other parameters', () => {
+		expect( exportTabUrl( 'https://example.test/wp-admin/options-general.php?page=typography-stylist' ) )
+			.toBe( 'https://example.test/wp-admin/options-general.php?page=typography-stylist&tab=export' );
+		expect( exportTabUrl( 'https://example.test/wp-admin/options-general.php?page=typography-stylist&tab=fonts#x' ) )
+			.toBe( 'https://example.test/wp-admin/options-general.php?page=typography-stylist&tab=export' );
 	} );
 } );
 

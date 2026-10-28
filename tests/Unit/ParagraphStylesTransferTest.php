@@ -196,6 +196,37 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->assertSame(100, $this->storedStyle('Body')['properties']['fontId']);
     }
 
+    public function test_a_font_only_left_out_sections_use_is_not_imported() {
+        $text = $this->exportText($this->sourceSite());
+        $this->site->manual = array();
+        $this->module(array(), 1);
+
+        $preview = $this->export()->preview($this->parse($text));
+        $this->assertSame(array('paragraphStyles'), $preview['fonts'][0]['sections']);
+
+        // "add" is the default for this font; leaving the section out must
+        // still add nothing.
+        $result = $this->export()->import($this->parse($text), array('include' => array()));
+        $this->assertSame(array('added' => array(), 'notFound' => array()), $result['fonts']);
+        $this->assertSame(array(), $this->site->manual);
+        $this->assertSame(array(), $this->storedStyles());
+    }
+
+    public function test_a_font_no_section_uses_still_imports_as_chosen() {
+        $module = $this->sourceSite();
+        $this->site->manual[] = array('id' => 'manual-mono', 'name' => 'House Mono', 'font_id' => 5, 'font_family' => 'House Mono', 'fallbacks' => 'monospace');
+        $text = $this->exportText($module, array('allFonts' => true));
+        $this->site->manual = array();
+        $this->module(array(), 1);
+
+        $preview = $this->export()->preview($this->parse($text));
+        $this->assertSame(array(), $preview['fonts'][1]['sections']);
+
+        $result = $this->export()->import($this->parse($text), array('include' => array()));
+        $this->assertSame(array('House Mono'), $result['fonts']['added']);
+        $this->assertSame(array('House Mono'), array_column($this->site->manual, 'name'));
+    }
+
     public function test_a_style_saved_before_rem_stays_without_a_unit() {
         $text = $this->exportText($this->sourceSite());
         $this->module(array(), 1);

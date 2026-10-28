@@ -134,7 +134,8 @@ class Typost_Export {
      *                the local font ID (0 = not on this site).
      * - `fontKeys`   (callable, optional) fn( mixed $data ): array<string,string[]>
      *                File font key => names of the items that use it, for
-     *                the preview's "used by".
+     *                the preview's "used by". Import also reads it: a font
+     *                that only left-out sections use is not imported.
      * - `items`      (callable, optional) fn(): array{id, name, parent?}[].
      *                The things the export UI lets the author pick from
      *                (styles); the picked ids reach `export` as
@@ -186,7 +187,7 @@ class Typost_Export {
      *                                 the ones the sections use (needs
      *                                 manage_options).
      *     @type array    $sectionArgs Per-section arguments, keyed by id
-     *                                 (paragraphStyles: {styles: int[]}).
+     *                                 (paragraphStyles: {items: int[]}).
      * }
      * @return array{file: array, notes: string[]}|WP_Error
      */
@@ -335,7 +336,6 @@ class Typost_Export {
         $fonts->plan_import_ids($fonts->default_choices($file['fonts']));
 
         $out_sections = array();
-        $used_by = array();
         $unknown = array();
         foreach ($file['sections'] as $id => $data) {
             $id = (string) $id;
@@ -352,16 +352,17 @@ class Typost_Export {
                 'label'   => $section['label'],
                 'preview' => $preview,
             );
-            if (!empty($section['fontKeys']) && is_callable($section['fontKeys'])) {
-                foreach ((array) call_user_func($section['fontKeys'], $data) as $key => $names) {
-                    foreach ((array) $names as $name) {
-                        $used_by[(string) $key][] = (string) $name;
-                    }
-                }
-            }
         }
+        $users = self::font_users($file['sections'], $sections);
         foreach ($font_rows as &$row) {
-            $row['usedBy'] = isset($used_by[$row['key']]) ? array_values(array_unique($used_by[$row['key']])) : array();
+            $names = array();
+            foreach (isset($users[$row['key']]) ? $users[$row['key']] : array() as $section_names) {
+                $names = array_merge($names, $section_names);
+            }
+            $row['usedBy'] = array_values(array_unique($names));
+            // The sections that use the font: when the author leaves all of
+            // them out, the font is not imported.
+            $row['sections'] = isset($users[$row['key']]) ? array_keys($users[$row['key']]) : array();
         }
         unset($row);
 
@@ -374,6 +375,36 @@ class Typost_Export {
             'unknownSections' => $unknown,
             'siteFonts'       => self::site_font_options($fonts),
         );
+    }
+
+    /**
+     * Which sections use each font in the file, read through each
+     * section's `fontKeys` callback.
+     *
+     * @param array $file_sections The file's sections, raw, by id.
+     * @param array $sections      get_sections().
+     * @return array<string,array<string,string[]>> File font key => section
+     *                                              id => names of the items
+     *                                              that use the font.
+     */
+    private static function font_users($file_sections, $sections) {
+        $users = array();
+        foreach ($file_sections as $id => $data) {
+            $id = (string) $id;
+            if (!isset($sections[$id]) || empty($sections[$id]['fontKeys']) || !is_callable($sections[$id]['fontKeys'])) {
+                continue;
+            }
+            foreach ((array) call_user_func($sections[$id]['fontKeys'], $data) as $key => $names) {
+                $key = (string) $key;
+                if (!isset($users[$key][$id])) {
+                    $users[$key][$id] = array();
+                }
+                foreach ((array) $names as $name) {
+                    $users[$key][$id][] = (string) $name;
+                }
+            }
+        }
+        return $users;
     }
 
     /**
@@ -412,12 +443,6 @@ class Typost_Export {
         $section_choices = isset($choices['sections']) && is_array($choices['sections']) ? $choices['sections'] : array();
         $include = isset($choices['include']) ? array_map('strval', (array) $choices['include']) : null;
 
-        $fonts = new Typost_Export_Fonts($this->typost);
-        $font_choices = $fonts->validate_choices($file['fonts'], isset($choices['fonts']) ? $choices['fonts'] : array());
-        if (is_wp_error($font_choices)) {
-            return $font_choices;
-        }
-
         $run = array();
         $not_imported = array();
         foreach ($file['sections'] as $id => $data) {
@@ -436,6 +461,24 @@ class Typost_Export {
             }
         }
 
+        // A font that only left-out sections use is not imported: it needs
+        // no choice, and nothing is added or adopted for it. A font that no
+        // section uses (one "All fonts" carried) imports as chosen, because
+        // carrying it to this site is its only purpose.
+        $left_out = array();
+        foreach (self::font_users($file['sections'], $sections) as $key => $section_names) {
+            if (!array_intersect_key($section_names, $ordered)) {
+                $left_out[$key] = true;
+            }
+        }
+        $file_fonts = array_diff_key($file['fonts'], $left_out);
+
+        $fonts = new Typost_Export_Fonts($this->typost);
+        $font_choices = $fonts->validate_choices($file_fonts, isset($choices['fonts']) ? $choices['fonts'] : array());
+        if (is_wp_error($font_choices)) {
+            return $font_choices;
+        }
+
         // Pass 1: every section checks its choices; nothing is written.
         $fonts->plan_import_ids($font_choices);
         foreach ($ordered as $id => $data) {
@@ -446,7 +489,7 @@ class Typost_Export {
         }
 
         // Pass 2: fonts first, then each section writes.
-        $font_result = $fonts->commit($file['fonts'], $font_choices);
+        $font_result = $fonts->commit($file_fonts, $font_choices);
         $results = array();
         foreach ($ordered as $id => $data) {
             $result = call_user_func($sections[$id]['import'], $data, isset($section_choices[$id]) ? $section_choices[$id] : array(), $fonts, false);

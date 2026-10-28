@@ -975,7 +975,7 @@ The admin page's JavaScript automatically handles tab switching for all register
 | `preview` | callable | `fn( mixed $data, Typost_Export_Fonts $fonts ): array\|WP_Error`. What the import UI shows. Return `items` (each with a `name`) for the default list. |
 | `import` | callable | `fn( mixed $data, array $choices, Typost_Export_Fonts $fonts, bool $dry_run ): array\|WP_Error`. |
 | `items` | callable, optional | `fn(): array{id, name, parent?}[]`: the things the author can pick on export. `parent` is the id the item needs with it; the UI says it is added. |
-| `fontKeys` | callable, optional | `fn( mixed $data ): array<string, string[]>`: file font key → names of the items that use it, for the preview's "Used by". |
+| `fontKeys` | callable, optional | `fn( mixed $data ): array<string, string[]>`: file font key → names of the items that use it, for the preview's "Used by". Also decides which fonts import: a font that only left-out sections use is not imported. Without it, your section's fonts import as chosen even when the author leaves the section out. |
 | `priority` | int, optional | Import order, lower first (default 50; paragraph styles use 20). |
 
 **File format:**
@@ -1004,8 +1004,8 @@ A newer `version` is rejected, and a section the receiving site does not know is
 **REST routes** (all `POST`, rate-limited like every `typost/v1` write):
 
 - `typost/v1/export` — `{sections: string[], allFonts: bool, sectionArgs: {id: {items: []}}}` → `{file, notes, filename}`. Needs `edit_posts`, the capability of each section, and `manage_options` for `allFonts`.
-- `typost/v1/import/preview` — `{fileText}` → fonts (status `found`, `ambiguous`, `addable` or `not_found`, with candidates), each section's preview, `unknownSections`, `siteFonts`. Needs `manage_options`. Saves nothing.
-- `typost/v1/import` — `{fileText, choices: {fonts: {key: {action: 'map'|'add'|'none', target?}}, sections: {id: choices}, include: string[]}}` → `{fonts: {added, notFound}, sections: {id: result}, notImported}`. Needs `manage_options`. A font or section choice left out takes the preview's default.
+- `typost/v1/import/preview` — `{fileText}` → fonts (status `found`, `ambiguous`, `addable` or `not_found`, with candidates, `usedBy` names and the `sections` that use the font), each section's preview, `unknownSections`, `siteFonts`. Needs `manage_options`. Saves nothing.
+- `typost/v1/import` — `{fileText, choices: {fonts: {key: {action: 'map'|'add'|'none', target?}}, sections: {id: choices}, include: string[]}}` → `{fonts: {added, notFound}, sections: {id: result}, notImported}`. Needs `manage_options`. A font or section choice left out takes the preview's default. A font that only sections missing from `include` use is not imported (no choice needed, nothing added); a font that no section uses imports as chosen.
 
 **Fonts** are matched by Adobe Fonts project and family, then WordPress Font Library slug and family, then family, then display name (case-insensitive). When more than one font matches at the first step that finds any, the font is "ambiguous" and the author must pick. Adobe Fonts families and font definitions can be added from the file (`Typost::add_adobe_font_entry()`, `Typost::add_manual_font_entry()`); a Library font is adopted. Uploaded font files are never in the file.
 

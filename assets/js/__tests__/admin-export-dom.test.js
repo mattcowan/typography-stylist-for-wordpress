@@ -57,8 +57,8 @@ const PREVIEW = {
 	plugin: '2.3.5',
 	exported: '2026-10-28',
 	fonts: [
-		{ key: 'f1', name: 'Inter', family: 'Inter', source: 'kit', status: 'ambiguous', candidates: [ { value: 'id:1', label: 'Inter A' }, { value: 'id:2', label: 'Inter B' } ], choice: { action: 'map', target: '' }, usedBy: [ 'Body' ] },
-		{ key: 'f2', name: 'Gone', family: 'Gone', source: 'kit', status: 'not_found', candidates: [], choice: { action: 'none' }, usedBy: [] },
+		{ key: 'f1', name: 'Inter', family: 'Inter', source: 'kit', status: 'ambiguous', candidates: [ { value: 'id:1', label: 'Inter A' }, { value: 'id:2', label: 'Inter B' } ], choice: { action: 'map', target: '' }, usedBy: [ 'Body' ], sections: [ 'paragraphStyles' ] },
+		{ key: 'f2', name: 'Gone', family: 'Gone', source: 'kit', status: 'not_found', candidates: [], choice: { action: 'none' }, usedBy: [], sections: [] },
 	],
 	sections: {
 		paragraphStyles: {
@@ -306,6 +306,47 @@ describe( 'import', () => {
 		expect( document.getElementById( 'typost-import-preview' ).hidden ).toBe( false );
 		expect( document.getElementById( 'typost-import-run-error' ).textContent ).toBe( '“Kicker”: Nothing was saved.' );
 		expect( document.activeElement ).toBe( button );
+	} );
+
+	it( 'a font that only left-out parts use needs no choice and is not sent', async () => {
+		await preview();
+		change( document.getElementById( 'typost-import-include-paragraphStyles' ), false );
+		const font = document.getElementById( 'typost-import-font-f1' );
+		expect( font.disabled ).toBe( true );
+		// A font no part uses still imports as chosen.
+		expect( document.getElementById( 'typost-import-font-f2' ).disabled ).toBe( false );
+
+		document.getElementById( 'typost-import-preview' ).querySelector( '.button-primary' ).click();
+		expect( requests ).toHaveLength( 2 );
+		expect( requests[ 1 ].body.choices.fonts ).toEqual( { f2: { action: 'none' } } );
+		expect( requests[ 1 ].body.choices.include ).toEqual( [] );
+
+		change( document.getElementById( 'typost-import-include-paragraphStyles' ), true );
+		expect( font.disabled ).toBe( false );
+	} );
+
+	it( 'cancel waits while an import runs', async () => {
+		await preview();
+		change( document.getElementById( 'typost-import-font-f1' ), 'map:id:1' );
+		const buttons = document.getElementById( 'typost-import-preview' ).querySelectorAll( '.typost-import-actions button' );
+		buttons[ 0 ].click();
+		expect( buttons[ 1 ].disabled ).toBe( true );
+
+		requests[ 1 ].deferred.reject( { responseJSON: { message: 'No.' } } );
+		expect( buttons[ 1 ].disabled ).toBe( false );
+	} );
+
+	it( 'a failed preview removes the previous file’s preview', async () => {
+		await preview();
+		setFile( 'not json' );
+		submit( 'typost-import-form' );
+		await waitFor( () => requests.length === 2 );
+		requests[ 1 ].deferred.reject( { responseJSON: { message: 'This file is not valid JSON, so it cannot be imported. Nothing was saved.' } } );
+
+		const container = document.getElementById( 'typost-import-preview' );
+		expect( container.hidden ).toBe( true );
+		expect( container.querySelector( 'button' ) ).toBeNull();
+		expect( document.getElementById( 'typost-import-error' ).textContent ).toContain( 'not valid JSON' );
 	} );
 
 	it( 'cancel closes the preview and returns to the file field', async () => {

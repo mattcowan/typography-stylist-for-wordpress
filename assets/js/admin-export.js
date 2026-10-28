@@ -175,6 +175,22 @@
 	}
 
 	/**
+	 * Whether a font is used only by sections the author left out. Such a
+	 * font is not imported, so it needs no choice. A font no section uses
+	 * (one "All fonts" carried) still imports as chosen.
+	 *
+	 * @param {Object} row   Preview font row.
+	 * @param {Object} state See collectErrors().
+	 * @return {boolean}
+	 */
+	function fontLeftOut(row, state) {
+		var ids = row.sections || [];
+		return ids.length > 0 && ids.every(function (id) {
+			return state.include[id] === false;
+		});
+	}
+
+	/**
 	 * Problems to fix before importing. The server checks again; this only
 	 * catches what the preview already knows.
 	 *
@@ -186,7 +202,7 @@
 	function collectErrors(preview, state, l10n) {
 		var errors = [];
 		(preview.fonts || []).forEach(function (row) {
-			if (!fontChoiceFromValue(state.fonts[row.key])) {
+			if (!fontLeftOut(row, state) && !fontChoiceFromValue(state.fonts[row.key])) {
 				errors.push({ message: formatString(l10n.errorChooseFont, [row.name]), kind: 'font', key: row.key });
 			}
 		});
@@ -234,7 +250,7 @@
 	function buildImportChoices(preview, state) {
 		var fonts = {};
 		(preview.fonts || []).forEach(function (row) {
-			var choice = fontChoiceFromValue(state.fonts[row.key]);
+			var choice = fontLeftOut(row, state) ? null : fontChoiceFromValue(state.fonts[row.key]);
 			if (choice) {
 				fonts[row.key] = choice;
 			}
@@ -314,6 +330,19 @@
 		return typeof typostDecodeEntities === 'function' ? typostDecodeEntities(message) : message;
 	}
 
+	/**
+	 * The settings page URL with this tab open.
+	 *
+	 * @param {string} href Current URL.
+	 * @return {string}
+	 */
+	function exportTabUrl(href) {
+		var url = new URL(href);
+		url.searchParams.set('tab', 'export');
+		url.hash = '';
+		return url.toString();
+	}
+
 	var helpers = {
 		formatString: formatString,
 		addedParents: addedParents,
@@ -321,10 +350,12 @@
 		fontChoiceFromValue: fontChoiceFromValue,
 		fontSelectOptions: fontSelectOptions,
 		styleActions: styleActions,
+		fontLeftOut: fontLeftOut,
 		collectErrors: collectErrors,
 		buildImportChoices: buildImportChoices,
 		resultGroups: resultGroups,
 		errorMessage: errorMessage,
+		exportTabUrl: exportTabUrl,
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -710,14 +741,25 @@
 		var importButton = actions.appendChild(el('button', { type: 'button', class: 'button button-primary' }, l10n.import));
 		var cancel = actions.appendChild(el('button', { type: 'button', class: 'button' }, l10n.cancel));
 
+		// A font that only left-out sections use is not imported.
+		container.addEventListener('change', function (event) {
+			if (!event.target.classList.contains('typost-import-include')) {
+				return;
+			}
+			var state = readState(container, preview);
+			preview.fonts.forEach(function (row) {
+				var select = document.getElementById('typost-import-font-' + row.key);
+				if (select) {
+					select.disabled = fontLeftOut(row, state);
+				}
+			});
+		});
 		cancel.addEventListener('click', function () {
-			container.hidden = true;
-			container.textContent = '';
-			importState = null;
+			clearPreview();
 			document.getElementById('typost-import-file').focus();
 		});
 		importButton.addEventListener('click', function () {
-			runImport(container, errorBox, importButton);
+			runImport(container, errorBox, importButton, cancel);
 		});
 
 		container.hidden = false;
@@ -743,7 +785,14 @@
 		}
 	}
 
-	function runImport(container, errorBox, button) {
+	function clearPreview() {
+		var container = document.getElementById('typost-import-preview');
+		container.hidden = true;
+		container.textContent = '';
+		importState = null;
+	}
+
+	function runImport(container, errorBox, button, cancel) {
 		var preview = importState.preview;
 		var state = readState(container, preview);
 		var errors = collectErrors(preview, state, l10n);
@@ -761,12 +810,15 @@
 		if (!typostBeginBusy(button, l10n.importing)) {
 			return;
 		}
+		// The server writes whatever happens on the page, so Cancel waits too.
+		cancel.disabled = true;
 		request('import', { fileText: importState.fileText, choices: buildImportChoices(preview, state) })
 			.done(function (response) {
 				renderResult(response);
 			})
 			.fail(function (xhr) {
 				typostEndBusy(button);
+				cancel.disabled = false;
 				showError(errorBox, errorMessage(xhr, l10n.requestFailed));
 				button.focus();
 			});
@@ -796,8 +848,9 @@
 		});
 		var again = container.appendChild(el('p')).appendChild(el('button', { type: 'button', class: 'button' }, l10n.importAnother));
 		again.addEventListener('click', function () {
-			// Reload, so the other tabs list what was imported.
-			window.location.reload();
+			// Reload, so the other tabs list what was imported. Tab clicks do
+			// not change the URL, so name this tab or the page opens the first.
+			window.location.assign(exportTabUrl(window.location.href));
 		});
 		container.hidden = false;
 		heading.focus();
@@ -828,6 +881,7 @@
 			}
 			var reader = new FileReader();
 			reader.onerror = function () {
+				clearPreview();
 				typostEndBusy(submit);
 				showError(errorBox, l10n.fileUnreadable);
 			};
@@ -838,6 +892,8 @@
 						renderPreview(preview, text);
 					})
 					.fail(function (xhr) {
+						// The last file's preview must not stay importable.
+						clearPreview();
 						showError(errorBox, errorMessage(xhr, l10n.requestFailed));
 						input.focus();
 					})
