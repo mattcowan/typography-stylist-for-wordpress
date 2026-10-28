@@ -3012,3 +3012,430 @@ msgstr "Las mayúsculas son más difíciles de leer en textos largos, así que r
 #: blocks/typography-stylist/build/index.js:7
 msgid "All caps are harder to read in long text, so keep them for short labels. Screen readers read this block’s original text, but when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter, as abbreviations."
 msgstr "Las mayúsculas son más difíciles de leer en textos largos, así que resérvalas para etiquetas cortas. Los lectores de pantalla leen el texto original de este bloque, pero cuando se aplica Todo en mayúsculas al texto de otros bloques, algunos lectores de pantalla deletrean letra por letra las palabras cortas en mayúsculas, como abreviaturas."
+
+#: includes/class-typost-export.php:200
+#: includes/class-typost-export.php:535
+msgid "Choose what to export."
+msgstr "Elige qué quieres exportar."
+
+#: includes/class-typost-export.php:203
+msgid "You are not allowed to export fonts."
+msgstr "No tienes permiso para exportar fuentes."
+
+#. translators: %s: name of an export section, such as Paragraph styles
+#: includes/class-typost-export.php:217
+#, php-format
+msgid "You are not allowed to export %s."
+msgstr "No tienes permiso para exportar: %s."
+
+#: includes/class-typost-export.php:232
+msgid "The export asked for a section this site does not have."
+msgstr "La exportación pide una parte que este sitio no tiene."
+
+#: includes/class-typost-export.php:270
+#: includes/class-typost-export.php:540
+msgid "Choose an export file to import."
+msgstr "Elige un archivo de exportación para importar."
+
+#: includes/class-typost-export.php:273
+msgid "This file is too large to be a Typography Stylist export file."
+msgstr "Este archivo es demasiado grande para ser un archivo de exportación de Typography Stylist."
+
+#: includes/class-typost-export.php:281
+msgid "This file is not valid JSON, so it cannot be imported. Nothing was saved."
+msgstr "Este archivo no es un JSON válido, así que no se puede importar. No se ha guardado nada."
+
+#: includes/class-typost-export.php:284
+msgid "This file is not a Typography Stylist export file. Nothing was saved."
+msgstr "Este archivo no es un archivo de exportación de Typography Stylist. No se ha guardado nada."
+
+#: includes/class-typost-export.php:288
+msgid "This export file has no format version, so it cannot be read. Nothing was saved."
+msgstr "Este archivo de exportación no indica la versión del formato, así que no se puede leer. No se ha guardado nada."
+
+#. translators: 1: version of the export file, 2: newest version this plugin reads
+#: includes/class-typost-export.php:295
+#, php-format
+msgid "This file was exported in format version %1$d, and this site reads up to version %2$d. Update Typography Stylist on this site, then import again. Nothing was saved."
+msgstr "Este archivo se exportó con la versión %1$d del formato, y este sitio lee hasta la versión %2$d. Actualiza Typography Stylist en este sitio y vuelve a importar. No se ha guardado nada."
+
+#: includes/class-typost-export.php:308
+msgid "The sections in this file cannot be read. Nothing was saved."
+msgstr "Las partes de este archivo no se pueden leer. No se ha guardado nada."
+
+#: includes/class-typost-export.php:478
+#: includes/admin-export-tab.php:25
+msgid "Export & Import"
+msgstr "Exportar e importar"
+
+#. translators: 1: name of the style added to the export, 2: name of the style based on it
+#: includes/class-typost-export.php:534
+#, php-format
+msgid "“%1$s” is added too, because “%2$s” is based on it."
+msgstr "«%1$s» también se añade, porque «%2$s» se basa en él."
+
+#: includes/class-typost-export.php:536
+msgid "Choose at least one item, or choose “All”."
+msgstr "Elige al menos un elemento, o elige «Todos»."
+
+#: includes/class-typost-export.php:537
+msgid "Exporting…"
+msgstr "Exportando…"
+
+#: includes/class-typost-export.php:538
+msgid "The export file was downloaded."
+msgstr "Se ha descargado el archivo de exportación."
+
+#: includes/class-typost-export.php:539
+msgid "The request failed. Check your connection and try again."
+msgstr "La solicitud ha fallado. Comprueba tu conexión y vuelve a intentarlo."
+
+#: includes/class-typost-export.php:541
+msgid "This file cannot be read."
+msgstr "Este archivo no se puede leer."
+
+#: includes/class-typost-export.php:542
+msgid "Reading the file…"
+msgstr "Leyendo el archivo…"
+
+#: includes/class-typost-export.php:543
+msgid "What this file holds"
+msgstr "Contenido de este archivo"
+
+#. translators: 1: date the file was exported, 2: plugin version that exported it
+#: includes/class-typost-export.php:545
+#, php-format
+msgid "Exported on %1$s by Typography Stylist %2$s. Nothing is saved until you choose Import."
+msgstr "Exportado el %1$s con Typography Stylist %2$s. No se guarda nada hasta que eliges Importar."
+
+#. translators: %s: comma-separated list of section names in the file
+#: includes/class-typost-export.php:547
+#, php-format
+msgid "This site cannot import these parts of the file, so they are left out: %s."
+msgstr "Este sitio no puede importar estas partes del archivo, así que se omiten: %s."
+
+#: includes/class-typost-export.php:548
+msgid "Fonts"
+msgstr "Fuentes"
+
+#: includes/class-typost-export.php:549
+msgid "Each font in the file, and the font on this site that the imported styles will use."
+msgstr "Cada fuente del archivo y la fuente de este sitio que usarán los estilos importados."
+
+#: includes/class-typost-export.php:550
+msgid "Font in the file"
+msgstr "Fuente en el archivo"
+
+#: includes/class-typost-export.php:551
+msgid "Used by"
+msgstr "Usada por"
+
+#: includes/class-typost-export.php:552
+msgid "On this site"
+msgstr "En este sitio"
+
+#: includes/class-typost-export.php:553
+msgid "Found"
+msgstr "Encontrada"
+
+#: includes/class-typost-export.php:554
+msgid "More than one font matches. Choose one."
+msgstr "Coincide más de una fuente. Elige una."
+
+#: includes/class-typost-export.php:555
+msgid "Not on this site. It can be added from the file."
+msgstr "No está en este sitio. Se puede añadir desde el archivo."
+
+#: includes/class-typost-export.php:556
+msgid "Not found. Upload the font first, or choose a font on this site."
+msgstr "No se encuentra. Sube primero la fuente, o elige una fuente de este sitio."
+
+#: includes/class-typost-export.php:557
+msgid "Choose a font…"
+msgstr "Elige una fuente…"
+
+#: includes/class-typost-export.php:558
+msgid "Matching fonts"
+msgstr "Fuentes que coinciden"
+
+#: includes/class-typost-export.php:559
+#: includes/admin-export-tab.php:102
+msgid "All fonts on this site"
+msgstr "Todas las fuentes de este sitio"
+
+#: includes/class-typost-export.php:560
+msgid "Add it to this site"
+msgstr "Añadirla a este sitio"
+
+#: includes/class-typost-export.php:561
+msgid "None (use the theme font)"
+msgstr "Ninguna (usar la fuente del tema)"
+
+#. translators: %s: font name
+#: includes/class-typost-export.php:563
+#, php-format
+msgid "Font on this site for “%s”"
+msgstr "Fuente de este sitio para «%s»"
+
+#: includes/class-typost-export.php:564
+msgid "Not used by a style in the file"
+msgstr "No la usa ningún estilo del archivo"
+
+#: includes/class-typost-export.php:565
+msgid "Import this part"
+msgstr "Importar esta parte"
+
+#: includes/class-typost-export.php:566
+msgid "Name in the file"
+msgstr "Nombre en el archivo"
+
+#: includes/class-typost-export.php:567
+msgid "Based on"
+msgstr "Basado en"
+
+#: includes/class-typost-export.php:568
+msgid "Import as"
+msgstr "Importar como"
+
+#: includes/class-typost-export.php:569
+msgid "A style with this name exists."
+msgstr "Ya existe un estilo con este nombre."
+
+#. translators: %s: comma-separated list of style names
+#: includes/class-typost-export.php:571
+#, php-format
+msgid "Overwriting it also changes the styles based on it: %s."
+msgstr "Sobrescribirlo también cambia los estilos basados en él: %s."
+
+#: includes/class-typost-export.php:572
+msgid "Add"
+msgstr "Añadir"
+
+#: includes/class-typost-export.php:573
+msgid "Skip"
+msgstr "Omitir"
+
+#: includes/class-typost-export.php:574
+msgid "Add with a new name"
+msgstr "Añadir con un nombre nuevo"
+
+#: includes/class-typost-export.php:575
+msgid "Overwrite the style on this site"
+msgstr "Sobrescribir el estilo de este sitio"
+
+#. translators: %s: style name
+#: includes/class-typost-export.php:577
+#, php-format
+msgid "Import “%s” as"
+msgstr "Importar «%s» como"
+
+#. translators: %s: style name
+#: includes/class-typost-export.php:579
+#, php-format
+msgid "New name for “%s”"
+msgstr "Nombre nuevo para «%s»"
+
+#: includes/class-typost-export.php:580
+msgid "Check before you import"
+msgstr "Revisa antes de importar"
+
+#: includes/class-typost-export.php:581
+#: includes/admin-export-tab.php:119
+msgid "Import"
+msgstr "Importar"
+
+#: includes/class-typost-export.php:583
+msgid "Importing…"
+msgstr "Importando…"
+
+#. translators: %s: font name
+#: includes/class-typost-export.php:585
+#: includes/class-typost-export-fonts.php:629
+#, php-format
+msgid "Choose a font on this site for “%s”."
+msgstr "Elige una fuente de este sitio para «%s»."
+
+#. translators: %s: style name
+#: includes/class-typost-export.php:587
+#, php-format
+msgid "Enter a new name for “%s”."
+msgstr "Escribe un nombre nuevo para «%s»."
+
+#. translators: 1: style name, 2: the new name
+#: includes/class-typost-export.php:589
+#, php-format
+msgid "“%2$s” is already used. Enter another name for “%1$s”."
+msgstr "«%2$s» ya está en uso. Escribe otro nombre para «%1$s»."
+
+#: includes/class-typost-export.php:590
+msgid "Import finished"
+msgstr "Importación terminada"
+
+#: includes/class-typost-export.php:591
+msgid "Added"
+msgstr "Añadidos"
+
+#: includes/class-typost-export.php:592
+msgid "Added with a new name"
+msgstr "Añadidos con un nombre nuevo"
+
+#. translators: 1: name in the file, 2: name on this site
+#: includes/class-typost-export.php:594
+#, php-format
+msgid "“%1$s” as “%2$s”"
+msgstr "«%1$s» como «%2$s»"
+
+#: includes/class-typost-export.php:595
+msgid "Overwritten"
+msgstr "Sobrescritos"
+
+#: includes/class-typost-export.php:596
+msgid "Skipped"
+msgstr "Omitidos"
+
+#: includes/class-typost-export.php:597
+msgid "Fonts added to this site"
+msgstr "Fuentes añadidas a este sitio"
+
+#: includes/class-typost-export.php:598
+msgid "Fonts not found (the styles use the theme font)"
+msgstr "Fuentes no encontradas (los estilos usan la fuente del tema)"
+
+#: includes/class-typost-export.php:599
+msgid "Parts of the file this site cannot import"
+msgstr "Partes del archivo que este sitio no puede importar"
+
+#: includes/class-typost-export.php:600
+msgid "Check these styles"
+msgstr "Revisa estos estilos"
+
+#: includes/class-typost-export.php:601
+msgid "Nothing was imported."
+msgstr "No se ha importado nada."
+
+#: includes/class-typost-export.php:602
+msgid "Import another file"
+msgstr "Importar otro archivo"
+
+#: includes/class-typost-export-fonts.php:495
+#: includes/class-typost-export-fonts.php:502
+msgid "The fonts in this file cannot be read."
+msgstr "Las fuentes de este archivo no se pueden leer."
+
+#: includes/class-typost-export-fonts.php:551
+msgid "uploaded"
+msgstr "subida"
+
+#: includes/class-typost-export-fonts.php:553
+msgid "font definition"
+msgstr "definición de fuente"
+
+#: includes/class-typost-export-fonts.php:554
+msgid "Font Library"
+msgstr "Biblioteca de fuentes"
+
+#. translators: 1: font name, 2: font family, 3: where the font comes from (uploaded, Adobe Fonts, font definition, Font Library)
+#: includes/class-typost-export-fonts.php:560
+#, php-format
+msgid "%1$s (%2$s, %3$s)"
+msgstr "%1$s (%2$s, %3$s)"
+
+#. translators: 1: font name, 2: where the font comes from (uploaded, Adobe Fonts, font definition, Font Library)
+#: includes/class-typost-export-fonts.php:563
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#. translators: %s: font name from the import file
+#: includes/class-typost-export-fonts.php:639
+#, php-format
+msgid "“%s” cannot be added from this file. Its font files must be on this site first."
+msgstr "«%s» no se puede añadir desde este archivo. Sus archivos de fuente tienen que estar antes en este sitio."
+
+#: includes/class-typost-export-fonts.php:647
+msgid "A font choice in the request is not valid."
+msgstr "Una elección de fuente de la solicitud no es válida."
+
+#: includes/admin-export-tab.php:28
+msgid "About Export & Import"
+msgstr "Acerca de exportar e importar"
+
+#: includes/admin-export-tab.php:30
+msgid "Move paragraph styles from one site to another, for example from a staging site to production, or reuse a house set of styles on each new site."
+msgstr "Pasa estilos de párrafo de un sitio a otro, por ejemplo de un sitio de pruebas a producción, o reutiliza tu conjunto de estilos de la casa en cada sitio nuevo."
+
+#: includes/admin-export-tab.php:32
+msgid "The file names each font by its family and where it comes from, not by this site’s font ID. On import, each font is matched to a font on the other site, and you can change the match."
+msgstr "El archivo nombra cada fuente por su familia y su origen, no por el ID de fuente de este sitio. Al importar, cada fuente se asocia con una fuente del otro sitio, y puedes cambiar esa asociación."
+
+#: includes/admin-export-tab.php:33
+msgid "Adobe Fonts projects and custom font definitions can be added from the file. Uploaded font files are not in the file: upload them on the other site first."
+msgstr "Los proyectos de Adobe Fonts y las definiciones de fuente personalizadas se pueden añadir desde el archivo. Los archivos de fuente subidos no están en el archivo: súbelos antes en el otro sitio."
+
+#: includes/admin-export-tab.php:34
+msgid "A style that is based on another style keeps that link. When you export some styles, the styles they are based on are added."
+msgstr "Un estilo basado en otro estilo conserva ese vínculo. Cuando exportas algunos estilos, se añaden los estilos en los que se basan."
+
+#: includes/admin-export-tab.php:35
+msgid "Import shows what the file holds first. Nothing is saved until you choose Import, and an existing style changes only when you choose to overwrite it."
+msgstr "La importación muestra primero el contenido del archivo. No se guarda nada hasta que eliges Importar, y un estilo existente solo cambia si eliges sobrescribirlo."
+
+#: includes/admin-export-tab.php:41
+msgid "Export & Import needs JavaScript."
+msgstr "Exportar e importar necesita JavaScript."
+
+#: includes/admin-export-tab.php:45
+msgid "Export"
+msgstr "Exportar"
+
+#: includes/admin-export-tab.php:47
+msgid "There is nothing you can export."
+msgstr "No hay nada que puedas exportar."
+
+#: includes/admin-export-tab.php:51
+msgid "What to export"
+msgstr "Qué exportar"
+
+#. translators: 1: section name, such as Paragraph styles, 2: number of items
+#: includes/admin-export-tab.php:61
+#, php-format
+msgid "%1$s (%2$d)"
+msgstr "%1$s (%2$d)"
+
+#. translators: %s: section name, such as Paragraph styles
+#: includes/admin-export-tab.php:73
+#, php-format
+msgid "Items to export: %s"
+msgstr "Elementos que exportar: %s"
+
+#: includes/admin-export-tab.php:79
+msgid "All"
+msgstr "Todos"
+
+#: includes/admin-export-tab.php:83
+msgid "Only the ones I choose"
+msgstr "Solo los que elija"
+
+#: includes/admin-export-tab.php:105
+msgid "Adds every Adobe Fonts project and font definition, also the ones no exported style uses, so the other site can add them. Fonts that the exported styles use are always in the file."
+msgstr "Añade cada proyecto de Adobe Fonts y cada definición de fuente, también los que no usa ningún estilo exportado, para que el otro sitio pueda añadirlos. Las fuentes que usan los estilos exportados siempre están en el archivo."
+
+#: includes/admin-export-tab.php:112
+msgid "Download export file"
+msgstr "Descargar el archivo de exportación"
+
+#: includes/admin-export-tab.php:121
+msgid "Only administrators can import."
+msgstr "Solo los administradores pueden importar."
+
+#: includes/admin-export-tab.php:124
+msgid "Choose a file that Typography Stylist exported. You see what the file holds before anything is saved."
+msgstr "Elige un archivo que haya exportado Typography Stylist. Verás su contenido antes de que se guarde nada."
+
+#: includes/admin-export-tab.php:126
+msgid "Export file"
+msgstr "Archivo de exportación"
+
+#: includes/admin-export-tab.php:128
+msgid "Preview import"
+msgstr "Vista previa de la importación"

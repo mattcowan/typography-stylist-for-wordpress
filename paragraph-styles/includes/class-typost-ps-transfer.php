@@ -533,7 +533,7 @@ final class Typost_PS_Transfer {
 					return self::choice_error(
 						$item['name'],
 						/* translators: %s: style name */
-						sprintf( __( 'A style named “%s” already exists. Choose Skip, Rename or Overwrite.', 'typost-paragraph-styles' ), $name )
+						sprintf( __( 'A style named “%s” already exists. Skip this style, add it with a new name, or overwrite the style on this site.', 'typost-paragraph-styles' ), $name )
 					);
 				}
 				$id = $next++;

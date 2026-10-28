@@ -649,3 +649,56 @@ msgstr ""
 #: assets/js/lib/ps-utils.js:1630
 msgid "Inherited size"
 msgstr ""
+
+#. translators: 1: name of the style added to the export, 2: name of the style based on it
+#: paragraph-styles/includes/class-typost-ps-transfer.php:148
+#, php-format
+msgid "“%1$s” was added because “%2$s” is based on it."
+msgstr ""
+
+#: paragraph-styles/includes/class-typost-ps-transfer.php:229
+msgid "The paragraph styles in this file cannot be read. Nothing was saved."
+msgstr ""
+
+#. translators: 1: style name, 2: why its Based On chain is rejected
+#: paragraph-styles/includes/class-typost-ps-transfer.php:274
+#: paragraph-styles/includes/class-typost-ps-transfer.php:808
+#, php-format
+msgid "“%1$s”: %2$s Nothing was saved."
+msgstr ""
+
+#: paragraph-styles/includes/class-typost-ps-transfer.php:519
+msgid "There is no style with this name to overwrite."
+msgstr ""
+
+#: paragraph-styles/includes/class-typost-ps-transfer.php:522
+msgid "Another style in the file already overwrites this style."
+msgstr ""
+
+#. translators: %s: style name
+#: paragraph-styles/includes/class-typost-ps-transfer.php:536
+#, php-format
+msgid "A style named “%s” already exists. Skip this style, add it with a new name, or overwrite the style on this site."
+msgstr ""
+
+#: paragraph-styles/includes/class-typost-ps-transfer.php:541
+msgid "The choice for this style is not valid."
+msgstr ""
+
+#. translators: 1: imported style name, 2: name of the style on this site it is based on
+#: paragraph-styles/includes/class-typost-ps-transfer.php:616
+#, php-format
+msgid "“%1$s” is based on “%2$s” on this site, which is not the same as in the file, so “%1$s” looks different from the file."
+msgstr ""
+
+#. translators: 1: style name, 2: list of OpenType feature codes, 3: font name
+#: paragraph-styles/includes/class-typost-ps-transfer.php:650
+#, php-format
+msgid "“%1$s” uses OpenType features that are hidden for %3$s in Feature Visibility, so the font may not have them: %2$s."
+msgstr ""
+
+#. translators: 1: style name, 2: list of variable font axis tags, 3: font name
+#: paragraph-styles/includes/class-typost-ps-transfer.php:664
+#, php-format
+msgid "“%1$s” sets variable font axes that are not defined for %3$s, so the font may not have them: %2$s."
+msgstr ""

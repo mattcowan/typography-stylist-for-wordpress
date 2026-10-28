@@ -70,7 +70,7 @@ if (!function_exists('typost_render_export_tab')) {
                                     <legend class="screen-reader-text">
                                         <?php
                                         /* translators: %s: section name, such as Paragraph styles */
-                                        echo esc_html(sprintf(__('Which %s', 'typography-stylist'), $section['label']));
+                                        echo esc_html(sprintf(__('Items to export: %s', 'typography-stylist'), $section['label']));
                                         ?>
                                     </legend>
                                     <p class="typost-export-scope">
