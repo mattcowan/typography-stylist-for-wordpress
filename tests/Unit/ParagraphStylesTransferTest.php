@@ -371,6 +371,41 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->assertSame($before, $this->options);
     }
 
+    public function test_an_overwrite_that_makes_a_chain_too_long_is_rejected() {
+        // Site: Root with nine levels below it (ten styles). File: Root
+        // based on a new Top, which would make eleven.
+        $styles = array(array('id' => 1, 'name' => 'Root', 'properties' => array()));
+        for ($i = 2; $i <= 10; $i++) {
+            $styles[] = array('id' => $i, 'name' => 'Level ' . $i, 'basedOn' => $i - 1, 'properties' => array());
+        }
+        $this->registerSection($this->module($styles, 11));
+        $file = $this->parse(json_encode(array(
+            'format'   => 'typost-export',
+            'version'  => 1,
+            'sections' => array('paragraphStyles' => array(
+                array('key' => 't', 'name' => 'Top', 'properties' => array()),
+                array('key' => 'r', 'name' => 'Root', 'basedOn' => 't', 'properties' => array()),
+            )),
+        )));
+        $before = $this->options;
+
+        $result = $this->export()->import($file, array('sections' => array('paragraphStyles' => array('r' => array('action' => 'overwrite')))));
+        $this->assertStringContainsString('at most 10 styles', $result->get_error_message());
+        $this->assertSame($before, $this->options);
+    }
+
+    public function test_a_broken_chain_already_on_the_site_does_not_block_an_import() {
+        $text = $this->exportText($this->module(array(array('id' => 1, 'name' => 'New', 'properties' => array()))));
+        // Stored data with a loop the import does not touch.
+        $this->module(array(
+            array('id' => 5, 'name' => 'X', 'basedOn' => 6, 'properties' => array()),
+            array('id' => 6, 'name' => 'Y', 'basedOn' => 5, 'properties' => array()),
+        ), 7);
+
+        $result = $this->export()->import($this->parse($text), array());
+        $this->assertSame(array('New'), $result['sections']['paragraphStyles']['added']);
+    }
+
     // ---------------------------------------------------------------------
     // Files the section rejects
     // ---------------------------------------------------------------------

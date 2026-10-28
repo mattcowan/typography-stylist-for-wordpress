@@ -595,8 +595,13 @@ final class Typost_PS_Transfer {
 		}
 
 		// An overwrite can link existing styles into a loop or a chain that
-		// is too long; check every chain as the style editor would.
-		foreach ( $working as $style ) {
+		// is too long; check the chain of every style the import adds or
+		// changes, as the style editor would (based_on_error() also counts
+		// the styles below an overwritten one). Only these: a broken chain
+		// already stored on this site must not block an import that does
+		// not touch it.
+		foreach ( array_keys( $imported_keys ) as $key ) {
+			$style = self::find_style( $working, $key_to_id[ $key ] );
 			if ( empty( $style['basedOn'] ) ) {
 				continue;
 			}
