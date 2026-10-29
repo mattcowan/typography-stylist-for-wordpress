@@ -271,10 +271,14 @@ class ExportSettingsTest extends ExportTestCase {
             array('key' => 'p2', 'name' => 'Caps', 'features' => array('smcp')),
             array('key' => 'p3', 'name' => 'Caps (2)', 'features' => array('smcp')),
         )));
-        $this->assertSame(array('add', 'rename', 'rename'), array_column($this->preview($text)['sections']['presets']['preview']['rows'], 'choice'));
+        // "Caps (2)" is free, so the third preset keeps its own name and the
+        // rename suggestion avoids it.
+        $rows = $this->preview($text)['sections']['presets']['preview']['rows'];
+        $this->assertSame(array('add', 'rename', 'add'), array_column($rows, 'choice'));
+        $this->assertSame('Add as “Caps (3)”', $rows[1]['choices'][0]['label']);
 
         $this->import($text);
-        $this->assertSame(array('Caps', 'Caps (2)', 'Caps (2) (2)'), array_column($this->options['typost_presets'], 'name'));
+        $this->assertSame(array('Caps', 'Caps (3)', 'Caps (2)'), array_column($this->options['typost_presets'], 'name'));
     }
 
     public function test_a_preset_with_no_known_feature_is_not_imported() {
@@ -358,6 +362,41 @@ class ExportSettingsTest extends ExportTestCase {
         );
         $this->import($text, array('include' => array('presets'), 'fonts' => array('f1' => array('action' => 'add'))));
         $this->assertSame(array(), $this->site->manual);
+    }
+
+    public function test_a_deleted_font_never_overrides_its_replacements_own_feature_visibility() {
+        $this->sourceFont();
+        $this->site->mappings = array(9 => 3); // Font 9 was deleted and replaced by 3.
+
+        // Both have entries: the replacement's own wins, in either order.
+        $this->options['typost_font_feature_visibility'] = array(3 => array('disabled_features' => array('ss15')), 9 => array('disabled_features' => array('ornm')));
+        $this->assertSame(array('f1' => array('disabledFeatures' => array('ss15'))), json_decode($this->exportText(array('featureVisibility')), true)['sections']['featureVisibility']);
+
+        // The replacement hides nothing on purpose: nothing is exported.
+        $this->options['typost_font_feature_visibility'] = array(9 => array('disabled_features' => array('ornm')), 3 => array('disabled_features' => array()));
+        $this->assertSame(array(), json_decode($this->exportText(array('featureVisibility')), true)['sections']['featureVisibility']);
+
+        // Only the deleted font has an entry: it describes the font it renders as.
+        $this->options['typost_font_feature_visibility'] = array(9 => array('disabled_features' => array('ornm')));
+        $this->assertSame(array('f1' => array('disabledFeatures' => array('ornm'))), json_decode($this->exportText(array('featureVisibility')), true)['sections']['featureVisibility']);
+    }
+
+    public function test_per_font_settings_under_a_key_the_file_has_no_font_for_are_left_out() {
+        $fonts = array('f1' => array('source' => 'manual', 'family' => 'Brand', 'name' => 'Brand', 'fontFamily' => 'Brand'));
+        $text = $this->file(array(
+            'featureVisibility' => array('f1' => array('disabledFeatures' => array('ss15')), 'f9' => array('disabledFeatures' => array('ornm'))),
+            'variableFonts'     => array('f9' => array('isVariable' => true, 'axes' => $this->axes())),
+        ), $fonts);
+        $this->targetFont();
+
+        $preview = $this->preview($text)['sections'];
+        $this->assertSame(array('f1'), array_column($preview['featureVisibility']['preview']['rows'], 'key'));
+        $this->assertSame(array(), $preview['variableFonts']['preview']['rows']);
+
+        $result = $this->import($text);
+        $this->assertSame(array(30 => array('disabled_features' => array('ss15'))), $this->options['typost_font_feature_visibility']);
+        $this->assertArrayNotHasKey('typost_variable_font_axes', $this->options);
+        $this->assertSame(array(), $result['sections']['variableFonts']['groups']);
     }
 
     public function test_feature_visibility_drops_features_this_site_does_not_know() {

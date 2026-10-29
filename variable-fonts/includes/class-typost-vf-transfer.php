@@ -190,6 +190,11 @@ final class Typost_VF_Transfer {
 		$string_ids = $this->string_ids();
 		$rows       = array();
 		foreach ( $read as $key => $settings ) {
+			// A key the file's font list does not have (a hand-edited file)
+			// has no font row to map, so it is left out.
+			if ( '' === $fonts->file_font_name( $key ) ) {
+				continue;
+			}
 			$font_id = $fonts->import_font_id( $key );
 			$current = $font_id && isset( $string_ids[ $font_id ] ) ? $this->settings_for( $string_ids[ $font_id ] ) : null;
 			$rows[]  = Typost_Export_Settings::font_settings_row(
@@ -225,7 +230,10 @@ final class Typost_VF_Transfer {
 		$kept       = array();
 		$missing    = array();
 		foreach ( $read as $key => $settings ) {
-			$name      = $fonts->file_font_name( $key );
+			$name = $fonts->file_font_name( $key );
+			if ( '' === $name ) {
+				continue; // Not in the file's font list, as in the preview.
+			}
 			$font_id   = $fonts->import_font_id( $key );
 			$string_id = $font_id && isset( $string_ids[ $font_id ] ) ? $string_ids[ $font_id ] : '';
 			$has_own   = '' !== $string_id && null !== $this->settings_for( $string_id );

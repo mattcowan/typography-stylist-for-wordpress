@@ -385,8 +385,13 @@ final class Typost_PS_Transfer {
 	 *
 	 * A name that exists on this site starts as skip; a name an earlier
 	 * style in the file already uses starts as a rename, so the defaults
-	 * always import cleanly; anything else is added. Every style also gets
-	 * a free name to offer for a rename.
+	 * always import cleanly; anything else is added. A skipped or renamed
+	 * style gets a free name to offer for a rename; an added style offers
+	 * its own name.
+	 *
+	 * Suggestions avoid every name in the file, not only the ones before
+	 * them, so a later style whose own name is free still starts as add
+	 * ("Body", "Body", "Body (2)" gives add, rename to "Body (3)", add).
 	 *
 	 * @param array[] $items  read_items().
 	 * @param array[] $styles The styles on this site.
@@ -395,22 +400,24 @@ final class Typost_PS_Transfer {
 	private static function default_choices( $items, $styles ) {
 		$by_name = self::styles_by_name( $styles );
 		$taken   = array_fill_keys( array_keys( $by_name ), true );
+		foreach ( $items as $item ) {
+			$taken[ self::lower( $item['name'] ) ] = true;
+		}
 		$in_file = array();
 		$out     = array();
 		foreach ( $items as $item ) {
-			$lower     = self::lower( $item['name'] );
-			$suggested = self::unique_name( $item['name'], $taken );
-			$taken[ self::lower( $suggested ) ] = true;
-			if ( isset( $by_name[ $lower ] ) ) {
-				$out[ $item['key'] ] = array( 'action' => 'skip' );
-			} elseif ( isset( $in_file[ $lower ] ) ) {
-				$out[ $item['key'] ] = array(
-					'action' => 'rename',
-					'name'   => $suggested,
-				);
-				// A later style with the suggested name must not add it too.
-				$in_file[ self::lower( $suggested ) ] = true;
+			$lower = self::lower( $item['name'] );
+			if ( isset( $by_name[ $lower ] ) || isset( $in_file[ $lower ] ) ) {
+				$suggested                          = self::unique_name( $item['name'], $taken );
+				$taken[ self::lower( $suggested ) ] = true;
+				$out[ $item['key'] ]                = isset( $by_name[ $lower ] )
+					? array( 'action' => 'skip' )
+					: array(
+						'action' => 'rename',
+						'name'   => $suggested,
+					);
 			} else {
+				$suggested           = $item['name'];
 				$out[ $item['key'] ] = array( 'action' => 'add' );
 			}
 			$out[ $item['key'] ]['suggestedName'] = $suggested;

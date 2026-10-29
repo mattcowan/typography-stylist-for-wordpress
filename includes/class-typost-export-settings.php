@@ -216,6 +216,11 @@ final class Typost_Export_Settings {
     /**
      * The choice each preset starts with, and the free name a rename uses.
      *
+     * Suggestions avoid every name in the file, not only the ones before
+     * them, so a later preset whose own name is free still starts as add
+     * ("Caps", "Caps", "Caps (2)" gives add, "Caps (3)", add). An added
+     * preset offers no rename, so its suggestion is its own name.
+     *
      * @param array[] $items read_presets() items.
      * @return array<string,array> Key => {action, exists, suggestedName}.
      */
@@ -225,19 +230,20 @@ final class Typost_Export_Settings {
             $existing[self::lower($preset['name'])] = true;
         }
         $taken = $existing;
+        foreach ($items as $item) {
+            $taken[self::lower($item['name'])] = true;
+        }
         $in_file = array();
         $out = array();
         foreach ($items as $item) {
             $lower = self::lower($item['name']);
-            $suggested = self::unique_name($item['name'], $taken);
-            $taken[self::lower($suggested)] = true;
-            if (isset($existing[$lower])) {
-                $action = 'skip';
-            } elseif (isset($in_file[$lower])) {
-                $action = 'rename';
-                $in_file[self::lower($suggested)] = true;
+            if (isset($existing[$lower]) || isset($in_file[$lower])) {
+                $action = isset($existing[$lower]) ? 'skip' : 'rename';
+                $suggested = self::unique_name($item['name'], $taken);
+                $taken[self::lower($suggested)] = true;
             } else {
                 $action = 'add';
+                $suggested = $item['name'];
             }
             $in_file[$lower] = true;
             $out[$item['key']] = array('action' => $action, 'exists' => isset($existing[$lower]), 'suggestedName' => $suggested);
@@ -548,14 +554,25 @@ final class Typost_Export_Settings {
      * @return array{data: array|stdClass}
      */
     public function export_visibility($fonts, $args) {
+        // Deleting a font leaves its entry behind, and key_for_font_id()
+        // follows the replacement chain, so a deleted font and its
+        // replacement name the same key. The replacement's own entry wins,
+        // also an empty one (it hides nothing on purpose); a deleted font's
+        // entry is used only when the replacement has none.
+        $entries = (array) get_option(self::VISIBILITY_OPTION, array());
         $out = array();
-        foreach ((array) get_option(self::VISIBILITY_OPTION, array()) as $font_id => $entry) {
+        foreach ($entries as $font_id => $entry) {
+            $font_id = absint($font_id);
             $features = self::disabled_features($entry);
             if (!$features) {
                 continue;
             }
-            $key = $fonts->key_for_font_id(absint($font_id));
-            if (null !== $key) {
+            $resolved = $fonts->resolve_font_id($font_id);
+            if ($resolved !== $font_id && isset($entries[$resolved])) {
+                continue;
+            }
+            $key = $fonts->key_for_font_id($font_id);
+            if (null !== $key && !isset($out[$key])) {
                 $out[$key] = array('disabledFeatures' => $features);
             }
         }
@@ -618,6 +635,11 @@ final class Typost_Export_Settings {
         $visibility = (array) get_option(self::VISIBILITY_OPTION, array());
         $rows = array();
         foreach ($read as $key => $features) {
+            // A key the file's font list does not have (a hand-edited
+            // file) has no font row to map, so it is left out.
+            if ('' === $fonts->file_font_name($key)) {
+                continue;
+            }
             $font_id = $fonts->import_font_id($key);
             $current = $font_id && isset($visibility[$font_id]) ? self::disabled_features($visibility[$font_id]) : array();
             $rows[] = self::font_settings_row(
@@ -652,6 +674,9 @@ final class Typost_Export_Settings {
         $missing = array();
         foreach ($read as $key => $features) {
             $name = $fonts->file_font_name($key);
+            if ('' === $name) {
+                continue; // Not in the file's font list, as in the preview.
+            }
             $font_id = $fonts->import_font_id($key);
             $has_own = $font_id && isset($visibility[$font_id]) && self::disabled_features($visibility[$font_id]);
             $choice = self::font_settings_choice($choices, $key, $has_own);

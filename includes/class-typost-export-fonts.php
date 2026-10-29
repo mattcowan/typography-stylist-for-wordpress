@@ -108,6 +108,17 @@ class Typost_Export_Fonts {
     }
 
     /**
+     * The font ID a font ID renders as here: itself when the font exists,
+     * its replacement when it was deleted, 0 when neither exists.
+     *
+     * @param int $font_id Font ID.
+     * @return int
+     */
+    public function resolve_font_id($font_id) {
+        return $this->resolve_replacement(absint($font_id));
+    }
+
+    /**
      * Follow the replacement chain of a deleted font ID.
      *
      * Same walk as Typost_Paragraph_Styles::resolve_font_label(): stops at
