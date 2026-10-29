@@ -258,7 +258,7 @@ final class Typost_Export_Settings {
      * @param mixed               $choices Key => add|skip|rename|overwrite.
      * @param Typost_Export_Fonts $fonts   Fonts helper.
      * @param bool                $dry_run Check only.
-     * @return array|WP_Error {groups, warnings}
+     * @return array|WP_Error {groups}
      */
     public function import_presets($data, $choices, $fonts, $dry_run) {
         $read = $this->read_presets($data);
@@ -333,8 +333,10 @@ final class Typost_Export_Settings {
                 self::group(__('Presets added', 'typography-stylist'), array_merge($added, $renamed)),
                 self::group(__('Presets overwritten', 'typography-stylist'), $overwritten),
                 self::group(__('Presets skipped', 'typography-stylist'), $skipped),
+                // A group of its own: the result page puts every section's
+                // warnings under a heading about styles.
+                self::group(__('Presets not imported (they use only OpenType features this site does not know)', 'typography-stylist'), $read['dropped']),
             ))),
-            'warnings' => $this->dropped_presets_notes($read['dropped']),
         );
     }
 

@@ -114,8 +114,8 @@ msgstr "Détecté automatiquement à partir des fichiers de police."
 
 #: includes/admin-page.php:113
 #: includes/class-typost-export-settings.php:61
-#: includes/class-typost-export-settings.php:601
-#: includes/class-typost-export-settings.php:676
+#: includes/class-typost-export-settings.php:620
+#: includes/class-typost-export-settings.php:703
 msgid "Feature Visibility"
 msgstr "Visibilité des fonctionnalités"
 
@@ -143,7 +143,7 @@ msgstr "Téléversements MyFonts"
 
 #: includes/admin-page.php:167
 #: includes/admin-page.php:417
-#: includes/class-typost-export-fonts.php:555
+#: includes/class-typost-export-fonts.php:566
 msgid "Adobe Fonts"
 msgstr "Adobe Fonts"
 
@@ -3294,7 +3294,7 @@ msgstr "Import en cours…"
 
 #. translators: %s: font name from the import file
 #. translators: %s: font name
-#: includes/class-typost-export-fonts.php:632
+#: includes/class-typost-export-fonts.php:643
 #: includes/class-typost-export.php:633
 #, php-format
 msgid "Choose a font on this site for “%s”."
@@ -3325,7 +3325,7 @@ msgid "Added with a new name"
 msgstr "Ajoutés sous un nouveau nom"
 
 #. translators: 1: name in the file, 2: name on this site
-#: includes/class-typost-export-settings.php:312
+#: includes/class-typost-export-settings.php:318
 #: includes/class-typost-export.php:642
 #, php-format
 msgid "“%1$s” as “%2$s”"
@@ -3363,42 +3363,42 @@ msgstr "Rien n’a été importé."
 msgid "Import another file"
 msgstr "Importer un autre fichier"
 
-#: includes/class-typost-export-fonts.php:498
-#: includes/class-typost-export-fonts.php:505
+#: includes/class-typost-export-fonts.php:509
+#: includes/class-typost-export-fonts.php:516
 msgid "The fonts in this file cannot be read."
 msgstr "Les polices de ce fichier ne peuvent pas être lues."
 
-#: includes/class-typost-export-fonts.php:554
+#: includes/class-typost-export-fonts.php:565
 msgid "uploaded"
 msgstr "téléversée"
 
-#: includes/class-typost-export-fonts.php:556
+#: includes/class-typost-export-fonts.php:567
 msgid "font definition"
 msgstr "définition de police"
 
-#: includes/class-typost-export-fonts.php:557
+#: includes/class-typost-export-fonts.php:568
 msgid "Font Library"
 msgstr "Bibliothèque de polices"
 
 #. translators: 1: font name, 2: font family, 3: where the font comes from (uploaded, Adobe Fonts, font definition, Font Library)
-#: includes/class-typost-export-fonts.php:563
+#: includes/class-typost-export-fonts.php:574
 #, php-format
 msgid "%1$s (%2$s, %3$s)"
 msgstr "%1$s (%2$s, %3$s)"
 
 #. translators: 1: font name, 2: where the font comes from (uploaded, Adobe Fonts, font definition, Font Library)
-#: includes/class-typost-export-fonts.php:566
+#: includes/class-typost-export-fonts.php:577
 #, php-format
 msgid "%1$s (%2$s)"
 msgstr "%1$s (%2$s)"
 
 #. translators: %s: font name from the import file
-#: includes/class-typost-export-fonts.php:642
+#: includes/class-typost-export-fonts.php:653
 #, php-format
 msgid "“%s” cannot be added from this file. Its font files must be on this site first."
 msgstr "« %s » ne peut pas être ajoutée depuis ce fichier. Ses fichiers de police doivent d’abord se trouver sur ce site."
 
-#: includes/class-typost-export-fonts.php:650
+#: includes/class-typost-export-fonts.php:661
 msgid "A font choice in the request is not valid."
 msgstr "Un choix de police dans la requête n’est pas valide."
 
@@ -3520,62 +3520,62 @@ msgstr "Remplacer le préréglage de ce site"
 msgid "A preset with this name exists."
 msgstr "Un préréglage portant ce nom existe."
 
-#: includes/class-typost-export-settings.php:290
+#: includes/class-typost-export-settings.php:296
 msgid "There is no preset with this name to overwrite."
 msgstr "Aucun préréglage portant ce nom n’existe à remplacer."
 
 #. translators: %s: preset name
-#: includes/class-typost-export-settings.php:302
+#: includes/class-typost-export-settings.php:308
 #, php-format
 msgid "A preset named “%s” already exists. Skip this preset, add it with another name, or overwrite the preset on this site."
 msgstr "Un préréglage nommé « %s » existe déjà. Ignorez ce préréglage, ajoutez-le sous un autre nom, ou remplacez le préréglage de ce site."
 
-#: includes/class-typost-export-settings.php:317
+#: includes/class-typost-export-settings.php:323
 msgid "The choice for this preset is not valid."
 msgstr "Le choix pour ce préréglage n’est pas valide."
 
-#: includes/class-typost-export-settings.php:327
+#: includes/class-typost-export-settings.php:333
 msgid "Presets added"
 msgstr "Préréglages ajoutés"
 
-#: includes/class-typost-export-settings.php:328
+#: includes/class-typost-export-settings.php:334
 msgid "Presets overwritten"
 msgstr "Préréglages remplacés"
 
-#: includes/class-typost-export-settings.php:329
+#: includes/class-typost-export-settings.php:335
 msgid "Presets skipped"
 msgstr "Préréglages ignorés"
 
 #. translators: %s: comma-separated list of preset names
-#: includes/class-typost-export-settings.php:371
+#: includes/class-typost-export-settings.php:379
 #, php-format
 msgid "These presets use only OpenType features this site does not know, so they are not imported: %s."
 msgstr "Ces préréglages n’utilisent que des fonctionnalités OpenType que ce site ne connaît pas, ils ne sont donc pas importés : %s."
 
 #. translators: 1: preset name, 2: why it cannot be imported
-#: includes/class-typost-export-settings.php:383
+#: includes/class-typost-export-settings.php:391
 #, php-format
 msgid "“%1$s”: %2$s Nothing was saved."
 msgstr "« %1$s » : %2$s Rien n’a été enregistré."
 
-#: includes/class-typost-export-settings.php:416
+#: includes/class-typost-export-settings.php:424
 msgid "The options in this file cannot be read. Nothing was saved."
 msgstr "Les options de ce fichier ne peuvent pas être lues. Rien n’a été enregistré."
 
-#: includes/class-typost-export-settings.php:463
+#: includes/class-typost-export-settings.php:471
 msgid "Keep the value on this site"
 msgstr "Garder la valeur de ce site"
 
-#: includes/class-typost-export-settings.php:464
+#: includes/class-typost-export-settings.php:472
 msgid "Use the value in the file"
 msgstr "Utiliser la valeur du fichier"
 
-#: includes/class-typost-export-settings.php:471
+#: includes/class-typost-export-settings.php:479
 msgid "Every option in the file has the same value on this site."
 msgstr "Chaque option du fichier a la même valeur sur ce site."
 
 #. translators: %d: number of options
-#: includes/class-typost-export-settings.php:474
+#: includes/class-typost-export-settings.php:482
 #, php-format
 msgid "%d other option has the same value on this site."
 msgid_plural "%d other options have the same value on this site."
@@ -3583,69 +3583,69 @@ msgstr[0] "%d autre option a la même valeur sur ce site."
 msgstr[1] "%d autres options ont la même valeur sur ce site."
 
 #. translators: %s: comma-separated list of option names
-#: includes/class-typost-export-settings.php:478
+#: includes/class-typost-export-settings.php:486
 #, php-format
 msgid "This site does not have these options, so they are left out: %s."
 msgstr "Ce site n’a pas ces options, elles sont donc laissées de côté : %s."
 
 #. translators: %s: option label
-#: includes/class-typost-export-settings.php:513
+#: includes/class-typost-export-settings.php:521
 #, php-format
 msgid "Choose whether to keep the value on this site or use the value in the file for “%s”. Nothing was saved."
 msgstr "Choisissez de garder la valeur de ce site ou d’utiliser la valeur du fichier pour « %s ». Rien n’a été enregistré."
 
 #. translators: 1: option label, 2: its new value
-#: includes/class-typost-export-settings.php:525
+#: includes/class-typost-export-settings.php:533
 #, php-format
 msgid "%1$s: %2$s"
 msgstr "%1$s : %2$s"
 
-#: includes/class-typost-export-settings.php:532
+#: includes/class-typost-export-settings.php:540
 msgid "Options changed"
 msgstr "Options modifiées"
 
-#: includes/class-typost-export-settings.php:533
+#: includes/class-typost-export-settings.php:541
 msgid "Options kept"
 msgstr "Options gardées"
 
-#: includes/class-typost-export-settings.php:573
+#: includes/class-typost-export-settings.php:592
 msgid "The Feature Visibility settings in this file cannot be read. Nothing was saved."
 msgstr "Les réglages de visibilité des fonctionnalités de ce fichier ne peuvent pas être lus. Rien n’a été enregistré."
 
-#: includes/class-typost-export-settings.php:626
+#: includes/class-typost-export-settings.php:650
 msgid "No features hidden"
 msgstr "Aucune fonctionnalité masquée"
 
-#: includes/class-typost-export-settings.php:714
+#: includes/class-typost-export-settings.php:741
 msgid "This font is not on this site yet. Its settings are imported only if you choose a font for it above."
 msgstr "Cette police n’est pas encore sur ce site. Ses réglages ne sont importés que si vous lui choisissez une police plus haut."
 
-#: includes/class-typost-export-settings.php:718
+#: includes/class-typost-export-settings.php:745
 msgid "Use the settings in the file"
 msgstr "Utiliser les réglages du fichier"
 
-#: includes/class-typost-export-settings.php:719
+#: includes/class-typost-export-settings.php:746
 msgid "Keep the settings on this site"
 msgstr "Garder les réglages de ce site"
 
-#: includes/class-typost-export-settings.php:741
+#: includes/class-typost-export-settings.php:768
 msgid "A font settings choice in the request is not valid. Nothing was saved."
 msgstr "Un choix de réglages de police dans la requête n’est pas valide. Rien n’a été enregistré."
 
 #. translators: %s: name of a per-font setting, such as Feature Visibility
-#: includes/class-typost-export-settings.php:756
+#: includes/class-typost-export-settings.php:783
 #, php-format
 msgid "%s: settings imported"
 msgstr "%s : réglages importés"
 
 #. translators: %s: name of a per-font setting, such as Feature Visibility
-#: includes/class-typost-export-settings.php:758
+#: includes/class-typost-export-settings.php:785
 #, php-format
 msgid "%s: settings kept"
 msgstr "%s : réglages gardés"
 
 #. translators: %s: name of a per-font setting, such as Feature Visibility
-#: includes/class-typost-export-settings.php:760
+#: includes/class-typost-export-settings.php:787
 #, php-format
 msgid "%s: not imported, because the font is not on this site"
 msgstr "%s : non importés, car la police n’est pas sur ce site"
@@ -3677,3 +3677,7 @@ msgstr "Choisissez quoi faire de « %s »."
 #: includes/class-typost-export.php:622
 msgid "This part of the file is empty."
 msgstr "Cette partie du fichier est vide."
+
+#: includes/class-typost-export-settings.php:338
+msgid "Presets not imported (they use only OpenType features this site does not know)"
+msgstr "Préréglages non importés (ils n’utilisent que des fonctionnalités OpenType que ce site ne connaît pas)"

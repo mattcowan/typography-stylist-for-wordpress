@@ -289,7 +289,10 @@ class ExportSettingsTest extends ExportTestCase {
 
         $result = $this->import($text);
         $this->assertArrayNotHasKey('typost_presets', $this->options);
-        $this->assertSame($preview['notes'], $result['sections']['presets']['warnings']);
+        // A group of the presets section, not a warning: the result page puts
+        // warnings under "Check these styles".
+        $this->assertSame(array(array('heading' => 'Presets not imported (they use only OpenType features this site does not know)', 'items' => array('Odd'))), $result['sections']['presets']['groups']);
+        $this->assertArrayNotHasKey('warnings', $result['sections']['presets']);
     }
 
     public function test_an_invalid_preset_choice_saves_nothing() {
