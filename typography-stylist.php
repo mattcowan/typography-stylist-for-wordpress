@@ -40,6 +40,8 @@ require_once __DIR__ . '/includes/class-typost-font-library-bridge.php';
 require_once __DIR__ . '/includes/class-typost-font-metadata.php';
 require_once __DIR__ . '/includes/class-typost-export-fonts.php';
 require_once __DIR__ . '/includes/class-typost-export.php';
+require_once __DIR__ . '/includes/class-typost-admin-options.php';
+require_once __DIR__ . '/includes/class-typost-export-settings.php';
 
 /**
  * Main plugin class
@@ -233,6 +235,7 @@ class Typost {
         add_filter('typost_admin_tabs', array($this->export(), 'register_admin_tab'));
         add_action('typost_admin_tab_content_export', array($this->export(), 'render_admin_tab'));
         add_action('typost_admin_assets', array($this->export(), 'enqueue_admin_assets'));
+        add_filter('typost_export_sections', array(new Typost_Export_Settings($this), 'register_sections'));
 
         // Register settings
         add_action('admin_init', array($this, 'register_settings'));
@@ -1590,8 +1593,7 @@ class Typost {
      * @return string Sanitized color scheme value.
      */
     public function sanitize_color_scheme($value) {
-        $valid = array('default', 'admin-colors', 'alice-blue', 'dark', 'high-contrast');
-        return in_array($value, $valid, true) ? $value : 'default';
+        return Typost_Admin_Options::sanitize(Typost_Admin_Options::COLOR_SCHEME, $value);
     }
 
     /**
@@ -3573,28 +3575,29 @@ class Typost {
      * @param WP_REST_Request $request
      */
     public function rest_save_admin_options(WP_REST_Request $request) {
-        // rest_sanitize_boolean(): clients may send real booleans (JSON) or
-        // strings like "false"/"0" (form-encoded), which are truthy in PHP.
-        update_option('typost_show_clear_confirmation', rest_sanitize_boolean($request->get_param('show_clear_confirmation')) ? '1' : '0');
-        update_option('typost_archive_full_content_check', rest_sanitize_boolean($request->get_param('archive_full_content_check')) ? '1' : '0');
+        // Typost_Admin_Options::sanitize() is shared with the POST fallback
+        // and import. Clients may send real booleans (JSON) or strings like
+        // "false"/"0" (form-encoded), which are truthy in PHP.
+        update_option('typost_show_clear_confirmation', Typost_Admin_Options::sanitize('typost_show_clear_confirmation', $request->get_param('show_clear_confirmation')));
+        update_option('typost_archive_full_content_check', Typost_Admin_Options::sanitize('typost_archive_full_content_check', $request->get_param('archive_full_content_check')));
 
         // Only save when the client actually sent the value. A browser holding a
         // cached copy of admin-page.js from before this option existed would post
         // without the field, and an unguarded write would read that absence as
         // "unchecked" and silently turn the default off.
         if (null !== $request->get_param('block_enter_line_break')) {
-            update_option('typost_block_enter_line_break', rest_sanitize_boolean($request->get_param('block_enter_line_break')) ? '1' : '0');
+            update_option('typost_block_enter_line_break', Typost_Admin_Options::sanitize('typost_block_enter_line_break', $request->get_param('block_enter_line_break')));
         }
 
         // Same "only save what the client sent" rule (#248)
         if (null !== $request->get_param('new_font_sizes_px')) {
-            update_option('typost_new_font_sizes_px', rest_sanitize_boolean($request->get_param('new_font_sizes_px')) ? '1' : '0');
+            update_option('typost_new_font_sizes_px', Typost_Admin_Options::sanitize('typost_new_font_sizes_px', $request->get_param('new_font_sizes_px')));
         }
 
         // Checkbox rendered only when the Font Library is available; only
         // save when the client actually sent the value.
         if ($this->font_library_bridge()->is_available() && null !== $request->get_param('auto_register_wp_fonts')) {
-            update_option('typost_auto_register_wp_fonts', rest_sanitize_boolean($request->get_param('auto_register_wp_fonts')) ? '1' : '0');
+            update_option('typost_auto_register_wp_fonts', Typost_Admin_Options::sanitize('typost_auto_register_wp_fonts', $request->get_param('auto_register_wp_fonts')));
         }
 
         // Extension-registered checkbox options (see typost_admin_options_rows).
@@ -3602,7 +3605,7 @@ class Typost {
         // Same "only save what the client sent" rule as above.
         foreach ($this->get_extension_option_checkboxes() as $option_key) {
             if (null !== $request->get_param($option_key)) {
-                update_option($option_key, rest_sanitize_boolean($request->get_param($option_key)) ? '1' : '0');
+                update_option($option_key, Typost_Admin_Options::sanitize($option_key, $request->get_param($option_key)));
             }
         }
 
@@ -3633,7 +3636,7 @@ class Typost {
     public function rest_save_accessibility_options(WP_REST_Request $request) {
         // rest_sanitize_boolean(): clients may send real booleans (JSON) or
         // strings like "false"/"0" (form-encoded), which are truthy in PHP.
-        update_option('typost_disable_accessibility_warning', rest_sanitize_boolean($request->get_param('disable_accessibility_warning')) ? '1' : '0');
+        update_option('typost_disable_accessibility_warning', Typost_Admin_Options::sanitize('typost_disable_accessibility_warning', $request->get_param('disable_accessibility_warning')));
 
         // Clear cache when accessibility settings change
         $this->clear_cache();
@@ -3744,6 +3747,18 @@ class Typost {
          * @since 2.0.0
          */
         do_action('typost_cache_clear');
+    }
+
+    /**
+     * Clear every plugin cache, as the save routes do after a write.
+     *
+     * Public for code outside this class that writes plugin options, such
+     * as import (#205): presets, options and Feature Visibility.
+     *
+     * @since 2.3.5
+     */
+    public function clear_caches() {
+        $this->clear_cache();
     }
 
     /**
@@ -7468,39 +7483,27 @@ class Typost {
             check_admin_referer('typography_stylist_options_settings_nonce') &&
             current_user_can('manage_options')) {
 
-            // Get previous value to detect changes
-            $previous_show_clear_confirmation = (bool) get_option('typost_show_clear_confirmation', true);
-            $show_clear_confirmation = isset($_POST['typost_show_clear_confirmation']) ? '1' : '0';
-            update_option('typost_show_clear_confirmation', $show_clear_confirmation);
-
+            // A checkbox is in the POST only when checked. Values go through
+            // Typost_Admin_Options::sanitize(), shared with REST and import.
             // typost_allow_variable_weights is deliberately NOT written here:
             // the Options tab renders no control for it, and a no-JS save must
             // not reset an option that has no checkbox (see sanitize_font_faces()).
-
-            // Save archive full content check setting
-            $archive_check = isset($_POST['typost_archive_full_content_check']) ? '1' : '0';
-            update_option('typost_archive_full_content_check', $archive_check);
-
-            // Save Enter-key behaviour for the Typography Stylist block
-            $enter_line_break = isset($_POST['typost_block_enter_line_break']) ? '1' : '0';
-            update_option('typost_block_enter_line_break', $enter_line_break);
-
-            // Save the unit new font sizes are written in (#248)
-            $new_font_sizes_px = isset($_POST['typost_new_font_sizes_px']) ? '1' : '0';
-            update_option('typost_new_font_sizes_px', $new_font_sizes_px);
-
-            // Save WP Font Library auto-register setting (checkbox rendered
-            // only when the Font Library is available)
+            $checkboxes = array(
+                'typost_show_clear_confirmation',
+                'typost_archive_full_content_check',
+                'typost_block_enter_line_break',
+                'typost_new_font_sizes_px', // #248
+            );
+            // The Font Library checkbox is rendered only when the Library is available.
             if ($this->font_library_bridge()->is_available()) {
-                $auto_register = isset($_POST['typost_auto_register_wp_fonts']) ? '1' : '0';
-                update_option('typost_auto_register_wp_fonts', $auto_register);
+                $checkboxes[] = 'typost_auto_register_wp_fonts';
             }
-
-            // Save extension-registered checkbox options (see typost_admin_options_rows).
+            // Extension-registered checkbox options (see typost_admin_options_rows).
             // A full form POST always carries every rendered checkbox, so an
             // absent field genuinely means unchecked here.
-            foreach ($this->get_extension_option_checkboxes() as $option_key) {
-                update_option($option_key, isset($_POST[$option_key]) ? '1' : '0');
+            $checkboxes = array_merge($checkboxes, $this->get_extension_option_checkboxes());
+            foreach ($checkboxes as $option_key) {
+                update_option($option_key, Typost_Admin_Options::sanitize($option_key, isset($_POST[$option_key])));
             }
 
             // Save color scheme setting
@@ -7524,8 +7527,7 @@ class Typost {
             current_user_can('manage_options')) {
 
             // Store checkbox values explicitly as '1' (enabled) or '0' (disabled)
-            $disable_warning = isset($_POST['typost_disable_accessibility_warning']) ? '1' : '0';
-            update_option('typost_disable_accessibility_warning', $disable_warning);
+            update_option('typost_disable_accessibility_warning', Typost_Admin_Options::sanitize('typost_disable_accessibility_warning', isset($_POST['typost_disable_accessibility_warning'])));
 
             // Clear cache when accessibility settings change
             $this->clear_cache();

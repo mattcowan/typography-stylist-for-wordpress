@@ -187,20 +187,59 @@
 	}
 
 	/**
+	 * The id of a generic row's select. Option names and font keys are
+	 * safe already; anything else is reduced to id characters.
+	 *
+	 * @param {string} sectionId
+	 * @param {string} rowKey
+	 * @return {string}
+	 */
+	function rowFieldId(sectionId, rowKey) {
+		return ('typost-import-row-' + sectionId + '-' + rowKey).replace(/[^A-Za-z0-9_-]/g, '_');
+	}
+
+	/**
+	 * The sections whose preview uses the generic row form.
+	 *
+	 * @param {Object} preview The preview response.
+	 * @return {string[]}
+	 */
+	function rowSectionIds(preview) {
+		return Object.keys(preview.sections || {}).filter(function (id) {
+			var p = preview.sections[id].preview;
+			return !!(p && Array.isArray(p.rows));
+		});
+	}
+
+	/**
 	 * Problems to fix before importing. The server checks again; this only
 	 * catches what the preview already knows.
 	 *
 	 * @param {Object} preview The preview response.
-	 * @param {Object} state   {fonts: {key: value}, styles: {key: {action, name}}, include: {id: bool}}
+	 * @param {Object} state   {fonts: {key: value}, styles: {key: {action, name}},
+	 *                         rows: {sectionId: {rowKey: value}}, include: {id: bool}}
 	 * @param {Object} l10n    Strings.
-	 * @return {Array} [{message, kind: 'font'|'style', key}]
+	 * @return {Array} [{message, kind: 'font'|'style'|'row', key, field}]
 	 */
 	function collectErrors(preview, state, l10n) {
 		var errors = [];
 		(preview.fonts || []).forEach(function (row) {
 			if (!fontLeftOut(row, state) && !fontChoiceFromValue(state.fonts[row.key])) {
-				errors.push({ message: formatString(l10n.errorChooseFont, [row.name]), kind: 'font', key: row.key });
+				errors.push({ message: formatString(l10n.errorChooseFont, [row.name]), kind: 'font', key: row.key, field: 'typost-import-font-' + row.key });
 			}
+		});
+		// A row with no pre-set choice (an option that differs here) must be
+		// answered.
+		rowSectionIds(preview).forEach(function (id) {
+			if (state.include[id] === false) {
+				return;
+			}
+			var answers = (state.rows && state.rows[id]) || {};
+			preview.sections[id].preview.rows.forEach(function (row) {
+				if (!answers[row.key]) {
+					errors.push({ message: formatString(l10n.errorChooseRow, [row.name]), kind: 'row', key: row.key, field: rowFieldId(id, row.key) });
+				}
+			});
 		});
 
 		var section = preview.sections && preview.sections.paragraphStyles;
@@ -225,9 +264,9 @@
 				}
 				var name = String(choice.name || '').trim();
 				if (!name) {
-					errors.push({ message: formatString(l10n.errorRenameEmpty, [item.name]), kind: 'style', key: item.key });
+					errors.push({ message: formatString(l10n.errorRenameEmpty, [item.name]), kind: 'style', key: item.key, field: 'typost-import-rename-' + item.key });
 				} else if (taken[nameKey(name)]) {
-					errors.push({ message: formatString(l10n.errorRenameTaken, [item.name, name]), kind: 'style', key: item.key });
+					errors.push({ message: formatString(l10n.errorRenameTaken, [item.name, name]), kind: 'style', key: item.key, field: 'typost-import-rename-' + item.key });
 				} else {
 					taken[nameKey(name)] = true;
 				}
@@ -271,6 +310,16 @@
 			});
 			sections.paragraphStyles = styles;
 		}
+		rowSectionIds(preview).forEach(function (id) {
+			var answers = (state.rows && state.rows[id]) || {};
+			var out = {};
+			preview.sections[id].preview.rows.forEach(function (row) {
+				if (answers[row.key]) {
+					out[row.key] = answers[row.key];
+				}
+			});
+			sections[id] = out;
+		});
 		return { fonts: fonts, sections: sections, include: include };
 	}
 
@@ -297,6 +346,10 @@
 			}));
 			push(l10n.resultOverwritten, r.overwritten);
 			push(l10n.resultSkipped, r.skipped);
+			// Sections in the generic form name their own groups.
+			(r.groups || []).forEach(function (group) {
+				push(String(group.heading || ''), group.items);
+			});
 		});
 		if (result.fonts) {
 			push(l10n.resultFontsAdded, result.fonts.added);
@@ -347,6 +400,8 @@
 		fontSelectOptions: fontSelectOptions,
 		styleActions: styleActions,
 		fontLeftOut: fontLeftOut,
+		rowFieldId: rowFieldId,
+		rowSectionIds: rowSectionIds,
 		collectErrors: collectErrors,
 		buildImportChoices: buildImportChoices,
 		resultGroups: resultGroups,
@@ -628,6 +683,17 @@
 		include.checked = true;
 		includeRow.appendChild(el('label', { for: includeId }, l10n.includeSection));
 
+		((section.preview && section.preview.notes) || []).forEach(function (note) {
+			container.appendChild(el('p', { class: 'typost-import-section-note' }, String(note)));
+		});
+		if (section.preview && Array.isArray(section.preview.rows)) {
+			if (!section.preview.rows.length && !(section.preview.notes || []).length) {
+				container.appendChild(el('p', { class: 'typost-import-section-note' }, l10n.sectionEmpty));
+			}
+			renderRows(container, id, section.preview.rows, headingId);
+			return;
+		}
+
 		var items = (section.preview && section.preview.items) || [];
 		if (id !== 'paragraphStyles') {
 			// A section an extension added: list what it holds.
@@ -683,8 +749,68 @@
 		container.appendChild(table);
 	}
 
+	/**
+	 * A section in the generic row form: each row offers the choices the
+	 * server sent. A row with no pre-set choice starts on "Choose…".
+	 */
+	function renderRows(container, id, rows, headingId) {
+		if (!rows.length) {
+			return;
+		}
+		var compare = rows.some(function (row) {
+			return row.current !== undefined || row.incoming !== undefined;
+		});
+		var table = el('table', { class: 'widefat striped typost-import-table', 'aria-labelledby': headingId });
+		var head = el('tr');
+		var columns = compare ? [l10n.colName, l10n.colOnSite, l10n.colInFile, l10n.colAction] : [l10n.colName, l10n.colAction];
+		columns.forEach(function (text) {
+			head.appendChild(el('th', { scope: 'col' }, text));
+		});
+		table.appendChild(el('thead')).appendChild(head);
+		var body = table.appendChild(el('tbody'));
+		rows.forEach(function (row) {
+			var tr = body.appendChild(el('tr'));
+			var nameCell = tr.appendChild(el('th', { scope: 'row' }, String(row.name)));
+			var fieldId = rowFieldId(id, row.key);
+			var described = [];
+			if (row.detail) {
+				var detailId = fieldId + '-detail';
+				nameCell.appendChild(el('span', { id: detailId, class: 'typost-import-detail' }, String(row.detail)));
+				described.push(detailId);
+			}
+			if (row.note) {
+				var noteId = fieldId + '-note';
+				nameCell.appendChild(el('span', { id: noteId, class: 'typost-import-note' }, String(row.note)));
+				described.push(noteId);
+			}
+			if (compare) {
+				tr.appendChild(el('td', {}, row.current !== undefined ? String(row.current) : '—'));
+				tr.appendChild(el('td', {}, row.incoming !== undefined ? String(row.incoming) : '—'));
+			}
+			var options = (row.choices || []).map(function (choice) {
+				return { value: String(choice.value), label: String(choice.label) };
+			});
+			if (!row.choice) {
+				options.unshift({ value: '', label: l10n.chooseAction });
+			}
+			var select = buildSelect(fieldId, options, row.choice || '', formatString(l10n.rowSelectLabel, [row.name]));
+			select.setAttribute('data-row-section', id);
+			select.setAttribute('data-row-key', row.key);
+			if (described.length) {
+				select.setAttribute('aria-describedby', described.join(' '));
+			}
+			tr.appendChild(el('td')).appendChild(select);
+		});
+		container.appendChild(table);
+	}
+
 	function readState(container, preview) {
-		var state = { fonts: {}, styles: {}, include: {} };
+		var state = { fonts: {}, styles: {}, rows: {}, include: {} };
+		Array.prototype.forEach.call(container.querySelectorAll('select[data-row-key]'), function (select) {
+			var id = select.getAttribute('data-row-section');
+			state.rows[id] = state.rows[id] || {};
+			state.rows[id][select.getAttribute('data-row-key')] = select.value;
+		});
 		Array.prototype.forEach.call(container.querySelectorAll('select[data-font-key]'), function (select) {
 			state.fonts[select.getAttribute('data-font-key')] = select.value;
 		});
@@ -767,14 +893,13 @@
 			node.removeAttribute('aria-invalid');
 		});
 		errors.forEach(function (error) {
-			var id = error.kind === 'font' ? 'typost-import-font-' + error.key : 'typost-import-rename-' + error.key;
-			var field = document.getElementById(id);
+			var field = document.getElementById(error.field);
 			if (field) {
 				field.setAttribute('aria-invalid', 'true');
 			}
 		});
 		if (errors.length) {
-			var first = document.getElementById(errors[0].kind === 'font' ? 'typost-import-font-' + errors[0].key : 'typost-import-rename-' + errors[0].key);
+			var first = document.getElementById(errors[0].field);
 			if (first) {
 				first.focus();
 			}

@@ -7,148 +7,170 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-05T19:52:24+00:00\n"
+"POT-Creation-Date: 2026-10-29T13:25:39+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: typost-variable-fonts\n"
 
+#: includes/class-typost-vf-transfer.php:58
+#: includes/class-typost-vf-transfer.php:171
+#: includes/class-typost-vf-transfer.php:250
+msgid "Variable font axes"
+msgstr ""
+
+#: includes/class-typost-vf-transfer.php:135
+msgid "The variable font settings in this file cannot be read. Nothing was saved."
+msgstr ""
+
+#: includes/class-typost-vf-transfer.php:198
+msgid "None"
+msgstr ""
+
+#: includes/class-typost-vf-transfer.php:275
+msgid "Not variable"
+msgstr ""
+
+#: includes/class-typost-vf-transfer.php:278
+msgid "Variable, no axes defined"
+msgstr ""
+
 #. translators: %s: comma-separated list of variable font axis tags.
-#: variable-fonts.php:346
+#: variable-fonts.php:353
 #, php-format
 msgid "Variable font (axes: %s)"
 msgstr ""
 
-#: variable-fonts.php:347
+#: variable-fonts.php:354
 msgid "Configured as a variable font"
 msgstr ""
 
-#: variable-fonts.php:352
+#: variable-fonts.php:359
 msgid "Variable"
 msgstr ""
 
-#: variable-fonts.php:384
+#: variable-fonts.php:391
 msgid "Variable Font"
 msgstr ""
 
-#: variable-fonts.php:386
+#: variable-fonts.php:393
 msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
 msgstr ""
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Tag"
 msgstr ""
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Axis tag"
 msgstr ""
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Name"
 msgstr ""
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Axis name"
 msgstr ""
 
-#: variable-fonts.php:396
-#: assets/js/admin.js:26
+#: variable-fonts.php:403
+#: assets/js/admin.js:40
 msgid "Min"
 msgstr ""
 
-#: variable-fonts.php:399
-#: assets/js/admin.js:29
+#: variable-fonts.php:406
+#: assets/js/admin.js:43
 msgid "Max"
 msgstr ""
 
-#: variable-fonts.php:402
-#: assets/js/admin.js:32
+#: variable-fonts.php:409
+#: assets/js/admin.js:46
 msgid "Default"
 msgstr ""
 
-#: variable-fonts.php:405
-#: assets/js/admin.js:35
+#: variable-fonts.php:412
+#: assets/js/admin.js:49
 msgid "Remove axis"
 msgstr ""
 
-#: variable-fonts.php:411
+#: variable-fonts.php:418
 msgid "+ Add Axis"
 msgstr ""
 
-#: variable-fonts.php:423
+#: variable-fonts.php:430
 msgid "Detect Axes from Font File"
 msgstr ""
 
-#: variable-fonts.php:427
+#: variable-fonts.php:434
 msgid "Reads the axes from the font file and replaces all the axis rows above. Axis names, ranges, and defaults that you set by hand are lost. Nothing is saved until you click “Save Changes”."
 msgstr ""
 
-#: variable-fonts.php:438
+#: variable-fonts.php:445
 msgid "Hide weight selection"
 msgstr ""
 
-#: variable-fonts.php:440
+#: variable-fonts.php:447
 msgid "Hide the standard weight checkboxes above. This is on by default for a variable font."
 msgstr ""
 
-#: variable-fonts.php:633
+#: variable-fonts.php:678
 msgid "Axes can only be re-detected from uploaded font files."
 msgstr ""
 
-#: variable-fonts.php:660
+#: variable-fonts.php:705
 msgid "Axes array is required"
 msgstr ""
 
-#: variable-fonts.php:794
+#: variable-fonts.php:839
 msgid "Settings saved successfully!"
 msgstr ""
 
-#: assets/js/admin.js:200
+#: assets/js/admin.js:214
 msgid "No variable axes found in the resolved font file (no fvar table)."
 msgstr ""
 
-#: assets/js/admin.js:201
+#: assets/js/admin.js:215
 msgid "Font data not found on this page."
 msgstr ""
 
-#: assets/js/admin.js:202
+#: assets/js/admin.js:216
 msgid "No font file could be found for this font."
 msgstr ""
 
-#: assets/js/admin.js:203
+#: assets/js/admin.js:217
 msgid "The font file download was blocked by the remote server (CORS)."
 msgstr ""
 
-#: assets/js/admin.js:204
+#: assets/js/admin.js:218
 msgid "The font file could not be downloaded."
 msgstr ""
 
-#: assets/js/admin.js:205
+#: assets/js/admin.js:219
 msgid "The font file format is not supported."
 msgstr ""
 
-#: assets/js/admin.js:206
+#: assets/js/admin.js:220
 msgid "The font-parsing libraries could not be loaded."
 msgstr ""
 
-#: assets/js/admin.js:207
-#: assets/js/admin.js:208
+#: assets/js/admin.js:221
+#: assets/js/admin.js:222
 msgid "The font file could not be read."
 msgstr ""
 
-#: assets/js/admin.js:445
+#: assets/js/admin.js:461
 msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
 msgstr ""
 
-#: assets/js/admin.js:456
+#: assets/js/admin.js:472
 msgid "Detecting axes…"
 msgstr ""
 
 #. translators: %d: number of detected variable font axes.
-#: assets/js/admin.js:486
+#: assets/js/admin.js:502
 #, js-format
 msgid "Detected %d axis and replaced the rows above. Review it, then click “Save Changes” to store it."
 msgid_plural "Detected %d axes and replaced the rows above. Review them, then click “Save Changes” to store them."
@@ -156,7 +178,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: number of variable fonts detected, 2: total number of new fonts.
-#: assets/js/admin.js:611
+#: assets/js/admin.js:628
 #, js-format
 msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
 msgstr ""

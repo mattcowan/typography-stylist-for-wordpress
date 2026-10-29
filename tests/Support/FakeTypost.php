@@ -31,6 +31,38 @@ class FakeTypost {
     /** @var int Next font ID to allocate */
     public $next_font_id = 100;
 
+    /** @var string[] Extension checkbox options (the bundled modules register these two) */
+    public $extension_options = array('typost_glyphs_toolbar_button', 'typost_ps_toolbar_button');
+
+    /** @var bool Whether the WordPress Font Library is available */
+    public $library_available = true;
+
+    /** @var int How often clear_cache() ran */
+    public $cache_cleared = 0;
+
+    public function get_extension_option_checkboxes() {
+        return $this->extension_options;
+    }
+
+    public function get_available_features() {
+        return array_map(function ($id) {
+            return array('id' => $id);
+        }, array('liga', 'dlig', 'calt', 'swsh', 'salt', 'ss01', 'ss02', 'ss15', 'smcp', 'ornm'));
+    }
+
+    public function clear_caches() {
+        $this->cache_cleared++;
+    }
+
+    // Typost's own clear_cache() and invalidate_editor_data_cache() are
+    // private: the double has them private too, so code that calls them
+    // from outside fails here as it does on a real site.
+    private function clear_cache() {
+    }
+
+    private function invalidate_editor_data_cache() {
+    }
+
     public function get_custom_fonts() {
         return $this->custom;
     }
@@ -86,7 +118,7 @@ class FakeTypost {
                 $this->site = $site;
             }
             public function is_available() {
-                return true;
+                return $this->site->library_available;
             }
             public function get_wp_font_library_fonts() {
                 return $this->site->library;

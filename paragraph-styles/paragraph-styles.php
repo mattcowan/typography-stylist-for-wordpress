@@ -198,6 +198,7 @@ final class Typost_Paragraph_Styles {
 		// Optional toolbar button setting (Options tab)
 		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
 		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
+		add_filter( 'typost_export_option_details', array( $this, 'export_option_details' ) );
 		add_action( 'admin_init', array( $this, 'maybe_turn_on_toolbar_button' ) );
 
 		// Editor data
@@ -1251,6 +1252,22 @@ final class Typost_Paragraph_Styles {
 	public function register_option_key( $options ) {
 		$options[] = self::TOOLBAR_OPTION;
 		return $options;
+	}
+
+	/**
+	 * Name the toolbar option in export files (#205).
+	 *
+	 * @since 2.3.5
+	 * @param array $details Option name => {label, default}.
+	 * @return array
+	 */
+	public function export_option_details( $details ) {
+		$details = is_array( $details ) ? $details : array();
+		$details[ self::TOOLBAR_OPTION ] = array(
+			'label'   => __( 'Add a Paragraph Styles button to the block toolbar', 'typost-paragraph-styles' ),
+			'default' => true,
+		);
+		return $details;
 	}
 
 	// -------------------------------------------------------------------------

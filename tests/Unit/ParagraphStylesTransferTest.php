@@ -362,12 +362,15 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->registerSection($this->module(array(), 1));
 
         $items = $this->export()->preview($file)['sections']['paragraphStyles']['preview']['items'];
-        $this->assertSame(array('add', 'rename', 'rename'), array_column($items, 'action'));
+        // "Body (2)" is free, so the third style keeps its own name and the
+        // rename suggestion avoids it.
+        $this->assertSame(array('add', 'rename', 'add'), array_column($items, 'action'));
+        $this->assertSame('Body (3)', $items[1]['suggestedName']);
 
         // The defaults import with no choice sent.
         $result = $this->export()->import($file, array());
         $this->assertIsArray($result);
-        $this->assertSame(array('Body', 'Body (2)', 'Body (2) (2)'), array_column($this->storedStyles(), 'name'));
+        $this->assertSame(array('Body', 'Body (3)', 'Body (2)'), array_column($this->storedStyles(), 'name'));
     }
 
     /**

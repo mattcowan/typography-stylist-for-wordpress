@@ -1,145 +1,155 @@
-# French (France) translation for Typography Stylist.
-# This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.4\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: fr\nX-Domain: typost-variable-fonts\nPlural-Forms: nplurals=2; plural=(n > 1);\n"
+msgstr ""
+"Project-Id-Version: Typography Stylist 2.3.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-06 15:00+0000\n"
+"PO-Revision-Date: 2026-10-06 15:00+0000\n"
+"Language: fr\n"
+"X-Domain: typost-variable-fonts\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #. translators: %s: comma-separated list of variable font axis tags.
-#: variable-fonts.php:346
+#: variable-fonts.php:353
 #, php-format
 msgid "Variable font (axes: %s)"
 msgstr "Police variable (axes : %s)"
 
-#: variable-fonts.php:347
+#: variable-fonts.php:354
 msgid "Configured as a variable font"
 msgstr "Configurée comme police variable"
 
-#: variable-fonts.php:352
+#: variable-fonts.php:359
 msgid "Variable"
 msgstr "Variable"
 
-#: variable-fonts.php:384
+#: variable-fonts.php:391
 msgid "Variable Font"
 msgstr "Police variable"
 
-#: variable-fonts.php:386
+#: variable-fonts.php:393
 msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
 msgstr "Activez pour définir les axes de police variable (graisse, chasse, inclinaison, etc.) avec des plages personnalisées."
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Tag"
 msgstr "Balise"
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Axis tag"
 msgstr "Balise de l'axe"
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Name"
 msgstr "Nom"
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Axis name"
 msgstr "Nom de l'axe"
 
-#: variable-fonts.php:396
-#: assets/js/admin.js:26
+#: variable-fonts.php:403
+#: assets/js/admin.js:40
 msgid "Min"
 msgstr "Min"
 
-#: variable-fonts.php:399
-#: assets/js/admin.js:29
+#: variable-fonts.php:406
+#: assets/js/admin.js:43
 msgid "Max"
 msgstr "Max"
 
-#: variable-fonts.php:402
-#: assets/js/admin.js:32
+#: variable-fonts.php:409
+#: assets/js/admin.js:46
 msgid "Default"
 msgstr "Défaut"
 
-#: variable-fonts.php:405
-#: assets/js/admin.js:35
+#: variable-fonts.php:412
+#: assets/js/admin.js:49
 msgid "Remove axis"
 msgstr "Supprimer l'axe"
 
-#: variable-fonts.php:411
+#: variable-fonts.php:418
 msgid "+ Add Axis"
 msgstr "+ Ajouter un axe"
 
-#: variable-fonts.php:423
+#: variable-fonts.php:430
 msgid "Detect Axes from Font File"
 msgstr "Détecter les axes depuis le fichier de police"
 
-#: variable-fonts.php:427
+#: variable-fonts.php:434
 msgid "Reads the axes from the font file and replaces all the axis rows above. Axis names, ranges, and defaults that you set by hand are lost. Nothing is saved until you click “Save Changes”."
 msgstr "Lit les axes depuis le fichier de police et remplace toutes les lignes d’axes ci-dessus. Les noms, plages et valeurs par défaut des axes que vous avez saisis à la main sont perdus. Rien n’est enregistré tant que vous n’avez pas cliqué sur « Enregistrer les modifications »."
 
-#: variable-fonts.php:438
+#: variable-fonts.php:445
 msgid "Hide weight selection"
 msgstr "Masquer la sélection de graisse"
 
-#: variable-fonts.php:440
+#: variable-fonts.php:447
 msgid "Hide the standard weight checkboxes above. This is on by default for a variable font."
 msgstr "Masque les cases de graisse standard ci-dessus. Cette option est activée par défaut pour une police variable."
 
-#: variable-fonts.php:633
+#: variable-fonts.php:678
 msgid "Axes can only be re-detected from uploaded font files."
 msgstr "Les axes ne peuvent être redétectés qu'à partir de fichiers de police téléversés."
 
-#: variable-fonts.php:660
+#: variable-fonts.php:705
 msgid "Axes array is required"
 msgstr "Le tableau d'axes est requis"
 
-#: variable-fonts.php:794
+#: variable-fonts.php:839
 msgid "Settings saved successfully!"
 msgstr "Réglages enregistrés !"
 
-#: assets/js/admin.js:200
+#: assets/js/admin.js:214
 msgid "No variable axes found in the resolved font file (no fvar table)."
 msgstr "Aucun axe variable trouvé dans le fichier de police résolu (pas de table fvar)."
 
-#: assets/js/admin.js:201
+#: assets/js/admin.js:215
 msgid "Font data not found on this page."
 msgstr "Données de police introuvables sur cette page."
 
-#: assets/js/admin.js:202
+#: assets/js/admin.js:216
 msgid "No font file could be found for this font."
 msgstr "Aucun fichier de police n'a pu être trouvé pour cette police."
 
-#: assets/js/admin.js:203
+#: assets/js/admin.js:217
 msgid "The font file download was blocked by the remote server (CORS)."
 msgstr "Le téléchargement du fichier de police a été bloqué par le serveur distant (CORS)."
 
-#: assets/js/admin.js:204
+#: assets/js/admin.js:218
 msgid "The font file could not be downloaded."
 msgstr "Le fichier de police n'a pas pu être téléchargé."
 
-#: assets/js/admin.js:205
+#: assets/js/admin.js:219
 msgid "The font file format is not supported."
 msgstr "Le format du fichier de police n'est pas pris en charge."
 
-#: assets/js/admin.js:206
+#: assets/js/admin.js:220
 msgid "The font-parsing libraries could not be loaded."
 msgstr "Les bibliothèques d'analyse de polices n'ont pas pu être chargées."
 
-#: assets/js/admin.js:207
-#: assets/js/admin.js:208
+#: assets/js/admin.js:221
+#: assets/js/admin.js:222
 msgid "The font file could not be read."
 msgstr "Le fichier de police n'a pas pu être lu."
 
-#: assets/js/admin.js:445
+#: assets/js/admin.js:461
 msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
 msgstr "La redétection relit les axes depuis le fichier de police et remplace toutes les lignes d'axes de cette police, en supprimant les valeurs que vous avez saisies à la main. Continuer ?"
 
-#: assets/js/admin.js:456
+#: assets/js/admin.js:472
 msgid "Detecting axes…"
 msgstr "Détection des axes…"
 
 #. translators: %d: number of detected variable font axes.
-#: assets/js/admin.js:486
+#: assets/js/admin.js:502
 #, js-format
 msgid "Detected %d axis and replaced the rows above. Review it, then click “Save Changes” to store it."
 msgid_plural "Detected %d axes and replaced the rows above. Review them, then click “Save Changes” to store them."
@@ -147,7 +157,7 @@ msgstr[0] "%d axe détecté, qui remplace les lignes ci-dessus. Vérifiez-le, pu
 msgstr[1] "%d axes détectés, qui remplacent les lignes ci-dessus. Vérifiez-les, puis cliquez sur « Enregistrer les modifications » pour les sauvegarder."
 
 #. translators: 1: number of variable fonts detected, 2: total number of new fonts.
-#: assets/js/admin.js:611
+#: assets/js/admin.js:628
 #, js-format
 msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
 msgstr "Axes de police variable détectés et enregistrés pour %1$d des %2$d nouvelles polices."
@@ -159,3 +169,25 @@ msgstr "Réinitialiser aux valeurs par défaut"
 #: assets/js/editor.js:432
 msgid "Variable Font Axes"
 msgstr "Axes de police variable"
+
+#: includes/class-typost-vf-transfer.php:58
+#: includes/class-typost-vf-transfer.php:171
+#: includes/class-typost-vf-transfer.php:250
+msgid "Variable font axes"
+msgstr "Axes de police variable"
+
+#: includes/class-typost-vf-transfer.php:135
+msgid "The variable font settings in this file cannot be read. Nothing was saved."
+msgstr "Les réglages de police variable de ce fichier ne peuvent pas être lus. Rien n’a été enregistré."
+
+#: includes/class-typost-vf-transfer.php:198
+msgid "None"
+msgstr "Aucun"
+
+#: includes/class-typost-vf-transfer.php:275
+msgid "Not variable"
+msgstr "Non variable"
+
+#: includes/class-typost-vf-transfer.php:278
+msgid "Variable, no axes defined"
+msgstr "Variable, aucun axe défini"

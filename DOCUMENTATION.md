@@ -465,12 +465,22 @@ The screen reader class is a setting of each Typography Stylist block, in its Ac
 
 ### Export & Import Tab
 
-Move paragraph styles from one site to another, for example from a staging site to production, or reuse a house set of styles on each new site.
+Move paragraph styles and settings from one site to another, for example from a staging site to production, or reuse a house set of styles on each new site.
+
+The file can hold these parts:
+
+- **Paragraph styles:** all or a selection.
+- **Presets:** the presets you saved.
+- **Options:** every setting on the Options and Accessibility tabs.
+- **Feature Visibility:** the OpenType features hidden for each font.
+- **Variable font axes:** the axes and the variable font settings of each font.
+
+The font order is not exported, because it orders all the fonts of one site.
 
 **Export**
 
-1. Under “What to export”, keep “Paragraph styles” checked. Choose “All”, or “Only the ones I choose” and check the styles. A style that a chosen style is based on is added to the file, and the tab tells you which ones.
-2. Optional: check “All fonts on this site” to add every Adobe Fonts project and font definition, also the ones no exported style uses. The fonts that the exported styles use are always in the file.
+1. Under “What to export”, check the parts you want. For “Paragraph styles”, choose “All”, or “Only the ones I choose” and check the styles. A style that a chosen style is based on is added to the file, and the tab tells you which ones. Only administrators can export presets, options and font settings.
+2. Optional: check “All fonts on this site” to add every Adobe Fonts project and font definition, also the ones no exported style uses. The fonts that the exported styles and font settings use are always in the file.
 3. Click “Download export file”. The file is named after the site and the date, for example `typography-my-site-2026-10-28.json`.
 
 The file names each font by its family and where it comes from (uploaded, Adobe Fonts, custom font definition, WordPress Font Library), not by the font ID of this site. Uploaded font files are never in the file.
@@ -486,11 +496,16 @@ The file names each font by its family and where it comes from (uploaded, Adobe 
    - **Not found:** upload the font first, or choose another font on this site. With “None”, the styles use the theme font.
    You can choose any font on this site for any font in the file.
 4. Check the **Paragraph styles** table. A style whose name already exists is skipped. To import it anyway, choose “Add with a new name” (a free name is filled in) or “Overwrite the style on this site”. Overwriting changes every post that uses that style, and the table names the other styles that are based on it and change too.
-5. Read the notes under “Check before you import”, then click “Import”.
+5. Check the **Presets** table. A preset whose name already exists is skipped. To import it anyway, choose “Add as …” (a free name) or “Overwrite the preset on this site”. A preset that uses only OpenType features this site does not know is not imported.
+6. Check the **Options** table. It shows only the options that have a different value on this site, with both values. For each one, choose “Keep the value on this site” or “Use the value in the file”. The import does not start until you choose for every option.
+7. Check the **Feature Visibility** and **Variable font axes** tables. Each font starts on “Use the settings in the file”, or on “Keep the settings on this site” when its font on this site has settings of its own. The settings of a font that is not on this site are not imported.
+8. Read the notes under “Check before you import”, then click “Import”.
 
-The result lists the styles that were added, renamed, overwritten and skipped, the fonts that were added, and the fonts that were not found. It also warns when a style uses OpenType features that are hidden for its new font in Feature Visibility, or variable font axes that the font does not define. Click “Import another file” to reload the page, so the Paragraph Styles tab lists the imported styles.
+To leave out a part of the file, clear its “Import this part” box. A font that only the parts you leave out use is not imported.
 
-Imported styles get new IDs, so content on the other site that already uses a style never changes. A style keeps the style it is based on. Only administrators can import. Presets, options and per-font settings are not in the file yet.
+The result lists what was added, renamed, overwritten, skipped and changed, the fonts that were added, and the fonts that were not found. It also warns when a style uses OpenType features that are hidden for its new font in Feature Visibility, or variable font axes that the font does not define. Click “Import another file” to reload the page, so the other tabs show what was imported.
+
+Imported styles get new IDs, so content on the other site that already uses a style never changes. A style keeps the style it is based on. Only administrators can import.
 
 ### Help Tab
 
@@ -834,6 +849,8 @@ typography-stylist/
 │   ├── admin-export-tab.php          # Export & Import tab
 │   ├── class-typost-export.php       # Export file, sections, import
 │   ├── class-typost-export-fonts.php # Fonts in export files (descriptors, matching)
+│   ├── class-typost-export-settings.php # Presets, options, Feature Visibility in export files
+│   ├── class-typost-admin-options.php   # Options tab settings and their one sanitizer
 │   ├── class-typost-font-sources.php # Font storage and font IDs
 │   ├── class-typost-font-library-bridge.php  # WordPress Font Library integration
 │   └── class-typost-font-metadata.php        # Font file metadata

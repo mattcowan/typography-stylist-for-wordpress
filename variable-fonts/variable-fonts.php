@@ -96,6 +96,10 @@ final class Typost_Variable_Fonts {
 		// Axis tags for core's import warnings (#205).
 		add_filter( 'typost_font_axis_tags', array( $this, 'font_axis_tags' ), 10, 2 );
 
+		// Axis definitions and flags in export files (#205).
+		require_once __DIR__ . '/includes/class-typost-vf-transfer.php';
+		add_filter( 'typost_export_sections', array( new Typost_VF_Transfer( $this ), 'register_section' ) );
+
 		// REST routes.
 		add_action( 'typost_register_rest_routes', array( $this, 'register_rest_routes' ) );
 
@@ -494,14 +498,18 @@ final class Typost_Variable_Fonts {
 	/**
 	 * String font ID => numeric font_id, across all four sources.
 	 *
+	 * @param object|null $typost Typost instance (or a test double); default
+	 *                            the core singleton.
 	 * @return array
 	 */
-	private function get_fonts_map() {
+	public function get_fonts_map( $typost = null ) {
 		$fonts_map = array();
-		if ( ! class_exists( 'Typost' ) ) {
-			return $fonts_map;
+		if ( null === $typost ) {
+			if ( ! class_exists( 'Typost' ) ) {
+				return $fonts_map;
+			}
+			$typost = Typost::get_instance();
 		}
-		$typost = Typost::get_instance();
 
 		foreach ( $typost->get_custom_fonts() as $font ) {
 			if ( isset( $font['id'], $font['font_id'] ) ) {
@@ -748,7 +756,7 @@ final class Typost_Variable_Fonts {
 	 * @param array $raw Raw axis data.
 	 * @return array|null Sanitized axis, or null if invalid.
 	 */
-	private function sanitize_axis( $raw ) {
+	public function sanitize_axis( $raw ) {
 		if ( ! is_array( $raw ) ) {
 			return null;
 		}

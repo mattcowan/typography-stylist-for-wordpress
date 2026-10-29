@@ -303,6 +303,22 @@ add_filter('typost_admin_options_checkboxes', function($options) {
 
 Keys must be prefixed `typost_`; anything else is ignored. This is deliberate — an extension may add its own settings to the form, not use it to write arbitrary WordPress options.
 
+These options are also exported with the Options section of an export file (since 2.3.5). Give each one a label and a default with [`typost_export_option_details`](#typost_export_option_details).
+
+#### `typost_export_option_details`
+
+*Since 2.3.5.* The label and default of each checkbox registered with [`typost_admin_options_checkboxes`](#typost_admin_options_checkboxes), for the Options section of an export file (#205). The import preview shows the label next to the value on this site and the value in the file. The default is the value when the option was never saved. Without an entry, the preview shows the option name and treats an unsaved option as off.
+
+```php
+add_filter('typost_export_option_details', function($details) {
+    $details['typost_my_extension_toolbar'] = array(
+        'label'   => __('Add a My Extension button to the block toolbar', 'my-extension'),
+        'default' => true,
+    );
+    return $details;
+});
+```
+
 #### `typost_available_features`
 
 Filter the list of available OpenType features.
@@ -382,7 +398,7 @@ add_filter('typost_content_font_ids', function($ids, $content) {
 
 #### `typost_export_sections`
 
-*Since 2.3.5.* Add a section to the export file that Settings → Typography Stylist → Export & Import writes and reads (#205). The bundled Paragraph Styles module registers the `paragraphStyles` section with this filter. See [Export Sections](#export-sections) for the section definition and the rules a section must follow.
+*Since 2.3.5.* Add a section to the export file that Settings → Typography Stylist → Export & Import writes and reads (#205). Core registers `presets`, `options` and `featureVisibility` with this filter, the bundled Paragraph Styles module `paragraphStyles`, and the bundled Variable Fonts module `variableFonts`. See [Export Sections](#export-sections) for the section definition and the rules a section must follow.
 
 ```php
 add_filter('typost_export_sections', function($sections) {
@@ -972,11 +988,38 @@ The admin page's JavaScript automatically handles tab switching for all register
 | `capability` | string | Needed to export the section (default `manage_options`). Import always needs `manage_options`. |
 | `options` | string[] | The `typost_*` options the section carries. The export registry test reads this list. |
 | `export` | callable | `fn( Typost_Export_Fonts $fonts, array $args ): array{data: mixed, notes?: string[]}\|WP_Error`. `$args['items']` holds the ids the author picked, when the section offers `items`. |
-| `preview` | callable | `fn( mixed $data, Typost_Export_Fonts $fonts ): array\|WP_Error`. What the import UI shows. Return `items` (each with a `name`) for the default list. |
-| `import` | callable | `fn( mixed $data, array $choices, Typost_Export_Fonts $fonts, bool $dry_run ): array\|WP_Error`. |
+| `preview` | callable | `fn( mixed $data, Typost_Export_Fonts $fonts ): array\|WP_Error`. What the import UI shows. Return `rows` for choices (see "Rows" below), or `items` (each with a `name`) for a plain list. `notes` (string[]) shows under the section heading, `warnings` (string[]) in "Check before you import". |
+| `import` | callable | `fn( mixed $data, array $choices, Typost_Export_Fonts $fonts, bool $dry_run ): array\|WP_Error`. Return `groups` (`[{heading, items: string[]}]`) and `warnings` (string[]) for the result page. |
 | `items` | callable, optional | `fn(): array{id, name, parent?}[]`: the things the author can pick on export. `parent` is the id the item needs with it; the UI says it is added. |
 | `fontKeys` | callable, optional | `fn( mixed $data ): array<string, string[]>`: file font key → names of the items that use it, for the preview's "Used by". Also decides which fonts import: a font that only left-out sections use is not imported. Without it, your section's fonts import as chosen even when the author leaves the section out. |
-| `priority` | int, optional | Import order, lower first (default 50; paragraph styles use 20). |
+| `priority` | int, optional | Import order, lower first (default 50). Core uses 10 (Feature Visibility), 15 (variable font axes), 20 (paragraph styles), 30 (presets) and 40 (options): per-font settings import before the styles whose warnings read them. |
+
+**Rows.** A section that asks the author something returns `rows` from `preview`, and the import page renders them with no code of its own:
+
+```php
+return array(
+    'rows'  => array(
+        array(
+            'key'      => 'typost_my_extension_toolbar', // reaches import as $choices[ key ]
+            'name'     => __('Add a My Extension button', 'my-extension'),
+            'detail'   => '',            // optional, under the name
+            'note'     => '',            // optional, under the name, read with the select
+            'current'  => __('Off', 'my-extension'), // optional: "On this site" column
+            'incoming' => __('On', 'my-extension'),  // optional: "In the file" column
+            'choices'  => array(
+                array('value' => 'keep',  'label' => __('Keep the value on this site', 'my-extension')),
+                array('value' => 'apply', 'label' => __('Use the value in the file', 'my-extension')),
+            ),
+            'choice'   => '', // '' = no default: the author must choose before import
+        ),
+    ),
+    'notes' => array(),
+);
+```
+
+The page sends the answers as `choices.sections[id][key] = value`. A row with `choice` `''` blocks the import until it is answered, in the page and in your `import` callback: return a `WP_Error` from the dry run when an answer is missing, because a client other than the page can leave it out.
+
+**Settings stored per font** go through the font map like a style's font. Write them under `$fonts->key_for_font_id( $id )`, and return those keys from `fontKeys`, so the fonts travel with the settings. For the preview row and the result, use core's helpers, so every per-font section asks the same question: `Typost_Export_Settings::font_settings_row( $key, $fonts, $current, $incoming, $has_own )`, `Typost_Export_Settings::font_settings_choice( $choices, $key, $has_own )` and `Typost_Export_Settings::font_settings_groups( $label, $applied, $kept, $missing )`. The choice starts on "keep" when the font this site maps to has settings of its own, else on "use the settings in the file". `$fonts->file_font_name( $key )` names a font of the file.
 
 **File format:**
 
@@ -999,7 +1042,19 @@ A newer `version` is rejected, and a section the receiving site does not know is
 - **Write nothing on a dry run.** Import calls `import` twice: first with `$dry_run = true` for every section, then, after fonts are added, with `false`. A `WP_Error` from either call stops the import, so return every error from the dry run. A file a section rejects must save nothing.
 - **Sanitize every value** as the code that saves it today does: the file comes from another site.
 - **List your options** in `options`, or add them to `Typost_Export::NOT_EXPORTED` with the reason. `tests/Unit/ExportRegistryTest.php` fails when an option `uninstall.php` deletes is in neither list, so a new option cannot ship without a decision about export.
-- **Never change existing data unless the author chose to.** Paragraph styles skip a style whose name exists unless the author picks "Overwrite".
+- **Never change existing data unless the author chose to.** Paragraph styles and presets skip an item whose name exists unless the author picks "Overwrite". An option that differs on this site has no default: the author must choose.
+
+**Sections in core and the bundled modules:**
+
+| Section | Holds | Choices |
+|---|---|---|
+| `featureVisibility` | Hidden OpenType features per font, by font key. | Per font: use the file's settings, or keep this site's. |
+| `variableFonts` | Variable font axes and the variable / hide-weights flags per font, by font key. | Per font, as Feature Visibility. |
+| `paragraphStyles` | Styles with their Based On links. | Per style: add, skip, add with a new name, overwrite. |
+| `presets` | The stored presets (name, features, description). Features this site does not know are dropped. | Per preset: add, skip, add as "Name (2)", overwrite. |
+| `options` | Every setting on the Options and Accessibility tabs, plus extension checkboxes. Option names are the keys. | Per option that differs here: keep, or use the file's value. No default. |
+
+The font order (`typost_font_order`) is not exported: it orders the whole font list of one site.
 
 **REST routes** (all `POST`, rate-limited like every `typost/v1` write):
 
