@@ -42,6 +42,9 @@ class Typost_Export_Fonts {
     /** @var array|null Memoized local font list */
     private $local_fonts = null;
 
+    /** @var array<string,array> File key => descriptor of the file being imported */
+    private $file_fonts = array();
+
     /**
      * @param object $typost Typost instance.
      */
@@ -702,6 +705,31 @@ class Typost_Export_Fonts {
         }
         $this->reset_local_fonts();
         return array('added' => $added, 'notFound' => $not_found);
+    }
+
+    /**
+     * Remember the fonts of the file being previewed or imported, so a
+     * section can name a font by its key (file_font_name()).
+     *
+     * @param array<string,array> $descriptors read_file_fonts().
+     */
+    public function set_file_fonts($descriptors) {
+        $this->file_fonts = is_array($descriptors) ? $descriptors : array();
+    }
+
+    /**
+     * The name of a font in the file, '' for a key the file does not have.
+     *
+     * @param mixed $key File key.
+     * @return string
+     */
+    public function file_font_name($key) {
+        $key = is_scalar($key) ? (string) $key : '';
+        if (!isset($this->file_fonts[$key])) {
+            return '';
+        }
+        $descriptor = $this->file_fonts[$key];
+        return '' !== $descriptor['name'] ? $descriptor['name'] : $descriptor['family'];
     }
 
     /**

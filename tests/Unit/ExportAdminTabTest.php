@@ -85,7 +85,25 @@ class ExportAdminTabTest extends ExportTestCase {
         ob_start();
         (new \Typost_Export($this->site))->render_admin_tab($this->site);
         $html = ob_get_clean();
+        // Paragraph styles need edit_posts; the site settings need manage_options.
+        $this->assertStringNotContainsString('typost-export-section-paragraphStyles', $html);
+        $this->assertStringContainsString('typost-export-section-options', $html);
+        $this->assertStringContainsString('typost-export-section-presets', $html);
+    }
+
+    public function test_render_admin_tab_with_no_section_the_user_can_export() {
+        $this->registerSection($this->module(array(array('id' => 1, 'name' => 'Body', 'properties' => array()))));
+        Functions\when('current_user_can')->justReturn(false);
+
+        ob_start();
+        (new \Typost_Export($this->site))->render_admin_tab($this->site);
+        $html = ob_get_clean();
         $this->assertStringContainsString('There is nothing you can export.', $html);
+    }
+
+    public function test_a_section_exported_whole_shows_no_count() {
+        $html = $this->render(array('options' => array('label' => 'Options', 'items' => null)));
+        $this->assertMatchesRegularExpression('/<label for="typost-export-section-options">\s*Options\s*<\/label>/', $html);
     }
 
     public function test_the_script_gets_its_data_and_flat_strings() {

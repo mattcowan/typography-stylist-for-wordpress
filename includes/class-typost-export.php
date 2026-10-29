@@ -2,8 +2,9 @@
 /**
  * Export and import (#205)
  *
- * One JSON file in sections. Each section (paragraph styles today; presets,
- * options and extension data later) registers through the
+ * One JSON file in sections. Each section (paragraph styles, presets,
+ * options, Feature Visibility, variable font axes, extension data)
+ * registers through the
  * `typost_export_sections` filter with an export, a preview and an import
  * callback. Fonts are shared by every section, so they live at the top of
  * the file and are mapped once, before any section imports (see
@@ -59,21 +60,7 @@ class Typost_Export {
         'typost_adopted_wp_fonts'                 => 'Described in the font map by Library slug; import adopts the family again.',
         'typost_font_replacements'                => 'Site-local font IDs; export follows it to name the replacement font.',
         'typost_paragraph_styles_next_id'         => 'ID counter; import moves it past the IDs it gives out.',
-        // Planned for the options, presets and per-font settings sections (#205 step 2).
-        'typost_presets'                          => 'Planned: presets section (#205 step 2).',
-        'typost_font_feature_visibility'          => 'Planned: per-font settings, mapped through the font map (#205 step 2).',
-        'typost_font_order'                       => 'Planned: per-font settings, mapped through the font map (#205 step 2).',
-        'typost_variable_font_axes'               => 'Planned: per-font settings, mapped through the font map (#205 step 2).',
-        'typost_variable_font_flags'              => 'Planned: per-font settings, mapped through the font map (#205 step 2).',
-        'typost_show_clear_confirmation'          => 'Planned: options section (#205 step 2).',
-        'typost_archive_full_content_check'       => 'Planned: options section (#205 step 2).',
-        'typost_block_enter_line_break'           => 'Planned: options section (#205 step 2).',
-        'typost_new_font_sizes_px'                => 'Planned: options section (#205 step 2).',
-        'typost_auto_register_wp_fonts'           => 'Planned: options section (#205 step 2).',
-        'typost_disable_accessibility_warning'    => 'Planned: options section (#205 step 2).',
-        'typost_admin_color_scheme'               => 'Planned: options section (#205 step 2).',
-        'typost_glyphs_toolbar_button'            => 'Planned: options section (#205 step 2).',
-        'typost_ps_toolbar_button'                => 'Planned: options section (#205 step 2).',
+        'typost_font_order'                       => 'Orders the whole font list of one site, so an order from another site has nothing to merge into.',
         // State about this site or this server, not settings.
         'typost_htaccess_verified'                => 'One-time check of this server.',
         'typost_font_library_json_repaired'       => 'One-time repair of this site\'s Font Library posts.',
@@ -126,12 +113,20 @@ class Typost_Export {
      *                $fonts->key_for_font_id() for every font the data names
      *                and write the key, never the ID.
      * - `preview`    (callable) fn( mixed $data, Typost_Export_Fonts $fonts ):
-     *                array|WP_Error. What the import UI shows.
+     *                array|WP_Error. What the import UI shows. Generic form:
+     *                {rows: [{key, name, detail?, note?, current?, incoming?,
+     *                choices: [{value, label}], choice}], notes?: string[],
+     *                warnings?: string[]}; a row whose choice is '' must be
+     *                answered before import, and the answers reach `import`
+     *                as $choices[key] = value. $fonts->file_font_name( $key )
+     *                names a font of the file.
      * - `import`     (callable) fn( mixed $data, array $choices,
      *                Typost_Export_Fonts $fonts, bool $dry_run ): array|WP_Error.
      *                With $dry_run it must write nothing; a WP_Error stops
      *                the whole import. $fonts->import_font_id( $key ) gives
-     *                the local font ID (0 = not on this site).
+     *                the local font ID (0 = not on this site). A result may
+     *                carry `groups` ([{heading, items}]) and `warnings`
+     *                (string[]) for the result page.
      * - `fontKeys`   (callable, optional) fn( mixed $data ): array<string,string[]>
      *                File font key => names of the items that use it, for
      *                the preview's "used by". Import also reads it: a font
@@ -331,6 +326,7 @@ class Typost_Export {
         $sections = $this->get_sections();
         $fonts = new Typost_Export_Fonts($this->typost);
         $font_rows = $fonts->preview($file['fonts']);
+        $fonts->set_file_fonts($file['fonts']);
         // Sections preview against the default mapping (an ambiguous font
         // counts as not on this site until the author picks one).
         $fonts->plan_import_ids($fonts->default_choices($file['fonts']));
@@ -474,6 +470,7 @@ class Typost_Export {
         $file_fonts = array_diff_key($file['fonts'], $left_out);
 
         $fonts = new Typost_Export_Fonts($this->typost);
+        $fonts->set_file_fonts($file['fonts']);
         $font_choices = $fonts->validate_choices($file_fonts, isset($choices['fonts']) ? $choices['fonts'] : array());
         if (is_wp_error($font_choices)) {
             return $font_choices;
@@ -533,10 +530,11 @@ class Typost_Export {
             if (!current_user_can($section['capability'])) {
                 continue;
             }
-            $items = array();
+            $items = null;
             if (!empty($section['items']) && is_callable($section['items'])) {
                 $items = (array) call_user_func($section['items']);
             }
+            // items: null for a section the author exports whole (options).
             $sections[$id] = array('label' => $section['label'], 'items' => $items);
         }
         require_once __DIR__ . '/admin-export-tab.php';
@@ -589,7 +587,7 @@ class Typost_Export {
             /* translators: %s: comma-separated list of section names in the file */
             'unknownSections'    => __('This site cannot import these parts of the file, so they are left out: %s.', 'typography-stylist'),
             'fontsHeading'       => __('Fonts', 'typography-stylist'),
-            'fontsIntro'         => __('Each font in the file, and the font on this site that the imported styles will use.', 'typography-stylist'),
+            'fontsIntro'         => __('Each font in the file, and the font on this site that the imported styles and font settings will use.', 'typography-stylist'),
             'colFont'            => __('Font in the file', 'typography-stylist'),
             'colUsedBy'          => __('Used by', 'typography-stylist'),
             'colOnSite'          => __('On this site', 'typography-stylist'),
@@ -620,6 +618,13 @@ class Typost_Export {
             'actionLabel'        => __('Import “%s” as', 'typography-stylist'),
             /* translators: %s: style name */
             'renameLabel'        => __('New name for “%s”', 'typography-stylist'),
+            'colInFile'          => __('In the file', 'typography-stylist'),
+            'sectionEmpty'       => __('This part of the file is empty.', 'typography-stylist'),
+            'chooseAction'       => __('Choose…', 'typography-stylist'),
+            /* translators: %s: name of an item in the import file, such as an option or a font */
+            'rowSelectLabel'     => __('What to do with “%s”', 'typography-stylist'),
+            /* translators: %s: name of an item in the import file, such as an option or a font */
+            'errorChooseRow'     => __('Choose what to do with “%s”.', 'typography-stylist'),
             'warningsHeading'    => __('Check before you import', 'typography-stylist'),
             'import'             => __('Import', 'typography-stylist'),
             'cancel'             => __('Cancel', 'typography-stylist'),

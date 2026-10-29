@@ -1,145 +1,155 @@
-# Spanish (Spain) translation for Typography Stylist.
-# This file is distributed under the GPL v2 or later.
 msgid ""
-msgstr "Project-Id-Version: Typography Stylist 2.3.4\nReport-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\nMIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\nPOT-Creation-Date: 2026-10-06 15:00+0000\nPO-Revision-Date: 2026-10-06 15:00+0000\nLanguage: es\nX-Domain: typost-variable-fonts\nPlural-Forms: nplurals=2; plural=(n != 1);\n"
+msgstr ""
+"Project-Id-Version: Typography Stylist 2.3.4\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/typography-stylist\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-06 15:00+0000\n"
+"PO-Revision-Date: 2026-10-06 15:00+0000\n"
+"Language: es\n"
+"X-Domain: typost-variable-fonts\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #. translators: %s: comma-separated list of variable font axis tags.
-#: variable-fonts.php:346
+#: variable-fonts.php:353
 #, php-format
 msgid "Variable font (axes: %s)"
 msgstr "Fuente variable (ejes: %s)"
 
-#: variable-fonts.php:347
+#: variable-fonts.php:354
 msgid "Configured as a variable font"
 msgstr "Configurada como fuente variable"
 
-#: variable-fonts.php:352
+#: variable-fonts.php:359
 msgid "Variable"
 msgstr "Variable"
 
-#: variable-fonts.php:384
+#: variable-fonts.php:391
 msgid "Variable Font"
 msgstr "Fuente variable"
 
-#: variable-fonts.php:386
+#: variable-fonts.php:393
 msgid "Enable to define variable font axes (weight, width, slant, etc.) with custom ranges."
 msgstr "Activa para definir ejes de fuente variable (peso, anchura, inclinación, etc.) con rangos personalizados."
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Tag"
 msgstr "Etiqueta"
 
-#: variable-fonts.php:394
-#: assets/js/admin.js:24
+#: variable-fonts.php:401
+#: assets/js/admin.js:38
 msgid "Axis tag"
 msgstr "Etiqueta del eje"
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Name"
 msgstr "Nombre"
 
-#: variable-fonts.php:395
-#: assets/js/admin.js:25
+#: variable-fonts.php:402
+#: assets/js/admin.js:39
 msgid "Axis name"
 msgstr "Nombre del eje"
 
-#: variable-fonts.php:396
-#: assets/js/admin.js:26
+#: variable-fonts.php:403
+#: assets/js/admin.js:40
 msgid "Min"
 msgstr "Mín"
 
-#: variable-fonts.php:399
-#: assets/js/admin.js:29
+#: variable-fonts.php:406
+#: assets/js/admin.js:43
 msgid "Max"
 msgstr "Máx"
 
-#: variable-fonts.php:402
-#: assets/js/admin.js:32
+#: variable-fonts.php:409
+#: assets/js/admin.js:46
 msgid "Default"
 msgstr "Predeterminado"
 
-#: variable-fonts.php:405
-#: assets/js/admin.js:35
+#: variable-fonts.php:412
+#: assets/js/admin.js:49
 msgid "Remove axis"
 msgstr "Eliminar eje"
 
-#: variable-fonts.php:411
+#: variable-fonts.php:418
 msgid "+ Add Axis"
 msgstr "+ Añadir eje"
 
-#: variable-fonts.php:423
+#: variable-fonts.php:430
 msgid "Detect Axes from Font File"
 msgstr "Detectar ejes desde el archivo de fuente"
 
-#: variable-fonts.php:427
+#: variable-fonts.php:434
 msgid "Reads the axes from the font file and replaces all the axis rows above. Axis names, ranges, and defaults that you set by hand are lost. Nothing is saved until you click “Save Changes”."
 msgstr "Lee los ejes del archivo de fuente y reemplaza todas las filas de ejes de arriba. Se pierden los nombres, rangos y valores predeterminados de los ejes que hayas ajustado a mano. No se guarda nada hasta que hagas clic en «Guardar cambios»."
 
-#: variable-fonts.php:438
+#: variable-fonts.php:445
 msgid "Hide weight selection"
 msgstr "Ocultar la selección de peso"
 
-#: variable-fonts.php:440
+#: variable-fonts.php:447
 msgid "Hide the standard weight checkboxes above. This is on by default for a variable font."
 msgstr "Oculta las casillas de peso estándar de arriba. Esta opción está activada por defecto para una fuente variable."
 
-#: variable-fonts.php:633
+#: variable-fonts.php:678
 msgid "Axes can only be re-detected from uploaded font files."
 msgstr "Los ejes solo se pueden volver a detectar desde archivos de fuente subidos."
 
-#: variable-fonts.php:660
+#: variable-fonts.php:705
 msgid "Axes array is required"
 msgstr "Se requiere el array de ejes"
 
-#: variable-fonts.php:794
+#: variable-fonts.php:839
 msgid "Settings saved successfully!"
 msgstr "¡Ajustes guardados!"
 
-#: assets/js/admin.js:200
+#: assets/js/admin.js:214
 msgid "No variable axes found in the resolved font file (no fvar table)."
 msgstr "No se encontraron ejes variables en el archivo de fuente resuelto (sin tabla fvar)."
 
-#: assets/js/admin.js:201
+#: assets/js/admin.js:215
 msgid "Font data not found on this page."
 msgstr "No se encontraron datos de la fuente en esta página."
 
-#: assets/js/admin.js:202
+#: assets/js/admin.js:216
 msgid "No font file could be found for this font."
 msgstr "No se pudo encontrar ningún archivo para esta fuente."
 
-#: assets/js/admin.js:203
+#: assets/js/admin.js:217
 msgid "The font file download was blocked by the remote server (CORS)."
 msgstr "La descarga del archivo de fuente fue bloqueada por el servidor remoto (CORS)."
 
-#: assets/js/admin.js:204
+#: assets/js/admin.js:218
 msgid "The font file could not be downloaded."
 msgstr "No se pudo descargar el archivo de fuente."
 
-#: assets/js/admin.js:205
+#: assets/js/admin.js:219
 msgid "The font file format is not supported."
 msgstr "El formato del archivo de fuente no es compatible."
 
-#: assets/js/admin.js:206
+#: assets/js/admin.js:220
 msgid "The font-parsing libraries could not be loaded."
 msgstr "No se pudieron cargar las bibliotecas de análisis de fuentes."
 
-#: assets/js/admin.js:207
-#: assets/js/admin.js:208
+#: assets/js/admin.js:221
+#: assets/js/admin.js:222
 msgid "The font file could not be read."
 msgstr "No se pudo leer el archivo de fuente."
 
-#: assets/js/admin.js:445
+#: assets/js/admin.js:461
 msgid "Re-detecting reads the axes back out of the font file and replaces every axis row for this font, discarding any values you set by hand. Continue?"
 msgstr "Volver a detectar lee los ejes del archivo de fuente y reemplaza todas las filas de ejes de esta fuente, descartando los valores que hayas ajustado a mano. ¿Continuar?"
 
-#: assets/js/admin.js:456
+#: assets/js/admin.js:472
 msgid "Detecting axes…"
 msgstr "Detectando ejes…"
 
 #. translators: %d: number of detected variable font axes.
-#: assets/js/admin.js:486
+#: assets/js/admin.js:502
 #, js-format
 msgid "Detected %d axis and replaced the rows above. Review it, then click “Save Changes” to store it."
 msgid_plural "Detected %d axes and replaced the rows above. Review them, then click “Save Changes” to store them."
@@ -147,7 +157,7 @@ msgstr[0] "Se detectó %d eje y se reemplazaron las filas de arriba. Revísalo y
 msgstr[1] "Se detectaron %d ejes y se reemplazaron las filas de arriba. Revísalos y luego haz clic en «Guardar cambios» para almacenarlos."
 
 #. translators: 1: number of variable fonts detected, 2: total number of new fonts.
-#: assets/js/admin.js:611
+#: assets/js/admin.js:628
 #, js-format
 msgid "Variable font axes detected and saved for %1$d of %2$d new fonts."
 msgstr "Se detectaron y guardaron ejes de fuente variable para %1$d de %2$d fuentes nuevas."
@@ -159,3 +169,25 @@ msgstr "Restablecer valores predeterminados"
 #: assets/js/editor.js:432
 msgid "Variable Font Axes"
 msgstr "Ejes de fuente variable"
+
+#: includes/class-typost-vf-transfer.php:58
+#: includes/class-typost-vf-transfer.php:171
+#: includes/class-typost-vf-transfer.php:250
+msgid "Variable font axes"
+msgstr "Ejes de fuente variable"
+
+#: includes/class-typost-vf-transfer.php:135
+msgid "The variable font settings in this file cannot be read. Nothing was saved."
+msgstr "No se pueden leer los ajustes de fuente variable de este archivo. No se ha guardado nada."
+
+#: includes/class-typost-vf-transfer.php:198
+msgid "None"
+msgstr "Ninguno"
+
+#: includes/class-typost-vf-transfer.php:275
+msgid "Not variable"
+msgstr "No variable"
+
+#: includes/class-typost-vf-transfer.php:278
+msgid "Variable, no axes defined"
+msgstr "Variable, sin ejes definidos"

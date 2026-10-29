@@ -42,7 +42,7 @@ A paragraph style is a named set of typography settings, like a paragraph style 
 * “Detach Style” changes styled text back to independent settings.
 * In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
 * Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes, and the style it is based on. Every post that uses the style shows the change.
-* Move styles to another site with Settings → Typography Stylist → Export & Import. The file names each font by its family, and import matches it to a font on the other site. You see every style and font before anything is saved.
+* Move styles, presets, options and font settings to another site with Settings → Typography Stylist → Export & Import. The file names each font by its family, and import matches it to a font on the other site. You see every item before anything is saved.
 
 = Granular typography control =
 
@@ -258,6 +258,8 @@ To base a style on another style, click “Edit” on the style in Settings → 
 4. Click “Import”. The result lists the styles that were added and the fonts that were not found. A style whose font was not found uses the theme font.
 
 Imported styles get new IDs, so content on the other site that already uses a style ID never changes. Only administrators can import.
+
+The file can also hold your presets, the settings on the Options and Accessibility tabs, and the Feature Visibility and variable font axes of each font. For each option that has another value on the other site, you choose which value to keep.
 
 = Is this plugin accessible? =
 

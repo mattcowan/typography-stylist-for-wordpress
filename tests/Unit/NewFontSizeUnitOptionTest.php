@@ -66,8 +66,10 @@ class NewFontSizeUnitOptionTest extends TestCase {
             "/null !== \\\$request->get_param\('new_font_sizes_px'\)\)\s*\{\s*update_option\('typost_new_font_sizes_px'/",
             $main
         );
-        // No-JS POST fallback
-        $this->assertStringContainsString("isset(\$_POST['typost_new_font_sizes_px']) ? '1' : '0'", $main);
+        // No-JS POST fallback: listed with the checkboxes that the loop
+        // writes through the shared sanitizer (#205)
+        $this->assertStringContainsString("'typost_new_font_sizes_px', // #248", $main);
+        $this->assertStringContainsString("update_option(\$option_key, Typost_Admin_Options::sanitize(\$option_key, isset(\$_POST[\$option_key])));", $main);
         // Editor data
         $this->assertStringContainsString("'newFontSizeUnit' => \$this->get_new_font_size_unit()", $main);
 

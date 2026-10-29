@@ -30,6 +30,14 @@ abstract class ExportTestCase extends TestCase {
         require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-export-fonts.php';
         require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-export.php';
         require_once TYPOST_PLUGIN_DIR . '/paragraph-styles/paragraph-styles.php';
+        require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-admin-options.php';
+        require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-export-settings.php';
+        // The module defines its directory constants from these on first load,
+        // and later Variable Fonts tests read them.
+        Functions\when('plugin_dir_path')->justReturn(TYPOST_PLUGIN_DIR . '/variable-fonts/');
+        Functions\when('plugin_dir_url')->justReturn('http://localhost/variable-fonts/');
+        require_once TYPOST_PLUGIN_DIR . '/variable-fonts/variable-fonts.php';
+        require_once TYPOST_PLUGIN_DIR . '/variable-fonts/includes/class-typost-vf-transfer.php';
 
         Functions\when('absint')->alias(function ($v) { return abs((int) $v); });
         Functions\when('current_time')->justReturn('2026-10-28');
@@ -42,6 +50,19 @@ abstract class ExportTestCase extends TestCase {
             return trim(preg_replace('/[^a-z0-9]+/', '-', strtolower((string) $title)), '-');
         });
         Functions\when('rest_ensure_response')->returnArg();
+        // As core: the strings "false" and "0" are false.
+        Functions\when('rest_sanitize_boolean')->alias(function ($value) {
+            if (is_string($value)) {
+                $value = strtolower($value);
+                if (in_array($value, array('false', '0'), true)) {
+                    $value = false;
+                }
+            }
+            return (bool) $value;
+        });
+        Functions\when('_n')->alias(function ($single, $plural, $number) {
+            return 1 === (int) $number ? $single : $plural;
+        });
 
         $options = &$this->options;
         Functions\when('get_option')->alias(function ($key, $default = false) use (&$options) {
@@ -103,18 +124,31 @@ abstract class ExportTestCase extends TestCase {
     }
 
     /**
-     * Make apply_filters('typost_export_sections') return the module's section.
+     * Make apply_filters('typost_export_sections') return every section a
+     * site has: the paragraph styles module's, core's presets, options and
+     * Feature Visibility, and the Variable Fonts module's.
      *
      * @param \Typost_Paragraph_Styles $module Module.
      */
     protected function registerSection($module) {
         $transfer = new \Typost_PS_Transfer($module);
-        Functions\when('apply_filters')->alias(function ($hook, $value) use ($transfer) {
+        $settings = new \Typost_Export_Settings($this->site);
+        $variable = new \Typost_VF_Transfer($this->variableFontsModule(), $this->site);
+        Functions\when('apply_filters')->alias(function ($hook, $value) use ($transfer, $settings, $variable) {
             if ('typost_export_sections' === $hook) {
-                return $transfer->register_section($value);
+                return $variable->register_section($settings->register_sections($transfer->register_section($value)));
             }
             return $value;
         });
+    }
+
+    /**
+     * The Variable Fonts module, without its constructor's hooks.
+     *
+     * @return \Typost_Variable_Fonts
+     */
+    protected function variableFontsModule() {
+        return (new \ReflectionClass(\Typost_Variable_Fonts::class))->newInstanceWithoutConstructor();
     }
 
     /**

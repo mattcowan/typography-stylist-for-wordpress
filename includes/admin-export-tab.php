@@ -16,8 +16,9 @@ if (!function_exists('typost_render_export_tab')) {
     /**
      * Render the tab content.
      *
-     * @param array $sections   Section id => {label, items: {id, name, parent}[]},
-     *                          only the sections the user may export.
+     * @param array $sections   Section id => {label, items: {id, name, parent}[]|null},
+     *                          only the sections the user may export. Null
+     *                          items: the section is exported whole.
      * @param bool  $can_import Whether the user may import (manage_options).
      */
     function typost_render_export_tab($sections, $can_import) {
@@ -28,11 +29,13 @@ if (!function_exists('typost_render_export_tab')) {
             <summary><?php esc_html_e('About Export & Import', 'typography-stylist'); ?></summary>
             <div class="typost-tab-help-content">
                 <p><?php esc_html_e('Move paragraph styles from one site to another, for example from a staging site to production, or reuse a house set of styles on each new site.', 'typography-stylist'); ?></p>
+                <p><?php esc_html_e('The file can also hold your presets, the settings on the Options and Accessibility tabs, and the settings of each font: Feature Visibility and variable font axes. The font order is not exported.', 'typography-stylist'); ?></p>
                 <ul>
                     <li><?php esc_html_e('The file names each font by its family and where it comes from, not by this site’s font ID. On import, each font is matched to a font on the other site, and you can change the match.', 'typography-stylist'); ?></li>
                     <li><?php esc_html_e('Adobe Fonts projects and custom font definitions can be added from the file. Uploaded font files are not in the file: upload them on the other site first.', 'typography-stylist'); ?></li>
                     <li><?php esc_html_e('A style that is based on another style keeps that link. When you export some styles, the styles they are based on are added.', 'typography-stylist'); ?></li>
                     <li><?php esc_html_e('Import shows what the file holds first. Nothing is saved until you choose Import, and an existing style changes only when you choose to overwrite it.', 'typography-stylist'); ?></li>
+                    <li><?php esc_html_e('For each option that has a different value on this site, you choose which value to keep before you can import.', 'typography-stylist'); ?></li>
                 </ul>
             </div>
         </details>
@@ -56,7 +59,7 @@ if (!function_exists('typost_render_export_tab')) {
                                 <input type="checkbox" id="<?php echo esc_attr($field); ?>" class="typost-export-section-toggle" value="<?php echo esc_attr($id); ?>" checked />
                                 <label for="<?php echo esc_attr($field); ?>">
                                     <?php
-                                    echo esc_html(sprintf(
+                                    echo esc_html(null === $section['items'] ? $section['label'] : sprintf(
                                         /* translators: 1: section name, such as Paragraph styles, 2: number of items */
                                         __('%1$s (%2$d)', 'typography-stylist'),
                                         $section['label'],

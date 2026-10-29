@@ -358,6 +358,95 @@ describe( 'import', () => {
 	} );
 } );
 
+describe( 'import of sections in the generic row form', () => {
+	const ROWS_PREVIEW = {
+		version: 1,
+		plugin: '2.3.5',
+		exported: '2026-10-29',
+		fonts: [ { key: 'f1', name: 'Inter', family: 'Inter', source: 'kit', status: 'found', candidates: [ { value: 'id:1', label: 'Inter A' } ], choice: { action: 'map', target: 'id:1' }, usedBy: [ 'Feature Visibility' ], sections: [ 'featureVisibility' ] } ],
+		sections: {
+			featureVisibility: {
+				label: 'Feature Visibility',
+				preview: { rows: [ { key: 'f1', name: 'Inter', note: 'Check the font.', current: 'ornm', incoming: 'ss15', choices: [ { value: 'apply', label: 'Use the settings in the file' }, { value: 'keep', label: 'Keep the settings on this site' } ], choice: 'keep' } ] },
+			},
+			options: {
+				label: 'Options',
+				preview: {
+					rows: [ { key: 'typost_new_font_sizes_px', name: 'Write new font sizes in px', current: 'Off', incoming: 'On', choices: [ { value: 'keep', label: 'Keep the value on this site' }, { value: 'apply', label: 'Use the value in the file' } ], choice: '' } ],
+					notes: [ '3 other options have the same value on this site.' ],
+				},
+			},
+		},
+		unknownSections: [],
+		siteFonts: [ { value: 'id:1', label: 'Inter A' } ],
+	};
+
+	async function preview() {
+		setFile( '{}' );
+		submit( 'typost-import-form' );
+		await waitFor( () => requests.length === 1 );
+		requests[ 0 ].deferred.resolve( ROWS_PREVIEW );
+	}
+
+	it( 'shows each row with both values and its choices', async () => {
+		await preview();
+		const container = document.getElementById( 'typost-import-preview' );
+		expect( container.textContent ).toContain( '3 other options have the same value on this site.' );
+
+		const option = document.getElementById( 'typost-import-row-options-typost_new_font_sizes_px' );
+		expect( option.value ).toBe( '' );
+		expect( Array.from( option.options ).map( ( o ) => o.textContent ) ).toEqual( [ 'Choose…', 'Keep the value on this site', 'Use the value in the file' ] );
+		expect( option.getAttribute( 'aria-label' ) ).toBe( 'What to do with “Write new font sizes in px”' );
+		const cells = Array.from( option.closest( 'tr' ).children ).map( ( c ) => c.textContent );
+		expect( cells.slice( 1, 3 ) ).toEqual( [ 'Off', 'On' ] );
+
+		const font = document.getElementById( 'typost-import-row-featureVisibility-f1' );
+		expect( font.value ).toBe( 'keep' );
+		expect( Array.from( font.options ).map( ( o ) => o.value ) ).toEqual( [ 'apply', 'keep' ] );
+		expect( document.getElementById( font.getAttribute( 'aria-describedby' ) ).textContent ).toBe( 'Check the font.' );
+	} );
+
+	it( 'marks an option with no choice and does not send the import', async () => {
+		await preview();
+		document.getElementById( 'typost-import-preview' ).querySelector( '.button-primary' ).click();
+
+		expect( requests ).toHaveLength( 1 );
+		const option = document.getElementById( 'typost-import-row-options-typost_new_font_sizes_px' );
+		expect( option.getAttribute( 'aria-invalid' ) ).toBe( 'true' );
+		expect( document.activeElement ).toBe( option );
+		expect( document.getElementById( 'typost-import-run-error' ).textContent ).toBe( 'Choose what to do with “Write new font sizes in px”.' );
+	} );
+
+	it( 'sends the answers and shows the groups the server names', async () => {
+		await preview();
+		change( document.getElementById( 'typost-import-row-options-typost_new_font_sizes_px' ), 'apply' );
+		document.getElementById( 'typost-import-preview' ).querySelector( '.button-primary' ).click();
+
+		expect( requests ).toHaveLength( 2 );
+		expect( requests[ 1 ].body.choices.sections ).toEqual( {
+			featureVisibility: { f1: 'keep' },
+			options: { typost_new_font_sizes_px: 'apply' },
+		} );
+
+		requests[ 1 ].deferred.resolve( {
+			fonts: { added: [], notFound: [] },
+			sections: { options: { groups: [ { heading: 'Options changed', items: [ 'Write new font sizes in px: On' ] } ] } },
+			notImported: [],
+		} );
+		const result = document.getElementById( 'typost-import-result' );
+		expect( Array.from( result.querySelectorAll( 'h4' ) ).map( ( h ) => h.textContent ) ).toEqual( [ 'Options changed' ] );
+		expect( result.textContent ).toContain( 'Write new font sizes in px: On' );
+	} );
+
+	it( 'does not ask for the options when that part is left out', async () => {
+		await preview();
+		change( document.getElementById( 'typost-import-include-options' ), false );
+		document.getElementById( 'typost-import-preview' ).querySelector( '.button-primary' ).click();
+		expect( requests ).toHaveLength( 2 );
+		expect( requests[ 1 ].body.choices.include ).toEqual( [ 'featureVisibility' ] );
+	} );
+} );
+
 describe( 'strings', () => {
 	it( 'every string the script uses is localized', () => {
 		const source = fs.readFileSync( path.resolve( __dirname, '../admin-export.js' ), 'utf8' );

@@ -17,6 +17,8 @@ const {
 	resultGroups,
 	errorMessage,
 	exportTabUrl,
+	rowFieldId,
+	rowSectionIds,
 } = require( '../admin-export' );
 
 const l10n = {
@@ -28,6 +30,7 @@ const l10n = {
 	errorChooseFont: 'Choose a font on this site for “%s”.',
 	errorRenameEmpty: 'Enter a new name for “%s”.',
 	errorRenameTaken: '“%2$s” is already used. Enter another name for “%1$s”.',
+	errorChooseRow: 'Choose what to do with “%s”.',
 	resultAdded: 'Added',
 	resultRenamed: 'Added with a new name',
 	resultRenamedItem: '“%1$s” as “%2$s”',
@@ -166,7 +169,7 @@ describe( 'collectErrors and buildImportChoices', () => {
 
 	it( 'asks for a font that has no choice', () => {
 		expect( collectErrors( preview, state( { fonts: { f1: '', f2: 'none' } } ), l10n ) ).toEqual( [
-			{ message: 'Choose a font on this site for “Inter”.', kind: 'font', key: 'f1' },
+			{ message: 'Choose a font on this site for “Inter”.', kind: 'font', key: 'f1', field: 'typost-import-font-f1' },
 		] );
 	} );
 
@@ -229,6 +232,70 @@ describe( 'collectErrors and buildImportChoices', () => {
 			expect( collectErrors( withSections, leftOut, l10n ) ).toEqual( [] );
 			expect( buildImportChoices( withSections, leftOut ).fonts ).toEqual( { f2: { action: 'none' } } );
 		} );
+	} );
+} );
+
+describe( 'sections in the generic row form', () => {
+	const preview = {
+		fonts: [],
+		sections: {
+			options: {
+				label: 'Options',
+				preview: {
+					rows: [
+						{ key: 'typost_new_font_sizes_px', name: 'Write new font sizes in px', choices: [ { value: 'keep' }, { value: 'apply' } ], choice: '' },
+						{ key: 'typost_admin_color_scheme', name: 'Admin Color Scheme', choices: [ { value: 'keep' }, { value: 'apply' } ], choice: '' },
+					],
+				},
+			},
+			featureVisibility: {
+				label: 'Feature Visibility',
+				preview: { rows: [ { key: 'f1', name: 'Inter', choices: [ { value: 'apply' }, { value: 'keep' } ], choice: 'apply' } ] },
+			},
+			layeredFonts: { label: 'Layers', preview: { items: [ { name: 'A' } ] } },
+		},
+	};
+	const state = ( rows, include ) => ( { fonts: {}, styles: {}, rows, include: include || {} } );
+
+	it( 'finds the sections that send rows', () => {
+		expect( rowSectionIds( preview ) ).toEqual( [ 'options', 'featureVisibility' ] );
+	} );
+
+	it( 'gives each row a select id made of id characters only', () => {
+		expect( rowFieldId( 'options', 'typost_new_font_sizes_px' ) ).toBe( 'typost-import-row-options-typost_new_font_sizes_px' );
+		expect( rowFieldId( 'x', 'a b"c' ) ).toBe( 'typost-import-row-x-a_b_c' );
+	} );
+
+	it( 'asks for every row with no answer', () => {
+		const errors = collectErrors( preview, state( { options: { typost_new_font_sizes_px: 'apply', typost_admin_color_scheme: '' }, featureVisibility: { f1: 'apply' } } ), l10n );
+		expect( errors ).toEqual( [ {
+			message: 'Choose what to do with “Admin Color Scheme”.',
+			kind: 'row',
+			key: 'typost_admin_color_scheme',
+			field: 'typost-import-row-options-typost_admin_color_scheme',
+		} ] );
+	} );
+
+	it( 'does not ask for rows of a section left out', () => {
+		expect( collectErrors( preview, state( {}, { options: false, featureVisibility: false } ), l10n ) ).toEqual( [] );
+	} );
+
+	it( 'sends each answer under its section', () => {
+		const choices = buildImportChoices( preview, state( { options: { typost_new_font_sizes_px: 'apply', typost_admin_color_scheme: 'keep' }, featureVisibility: { f1: 'keep' } } ) );
+		expect( choices.sections ).toEqual( {
+			options: { typost_new_font_sizes_px: 'apply', typost_admin_color_scheme: 'keep' },
+			featureVisibility: { f1: 'keep' },
+		} );
+		expect( choices.include ).toEqual( [ 'options', 'featureVisibility', 'layeredFonts' ] );
+	} );
+
+	it( 'lists the groups a section names in the result', () => {
+		const groups = resultGroups( {
+			sections: {
+				options: { groups: [ { heading: 'Options changed', items: [ 'Write new font sizes in px: On' ] }, { heading: 'Empty', items: [] } ] },
+			},
+		}, l10n );
+		expect( groups ).toEqual( [ { heading: 'Options changed', items: [ 'Write new font sizes in px: On' ] } ] );
 	} );
 } );
 

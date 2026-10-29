@@ -2273,7 +2273,8 @@ details.typost-font-kit-card[open] > .typost-font-kit-header::before {
     display: none;
 }
 
-.typost-import-note {
+.typost-import-note,
+.typost-import-detail {
     display: block;
     font-weight: 400;
     color: var(--typost-text-secondary, #646970);
