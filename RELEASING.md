@@ -207,11 +207,50 @@ workflow never touches SVN for a pre-release.
 
 ## 6. Hotfixes
 
-If `main` has moved past the release you need to patch: branch from the
-release tag (`git switch -c hotfix/2.1.2 v2.1.1`), cherry-pick or apply the
-fix, bump to `X.Y.Z+1` in all six places, merge back to `main`, and release
-as normal. If `main` hasn't diverged, a hotfix is just a small stable
-release.
+There is no `develop` branch, and a hotfix does not need one: the deploy
+builds the commit the release **tag** points at, not the tip of `main`
+(`release-deploy.yml` runs on `release: published` and checks out the tag).
+So the release tags are the "released" line, and `main` is the integration
+branch. If `main` hasn't diverged from the last release, a hotfix is just a
+small stable release from `main`. If `main` holds unreleased work:
+
+1. **Branch from the release tag, not from `main`:**
+   `git switch -c release/2.3.5 v2.3.4`. Name it `release/X.Y.Z` — CI runs
+   the module version check only when the PR's head branch starts with
+   `release/` (`ci.yml`).
+2. **Apply the fix** (write it there, or cherry-pick it from `main`). Add a
+   test that fails without it, as for any bug fix.
+3. **Version: the next patch number, `X.Y.Z+1`.** A four-part version
+   (`2.3.4.1`) does not work: `parseStable()` in `scripts/check-versions.js`
+   reads only `X.Y.Z`, and the module check, which always runs in tag mode,
+   fails with "cannot read the release version". If `main`'s parked
+   entries in `changelog.txt` already sit under that number, the hotfix
+   takes it anyway and `main`'s work moves to the next one (step 7).
+   Bump all six places, plus any module constant whose `assets/` the fix
+   changed (§4 step 1), and set `Project-Id-Version` (§4 step 2).
+4. **Changelog:** a `= X.Y.Z =` section in readme.txt, changelog.txt and
+   README.md with the hotfix entry only. readme.txt on this branch comes
+   from the tag, so it holds no unreleased text from `main`.
+5. **PR the branch** (CI runs on every pull request, whatever its base) and
+   wait for green. Do not merge it into `main` yet if you want the release
+   to come from the exact tested commit — the release can target the branch.
+6. **Draft the GitHub Release** with tag `vX.Y.Z` and set **Target** to the
+   `release/X.Y.Z` branch (not `main`). Then §4 steps 6–9 as normal:
+   publish, watch the deploy, confirm on wp.org.
+7. **Merge the branch back into `main`.** `main`'s six version sources
+   still name the previous release (versions bump at a release's start), so
+   they take the hotfix's numbers without conflict. Expect conflicts in
+   `changelog.txt` and README.md: keep the hotfix section, and move
+   `main`'s parked entries to the next patch number. Docs on `main` that
+   label unreleased work with the number the hotfix took ("v2.3.5+" in
+   CLAUDE.md, module CLAUDE.md files, DOCUMENTATION.md) need the new number
+   too; `grep -rn "X.Y.Z"` finds them. The merge is also what makes the
+   hotfix tag an ancestor of `main`, so the next release's module check
+   diffs against it.
+
+Between the release and the merge back, do not run the readme/assets sync
+(§7) from `main`: it would put `main`'s readme on the listing. Run it from
+the `release/X.Y.Z` branch if you need it.
 
 ## 7. Readme / assets updates without a release
 
