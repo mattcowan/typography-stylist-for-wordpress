@@ -228,8 +228,9 @@ small stable release from `main`. If `main` holds unreleased work:
    takes it anyway and `main`'s work moves to the next one (step 7).
    Bump all six places, plus any module constant whose `assets/` the fix
    changed (§4 step 1), and set `Project-Id-Version` (§4 step 2).
-4. **Changelog:** a `= X.Y.Z =` section in readme.txt, changelog.txt and
-   README.md with the hotfix entry only. readme.txt on this branch comes
+4. **Changelog:** a `= X.Y.Z =` section in readme.txt and changelog.txt,
+   and a `### Version X.Y.Z` section in README.md, each with the hotfix
+   entry only. readme.txt on this branch comes
    from the tag, so it holds no unreleased text from `main`.
 5. **PR the branch** (CI runs on every pull request, whatever its base) and
    wait for green. Do not merge it into `main` yet if you want the release
