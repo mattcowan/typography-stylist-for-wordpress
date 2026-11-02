@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.4
+Stable tag: 2.3.5
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -27,6 +27,7 @@ The Glyphs Panel shows every character in a font, like the Glyphs panel in Adobe
 * Select a letter in your text to see all of its alternates. Click an alternate to put it in place of the letter.
 * Click any glyph to insert it into your text.
 * Move through the grid with the keyboard. Screen readers announce each glyph.
+* Make the glyphs larger with “Glyph size” to compare similar alternates.
 
 The panel reads the font in your browser, and it reads only the font’s metadata. It does not extract glyph outlines, and it does not store font data on your server.
 
@@ -41,7 +42,7 @@ A paragraph style is a named set of typography settings, like a paragraph style 
 * If the selected text already has its own settings, the editor asks before the style replaces them.
 * “Detach Style” changes styled text back to independent settings.
 * In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
-* Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes, and the style it is based on. Every post that uses the style shows the change.
+* Edit, rename and delete styles on the Paragraph Styles tab in Settings → Typography Stylist. Edit changes every setting of a style: font, weight, font style, size, spacing, line height, First Letter Hang, case, OpenType features and variable font axes, and the style it is based on. Every post that uses the style shows the change. The Edit form can also set the alignment, the word spacing, and the line breaking of a style (“Balance lines” for headings, “Avoid short last lines” for body text).
 * Move styles, presets, options and font settings to another site with Settings → Typography Stylist → Export & Import. The file names each font by its family, and import matches it to a font on the other site. You see every item before anything is saved.
 
 = Granular typography control =
@@ -61,7 +62,7 @@ Your site’s front end gets CSS only. The plugin adds no JavaScript to your pag
 1. **In a heading, paragraph, or other text block.** Select the text, then click “Typography Stylist Features” (a swash “T”) in the block toolbar. Use this for whole words and phrases. Changes apply at once.
 2. **In a Typography Stylist block.** Use this block for letter-by-letter work. Set the options for the whole block in the sidebar. Select text in the block to change only that text.
 
-Two settings in Settings → Typography Stylist → Options add a Glyphs button and a Paragraph Styles button to the block toolbar. Both settings are off by default.
+The block toolbar also has a Glyphs button and a Paragraph Styles button. To remove them, turn them off in Settings → Typography Stylist → Options.
 
 = Accessibility =
 
@@ -333,6 +334,18 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.5 =
+* **New: Export & Import.** Settings → Typography Stylist → Export & Import moves paragraph styles, presets, the settings on the Options and Accessibility tabs, and the Feature Visibility and variable font axes of each font to another site. The file names each font by its family, and import matches it to a font on the other site. You see every font, style, preset, and option before anything is saved, and you choose what to do with each conflict. Imported styles get new IDs and keep their "Based on" links.
+* **New: Case for selected text** in the Quick Feature Toggles of the Typography Stylist block. For example, a headline in Title Case can have its first word in All Small Caps.
+* **New: alignment, word spacing, and line breaking in paragraph styles.** Set them in the Edit form on the Paragraph Styles tab. "Balance lines" gives a short heading lines of similar length, and "Avoid short last lines" keeps a single word off the last line of body text.
+* **New: a Glyph size control in the Glyphs panel**, so similar alternates are easier to tell apart. The panel keeps the size in your browser.
+* **New for theme developers: a plain typography switch.** The `typost-plain` class removes First Letter Hangs and resets the plugin's OpenType features in an element, for example from a "Simplify typography" toggle in a reader panel.
+* **Changed: the Glyphs and Paragraph Styles toolbar buttons are on by default.** The update turns both buttons on one time. If you do not want a button, turn it off in Options again. It then stays off.
+* **Improved: the Paragraph Styles tab shows the rem value of a style that writes rem**, for example "20px (1.25rem)".
+* **Fixed: the settings page scrolled sideways in a narrow window.**
+* **Fixed: the font list on the settings page could show old values after two quick font actions.**
+* Full details are in changelog.txt.
+
 = 2.3.4 =
 * **New: edit every setting of a paragraph style on the Paragraph Styles tab.** Edit on a style card opens a form with the font, weight, font style, size, letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes. Save changes the style on every post that uses it.
 * **New: a paragraph style can be based on another style**, as with "Based On" in Adobe InDesign. The style uses the values of the other style for each setting that it does not set itself, and follows later changes to that style. "Reset to Base" removes the settings of the style itself, and tells you when the Edit form has changes that are not saved.
@@ -432,6 +445,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.5 =
+Adds Export & Import for paragraph styles, presets, options and font settings, Case for selected text, and alignment and line breaking in paragraph styles. The update turns on the Glyphs and Paragraph Styles toolbar buttons one time. To remove them, turn them off in Options.
 
 = 2.3.4 =
 Adds an Edit form for every paragraph style setting, and styles based on other styles. Repairs Font Library fonts that the plugin registered. Before you go back to an earlier version, choose "None" in "Based on" for each style based on another style.
