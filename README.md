@@ -65,6 +65,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 ### Case (v2.3.3+)
 
 - In the Typography Stylist block, set the case: All Caps, Lowercase, Title Case, Small Caps, or All Small Caps. “Normal” removes a case the theme sets.
+- To change the case of part of the block (v2.3.5+), select the text and use “Case (for selected text)” in the Quick Feature Toggles. The block’s own Case setting does not change.
 - In other text blocks, select text and set the case in the inline format panel.
 - The stored text keeps the case you typed. Only the look changes.
 - Small caps use the font’s own small caps. “Allow fake small caps” lets the browser shrink capitals when the font has none.
@@ -495,6 +496,19 @@ The plugin is for the WordPress block editor. It works in a page builder only if
 The front end gets CSS only, with no JavaScript. A font loads only on the pages that use it. Font file size is the main cost, as with any web font. The plugin JavaScript loads only in the block editor.
 
 ## Changelog
+
+### Version 2.3.5
+
+- **New: Export & Import.** Settings → Typography Stylist → Export & Import moves paragraph styles, presets, the settings on the Options and Accessibility tabs, and the Feature Visibility and variable font axes of each font to another site. The file names each font by its family, and import matches it to a font on the other site. You see every font, style, preset, and option before anything is saved, and you choose what to do with each conflict. Imported styles get new IDs and keep their "Based on" links.
+- **New: Case for selected text** in the Quick Feature Toggles of the Typography Stylist block. For example, a headline in Title Case can have its first word in All Small Caps.
+- **New: alignment, word spacing, and line breaking in paragraph styles.** Set them in the Edit form on the Paragraph Styles tab. "Balance lines" gives a short heading lines of similar length, and "Avoid short last lines" keeps a single word off the last line of body text.
+- **New: a Glyph size control in the Glyphs panel**, so similar alternates are easier to tell apart. The panel keeps the size in your browser.
+- **New for theme developers: a plain typography switch.** The `typost-plain` class removes First Letter Hangs and resets the plugin's OpenType features in an element, for example from a "Simplify typography" toggle in a reader panel. See [HOOKS.md](HOOKS.md#plain-typography-switch).
+- **Changed: the Glyphs and Paragraph Styles toolbar buttons are on by default.** The update turns both buttons on one time. If you do not want a button, turn it off in Options again. It then stays off.
+- **Improved: the Paragraph Styles tab shows the rem value of a style that writes rem**, for example "20px (1.25rem)".
+- **Fixed: the settings page scrolled sideways in a narrow window.**
+- **Fixed: the font list on the settings page could show old values after two quick font actions.**
+- Full details are in changelog.txt.
 
 ### Version 2.3.4
 
