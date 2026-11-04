@@ -287,58 +287,40 @@ E2E tests are:
 
 Rationale: E2E tests are for development/CI only, not needed in production plugin.
 
-## CI/CD Integration
+## Running in wp-env (and in CI)
 
-### GitHub Actions Example
+The suite does not need the local `http://typography-stylist:8080` site. It
+runs against any WordPress where this plugin is active, through
+`WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`. The repository's
+`.wp-env.json` maps this checkout as a plugin, so with Docker running:
 
-```yaml
-name: E2E Tests
-
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:5.7
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: wordpress_test
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browsers
-        run: npx playwright install chromium
-
-      - name: Setup WordPress
-        run: |
-          # Install WordPress CLI
-          # Set up test WordPress instance
-          # Configure .env with test credentials
-
-      - name: Run E2E tests
-        run: npm run test:e2e
-        env:
-          WP_BASE_URL: http://localhost:8080
-          WP_USERNAME: admin
-          WP_PASSWORD: password
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: playwright-report
-          path: playwright-report/
+```bash
+npm run build                       # wp-env serves the minified assets
+npx @wordpress/env start            # http://localhost:8888, admin / password
+WP_BASE_URL=http://localhost:8888 WP_USERNAME=admin WP_PASSWORD=password npm run test:e2e
 ```
+
+`.wp-env.json` sets `SCRIPT_DEBUG` to `false` (wp-env turns it on by
+default): with `SCRIPT_DEBUG` on, the plugin loads `assets/js/block-editor.js`
+itself, which is the browserify source and does not run in a browser.
+
+To try the next WordPress locally, add a git-ignored `.wp-env.override.json`:
+
+```json
+{
+  "core": "https://wordpress.org/nightly-builds/wordpress-latest.zip",
+  "plugins": [ ".", "https://downloads.wordpress.org/plugin/gutenberg.zip" ]
+}
+```
+
+That is what the weekly **Compatibility** workflow
+(`.github/workflows/compat.yml`, #189) does: it runs this suite in wp-env
+with WordPress trunk and the latest Gutenberg every Monday and on demand,
+and attaches the Playwright report to a failed run. It does not run on push
+or pull request. See `RELEASING.md` § 9.
+
+The screen-reader suite (`npm run test:sr`, `tests/e2e-sr/`) needs Windows
+and NVDA, so it stays local.
 
 ## Additional Resources
 
