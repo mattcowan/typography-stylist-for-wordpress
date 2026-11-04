@@ -50,25 +50,46 @@ function editable(page, clientId) {
 	return canvas(page).locator(`[data-block="${clientId}"] [contenteditable="true"]`).first();
 }
 
+function selectionOffsets(page) {
+	return page.evaluate(() => {
+		const s = wp.data.select('core/block-editor');
+		return [s.getSelectionStart().offset, s.getSelectionEnd().offset];
+	});
+}
+
+// Press `key` until the editor store reports `done(offsets)`. The number of
+// presses is not the number of characters: at the edge of a styled span the
+// first arrow press only moves the caret into or out of the format (RichText
+// format boundaries) and leaves the offset where it is.
+async function pressUntil(page, key, done, maxPresses) {
+	for (let i = 0; i < maxPresses; i++) {
+		const before = await selectionOffsets(page);
+		if (done(before)) {
+			return;
+		}
+		await page.keyboard.press(key);
+		// The store follows the DOM selection on selectionchange, a moment
+		// after the key press. Give it that moment (a boundary press changes
+		// no offset, so this cannot wait for a change alone).
+		for (let tries = 0; tries < 10; tries++) {
+			const after = await selectionOffsets(page);
+			if (after[0] !== before[0] || after[1] !== before[1]) {
+				break;
+			}
+			await page.waitForTimeout(20);
+		}
+	}
+}
+
 // Put the caret at `start` and, when `end` is past it, select up to `end`,
 // with the keyboard. Waits until the editor store reports the selection.
 async function select(page, clientId, start, end = start) {
 	await editable(page, clientId).click();
 	await page.keyboard.press('Home');
-	for (let i = 0; i < start; i++) {
-		await page.keyboard.press('ArrowRight');
-	}
-	if (end > start) {
-		await page.keyboard.down('Shift');
-		for (let i = start; i < end; i++) {
-			await page.keyboard.press('ArrowRight');
-		}
-		await page.keyboard.up('Shift');
-	}
-	await expect.poll(() => page.evaluate(() => {
-		const s = wp.data.select('core/block-editor');
-		return [s.getSelectionStart().offset, s.getSelectionEnd().offset];
-	})).toEqual([start, end]);
+	await expect.poll(async () => (await selectionOffsets(page))[0]).toBe(0);
+	await pressUntil(page, 'ArrowRight', ([caret]) => caret >= start, start * 2 + 2);
+	await pressUntil(page, 'Shift+ArrowRight', ([, focus]) => focus >= end, (end - start) * 2 + 2);
+	await expect.poll(() => selectionOffsets(page)).toEqual([start, end]);
 }
 
 async function openQuickFeatureToggles(page) {
