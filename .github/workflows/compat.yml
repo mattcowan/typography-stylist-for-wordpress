@@ -1,0 +1,119 @@
+# Weekly compatibility run against the next WordPress and Gutenberg (#189).
+#
+# The CI workflow installs every dependency from the committed lockfiles and
+# mocks WordPress in PHPUnit, so it never meets a newer WordPress than the one
+# in the lockfile. This workflow does, once a week and on demand
+# (Actions → Compatibility → Run workflow):
+#
+#   1. Jest, after upgrading every installed @wordpress/* package to its
+#      latest published version (without saving the change).
+#   2. The Playwright E2E suite (tests/e2e) in wp-env, with WordPress trunk
+#      (the nightly build) and the latest Gutenberg plugin.
+#
+# This is not the nightly build that RELEASING.md § 9 rejects: it produces no
+# zip, and its inputs change every week, so a failure means something
+# upstream moved. See RELEASING.md § 9.
+#
+# It never runs on push or pull_request, so it adds no check to pull
+# requests and cannot block one. A failed scheduled run sends the usual
+# GitHub Actions failure notification to the user who last changed the cron
+# line below; a failed manual run notifies whoever started it.
+#
+# GitHub disables scheduled workflows in a public repository after 60 days
+# with no repository activity, without a warning. Re-enable it in the
+# Actions tab.
+#
+# Supply chain: this job installs packages the day they are published (no
+# Dependabot cooldown) and runs them. The token is read-only and the job
+# uses no secrets, so such a package can reach only this runner.
+name: Compatibility
+
+on:
+  schedule:
+    # Mondays 05:17 UTC (off the hour: scheduled runs on :00 are delayed).
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jest-latest-wordpress:
+    name: Jest with the latest @wordpress/* packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Every @wordpress/* package npm installed (direct and transitive),
+      # each at its latest version. --no-save leaves package.json and the
+      # lockfile alone. A peer dependency conflict (for example a package
+      # that needs React 19) fails here, which is also worth knowing.
+      - name: Upgrade @wordpress/* to latest
+        run: |
+          packages=$(ls node_modules/@wordpress | sed 's|^|@wordpress/|; s|$|@latest|')
+          npm install --no-save --no-audit --no-fund $packages
+      - name: List @wordpress/* versions
+        run: |
+          for dir in node_modules/@wordpress/*/; do
+            node -p "const p = require('./${dir}package.json'); p.name + '@' + p.version"
+          done
+      - run: npm test
+
+  e2e-wordpress-trunk:
+    name: E2E (WordPress trunk + latest Gutenberg)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # wp-env's default site and admin user, not the local
+      # http://typography-stylist:8080 development site.
+      WP_BASE_URL: http://localhost:8888
+      WP_USERNAME: admin
+      WP_PASSWORD: password
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      # The production build from the lockfile: this job tests what would
+      # ship against the next WordPress, not newer build tools.
+      - run: npm ci
+      - run: npm run build
+      # .wp-env.json maps this checkout as the plugin. The override adds
+      # WordPress trunk and Gutenberg for this run only.
+      - name: Point wp-env at WordPress trunk and the latest Gutenberg
+        run: |
+          cat > .wp-env.override.json <<'JSON'
+          {
+            "core": "https://wordpress.org/nightly-builds/wordpress-latest.zip",
+            "plugins": [ ".", "https://downloads.wordpress.org/plugin/gutenberg.zip" ]
+          }
+          JSON
+      - run: npm install -g @wordpress/env@latest
+      - run: wp-env start
+      - name: WordPress and plugin versions
+        run: |
+          wp-env run cli wp core version -- --extra
+          wp-env run cli wp plugin list
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+      - name: wp-env logs
+        if: failure()
+        run: wp-env logs --watch=false
