@@ -123,6 +123,7 @@ class ParagraphStylesAdminPreviewTest extends TestCase {
         Functions\when('wp_set_script_translations')->justReturn(true);
         Functions\when('wp_enqueue_style')->justReturn(null);
         Functions\when('wp_localize_script')->justReturn(true);
+        Functions\when('wp_register_style')->justReturn(true);
         Functions\when('rest_url')->justReturn('http://localhost/wp-json/typost/v1/paragraph-styles');
         Functions\when('wp_create_nonce')->justReturn('nonce');
 

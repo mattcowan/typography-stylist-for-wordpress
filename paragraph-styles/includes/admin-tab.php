@@ -30,6 +30,36 @@ foreach ( $form_features as $feature ) {
 	$category = isset( $feature['category'] ) ? $feature['category'] : 'other';
 	$form_features_grouped[ $category ][] = $feature;
 }
+
+// Text color and outline choices (#215): the theme's palette first. A
+// palette color is stored as a reference to the palette, so the style
+// follows the theme when it changes the color.
+$form_palette        = Typost_Paragraph_Styles::get_color_palette();
+$form_palette_groups = array(
+	'theme'   => __( 'Theme palette', 'typost-paragraph-styles' ),
+	'custom'  => __( 'Site palette', 'typost-paragraph-styles' ),
+	'default' => __( 'Default palette', 'typost-paragraph-styles' ),
+);
+$render_palette_options = function () use ( $form_palette, $form_palette_groups ) {
+	foreach ( $form_palette_groups as $origin => $group_label ) {
+		$entries = array_filter(
+			$form_palette,
+			function ( $entry ) use ( $origin ) {
+				return $origin === $entry['origin'];
+			}
+		);
+		if ( empty( $entries ) ) {
+			continue;
+		}
+		echo '<optgroup label="' . esc_attr( $group_label ) . '">';
+		foreach ( $entries as $entry ) {
+			/* translators: 1: palette color name, 2: its color value */
+			$option_label = sprintf( __( '%1$s (%2$s)', 'typost-paragraph-styles' ), $entry['name'], $entry['color'] );
+			echo '<option value="' . esc_attr( 'preset:' . $entry['slug'] ) . '">' . esc_html( $option_label ) . '</option>';
+		}
+		echo '</optgroup>';
+	}
+};
 ?>
 
 <div class="typost-ps-admin-tab">
@@ -279,6 +309,74 @@ foreach ( $form_features as $feature ) {
 						<span class="typost-ps-edit-help" id="typost-ps-edit-text-wrap-help"><?php esc_html_e( 'Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks.', 'typost-paragraph-styles' ); ?></span>
 					</p>
 				</div>
+			</fieldset>
+
+			<?php
+			// Text color and outline (#215). admin.js fills the selects from
+			// the stored color (a palette color the palette no longer has is
+			// added), shows the custom fields for Custom, and keeps the
+			// contrast notice up to date.
+			?>
+			<fieldset class="typost-ps-edit-group typost-ps-edit-colors">
+				<legend><?php esc_html_e( 'Color and outline', 'typost-paragraph-styles' ); ?></legend>
+				<div class="typost-ps-edit-row">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-text-color"><?php esc_html_e( 'Text color', 'typost-paragraph-styles' ); ?></label>
+						<span class="typost-ps-edit-color-control">
+							<span class="typost-ps-color-swatch" data-swatch-for="textColor" aria-hidden="true"></span>
+							<select id="typost-ps-edit-text-color" data-field="textColor" aria-describedby="typost-ps-edit-text-color-help">
+								<option value=""><?php esc_html_e( 'Default (theme color)', 'typost-paragraph-styles' ); ?></option>
+								<?php $render_palette_options(); ?>
+								<option value="custom"><?php esc_html_e( 'Custom color', 'typost-paragraph-styles' ); ?></option>
+								<option value="transparent"><?php esc_html_e( 'Transparent (outline only)', 'typost-paragraph-styles' ); ?></option>
+							</select>
+						</span>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-text-color-help"><?php esc_html_e( 'A palette color follows the theme: when the theme changes that color, every style that uses it changes too. A block’s own text color setting overrides this.', 'typost-paragraph-styles' ); ?></span>
+					</p>
+					<p class="typost-ps-edit-field" data-show-for-color="textColor">
+						<label for="typost-ps-edit-text-color-custom"><?php esc_html_e( 'Custom text color', 'typost-paragraph-styles' ); ?></label>
+						<span class="typost-ps-edit-color-control">
+							<input type="text" id="typost-ps-edit-text-color-custom" data-field="textColorCustom" class="typost-ps-edit-hex" spellcheck="false" autocomplete="off" aria-describedby="typost-ps-edit-hex-help" />
+							<input type="color" data-color-picker-for="textColorCustom" aria-label="<?php esc_attr_e( 'Pick the custom text color', 'typost-paragraph-styles' ); ?>" />
+						</span>
+					</p>
+				</div>
+				<div class="typost-ps-edit-row">
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-stroke-width"><?php esc_html_e( 'Outline width (px, 0 = none)', 'typost-paragraph-styles' ); ?></label>
+						<input type="number" id="typost-ps-edit-stroke-width" data-field="textStrokeWidth" min="0" max="<?php echo esc_attr( Typost_Paragraph_Styles::TEXT_STROKE_MAX ); ?>" step="0.1" />
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-stroke-color"><?php esc_html_e( 'Outline color', 'typost-paragraph-styles' ); ?></label>
+						<span class="typost-ps-edit-color-control">
+							<span class="typost-ps-color-swatch" data-swatch-for="textStrokeColor" aria-hidden="true"></span>
+							<select id="typost-ps-edit-stroke-color" data-field="textStrokeColor">
+								<option value=""><?php esc_html_e( 'Same as the text', 'typost-paragraph-styles' ); ?></option>
+								<?php $render_palette_options(); ?>
+								<option value="custom"><?php esc_html_e( 'Custom color', 'typost-paragraph-styles' ); ?></option>
+							</select>
+						</span>
+					</p>
+					<p class="typost-ps-edit-field" data-show-for-color="textStrokeColor">
+						<label for="typost-ps-edit-stroke-color-custom"><?php esc_html_e( 'Custom outline color', 'typost-paragraph-styles' ); ?></label>
+						<span class="typost-ps-edit-color-control">
+							<input type="text" id="typost-ps-edit-stroke-color-custom" data-field="textStrokeColorCustom" class="typost-ps-edit-hex" spellcheck="false" autocomplete="off" aria-describedby="typost-ps-edit-hex-help" />
+							<input type="color" data-color-picker-for="textStrokeColorCustom" aria-label="<?php esc_attr_e( 'Pick the custom outline color', 'typost-paragraph-styles' ); ?>" />
+						</span>
+					</p>
+					<p class="typost-ps-edit-field">
+						<label for="typost-ps-edit-stroke-position"><?php esc_html_e( 'Outline position', 'typost-paragraph-styles' ); ?></label>
+						<select id="typost-ps-edit-stroke-position" data-field="textStrokePosition" aria-describedby="typost-ps-edit-stroke-position-help">
+							<option value=""><?php esc_html_e( 'On top of the fill', 'typost-paragraph-styles' ); ?></option>
+							<option value="behind"><?php esc_html_e( 'Behind the fill', 'typost-paragraph-styles' ); ?></option>
+						</select>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-stroke-position-help"><?php esc_html_e( 'The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape.', 'typost-paragraph-styles' ); ?></span>
+					</p>
+				</div>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-hex-help"><?php esc_html_e( 'A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent.', 'typost-paragraph-styles' ); ?></p>
+				<p class="typost-ps-edit-help"><?php esc_html_e( 'In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text.', 'typost-paragraph-styles' ); ?></p>
+				<?php // A polite live region, empty while the colors meet WCAG 1.4.3; admin.js fills it ?>
+				<p class="typost-ps-edit-contrast" id="typost-ps-edit-contrast" role="status"></p>
 			</fieldset>
 
 			<fieldset class="typost-ps-edit-group">

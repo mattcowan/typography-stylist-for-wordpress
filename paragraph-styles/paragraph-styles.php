@@ -41,6 +41,9 @@ final class Typost_Paragraph_Styles {
 	/** @var self|null */
 	private static $instance = null;
 
+	/** @var array[]|null The color palette, read once per request (#215) */
+	private static $color_palette = null;
+
 	/** @var bool Whether the style CSS was already added to the admin page */
 	private $admin_style_css_added = false;
 
@@ -141,10 +144,25 @@ final class Typost_Paragraph_Styles {
 	 * ps-utils.js.
 	 */
 	const BASED_ON_GROUPS = array(
-		'fontSize' => array( 'fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize' ),
-		'textCase'  => array( 'textCase', 'fakeSmallCaps' ),
-		'alignment' => array( 'alignment', 'alignLast' ),
+		'fontSize'        => array( 'fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize' ),
+		'textCase'        => array( 'textCase', 'fakeSmallCaps' ),
+		'alignment'       => array( 'alignment', 'alignLast' ),
+		'textStrokeWidth' => array( 'textStrokeWidth', 'textStrokeColor', 'textStrokePosition' ),
 	);
+
+	/**
+	 * Widest text outline in px (#215). Mirrors TEXT_STROKE_MAX in
+	 * ps-utils.js and the Edit form's field.
+	 */
+	const TEXT_STROKE_MAX = 20;
+
+	/**
+	 * A stored palette color (#215): core's own reference to a palette
+	 * preset (`var:preset|color|{slug}`, as theme.json writes it) plus the
+	 * color it had when it was saved, which the CSS uses as the fallback of
+	 * the preset variable. Mirrors PALETTE_COLOR_PATTERN in ps-utils.js.
+	 */
+	const PALETTE_COLOR_PATTERN = '/^var:preset\\|color\\|([a-z0-9-]{1,100})(?:\\|(#[0-9a-f]{6}(?:[0-9a-f]{2})?))?$/';
 
 	/**
 	 * The value a style based on another stores to unset an inherited
@@ -162,6 +180,7 @@ final class Typost_Paragraph_Styles {
 		'initialHang'           => 0,
 		'wordSpacing'           => 0,
 		'textWrap'              => '',
+		'textColor'             => '',
 	);
 
 	/**
@@ -484,6 +503,14 @@ final class Typost_Paragraph_Styles {
 			$align_rules = self::alignment_declarations( $props, $hang );
 		}
 
+		// Text color and outline (#215), for fit to width too. A palette
+		// color reads the theme's preset variable.
+		$text_color = self::text_color_css_value( $props );
+		if ( '' !== $text_color ) {
+			$css_rules[] = 'color: ' . $text_color;
+		}
+		$css_rules = array_merge( $css_rules, self::stroke_declarations( $props ) );
+
 		if ( empty( $css_rules ) && empty( $align_rules ) ) {
 			return '';
 		}
@@ -546,11 +573,38 @@ final class Typost_Paragraph_Styles {
 			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
 		}
 
+		// The Typography Stylist block's own text color (#215). The color
+		// support colors the block's wrapper (`has-text-color`, with a preset
+		// class or an inline color), and the style class is on the visual
+		// element inside it, where the class would beat the inherited color.
+		// This rule, two classes more specific, gives the element the
+		// block's color back. A core Paragraph or Heading needs nothing: its
+		// own color is an inline style or a preset class with !important on
+		// the element itself.
+		if ( '' !== $text_color ) {
+			$block_selectors = array( self::block_color_selector( $id ) );
+			if ( ! empty( $style['legacyId'] ) ) {
+				$block_selectors[] = self::block_color_selector( esc_attr( $style['legacyId'] ) );
+			}
+			$css .= "\n\n" . implode( ",\n", $block_selectors ) . " {\n    color: inherit;\n}";
+		}
+
 		if ( $hang > 0 ) {
 			$css .= self::core_block_hang_css( $id );
 		}
 
 		return $css;
+	}
+
+	/**
+	 * The visual element of a Typography Stylist block whose wrapper has its
+	 * own text color (#215). Mirrors blockColorSelector() in ps-utils.js.
+	 *
+	 * @param int|string $ref Style id or legacy id.
+	 * @return string
+	 */
+	private static function block_color_selector( $ref ) {
+		return '.wp-block-typost.has-text-color > .typost-styled' . str_repeat( '.typost-ps-' . $ref, 5 );
 	}
 
 	/**
@@ -585,6 +639,177 @@ final class Typost_Paragraph_Styles {
 	 */
 	private static function normalize_text_wrap( $value ) {
 		return is_string( $value ) && in_array( $value, self::TEXT_WRAP_VALUES, true ) ? $value : '';
+	}
+
+	/**
+	 * A color as a style stores it (#215), or '' for none or an invalid value.
+	 *
+	 * - a custom color: `#rrggbb` or `#rrggbbaa` (lowercase; `#rgb` and
+	 *   `#rgba` are expanded). The alpha channel is how a style gets a tint.
+	 * - a palette color: `var:preset|color|{slug}`, core's own reference to a
+	 *   palette preset, optionally followed by `|#rrggbb[aa]`, the color it
+	 *   had when it was saved (the CSS fallback). The slug is the kebab-case
+	 *   one in the preset's CSS variable name (`_wp_to_kebab_case()`).
+	 * - `transparent`, only where `$allow_transparent` (the text fill of
+	 *   outline-only text).
+	 *
+	 * Mirrors normalizeColor() in ps-utils.js.
+	 *
+	 * @param mixed $value             Stored or submitted value.
+	 * @param bool  $allow_transparent Whether `transparent` is allowed.
+	 * @return string
+	 */
+	public static function normalize_color( $value, $allow_transparent = false ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		$value = strtolower( trim( $value ) );
+		if ( 'transparent' === $value ) {
+			return $allow_transparent ? 'transparent' : '';
+		}
+		if ( preg_match( self::PALETTE_COLOR_PATTERN, $value, $m ) ) {
+			return 'var:preset|color|' . $m[1] . ( isset( $m[2] ) && '' !== $m[2] ? '|' . $m[2] : '' );
+		}
+		return self::normalize_hex_color( $value );
+	}
+
+	/**
+	 * A hex color as `#rrggbb` or `#rrggbbaa`, or '' when it is not one.
+	 * Mirrors normalizeHexColor() in ps-utils.js.
+	 *
+	 * @param mixed $value Value.
+	 * @return string
+	 */
+	public static function normalize_hex_color( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		$value = strtolower( trim( $value ) );
+		if ( ! preg_match( '/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/', $value, $m ) ) {
+			return '';
+		}
+		$hex = $m[1];
+		if ( strlen( $hex ) <= 4 ) {
+			$long = '';
+			foreach ( str_split( $hex ) as $digit ) {
+				$long .= $digit . $digit;
+			}
+			$hex = $long;
+		}
+		return '#' . $hex;
+	}
+
+	/**
+	 * The palette slug of a stored color, or '' for a custom color (#215).
+	 *
+	 * @param mixed $value Stored color.
+	 * @return string
+	 */
+	public static function palette_color_slug( $value ) {
+		$color = self::normalize_color( $value );
+		return preg_match( self::PALETTE_COLOR_PATTERN, $color, $m ) ? $m[1] : '';
+	}
+
+	/**
+	 * The fallback a stored palette color carries, '' when none (#215).
+	 *
+	 * @param mixed $value Stored color.
+	 * @return string
+	 */
+	public static function palette_color_fallback( $value ) {
+		$color = self::normalize_color( $value );
+		return preg_match( self::PALETTE_COLOR_PATTERN, $color, $m ) && isset( $m[2] ) ? $m[2] : '';
+	}
+
+	/**
+	 * A stored color as a CSS value (#215). A palette color reads the
+	 * theme's preset variable, so a change to the palette restyles every
+	 * style that uses it, with the saved color as the fallback for a theme
+	 * that no longer defines it. Mirrors colorCssValue() in ps-utils.js.
+	 *
+	 * @param mixed $value             Stored color.
+	 * @param bool  $allow_transparent Whether `transparent` is allowed.
+	 * @return string '' for none.
+	 */
+	public static function color_css_value( $value, $allow_transparent = false ) {
+		$color = self::normalize_color( $value, $allow_transparent );
+		if ( preg_match( self::PALETTE_COLOR_PATTERN, $color, $m ) ) {
+			return 'var(--wp--preset--color--' . $m[1] . ( isset( $m[2] ) && '' !== $m[2] ? ', ' . $m[2] : '' ) . ')';
+		}
+		return $color;
+	}
+
+	/**
+	 * An outline width in px (#215): 0 when off or invalid, otherwise
+	 * capped at TEXT_STROKE_MAX and rounded to two decimals. Same number
+	 * rules as normalize_hang(). Mirrors normalizeStrokeWidth() in
+	 * ps-utils.js.
+	 *
+	 * @param mixed $value Value.
+	 * @return float|int
+	 */
+	public static function normalize_stroke_width( $value ) {
+		if ( is_bool( $value ) || ! is_numeric( $value ) ) {
+			return 0;
+		}
+		$width = (float) $value;
+		if ( ! is_finite( $width ) || $width < 0.005 ) {
+			return 0;
+		}
+		$width = min( $width, self::TEXT_STROKE_MAX );
+		// Textual shift, as normalize_hang(): JS rounds the same way
+		$rounded = round( (float) ( $width . 'e2' ) ) / 100;
+		return $rounded == (int) $rounded ? (int) $rounded : $rounded; // phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual -- whole numbers print without a decimal point, as in JS
+	}
+
+	/**
+	 * The outline declarations of a style (#215).
+	 *
+	 * `-webkit-text-stroke-*` is the only outline for HTML text (there is no
+	 * unprefixed property; Chrome, Firefox 49 and Safari 3 support it). The
+	 * stroke is centered on the glyph outline, so a thick stroke on top eats
+	 * into the letter; `paint-order: stroke fill` draws it behind the fill
+	 * instead. With no color of its own the outline is the text color.
+	 * Mirrors strokeDeclarations() in ps-utils.js.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return string[]
+	 */
+	private static function stroke_declarations( $props ) {
+		$width = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 );
+		if ( $width <= 0 ) {
+			return array();
+		}
+		$rules = array( '-webkit-text-stroke-width: ' . $width . 'px' );
+		$color = self::color_css_value( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
+		if ( '' !== $color ) {
+			$rules[] = '-webkit-text-stroke-color: ' . $color;
+		}
+		if ( isset( $props['textStrokePosition'] ) && 'behind' === $props['textStrokePosition'] ) {
+			$rules[] = 'paint-order: stroke fill';
+		}
+		return $rules;
+	}
+
+	/**
+	 * The text color declaration value of a style (#215), '' for none.
+	 *
+	 * A transparent fill is written only with an outline that has its own
+	 * color: without one the text would not show at all (an outline with no
+	 * color is drawn in the text color, which would then be transparent).
+	 * Mirrors textColorCssValue() in ps-utils.js.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return string
+	 */
+	private static function text_color_css_value( $props ) {
+		$color = self::color_css_value( isset( $props['textColor'] ) ? $props['textColor'] : '', true );
+		if ( 'transparent' === $color ) {
+			$outlined = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 ) > 0
+				&& '' !== self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
+			return $outlined ? $color : '';
+		}
+		return $color;
 	}
 
 	/**
@@ -1669,6 +1894,15 @@ final class Typost_Paragraph_Styles {
 		$new_unit = class_exists( 'Typost' ) && method_exists( 'Typost', 'get_new_font_size_unit' )
 			? Typost::get_instance()->get_new_font_size_unit()
 			: 'rem';
+		// The preview surface (#215) on its own handle: replaceStyleCss()
+		// in admin.js replaces the style CSS above after every save.
+		wp_register_style( 'typost-paragraph-styles-admin-surface', false, array( 'typost-paragraph-styles-admin' ), TYPOST_PS_VERSION );
+		wp_enqueue_style( 'typost-paragraph-styles-admin-surface' );
+		$surface_css = self::admin_preview_surface_css();
+		if ( '' !== $surface_css ) {
+			wp_add_inline_style( 'typost-paragraph-styles-admin-surface', $surface_css );
+		}
+
 		wp_localize_script( 'typost-paragraph-styles-admin', 'typostPSAdmin', array(
 			'restUrl'         => rest_url( self::REST_NAMESPACE . '/paragraph-styles' ),
 			'nonce'           => wp_create_nonce( 'wp_rest' ),
@@ -1677,6 +1911,9 @@ final class Typost_Paragraph_Styles {
 			// basedOn let the save store only the overrides.
 			'styles'          => array_values( $this->get_client_styles() ),
 			'newFontSizeUnit' => 'px' === $new_unit ? 'px' : 'rem',
+			// The color fields and the contrast check (#215)
+			'palette'         => self::get_color_palette(),
+			'themeColors'     => self::get_theme_colors(),
 		) );
 	}
 
@@ -2038,6 +2275,33 @@ final class Typost_Paragraph_Styles {
 			$case_display = $none;
 		}
 
+		// Text color and outline (#215)
+		$palette       = self::get_color_palette();
+		$color_display = '';
+		if ( '' !== self::normalize_color( isset( $props['textColor'] ) ? $props['textColor'] : '', true ) ) {
+			$color_display = self::color_label( $props['textColor'], $palette );
+		} elseif ( $unsets( 'textColor' ) ) {
+			$color_display = $none;
+		}
+		$stroke_display = '';
+		$stroke_width   = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 );
+		if ( $stroke_width > 0 ) {
+			$stroke_color   = isset( $props['textStrokeColor'] ) && '' !== self::normalize_color( $props['textStrokeColor'] )
+				? self::color_label( $props['textStrokeColor'], $palette )
+				: __( 'text color', 'typost-paragraph-styles' );
+			$stroke_display = sprintf(
+				/* translators: 1: outline width in pixels, 2: outline color, 3: "behind the fill" or "on top of the fill" */
+				__( '%1$spx, %2$s, %3$s', 'typost-paragraph-styles' ),
+				$stroke_width,
+				$stroke_color,
+				isset( $props['textStrokePosition'] ) && 'behind' === $props['textStrokePosition']
+					? __( 'behind the fill', 'typost-paragraph-styles' )
+					: __( 'on top of the fill', 'typost-paragraph-styles' )
+			);
+		} elseif ( $unsets( 'textStrokeWidth' ) ) {
+			$stroke_display = $none;
+		}
+
 		// "Override" when the style stores one of the row's keys itself,
 		// "Inherited" when its parent supplies the value
 		$source = function ( $keys ) use ( $own ) {
@@ -2091,6 +2355,12 @@ final class Typost_Paragraph_Styles {
 		if ( '' !== $wrap_display ) {
 			$html .= $detail( array( array( __( 'Line Breaking:', 'typost-paragraph-styles' ), $wrap_display, array( 'textWrap' ) ) ) );
 		}
+		if ( '' !== $color_display ) {
+			$html .= $detail( array( array( __( 'Color:', 'typost-paragraph-styles' ), $color_display, array( 'textColor' ) ) ) );
+		}
+		if ( '' !== $stroke_display ) {
+			$html .= $detail( array( array( __( 'Outline:', 'typost-paragraph-styles' ), $stroke_display, self::BASED_ON_GROUPS['textStrokeWidth'] ) ) );
+		}
 
 		return '<div class="typost-ps-style-card-details" data-font-label="' . esc_attr( $font_name ) . '">' . $html . '</div>';
 	}
@@ -2122,6 +2392,211 @@ final class Typost_Paragraph_Styles {
 		}
 		$html .= '</div>';
 		return $html;
+	}
+
+	/**
+	 * The color palette authors pick from (#215): the theme's colors first,
+	 * then the site's custom colors (Global Styles), then WordPress's
+	 * default palette when the theme keeps it. Each entry is
+	 * {slug, name, color, origin}, with the slug in the kebab case of the
+	 * preset's CSS variable (`_wp_to_kebab_case()`, as core builds
+	 * `--wp--preset--color--{slug}`). A slug in two origins is listed once,
+	 * with the value that wins in core's CSS (custom over theme over
+	 * default). Colors that are not plain CSS color syntax are left out.
+	 *
+	 * @return array[]
+	 */
+	public static function get_color_palette() {
+		if ( null !== self::$color_palette ) {
+			return self::$color_palette;
+		}
+		$by_origin = array(
+			'default' => array(),
+			'theme'   => array(),
+			'custom'  => array(),
+		);
+		if ( function_exists( 'wp_get_global_settings' ) ) {
+			$palette = wp_get_global_settings( array( 'color', 'palette' ) );
+			if ( is_array( $palette ) ) {
+				if ( isset( $palette['theme'] ) || isset( $palette['default'] ) || isset( $palette['custom'] ) ) {
+					foreach ( array_keys( $by_origin ) as $origin ) {
+						$by_origin[ $origin ] = isset( $palette[ $origin ] ) && is_array( $palette[ $origin ] ) ? $palette[ $origin ] : array();
+					}
+				} else {
+					$by_origin['theme'] = $palette;
+				}
+			}
+			if ( false === wp_get_global_settings( array( 'color', 'defaultPalette' ) ) ) {
+				$by_origin['default'] = array();
+			}
+		} elseif ( function_exists( 'get_theme_support' ) ) {
+			$support            = get_theme_support( 'editor-color-palette' );
+			$by_origin['theme'] = is_array( $support ) && isset( $support[0] ) && is_array( $support[0] ) ? $support[0] : array();
+		}
+
+		$entries = array();
+		foreach ( $by_origin as $origin => $list ) {
+			foreach ( $list as $entry ) {
+				if ( ! is_array( $entry ) || ! isset( $entry['slug'], $entry['color'] ) || ! is_string( $entry['color'] ) ) {
+					continue;
+				}
+				$slug  = self::palette_slug( $entry['slug'] );
+				$color = self::safe_css_color( $entry['color'] );
+				if ( '' === $slug || '' === $color ) {
+					continue;
+				}
+				// Later origins win, as in core's CSS
+				$entries[ $slug ] = array(
+					'slug'   => $slug,
+					'name'   => isset( $entry['name'] ) && is_string( $entry['name'] ) && '' !== $entry['name'] ? $entry['name'] : $slug,
+					'color'  => $color,
+					'origin' => $origin,
+				);
+			}
+		}
+		$out = array();
+		foreach ( array( 'theme', 'custom', 'default' ) as $origin ) {
+			foreach ( $entries as $entry ) {
+				if ( $origin === $entry['origin'] ) {
+					$out[] = $entry;
+				}
+			}
+		}
+		self::$color_palette = $out;
+		return $out;
+	}
+
+	/**
+	 * A palette slug as it appears in the preset's CSS variable name.
+	 *
+	 * @param mixed $slug Slug from the theme.
+	 * @return string '' when it cannot be one.
+	 */
+	private static function palette_slug( $slug ) {
+		if ( ! is_string( $slug ) && ! is_numeric( $slug ) ) {
+			return '';
+		}
+		$slug = function_exists( '_wp_to_kebab_case' )
+			? _wp_to_kebab_case( (string) $slug )
+			: strtolower( trim( preg_replace( '/[^A-Za-z0-9]+/', '-', (string) $slug ), '-' ) );
+		return preg_match( '/^[a-z0-9-]{1,100}$/', $slug ) ? $slug : '';
+	}
+
+	/**
+	 * A theme color value that is safe to print in CSS: plain color syntax
+	 * only (a hex color, a keyword, or a function such as rgb() or var()).
+	 *
+	 * @param mixed $value Color value.
+	 * @return string '' when it is not one.
+	 */
+	private static function safe_css_color( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		$value = trim( $value );
+		return '' !== $value && strlen( $value ) <= 200 && preg_match( '/^[#a-zA-Z0-9(),.%\s\/+-]+$/', $value ) ? $value : '';
+	}
+
+	/**
+	 * The theme's own background and text colors (#215), for the contrast
+	 * check and the preview surface: the root colors of Global Styles,
+	 * with a palette reference resolved to the palette's color.
+	 *
+	 * @return array{background: string, text: string} '' when unknown.
+	 */
+	public static function get_theme_colors() {
+		$out = array(
+			'background' => '',
+			'text'       => '',
+		);
+		if ( ! function_exists( 'wp_get_global_styles' ) ) {
+			return $out;
+		}
+		$colors = wp_get_global_styles( array( 'color' ) );
+		if ( ! is_array( $colors ) ) {
+			return $out;
+		}
+		foreach ( array_keys( $out ) as $key ) {
+			$out[ $key ] = isset( $colors[ $key ] ) ? self::resolve_theme_color( $colors[ $key ] ) : '';
+		}
+		return $out;
+	}
+
+	/**
+	 * A Global Styles color with palette references resolved.
+	 *
+	 * @param mixed $value `#fff`, `var:preset|color|base` or `var(--wp--preset--color--base)`.
+	 * @return string
+	 */
+	private static function resolve_theme_color( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		$value = trim( $value );
+		if ( preg_match( '/^var:preset\|color\|([A-Za-z0-9_-]+)$/', $value, $m ) || preg_match( '/^var\(\s*--wp--preset--color--([a-z0-9-]+)\s*\)$/', $value, $m ) ) {
+			$slug = self::palette_slug( $m[1] );
+			foreach ( self::get_color_palette() as $entry ) {
+				if ( $entry['slug'] === $slug ) {
+					return $entry['color'];
+				}
+			}
+			return '';
+		}
+		return self::safe_css_color( $value );
+	}
+
+	/**
+	 * A stored color as the admin card names it (#215): the palette name,
+	 * the slug with a note when the palette no longer has it, the hex value
+	 * of a custom color, or Transparent.
+	 *
+	 * @param string  $value   Stored color.
+	 * @param array[] $palette get_color_palette().
+	 * @return string
+	 */
+	public static function color_label( $value, $palette ) {
+		$color = self::normalize_color( $value, true );
+		if ( 'transparent' === $color ) {
+			return __( 'Transparent (outline only)', 'typost-paragraph-styles' );
+		}
+		$slug = self::palette_color_slug( $color );
+		if ( '' === $slug ) {
+			return $color;
+		}
+		foreach ( (array) $palette as $entry ) {
+			if ( isset( $entry['slug'], $entry['name'] ) && $entry['slug'] === $slug ) {
+				return $entry['name'];
+			}
+		}
+		/* translators: %s: palette color slug, such as accent-1 */
+		return sprintf( __( '%s (not in the theme palette)', 'typost-paragraph-styles' ), $slug );
+	}
+
+	/**
+	 * The preview surface of the admin cards (#215): the theme's background
+	 * and text color, and the palette's preset variables, which a settings
+	 * page does not print. The text color is at (0,0,0), so a style's own
+	 * color always wins.
+	 *
+	 * @return string CSS.
+	 */
+	public static function admin_preview_surface_css() {
+		$vars = array();
+		foreach ( self::get_color_palette() as $entry ) {
+			$vars[] = '--wp--preset--color--' . $entry['slug'] . ': ' . $entry['color'];
+		}
+		$theme = self::get_theme_colors();
+		$css   = '';
+		if ( $vars ) {
+			$css .= ".typost-ps-preview {\n    " . implode( ";\n    ", $vars ) . ";\n}\n";
+		}
+		if ( '' !== $theme['background'] ) {
+			$css .= ".typost-ps-preview .typost-ps-preview-sample {\n    background-color: " . $theme['background'] . ";\n    padding: 8px 12px;\n}\n";
+		}
+		if ( '' !== $theme['text'] ) {
+			$css .= ":where(.typost-ps-preview-sample) {\n    color: " . $theme['text'] . ";\n}\n";
+		}
+		return $css;
 	}
 
 	/**
@@ -2491,6 +2966,33 @@ final class Typost_Paragraph_Styles {
 			$clean['textWrap'] = '';
 		}
 
+		// Text color (#215): a custom hex color, a palette color, or
+		// transparent (outline-only text); none ('') is never stored unless
+		// it unsets an inherited color
+		$text_color = self::normalize_color( isset( $raw['textColor'] ) ? $raw['textColor'] : '', true );
+		if ( '' !== $text_color ) {
+			$clean['textColor'] = $text_color;
+		} elseif ( $keep_empty && isset( $raw['textColor'] ) && '' === $raw['textColor'] ) {
+			$clean['textColor'] = '';
+		}
+
+		// Outline (#215): the width leads the group; its color and the
+		// position (only 'behind', absent = on top of the fill) are stored
+		// only with a width. 0 is stored only to unset an inherited outline.
+		$stroke_width = self::normalize_stroke_width( isset( $raw['textStrokeWidth'] ) ? $raw['textStrokeWidth'] : 0 );
+		if ( $stroke_width > 0 ) {
+			$clean['textStrokeWidth'] = $stroke_width;
+			$stroke_color             = self::normalize_color( isset( $raw['textStrokeColor'] ) ? $raw['textStrokeColor'] : '' );
+			if ( '' !== $stroke_color ) {
+				$clean['textStrokeColor'] = $stroke_color;
+			}
+			if ( isset( $raw['textStrokePosition'] ) && 'behind' === $raw['textStrokePosition'] ) {
+				$clean['textStrokePosition'] = 'behind';
+			}
+		} elseif ( $keep_empty && isset( $raw['textStrokeWidth'] ) && is_numeric( $raw['textStrokeWidth'] ) ) {
+			$clean['textStrokeWidth'] = 0;
+		}
+
 		return $clean;
 	}
 
@@ -2736,6 +3238,11 @@ final class Typost_Paragraph_Styles {
 				unset( $props[ $key ] );
 			}
 		}
+		if ( array_key_exists( 'textStrokeWidth', $props ) && self::normalize_stroke_width( $props['textStrokeWidth'] ) <= 0 ) {
+			foreach ( self::BASED_ON_GROUPS['textStrokeWidth'] as $key ) {
+				unset( $props[ $key ] );
+			}
+		}
 		foreach ( $props as $key => $value ) {
 			if ( ! self::is_group_key( $key ) && empty( $value ) ) {
 				unset( $props[ $key ] );
@@ -2804,7 +3311,7 @@ final class Typost_Paragraph_Styles {
 			}
 			$no_case = 'textCase' === $lead && ! ( isset( $full['textCase'] ) && in_array( $full['textCase'], self::TEXT_CASE_VALUES, true ) );
 			if ( 'none' === $mine || $no_case ) {
-				$out[ $lead ] = 'fontSize' === $lead ? 'inherit' : '';
+				$out[ $lead ] = self::group_empty_value( $lead );
 				continue;
 			}
 			foreach ( $keys as $key ) {
@@ -2833,7 +3340,23 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Whether a key belongs to the size, the case or the alignment group.
+	 * The value a style based on another stores to unset a group (#200):
+	 * fontSize 'inherit', textStrokeWidth 0 (#215), '' for the others.
+	 * Mirrors groupEmptyValue() in ps-utils.js.
+	 *
+	 * @param string $lead Group lead key.
+	 * @return string|int
+	 */
+	private static function group_empty_value( $lead ) {
+		if ( 'fontSize' === $lead ) {
+			return 'inherit';
+		}
+		return 'textStrokeWidth' === $lead ? 0 : '';
+	}
+
+	/**
+	 * Whether a key belongs to the size, the case, the alignment or the
+	 * outline group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool
@@ -2854,13 +3377,22 @@ final class Typost_Paragraph_Styles {
 	 * px), the trio for responsive and fit, and the cap for fit. Case: the
 	 * case value and whether fake small caps are allowed. Alignment (#207):
 	 * 'none' when not set, else the value and the last line alignment of
-	 * justified text. Twin: groupSignature().
+	 * justified text. Outline (#215): 'none' with no width, else the width,
+	 * the color and the position. Twin: groupSignature().
 	 *
-	 * @param string $lead  'fontSize', 'textCase' or 'alignment'.
+	 * @param string $lead  'fontSize', 'textCase', 'alignment' or 'textStrokeWidth'.
 	 * @param array  $props Properties.
 	 * @return string
 	 */
 	private static function group_signature( $lead, $props ) {
+		if ( 'textStrokeWidth' === $lead ) {
+			$width = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 );
+			if ( $width <= 0 ) {
+				return 'none';
+			}
+			return $width . '|' . self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' )
+				. '|' . ( isset( $props['textStrokePosition'] ) && 'behind' === $props['textStrokePosition'] ? 'behind' : '' );
+		}
 		if ( 'alignment' === $lead ) {
 			$alignment = self::normalize_alignment( isset( $props['alignment'] ) ? $props['alignment'] : '' );
 			if ( '' === $alignment ) {
@@ -2914,6 +3446,8 @@ final class Typost_Paragraph_Styles {
 				return abs( (float) $va - (float) $vb ) <= 0.0005;
 			case 'initialHang':
 				return self::normalize_hang( $va ) === self::normalize_hang( $vb );
+			case 'textColor':
+				return self::normalize_color( $va, true ) === self::normalize_color( $vb, true );
 			case 'features':
 				$fa = is_array( $va ) ? array_map( 'strval', $va ) : array();
 				$fb = is_array( $vb ) ? array_map( 'strval', $vb ) : array();

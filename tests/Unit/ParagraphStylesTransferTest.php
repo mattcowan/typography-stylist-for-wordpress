@@ -554,4 +554,95 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->assertSame('A', \Typost_PS_Transfer::unique_name('A', array()));
         $this->assertSame('A (3)', \Typost_PS_Transfer::unique_name('A', array('a' => true, 'a (2)' => true)));
     }
+
+    // ---------------------------------------------------------------------
+    // Palette colors (#215)
+    // ---------------------------------------------------------------------
+
+    private function colorSite() {
+        $this->setPalette(array(
+            array('slug' => 'accent-1', 'name' => 'Accent', 'color' => '#CC0000', 'origin' => 'theme'),
+            array('slug' => 'fancy', 'name' => 'Fancy', 'color' => 'oklch(60% 0.2 30)', 'origin' => 'theme'),
+        ));
+        return $this->module(array(
+            array('id' => 1, 'name' => 'Kicker', 'properties' => array('textColor' => 'var:preset|color|accent-1|#990000')),
+            array('id' => 2, 'name' => 'Display outline', 'properties' => array('textColor' => 'transparent', 'textStrokeWidth' => 2, 'textStrokeColor' => 'var:preset|color|fancy|#123456')),
+            array('id' => 3, 'name' => 'Lost', 'properties' => array('textColor' => 'var:preset|color|gone')),
+            array('id' => 4, 'name' => 'Tint', 'properties' => array('textColor' => '#cc000080')),
+        ), 5);
+    }
+
+    public function test_export_writes_palette_colors_as_slug_and_value() {
+        $styles = json_decode($this->exportText($this->colorSite()), true)['sections']['paragraphStyles'];
+        // The palette's color now, not the fallback saved with the style
+        $this->assertSame(array('slug' => 'accent-1', 'value' => '#cc0000'), $styles[0]['properties']['textColor']);
+        // A palette color that is not hex: the saved fallback
+        $this->assertSame(array('slug' => 'fancy', 'value' => '#123456'), $styles[1]['properties']['textStrokeColor']);
+        $this->assertSame('transparent', $styles[1]['properties']['textColor']);
+        // No palette entry and no fallback: the slug alone
+        $this->assertSame(array('slug' => 'gone'), $styles[2]['properties']['textColor']);
+        // A custom color as it is
+        $this->assertSame('#cc000080', $styles[3]['properties']['textColor']);
+    }
+
+    public function test_import_keeps_a_slug_the_palette_has_and_says_when_its_color_differs() {
+        $text = $this->exportText($this->colorSite());
+        $this->setPalette(array(array('slug' => 'accent-1', 'name' => 'Accent', 'color' => '#0000ff', 'origin' => 'theme')));
+        $this->module(array(), 1);
+
+        $preview = $this->export()->preview($this->parse($text));
+        $section = $preview['sections']['paragraphStyles']['preview'];
+        $this->assertContains('The palette color Accent (accent-1) is #0000ff on this site and #cc0000 in the file. These styles follow this site’s palette: Kicker.', $section['warnings']);
+        // Only slugs this palette lacks are asked about, and only with a color in the file
+        $this->assertSame(array('fancy'), array_column($section['colorRows'], 'key'));
+        $this->assertSame('slug', $section['colorRows'][0]['choice']);
+        $this->assertSame('#123456', $section['colorRows'][0]['incoming']);
+        $this->assertContains('The palette color “gone” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: Lost.', $section['warnings']);
+
+        $this->export()->import($this->parse($text), array());
+        $this->assertSame('var:preset|color|accent-1|#0000ff', $this->storedStyle('Kicker')['properties']['textColor']);
+        // Default: keep the slug, with the file's color as the fallback
+        $this->assertSame('var:preset|color|fancy|#123456', $this->storedStyle('Display outline')['properties']['textStrokeColor']);
+        $this->assertSame('var:preset|color|gone', $this->storedStyle('Lost')['properties']['textColor']);
+        $this->assertSame('#cc000080', $this->storedStyle('Tint')['properties']['textColor']);
+    }
+
+    public function test_import_can_use_the_files_color_for_a_slug_the_palette_lacks() {
+        $text = $this->exportText($this->colorSite());
+        $this->setPalette(array());
+        $this->module(array(), 1);
+
+        $this->export()->import($this->parse($text), array('sections' => array('paragraphStyles' => array('color:fancy' => 'value', 'color:accent-1' => 'value'))));
+        $this->assertSame('#123456', $this->storedStyle('Display outline')['properties']['textStrokeColor']);
+        $this->assertSame('#cc0000', $this->storedStyle('Kicker')['properties']['textColor']);
+    }
+
+    public function test_a_same_site_round_trip_changes_no_color() {
+        $text = $this->exportText($this->colorSite());
+        $before = $this->storedStyles();
+        $this->module(array(), 1);
+        $this->export()->import($this->parse($text), array());
+        // Kicker's fallback is brought up to the palette's color now; the rest is unchanged
+        $this->assertSame('var:preset|color|accent-1|#cc0000', $this->storedStyle('Kicker')['properties']['textColor']);
+        $this->assertSame($before[1]['properties'], $this->storedStyle('Display outline')['properties']);
+        $this->assertSame($before[2]['properties'], $this->storedStyle('Lost')['properties']);
+        $this->assertSame($before[3]['properties'], $this->storedStyle('Tint')['properties']);
+    }
+
+    public function test_an_invalid_file_color_is_dropped() {
+        $this->setPalette(array());
+        $this->registerSection($this->module(array(), 1));
+        $file = array(
+            'format'   => 'typost-export',
+            'version'  => 1,
+            'fonts'    => array(),
+            'sections' => array('paragraphStyles' => array(
+                array('key' => 's1', 'name' => 'Bad', 'basedOn' => null, 'properties' => array('textColor' => array('slug' => 'x;}'), 'textStrokeWidth' => 1, 'textStrokeColor' => 'url(x)')),
+            )),
+        );
+        $result = $this->export()->import($this->parse(json_encode($file)), array());
+        $this->assertIsArray($result, is_wp_error($result) ? $result->get_error_message() : '');
+        $this->assertSame(array('textStrokeWidth' => 1), $this->storedStyle('Bad')['properties']);
+    }
 }
+

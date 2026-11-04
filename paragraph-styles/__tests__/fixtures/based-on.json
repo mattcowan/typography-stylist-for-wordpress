@@ -482,6 +482,20 @@
 				"3": {},
 				"4": { "alignment": "justify", "alignLast": "center", "wordSpacing": -20, "textWrap": "pretty" }
 			}
+		},
+		{
+			"label": "text color inherits on its own and the outline as a group (#215): a child's own outline drops the parent's outline color and position",
+			"styles": [
+				{ "id": 1, "name": "Display", "properties": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" } },
+				{ "id": 2, "name": "Display Thin", "basedOn": 1, "properties": { "textStrokeWidth": 0.5 } },
+				{ "id": 3, "name": "Display Plain", "basedOn": 1, "properties": { "textColor": "", "textStrokeWidth": 0 } },
+				{ "id": 4, "name": "Display Dark", "basedOn": 1, "properties": { "textColor": "#111111" } }
+			],
+			"expected": {
+				"2": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 0.5 },
+				"3": {},
+				"4": { "textColor": "#111111", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" }
+			}
 		}
 	],
 	"equality": [
@@ -709,7 +723,9 @@
 		{ "label": "word spacing as number and string", "key": "wordSpacing", "a": { "wordSpacing": 50 }, "b": { "wordSpacing": "50" }, "equal": true },
 		{ "label": "no word spacing and word spacing 0", "key": "wordSpacing", "a": { "wordSpacing": 0 }, "b": {}, "equal": true },
 		{ "label": "no line breaking and an empty one", "key": "textWrap", "a": { "textWrap": "" }, "b": {}, "equal": true },
-		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false }
+		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false },
+		{ "label": "text colors compare normalized (#215)", "key": "textColor", "a": { "textColor": "#ABC" }, "b": { "textColor": "#aabbcc" }, "equal": true },
+		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false }
 	],
 	"css": [
 		{
@@ -843,6 +859,18 @@
 			"full": { "alignment": "justify", "alignLast": "end", "textWrap": "balance" },
 			"parent": { "alignment": "justify", "alignLast": "center", "textWrap": "balance" },
 			"expected": { "alignment": "justify", "alignLast": "end" }
+		},
+		{
+			"label": "outline (#215): another position is the whole group; a color the look lacks is unset with ''",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "#000000" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind", "textColor": "#111111" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textColor": "" }
+		},
+		{
+			"label": "outline (#215): no outline in the look unsets the parent's with 0",
+			"full": {},
+			"parent": { "textStrokeWidth": 2 },
+			"expected": { "textStrokeWidth": 0 }
 		}
 	]
 }

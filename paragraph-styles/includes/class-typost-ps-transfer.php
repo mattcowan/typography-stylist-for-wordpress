@@ -163,7 +163,8 @@ final class Typost_PS_Transfer {
 			}
 		}
 
-		$out = array();
+		$out     = array();
+		$palette = Typost_Paragraph_Styles::get_color_palette();
 		foreach ( $styles as $style ) {
 			if ( ! isset( $style['id'] ) || ! isset( $keys[ intval( $style['id'] ) ] ) ) {
 				continue;
@@ -178,7 +179,7 @@ final class Typost_PS_Transfer {
 				'key'        => $keys[ intval( $style['id'] ) ],
 				'name'       => (string) $style['name'],
 				'basedOn'    => $parent_key,
-				'properties' => self::export_fonts( $properties, $fonts, null !== $parent_key ),
+				'properties' => self::export_fonts( self::export_colors( $properties, $palette ), $fonts, null !== $parent_key ),
 			);
 		}
 
@@ -186,6 +187,149 @@ final class Typost_PS_Transfer {
 			'data'  => $out,
 			'notes' => $notes,
 		);
+	}
+
+	/** @var string[] Properties that hold a color (#215) */
+	const COLOR_KEYS = array( 'textColor', 'textStrokeColor' );
+
+	/**
+	 * Write each palette color as `{slug, value}` (#215). A palette slug
+	 * means another color, or nothing, on a site with another theme, so the
+	 * file also carries the color it is on this site: the palette's color
+	 * now when it is a hex color, else the color the style saved with it.
+	 * A custom color is written as it is.
+	 *
+	 * @param array   $properties Style properties.
+	 * @param array[] $palette    Typost_Paragraph_Styles::get_color_palette().
+	 * @return array
+	 */
+	private static function export_colors( $properties, $palette ) {
+		foreach ( self::COLOR_KEYS as $key ) {
+			if ( ! isset( $properties[ $key ] ) ) {
+				continue;
+			}
+			$slug = Typost_Paragraph_Styles::palette_color_slug( $properties[ $key ] );
+			if ( '' === $slug ) {
+				continue;
+			}
+			$value = Typost_Paragraph_Styles::palette_color_fallback( $properties[ $key ] );
+			foreach ( $palette as $entry ) {
+				if ( $entry['slug'] === $slug && '' !== Typost_Paragraph_Styles::normalize_hex_color( $entry['color'] ) ) {
+					$value = Typost_Paragraph_Styles::normalize_hex_color( $entry['color'] );
+				}
+			}
+			$properties[ $key ] = '' !== $value
+				? array(
+					'slug'  => $slug,
+					'value' => $value,
+				)
+				: array( 'slug' => $slug );
+		}
+		return $properties;
+	}
+
+	/**
+	 * The palette colors a file's styles use (#215).
+	 *
+	 * @param array[] $items read_items().
+	 * @return array<string,array> Slug => {value: string ('' when the file
+	 *                             has none), styles: string[]}.
+	 */
+	private static function file_palette_colors( $items ) {
+		$out = array();
+		foreach ( $items as $item ) {
+			foreach ( self::COLOR_KEYS as $key ) {
+				$color = isset( $item['properties'][ $key ] ) ? $item['properties'][ $key ] : null;
+				if ( ! is_array( $color ) || ! isset( $color['slug'] ) || ! is_string( $color['slug'] ) || ! preg_match( '/^[a-z0-9-]{1,100}$/', $color['slug'] ) ) {
+					continue;
+				}
+				$slug = $color['slug'];
+				if ( ! isset( $out[ $slug ] ) ) {
+					$out[ $slug ] = array(
+						'value'  => isset( $color['value'] ) ? Typost_Paragraph_Styles::normalize_hex_color( $color['value'] ) : '',
+						'styles' => array(),
+					);
+				}
+				if ( ! in_array( $item['name'], $out[ $slug ]['styles'], true ) ) {
+					$out[ $slug ]['styles'][] = $item['name'];
+				}
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * This site's palette by slug.
+	 *
+	 * @return array<string,array>
+	 */
+	private static function palette_by_slug() {
+		$out = array();
+		foreach ( Typost_Paragraph_Styles::get_color_palette() as $entry ) {
+			$out[ $entry['slug'] ] = $entry;
+		}
+		return $out;
+	}
+
+	/**
+	 * The import choices for palette colors (#215): `color:{slug}` keys in
+	 * the section's choices, 'slug' (keep the palette reference, which
+	 * renders the file's color until the theme defines the slug) or 'value'
+	 * (store the file's color as a custom color). Only slugs this site's
+	 * palette does not have are asked about; a slug it has always keeps
+	 * the reference.
+	 *
+	 * @param mixed $choices Section choices.
+	 * @return array<string,string> Slug => 'slug'|'value'.
+	 */
+	private static function color_choices( $choices ) {
+		$out = array();
+		foreach ( is_array( $choices ) ? $choices : array() as $key => $choice ) {
+			if ( is_string( $key ) && 0 === strpos( $key, 'color:' ) && in_array( $choice, array( 'slug', 'value' ), true ) ) {
+				$out[ substr( $key, 6 ) ] = $choice;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Turn the file's `{slug, value}` colors into stored colors (#215).
+	 *
+	 * A slug this site's palette has keeps the reference, with this site's
+	 * color as the fallback (the file's when this site's is not hex). One it does not have keeps the reference with
+	 * the file's color as the fallback, or becomes that color as a custom
+	 * color when the author chose so.
+	 *
+	 * @param array                $properties Properties from the file.
+	 * @param array<string,string> $choices    color_choices().
+	 * @param array<string,array>  $palette    palette_by_slug().
+	 * @return array
+	 */
+	private static function map_colors( $properties, $choices, $palette ) {
+		foreach ( self::COLOR_KEYS as $key ) {
+			if ( ! isset( $properties[ $key ] ) || ! is_array( $properties[ $key ] ) ) {
+				continue;
+			}
+			$color = $properties[ $key ];
+			$slug  = isset( $color['slug'] ) && is_string( $color['slug'] ) ? $color['slug'] : '';
+			$value = isset( $color['value'] ) ? Typost_Paragraph_Styles::normalize_hex_color( $color['value'] ) : '';
+			if ( ! preg_match( '/^[a-z0-9-]{1,100}$/', $slug ) ) {
+				unset( $properties[ $key ] );
+				continue;
+			}
+			if ( isset( $palette[ $slug ] ) ) {
+				// The fallback is this site's color; a palette color that is
+				// not hex keeps the file's
+				$local              = Typost_Paragraph_Styles::normalize_hex_color( $palette[ $slug ]['color'] );
+				$local              = '' !== $local ? $local : $value;
+				$properties[ $key ] = 'var:preset|color|' . $slug . ( '' !== $local ? '|' . $local : '' );
+			} elseif ( '' !== $value && isset( $choices[ $slug ] ) && 'value' === $choices[ $slug ] ) {
+				$properties[ $key ] = $value;
+			} else {
+				$properties[ $key ] = 'var:preset|color|' . $slug . ( '' !== $value ? '|' . $value : '' );
+			}
+		}
+		return $properties;
 	}
 
 	/**
@@ -374,9 +518,56 @@ final class Typost_PS_Transfer {
 
 		$plan = $this->plan( $items, $defaults, $fonts );
 		return array(
-			'items'    => $rows,
-			'warnings' => is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'],
+			'items'       => $rows,
+			'warnings'    => is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'],
+			// Palette colors this site's palette does not have (#215), in
+			// core's generic row form
+			'colorRows'   => self::color_rows( $items ),
+			'colorHeading' => __( 'Palette colors this theme does not have', 'typost-paragraph-styles' ),
 		);
+	}
+
+	/**
+	 * One row per palette color the file uses and this site's palette does
+	 * not have (#215). Keeping the slug renders the file's color (the
+	 * fallback) until the theme defines the slug; using the file's color
+	 * stores it as a custom color, so it stays that color with any theme.
+	 * A slug with no color in the file has nothing to choose: it is a
+	 * warning instead (plan()).
+	 *
+	 * @param array[] $items read_items().
+	 * @return array[] Rows: {key, name, detail, incoming, choices, choice}.
+	 */
+	private static function color_rows( $items ) {
+		$palette = self::palette_by_slug();
+		$rows    = array();
+		foreach ( self::file_palette_colors( $items ) as $slug => $color ) {
+			if ( isset( $palette[ $slug ] ) || '' === $color['value'] ) {
+				continue;
+			}
+			$rows[] = array(
+				'key'      => $slug,
+				'name'     => $slug,
+				/* translators: %s: list of style names */
+				'detail'   => sprintf( __( 'Used by: %s', 'typost-paragraph-styles' ), implode( ', ', $color['styles'] ) ),
+				'current'  => __( 'Not in the palette', 'typost-paragraph-styles' ),
+				'incoming' => $color['value'],
+				'choices'  => array(
+					array(
+						'value' => 'slug',
+						/* translators: %s: palette color slug */
+						'label' => sprintf( __( 'Keep the palette color “%s” (shows the file’s color until the theme has it)', 'typost-paragraph-styles' ), $slug ),
+					),
+					array(
+						'value' => 'value',
+						/* translators: %s: hex color */
+						'label' => sprintf( __( 'Use the color from the file (%s) as a custom color', 'typost-paragraph-styles' ), $color['value'] ),
+					),
+				),
+				'choice'   => 'slug',
+			);
+		}
+		return $rows;
 	}
 
 	/**
@@ -473,6 +664,16 @@ final class Typost_PS_Transfer {
 	 * @return array|WP_Error
 	 */
 	private function plan( $items, $choices, $fonts ) {
+		$palette         = self::palette_by_slug();
+		$color_choices   = self::color_choices( $choices );
+		$file_colors     = self::file_palette_colors( $items );
+		$items           = array_map(
+			function ( $item ) use ( $color_choices, $palette ) {
+				$item['properties'] = self::map_colors( $item['properties'], $color_choices, $palette );
+				return $item;
+			},
+			$items
+		);
 		$existing_styles = $this->module->get_styles();
 		$working         = array_values( $existing_styles );
 		$by_name         = self::styles_by_name( $working );
@@ -635,9 +836,66 @@ final class Typost_PS_Transfer {
 			$result['warnings'] = array_merge( $result['warnings'], self::font_support_warnings( $name, $look, $fonts ) );
 		}
 
+		$result['warnings'] = array_merge( $result['warnings'], self::palette_warnings( $file_colors, $palette, $color_choices, $imported_keys, $by_key ) );
+
 		$result['styles'] = $working;
 		$result['nextId'] = $next;
 		return $result;
+	}
+
+	/**
+	 * Warnings for palette colors (#215): a slug this site's palette has
+	 * with another color than in the file (the style follows this site's
+	 * palette), and a slug it does not have that the file gives no color
+	 * for (the style shows the inherited text color until the theme defines
+	 * it). Only for styles the import writes.
+	 *
+	 * @param array<string,array>  $file_colors   file_palette_colors().
+	 * @param array<string,array>  $palette       palette_by_slug().
+	 * @param array<string,string> $color_choices color_choices().
+	 * @param array<string,string> $imported_keys File key => name of each style written.
+	 * @param array[]              $by_key        Items by file key.
+	 * @return string[]
+	 */
+	private static function palette_warnings( $file_colors, $palette, $color_choices, $imported_keys, $by_key ) {
+		$written = array();
+		foreach ( array_keys( $imported_keys ) as $key ) {
+			$written[ $by_key[ $key ]['name'] ] = $imported_keys[ $key ];
+		}
+		$warnings = array();
+		foreach ( $file_colors as $slug => $color ) {
+			$names = array();
+			foreach ( $color['styles'] as $file_name ) {
+				if ( isset( $written[ $file_name ] ) ) {
+					$names[] = $written[ $file_name ];
+				}
+			}
+			if ( empty( $names ) ) {
+				continue;
+			}
+			if ( isset( $palette[ $slug ] ) ) {
+				$local = Typost_Paragraph_Styles::normalize_hex_color( $palette[ $slug ]['color'] );
+				if ( '' !== $color['value'] && $local !== $color['value'] ) {
+					$warnings[] = sprintf(
+						/* translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names */
+						__( 'The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s.', 'typost-paragraph-styles' ),
+						$palette[ $slug ]['name'],
+						$slug,
+						$palette[ $slug ]['color'],
+						$color['value'],
+						implode( ', ', $names )
+					);
+				}
+			} elseif ( '' === $color['value'] ) {
+				$warnings[] = sprintf(
+					/* translators: 1: palette color slug, 2: list of style names */
+					__( 'The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s.', 'typost-paragraph-styles' ),
+					$slug,
+					implode( ', ', $names )
+				);
+			}
+		}
+		return $warnings;
 	}
 
 	/**

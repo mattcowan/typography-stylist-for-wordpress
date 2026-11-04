@@ -46,6 +46,8 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize',
         'letterSpacing', 'lineHeight', 'initialHang', 'textCase', 'fakeSmallCaps',
         'alignment', 'alignLast', 'wordSpacing', 'textWrap',
+        'textColor', 'textColorCustom', 'textStrokeWidth', 'textStrokeColor',
+        'textStrokeColorCustom', 'textStrokePosition',
         'fontVariationSettings',
     );
 
@@ -280,6 +282,7 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         $this->stubStyles($styles, '');
         Functions\when('get_user_locale')->justReturn('en_US');
         Functions\when('esc_html_e')->echoArg();
+        Functions\when('esc_attr_e')->echoArg();
         Functions\when('wp_specialchars_decode')->alias(function ($text) {
             return htmlspecialchars_decode($text, ENT_QUOTES);
         });
@@ -345,6 +348,7 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         Functions\when('wp_set_script_translations')->justReturn(true);
         Functions\when('wp_enqueue_style')->justReturn(null);
         Functions\when('wp_add_inline_style')->justReturn(true);
+        Functions\when('wp_register_style')->justReturn(true);
         Functions\when('rest_url')->justReturn('http://localhost/wp-json/typost/v1/paragraph-styles');
         Functions\when('wp_create_nonce')->justReturn('nonce');
         $styles = array(array('id' => 4, 'name' => 'Pull quote', 'properties' => array('lineHeight' => 1.8)));

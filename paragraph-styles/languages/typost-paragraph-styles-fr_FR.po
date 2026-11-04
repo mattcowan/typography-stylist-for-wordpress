@@ -778,3 +778,200 @@ msgstr "Coupure des lignes"
 #: includes/admin-tab.php:279
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr "Équilibrer les lignes donne des longueurs proches aux lignes d’un titre court. Éviter les dernières lignes courtes convient au texte courant. Un navigateur qui ne prend pas en charge ce choix coupe les lignes normalement."
+
+#: paragraph-styles.php:2291
+msgid "text color"
+msgstr "couleur du texte"
+
+#. translators: 1: outline width in pixels, 2: outline color, 3: "behind the fill" or "on top of the fill"
+#: paragraph-styles.php:2294
+#, php-format
+msgid "%1$spx, %2$s, %3$s"
+msgstr "%1$s px, %2$s, %3$s"
+
+#: paragraph-styles.php:2298
+msgid "behind the fill"
+msgstr "derrière le remplissage"
+
+#: paragraph-styles.php:2299
+msgid "on top of the fill"
+msgstr "au-dessus du remplissage"
+
+#: paragraph-styles.php:2359
+msgid "Color:"
+msgstr "Couleur :"
+
+#: paragraph-styles.php:2362
+msgid "Outline:"
+msgstr "Contour :"
+
+#: paragraph-styles.php:2560
+#: includes/admin-tab.php:331
+msgid "Transparent (outline only)"
+msgstr "Transparent (contour seul)"
+
+#. translators: %s: palette color slug, such as accent-1
+#: paragraph-styles.php:2572
+#: assets/js/admin.js:356
+#, php-format,js-format
+msgid "%s (not in the theme palette)"
+msgstr "%s (absent de la palette du thème)"
+
+#: includes/admin-tab.php:39
+msgid "Theme palette"
+msgstr "Palette du thème"
+
+#: includes/admin-tab.php:40
+msgid "Site palette"
+msgstr "Palette du site"
+
+#: includes/admin-tab.php:41
+msgid "Default palette"
+msgstr "Palette par défaut"
+
+#. translators: 1: palette color name, 2: its color value
+#: includes/admin-tab.php:57
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#: includes/admin-tab.php:321
+msgid "Color and outline"
+msgstr "Couleur et contour"
+
+#: includes/admin-tab.php:324
+msgid "Text color"
+msgstr "Couleur du texte"
+
+#: includes/admin-tab.php:328
+msgid "Default (theme color)"
+msgstr "Par défaut (couleur du thème)"
+
+#: includes/admin-tab.php:330
+#: includes/admin-tab.php:356
+msgid "Custom color"
+msgstr "Couleur personnalisée"
+
+#: includes/admin-tab.php:334
+msgid "A palette color follows the theme: when the theme changes that color, every style that uses it changes too. A block’s own text color setting overrides this."
+msgstr "Une couleur de la palette suit le thème : quand le thème change cette couleur, tous les styles qui l’utilisent changent aussi. Le réglage de couleur du texte d’un bloc a priorité sur celui-ci."
+
+#: includes/admin-tab.php:337
+msgid "Custom text color"
+msgstr "Couleur de texte personnalisée"
+
+#: includes/admin-tab.php:340
+msgid "Pick the custom text color"
+msgstr "Choisir la couleur de texte personnalisée"
+
+#: includes/admin-tab.php:346
+msgid "Outline width (px, 0 = none)"
+msgstr "Épaisseur du contour (px, 0 = aucun)"
+
+#: includes/admin-tab.php:350
+msgid "Outline color"
+msgstr "Couleur du contour"
+
+#: includes/admin-tab.php:354
+msgid "Same as the text"
+msgstr "Comme le texte"
+
+#: includes/admin-tab.php:361
+msgid "Custom outline color"
+msgstr "Couleur de contour personnalisée"
+
+#: includes/admin-tab.php:364
+msgid "Pick the custom outline color"
+msgstr "Choisir la couleur de contour personnalisée"
+
+#: includes/admin-tab.php:368
+msgid "Outline position"
+msgstr "Position du contour"
+
+#: includes/admin-tab.php:370
+msgid "On top of the fill"
+msgstr "Au-dessus du remplissage"
+
+#: includes/admin-tab.php:371
+msgid "Behind the fill"
+msgstr "Derrière le remplissage"
+
+#: includes/admin-tab.php:373
+msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
+msgstr "Le contour est centré sur le bord de chaque lettre : au-dessus du remplissage, un contour épais amincit les lettres. Derrière le remplissage, elles gardent leur forme."
+
+#: includes/admin-tab.php:376
+msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
+msgstr "Une couleur hexadécimale comme #c00 ou #cc0000. Ajoutez deux chiffres pour la transparence : #cc000080 est à moitié transparent."
+
+#: includes/admin-tab.php:377
+msgid "In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text."
+msgstr "En mode Contraste élevé de Windows (couleurs forcées), le navigateur dessine le texte et le contour dans la couleur de texte du système : un texte en contour seul s’affiche plein."
+
+#: includes/class-typost-ps-transfer.php:526
+msgid "Palette colors this theme does not have"
+msgstr "Couleurs de palette absentes de ce thème"
+
+#. translators: %s: list of style names
+#: includes/class-typost-ps-transfer.php:552
+#, php-format
+msgid "Used by: %s"
+msgstr "Utilisée par : %s"
+
+#: includes/class-typost-ps-transfer.php:553
+msgid "Not in the palette"
+msgstr "Absente de la palette"
+
+#. translators: %s: palette color slug
+#: includes/class-typost-ps-transfer.php:559
+#, php-format
+msgid "Keep the palette color “%s” (shows the file’s color until the theme has it)"
+msgstr "Garder la couleur de palette « %s » (affiche la couleur du fichier tant que le thème ne l’a pas)"
+
+#. translators: %s: hex color
+#: includes/class-typost-ps-transfer.php:564
+#, php-format
+msgid "Use the color from the file (%s) as a custom color"
+msgstr "Utiliser la couleur du fichier (%s) comme couleur personnalisée"
+
+#. translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names
+#: includes/class-typost-ps-transfer.php:881
+#, php-format
+msgid "The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s."
+msgstr "La couleur de palette %1$s (%2$s) est %3$s sur ce site et %4$s dans le fichier. Ces styles suivent la palette de ce site : %5$s."
+
+#. translators: 1: palette color slug, 2: list of style names
+#: includes/class-typost-ps-transfer.php:892
+#, php-format
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s."
+msgstr "La couleur de palette « %1$s » est absente de la palette de ce thème, et le fichier n’indique pas sa couleur. Ces styles prennent la couleur du texte environnant tant que le thème ne la définit pas : %2$s."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:479
+#, js-format
+msgid "Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3)."
+msgstr "Contraste faible : la couleur du texte a un rapport de %1$s:1 avec le fond du thème (%2$s). Le texte doit atteindre au moins %3$s:1 pour être lisible (WCAG 1.4.3)."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:481
+#, js-format
+msgid "Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing."
+msgstr "Contraste faible : le contour a un rapport de %1$s:1 avec le fond du thème (%2$s). Un texte en contour seul doit atteindre au moins %3$s:1 (WCAG 1.4.3), et un contour fin perd davantage au lissage."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:483
+#, js-format
+msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
+msgstr "Contraste faible : la couleur du texte ne se détache ni du fond du thème (%2$s) ni du contour ; le meilleur rapport est %1$s:1. Le texte doit atteindre au moins %3$s:1 avec l’un des deux (WCAG 1.4.3)."
+
+#: assets/js/admin.js:857
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr "Saisissez une couleur hexadécimale, comme #c00 ou #cc0000."
+
+#: assets/js/admin.js:861
+msgid "Enter an outline width from 0 to 20."
+msgstr "Saisissez une épaisseur de contour entre 0 et 20."
+
+#: assets/js/admin.js:864
+msgid "Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color."
+msgstr "Un texte transparent n’affiche que son contour. Donnez au contour une épaisseur et sa propre couleur, ou choisissez une autre couleur de texte."

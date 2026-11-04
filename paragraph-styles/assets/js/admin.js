@@ -295,6 +295,247 @@
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// Text color and outline (#215)
+	// -------------------------------------------------------------------------
+
+	// The two color fields: each has a select (data-field = the property)
+	// and a custom hex field (data-field = property + 'Custom')
+	var COLOR_FIELDS = ['textColor', 'textStrokeColor'];
+
+	/**
+	 * The palette and the theme's colors (typostPSAdmin.palette and
+	 * .themeColors). Read when needed, so a test can set them.
+	 *
+	 * @return {{palette: Array, themeColors: Object}}
+	 */
+	function colorContext() {
+		var data = typeof typostPSAdmin !== 'undefined' && typostPSAdmin ? typostPSAdmin : {};
+		return {
+			palette: Array.isArray(data.palette) ? data.palette : [],
+			themeColors: data.themeColors && typeof data.themeColors === 'object' ? data.themeColors : {}
+		};
+	}
+
+	function paletteEntry(palette, slug) {
+		for (var i = 0; i < palette.length; i++) {
+			if (palette[i] && palette[i].slug === slug) {
+				return palette[i];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Fill a color select and its custom field from a stored color. A
+	 * palette color the palette no longer has is added as an option, and
+	 * the stored value is kept on the select, so an untouched form saves it
+	 * unchanged (its fallback included).
+	 *
+	 * @param {Element} form
+	 * @param {string}  name    'textColor' or 'textStrokeColor'.
+	 * @param {string}  stored  Stored color.
+	 * @param {Array}   palette Palette entries.
+	 */
+	function fillColorField(form, name, stored, palette) {
+		var select = field(form, name);
+		var custom = field(form, name + 'Custom');
+		if (!select) {
+			return;
+		}
+		var utils = getUtils();
+		var color = utils.normalizeColor(stored, name === 'textColor');
+		var slug = utils.paletteColorSlug(color);
+		select.setAttribute('data-stored', color);
+		if (custom) {
+			custom.value = '';
+		}
+		if (slug) {
+			var label = paletteEntry(palette, slug)
+				? ''
+				: /* translators: %s: palette color slug, such as accent-1 */ __('%s (not in the theme palette)', 'typost-paragraph-styles').replace('%s', function() { return slug; });
+			selectValue(select, 'preset:' + slug, label);
+		} else if (color && color !== 'transparent') {
+			selectValue(select, 'custom');
+			if (custom) {
+				custom.value = color;
+			}
+		} else {
+			selectValue(select, color);
+		}
+		syncColorPicker(form, name + 'Custom');
+	}
+
+	/**
+	 * A color field's value as a style stores it.
+	 *
+	 * @param {Element} form
+	 * @param {string}  name    'textColor' or 'textStrokeColor'.
+	 * @param {Array}   palette Palette entries.
+	 * @return {{color: string, mode: string, custom: string}|undefined}
+	 *         undefined when the form has no such field. color is '' for an
+	 *         invalid custom color (mode 'custom' tells validation).
+	 */
+	function readColorField(form, name, palette) {
+		var select = field(form, name);
+		if (!select) {
+			return undefined;
+		}
+		var utils = getUtils();
+		var custom = field(form, name + 'Custom');
+		var value = select.value;
+		var out = { color: '', mode: value, custom: custom ? custom.value.trim() : '' };
+		if (value === 'custom') {
+			out.color = utils.normalizeHexColor(out.custom);
+		} else if (value.indexOf('preset:') === 0) {
+			var slug = value.slice(7);
+			var entry = paletteEntry(palette, slug);
+			var stored = select.getAttribute('data-stored') || '';
+			// A palette color stores the palette's color as its fallback; a
+			// slug the palette no longer has keeps the one it was saved with
+			out.color = entry
+				? utils.buildPaletteColor(slug, String(entry.color))
+				: (utils.paletteColorSlug(stored) === slug ? stored : utils.buildPaletteColor(slug, ''));
+		} else if (value === 'transparent' && name === 'textColor') {
+			out.color = 'transparent';
+		}
+		return out;
+	}
+
+	/** Copy a custom hex field to its color picker (the picker has no alpha). */
+	function syncColorPicker(form, customName) {
+		var custom = field(form, customName);
+		var picker = form.querySelector('[data-color-picker-for="' + customName + '"]');
+		var utils = getUtils();
+		var hex = custom ? utils.normalizeHexColor(custom.value) : '';
+		if (picker && hex) {
+			picker.value = hex.slice(0, 7);
+		}
+	}
+
+	/**
+	 * Copy the color picker to its custom hex field, keeping the alpha
+	 * digits the field had (the picker has no alpha channel).
+	 *
+	 * @param {Element} picker
+	 */
+	function applyColorPicker(picker) {
+		var form = picker.form || (picker.closest ? picker.closest('form') : null);
+		var custom = form ? field(form, picker.getAttribute('data-color-picker-for')) : null;
+		if (!custom) {
+			return;
+		}
+		var current = getUtils().normalizeHexColor(custom.value);
+		var alpha = current.length === 9 ? current.slice(7) : '';
+		custom.value = String(picker.value).toLowerCase() + alpha;
+	}
+
+	/**
+	 * The color a swatch shows for a select: a palette color, the custom
+	 * color, or nothing.
+	 *
+	 * @param {Object} read    readColorField() result.
+	 * @param {Array}  palette Palette entries.
+	 * @return {string} CSS color, '' for none.
+	 */
+	function swatchColor(read, palette) {
+		if (!read || !read.color || read.color === 'transparent') {
+			return '';
+		}
+		var utils = getUtils();
+		var slug = utils.paletteColorSlug(read.color);
+		if (slug) {
+			var entry = paletteEntry(palette, slug);
+			return entry ? String(entry.color) : utils.paletteColorFallback(read.color);
+		}
+		return read.color;
+	}
+
+	/**
+	 * The contrast notice text for the form's values (#215, WCAG 1.4.3), ''
+	 * when the colors pass or cannot be checked.
+	 *
+	 * @param {Object} values readEditForm() result.
+	 * @param {Object} ctx    colorContext().
+	 * @return {string}
+	 */
+	function contrastMessage(values, ctx) {
+		var utils = getUtils();
+		if (!utils || (values.textColor === undefined && values.textStrokeWidth === undefined)) {
+			return '';
+		}
+		var props = utils.buildPropertiesFromState(stateFromEditValues(values, 'px'));
+		var background = ctx.themeColors && ctx.themeColors.background ? String(ctx.themeColors.background) : '#ffffff';
+		var problem = utils.findContrastProblem(props, {
+			palette: ctx.palette,
+			background: background,
+			text: ctx.themeColors && ctx.themeColors.text ? String(ctx.themeColors.text) : ''
+		});
+		if (!problem) {
+			return '';
+		}
+		var templates = {
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			text: __('Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3).', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			outline: __('Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing.', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			'text-outline': __('Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3).', 'typost-paragraph-styles')
+		};
+		var args = [String(problem.ratio), background, String(problem.required)];
+		return templates[problem.pair].replace(/%(\d)\$s/g, function(match, n) {
+			return args[parseInt(n, 10) - 1];
+		});
+	}
+
+	/**
+	 * Show the custom fields, the swatches and the contrast notice for the
+	 * color fields. The notice joins the color selects' descriptions while
+	 * it shows, and leaves them when empty.
+	 *
+	 * @param {Element} form
+	 */
+	function updateColorFields(form) {
+		var ctx = colorContext();
+		COLOR_FIELDS.forEach(function(name) {
+			var select = field(form, name);
+			Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-color="' + name + '"]'), function(el) {
+				el.hidden = !select || select.value !== 'custom';
+			});
+			var swatch = form.querySelector('[data-swatch-for="' + name + '"]');
+			if (swatch) {
+				var color = swatchColor(readColorField(form, name, ctx.palette), ctx.palette);
+				swatch.style.background = color;
+				swatch.classList.toggle('is-empty', !color);
+			}
+		});
+		var notice = form.querySelector('.typost-ps-edit-contrast');
+		if (!notice) {
+			return;
+		}
+		var message = contrastMessage(readEditForm(form), ctx);
+		if (notice.textContent !== message) {
+			notice.textContent = message;
+		}
+		COLOR_FIELDS.forEach(function(name) {
+			var select = field(form, name);
+			if (!select || !notice.id) {
+				return;
+			}
+			var ids = (select.getAttribute('aria-describedby') || '').split(/\s+/).filter(function(id) {
+				return id && id !== notice.id;
+			});
+			if (message) {
+				ids.push(notice.id);
+			}
+			if (ids.length) {
+				select.setAttribute('aria-describedby', ids.join(' '));
+			} else {
+				select.removeAttribute('aria-describedby');
+			}
+		});
+	}
+
 	/**
 	 * Show the fields that belong to the chosen size mode, case and
 	 * alignment. The justify note (#207) also joins the alignment select's
@@ -328,6 +569,7 @@
 		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-case]'), function(el) {
 			el.hidden = el.getAttribute('data-show-for-case').split(/\s+/).indexOf(textCase) === -1;
 		});
+		updateColorFields(form);
 	}
 
 	/**
@@ -444,6 +686,13 @@
 		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
 		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
 
+		// Text color and outline (#215)
+		var palette = colorContext().palette;
+		fillColorField(form, 'textColor', props.textColor, palette);
+		setInput(form, 'textStrokeWidth', utils ? utils.normalizeStrokeWidth(props.textStrokeWidth) : 0);
+		fillColorField(form, 'textStrokeColor', props.textStrokeColor, palette);
+		selectValue(field(form, 'textStrokePosition'), props.textStrokePosition === 'behind' ? 'behind' : '');
+
 		var features = Array.isArray(props.features) ? props.features.map(String) : [];
 		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
 		var known = {};
@@ -517,6 +766,10 @@
 		}));
 		var fake = field(form, 'fakeSmallCaps');
 		var sizeInput = field(form, 'fontSize');
+		var palette = colorContext().palette;
+		var textColor = readColorField(form, 'textColor', palette);
+		var strokeColor = readColorField(form, 'textStrokeColor', palette);
+		var strokePosition = field(form, 'textStrokePosition');
 
 		return {
 			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
@@ -539,6 +792,16 @@
 			alignLast: field(form, 'alignLast') ? field(form, 'alignLast').value : '',
 			wordSpacing: numberOf(form, 'wordSpacing'),
 			textWrap: field(form, 'textWrap') ? field(form, 'textWrap').value : '',
+			// Text color and outline (#215). undefined when the form has no
+			// such field, so the save keeps the stored value
+			textColor: textColor ? textColor.color : undefined,
+			textColorMode: textColor ? textColor.mode : '',
+			textColorCustom: textColor ? textColor.custom : '',
+			textStrokeWidth: field(form, 'textStrokeWidth') ? numberOf(form, 'textStrokeWidth') : undefined,
+			textStrokeColor: strokeColor ? strokeColor.color : undefined,
+			textStrokeColorMode: strokeColor ? strokeColor.mode : '',
+			textStrokeColorCustom: strokeColor ? strokeColor.custom : '',
+			textStrokePosition: strokePosition ? strokePosition.value : undefined,
 			features: features,
 			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : ''
 		};
@@ -586,6 +849,19 @@
 			if (missing.length) {
 				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
 			}
+		}
+		// Text color and outline (#215)
+		var colorChecks = [['textColor', 'textColorCustom'], ['textStrokeColor', 'textStrokeColorCustom']];
+		for (var c = 0; c < colorChecks.length; c++) {
+			if (values[colorChecks[c][0] + 'Mode'] === 'custom' && !values[colorChecks[c][0]]) {
+				return { field: colorChecks[c][1], message: __('Enter a hex color, such as #c00 or #cc0000.', 'typost-paragraph-styles') };
+			}
+		}
+		if (values.textStrokeWidth !== undefined && (values.textStrokeWidth < 0 || values.textStrokeWidth > 20)) {
+			return { field: 'textStrokeWidth', message: __('Enter an outline width from 0 to 20.', 'typost-paragraph-styles') };
+		}
+		if (values.textColor === 'transparent' && !(values.textStrokeWidth > 0 && values.textStrokeColor)) {
+			return { field: 'textColor', message: __('Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color.', 'typost-paragraph-styles') };
 		}
 		var axesUnchanged = opts.baseline && opts.baseline.fontVariationSettings === values.fontVariationSettings;
 		if (values.fontVariationSettings && !axesUnchanged) {
@@ -637,7 +913,13 @@
 			alignment: values.alignment || '',
 			alignLast: values.alignLast || '',
 			wordSpacing: Math.round(values.wordSpacing) || 0,
-			textWrap: values.textWrap || ''
+			textWrap: values.textWrap || '',
+			// Text color and outline (#215); undefined (no field) is carried
+			// from the stored style by buildPropertiesForStyleSave()
+			textColor: values.textColor,
+			textStrokeWidth: values.textStrokeWidth,
+			textStrokeColor: values.textStrokeColor,
+			textStrokePosition: values.textStrokePosition
 		};
 	}
 
@@ -908,6 +1190,9 @@
 		suffixIds: suffixIds,
 		sizeModeOf: sizeModeOf,
 		updateConditionalFields: updateConditionalFields,
+		updateColorFields: updateColorFields,
+		applyColorPicker: applyColorPicker,
+		contrastMessage: contrastMessage,
 		fillEditForm: fillEditForm,
 		updateResetToBase: updateResetToBase,
 		readEditForm: readEditForm,
@@ -1094,6 +1379,25 @@
 				openEditForm($card, styleId);
 			}
 		});
+	});
+
+	// Color fields (#215): the custom fields, swatches and the contrast
+	// notice follow every change; the size and weight change the notice's
+	// threshold (large text)
+	$(document).on('input', '.typost-ps-edit-form [data-color-picker-for]', function() {
+		applyColorPicker(this);
+		updateColorFields($(this).closest('form')[0]);
+	});
+	$(document).on('change input', '.typost-ps-edit-form [data-field="textColor"], .typost-ps-edit-form [data-field="textColorCustom"], .typost-ps-edit-form [data-field="textStrokeColor"], .typost-ps-edit-form [data-field="textStrokeColorCustom"], .typost-ps-edit-form [data-field="textStrokeWidth"], .typost-ps-edit-form [data-field="fontSize"], .typost-ps-edit-form [data-field="fontSizeMin"], .typost-ps-edit-form [data-field="fontWeight"]', function() {
+		var form = $(this).closest('form')[0];
+		if (/Custom$/.test(this.getAttribute('data-field') || '')) {
+			var picker = form.querySelector('[data-color-picker-for="' + this.getAttribute('data-field') + '"]');
+			var hex = getUtils().normalizeHexColor(this.value);
+			if (picker && hex) {
+				picker.value = hex.slice(0, 7);
+			}
+		}
+		updateColorFields(form);
 	});
 
 	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"]', function() {

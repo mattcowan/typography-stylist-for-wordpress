@@ -208,6 +208,25 @@ describe( 'collectErrors and buildImportChoices', () => {
 		} );
 	} );
 
+	describe( 'palette colors this site lacks (#215)', () => {
+		const withColors = JSON.parse( JSON.stringify( preview ) );
+		withColors.sections.paragraphStyles.preview.colorRows = [
+			{ key: 'accent-1', name: 'accent-1', choices: [ { value: 'slug', label: 'Keep' }, { value: 'value', label: 'Use' } ], choice: 'slug' },
+		];
+
+		it( 'sends each answer as a color: key in the section choices', () => {
+			const choices = buildImportChoices( withColors, state( { rows: { paragraphStyles: { 'accent-1': 'value' } } } ) );
+			expect( choices.sections.paragraphStyles[ 'color:accent-1' ] ).toBe( 'value' );
+			expect( choices.sections.paragraphStyles.s2 ).toEqual( { action: 'add' } );
+		} );
+
+		it( 'asks for an unanswered row', () => {
+			const errors = collectErrors( withColors, state( { rows: { paragraphStyles: {} } } ), l10n );
+			expect( errors ).toHaveLength( 1 );
+			expect( errors[ 0 ] ).toEqual( expect.objectContaining( { kind: 'row', key: 'accent-1', field: 'typost-import-row-paragraphStyles-accent-1' } ) );
+		} );
+	} );
+
 	it( 'leaves out a section the author unchecked', () => {
 		expect( buildImportChoices( preview, state( { include: { paragraphStyles: false } } ) ).include ).toEqual( [] );
 	} );
