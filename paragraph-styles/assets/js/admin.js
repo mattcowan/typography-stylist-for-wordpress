@@ -192,6 +192,43 @@
 	// Same check as the CSS generators: an axis pair they would drop
 	var AXIS_PAIR = /^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/;
 
+	// Indent and spacing fields (#199): a number input named by the key and
+	// a unit select named key + 'Unit'. Only the first line indent can be
+	// negative. LENGTH_MAX mirrors the sanitizer's caps.
+	var LENGTH_FIELDS = ['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'];
+	var LENGTH_MAX = { px: 1000, em: 50 };
+
+	/**
+	 * Split a stored length ('1.5em', '-24px') into the form's number and
+	 * unit. None gives an empty number and the em unit.
+	 *
+	 * @param {*} value Stored value.
+	 * @return {{number: string, unit: string}}
+	 */
+	function splitLength(value) {
+		var m = typeof value === 'string' ? /^(-?[\d.]+)(px|em)$/.exec(value) : null;
+		return m ? { number: m[1], unit: m[2] } : { number: '', unit: 'em' };
+	}
+
+	/**
+	 * A length field's value as the form reads it: '' for empty or 0, else
+	 * the number and its unit ('1.5em'), not yet capped or rounded
+	 * (validateEditValues() checks the range, normalizeLength() rounds).
+	 *
+	 * @param {Element} form
+	 * @param {string}  key
+	 * @return {string}
+	 */
+	function lengthOf(form, key) {
+		var input = field(form, key);
+		var unitSelect = field(form, key + 'Unit');
+		var n = input ? parseFloat(input.value) : NaN;
+		if (!isFinite(n) || n === 0) {
+			return '';
+		}
+		return String(n) + (unitSelect && unitSelect.value === 'px' ? 'px' : 'em');
+	}
+
 	/**
 	 * Append a suffix to every id in a cloned form and to the attributes
 	 * that point at ids, so each card's labels stay tied to its own fields.
@@ -444,6 +481,18 @@
 		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
 		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
 
+		// Indents and paragraph spacing (#199)
+		LENGTH_FIELDS.forEach(function(key) {
+			var stored = utils ? utils.normalizeLength(props[key], key === 'firstLineIndent') : props[key];
+			var parts = splitLength(stored);
+			setInput(form, key, parts.number);
+			selectValue(field(form, key + 'Unit'), parts.unit);
+		});
+		var afterSame = field(form, 'indentAfterSame');
+		if (afterSame) {
+			afterSame.checked = props.indentAfterSame === true;
+		}
+
 		var features = Array.isArray(props.features) ? props.features.map(String) : [];
 		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
 		var known = {};
@@ -517,8 +566,15 @@
 		}));
 		var fake = field(form, 'fakeSmallCaps');
 		var sizeInput = field(form, 'fontSize');
+		var afterSame = field(form, 'indentAfterSame');
 
 		return {
+			indentStart: lengthOf(form, 'indentStart'),
+			indentEnd: lengthOf(form, 'indentEnd'),
+			firstLineIndent: lengthOf(form, 'firstLineIndent'),
+			indentAfterSame: afterSame ? !!afterSame.checked : false,
+			spaceBefore: lengthOf(form, 'spaceBefore'),
+			spaceAfter: lengthOf(form, 'spaceAfter'),
 			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
 			basedOn: parseInt(field(form, 'basedOn') ? field(form, 'basedOn').value : 0, 10) || 0,
 			fontId: parseInt(field(form, 'fontId') ? field(form, 'fontId').value : 0, 10) || 0,
@@ -587,6 +643,22 @@
 				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
 			}
 		}
+		// Indents and spacing (#199): zero or more (the first line indent can
+		// be negative), up to the sanitizer's caps
+		for (var i = 0; i < LENGTH_FIELDS.length; i++) {
+			var key = LENGTH_FIELDS[i];
+			var length = values[key] ? /^(-?[\d.e+-]+)(px|em)$/.exec(values[key]) : null;
+			if (!length) {
+				continue;
+			}
+			var amount = parseFloat(length[1]);
+			if (amount < 0 && key !== 'firstLineIndent') {
+				return { field: key, message: __('Enter 0 or more.', 'typost-paragraph-styles') };
+			}
+			if (Math.abs(amount) > LENGTH_MAX[length[2]]) {
+				return { field: key, message: __('Enter a value up to 1000px or 50em.', 'typost-paragraph-styles') };
+			}
+		}
 		var axesUnchanged = opts.baseline && opts.baseline.fontVariationSettings === values.fontVariationSettings;
 		if (values.fontVariationSettings && !axesUnchanged) {
 			var bad = values.fontVariationSettings.split(',').some(function(pair) {
@@ -637,7 +709,13 @@
 			alignment: values.alignment || '',
 			alignLast: values.alignLast || '',
 			wordSpacing: Math.round(values.wordSpacing) || 0,
-			textWrap: values.textWrap || ''
+			textWrap: values.textWrap || '',
+			indentStart: values.indentStart || '',
+			indentEnd: values.indentEnd || '',
+			firstLineIndent: values.firstLineIndent || '',
+			indentAfterSame: values.indentAfterSame === true,
+			spaceBefore: values.spaceBefore || '',
+			spaceAfter: values.spaceAfter || ''
 		};
 	}
 
@@ -739,7 +817,12 @@
 			alignment: p.alignment || '',
 			alignLast: p.alignLast || '',
 			wordSpacing: p.wordSpacing || 0,
-			textWrap: p.textWrap || ''
+			textWrap: p.textWrap || '',
+			// Indents (#199); space before and after stay, fit uses them
+			indentStart: p.indentStart || '',
+			indentEnd: p.indentEnd || '',
+			firstLineIndent: p.firstLineIndent || '',
+			indentAfterSame: p.indentAfterSame === true
 		});
 	}
 

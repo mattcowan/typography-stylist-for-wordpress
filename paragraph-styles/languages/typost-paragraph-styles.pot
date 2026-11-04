@@ -780,3 +780,100 @@ msgstr ""
 #: includes/admin-tab.php:279
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr ""
+
+#: includes/admin-tab.php:293
+msgid "Left indent"
+msgstr ""
+
+#: includes/admin-tab.php:294
+msgid "Left indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:301
+msgid "Right indent"
+msgstr ""
+
+#: includes/admin-tab.php:302
+msgid "Right indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:309
+msgid "First line indent"
+msgstr ""
+
+#: includes/admin-tab.php:310
+msgid "First line indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:313
+msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
+msgstr ""
+
+#: includes/admin-tab.php:318
+msgid "Space before"
+msgstr ""
+
+#: includes/admin-tab.php:319
+msgid "Space before unit"
+msgstr ""
+
+#: includes/admin-tab.php:326
+msgid "Space after"
+msgstr ""
+
+#: includes/admin-tab.php:327
+msgid "Space after unit"
+msgstr ""
+
+#: includes/admin-tab.php:334
+msgid "Indents and spacing"
+msgstr ""
+
+#: includes/admin-tab.php:335
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these."
+msgstr ""
+
+#: includes/admin-tab.php:336
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
+msgstr ""
+
+#: includes/admin-tab.php:356
+msgid "Indent the first line only after a paragraph with the same style"
+msgstr ""
+
+#: includes/admin-tab.php:357
+msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
+msgstr ""
+
+#: paragraph-styles.php:2260
+msgid "Left Indent:"
+msgstr ""
+
+#: paragraph-styles.php:2261
+msgid "Right Indent:"
+msgstr ""
+
+#: paragraph-styles.php:2262
+msgid "First Line:"
+msgstr ""
+
+#: paragraph-styles.php:2265
+#, php-format
+msgid "%s (after the same style only)"
+msgstr ""
+
+#: paragraph-styles.php:2273
+msgid "Space Before:"
+msgstr ""
+
+#: paragraph-styles.php:2274
+msgid "Space After:"
+msgstr ""
+
+#: assets/js/admin.js:656
+msgid "Enter 0 or more."
+msgstr ""
+
+#: assets/js/admin.js:659
+msgid "Enter a value up to 1000px or 50em."
+msgstr ""

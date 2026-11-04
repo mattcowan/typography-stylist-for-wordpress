@@ -106,7 +106,11 @@ class ExportRegistryTest extends ExportTestCase {
         $this->assertNotFalse($start);
         $end = strpos($source, "\n\t}\n", $start);
         preg_match_all("/\\\$clean\\['([A-Za-z]+)'\\]\\s*=/", substr($source, $start, $end - $start), $m);
-        return array_values(array_unique($m[1]));
+        // Keys the sanitizer stores in a loop over a constant (#199)
+        $this->assertStringContainsString('foreach ( self::SPACING_PROPERTIES as $key )', substr($source, $start, $end - $start));
+        $this->assertSame(1, preg_match("/const SPACING_PROPERTIES = array\\(([^)]*)\\)/", $source, $looped));
+        preg_match_all("/'([A-Za-z]+)'/", $looped[1], $l);
+        return array_values(array_unique(array_merge($m[1], $l[1])));
     }
 
     /** One style that sets every property, as the editors would store it. */
@@ -132,6 +136,12 @@ class ExportRegistryTest extends ExportTestCase {
             'alignLast'             => 'center',
             'wordSpacing'           => 120,
             'textWrap'              => 'balance',
+            'indentStart'           => '2em',
+            'indentEnd'             => '12px',
+            'firstLineIndent'       => '1.5em',
+            'indentAfterSame'       => true,
+            'spaceBefore'           => '0.5em',
+            'spaceAfter'            => '24px',
         );
     }
 
@@ -170,6 +180,11 @@ class ExportRegistryTest extends ExportTestCase {
             'alignment'             => '',
             'wordSpacing'           => 0,
             'textWrap'              => '',
+            'indentStart'           => '',
+            'indentEnd'             => '',
+            'firstLineIndent'       => '',
+            'spaceBefore'           => '',
+            'spaceAfter'            => '',
         );
         $this->site->manual = array(array('id' => 'manual-a', 'name' => 'Brand', 'font_id' => 3, 'font_family' => 'Brand'));
         $module = $this->module(array(

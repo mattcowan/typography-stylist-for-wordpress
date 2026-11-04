@@ -90,6 +90,15 @@ function buildTemplate() {
 					<option value="">Normal</option><option value="balance">Balance lines</option><option value="pretty">Avoid short last lines</option>
 				</select>
 			</div>
+			${['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'].map((key) => `
+				<p${key.indexOf('space') === 0 ? '' : ' data-show-for-size="inherit fixed responsive"'}>
+					<input type="number" id="typost-ps-edit-${key}" data-field="${key}" step="any" />
+					<select data-field="${key}Unit"><option value="em">em</option><option value="px">px</option></select>
+				</p>`).join('')}
+			<p data-show-for-size="inherit fixed responsive">
+				<input type="checkbox" id="typost-ps-edit-indent-after-same" data-field="indentAfterSame" />
+				<label for="typost-ps-edit-indent-after-same">Indent the first line only after a paragraph with the same style</label>
+			</p>
 			<div role="group" aria-labelledby="typost-ps-edit-features-ligatures">
 				<p id="typost-ps-edit-features-ligatures">Ligatures</p>
 				${FEATURES.map((f) => `<input type="checkbox" data-feature value="${f}" />`).join('')}
@@ -891,5 +900,102 @@ describe('alignment, word spacing and line breaking (#207)', () => {
 			expect(el.hidden).toBe(true);
 		});
 		expect(form.querySelector('.typost-ps-edit-justify-note').hidden).toBe(true);
+	});
+});
+
+describe('indents and paragraph spacing (#199)', () => {
+	const STYLE = {
+		id: 9,
+		name: 'Body',
+		properties: {
+			fontWeight: '400',
+			indentStart: '24px',
+			indentEnd: '1em',
+			firstLineIndent: '1.5em',
+			indentAfterSame: true,
+			spaceBefore: '0.5em',
+			spaceAfter: '12px',
+		},
+	};
+
+	test('the form fills each number and unit, and an untouched form sends no properties', () => {
+		const { form, baseline } = openForm(STYLE);
+		expect(form.querySelector('[data-field="indentStart"]').value).toBe('24');
+		expect(form.querySelector('[data-field="indentStartUnit"]').value).toBe('px');
+		expect(form.querySelector('[data-field="firstLineIndent"]').value).toBe('1.5');
+		expect(form.querySelector('[data-field="firstLineIndentUnit"]').value).toBe('em');
+		expect(form.querySelector('[data-field="indentAfterSame"]').checked).toBe(true);
+		const values = readEditForm(form);
+		expect(values.spaceAfter).toBe('12px');
+		expect(buildEditPayload(values, baseline, STYLE, 'rem')).toEqual({ name: 'Body' });
+	});
+
+	test('an empty style opens with empty numbers in em', () => {
+		const { form } = openForm({ id: 3, name: 'Plain', properties: {} });
+		expect(form.querySelector('[data-field="spaceBefore"]').value).toBe('');
+		expect(form.querySelector('[data-field="spaceBeforeUnit"]').value).toBe('em');
+		expect(readEditForm(form).spaceBefore).toBe('');
+	});
+
+	test('changing a unit or a number saves the whole set', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'spaceBeforeUnit', 'px');
+		setField(form, 'spaceBefore', '8');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({
+			fontWeight: '400', indentStart: '24px', indentEnd: '1em', firstLineIndent: '1.5em', indentAfterSame: true,
+			spaceBefore: '8px', spaceAfter: '12px',
+		});
+	});
+
+	test('0 or an empty number removes a value, and a hanging indent drops "only after the same style"', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'indentStart', '0');
+		setField(form, 'indentEnd', '');
+		setField(form, 'firstLineIndent', '-2');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({
+			fontWeight: '400', firstLineIndent: '-2em', spaceBefore: '0.5em', spaceAfter: '12px',
+		});
+	});
+
+	test('a negative indent or spacing and a value past the cap are refused', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'spaceAfter', '-4');
+		expect(validateEditValues(readEditForm(form), { baseline })).toEqual({ field: 'spaceAfter', message: 'Enter 0 or more.' });
+		setField(form, 'spaceAfter', '4');
+		setField(form, 'indentStartUnit', 'em');
+		setField(form, 'indentStart', '60');
+		expect(validateEditValues(readEditForm(form), { baseline })).toEqual({ field: 'indentStart', message: 'Enter a value up to 1000px or 50em.' });
+		setField(form, 'indentStart', '2');
+		setField(form, 'firstLineIndent', '-3');
+		expect(validateEditValues(readEditForm(form), { baseline })).toBeNull();
+	});
+
+	test('switching to fit to width keeps the spacing and stops storing the indents', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'sizeMode', 'fit');
+		updateConditionalFields(form);
+		expect(form.querySelector('[data-field="indentStart"]').closest('[data-show-for-size]').hidden).toBe(true);
+		expect(form.querySelector('[data-field="spaceBefore"]').closest('p').hidden).toBe(false);
+		const props = buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties;
+		expect(props.fontSize).toBe('fit');
+		['indentStart', 'indentEnd', 'firstLineIndent', 'indentAfterSame'].forEach((key) => {
+			expect(props).not.toHaveProperty(key);
+		});
+		expect(props.spaceBefore).toBe('0.5em');
+		expect(props.spaceAfter).toBe('12px');
+	});
+
+	test('a style based on another can unset an inherited value', () => {
+		const { resolveStyleList } = require('../assets/js/lib/ps-utils.js');
+		const styles = resolveStyleList([
+			{ id: 1, name: 'Body', properties: { firstLineIndent: '1.5em', indentAfterSame: true, spaceAfter: '1em' } },
+			{ id: 2, name: 'Body – First', basedOn: 1, properties: { fontWeight: '700' } },
+		]);
+		const { form, baseline } = openForm(styles[1]);
+		setField(form, 'firstLineIndent', '');
+		setField(form, 'spaceAfter', '');
+		expect(buildEditPayload(readEditForm(form), baseline, styles[1], 'rem', styles).properties).toEqual({
+			fontWeight: '700', firstLineIndent: '', spaceAfter: '',
+		});
 	});
 });

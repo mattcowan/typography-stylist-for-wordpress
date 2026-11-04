@@ -46,6 +46,9 @@ class ParagraphStylesAdminEditFormTest extends TestCase {
         'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize',
         'letterSpacing', 'lineHeight', 'initialHang', 'textCase', 'fakeSmallCaps',
         'alignment', 'alignLast', 'wordSpacing', 'textWrap',
+        'indentStart', 'indentStartUnit', 'indentEnd', 'indentEndUnit',
+        'firstLineIndent', 'firstLineIndentUnit', 'indentAfterSame',
+        'spaceBefore', 'spaceBeforeUnit', 'spaceAfter', 'spaceAfterUnit',
         'fontVariationSettings',
     );
 

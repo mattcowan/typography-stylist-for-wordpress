@@ -1,0 +1,134 @@
+{
+	"_comment": "Paragraph style CSS for indents and paragraph spacing (#199). Read by paragraph-layout.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesLayoutTest.php (generate_style_css), so both generators are held to the same text. css is the whole output for style id 8; an empty string means the style writes no CSS.",
+	"cases": [
+		{
+			"label": "space before and after only",
+			"properties": {
+				"spaceBefore": "1em",
+				"spaceAfter": "24px"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-start: 1em;\n    margin-block-end: 24px;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) {\n    margin-block-start: 1em;\n    margin-block-end: 24px;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-start: 0;\n    margin-block-end: 0;\n}"
+		},
+		{
+			"label": "left and right indent",
+			"properties": {
+				"indentStart": "2em",
+				"indentEnd": "40px"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: 2em;\n    padding-inline-end: 40px;\n}"
+		},
+		{
+			"label": "first line indent on every paragraph",
+			"properties": {
+				"firstLineIndent": "1.5em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    text-indent: 1.5em;\n}"
+		},
+		{
+			"label": "first line indent only after the same style",
+			"properties": {
+				"fontWeight": "400",
+				"firstLineIndent": "1.5em",
+				"indentAfterSame": true
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}\n\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    text-indent: 1.5em;\n}"
+		},
+		{
+			"label": "hanging indent",
+			"properties": {
+				"firstLineIndent": "-1.5em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: 1.5em;\n    text-indent: -1.5em;\n}"
+		},
+		{
+			"label": "left indent plus a hanging indent",
+			"properties": {
+				"indentStart": "24px",
+				"firstLineIndent": "-1em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: calc(24px + 1em);\n    text-indent: -1em;\n}"
+		},
+		{
+			"label": "a hanging indent ignores only-after-the-same-style",
+			"properties": {
+				"firstLineIndent": "-1em",
+				"indentAfterSame": true
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: 1em;\n    text-indent: -1em;\n}"
+		},
+		{
+			"label": "a first line indent turns the hang off",
+			"properties": {
+				"initialHang": 0.2,
+				"firstLineIndent": "2em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.2;\n}\n\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    text-indent: 2em;\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "only after the same style, with a hang",
+			"properties": {
+				"initialHang": 0.2,
+				"firstLineIndent": "2em",
+				"indentAfterSame": true
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.2;\n}\n\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    text-indent: 2em;\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "fit to width keeps spacing and writes no indents",
+			"properties": {
+				"fontSize": "fit",
+				"fontSizeUnit": "rem",
+				"fontSizeMin": 16,
+				"fontSizePreferred": 24,
+				"fontSizeMax": 64,
+				"fitMaxSize": 0,
+				"indentStart": "1em",
+				"indentEnd": "1em",
+				"firstLineIndent": "1em",
+				"spaceAfter": "0.5em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1rem, 1.5rem + 3vw, 4rem);\n}\n\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-end: 0.5em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) {\n    margin-block-end: 0.5em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-end: 0;\n}"
+		},
+		{
+			"label": "values are normalized and capped",
+			"properties": {
+				"indentStart": " 1.50EM",
+				"indentEnd": "2000px",
+				"spaceBefore": ".25em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: 1.5em;\n    padding-inline-end: 1000px;\n    margin-block-start: 0.25em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) {\n    margin-block-start: 0.25em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-start: 0;\n}"
+		},
+		{
+			"label": "invalid and zero values write nothing",
+			"properties": {
+				"indentStart": "-2px",
+				"indentEnd": "3rem",
+				"spaceBefore": "0em",
+				"spaceAfter": 12,
+				"firstLineIndent": "1.5",
+				"indentAfterSame": true
+			},
+			"css": ""
+		},
+		{
+			"label": "with alignment and word spacing: own rules after theirs",
+			"properties": {
+				"alignment": "justify",
+				"wordSpacing": 50,
+				"indentStart": "1em",
+				"spaceAfter": "1em"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    word-spacing: 0.05em;\n}\n\n.typost-ps-8:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id]:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit) {\n    text-align: justify;\n}\n\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    box-sizing: border-box;\n    padding-inline-start: 1em;\n    margin-block-end: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    margin-block-end: 0;\n}"
+		},
+		{
+			"label": "legacy id: every selector has its legacy twin",
+			"legacyId": "ps_1709312345_123",
+			"properties": {
+				"spaceBefore": "1em",
+				"firstLineIndent": "1em",
+				"indentAfterSame": true
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-ps-ps_1709312345_123,\n.typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123 {\n    margin-block-start: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8),\n.wp-block-typost:has(> .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123) {\n    margin-block-start: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.wp-block-typost > .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123 {\n    margin-block-start: 0;\n}\n\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8), .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8) + .wp-block-typost > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123), .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123) + .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123,\n:is(.wp-block-typost:has(> .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123), .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123) + .wp-block-typost > .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123 {\n    text-indent: 1em;\n}"
+		}
+	]
+}

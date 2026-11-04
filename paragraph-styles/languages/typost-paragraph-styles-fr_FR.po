@@ -778,3 +778,100 @@ msgstr "Coupure des lignes"
 #: includes/admin-tab.php:279
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr "Équilibrer les lignes donne des longueurs proches aux lignes d’un titre court. Éviter les dernières lignes courtes convient au texte courant. Un navigateur qui ne prend pas en charge ce choix coupe les lignes normalement."
+
+#: includes/admin-tab.php:293
+msgid "Left indent"
+msgstr "Retrait gauche"
+
+#: includes/admin-tab.php:294
+msgid "Left indent unit"
+msgstr "Unité du retrait gauche"
+
+#: includes/admin-tab.php:301
+msgid "Right indent"
+msgstr "Retrait droit"
+
+#: includes/admin-tab.php:302
+msgid "Right indent unit"
+msgstr "Unité du retrait droit"
+
+#: includes/admin-tab.php:309
+msgid "First line indent"
+msgstr "Retrait de première ligne"
+
+#: includes/admin-tab.php:310
+msgid "First line indent unit"
+msgstr "Unité du retrait de première ligne"
+
+#: includes/admin-tab.php:313
+msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
+msgstr "Une valeur négative donne un retrait suspendu. Un retrait de première ligne désactive le débord de la première lettre."
+
+#: includes/admin-tab.php:318
+msgid "Space before"
+msgstr "Espace avant"
+
+#: includes/admin-tab.php:319
+msgid "Space before unit"
+msgstr "Unité de l’espace avant"
+
+#: includes/admin-tab.php:326
+msgid "Space after"
+msgstr "Espace après"
+
+#: includes/admin-tab.php:327
+msgid "Space after unit"
+msgstr "Unité de l’espace après"
+
+#: includes/admin-tab.php:334
+msgid "Indents and spacing"
+msgstr "Retraits et espacement"
+
+#: includes/admin-tab.php:335
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these."
+msgstr "Les retraits et l’espacement s’appliquent à des paragraphes et des titres entiers. Ils n’ont aucun effet quand le style est appliqué à un texte sélectionné. La gauche et la droite suivent le sens du texte : dans un texte de droite à gauche, le retrait gauche est à droite. Les réglages d’espacement ou de retrait de texte propres à un bloc l’emportent sur ceux-ci."
+
+#: includes/admin-tab.php:336
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
+msgstr "L’ajustement à la largeur fixe lui-même la largeur de chaque ligne : un style ajusté à la largeur n’utilise donc pas de retraits."
+
+#: includes/admin-tab.php:356
+msgid "Indent the first line only after a paragraph with the same style"
+msgstr "Mettre la première ligne en retrait seulement après un paragraphe du même style"
+
+#: includes/admin-tab.php:357
+msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
+msgstr "La convention des livres : le premier paragraphe après un titre n’a pas de retrait. S’applique seulement à un retrait de première ligne positif."
+
+#: paragraph-styles.php:2260
+msgid "Left Indent:"
+msgstr "Retrait gauche :"
+
+#: paragraph-styles.php:2261
+msgid "Right Indent:"
+msgstr "Retrait droit :"
+
+#: paragraph-styles.php:2262
+msgid "First Line:"
+msgstr "Première ligne :"
+
+#: paragraph-styles.php:2265
+#, php-format
+msgid "%s (after the same style only)"
+msgstr "%s (seulement après le même style)"
+
+#: paragraph-styles.php:2273
+msgid "Space Before:"
+msgstr "Espace avant :"
+
+#: paragraph-styles.php:2274
+msgid "Space After:"
+msgstr "Espace après :"
+
+#: assets/js/admin.js:656
+msgid "Enter 0 or more."
+msgstr "Saisissez 0 ou plus."
+
+#: assets/js/admin.js:659
+msgid "Enter a value up to 1000px or 50em."
+msgstr "Saisissez une valeur jusqu’à 1000px ou 50em."

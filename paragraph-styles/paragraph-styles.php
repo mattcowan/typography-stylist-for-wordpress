@@ -129,6 +129,25 @@ final class Typost_Paragraph_Styles {
 	const ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
 	/**
+	 * @var array<string,int> Units a paragraph indent or spacing value (#199)
+	 * can use, with the largest value each accepts. Mirrors LENGTH_MAX in
+	 * ps-utils.js.
+	 */
+	const LENGTH_MAX = array(
+		'px' => 1000,
+		'em' => 50,
+	);
+
+	/**
+	 * @var string[] Indents and paragraph spacing (#199) that are plain
+	 * lengths, zero or more: left and right indent (logical start and end,
+	 * so they follow the text direction) and space before and after. The
+	 * first line indent can be negative and has its own group. Mirrors
+	 * SPACING_PROPERTIES in ps-utils.js.
+	 */
+	const SPACING_PROPERTIES = array( 'indentStart', 'indentEnd', 'spaceBefore', 'spaceAfter' );
+
+	/**
 	 * Most styles a Based On chain may hold, the style itself included (#200).
 	 * Resolution stops there, so bad data in the option cannot loop.
 	 * Mirrors MAX_BASED_ON_LEVELS in ps-utils.js.
@@ -144,6 +163,9 @@ final class Typost_Paragraph_Styles {
 		'fontSize' => array( 'fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize' ),
 		'textCase'  => array( 'textCase', 'fakeSmallCaps' ),
 		'alignment' => array( 'alignment', 'alignLast' ),
+		// #199: a child with its own first line indent must not keep the
+		// parent's "only after the same style"
+		'firstLineIndent' => array( 'firstLineIndent', 'indentAfterSame' ),
 	);
 
 	/**
@@ -162,6 +184,10 @@ final class Typost_Paragraph_Styles {
 		'initialHang'           => 0,
 		'wordSpacing'           => 0,
 		'textWrap'              => '',
+		'indentStart'           => '',
+		'indentEnd'             => '',
+		'spaceBefore'           => '',
+		'spaceAfter'            => '',
 	);
 
 	/**
@@ -484,7 +510,15 @@ final class Typost_Paragraph_Styles {
 			$align_rules = self::alignment_declarations( $props, $hang );
 		}
 
-		if ( empty( $css_rules ) && empty( $align_rules ) ) {
+		// Indents and paragraph spacing (#199): rules of their own, never on
+		// the inline-span selector (see paragraph_layout_css())
+		$layout_ids = array( (string) $id );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$layout_ids[] = esc_attr( $style['legacyId'] );
+		}
+		$layout_css = self::paragraph_layout_css( $props, $hang, $layout_ids );
+
+		if ( empty( $css_rules ) && empty( $align_rules ) && '' === $layout_css ) {
 			return '';
 		}
 
@@ -544,6 +578,10 @@ final class Typost_Paragraph_Styles {
 				return $part . self::ALIGNMENT_GUARD;
 			}, explode( ",\n", $selector ) ) );
 			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
+		}
+
+		if ( '' !== $layout_css ) {
+			$css .= ( '' === $css ? '' : "\n\n" ) . $layout_css;
 		}
 
 		if ( $hang > 0 ) {
@@ -614,6 +652,196 @@ final class Typost_Paragraph_Styles {
 			$rules[] = '--typost-hang-on: 0';
 		}
 		return $rules;
+	}
+
+	/**
+	 * Normalize an indent or spacing value (#199) to the stored form.
+	 *
+	 * Accepts a number with a `px` or `em` unit ("24px", "1.5em", " .5EM ").
+	 * Returns '' for zero, for anything else (no unit, other units, a
+	 * number alone), and for a negative value unless `$allow_negative`
+	 * (only the first line indent, where negative is a hanging indent).
+	 * The number is capped at LENGTH_MAX and rounded to three decimals, so
+	 * it prints the same here and in JS. Mirrors normalizeLength() in
+	 * ps-utils.js.
+	 *
+	 * @param mixed $value          Raw value.
+	 * @param bool  $allow_negative Accept a negative value.
+	 * @return string Length such as "1.5em", or '' for none.
+	 */
+	public static function normalize_length( $value, $allow_negative = false ) {
+		if ( ! is_string( $value ) || ! preg_match( '/^\s*(-?)(\d+(?:\.\d*)?|\.\d+)\s*(px|em)\s*$/i', $value, $m ) ) {
+			return '';
+		}
+		$unit = strtolower( $m[3] );
+		$n    = min( (float) $m[2], self::LENGTH_MAX[ $unit ] );
+		// Below 0.0005 rounds to 0; PHP would also print it in exponent form
+		if ( ! is_finite( $n ) || $n < 0.0005 ) {
+			return '';
+		}
+		$negative = '-' === $m[1];
+		if ( $negative && ! $allow_negative ) {
+			return '';
+		}
+		return ( $negative ? '-' : '' ) . round( $n, 3 ) . $unit;
+	}
+
+	/**
+	 * Whether a style's first line indent applies only after a paragraph
+	 * with the same style (#199). Only for a positive indent: a hanging
+	 * indent is a whole-paragraph shape, which every paragraph keeps.
+	 * Mirrors indentAfterSameApplies() in ps-utils.js.
+	 *
+	 * @param array $props Properties.
+	 * @return bool
+	 */
+	private static function indent_after_same_applies( $props ) {
+		$first = self::normalize_length( isset( $props['firstLineIndent'] ) ? $props['firstLineIndent'] : '', true );
+		return '' !== $first && '-' !== $first[0] && isset( $props['indentAfterSame'] ) && true === $props['indentAfterSame'];
+	}
+
+	/**
+	 * The indent and paragraph spacing rules of a style (#199).
+	 *
+	 * A paragraph-level setting, so the rules go on the plain preview class
+	 * (the settings tab card) and the block-level selector, never on the
+	 * inline-span selector: inline start and end padding would move a
+	 * selected word, and text-indent and block margins do nothing on a span.
+	 * Each value is a length with px or em, stored by normalize_length().
+	 *
+	 * - Indents are padding, with `box-sizing: border-box` only when the
+	 *   style sets one: core Paragraph and Heading blocks in a constrained
+	 *   layout get `margin-left/right: auto !important` from core, so a
+	 *   margin indent did nothing, and padding on a content-box element
+	 *   only widened it (measured on Twenty Twenty-Five, #199 review).
+	 *   Logical properties, so the indents follow the text direction.
+	 * - A negative first line indent is a hanging indent: the start padding
+	 *   grows by its size and `text-indent` pulls the first line back. The
+	 *   `hanging` keyword is shorter but too new (Chrome 146).
+	 * - A first line indent turns the First Letter Hang off where it
+	 *   applies (`--typost-hang-on: 0`): the hang lines a swash up with the
+	 *   text edge, which an indented first line no longer starts at. The
+	 *   class rule also beats the editors' hang `text-indent` rules, so the
+	 *   editor and the frontend agree.
+	 * - "Only after the same style" moves the first line indent into a rule
+	 *   for a paragraph that follows one with the same style, as core's Text
+	 *   indent does for `.wp-block-paragraph + .wp-block-paragraph`. A
+	 *   Typography Stylist block carries the class on the inner visual
+	 *   element, so its wrapper is matched with `:has()`; all four pairs of
+	 *   block types are covered.
+	 * - Space before and after are block margins. In a Typography Stylist
+	 *   block they go on the `.wp-block-typost` wrapper and the inner
+	 *   element's margins become 0: the inner margins would collapse with
+	 *   the wrapper's (the larger wins) or, with block padding, add to them.
+	 *   On the wrapper the block's own spacing setting (an inline style)
+	 *   wins, as it does on core blocks, where the class is on the block.
+	 * - Fit-to-width styles write no indents: each line fills the width, and
+	 *   an indent would push line 1 past the edge. Spacing is kept.
+	 *
+	 * Mirrors paragraphLayoutCss() in ps-utils.js; the shared fixture
+	 * `__tests__/fixtures/paragraph-layout-css.json` holds both to the same
+	 * text.
+	 *
+	 * @param array    $props Resolved properties.
+	 * @param float    $hang  The style's normalized hang.
+	 * @param string[] $ids   The style's id, then its legacy id if any.
+	 * @return string CSS rule blocks separated by a blank line, or ''.
+	 */
+	private static function paragraph_layout_css( $props, $hang, $ids ) {
+		$is_fit = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
+		$length = function ( $key, $allow_negative = false ) use ( $props ) {
+			return self::normalize_length( isset( $props[ $key ] ) ? $props[ $key ] : '', $allow_negative );
+		};
+
+		$start   = $is_fit ? '' : $length( 'indentStart' );
+		$end     = $is_fit ? '' : $length( 'indentEnd' );
+		$first   = $is_fit ? '' : $length( 'firstLineIndent', true );
+		$after   = '' !== $first && self::indent_after_same_applies( $props );
+		$before  = $length( 'spaceBefore' );
+		$after_s = $length( 'spaceAfter' );
+
+		$hanging   = '' !== $first && '-' === $first[0] ? substr( $first, 1 ) : '';
+		$pad_start = '' !== $start && '' !== $hanging ? 'calc(' . $start . ' + ' . $hanging . ')' : ( '' !== $start ? $start : $hanging );
+
+		$rules = array();
+		if ( '' !== $pad_start || '' !== $end ) {
+			$rules[] = 'box-sizing: border-box';
+		}
+		if ( '' !== $pad_start ) {
+			$rules[] = 'padding-inline-start: ' . $pad_start;
+		}
+		if ( '' !== $end ) {
+			$rules[] = 'padding-inline-end: ' . $end;
+		}
+		$indent_rules = array();
+		if ( '' !== $first ) {
+			$indent_rules[] = 'text-indent: ' . $first;
+			if ( $hang > 0 ) {
+				$indent_rules[] = '--typost-hang-on: 0';
+			}
+		}
+		if ( ! $after ) {
+			$rules = array_merge( $rules, $indent_rules );
+		}
+		$margins = array();
+		if ( '' !== $before ) {
+			$margins[] = 'margin-block-start: ' . $before;
+		}
+		if ( '' !== $after_s ) {
+			$margins[] = 'margin-block-end: ' . $after_s;
+		}
+		$rules = array_merge( $rules, $margins );
+
+		if ( empty( $rules ) && ! $after ) {
+			return '';
+		}
+
+		$plain   = array();
+		$block   = array();
+		$wrapper = array();
+		$inner   = array();
+		$next    = array();
+		foreach ( $ids as $ref ) {
+			$cls       = '.typost-ps-' . $ref;
+			$s         = '.typost-styled' . str_repeat( $cls, 5 );
+			$w         = '.wp-block-typost:has(> ' . $s . ')';
+			$plain[]   = $cls;
+			$block[]   = $s;
+			$wrapper[] = $w;
+			$inner[]   = '.wp-block-typost > ' . $s;
+			$next[]    = ':is(' . $w . ', ' . $s . ') + ' . $s;
+			$next[]    = ':is(' . $w . ', ' . $s . ') + .wp-block-typost > ' . $s;
+		}
+		// Plain and block-level forms in the same order as selectorSet():
+		// per id, its preview class then its boosted class
+		$main = array();
+		foreach ( $plain as $i => $p ) {
+			$main[] = $p;
+			$main[] = $block[ $i ];
+		}
+
+		$rule = function ( $selectors, $declarations ) {
+			return implode( ",\n", $selectors ) . " {\n    " . implode( ";\n    ", $declarations ) . ";\n}";
+		};
+		$blocks = array();
+		if ( ! empty( $rules ) ) {
+			$blocks[] = $rule( $main, $rules );
+		}
+		if ( ! empty( $margins ) ) {
+			$blocks[] = $rule( $wrapper, $margins );
+			$zero     = array();
+			if ( '' !== $before ) {
+				$zero[] = 'margin-block-start: 0';
+			}
+			if ( '' !== $after_s ) {
+				$zero[] = 'margin-block-end: 0';
+			}
+			$blocks[] = $rule( $inner, $zero );
+		}
+		if ( $after ) {
+			$blocks[] = $rule( $next, $indent_rules );
+		}
+		return implode( "\n\n", $blocks );
 	}
 
 	/**
@@ -2017,8 +2245,39 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Indents and paragraph spacing (#199), each as its stored length. A
+		// fit to width style writes no indents (paragraph_layout_css()), so
+		// its card does not list them.
+		$length_row = function ( $label, $key, $allow_negative = false ) use ( $props, $unsets, $none ) {
+			$value = self::normalize_length( isset( $props[ $key ] ) ? $props[ $key ] : '', $allow_negative );
+			if ( '' !== $value ) {
+				return array( $label, $value, array( $key ) );
+			}
+			return $unsets( $key ) ? array( $label, $none, array( $key ) ) : null;
+		};
+		$indent_rows = array();
+		if ( ! $is_fit ) {
+			$indent_rows[] = $length_row( __( 'Left Indent:', 'typost-paragraph-styles' ), 'indentStart' );
+			$indent_rows[] = $length_row( __( 'Right Indent:', 'typost-paragraph-styles' ), 'indentEnd' );
+			$first_row     = $length_row( __( 'First Line:', 'typost-paragraph-styles' ), 'firstLineIndent', true );
+			if ( null !== $first_row && self::indent_after_same_applies( $props ) ) {
+				/* translators: %s: first line indent, such as "1.5em" */
+				$first_row[1] = sprintf( __( '%s (after the same style only)', 'typost-paragraph-styles' ), $first_row[1] );
+			}
+			$indent_rows[] = $first_row;
+		}
+		$indent_rows    = array_values( array_filter( $indent_rows ) );
+		$paragraph_rows = array_values(
+			array_filter(
+				array(
+					$length_row( __( 'Space Before:', 'typost-paragraph-styles' ), 'spaceBefore' ),
+					$length_row( __( 'Space After:', 'typost-paragraph-styles' ), 'spaceAfter' ),
+				)
+			)
+		);
+
 		// Variable font axes, shown as the sanitizer stored them
-		$axes_display = ! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
+		$axes_display =! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
 
 		// First letter hang (#242)
 		$hang_value   = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;
@@ -2090,6 +2349,12 @@ final class Typost_Paragraph_Styles {
 		}
 		if ( '' !== $wrap_display ) {
 			$html .= $detail( array( array( __( 'Line Breaking:', 'typost-paragraph-styles' ), $wrap_display, array( 'textWrap' ) ) ) );
+		}
+		if ( ! empty( $indent_rows ) ) {
+			$html .= $detail( $indent_rows );
+		}
+		if ( ! empty( $paragraph_rows ) ) {
+			$html .= $detail( $paragraph_rows );
 		}
 
 		return '<div class="typost-ps-style-card-details" data-font-label="' . esc_attr( $font_name ) . '">' . $html . '</div>';
@@ -2355,7 +2620,8 @@ final class Typost_Paragraph_Styles {
 	 * @param bool       $keep_empty Keep the empty values a style based on
 	 *                               another stores to unset an inherited
 	 *                               property (#200): `fontStyle`, `textCase`,
-	 *                               `alignment`, `textWrap` and
+	 *                               `alignment`, `textWrap`, the indents and
+	 *                               spacing (#199) and
 	 *                               `fontVariationSettings` as '', and
 	 *                               `initialHang` as 0. Other keys keep their
 	 *                               empty values either way.
@@ -2489,6 +2755,36 @@ final class Typost_Paragraph_Styles {
 			$clean['textWrap'] = $raw['textWrap'];
 		} elseif ( $keep_empty && isset( $raw['textWrap'] ) && '' === $raw['textWrap'] ) {
 			$clean['textWrap'] = '';
+		}
+
+		// Indents and paragraph spacing (#199): lengths in px or em, zero
+		// or more; none ('') is never stored unless it unsets an inherited
+		// value
+		foreach ( self::SPACING_PROPERTIES as $key ) {
+			if ( ! isset( $raw[ $key ] ) ) {
+				continue;
+			}
+			$length = self::normalize_length( $raw[ $key ] );
+			if ( '' !== $length ) {
+				$clean[ $key ] = $length;
+			} elseif ( $keep_empty && '' === $raw[ $key ] ) {
+				$clean[ $key ] = '';
+			}
+		}
+
+		// First line indent: negative is a hanging indent. "Only after a
+		// paragraph with the same style" is stored only as true, and only
+		// with a positive indent (indent_after_same_applies()).
+		if ( isset( $raw['firstLineIndent'] ) ) {
+			$first = self::normalize_length( $raw['firstLineIndent'], true );
+			if ( '' !== $first ) {
+				$clean['firstLineIndent'] = $first;
+				if ( '-' !== $first[0] && isset( $raw['indentAfterSame'] ) && in_array( $raw['indentAfterSame'], array( true, 1, '1', 'true' ), true ) ) {
+					$clean['indentAfterSame'] = true;
+				}
+			} elseif ( $keep_empty && '' === $raw['firstLineIndent'] ) {
+				$clean['firstLineIndent'] = '';
+			}
 		}
 
 		return $clean;
@@ -2736,6 +3032,11 @@ final class Typost_Paragraph_Styles {
 				unset( $props[ $key ] );
 			}
 		}
+		if ( array_key_exists( 'firstLineIndent', $props ) && '' === self::normalize_length( $props['firstLineIndent'], true ) ) {
+			foreach ( self::BASED_ON_GROUPS['firstLineIndent'] as $key ) {
+				unset( $props[ $key ] );
+			}
+		}
 		foreach ( $props as $key => $value ) {
 			if ( ! self::is_group_key( $key ) && empty( $value ) ) {
 				unset( $props[ $key ] );
@@ -2783,8 +3084,8 @@ final class Typost_Paragraph_Styles {
 	 * `$full` is the whole look; the result keeps what differs from the
 	 * parent's resolved properties and stores the empty value of each
 	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
-	 * fontSize 'inherit', textCase '', alignment ''), so the style still
-	 * does not set it.
+	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent ''), so
+	 * the style still does not set it.
 	 * Used when a style gets its first parent (rebase_properties()). Twin of
 	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
 	 * cases of the shared fixture.
@@ -2833,7 +3134,8 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Whether a key belongs to the size, the case or the alignment group.
+	 * Whether a key belongs to the size, the case, the alignment or the
+	 * first line indent group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool
@@ -2854,13 +3156,22 @@ final class Typost_Paragraph_Styles {
 	 * px), the trio for responsive and fit, and the cap for fit. Case: the
 	 * case value and whether fake small caps are allowed. Alignment (#207):
 	 * 'none' when not set, else the value and the last line alignment of
-	 * justified text. Twin: groupSignature().
+	 * justified text. First line indent (#199): 'none' when not set, else
+	 * the length and whether it applies only after the same style.
+	 * Twin: groupSignature().
 	 *
-	 * @param string $lead  'fontSize', 'textCase' or 'alignment'.
+	 * @param string $lead  'fontSize', 'textCase', 'alignment' or 'firstLineIndent'.
 	 * @param array  $props Properties.
 	 * @return string
 	 */
 	private static function group_signature( $lead, $props ) {
+		if ( 'firstLineIndent' === $lead ) {
+			$first = self::normalize_length( isset( $props['firstLineIndent'] ) ? $props['firstLineIndent'] : '', true );
+			if ( '' === $first ) {
+				return 'none';
+			}
+			return $first . '|' . ( self::indent_after_same_applies( $props ) ? '1' : '0' );
+		}
 		if ( 'alignment' === $lead ) {
 			$alignment = self::normalize_alignment( isset( $props['alignment'] ) ? $props['alignment'] : '' );
 			if ( '' === $alignment ) {
@@ -2914,6 +3225,11 @@ final class Typost_Paragraph_Styles {
 				return abs( (float) $va - (float) $vb ) <= 0.0005;
 			case 'initialHang':
 				return self::normalize_hang( $va ) === self::normalize_hang( $vb );
+			case 'indentStart':
+			case 'indentEnd':
+			case 'spaceBefore':
+			case 'spaceAfter':
+				return self::normalize_length( $va ) === self::normalize_length( $vb );
 			case 'features':
 				$fa = is_array( $va ) ? array_map( 'strval', $va ) : array();
 				$fb = is_array( $vb ) ? array_map( 'strval', $vb ) : array();

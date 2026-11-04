@@ -296,7 +296,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, and line breaking.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, indents, and paragraph spacing.
 
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
@@ -317,6 +317,20 @@ A style can also set how its text is aligned, how wide the spaces between words 
 - A Fit to width style uses none of these settings: fit sets the width of each line itself.
 - A centered or end-aligned style with a First Letter Hang does not hang the first letter, as for a centered block.
 - “Detach Style” keeps the alignment: the block gets it as its own alignment, unless the block already has one. Start and End become left or right, by the text direction. A core Paragraph or Heading block does not keep Justify, because WordPress has no justify alignment for these blocks. Word spacing and line breaking are removed, because a block has no setting to keep them.
+
+#### Indents and paragraph spacing
+
+Since v2.3.6, a style can also set indents and the space before and after a paragraph, as in a paragraph style in InDesign. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+
+- **Left indent** and **Right indent:** move the whole paragraph in from the start or end edge. They follow the text direction: in right-to-left text, such as Arabic or Hebrew, the left indent is on the right.
+- **First line indent:** moves only the first line. A negative value gives a hanging indent: the first line starts at the edge and the other lines are indented, as in a bibliography or a numbered list written as text.
+- **Indent the first line only after a paragraph with the same style:** the book convention. The first paragraph after a heading (or after any paragraph with another style) has no indent, and every next paragraph with the style has one. It matches WordPress's own Text indent setting for paragraphs, which also indents only a paragraph that follows a paragraph. It applies to a positive first line indent only: a hanging indent stays on every paragraph.
+- **Space before** and **Space after:** the space above and below the paragraph. Two spaces that meet do not add up: the larger one is used, as in CSS. Space before also applies to the first block of a page or a group.
+- A block's own settings win: the spacing (margin and padding) in the block's sidebar, and the Text indent setting of a core Paragraph block, override the style's values.
+- Indents and spacing apply to whole paragraphs and headings. When you apply the style to selected text, the selected words do not move. The form says so.
+- A first line indent turns the First Letter Hang off on the paragraphs it indents: the hang lines up a swash capital with the text edge, and an indented first line does not start at the edge. With “only after a paragraph with the same style”, the first paragraph keeps its hang.
+- A Fit to width style uses no indents: fit sets the width of each line itself. Space before and after work.
+- “Detach Style” removes the indents and spacing from the text, because a block has no setting that holds a first line indent, and the block's own spacing settings do not give the same result as the style. Set the block's spacing in its sidebar if you need it after detaching.
 
 In a Typography Stylist block, the Paragraph Style panel in the Quick Feature Toggles works on the selected text, like the other controls there. With text selected, “Save Current Settings as Style” makes the style from the settings of the selected text, and only that text gets the style. A style made from selected text includes the case of that text. It does not include the First Letter Hang, which applies to the whole block. “Update Style” and “Detach Style” work on the style of the selected text. With only the caret in the block, the panel works on the whole block. The Paragraph Style panel in the block sidebar always works on the whole block.
 
