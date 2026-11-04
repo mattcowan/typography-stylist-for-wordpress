@@ -106,7 +106,10 @@ jobs:
           wp-env run cli wp core version -- --extra
           wp-env run cli wp plugin list
       - run: npx playwright install --with-deps chromium firefox
+      # A step timeout, under the job's, fails the step instead of cancelling
+      # the job, so the report and the logs below are still collected.
       - run: npx playwright test
+        timeout-minutes: 30
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v7
