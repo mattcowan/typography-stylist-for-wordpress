@@ -93,7 +93,14 @@ async function select(page, clientId, start, end = start) {
 }
 
 async function openQuickFeatureToggles(page) {
-	await page.getByRole('button', { name: 'Typography Stylist Features' }).click();
+	const button = page.getByRole('button', { name: 'Typography Stylist Features' });
+	// After caret moves with no selection the editor keeps the block toolbar
+	// hidden; Alt+F10 (the editor's "focus the block toolbar" shortcut)
+	// shows it and leaves the caret where it is in the store
+	if (!(await button.isVisible())) {
+		await page.keyboard.press('Alt+F10');
+	}
+	await button.click();
 	const modal = page.locator('.typost-block-modal');
 	await expect(modal).toBeVisible();
 	return modal;
