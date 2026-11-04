@@ -33,8 +33,6 @@ on:
     # Mondays 05:17 UTC (off the hour: scheduled runs on :00 are delayed).
     - cron: '17 5 * * 1'
   workflow_dispatch:
-  push:
-    branches: [ccr-2c530b03-5p9pu3]
 
 permissions:
   contents: read
