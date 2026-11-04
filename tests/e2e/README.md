@@ -113,100 +113,48 @@ This opens the Playwright HTML report in your browser showing:
 
 ## Test Coverage
 
-The E2E test suite covers these critical inline features:
+### `typography-stylist.spec.js` — Quick Feature Toggles on selected text
 
-### Font Size Persistence (`font size persists after apply and close`)
-- Verifies responsive font size applies correctly to selected text
-- Checks data attributes (`data-fontsize`, `data-fontsize-min`, `data-fontsize-max`)
-- Validates CSS `clamp()` function in computed styles
-- Ensures styling persists after closing Quick Features Toggle popover
+The block's Quick Feature Toggles apply each control as it changes (debounced);
+there is no Apply button. Each test inserts a Typography Stylist block with
+"Hello Beautiful World", selects a word with the keyboard, changes a control,
+and checks the block's stored content (what gets saved):
 
-### Font Weight Persistence (`font weight persists after apply and close`)
-- Verifies font weight (e.g., 700) applies to selection only
-- Checks `data-fontweight` attribute
-- Validates `font-weight` CSS property
-- Ensures no block-wide application
+- **Persistence:** responsive font size (`data-fontsize="responsive"`, the
+  three slider values, a `clamp()`), font weight, letter spacing, line height
+  and font family each style only the selection and stay after the dialog
+  closes. The font family test adds a font definition for Georgia through the
+  REST API and deletes it afterwards, so it needs no font files.
+- **Sequential application:** line height on one word, then letter spacing on
+  another, leaves each word with only its own property.
+- **Detection:** letter spacing, line height, font weight, and a font size
+  plus an OpenType feature (`ss01`) on the same word read back into the
+  controls when the word is selected again.
+- **Collapsed caret:** a new letter spacing with the caret inside a styled
+  word updates that span in place.
+- **Partial selection:** a new letter spacing on part of a styled word splits
+  the span into three.
 
-### Letter Spacing Persistence (`letter spacing persists after apply and close`)
-- Verifies letter spacing applies to selected text only
-- Validates `letter-spacing` CSS property
-- Ensures styling persists after popover closes
+### `paragraph-style-selection-scope.spec.js` — #303
 
-### Line Height Persistence (`line height persists after apply and close`)
-- Verifies line height applies to selection only
-- Validates `line-height` CSS property
-- Ensures no block-wide application
-
-### Font Family Persistence (`font family persists after apply and close`)
-- Verifies font family applies to selection only
-- Validates `font-family` CSS property
-- Tests with available custom fonts
-
-### Sequential Application (`sequential feature application works correctly`)
-- **Critical test** for the bug that affected multiple controls
-- Applies line-height to one word, then letter-spacing to another
-- Verifies each word has ONLY its applied feature
-- Ensures no cross-contamination between selections
+The Paragraph Style panel in the Quick Feature Toggles works on the selected
+text, not the whole block. Tests tagged `@firefox` also run in Firefox.
 
 ## Writing New Tests
 
-### Test Structure
+Follow the helpers in the spec files:
 
-Tests follow this pattern:
-
-```javascript
-test('descriptive test name', async ({ page }) => {
-  // 1. Select text in the editor
-  const editor = page.locator('[data-type="typost/block"] [contenteditable]').first();
-  // ... selection logic
-
-  // 2. Open Quick Features Toggle
-  await page.click('button[aria-label="Quick Features Toggle"]');
-  await page.waitForSelector('.typost-quick-features-popover');
-
-  // 3. Adjust controls
-  await page.fill('input[type="number"]', '20');
-
-  // 4. Click Apply button
-  await page.click('button:has-text("Apply Font Size")');
-
-  // 5. Close popover
-  await page.click('.editor-styles-wrapper');
-
-  // 6. Verify styling persists
-  const styledSpan = editor.locator('span.typost-styled');
-  await expect(styledSpan).toHaveText('Expected Text');
-  await expect(styledSpan).toHaveAttribute('data-fontsize', 'responsive');
-});
-```
-
-### Best Practices
-
-1. **Use `waitForSelector()` before interacting** with elements to avoid race conditions
-2. **Add `waitForTimeout(500)` after clicking Apply** to allow React state updates
-3. **Use specific selectors** like `button:has-text("Apply Font Size")` instead of generic classes
-4. **Test persistence** by closing the popover and checking styles remain
-5. **Use data attributes** in assertions when available (more reliable than computed styles)
-6. **Test edge cases** like sequential application to catch state management bugs
-
-### Locator Strategies
-
-```javascript
-// By ARIA label (preferred for accessibility)
-await page.click('button[aria-label="Quick Features Toggle"]');
-
-// By text content (good for buttons)
-await page.click('button:has-text("Apply Font Size")');
-
-// By data attribute (preferred for block types)
-const editor = page.locator('[data-type="typost/block"]');
-
-// By CSS class (use sparingly, classes can change)
-const popover = page.locator('.typost-quick-features-popover');
-
-// By input type and nth() for multiple similar elements
-const minInput = page.locator('input[type="number"]').nth(0);
-```
+- Insert blocks through the editor store (`wp.blocks.createBlock` +
+  `insertBlocks`) instead of the inserter UI.
+- Select text with the keyboard, then wait until the store reports the
+  selection (`getSelectionStart()` / `getSelectionEnd()`).
+- Wait for results with `expect.poll()` on the block's stored content instead
+  of fixed `waitForTimeout()` delays; the controls apply after a debounce.
+- Prefer roles and labels (`getByRole('spinbutton', { name: 'Letter Spacing
+  (for selected text)' })`) over CSS classes.
+- Make each test independent: create what it needs and delete it afterwards
+  (the draft post, styles, fonts). The suite runs against any WordPress with
+  the plugin active, including a fresh `wp-env` site.
 
 ## Configuration
 
