@@ -13,6 +13,13 @@
  * source site. A style with a parent is written with its own properties
  * only, exactly as stored, so inheritance survives the trip.
  *
+ * GREP styles (#196) are written as `"grepRules": [{"pattern": "acronyms",
+ * "style": "s3"}, {"pattern": "custom", "regex": "…", "style": "s4"}]`:
+ * the style a rule applies is a file key too (and is exported with it),
+ * and a built-in pattern is written by name, so a later release can fix
+ * it. A style written before #196 has no `grepRules` key; importing it
+ * over an existing style keeps that style's rules.
+ *
  * Import gives every added style a new ID and saves every style in one
  * write, after a dry run that checks names, parents and chains.
  *
@@ -132,25 +139,37 @@ final class Typost_PS_Transfer {
 		}
 
 		// A style needs the styles it is based on, or it cannot be imported
-		// as it looks here.
+		// as it looks here, and the styles its GREP rules apply (#196).
+		// Added styles can need others in turn, so this runs until nothing
+		// is added.
 		$notes    = array();
 		$selected = $picked;
-		foreach ( array_keys( $picked ) as $id ) {
+		$queue    = array_keys( $picked );
+		while ( ! empty( $queue ) ) {
+			$id      = array_shift( $queue );
 			$current = $by_id[ $id ];
-			$seen    = array( $id => true );
-			while ( ! empty( $current['basedOn'] ) && isset( $by_id[ intval( $current['basedOn'] ) ] ) && ! isset( $seen[ intval( $current['basedOn'] ) ] ) ) {
-				$parent_id          = intval( $current['basedOn'] );
-				$seen[ $parent_id ] = true;
-				if ( ! isset( $selected[ $parent_id ] ) ) {
-					$selected[ $parent_id ] = true;
+			if ( ! empty( $current['basedOn'] ) && isset( $by_id[ intval( $current['basedOn'] ) ] ) && ! isset( $selected[ intval( $current['basedOn'] ) ] ) ) {
+				$parent_id              = intval( $current['basedOn'] );
+				$selected[ $parent_id ] = true;
+				$queue[]                = $parent_id;
+				$notes[]                = sprintf(
+					/* translators: 1: name of the style added to the export, 2: name of the style based on it */
+					__( '“%1$s” was added because “%2$s” is based on it.', 'typost-paragraph-styles' ),
+					$by_id[ $parent_id ]['name'],
+					$current['name']
+				);
+			}
+			foreach ( Typost_PS_Grep::target_style_ids( isset( $current['grepRules'] ) ? $current['grepRules'] : array() ) as $target_id ) {
+				if ( isset( $by_id[ $target_id ] ) && ! isset( $selected[ $target_id ] ) ) {
+					$selected[ $target_id ] = true;
+					$queue[]                = $target_id;
 					$notes[]                = sprintf(
-						/* translators: 1: name of the style added to the export, 2: name of the style based on it */
-						__( '“%1$s” was added because “%2$s” is based on it.', 'typost-paragraph-styles' ),
-						$by_id[ $parent_id ]['name'],
+						/* translators: 1: name of the style added to the export, 2: name of the style whose GREP rule applies it */
+						__( '“%1$s” was added because a GREP rule of “%2$s” applies it.', 'typost-paragraph-styles' ),
+						$by_id[ $target_id ]['name'],
 						$current['name']
 					);
 				}
-				$current = $by_id[ $parent_id ];
 			}
 		}
 
@@ -174,18 +193,47 @@ final class Typost_PS_Transfer {
 			$properties = null === $parent_key
 				? Typost_Paragraph_Styles::compact_properties( Typost_Paragraph_Styles::resolve_properties( $style, $styles ) )
 				: ( isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array() );
-			$out[]      = array(
+			$entry      = array(
 				'key'        => $keys[ intval( $style['id'] ) ],
 				'name'       => (string) $style['name'],
 				'basedOn'    => $parent_key,
 				'properties' => self::export_fonts( $properties, $fonts, null !== $parent_key ),
 			);
+			$rules = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
+			if ( ! empty( $rules ) ) {
+				$entry['grepRules'] = $rules;
+			}
+			$out[] = $entry;
 		}
 
 		return array(
 			'data'  => $out,
 			'notes' => $notes,
 		);
+	}
+
+	/**
+	 * A style's GREP rules with file style keys (#196). A rule whose style
+	 * is not in the file (it was deleted) is left out.
+	 *
+	 * @param mixed $rules Stored rules.
+	 * @param array $keys  Style ID => file key.
+	 * @return array[]
+	 */
+	private static function export_grep_rules( $rules, $keys ) {
+		$out = array();
+		foreach ( is_array( $rules ) ? $rules : array() as $rule ) {
+			if ( ! is_array( $rule ) || empty( $rule['styleId'] ) || ! isset( $rule['pattern'], $keys[ intval( $rule['styleId'] ) ] ) ) {
+				continue;
+			}
+			$entry = array( 'pattern' => (string) $rule['pattern'] );
+			if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+				$entry['regex'] = isset( $rule['regex'] ) ? (string) $rule['regex'] : '';
+			}
+			$entry['style'] = $keys[ intval( $rule['styleId'] ) ];
+			$out[]          = $entry;
+		}
+		return $out;
 	}
 
 	/**
@@ -247,16 +295,53 @@ final class Typost_PS_Transfer {
 			if ( ! is_array( $properties ) ) {
 				return $invalid;
 			}
+			// GREP rules (#196): null when the file has none (a file written
+			// before #196 keeps an overwritten style's own rules)
+			$grep_rules = null;
+			if ( array_key_exists( 'grepRules', $raw ) ) {
+				$grep_rules = $raw['grepRules'];
+				if ( ! is_array( $grep_rules ) || array_values( $grep_rules ) !== $grep_rules || count( $grep_rules ) > Typost_PS_Grep::MAX_RULES ) {
+					return $invalid;
+				}
+				foreach ( $grep_rules as $rule ) {
+					if ( ! is_array( $rule ) || ! isset( $rule['pattern'], $rule['style'] ) || ! is_string( $rule['pattern'] ) || ! is_string( $rule['style'] ) || $rule['style'] === $raw['key'] ) {
+						return $invalid;
+					}
+					if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] && ( ! isset( $rule['regex'] ) || ! is_string( $rule['regex'] ) ) ) {
+						return $invalid;
+					}
+				}
+			}
 			$items[ $raw['key'] ] = array(
 				'key'        => $raw['key'],
 				'name'       => $name,
 				'basedOn'    => $based_on,
 				'properties' => $properties,
+				'grepRules'  => $grep_rules,
 			);
 		}
 		foreach ( $items as $item ) {
 			if ( null !== $item['basedOn'] && ! isset( $items[ $item['basedOn'] ] ) ) {
 				return $invalid;
+			}
+			foreach ( is_array( $item['grepRules'] ) ? $item['grepRules'] : array() as $index => $rule ) {
+				if ( ! isset( $items[ $rule['style'] ] ) ) {
+					return $invalid;
+				}
+				// A custom pattern runs on every page render that uses the
+				// style, so it gets the same checks as Save, and one that
+				// fails rejects the whole file.
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					$error = Typost_PS_Grep::validate_pattern( $rule['regex'] );
+					if ( '' !== $error ) {
+						return new WP_Error(
+							'typost_import_invalid_file',
+							/* translators: 1: style name, 2: rule number, 3: why the pattern is rejected */
+							sprintf( __( '“%1$s”, GREP rule %2$d: %3$s Nothing was saved.', 'typost-paragraph-styles' ), $item['name'], $index + 1, $error ),
+							array( 'status' => 400 )
+						);
+					}
+				}
 			}
 		}
 
@@ -349,8 +434,32 @@ final class Typost_PS_Transfer {
 		foreach ( $items as $item ) {
 			$by_key[ $item['key'] ] = $item;
 		}
-		$rows = array();
+		$rows   = array();
+		$notes  = array();
+		$labels = Typost_PS_Grep::pattern_labels();
 		foreach ( $items as $item ) {
+			// GREP rules (#196): what each rule applies, and every custom
+			// pattern listed on its own, because it runs on each page render
+			$grep = array();
+			foreach ( is_array( $item['grepRules'] ) ? $item['grepRules'] : array() as $rule ) {
+				$target = $by_key[ $rule['style'] ]['name'];
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					/* translators: %s: a regular expression */
+					$pattern_label = sprintf( __( 'Custom (%s)', 'typost-paragraph-styles' ), $rule['regex'] );
+					$notes[]       = sprintf(
+						/* translators: 1: style name, 2: a regular expression, 3: name of the style applied to its matches */
+						__( '“%1$s” has a custom GREP pattern, which runs on every page that uses the style: %2$s (applies “%3$s”).', 'typost-paragraph-styles' ),
+						$item['name'],
+						$rule['regex'],
+						$target
+					);
+				} else {
+					$pattern_label = isset( $labels[ $rule['pattern'] ] ) ? $labels[ $rule['pattern'] ] : $rule['pattern'];
+				}
+				/* translators: 1: a GREP pattern, such as "Acronyms (NASA)", 2: the style applied to its matches */
+				$grep[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $pattern_label, $target );
+			}
+
 			$lower    = self::lower( $item['name'] );
 			$existing = isset( $by_name[ $lower ] ) ? $by_name[ $lower ] : null;
 			$affected = array();
@@ -369,14 +478,37 @@ final class Typost_PS_Transfer {
 				'action'        => $defaults[ $item['key'] ]['action'],
 				'suggestedName' => $defaults[ $item['key'] ]['suggestedName'],
 				'affected'      => $affected,
+				'grep'          => $grep,
 			);
 		}
 
-		$plan = $this->plan( $items, $defaults, $fonts );
+		$plan     = $this->plan( $items, $defaults, $fonts );
+		$warnings = is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'];
+		if ( ! empty( $notes ) || self::file_has_grep_rules( $items ) ) {
+			if ( ! Typost_Paragraph_Styles::grep_supported() ) {
+				$warnings[] = __( 'GREP styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated.', 'typost-paragraph-styles' );
+			}
+		}
 		return array(
 			'items'    => $rows,
-			'warnings' => is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'],
+			'notes'    => $notes,
+			'warnings' => $warnings,
 		);
+	}
+
+	/**
+	 * Whether any style in the file has GREP rules.
+	 *
+	 * @param array[] $items read_items().
+	 * @return bool
+	 */
+	private static function file_has_grep_rules( $items ) {
+		foreach ( $items as $item ) {
+			if ( ! empty( $item['grepRules'] ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -617,6 +749,59 @@ final class Typost_PS_Transfer {
 			$error = Typost_Paragraph_Styles::based_on_error( $working, intval( $style['id'] ), intval( $style['basedOn'] ) );
 			if ( '' !== $error ) {
 				return self::choice_error( (string) $style['name'], $error );
+			}
+		}
+
+		// GREP rules (#196), once every style has its ID: each rule's style
+		// is the imported style, or the style on this site that stands in
+		// for a skipped one. A rule whose style is not imported is left out.
+		$built_in = Typost_PS_Grep::built_in_patterns();
+		foreach ( $imported_keys as $key => $name ) {
+			$file_rules = $by_key[ $key ]['grepRules'];
+			if ( null === $file_rules ) {
+				continue;
+			}
+			$own_id = $key_to_id[ $key ];
+			$rules  = array();
+			foreach ( $file_rules as $index => $rule ) {
+				if ( Typost_PS_Grep::CUSTOM !== $rule['pattern'] && ! isset( $built_in[ $rule['pattern'] ] ) ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: pattern name from the file */
+						__( '“%1$s”, GREP rule %2$d: this site does not know the pattern “%3$s”, so the rule is left out.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$rule['pattern']
+					);
+					continue;
+				}
+				$target_id = ! empty( $key_to_id[ $rule['style'] ] ) ? intval( $key_to_id[ $rule['style'] ] ) : 0;
+				if ( ! $target_id || $target_id === $own_id ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: name of the style the rule applies */
+						__( '“%1$s”, GREP rule %2$d: “%3$s” is not imported, so the rule is left out.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$by_key[ $rule['style'] ]['name']
+					);
+					continue;
+				}
+				$clean = array(
+					'pattern' => $rule['pattern'],
+					'styleId' => $target_id,
+				);
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					$clean['regex'] = $rule['regex'];
+				}
+				$rules[] = $clean;
+			}
+			foreach ( $working as $i => $style ) {
+				if ( intval( $style['id'] ) === $own_id ) {
+					if ( empty( $rules ) ) {
+						unset( $working[ $i ]['grepRules'] );
+					} else {
+						$working[ $i ]['grepRules'] = $rules;
+					}
+				}
 			}
 		}
 

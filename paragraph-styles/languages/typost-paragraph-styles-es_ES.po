@@ -778,3 +778,231 @@ msgstr "Saltos de línea"
 #: includes/admin-tab.php:279
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr "Equilibrar las líneas da longitudes parecidas a las líneas de un título corto. Evitar últimas líneas cortas es adecuado para el texto principal. Un navegador que no admite la opción usa saltos de línea normales."
+
+#: includes/class-typost-ps-grep.php:121
+msgid "Acronyms (NASA)"
+msgstr "Siglas (NASA)"
+
+#: includes/class-typost-ps-grep.php:122
+msgid "Fractions (1/2, not dates)"
+msgstr "Fracciones (1/2, no fechas)"
+
+#: includes/class-typost-ps-grep.php:123
+msgid "Ordinals (the “st” in 1st)"
+msgstr "Ordinales (el «st» de 1st)"
+
+#: includes/class-typost-ps-grep.php:124
+msgid "Numbers"
+msgstr "Números"
+
+#: includes/class-typost-ps-grep.php:125
+msgid "Ampersand (&)"
+msgstr "Et (&)"
+
+#: includes/class-typost-ps-grep.php:126
+msgid "Custom pattern"
+msgstr "Patrón personalizado"
+
+#: includes/class-typost-ps-grep.php:170
+#: assets/js/admin.js:1282
+msgid "Enter a pattern."
+msgstr "Introduce un patrón."
+
+#: includes/class-typost-ps-grep.php:173
+msgid "The pattern is not valid UTF-8 text."
+msgstr "El patrón no es un texto UTF-8 válido."
+
+#: includes/class-typost-ps-grep.php:178
+#: assets/js/admin.js:1286
+#, php-format
+msgid "The pattern is too long. Use %d characters or fewer."
+msgstr "El patrón es demasiado largo. Usa %d caracteres como máximo."
+
+#: includes/class-typost-ps-grep.php:181
+msgid "The pattern contains a control character, such as a tab or a line break. Use \\t or \\n instead."
+msgstr "El patrón contiene un carácter de control, como un tabulador o un salto de línea. Usa \\t o \\n en su lugar."
+
+#: includes/class-typost-ps-grep.php:187
+#, php-format
+msgid "The pattern uses “%s”, which GREP styles do not support. Patterns must work the same in PHP and in the browser."
+msgstr "El patrón usa «%s», que los estilos GREP no admiten. Los patrones deben funcionar igual en PHP y en el navegador."
+
+#: includes/class-typost-ps-grep.php:193
+#, php-format
+msgid "The pattern is not valid: %s"
+msgstr "El patrón no es válido: %s"
+
+#: includes/class-typost-ps-grep.php:197
+msgid "The pattern takes too long on some text, so it would be turned off. Make it simpler, for example without a repeated group inside a repeated group."
+msgstr "El patrón tarda demasiado con algunos textos, así que se desactivaría. Simplifícalo, por ejemplo sin un grupo repetido dentro de otro grupo repetido."
+
+#: includes/class-typost-ps-grep.php:468
+msgid "(after a lookahead or lookbehind)"
+msgstr "(después de una aserción de anticipación o retroceso)"
+
+#: includes/class-typost-ps-grep.php:617
+msgid "GREP styles must be a list of rules."
+msgstr "Los estilos GREP deben ser una lista de reglas."
+
+#: includes/class-typost-ps-grep.php:622
+#, php-format
+msgid "A style can have %d GREP rules at most."
+msgstr "Un estilo puede tener %d reglas GREP como máximo."
+
+#: includes/class-typost-ps-grep.php:644
+msgid "A GREP rule is not valid."
+msgstr "Una regla GREP no es válida."
+
+#: includes/class-typost-ps-grep.php:648
+#: assets/js/admin.js:1278
+msgid "Choose a pattern for each GREP rule."
+msgstr "Elige un patrón para cada regla GREP."
+
+#: includes/class-typost-ps-grep.php:653
+#: assets/js/admin.js:1296
+msgid "Choose a style for each GREP rule."
+msgstr "Elige un estilo para cada regla GREP."
+
+#: includes/class-typost-ps-grep.php:656
+msgid "A GREP rule cannot apply the style it belongs to. Choose another style."
+msgstr "Una regla GREP no puede aplicar el estilo al que pertenece. Elige otro estilo."
+
+#: includes/class-typost-ps-grep.php:666
+msgid "Only administrators can add or change a custom GREP pattern. Choose a built-in pattern."
+msgstr "Solo los administradores pueden añadir o cambiar un patrón GREP personalizado. Elige un patrón integrado."
+
+#: paragraph-styles.php:2653
+#: includes/class-typost-ps-transfer.php:448
+#, php-format
+msgid "Custom (%s)"
+msgstr "Personalizado (%s)"
+
+#: paragraph-styles.php:2458
+#: includes/class-typost-ps-transfer.php:460
+#, php-format
+msgid "%1$s → %2$s"
+msgstr "%1$s → %2$s"
+
+#: paragraph-styles.php:2461
+msgid "GREP styles:"
+msgstr "Estilos GREP:"
+
+#: includes/admin-tab.php:331
+msgid "GREP styles"
+msgstr "Estilos GREP"
+
+#: includes/admin-tab.php:333
+msgid "Apply another style to the text that matches a pattern, wherever this style is used on a whole block. The saved text does not change. Where two rules match the same text, the rule higher in the list wins. Text in fit to width blocks and in code is not matched."
+msgstr "Aplica otro estilo al texto que coincide con un patrón, allí donde este estilo se use en un bloque entero. El texto guardado no cambia. Cuando dos reglas coinciden con el mismo texto, gana la regla más alta de la lista. No se buscan coincidencias en el texto de los bloques ajustados al ancho ni en el código."
+
+#: includes/admin-tab.php:336
+msgid "No GREP rules."
+msgstr "No hay reglas GREP."
+
+#: includes/admin-tab.php:338
+msgid "Add GREP rule"
+msgstr "Añadir regla GREP"
+
+#: includes/class-typost-ps-transfer.php:168
+#, php-format
+msgid "“%1$s” was added because a GREP rule of “%2$s” applies it."
+msgstr "Se ha añadido «%1$s» porque una regla GREP de «%2$s» lo aplica."
+
+#: includes/class-typost-ps-transfer.php:340
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: %3$s Nothing was saved."
+msgstr "«%1$s», regla GREP %2$d: %3$s No se ha guardado nada."
+
+#: includes/class-typost-ps-transfer.php:451
+#, php-format
+msgid "“%1$s” has a custom GREP pattern, which runs on every page that uses the style: %2$s (applies “%3$s”)."
+msgstr "«%1$s» tiene un patrón GREP personalizado, que se ejecuta en cada página que usa el estilo: %2$s (aplica «%3$s»)."
+
+#: includes/class-typost-ps-transfer.php:489
+msgid "GREP styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated."
+msgstr "Los estilos GREP necesitan WordPress 6.9 o posterior. Se importan, pero no tienen efecto en este sitio hasta que se actualice WordPress."
+
+#: includes/class-typost-ps-transfer.php:770
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: this site does not know the pattern “%3$s”, so the rule is left out."
+msgstr "«%1$s», regla GREP %2$d: este sitio no conoce el patrón «%3$s», así que la regla se omite."
+
+#: includes/class-typost-ps-transfer.php:781
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: “%3$s” is not imported, so the rule is left out."
+msgstr "«%1$s», regla GREP %2$d: «%3$s» no se importa, así que la regla se omite."
+
+#: assets/js/admin.js:1006
+msgid "Pattern"
+msgstr "Patrón"
+
+#: assets/js/admin.js:1022
+msgid "Regular expression"
+msgstr "Expresión regular"
+
+#: assets/js/admin.js:1035
+msgid "JavaScript-style syntax without slashes or flags, for example \\b[A-Z]{2,}\\b. Matching is case-sensitive."
+msgstr "Sintaxis de tipo JavaScript sin barras ni modificadores, por ejemplo \\b[A-Z]{2,}\\b. Distingue mayúsculas y minúsculas."
+
+#: assets/js/admin.js:1036
+msgid "Only administrators can change a custom pattern."
+msgstr "Solo los administradores pueden cambiar un patrón personalizado."
+
+#: assets/js/admin.js:1045
+msgid "Apply style"
+msgstr "Aplicar estilo"
+
+#: assets/js/admin.js:1047
+msgid "Choose a style"
+msgstr "Elige un estilo"
+
+#: assets/js/admin.js:1069
+msgid "Move up"
+msgstr "Subir"
+
+#: assets/js/admin.js:1070
+msgid "Move down"
+msgstr "Bajar"
+
+#: assets/js/admin.js:1071
+msgid "Remove"
+msgstr "Quitar"
+
+#: assets/js/admin.js:1110
+#, js-format
+msgid "GREP rule %d"
+msgstr "Regla GREP %d"
+
+#: assets/js/admin.js:1122
+#, js-format
+msgid "Move rule %d up"
+msgstr "Subir la regla %d"
+
+#: assets/js/admin.js:1127
+#, js-format
+msgid "Move rule %d down"
+msgstr "Bajar la regla %d"
+
+#: assets/js/admin.js:1132
+#, js-format
+msgid "Remove rule %d"
+msgstr "Quitar la regla %d"
+
+#: assets/js/admin.js:1292
+#, js-format
+msgid "The pattern is not valid in the browser: %s"
+msgstr "El patrón no es válido en el navegador: %s"
+
+#: assets/js/admin.js:1670
+#, js-format
+msgid "GREP rule %d added."
+msgstr "Regla GREP %d añadida."
+
+#: assets/js/admin.js:1687
+#, js-format
+msgid "Rule moved to position %d."
+msgstr "Regla movida a la posición %d."
+
+#: assets/js/admin.js:1697
+msgid "GREP rule removed."
+msgstr "Regla GREP quitada."

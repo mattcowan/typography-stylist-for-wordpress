@@ -723,6 +723,10 @@
 					notes.push(formatString(l10n.overwriteAffects, [item.affected.join(', ')]));
 				}
 			}
+			// GREP styles (#196): what each rule applies
+			if (Array.isArray(item.grep) && item.grep.length) {
+				notes.push(formatString(l10n.grepRules, [item.grep.join('; ')]));
+			}
 			if (notes.length) {
 				nameCell.appendChild(el('span', { id: noteId, class: 'typost-import-note' }, notes.join(' ')));
 			}
