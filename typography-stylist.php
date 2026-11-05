@@ -2212,6 +2212,8 @@ class Typost {
      * @return string The HTML, with the settings on the wrapper.
      */
     public function add_block_support_attributes($block_content, $block) {
+        // A block with no attributes has no sidebar settings: core would give it
+        // only its generated class, which is dropped below
         if (!is_string($block_content) || !is_array($block)
             || !isset($block['blockName']) || 'typost/block' !== $block['blockName']
             || empty($block['attrs']) || !is_array($block['attrs'])
@@ -2229,7 +2231,9 @@ class Typost {
         // CSS does not use it, so a block with nothing set stays as it was saved
         $classes = array_diff($classes, array('', 'wp-block-typost', 'wp-block-typost-block'));
         $style = isset($support['style']) ? trim((string) $support['style']) : '';
-        // WordPress before 7.0 has no anchor support on the server
+        // WordPress before 7.0 has no anchor support on the server. block.json
+        // declares supports.anchor, so the attribute is the block's own, and it is
+        // escaped below
         $id = !empty($support['id']) ? $support['id'] : (isset($block['attrs']['anchor']) ? $block['attrs']['anchor'] : '');
         if (empty($classes) && '' === $style && '' === (string) $id) {
             return $block_content;
