@@ -54,3 +54,6 @@ tests/e2e-sr/auth.json
 test-results/sr-logs/
 tests/e2e-sr/logs/
 playwright-report-sr/
+
+# wp-env local overrides (the weekly compatibility workflow writes one too)
+.wp-env.override.json

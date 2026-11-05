@@ -393,7 +393,9 @@ class Typost {
         // Editor JavaScript
         wp_enqueue_script(
             'typost-block-editor',
-            TYPOST_PLUGIN_URL . "assets/js/block-editor{$suffix}.js",
+            // Always the built file: the source holds require() and JSX, so a
+            // browser cannot run it, with SCRIPT_DEBUG on or off.
+            TYPOST_PLUGIN_URL . "assets/js/block-editor.min.js",
             array(
                 'typost-editor-font-kits',
                 'wp-blocks',

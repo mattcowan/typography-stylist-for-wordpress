@@ -8,6 +8,7 @@ https://github.com/mattcowan/typography-stylist-for-wordpress/releases
 == Changelog ==
 
 = 2.3.6 =
+* **Fixed: the inline editor did not start with `SCRIPT_DEBUG` on.** The plugin loaded the source of its script, which a browser cannot run. It now always loads the built file.
 * **Fixed: a Typography Stylist block's own settings now show on the published page.** The text color, background, margin, padding, line height, alignment, HTML anchor and additional CSS class in the block's sidebar showed in the editor only. Saved content does not change. A saved block that has one of these settings now shows it on the published page, so its look can change after this update.
 
 = 2.3.5 =
