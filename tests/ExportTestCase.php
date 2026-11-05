@@ -75,6 +75,9 @@ abstract class ExportTestCase extends TestCase {
 
         $this->site = new FakeTypost();
 
+        // No theme palette unless a test sets one (#215)
+        $this->setPalette(array());
+
         // save_styles() clears core's font detection cache through the
         // Typost singleton when the class is loaded (another test may have
         // loaded it).
@@ -86,7 +89,20 @@ abstract class ExportTestCase extends TestCase {
         }
     }
 
+    /**
+     * The theme color palette the module reads (#215), set on its per-request
+     * cache so no WordPress global settings are needed.
+     *
+     * @param array[] $entries {slug, name, color, origin}
+     */
+    protected function setPalette(array $entries) {
+        $property = (new \ReflectionClass(\Typost_Paragraph_Styles::class))->getProperty('color_palette');
+        $property->setAccessible(true);
+        $property->setValue(null, $entries);
+    }
+
     protected function tearDown(): void {
+        $this->setPalette(array());
         if (class_exists('Typost')) {
             $property = (new \ReflectionClass(\Typost::class))->getProperty('instance');
             $property->setAccessible(true);

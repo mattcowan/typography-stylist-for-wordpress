@@ -546,6 +546,20 @@
 					"firstLineIndent": "-1em"
 				}
 			}
+		},
+		{
+			"label": "text color inherits on its own and the outline as a group (#215): a child's own outline drops the parent's outline color and position",
+			"styles": [
+				{ "id": 1, "name": "Display", "properties": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" } },
+				{ "id": 2, "name": "Display Thin", "basedOn": 1, "properties": { "textStrokeWidth": 0.5 } },
+				{ "id": 3, "name": "Display Plain", "basedOn": 1, "properties": { "textColor": "", "textStrokeWidth": 0 } },
+				{ "id": 4, "name": "Display Dark", "basedOn": 1, "properties": { "textColor": "#111111" } }
+			],
+			"expected": {
+				"2": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 0.5 },
+				"3": {},
+				"4": { "textColor": "#111111", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" }
+			}
 		}
 	],
 	"equality": [
@@ -776,7 +790,12 @@
 		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false },
 		{ "label": "an indent written two ways", "key": "indentStart", "a": {"indentStart": "1.50em"}, "b": {"indentStart": "1.5em"}, "equal": true },
 		{ "label": "no space before and an empty one", "key": "spaceBefore", "a": {"spaceBefore": ""}, "b": {}, "equal": true },
-		{ "label": "px and em are different spacing", "key": "spaceAfter", "a": {"spaceAfter": "16px"}, "b": {"spaceAfter": "1em"}, "equal": false }
+		{ "label": "px and em are different spacing", "key": "spaceAfter", "a": {"spaceAfter": "16px"}, "b": {"spaceAfter": "1em"}, "equal": false },
+		{ "label": "text colors compare normalized (#215)", "key": "textColor", "a": { "textColor": "#ABC" }, "b": { "textColor": "#aabbcc" }, "equal": true },
+		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false },
+		{ "label": "a palette color with another saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#990000" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "a palette color with no saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "two palette colors with the same fallback differ (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "var:preset|color|accent-2|#cc0000" }, "equal": false }
 	],
 	"css": [
 		{
@@ -990,6 +1009,30 @@
 			"expected": {
 				"firstLineIndent": "1.5em"
 			}
+		},
+		{
+			"label": "outline (#215): another position is the whole group; a color the look lacks is unset with ''",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "#000000" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind", "textColor": "#111111" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textColor": "" }
+		},
+		{
+			"label": "outline (#215): no outline in the look unsets the parent's with 0",
+			"full": {},
+			"parent": { "textStrokeWidth": 2 },
+			"expected": { "textStrokeWidth": 0 }
+		},
+		{
+			"label": "palette colors (#215 review): a new fallback after a theme change is no override, for the text color and the outline",
+			"full": { "textColor": "var:preset|color|accent-1|#990000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee" },
+			"parent": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base" },
+			"expected": {}
+		},
+		{
+			"label": "palette colors (#215 review): another outline slug is the whole group",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee", "textStrokePosition": "behind" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" }
 		}
 	]
 }

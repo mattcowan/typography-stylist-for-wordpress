@@ -781,102 +781,6 @@ msgstr ""
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr ""
 
-#: includes/admin-tab.php:293
-msgid "Left indent"
-msgstr ""
-
-#: includes/admin-tab.php:294
-msgid "Left indent unit"
-msgstr ""
-
-#: includes/admin-tab.php:301
-msgid "Right indent"
-msgstr ""
-
-#: includes/admin-tab.php:302
-msgid "Right indent unit"
-msgstr ""
-
-#: includes/admin-tab.php:309
-msgid "First line indent"
-msgstr ""
-
-#: includes/admin-tab.php:310
-msgid "First line indent unit"
-msgstr ""
-
-#: includes/admin-tab.php:313
-msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
-msgstr ""
-
-#: includes/admin-tab.php:318
-msgid "Space before"
-msgstr ""
-
-#: includes/admin-tab.php:319
-msgid "Space before unit"
-msgstr ""
-
-#: includes/admin-tab.php:326
-msgid "Space after"
-msgstr ""
-
-#: includes/admin-tab.php:327
-msgid "Space after unit"
-msgstr ""
-
-#: includes/admin-tab.php:334
-msgid "Indents and spacing"
-msgstr ""
-
-#: includes/admin-tab.php:335
-msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
-msgstr ""
-
-#: includes/admin-tab.php:336
-msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
-msgstr ""
-
-#: includes/admin-tab.php:356
-msgid "Indent the first line only after a paragraph with the same style"
-msgstr ""
-
-#: includes/admin-tab.php:357
-msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
-msgstr ""
-
-#: paragraph-styles.php:2260
-msgid "Left Indent:"
-msgstr ""
-
-#: paragraph-styles.php:2261
-msgid "Right Indent:"
-msgstr ""
-
-#: paragraph-styles.php:2262
-msgid "First Line:"
-msgstr ""
-
-#: paragraph-styles.php:2265
-#, php-format
-msgid "%s (after the same style only)"
-msgstr ""
-
-#: paragraph-styles.php:2273
-msgid "Space Before:"
-msgstr ""
-
-#: paragraph-styles.php:2274
-msgid "Space After:"
-msgstr ""
-
-#: assets/js/admin.js:656
-msgid "Enter 0 or more."
-msgstr ""
-
-#: assets/js/admin.js:659
-msgid "Enter a value up to 1000px or 50em."
-
 #: includes/class-typost-ps-grep.php:121
 msgid "Acronyms (NASA)"
 msgstr ""
@@ -1107,4 +1011,302 @@ msgstr ""
 
 #: assets/js/admin.js:1697
 msgid "GREP rule removed."
+
+#: includes/admin-tab.php:293
+msgid "Left indent"
+msgstr ""
+
+#: includes/admin-tab.php:294
+msgid "Left indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:301
+msgid "Right indent"
+msgstr ""
+
+#: includes/admin-tab.php:302
+msgid "Right indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:309
+msgid "First line indent"
+msgstr ""
+
+#: includes/admin-tab.php:310
+msgid "First line indent unit"
+msgstr ""
+
+#: includes/admin-tab.php:313
+msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
+msgstr ""
+
+#: includes/admin-tab.php:318
+msgid "Space before"
+msgstr ""
+
+#: includes/admin-tab.php:319
+msgid "Space before unit"
+msgstr ""
+
+#: includes/admin-tab.php:326
+msgid "Space after"
+msgstr ""
+
+#: includes/admin-tab.php:327
+msgid "Space after unit"
+msgstr ""
+
+#: includes/admin-tab.php:334
+msgid "Indents and spacing"
+msgstr ""
+
+#: includes/admin-tab.php:335
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
+msgstr ""
+
+#: includes/admin-tab.php:336
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
+msgstr ""
+
+#: includes/admin-tab.php:356
+msgid "Indent the first line only after a paragraph with the same style"
+msgstr ""
+
+#: includes/admin-tab.php:357
+msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
+msgstr ""
+
+#: paragraph-styles.php:2260
+msgid "Left Indent:"
+msgstr ""
+
+#: paragraph-styles.php:2261
+msgid "Right Indent:"
+msgstr ""
+
+#: paragraph-styles.php:2262
+msgid "First Line:"
+msgstr ""
+
+#: paragraph-styles.php:2265
+#, php-format
+msgid "%s (after the same style only)"
+msgstr ""
+
+#: paragraph-styles.php:2273
+msgid "Space Before:"
+msgstr ""
+
+#: paragraph-styles.php:2274
+msgid "Space After:"
+msgstr ""
+
+#: assets/js/admin.js:656
+msgid "Enter 0 or more."
+msgstr ""
+
+#: assets/js/admin.js:659
+msgid "Enter a value up to 1000px or 50em."
+
+#: paragraph-styles.php:2291
+msgid "text color"
+msgstr ""
+
+#. translators: 1: outline width in pixels, 2: outline color, 3: "behind the fill" or "on top of the fill"
+#: paragraph-styles.php:2294
+#, php-format
+msgid "%1$spx, %2$s, %3$s"
+msgstr ""
+
+#: paragraph-styles.php:2298
+msgid "behind the fill"
+msgstr ""
+
+#: paragraph-styles.php:2299
+msgid "on top of the fill"
+msgstr ""
+
+#: paragraph-styles.php:2359
+msgid "Color:"
+msgstr ""
+
+#: paragraph-styles.php:2362
+msgid "Outline:"
+msgstr ""
+
+#: paragraph-styles.php:2560
+#: includes/admin-tab.php:331
+msgid "Transparent (outline only)"
+msgstr ""
+
+#. translators: %s: palette color slug, such as accent-1
+#: paragraph-styles.php:2572
+#: assets/js/admin.js:356
+#, php-format,js-format
+msgid "%s (not in the theme palette)"
+msgstr ""
+
+#: includes/admin-tab.php:39
+msgid "Theme palette"
+msgstr ""
+
+#: includes/admin-tab.php:40
+msgid "Site palette"
+msgstr ""
+
+#: includes/admin-tab.php:41
+msgid "Default palette"
+msgstr ""
+
+#. translators: 1: palette color name, 2: its color value
+#: includes/admin-tab.php:57
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr ""
+
+#: includes/admin-tab.php:321
+msgid "Color and outline"
+msgstr ""
+
+#: includes/admin-tab.php:324
+msgid "Text color"
+msgstr ""
+
+#: includes/admin-tab.php:328
+msgid "Default (theme color)"
+msgstr ""
+
+#: includes/admin-tab.php:330
+#: includes/admin-tab.php:356
+msgid "Custom color"
+msgstr ""
+
+#: includes/admin-tab.php:334
+msgid "A palette color follows the theme: when the theme changes that color, every style that uses it changes too. A block’s own text color setting overrides this."
+msgstr ""
+
+#: includes/admin-tab.php:337
+msgid "Custom text color"
+msgstr ""
+
+#: includes/admin-tab.php:340
+msgid "Pick the custom text color"
+msgstr ""
+
+#: includes/admin-tab.php:346
+msgid "Outline width (px, 0 = none)"
+msgstr ""
+
+#: includes/admin-tab.php:350
+msgid "Outline color"
+msgstr ""
+
+#: includes/admin-tab.php:354
+msgid "Same as the text"
+msgstr ""
+
+#: includes/admin-tab.php:361
+msgid "Custom outline color"
+msgstr ""
+
+#: includes/admin-tab.php:364
+msgid "Pick the custom outline color"
+msgstr ""
+
+#: includes/admin-tab.php:368
+msgid "Outline position"
+msgstr ""
+
+#: includes/admin-tab.php:370
+msgid "On top of the fill"
+msgstr ""
+
+#: includes/admin-tab.php:371
+msgid "Behind the fill"
+msgstr ""
+
+#: includes/admin-tab.php:373
+msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
+msgstr ""
+
+#: includes/admin-tab.php:376
+msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
+msgstr ""
+
+#: includes/admin-tab.php:377
+msgid "In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text."
+msgstr ""
+
+#: includes/class-typost-ps-transfer.php:526
+msgid "Palette colors this theme does not have"
+msgstr ""
+
+#. translators: %s: list of style names
+#: includes/class-typost-ps-transfer.php:552
+#, php-format
+msgid "Used by: %s"
+msgstr ""
+
+#: includes/class-typost-ps-transfer.php:553
+msgid "Not in the palette"
+msgstr ""
+
+#. translators: %s: palette color slug
+#: includes/class-typost-ps-transfer.php:559
+#, php-format
+msgid "Keep the palette color “%s” (shows the file’s color until the theme has it)"
+msgstr ""
+
+#. translators: %s: hex color
+#: includes/class-typost-ps-transfer.php:564
+#, php-format
+msgid "Use the color from the file (%s) as a custom color"
+msgstr ""
+
+#. translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names
+#: includes/class-typost-ps-transfer.php:881
+#, php-format
+msgid "The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s."
+msgstr ""
+
+#. translators: 1: palette color slug, 2: list of style names
+#: includes/class-typost-ps-transfer.php:892
+#, php-format
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
+msgstr ""
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:479
+#, js-format
+msgid "Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3)."
+msgstr ""
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:481
+#, js-format
+msgid "Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing."
+msgstr ""
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:483
+#, js-format
+msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
+msgstr ""
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
+msgstr ""
+
+#: assets/js/admin.js:864
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr ""
+
+#: assets/js/admin.js:868
+msgid "Enter an outline width from 0 to 20."
+msgstr ""
+
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
 msgstr ""

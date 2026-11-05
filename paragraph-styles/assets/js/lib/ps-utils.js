@@ -222,6 +222,194 @@
 		return typeof value === 'string' && TEXT_WRAP_VALUES.indexOf(value) !== -1 ? value : '';
 	}
 
+	// Widest text outline in px (#215). Mirrors TEXT_STROKE_MAX in PHP.
+	var TEXT_STROKE_MAX = 20;
+
+	// A stored palette color (#215): core's `var:preset|color|{slug}` plus
+	// the color it had when saved (the CSS fallback). Mirrors
+	// PALETTE_COLOR_PATTERN in PHP.
+	var PALETTE_COLOR_PATTERN = /^var:preset\|color\|([a-z0-9-]{1,100})(?:\|(#[0-9a-f]{6}(?:[0-9a-f]{2})?))?$/;
+
+	/** A hex color as #rrggbb or #rrggbbaa, or '' (twin of PHP normalize_hex_color()). */
+	function normalizeHexColor(value) {
+		if (typeof value !== 'string') return '';
+		var m = value.trim().toLowerCase().match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+		if (!m) return '';
+		var hex = m[1];
+		if (hex.length <= 4) {
+			hex = hex.split('').map(function (digit) { return digit + digit; }).join('');
+		}
+		return '#' + hex;
+	}
+
+	/**
+	 * A color as a style stores it (#215), or '' for none or an invalid
+	 * value: `#rrggbb[aa]`, `var:preset|color|{slug}[|#rrggbb[aa]]`, or
+	 * `transparent` where allowed. Twin of PHP normalize_color().
+	 *
+	 * @param {*}       value
+	 * @param {boolean} [allowTransparent]
+	 * @return {string}
+	 */
+	function normalizeColor(value, allowTransparent) {
+		if (typeof value !== 'string') return '';
+		var v = value.trim().toLowerCase();
+		if (v === 'transparent') return allowTransparent ? 'transparent' : '';
+		var m = v.match(PALETTE_COLOR_PATTERN);
+		if (m) return 'var:preset|color|' + m[1] + (m[2] ? '|' + m[2] : '');
+		return normalizeHexColor(v);
+	}
+
+	/**
+	 * The stored form of a palette color (#215): the slug and, when the
+	 * palette color is a hex color, that color as the CSS fallback.
+	 *
+	 * @param {string} slug  Kebab-case palette slug.
+	 * @param {string} color The palette's color value.
+	 * @return {string} '' for an invalid slug.
+	 */
+	function buildPaletteColor(slug, color) {
+		var s = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+		if (!/^[a-z0-9-]{1,100}$/.test(s)) return '';
+		var hex = normalizeHexColor(color);
+		return 'var:preset|color|' + s + (hex ? '|' + hex : '');
+	}
+
+	/** The palette slug of a stored color, '' for a custom color (#215). */
+	function paletteColorSlug(value) {
+		var m = normalizeColor(value).match(PALETTE_COLOR_PATTERN);
+		return m ? m[1] : '';
+	}
+
+	/** The fallback a stored palette color carries, '' when none (#215). */
+	function paletteColorFallback(value) {
+		var m = normalizeColor(value).match(PALETTE_COLOR_PATTERN);
+		return m && m[2] ? m[2] : '';
+	}
+
+	/**
+	 * A stored color as a CSS value (#215): a palette color reads the
+	 * theme's preset variable, with the saved color as its fallback. Twin
+	 * of PHP color_css_value().
+	 */
+	function colorCssValue(value, allowTransparent) {
+		var color = normalizeColor(value, allowTransparent);
+		var m = color.match(PALETTE_COLOR_PATTERN);
+		if (m) return 'var(--wp--preset--color--' + m[1] + (m[2] ? ', ' + m[2] : '') + ')';
+		return color;
+	}
+
+	/**
+	 * An outline width in px (#215): 0 when off or invalid, else capped at
+	 * TEXT_STROKE_MAX and rounded to two decimals. Same number rules as
+	 * normalizeHang(); twin of PHP normalize_stroke_width().
+	 */
+	function normalizeStrokeWidth(value) {
+		if (typeof value === 'string' ? !/^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) : typeof value !== 'number') return 0;
+		var n = Number(value);
+		if (!isFinite(n) || n < 0.005) return 0;
+		return Number(Math.round(Number(Math.min(n, TEXT_STROKE_MAX) + 'e2')) + 'e-2');
+	}
+
+	/**
+	 * The outline declarations of a style (#215). Twin of PHP
+	 * stroke_declarations(), which explains them.
+	 *
+	 * @param {Object} props Resolved properties.
+	 * @return {string[]}
+	 */
+	function strokeDeclarations(props) {
+		var width = normalizeStrokeWidth(props.textStrokeWidth);
+		if (width <= 0) return [];
+		var rules = ['-webkit-text-stroke-width: calc(' + phpFloatStr(width) + 'px * (1 - var(--typost-plain-outline, 0)))'];
+		var color = strokeColorCssValue(props);
+		if (color) rules.push('-webkit-text-stroke-color: ' + color);
+		if (props.textStrokePosition === 'behind') rules.push('paint-order: stroke fill');
+		return rules;
+	}
+
+	/**
+	 * The outline color of a style as a CSS value, '' for none (#215). On
+	 * outline-only text, a palette outline with no fallback that shows uses
+	 * the system text color when the theme lacks the preset. Twin of PHP
+	 * stroke_color_css_value(), which explains it.
+	 */
+	function strokeColorCssValue(props) {
+		var color = normalizeColor(props.textStrokeColor);
+		if (normalizeColor(props.textColor, true) === 'transparent') {
+			var m = color.match(PALETTE_COLOR_PATTERN);
+			if (m && (!m[2] || isFullyTransparentColor(m[2]))) {
+				return 'var(--wp--preset--color--' + m[1] + ', CanvasText)';
+			}
+		}
+		return colorCssValue(color);
+	}
+
+	/** Whether a normalized hex color has zero alpha (twin of PHP is_fully_transparent_color()). */
+	function isFullyTransparentColor(color) {
+		return /^#[0-9a-f]{6}00$/.test(color);
+	}
+
+	/**
+	 * Whether a style's outline can show text that has a transparent fill
+	 * (#215): a width and a color of its own that is not fully transparent.
+	 * Twin of PHP has_outline_partner(), which explains it.
+	 *
+	 * @param {Object} props Properties.
+	 * @return {boolean}
+	 */
+	function hasOutlinePartner(props) {
+		var p = props || {};
+		if (normalizeStrokeWidth(p.textStrokeWidth) <= 0) return false;
+		var color = normalizeColor(p.textStrokeColor);
+		return !!color && !isFullyTransparentColor(color);
+	}
+
+	/**
+	 * The text color of a style as a CSS value, '' for none (#215). A
+	 * transparent fill needs an outline that shows, and reads the plain
+	 * typography switch. Twin of PHP text_color_css_value(), which explains
+	 * it.
+	 */
+	function textColorCssValue(props) {
+		var color = colorCssValue(props.textColor, true);
+		if (color === 'transparent') {
+			return hasOutlinePartner(props) ? 'var(--typost-plain-fill, transparent)' : '';
+		}
+		return color;
+	}
+
+	/**
+	 * The surface of a style browser sample (#215), the twin of the admin
+	 * card's admin_preview_surface_css(): the sample carries the style's
+	 * real class, so a white text color or an outline would otherwise sit
+	 * on the modal's own background. Only for a style with a color or an
+	 * outline, and only when the theme has both colors. The theme text
+	 * color applies only when the style's class writes no color of its own,
+	 * as an inline style would beat the class.
+	 *
+	 * @param {Object} properties  Resolved style properties.
+	 * @param {Object} themeColors {background, text}, '' when unknown.
+	 * @return {?Object} Inline style, or null for none.
+	 */
+	function buildStyleSampleSurface(properties, themeColors) {
+		var props = properties || {};
+		var theme = themeColors || {};
+		var ownColor = textColorCssValue(props);
+		if ((!ownColor && normalizeStrokeWidth(props.textStrokeWidth) <= 0) || !theme.background || !theme.text) {
+			return null;
+		}
+		var surface = { backgroundColor: String(theme.background), padding: '4px 8px' };
+		if (!ownColor) surface.color = String(theme.text);
+		return surface;
+	}
+
+	/** The visual element of a Typography Stylist block with its own text color (twin of PHP block_color_selector()). */
+	function blockColorSelector(ref) {
+		var cls = '.typost-ps-' + ref;
+		return '.wp-block-typost.has-text-color > .typost-styled' + cls + cls + cls + cls + cls;
+	}
+
 	/**
 	 * A style's alignment (#207) as a block alignment value, for Detach
 	 * (PR #329 review): the block keeps the alignment it showed under the
@@ -585,6 +773,10 @@
 			if (normalizeLength(state.firstLineIndent, true) !== normalizeLength(styleProps.firstLineIndent, true)) return true;
 			if (indentAfterSameApplies(state) !== indentAfterSameApplies(styleProps)) return true;
 		}
+		// Text color and outline (#215): style-only like #207, so only the
+		// admin Edit form reports them
+		if (state.textColor !== undefined && comparableColor(state.textColor, true) !== comparableColor(styleProps.textColor, true)) return true;
+		if (state.textStrokeWidth !== undefined && groupSignature('textStrokeWidth', state) !== groupSignature('textStrokeWidth', styleProps)) return true;
 
 		return false;
 	}
@@ -700,7 +892,27 @@
 		// Indents and paragraph spacing (#199): none is never stored, and
 		// "only after the same style" only as true with a positive indent
 		copyLayoutProperties(properties, state);
+		// Text color and outline (#215): none is never stored; the outline's
+		// color and position only with a width, the position only as behind
+		var textColor = normalizeColor(state.textColor, true);
+		if (textColor) {
+			properties.textColor = textColor;
+		}
+		Object.assign(properties, strokeProperties(state));
 		return properties;
+	}
+
+	/** The outline group as stored (#215), {} for no outline. */
+	function strokeProperties(source) {
+		var out = {};
+		var width = normalizeStrokeWidth(source && source.textStrokeWidth);
+		if (width > 0) {
+			out.textStrokeWidth = width;
+			var color = normalizeColor(source.textStrokeColor);
+			if (color) out.textStrokeColor = color;
+			if (source.textStrokePosition === 'behind') out.textStrokePosition = 'behind';
+		}
+		return out;
 	}
 
 	/**
@@ -799,6 +1011,13 @@
 			if (!state || state[key] === undefined) unreported[key] = true;
 		});
 		copyLayoutProperties(properties, base, unreported);
+		// Text color and outline (#215): no editor control either
+		if ((!state || state.textColor === undefined) && normalizeColor(base.textColor, true)) {
+			properties.textColor = normalizeColor(base.textColor, true);
+		}
+		if (!state || state.textStrokeWidth === undefined) {
+			Object.assign(properties, strokeProperties(base));
+		}
 		// Same test as the CSS generators: only these write a size ('0' does not)
 		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
 			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
@@ -823,7 +1042,15 @@
 		textCase: ['textCase', 'fakeSmallCaps'],
 		alignment: ['alignment', 'alignLast'],
 		firstLineIndent: ['firstLineIndent', 'indentAfterSame'],
+		textStrokeWidth: ['textStrokeWidth', 'textStrokeColor', 'textStrokePosition'],
 	};
+
+	// The value that unsets a group: fontSize 'inherit', textStrokeWidth 0
+	// (#215), '' for the others. Twin of PHP group_empty_value().
+	function groupEmptyValue(lead) {
+		if (lead === 'fontSize') return 'inherit';
+		return lead === 'textStrokeWidth' ? 0 : '';
+	}
 
 	// The value a style based on another stores to unset a property its
 	// parent sets. The groups use fontSize 'inherit', textCase '',
@@ -844,6 +1071,7 @@
 		indentEnd: '',
 		spaceBefore: '',
 		spaceAfter: '',
+		textColor: '',
 	};
 
 	function hasOwn(obj, key) {
@@ -914,6 +1142,9 @@
 		}
 		if (hasOwn(out, 'firstLineIndent') && normalizeLength(out.firstLineIndent, true) === '') {
 			BASED_ON_GROUPS.firstLineIndent.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'textStrokeWidth') && normalizeStrokeWidth(out.textStrokeWidth) <= 0) {
+			BASED_ON_GROUPS.textStrokeWidth.forEach(function (key) { delete out[key]; });
 		}
 		Object.keys(out).forEach(function (key) {
 			var value = out[key];
@@ -995,6 +1226,17 @@
 	}
 
 	/**
+	 * A stored color in the form two styles compare by (#215): a palette
+	 * color by its slug only. Twin of PHP comparable_color(), which explains
+	 * it.
+	 */
+	function comparableColor(value, allowTransparent) {
+		var color = normalizeColor(value, allowTransparent);
+		var m = color.match(PALETTE_COLOR_PATTERN);
+		return m ? 'var:preset|color|' + m[1] : color;
+	}
+
+	/**
 	 * A comparable form of a group, as the CSS generators read it. Twin of
 	 * PHP group_signature().
 	 */
@@ -1003,6 +1245,10 @@
 		if (lead === 'firstLineIndent') {
 			var first = normalizeLength(p.firstLineIndent, true);
 			return first ? first + '|' + (indentAfterSameApplies(p) ? '1' : '0') : 'none';
+		}
+		if (lead === 'textStrokeWidth') {
+			var w = normalizeStrokeWidth(p.textStrokeWidth);
+			return w > 0 ? phpFloatStr(w) + '|' + comparableColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
 		}
 		if (lead === 'alignment') {
 			var a = normalizeAlignment(p.alignment);
@@ -1048,6 +1294,8 @@
 			case 'spaceBefore':
 			case 'spaceAfter':
 				return normalizeLength(va) === normalizeLength(vb);
+			case 'textColor':
+				return comparableColor(va, true) === comparableColor(vb, true);
 			case 'features':
 				var fa = (Array.isArray(va) ? va : []).map(String).sort();
 				var fb = (Array.isArray(vb) ? vb : []).map(String).sort();
@@ -1084,7 +1332,7 @@
 			var mine = groupSignature(lead, f);
 			if (mine === groupSignature(lead, p)) return;
 			if (mine === 'none' || (lead === 'textCase' && !normalizeTextCase(f.textCase))) {
-				out[lead] = lead === 'fontSize' ? 'inherit' : '';
+				out[lead] = groupEmptyValue(lead);
 				return;
 			}
 			BASED_ON_GROUPS[lead].forEach(function (key) {
@@ -1196,6 +1444,9 @@
 	 *   spaceBefore, spaceAfter (#199) — style-only for the same reason.
 	 *   (The block's own spacing settings are separate and override the
 	 *   style's spacing.)
+	 * - textColor, textStrokeWidth, textStrokeColor, textStrokePosition
+	 *   (#215) — style-only for the same reason. The block's own text color
+	 *   (the color support) overrides the style's color through CSS.
 	 *
 	 * initialHang IS normalized (to 0): a style without a hang must remove a
 	 * lingering hang on apply. The inline editor ignores the key, because a
@@ -1568,6 +1819,13 @@
 			alignRules = alignmentDeclarations(props, hang);
 		}
 
+		// Text color and outline (#215), for fit to width too (PHP twin)
+		var textColor = textColorCssValue(props);
+		if (textColor) {
+			rules.push('color: ' + textColor);
+		}
+		rules = rules.concat(strokeDeclarations(props));
+
 		// Indents and paragraph spacing (#199): rules of their own, never on
 		// the inline-span selector (see the PHP twin)
 		var id = parseInt(style.id, 10);
@@ -1597,6 +1855,18 @@
 		}
 		if (layoutCss) {
 			css += (css ? '\n\n' : '') + layoutCss;
+		}
+		// A Typography Stylist block's own text color wins (PHP twin)
+		if (textColor) {
+			var blockSelectors = [blockColorSelector(id)];
+			if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+				blockSelectors.push(blockColorSelector(String(style.legacyId)));
+			}
+			css += '\n\n' + blockSelectors.join(',\n') + ' {\n    color: inherit;\n}';
+			// Outline-only text in forced colors: Firefox would paint nothing (PHP twin)
+			if (textColor.indexOf('transparent') !== -1) {
+				css += '\n\n@media (forced-colors: active) {\n' + selector + ' {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}';
+			}
 		}
 		if (hang > 0) {
 			css += coreBlockHangCss(id);
@@ -2209,6 +2479,200 @@
 		return -1;
 	}
 
+	// ---------------------------------------------------------------------
+	// Contrast (#215, WCAG 1.4.3)
+	// ---------------------------------------------------------------------
+
+	/**
+	 * A CSS color as {r, g, b, a} (0–255, alpha 0–1), or null when it is not
+	 * a hex, rgb()/rgba() or `transparent` value. Palette colors can be any
+	 * CSS color; one this cannot read is not checked.
+	 *
+	 * @param {string} value
+	 * @return {?Object}
+	 */
+	function parseCssColor(value) {
+		if (typeof value !== 'string') return null;
+		var v = value.trim().toLowerCase();
+		if (v === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+		var hex = normalizeHexColor(v);
+		if (hex) {
+			return {
+				r: parseInt(hex.substr(1, 2), 16),
+				g: parseInt(hex.substr(3, 2), 16),
+				b: parseInt(hex.substr(5, 2), 16),
+				a: hex.length === 9 ? parseInt(hex.substr(7, 2), 16) / 255 : 1,
+			};
+		}
+		var m = v.match(/^rgba?\(\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*(?:[,\/]\s*([\d.]+%?)\s*)?\)$/);
+		if (!m) return null;
+		var alpha = m[4] === undefined ? 1 : (m[4].slice(-1) === '%' ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+		return {
+			r: Math.min(255, parseFloat(m[1])),
+			g: Math.min(255, parseFloat(m[2])),
+			b: Math.min(255, parseFloat(m[3])),
+			a: Math.max(0, Math.min(1, alpha)),
+		};
+	}
+
+	/** A color laid over an opaque background (alpha compositing). */
+	function compositeColor(color, background) {
+		var a = color.a;
+		return {
+			r: color.r * a + background.r * (1 - a),
+			g: color.g * a + background.g * (1 - a),
+			b: color.b * a + background.b * (1 - a),
+			a: 1,
+		};
+	}
+
+	/** WCAG relative luminance of an opaque color. */
+	function relativeLuminance(color) {
+		var channel = function (c) {
+			var s = c / 255;
+			return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+		};
+		return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+	}
+
+	/**
+	 * The WCAG contrast ratio of a color over a background (1–21). A color
+	 * with transparency is laid over the background first, so a tint is
+	 * checked as it shows.
+	 *
+	 * @param {Object} color      parseCssColor() result.
+	 * @param {Object} background parseCssColor() result (made opaque over white).
+	 * @return {number}
+	 */
+	function contrastRatio(color, background) {
+		var bg = compositeColor(background, { r: 255, g: 255, b: 255, a: 1 });
+		var fg = compositeColor(color, bg);
+		var l1 = relativeLuminance(fg);
+		var l2 = relativeLuminance(bg);
+		return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+	}
+
+	/**
+	 * Whether a style's text counts as large under WCAG 1.4.3: at least
+	 * 24px, or 18.66px and bold. A fluid or fit size counts by its smallest
+	 * size; text with no size of its own is not large.
+	 *
+	 * @param {Object} props Properties.
+	 * @return {boolean}
+	 */
+	function isLargeText(props) {
+		var p = props || {};
+		var size = contrastFontSize(p);
+		var weight = parseInt(p.fontWeight, 10) || (p.fontWeight === 'bold' ? 700 : 400);
+		return size >= 24 || (size >= 18.66 && weight >= 700);
+	}
+
+	/**
+	 * The font size in px the contrast check reads: the smallest size of a
+	 * fluid or fit style, 0 when the style has no size of its own.
+	 *
+	 * @param {Object} p Properties.
+	 * @return {number}
+	 */
+	function contrastFontSize(p) {
+		if (p.fontSize === 'responsive' || p.fontSize === 'fit') {
+			return parseFloat(p.fontSizeMin) || 0;
+		}
+		return p.fontSize !== undefined && isFinite(p.fontSize) ? Number(p.fontSize) || 0 : 0;
+	}
+
+	// An outline is centered on the edge of each letter, so an outline on top
+	// about as wide as a stem (about a tenth of the font size in text weights)
+	// covers the stem: WCAG's Understanding 1.4.3 then counts it as the color
+	// of the letter, not as a border around it.
+	var OUTLINE_COVERS_LETTER_RATIO = 0.1;
+
+	/**
+	 * A stored color as a color the contrast check can read: a custom color
+	 * as stored, a palette color as the palette has it now (else its saved
+	 * fallback).
+	 *
+	 * @param {string} value   Stored color.
+	 * @param {Array}  palette [{slug, color}].
+	 * @return {?Object} parseCssColor() result.
+	 */
+	function resolveStoredColor(value, palette) {
+		var color = normalizeColor(value, true);
+		if (!color) return null;
+		var slug = paletteColorSlug(color);
+		if (slug) {
+			var entry = null;
+			(Array.isArray(palette) ? palette : []).forEach(function (candidate) {
+				if (!entry && candidate && candidate.slug === slug) entry = candidate;
+			});
+			return parseCssColor(entry ? String(entry.color) : paletteColorFallback(color));
+		}
+		return parseCssColor(color);
+	}
+
+	/**
+	 * The contrast problem of a style's text color and outline (#215), or
+	 * null when it meets WCAG 1.4.3 or cannot be checked.
+	 *
+	 * - Text with a fill and no outline: the fill against the background.
+	 * - Outline-only text (transparent fill): the outline against the
+	 *   background. WCAG's Understanding 1.4.3 counts a narrow border as part
+	 *   of the letter.
+	 * - A fill with an outline: the text reads when the fill stands out from
+	 *   the background (a narrow outline) or from the outline (a wide halo,
+	 *   which acts as the background), so it is flagged only when both fail.
+	 * - A fill that passes, with a wide outline on top: the outline covers
+	 *   the letter, so the outline against the background also counts. A
+	 *   style with no size counts as 16px, as isLargeText() counts it as
+	 *   not large.
+	 *
+	 * A fill with no color of its own is the theme's text color, and an
+	 * outline with no color is the fill's color.
+	 *
+	 * @param {Object} props   Properties (stored form).
+	 * @param {Object} context {palette: [{slug, color}], background: CSS color,
+	 *                         text: the theme's text color}.
+	 * @return {?{ratio: number, required: number, pair: string}} pair is
+	 *         'text', 'outline', 'text-outline' or 'outline-covers'; ratio
+	 *         rounded down to two decimals, as a ratio just under the line
+	 *         must not read as on it.
+	 */
+	function findContrastProblem(props, context) {
+		var p = props || {};
+		var ctx = context || {};
+		var background = parseCssColor(ctx.background || '#ffffff');
+		if (!background) return null;
+		var hasFill = !!normalizeColor(p.textColor, true);
+		var width = normalizeStrokeWidth(p.textStrokeWidth);
+		if (!hasFill && width <= 0) return null;
+		var fill = hasFill ? resolveStoredColor(p.textColor, ctx.palette) : parseCssColor(ctx.text || '');
+		var outline = width > 0
+			? (normalizeColor(p.textStrokeColor) ? resolveStoredColor(p.textStrokeColor, ctx.palette) : fill)
+			: null;
+		var required = isLargeText(p) ? 3 : 4.5;
+		var floor2 = function (n) { return Math.floor(n * 100) / 100; };
+		var outlineOnly = normalizeColor(p.textColor, true) === 'transparent';
+		if (outlineOnly) {
+			if (!outline) return null;
+			var r = contrastRatio(outline, background);
+			return r < required ? { ratio: floor2(r), required: required, pair: 'outline' } : null;
+		}
+		if (!fill) return null;
+		var fillRatio = contrastRatio(fill, background);
+		if (fillRatio >= required) {
+			var covers = outline && p.textStrokePosition !== 'behind' && width / (contrastFontSize(p) || 16) >= OUTLINE_COVERS_LETTER_RATIO;
+			var coverRatio = covers ? contrastRatio(outline, background) : required;
+			return coverRatio < required ? { ratio: floor2(coverRatio), required: required, pair: 'outline-covers' } : null;
+		}
+		if (outline && width > 0) {
+			var bg = compositeColor(background, { r: 255, g: 255, b: 255, a: 1 });
+			var halo = contrastRatio(fill, compositeColor(outline, bg));
+			if (halo >= required) return null;
+			return { ratio: floor2(Math.max(fillRatio, halo)), required: required, pair: 'text-outline' };
+		}
+		return { ratio: floor2(fillRatio), required: required, pair: 'text' };
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
@@ -2221,6 +2685,20 @@
 		normalizeAlignment: normalizeAlignment,
 		normalizeAlignLast: normalizeAlignLast,
 		normalizeTextWrap: normalizeTextWrap,
+		TEXT_STROKE_MAX: TEXT_STROKE_MAX,
+		normalizeHexColor: normalizeHexColor,
+		normalizeColor: normalizeColor,
+		buildPaletteColor: buildPaletteColor,
+		paletteColorSlug: paletteColorSlug,
+		paletteColorFallback: paletteColorFallback,
+		colorCssValue: colorCssValue,
+		normalizeStrokeWidth: normalizeStrokeWidth,
+		hasOutlinePartner: hasOutlinePartner,
+		buildStyleSampleSurface: buildStyleSampleSurface,
+		parseCssColor: parseCssColor,
+		contrastRatio: contrastRatio,
+		isLargeText: isLargeText,
+		findContrastProblem: findContrastProblem,
 		alignmentToBlockAlign: alignmentToBlockAlign,
 		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,

@@ -779,103 +779,6 @@ msgstr "Coupure des lignes"
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr "Équilibrer les lignes donne des longueurs proches aux lignes d’un titre court. Éviter les dernières lignes courtes convient au texte courant. Un navigateur qui ne prend pas en charge ce choix coupe les lignes normalement."
 
-#: includes/admin-tab.php:293
-msgid "Left indent"
-msgstr "Retrait gauche"
-
-#: includes/admin-tab.php:294
-msgid "Left indent unit"
-msgstr "Unité du retrait gauche"
-
-#: includes/admin-tab.php:301
-msgid "Right indent"
-msgstr "Retrait droit"
-
-#: includes/admin-tab.php:302
-msgid "Right indent unit"
-msgstr "Unité du retrait droit"
-
-#: includes/admin-tab.php:309
-msgid "First line indent"
-msgstr "Retrait de première ligne"
-
-#: includes/admin-tab.php:310
-msgid "First line indent unit"
-msgstr "Unité du retrait de première ligne"
-
-#: includes/admin-tab.php:313
-msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
-msgstr "Une valeur négative donne un retrait suspendu. Un retrait de première ligne désactive le débord de la première lettre."
-
-#: includes/admin-tab.php:318
-msgid "Space before"
-msgstr "Espace avant"
-
-#: includes/admin-tab.php:319
-msgid "Space before unit"
-msgstr "Unité de l’espace avant"
-
-#: includes/admin-tab.php:326
-msgid "Space after"
-msgstr "Espace après"
-
-#: includes/admin-tab.php:327
-msgid "Space after unit"
-msgstr "Unité de l’espace après"
-
-#: includes/admin-tab.php:334
-msgid "Indents and spacing"
-msgstr "Retraits et espacement"
-
-#: includes/admin-tab.php:335
-msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
-msgstr "Les retraits et l’espacement s’appliquent à des paragraphes et des titres entiers. Ils n’ont aucun effet quand le style est appliqué à un texte sélectionné. La gauche et la droite suivent le sens du texte : dans un texte de droite à gauche, le retrait gauche est à droite. Sur un bloc natif Paragraphe ou Titre, les réglages d’espacement ou de retrait de texte propres au bloc l’emportent sur ceux-ci."
-
-#: includes/admin-tab.php:336
-msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
-msgstr "L’ajustement à la largeur fixe lui-même la largeur de chaque ligne : un style ajusté à la largeur n’utilise donc pas de retraits."
-
-#: includes/admin-tab.php:356
-msgid "Indent the first line only after a paragraph with the same style"
-msgstr "Mettre la première ligne en retrait seulement après un paragraphe du même style"
-
-#: includes/admin-tab.php:357
-msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
-msgstr "La convention des livres : le premier paragraphe après un titre n’a pas de retrait. S’applique seulement à un retrait de première ligne positif."
-
-#: paragraph-styles.php:2260
-msgid "Left Indent:"
-msgstr "Retrait gauche :"
-
-#: paragraph-styles.php:2261
-msgid "Right Indent:"
-msgstr "Retrait droit :"
-
-#: paragraph-styles.php:2262
-msgid "First Line:"
-msgstr "Première ligne :"
-
-#: paragraph-styles.php:2265
-#, php-format
-msgid "%s (after the same style only)"
-msgstr "%s (seulement après le même style)"
-
-#: paragraph-styles.php:2273
-msgid "Space Before:"
-msgstr "Espace avant :"
-
-#: paragraph-styles.php:2274
-msgid "Space After:"
-msgstr "Espace après :"
-
-#: assets/js/admin.js:656
-msgid "Enter 0 or more."
-msgstr "Saisissez 0 ou plus."
-
-#: assets/js/admin.js:659
-msgid "Enter a value up to 1000px or 50em."
-msgstr "Saisissez une valeur jusqu’à 1000px ou 50em."
-
 #: includes/class-typost-ps-grep.php:121
 msgid "Acronyms (NASA)"
 msgstr "Acronymes (NASA)"
@@ -1107,3 +1010,303 @@ msgstr "Règle déplacée en position %d."
 #: assets/js/admin.js:1697
 msgid "GREP rule removed."
 msgstr "Règle GREP retirée."
+
+#: includes/admin-tab.php:293
+msgid "Left indent"
+msgstr "Retrait gauche"
+
+#: includes/admin-tab.php:294
+msgid "Left indent unit"
+msgstr "Unité du retrait gauche"
+
+#: includes/admin-tab.php:301
+msgid "Right indent"
+msgstr "Retrait droit"
+
+#: includes/admin-tab.php:302
+msgid "Right indent unit"
+msgstr "Unité du retrait droit"
+
+#: includes/admin-tab.php:309
+msgid "First line indent"
+msgstr "Retrait de première ligne"
+
+#: includes/admin-tab.php:310
+msgid "First line indent unit"
+msgstr "Unité du retrait de première ligne"
+
+#: includes/admin-tab.php:313
+msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
+msgstr "Une valeur négative donne un retrait suspendu. Un retrait de première ligne désactive le débord de la première lettre."
+
+#: includes/admin-tab.php:318
+msgid "Space before"
+msgstr "Espace avant"
+
+#: includes/admin-tab.php:319
+msgid "Space before unit"
+msgstr "Unité de l’espace avant"
+
+#: includes/admin-tab.php:326
+msgid "Space after"
+msgstr "Espace après"
+
+#: includes/admin-tab.php:327
+msgid "Space after unit"
+msgstr "Unité de l’espace après"
+
+#: includes/admin-tab.php:334
+msgid "Indents and spacing"
+msgstr "Retraits et espacement"
+
+#: includes/admin-tab.php:335
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
+msgstr "Les retraits et l’espacement s’appliquent à des paragraphes et des titres entiers. Ils n’ont aucun effet quand le style est appliqué à un texte sélectionné. La gauche et la droite suivent le sens du texte : dans un texte de droite à gauche, le retrait gauche est à droite. Sur un bloc natif Paragraphe ou Titre, les réglages d’espacement ou de retrait de texte propres au bloc l’emportent sur ceux-ci."
+
+#: includes/admin-tab.php:336
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
+msgstr "L’ajustement à la largeur fixe lui-même la largeur de chaque ligne : un style ajusté à la largeur n’utilise donc pas de retraits."
+
+#: includes/admin-tab.php:356
+msgid "Indent the first line only after a paragraph with the same style"
+msgstr "Mettre la première ligne en retrait seulement après un paragraphe du même style"
+
+#: includes/admin-tab.php:357
+msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
+msgstr "La convention des livres : le premier paragraphe après un titre n’a pas de retrait. S’applique seulement à un retrait de première ligne positif."
+
+#: paragraph-styles.php:2260
+msgid "Left Indent:"
+msgstr "Retrait gauche :"
+
+#: paragraph-styles.php:2261
+msgid "Right Indent:"
+msgstr "Retrait droit :"
+
+#: paragraph-styles.php:2262
+msgid "First Line:"
+msgstr "Première ligne :"
+
+#: paragraph-styles.php:2265
+#, php-format
+msgid "%s (after the same style only)"
+msgstr "%s (seulement après le même style)"
+
+#: paragraph-styles.php:2273
+msgid "Space Before:"
+msgstr "Espace avant :"
+
+#: paragraph-styles.php:2274
+msgid "Space After:"
+msgstr "Espace après :"
+
+#: assets/js/admin.js:656
+msgid "Enter 0 or more."
+msgstr "Saisissez 0 ou plus."
+
+#: assets/js/admin.js:659
+msgid "Enter a value up to 1000px or 50em."
+msgstr "Saisissez une valeur jusqu’à 1000px ou 50em."
+
+#: paragraph-styles.php:2291
+msgid "text color"
+msgstr "couleur du texte"
+
+#. translators: 1: outline width in pixels, 2: outline color, 3: "behind the fill" or "on top of the fill"
+#: paragraph-styles.php:2294
+#, php-format
+msgid "%1$spx, %2$s, %3$s"
+msgstr "%1$s px, %2$s, %3$s"
+
+#: paragraph-styles.php:2298
+msgid "behind the fill"
+msgstr "derrière le remplissage"
+
+#: paragraph-styles.php:2299
+msgid "on top of the fill"
+msgstr "au-dessus du remplissage"
+
+#: paragraph-styles.php:2359
+msgid "Color:"
+msgstr "Couleur :"
+
+#: paragraph-styles.php:2362
+msgid "Outline:"
+msgstr "Contour :"
+
+#: paragraph-styles.php:2560
+#: includes/admin-tab.php:331
+msgid "Transparent (outline only)"
+msgstr "Transparent (contour seul)"
+
+#. translators: %s: palette color slug, such as accent-1
+#: paragraph-styles.php:2572
+#: assets/js/admin.js:356
+#, php-format,js-format
+msgid "%s (not in the theme palette)"
+msgstr "%s (absent de la palette du thème)"
+
+#: includes/admin-tab.php:39
+msgid "Theme palette"
+msgstr "Palette du thème"
+
+#: includes/admin-tab.php:40
+msgid "Site palette"
+msgstr "Palette du site"
+
+#: includes/admin-tab.php:41
+msgid "Default palette"
+msgstr "Palette par défaut"
+
+#. translators: 1: palette color name, 2: its color value
+#: includes/admin-tab.php:57
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#: includes/admin-tab.php:321
+msgid "Color and outline"
+msgstr "Couleur et contour"
+
+#: includes/admin-tab.php:324
+msgid "Text color"
+msgstr "Couleur du texte"
+
+#: includes/admin-tab.php:328
+msgid "Default (theme color)"
+msgstr "Par défaut (couleur du thème)"
+
+#: includes/admin-tab.php:330
+#: includes/admin-tab.php:356
+msgid "Custom color"
+msgstr "Couleur personnalisée"
+
+#: includes/admin-tab.php:334
+msgid "A palette color follows the theme: when the theme changes that color, every style that uses it changes too. A block’s own text color setting overrides this."
+msgstr "Une couleur de la palette suit le thème : quand le thème change cette couleur, tous les styles qui l’utilisent changent aussi. Le réglage de couleur du texte d’un bloc a priorité sur celui-ci."
+
+#: includes/admin-tab.php:337
+msgid "Custom text color"
+msgstr "Couleur de texte personnalisée"
+
+#: includes/admin-tab.php:340
+msgid "Pick the custom text color"
+msgstr "Choisir la couleur de texte personnalisée"
+
+#: includes/admin-tab.php:346
+msgid "Outline width (px, 0 = none)"
+msgstr "Épaisseur du contour (px, 0 = aucun)"
+
+#: includes/admin-tab.php:350
+msgid "Outline color"
+msgstr "Couleur du contour"
+
+#: includes/admin-tab.php:354
+msgid "Same as the text"
+msgstr "Comme le texte"
+
+#: includes/admin-tab.php:361
+msgid "Custom outline color"
+msgstr "Couleur de contour personnalisée"
+
+#: includes/admin-tab.php:364
+msgid "Pick the custom outline color"
+msgstr "Choisir la couleur de contour personnalisée"
+
+#: includes/admin-tab.php:368
+msgid "Outline position"
+msgstr "Position du contour"
+
+#: includes/admin-tab.php:370
+msgid "On top of the fill"
+msgstr "Au-dessus du remplissage"
+
+#: includes/admin-tab.php:371
+msgid "Behind the fill"
+msgstr "Derrière le remplissage"
+
+#: includes/admin-tab.php:373
+msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
+msgstr "Le contour est centré sur le bord de chaque lettre : au-dessus du remplissage, un contour épais amincit les lettres. Derrière le remplissage, elles gardent leur forme."
+
+#: includes/admin-tab.php:376
+msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
+msgstr "Une couleur hexadécimale comme #c00 ou #cc0000. Ajoutez deux chiffres pour la transparence : #cc000080 est à moitié transparent."
+
+#: includes/admin-tab.php:377
+msgid "In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text."
+msgstr "En mode Contraste élevé de Windows (couleurs forcées), le navigateur dessine le texte et le contour dans la couleur de texte du système : un texte en contour seul s’affiche plein."
+
+#: includes/class-typost-ps-transfer.php:526
+msgid "Palette colors this theme does not have"
+msgstr "Couleurs de palette absentes de ce thème"
+
+#. translators: %s: list of style names
+#: includes/class-typost-ps-transfer.php:552
+#, php-format
+msgid "Used by: %s"
+msgstr "Utilisée par : %s"
+
+#: includes/class-typost-ps-transfer.php:553
+msgid "Not in the palette"
+msgstr "Absente de la palette"
+
+#. translators: %s: palette color slug
+#: includes/class-typost-ps-transfer.php:559
+#, php-format
+msgid "Keep the palette color “%s” (shows the file’s color until the theme has it)"
+msgstr "Garder la couleur de palette « %s » (affiche la couleur du fichier tant que le thème ne l’a pas)"
+
+#. translators: %s: hex color
+#: includes/class-typost-ps-transfer.php:564
+#, php-format
+msgid "Use the color from the file (%s) as a custom color"
+msgstr "Utiliser la couleur du fichier (%s) comme couleur personnalisée"
+
+#. translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names
+#: includes/class-typost-ps-transfer.php:881
+#, php-format
+msgid "The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s."
+msgstr "La couleur de palette %1$s (%2$s) est %3$s sur ce site et %4$s dans le fichier. Ces styles suivent la palette de ce site : %5$s."
+
+#. translators: 1: palette color slug, 2: list of style names
+#: includes/class-typost-ps-transfer.php:892
+#, php-format
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
+msgstr "La couleur de palette « %1$s » est absente de la palette de ce thème, et le fichier n’indique pas sa couleur. Ces styles prennent la couleur du texte environnant, ou la couleur de texte par défaut du navigateur pour un texte avec contour seul, tant que le thème ne la définit pas : %2$s."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:479
+#, js-format
+msgid "Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3)."
+msgstr "Contraste faible : la couleur du texte a un rapport de %1$s:1 avec le fond du thème (%2$s). Le texte doit atteindre au moins %3$s:1 pour être lisible (WCAG 1.4.3)."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:481
+#, js-format
+msgid "Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing."
+msgstr "Contraste faible : le contour a un rapport de %1$s:1 avec le fond du thème (%2$s). Un texte en contour seul doit atteindre au moins %3$s:1 (WCAG 1.4.3), et un contour fin perd davantage au lissage."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:483
+#, js-format
+msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
+msgstr "Contraste faible : la couleur du texte ne se détache ni du fond du thème (%2$s) ni du contour ; le meilleur rapport est %1$s:1. Le texte doit atteindre au moins %3$s:1 avec l’un des deux (WCAG 1.4.3)."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
+msgstr "Contraste faible : un contour large au-dessus du remplissage couvre la plus grande partie de chaque lettre, et son rapport avec le fond du thème (%2$s) est de %1$s:1. Le texte doit atteindre au moins %3$s:1 (WCAG 1.4.3). Utilisez un contour plus fin ou une autre couleur de contour, ou placez le contour derrière le remplissage."
+
+#: assets/js/admin.js:864
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr "Saisissez une couleur hexadécimale, comme #c00 ou #cc0000."
+
+#: assets/js/admin.js:868
+msgid "Enter an outline width from 0 to 20."
+msgstr "Saisissez une épaisseur de contour entre 0 et 20."
+
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
+msgstr "Un texte transparent n’affiche que son contour. Donnez au contour une épaisseur et sa propre couleur visible, ou choisissez une autre couleur de texte."

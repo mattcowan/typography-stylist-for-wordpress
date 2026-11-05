@@ -297,6 +297,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 ### Paragraph Styles
 
 A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, indents, and paragraph spacing.
+text color, and outline.
 
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
@@ -333,6 +334,21 @@ Since v2.3.6, a style can also set indents and the space before and after a para
 - A first line indent turns the First Letter Hang off on the paragraphs it indents: the hang lines up a swash capital with the text edge, and an indented first line does not start at the edge. With “only after a paragraph with the same style”, the first paragraph keeps its hang.
 - A Fit to width style uses no indents: fit sets the width of each line itself. A Fit to width block also uses no indents from a style that is not Fit to width. Space before and after work.
 - “Detach Style” removes the indents and spacing from the text, because a block has no setting that holds a first line indent, and the block's own spacing settings do not give the same result as the style. Set the block's spacing in its sidebar if you need it after detaching.
+
+#### Text color and outline
+
+A style can set a text color and an outline. Set them in the “Color and outline” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+
+- **Text color:** a color from the theme's palette (listed first), a color from the site's palette in Global Styles, a color from the WordPress default palette when the theme keeps it, or a custom hex color. A palette color follows the theme: if the theme changes its “Accent” color, every style that uses “Accent” changes too. The style also stores the color the palette had when you saved it, so a theme that no longer has that color still shows it. A custom color can be partly transparent: add two digits to the hex code (`#cc000080` is half transparent). This is how a style gets a tint.
+- **Outline:** a width from 0 to 20 pixels, a color (by default the text color), and a position. “On top of the fill” draws the outline over the letters; the outline is centered on the edge of each letter, so a thick outline makes them look thinner. “Behind the fill” keeps their shape.
+- **Outline only:** choose “Transparent (outline only)” as the text color. The outline then needs a width and a visible color of its own, or the text would not show; the form asks for them. If the outline is a palette color with no stored color and the theme does not have it, the outline uses the browser's default text color.
+- **A block's own text color:** the text color setting of a block overrides the style's color. The outline stays. On an outline-only style, the block's color fills the letters, so the text is no longer outline-only.
+- **Contrast check:** the form warns when the colors fall below the contrast WCAG asks for (1.4.3): 4.5:1, or 3:1 for large text (24px, or 18.66px and bold; a responsive size counts by its smallest size). It checks against the theme's background color, or white when the theme sets none. Outline-only text is checked by its outline against the background. Text with a fill and an outline is flagged when the fill stands out from neither the background nor the outline: a thin outline counts as part of the letter, and a wide outline acts as the background of the letter. An outline on top of the fill that is at least one tenth of the font size covers most of the letter, so the outline must also stand out from the background (a style with no size counts as 16px). A thin outline also loses contrast to font smoothing, so test outline-only text at the size you use it. The check cannot read every color, for example an `oklch()` palette color; such a color is not checked.
+- **Plain typography switch:** the `typost-plain` class removes the outline, and outline-only text takes the text color of its parent element. Other text colors do not change. See [HOOKS.md](HOOKS.md#plain-typography-switch).
+- **High contrast:** in Windows High Contrast mode (forced colors), the browser draws the text and the outline in the system text color, so outline-only text shows as solid text. It stays readable; it loses the outline effect.
+- The card on the tab shows the color by its palette name, or with “(not in the theme palette)” when the theme no longer has it, and the sample shows the style on the theme's background color.
+- “Detach Style” removes the color and the outline. Give the block its own color if it should keep one.
+- **Export and import:** the export file writes a palette color as its palette slug and its color on your site. On import, a slug that the other site's palette has keeps the link to that palette, and the preview warns when that color is not the same as in the file. For a slug that the other palette does not have, choose to keep the slug (the style shows the color from the file until the theme defines the slug) or to use the color from the file as a custom color.
 
 In a Typography Stylist block, the Paragraph Style panel in the Quick Feature Toggles works on the selected text, like the other controls there. With text selected, “Save Current Settings as Style” makes the style from the settings of the selected text, and only that text gets the style. A style made from selected text includes the case of that text. It does not include the First Letter Hang, which applies to the whole block. “Update Style” and “Detach Style” work on the style of the selected text. With only the caret in the block, the panel works on the whole block. The Paragraph Style panel in the block sidebar always works on the whole block.
 
@@ -870,7 +886,7 @@ fetch('/wp-json/typost/v1/adobe-fonts', {
 
 /* Plain typography switch (since 2.3.5). Put it on any ancestor. */
 .typost-plain {
-    /* No First Letter Hang, OpenType features reset to normal */
+    /* No First Letter Hang, no paragraph style outline, OpenType features reset to normal */
 }
 ```
 

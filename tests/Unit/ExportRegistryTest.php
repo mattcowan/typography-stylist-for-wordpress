@@ -142,6 +142,10 @@ class ExportRegistryTest extends ExportTestCase {
             'indentAfterSame'       => true,
             'spaceBefore'           => '0.5em',
             'spaceAfter'            => '24px',
+            'textColor'             => 'var:preset|color|accent-1|#cc0000',
+            'textStrokeWidth'       => 1.5,
+            'textStrokeColor'       => '#00000080',
+            'textStrokePosition'    => 'behind',
         );
     }
 
@@ -185,6 +189,8 @@ class ExportRegistryTest extends ExportTestCase {
             'firstLineIndent'       => '',
             'spaceBefore'           => '',
             'spaceAfter'            => '',
+            'textColor'             => '',
+            'textStrokeWidth'       => 0,
         );
         $this->site->manual = array(array('id' => 'manual-a', 'name' => 'Brand', 'font_id' => 3, 'font_family' => 'Brand'));
         $module = $this->module(array(
