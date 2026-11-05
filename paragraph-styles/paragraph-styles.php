@@ -763,7 +763,8 @@ final class Typost_Paragraph_Styles {
 			return 0;
 		}
 		$width = min( $width, self::TEXT_STROKE_MAX );
-		// Textual shift, as normalize_hang(): JS rounds the same way
+		// Textual shift, as normalize_hang(): JS rounds the same way. The return
+		// above also keeps PHP's exponent form (1.0E-5) out of this string.
 		$rounded = round( (float) ( $width . 'e2' ) ) / 100;
 		return $rounded == (int) $rounded ? (int) $rounded : $rounded; // phpcs:ignore Universal.Operators.StrictComparisons.LooseEqual -- whole numbers print without a decimal point, as in JS
 	}
