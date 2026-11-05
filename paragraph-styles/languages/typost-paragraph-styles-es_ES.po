@@ -1310,3 +1310,81 @@ msgstr "Introduce un grosor de contorno entre 0 y 20."
 #: assets/js/admin.js:873
 msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
 msgstr "El texto transparente solo muestra su contorno. Da al contorno un grosor y un color propio visible, o elige otro color de texto."
+
+#: assets/js/editor.js:193
+msgid "outline"
+msgstr "contorno"
+
+#: assets/js/editor.js:194
+msgid "first line indent"
+msgstr "sangría de primera línea"
+
+#: assets/js/editor.js:196
+msgid "word spacing"
+msgstr "espaciado entre palabras"
+
+#: assets/js/editor.js:197
+msgid "line breaking"
+msgstr "saltos de línea"
+
+#: assets/js/editor.js:198
+msgid "justified alignment"
+msgstr "alineación justificada"
+
+#: assets/js/editor.js:199
+msgid "last line alignment"
+msgstr "alineación de la última línea"
+
+#: assets/js/editor.js:200
+msgid "font"
+msgstr "fuente"
+
+#: assets/js/editor.js:201
+msgid "font weight"
+msgstr "grosor de fuente"
+
+#: assets/js/editor.js:202
+msgid "font style"
+msgstr "estilo de fuente"
+
+#: assets/js/editor.js:203
+msgid "font size"
+msgstr "tamaño de fuente"
+
+#: assets/js/editor.js:204
+msgid "letter spacing"
+msgstr "espaciado entre letras"
+
+#: assets/js/editor.js:205
+msgid "line height"
+msgstr "altura de línea"
+
+#: assets/js/editor.js:207
+msgid "variable font axes"
+msgstr "ejes de fuente variable"
+
+#: assets/js/editor.js:209
+msgid "case"
+msgstr "mayúsculas y minúsculas"
+
+#. translators: %s: comma-separated list of style settings.
+#: assets/js/editor.js:216
+#, js-format
+msgid "Detach Style removed these settings from the block: %s."
+msgstr "Desvincular estilo eliminó estos ajustes del bloque: %s."
+
+#: assets/js/editor.js:221
+msgid "Some values set in em are now in px, at the current text size."
+msgstr "Algunos valores definidos en em ahora están en px, con el tamaño de texto actual."
+
+#: assets/js/editor.js:208
+msgid "first letter hang"
+msgstr "desborde de la primera letra"
+
+#: assets/js/editor.js:195
+msgid "“Indent the first line only after a paragraph with the same style”"
+msgstr "«Sangrar la primera línea solo después de un párrafo con el mismo estilo»"
+
+#: assets/js/editor.js:200
+msgid "GREP rules"
+msgstr "reglas GREP"

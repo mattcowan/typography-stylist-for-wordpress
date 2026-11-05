@@ -476,6 +476,193 @@
 		return null;
 	}
 
+	/** Core's kebab form of a palette slug: `accent1` is `accent-1` in class and variable names. */
+	function paletteSlugToKebab(slug) {
+		return String(slug)
+			.replace(/([a-z])([A-Z])/g, '$1-$2')
+			.replace(/([a-zA-Z])(\d)/g, '$1-$2')
+			.replace(/(\d)([a-zA-Z])/g, '$1-$2')
+			.replace(/[\s_]+/g, '-')
+			.toLowerCase();
+	}
+
+	/**
+	 * What a whole block keeps of a style's own values when it is detached
+	 * (#346). The values a block setting can hold go to that setting: text
+	 * color, margin top and bottom, padding left and right. A setting the
+	 * block already has wins. The rest are reported, so the author knows
+	 * what went.
+	 *
+	 * A style's indents are logical and block padding is physical, so the
+	 * text direction picks the side. An em value that would resolve against
+	 * another size becomes px at the size the text renders at now
+	 * (fontSizePx): a core block loses the style's size, and a Typography
+	 * Stylist block's indent moves from the text element to the wrapper.
+	 * That block's margins stay in em (keepMarginEm): the style wrote them on
+	 * the wrapper too, so the same value gives the same result on every
+	 * theme, where a px value measured in the editor might not. A color that
+	 * is fully transparent is never kept: the outline that shows such text
+	 * has no block setting, and the text would vanish.
+	 *
+	 * @param {Object} properties The detached style's resolved properties.
+	 * @param {Object} attrs      The block's attributes.
+	 * @param {Object} [options]
+	 * @param {boolean} [options.isRtl]      Right-to-left text.
+	 * @param {Array}   [options.palette]    The theme palette, [{slug, color}].
+	 * @param {number}  [options.fontSizePx] The rendered font size.
+	 * @param {boolean} [options.isFit]      A fit to width block: the style's indents never applied.
+	 * @param {boolean} [options.coreBlock]  A core block, which holds no copy of the style's type settings.
+	 * @param {boolean} [options.keepMarginEm] The style's margins are on the element the block's margins go to.
+	 * @param {boolean} [options.hasGrepRules] The style has GREP rules, which are on its record, not in its properties.
+	 * @return {{attributes: Object, removed: string[], emConverted: boolean}}
+	 */
+	function buildDetachBlockSettings(properties, attrs, options) {
+		var props = properties && typeof properties === 'object' ? properties : {};
+		var a = attrs && typeof attrs === 'object' ? attrs : {};
+		var opts = options || {};
+		var isFit = !!opts.isFit || props.fontSize === 'fit';
+		var fontSizePx = typeof opts.fontSizePx === 'number' && isFinite(opts.fontSizePx) && opts.fontSizePx > 0 ? opts.fontSizePx : 0;
+		var style = a.style && typeof a.style === 'object' ? a.style : {};
+		var attributes = {};
+		var removed = [];
+		var emConverted = false;
+		var nextStyle = null;
+
+		function write(group, side, value) {
+			nextStyle = nextStyle || Object.assign({}, style);
+			if (!side) {
+				nextStyle.color = Object.assign({}, nextStyle.color, { text: value });
+				return;
+			}
+			nextStyle.spacing = Object.assign({}, nextStyle.spacing);
+			nextStyle.spacing[group] = Object.assign({}, nextStyle.spacing[group]);
+			nextStyle.spacing[group][side] = value;
+		}
+
+		// Text color
+		var ownColor = style.color && typeof style.color === 'object' ? style.color : {};
+		var color = normalizeColor(props.textColor, true);
+		if (color && !a.textColor && !ownColor.text) {
+			var slug = paletteColorSlug(color);
+			if (color === 'transparent') {
+				if (hasOutlinePartner(props)) removed.push('textColor');
+			} else if (slug) {
+				var entry = (Array.isArray(opts.palette) ? opts.palette : []).filter(function (candidate) {
+					return candidate && paletteSlugToKebab(candidate.slug) === slug;
+				})[0];
+				var fallback = paletteColorFallback(color);
+				if (entry && !isFullyTransparentColor(normalizeHexColor(entry.color))) {
+					attributes.textColor = entry.slug;
+				} else if (!entry && fallback && !isFullyTransparentColor(fallback)) {
+					write('color', '', fallback);
+				} else {
+					removed.push('textColor');
+				}
+			} else if (isFullyTransparentColor(color)) {
+				removed.push('textColor');
+			} else {
+				write('color', '', color);
+			}
+		}
+
+		// Space before and after, and the indents
+		var spacing = style.spacing && typeof style.spacing === 'object' ? style.spacing : {};
+		function keepLength(group, side, value) {
+			if (!value) return;
+			var current = spacing[group];
+			if (current !== undefined && current !== null && (typeof current !== 'object' || current[side] !== undefined)) return;
+			var written = value;
+			if (fontSizePx && /em$/.test(value) && !(group === 'margin' && opts.keepMarginEm)) {
+				written = String(Number(Math.round(Number(parseFloat(value) * fontSizePx + 'e3')) + 'e-3')) + 'px';
+				emConverted = true;
+			}
+			write(group, side, written);
+		}
+		keepLength('margin', 'top', normalizeLength(props.spaceBefore));
+		keepLength('margin', 'bottom', normalizeLength(props.spaceAfter));
+		if (!isFit) {
+			keepLength('padding', opts.isRtl ? 'right' : 'left', normalizeLength(props.indentStart));
+			keepLength('padding', opts.isRtl ? 'left' : 'right', normalizeLength(props.indentEnd));
+		}
+
+		// No block setting holds these
+		if (normalizeStrokeWidth(props.textStrokeWidth) > 0) removed.push('textStrokeWidth');
+		if (!isFit && normalizeLength(props.firstLineIndent, true)) {
+			removed.push('firstLineIndent');
+			if (indentAfterSameApplies(props)) removed.push('indentAfterSame');
+		}
+		if (props.fontSize !== 'fit') {
+			if (phpInt(props.wordSpacing)) removed.push('wordSpacing');
+			if (normalizeTextWrap(props.textWrap)) removed.push('textWrap');
+			if (opts.coreBlock && normalizeAlignment(props.alignment) === 'justify') removed.push('alignment');
+			if (normalizeAlignLast(props.alignment, props.alignLast)) removed.push('alignLast');
+		}
+		// The GREP rules go with the class; text in a fit block never matched
+		if (opts.hasGrepRules && !isFit) removed.push('grepRules');
+
+		// A Typography Stylist block keeps these as its working copy; a core
+		// block has only the class
+		if (opts.coreBlock) {
+			if (phpInt(props.fontId) > 0) removed.push('fontId');
+			if (props.fontWeight) removed.push('fontWeight');
+			if (props.fontStyle) removed.push('fontStyle');
+			if (props.fontSize && props.fontSize !== 'inherit') removed.push('fontSize');
+			if (phpInt(props.letterSpacing)) removed.push('letterSpacing');
+			if (props.lineHeight) removed.push('lineHeight');
+			if (Array.isArray(props.features) && props.features.length) removed.push('features');
+			if (props.fontVariationSettings) removed.push('fontVariationSettings');
+			if (normalizeHang(props.initialHang) > 0) removed.push('initialHang');
+			if (props.textCase) removed.push('textCase');
+		}
+
+		if (nextStyle) attributes.style = nextStyle;
+		return { attributes: attributes, removed: removed, emConverted: emConverted };
+	}
+
+	/**
+	 * The editor's color palette as [{slug, color}], [] outside the block
+	 * editor. Every origin, because a style can use a site, theme or default
+	 * color, and core sets settings.colors to only one of them
+	 * (custom ?? theme ?? default). The default origin only when the theme
+	 * keeps it: with defaultPalette false core prints no CSS for those colors,
+	 * so a kept slug would show nothing.
+	 */
+	function readEditorPalette() {
+		var data = typeof window !== 'undefined' && window.wp && window.wp.data;
+		var store = data && data.select && data.select('core/block-editor');
+		var settings = store && store.getSettings ? store.getSettings() : null;
+		if (!settings) return [];
+		var color = settings.__experimentalFeatures && settings.__experimentalFeatures.color;
+		var palette = color && color.palette;
+		if (palette) {
+			return [].concat(palette.custom || [], palette.theme || [], color.defaultPalette === false ? [] : (palette.default || []));
+		}
+		return Array.isArray(settings.colors) ? settings.colors : [];
+	}
+
+	/**
+	 * The font size a block's text renders at now, in px, or null when the
+	 * block is not rendered (#346): the canvas iframe's copy first, since
+	 * the editor page has no blocks when the canvas is an iframe.
+	 *
+	 * @param {string} clientId
+	 * @return {?number}
+	 */
+	function measureBlockFontSize(clientId) {
+		if (!clientId || typeof document === 'undefined') return null;
+		var canvas = document.querySelector('iframe[name="editor-canvas"]');
+		var docs = [canvas && canvas.contentDocument, document];
+		for (var i = 0; i < docs.length; i++) {
+			var block = docs[i] && docs[i].querySelector('[data-block="' + clientId + '"]');
+			if (block) {
+				var el = block.querySelector('.typost-block-content') || block;
+				var size = parseFloat(docs[i].defaultView.getComputedStyle(el).fontSize);
+				return isFinite(size) && size > 0 ? size : null;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * The alignment declarations of a style (#207), for its guarded rule.
 	 * Twin of PHP alignment_declarations(): text-align-last only with
@@ -2701,6 +2888,9 @@
 		findContrastProblem: findContrastProblem,
 		alignmentToBlockAlign: alignmentToBlockAlign,
 		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
+		buildDetachBlockSettings: buildDetachBlockSettings,
+		measureBlockFontSize: measureBlockFontSize,
+		readEditorPalette: readEditorPalette,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
 		normalizeLength: normalizeLength,
 		indentAfterSameApplies: indentAfterSameApplies,

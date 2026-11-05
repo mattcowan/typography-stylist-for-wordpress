@@ -4,6 +4,20 @@
 
 .wp-block-typost {
 	position: relative;
+	/* The block's own padding stays inside its width. In a theme with no
+	   border-box reset, padding on a block with a max-width (a constrained
+	   layout) would widen the box past the column. A style's indents already
+	   use border-box, so Detach (#346) keeps the same width. */
+	box-sizing: border-box;
+}
+
+/* The block's own text color is on the wrapper, and the text element inherits
+   it. A theme's heading color would otherwise beat it on the element itself.
+   A style's color still wins on a block with no color of its own: this rule
+   needs has-text-color. With both, the generated block_color_selector() rule
+   gives the same result at a higher specificity. */
+.wp-block-typost.has-text-color > :is(.typost-styled, .typost-block-content) {
+	color: inherit;
 }
 
 /* Screen reader only classes - ensure they exist and prevent layout impact */
