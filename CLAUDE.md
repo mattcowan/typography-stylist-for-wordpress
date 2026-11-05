@@ -119,6 +119,10 @@ The plugin uses different WordPress hooks for font detection depending on page t
 - Cache automatically cleared when plugin options change
 - Cache keys: `typost_has_styled_*`, `typost_used_fonts_*`, `typost_font_css_*`
 
+### Block supports reach the frontend at render time (v2.3.6+)
+
+`save.js` writes a bare `<div class="wp-block-typost">` and never calls `useBlockProps.save()`, and core's `getSaveElement` skips `blocks.getSaveContent.extraProps` for an apiVersion above 1 (`wp-includes/js/dist/blocks.js:3620`, WP 7.1.3). So the block's color, background, margin, padding, line height, alignment, anchor and class never reached saved markup, in any version. Changing `save()` needs a deprecation for every block with a setting, so `Typost::add_block_support_attributes()` (`render_block`) adds them instead: it sets `WP_Block_Supports::$block_to_render`, calls `apply_block_supports()`, restores the value, and writes the result on the wrapper. Do not change `save()` to fix a block support: the attribute is stored either way, so a support in `block.json` reaches the frontend through this filter. The API is public and unchanged since WP 5.8 (read at the 5.8 tag); `block-supports/anchor.php` starts at 7.0, so the filter also reads `attrs.anchor`. Core's generated `wp-block-typost-block` is dropped so a block with nothing set stays byte for byte. Verified on mnc4 in Chromium: see `tests/Unit/BlockSupportsRenderTest.php` for the shapes.
+
 ### Data Flow
 
 1. User selects text in heading block → clicks toolbar button
