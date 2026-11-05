@@ -320,6 +320,26 @@ foreach ( $form_features as $feature ) {
 				</p>
 			</fieldset>
 
+			<?php
+			// GREP styles (#196). Only where the render-time engine runs
+			// (WordPress 6.9+). admin.js builds one row per rule from
+			// typostPSAdmin.grep: pattern, custom expression, style, and Move
+			// up / Move down / Remove buttons.
+			if ( Typost_Paragraph_Styles::grep_supported() ) :
+				?>
+			<fieldset class="typost-ps-edit-group typost-ps-edit-grep" data-grep>
+				<legend><?php esc_html_e( 'GREP styles', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-grep-help">
+					<?php esc_html_e( 'Apply another style to the text that matches a pattern, wherever this style is used on a whole block. The saved text does not change. Where two rules match the same text, the rule higher in the list wins. Text in fit to width blocks and in code is not matched.', 'typost-paragraph-styles' ); ?>
+				</p>
+				<ol class="typost-ps-grep-rules" data-grep-rules></ol>
+				<p class="typost-ps-grep-empty" data-grep-empty><?php esc_html_e( 'No GREP rules.', 'typost-paragraph-styles' ); ?></p>
+				<p>
+					<button type="button" class="button typost-ps-grep-add" aria-describedby="typost-ps-edit-grep-help"><?php esc_html_e( 'Add GREP rule', 'typost-paragraph-styles' ); ?></button>
+				</p>
+			</fieldset>
+			<?php endif; ?>
+
 			<?php // The id lets showFormError() add the message to the failing field's description ?>
 			<p class="typost-ps-edit-error" id="typost-ps-edit-error" role="alert" hidden></p>
 

@@ -351,6 +351,39 @@ The block’s own sidebar settings, for example font size, letter spacing, and l
 
 A First Letter Hang in the style also applies to these blocks. It has no effect when the block is centered, aligned to the end, has a drop cap, or has a text indent.
 
+#### GREP styles (v2.3.6+, WordPress 6.9+)
+
+Some OpenType features are right for only part of the text. `frac` turns "1/2" into a fraction, but it also changes a date such as "9/22/2026". GREP styles, named after the same feature in Adobe InDesign, apply a style to the text that matches a pattern, automatically.
+
+1. Make a style for the matched text, for example "Fraction" with only the `frac` feature, or "Small caps" with `c2sc`. A style that sets only a few things works like a character style.
+2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Body".
+3. Under "GREP styles", click "Add GREP rule", choose a pattern, and choose the style to apply.
+4. Save. Every block that uses "Body" shows the change on its next page load.
+
+Built-in patterns:
+
+| Pattern | Matches | Typical style |
+|---|---|---|
+| Acronyms | 2 or more capital letters as a word, for example "NASA" ("PDFs" matches "PDF") | `c2sc` small caps |
+| Fractions | a number, `/` or `⁄`, a number, not part of a date or a decimal (1/2 and 3/16; not 9/22/2026 or 2026/9/22) | `frac` |
+| Ordinals | the letters after a number: "st", "nd", "rd", "th", and French "er", "re", "e", "ème" | `ordn` or `sups` |
+| Numbers | runs of digits, with the separators inside a number (1,000.50) | `onum` or `tnum` |
+| Ampersand | `&` | a different font |
+
+- **Order:** the rules run from the top. Where two rules match the same text, the higher rule wins and the lower rule skips that text. Put Fractions above Numbers, so a fraction keeps `frac`.
+- **Features add up:** the matched text keeps the OpenType features of the paragraph style and adds the features of the rule's style. Variable font axes do not add up: the rule's style replaces them.
+- **What is matched:** the text of blocks that use the style as a whole (core Paragraph and Heading blocks, and Typography Stylist blocks). Text that has the style only on a selection is not matched. Text in code, in a fit to width block, and inside HTML tags or attributes is never matched. A match can cross an inline element, for example "N*AS*A", and each piece gets the style.
+- **Your posts do not change:** the plugin applies the rules when the page is shown. Change or remove a rule, and every post follows. The page loads no script, and the screen reader copy of a Typography Stylist block does not change.
+- **A bare date:** "9/22" with no year cannot be told from a fraction, and the Fractions pattern matches it. Write dates with the year, or use a custom pattern.
+- **Automatic typography across a match:** WordPress changes some characters only when the text around them is in one piece. With a Numbers rule, "3x4" stays "3x4" and does not become "3×4", and an apostrophe directly before a matched number, as in "'90s", can curl the wrong way. This changes only how these characters look, and only in a block with a match.
+- **Shortcodes:** the rules do not run on a block that contains a registered shortcode. This includes a shortcode that is written as text with entities, for example `&#91;gallery&#93;`. The block shows without the rules, and the shortcode works as usual. Text that a shortcode writes is never matched.
+- **Screen readers and part of a word:** Ordinals and Acronyms can put part of a word in a span, for example the "st" in "1st", or "PDF" in "PDFs". A core Paragraph or Heading block has no separate screen reader copy, and some screen readers, for example NVDA, can read such a word in two parts. If this is a problem for your readers, do not use a rule that matches part of a word on that text. The screen reader copy of a Typography Stylist block does not have this problem.
+- **Custom patterns (administrators only):** choose "Custom pattern" and type a regular expression, without slashes or flags. Matching is case-sensitive. A pattern must be valid in PHP and in the browser, so some PHP-only syntax is refused (for example `(?>…)`, `a++`, `(?i)`, `\x{41}`), and so is a pattern that is too slow on some text. The form says why. PHP runs the pattern on the page. PHP reads `\d`, `\w` and `\b` with Unicode, so `\d` also matches "٣" and `\w` also matches "é". A browser reads these three as ASCII only, and `\s` also differs on a few characters. This has an effect only when a future editor preview runs a pattern in the browser. To get the same result in both, use `\p{L}`, `\p{Lu}` and `\p{Nd}`. Authors who are not administrators can use the built-in patterns and keep a custom pattern that an administrator added. A custom pattern runs on every page render of every post that uses the style, so keep it simple.
+- **If something fails:** a rule whose pattern fails on a page (for example on very long text) is skipped there, and the text shows without it. A block with HTML that is not complete is also left as it is. A rule whose style was deleted is removed with the style.
+- **Preview:** the style card on the Paragraph Styles tab shows the rules on its sample text. The block editor does not show them yet: check the result on the page.
+- **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect.
+- **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). The import preview lists each custom pattern, and refuses a file with a pattern that fails. If you overwrite a style with a style that has no rules, the rules are removed. If the file was made before GREP styles existed, the rules stay.
+
 ---
 
 ## Admin Interface Guide
@@ -404,6 +437,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option). A fixed size in px is a whole number: the form removes the decimals, because the page shows px sizes without them.
 - The form opens with the settings that are saved now. A change that you made in the editor after this page opened is in the form.
 - The form also has “Based on” (see “Based On” under Paragraph Styles). A style that is based on another style shows “Based on” on its card, marks each value as “Inherited” or “Override”, and has a “Reset to Base” button in its form. After a save, the cards of the styles based on it show their new values too.
+- On WordPress 6.9 or later, the form also has “GREP styles” (see “GREP styles” under Paragraph Styles): a list of rules, each with a pattern and the style to apply, with buttons to move a rule up or down and to remove it. The card lists the rules, and its sample shows them.
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab
