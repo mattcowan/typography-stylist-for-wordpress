@@ -263,6 +263,9 @@ class Typost {
         // Let the plain typography switch keep hung fit lines inside the block (#315)
         add_filter('render_block', array($this, 'add_fit_line_plain_properties'), 10, 2);
 
+        // Write the block's sidebar settings to its wrapper at render time
+        add_filter('render_block', array($this, 'add_block_support_attributes'), 10, 2);
+
         // Load translations.
         //
         // On WordPress 6.7+ just-in-time loading already finds the bundled
@@ -2185,6 +2188,77 @@ class Typost {
             return $properties;
         }
         return array_values(array_unique(array_merge($properties, self::SAFE_CSS_PROPERTIES)));
+    }
+
+    /**
+     * Write a Typography Stylist block's sidebar settings to its wrapper.
+     *
+     * The block supports color, spacing, line height, alignment, an anchor and
+     * a CSS class. In the editor useBlockProps() applies them, but save.js
+     * writes a bare wrapper, and core skips blocks.getSaveContent.extraProps
+     * for an apiVersion above 1, so they never reach the saved markup. This
+     * filter asks core's block supports API for what the editor shows and adds
+     * it at render time. Saved markup does not change (no deprecation), content
+     * already saved is covered, and the frontend loads no script. A block with
+     * none of these settings comes back byte for byte.
+     *
+     * Runs on `render_block`, because a static block has no render callback, so
+     * core does not set WP_Block_Supports::$block_to_render for it. The value is
+     * restored afterwards, because this can run inside a dynamic parent.
+     *
+     * @since 2.3.6
+     * @param string $block_content The rendered block HTML.
+     * @param array  $block         The parsed block.
+     * @return string The HTML, with the settings on the wrapper.
+     */
+    public function add_block_support_attributes($block_content, $block) {
+        // A block with no attributes has no sidebar settings: core would give it
+        // only its generated class, which is dropped below
+        if (!is_string($block_content) || !is_array($block)
+            || !isset($block['blockName']) || 'typost/block' !== $block['blockName']
+            || empty($block['attrs']) || !is_array($block['attrs'])
+            || !class_exists('WP_Block_Supports')) {
+            return $block_content;
+        }
+
+        $previous = WP_Block_Supports::$block_to_render;
+        WP_Block_Supports::$block_to_render = $block;
+        $support = WP_Block_Supports::get_instance()->apply_block_supports();
+        WP_Block_Supports::$block_to_render = $previous;
+
+        $classes = isset($support['class']) ? preg_split('/\s+/', trim((string) $support['class'])) : array();
+        // Core's generated class is not one of the settings, and the block's
+        // CSS does not use it, so a block with nothing set stays as it was saved
+        $classes = array_diff($classes, array('', 'wp-block-typost', 'wp-block-typost-block'));
+        $style = isset($support['style']) ? trim((string) $support['style']) : '';
+        // WordPress before 7.0 has no anchor support on the server. block.json
+        // declares supports.anchor, so the attribute is the block's own, and it is
+        // escaped below
+        $id = !empty($support['id']) ? $support['id'] : (isset($block['attrs']['anchor']) ? $block['attrs']['anchor'] : '');
+        if (empty($classes) && '' === $style && '' === (string) $id) {
+            return $block_content;
+        }
+
+        // The wrapper save.js writes, which has only a class. Core's own filters
+        // run first at this priority and can add a class to it: its layout support
+        // adds wp-container-content-* to a block in a Row. Any other form is not
+        // this block's wrapper, so it is left alone.
+        return preg_replace_callback(
+            '/^(\s*)<div class="([^"]*)">/',
+            function ($matches) use ($id, $style, $classes) {
+                $existing = preg_split('/\s+/', trim($matches[2]), -1, PREG_SPLIT_NO_EMPTY);
+                if (!in_array('wp-block-typost', $existing, true)) {
+                    return $matches[0];
+                }
+                return $matches[1] . '<div'
+                    . ('' !== (string) $id ? ' id="' . esc_attr($id) . '"' : '')
+                    . ' class="' . esc_attr(implode(' ', array_values(array_unique(array_merge($existing, $classes))))) . '"'
+                    . ('' !== $style ? ' style="' . esc_attr($style) . '"' : '')
+                    . '>';
+            },
+            $block_content,
+            1
+        );
     }
 
     /**
