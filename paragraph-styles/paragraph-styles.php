@@ -35,6 +35,8 @@ if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
  * to provide paragraph style presets with CSS class-based rendering.
  */
 require_once __DIR__ . '/includes/class-typost-ps-transfer.php';
+require_once __DIR__ . '/includes/class-typost-ps-text-ranges.php';
+require_once __DIR__ . '/includes/class-typost-ps-grep.php';
 
 final class Typost_Paragraph_Styles {
 
@@ -55,6 +57,16 @@ final class Typost_Paragraph_Styles {
 
 	/** @var string[]|null Memoized typost_force_enqueue_paragraph_style_ids result */
 	private $forced_style_refs = null;
+
+	/** @var array|null Memoized GREP rules by style reference (#196), see get_grep_style_map() */
+	private $grep_style_map = null;
+
+	/**
+	 * Blocks whose styled element GREP rules apply to (#196): the core
+	 * blocks that take a style through their className (#219) and the
+	 * Typography Stylist block.
+	 */
+	const GREP_BLOCKS = array( 'core/paragraph', 'core/heading', 'typost/block' );
 
 	/** @var string Option key for storing paragraph styles */
 	const OPTION_KEY = 'typost_paragraph_styles';
@@ -262,6 +274,9 @@ final class Typost_Paragraph_Styles {
 		// CSS output — frontend: the rules for the styles the page uses, in
 		// the head; a footer pass prints the styles that blocks rendered
 		// after the head (classic-theme widgets, custom query loops).
+		// GREP styles (#196) wrap matches at render time; before the
+		// collector, so the styles the rules apply are collected too.
+		add_filter( 'render_block', array( $this, 'apply_grep_styles' ), 9, 2 );
 		add_filter( 'render_block', array( $this, 'collect_rendered_style_refs' ) );
 		add_action( 'wp_head', array( $this, 'output_style_css' ), 6 );
 		// Last, so blocks a popup or modal plugin renders in wp_footer count.
@@ -950,6 +965,13 @@ final class Typost_Paragraph_Styles {
 				$css_blocks[] = $block;
 			}
 		}
+		// GREP feature rules last, so they follow every style they combine
+		foreach ( $styles as $style ) {
+			$block = self::grep_feature_css( $style, $styles );
+			if ( '' !== $block ) {
+				$css_blocks[] = $block;
+			}
+		}
 
 		$css = implode( "\n\n", $css_blocks );
 		set_transient( self::CSS_CACHE_KEY, $css, 12 * HOUR_IN_SECONDS );
@@ -1039,6 +1061,340 @@ final class Typost_Paragraph_Styles {
 		return $block_content;
 	}
 
+	// -------------------------------------------------------------------------
+	// GREP styles (#196)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Wrap the text a style's GREP rules match, as the block renders.
+	 *
+	 * Hooked to `render_block` (priority 9, before the style collector). The
+	 * saved content never changes: the spans exist only in the rendered
+	 * HTML, so a change to a rule restyles every post on its next render.
+	 * Runs on WordPress 6.9+ (Typost_PS_Text_Ranges::is_supported()); below
+	 * that, the rules have no effect and the admin form does not show them.
+	 *
+	 * @param string $block_content Rendered block.
+	 * @param array  $block         Parsed block.
+	 * @return string
+	 */
+	public function apply_grep_styles( $block_content, $block = null ) {
+		if ( ! is_string( $block_content ) || false === strpos( $block_content, 'typost-ps-' ) ) {
+			return $block_content;
+		}
+		$name = is_array( $block ) && isset( $block['blockName'] ) ? $block['blockName'] : '';
+		if ( ! in_array( $name, self::GREP_BLOCKS, true ) ) {
+			return $block_content;
+		}
+		$map = $this->get_grep_style_map();
+		if ( empty( $map['rules'] ) || ! Typost_PS_Text_Ranges::is_supported() ) {
+			return $block_content;
+		}
+		// A full parse only for a block whose style has rules: on a site with
+		// any rule, this filter sees every styled block.
+		if ( ! self::references_grep_rules( $block_content, $map['rules'] ) ) {
+			return $block_content;
+		}
+		return self::wrap_grep( $block_content, $map['rules'], $map['ids'] );
+	}
+
+	/**
+	 * Whether HTML mentions the `typost-ps-{ref}` class of a style with rules.
+	 *
+	 * A cheap test before the parser. wrap_grep() reads the classes properly,
+	 * with the same reference form (an id, or a legacy `ps_123_456`), so a
+	 * false positive only costs that parse.
+	 *
+	 * @param string $html         HTML fragment.
+	 * @param array  $rules_by_ref Rules by style reference (id or legacy id).
+	 * @return bool
+	 */
+	public static function references_grep_rules( $html, $rules_by_ref ) {
+		if ( empty( $rules_by_ref ) || ! preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', (string) $html, $matches ) ) {
+			return false;
+		}
+		foreach ( $matches[1] as $ref ) {
+			if ( isset( $rules_by_ref[ $ref ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether HTML holds a registered shortcode, written out or as entities.
+	 *
+	 * GREP runs before do_shortcode (the_content, priority 11), so a shortcode
+	 * is still plain text here: a pattern could match inside it. The entity
+	 * form counts because wrapped text is written back decoded: `&#91;foo&#93;`,
+	 * how an author shows a shortcode as text, would become a real one.
+	 *
+	 * @param string $html HTML fragment.
+	 * @return bool
+	 */
+	private static function has_registered_shortcode( $html ) {
+		// With no tags, the core regex would match any "[ " (do_shortcode() has the same check).
+		if ( empty( $GLOBALS['shortcode_tags'] ) || ! function_exists( 'get_shortcode_regex' ) ) {
+			return false;
+		}
+		$text = false !== strpos( $html, '&' ) ? html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : $html;
+		if ( false === strpos( $text, '[' ) ) {
+			return false;
+		}
+		// A regex error (false) also leaves the block alone.
+		return 0 !== preg_match( '/' . get_shortcode_regex() . '/', $text );
+	}
+
+	/**
+	 * Wrap GREP matches in an HTML fragment.
+	 *
+	 * A root is an element with the `typost-ps-N` class of a style that has
+	 * rules, and (unless $require_styled is false, for the admin preview)
+	 * the `typost-styled` class: a core block with a style (#219), or the
+	 * Typography Stylist block's visual copy. The block's screen reader copy
+	 * carries neither class, so its text never changes. Fit-to-width text
+	 * (`typost-fit`) is left alone: its lines were measured in the editor,
+	 * and a span with another size or features would change their width.
+	 * A fragment with a registered shortcode comes back unchanged (see
+	 * has_registered_shortcode()).
+	 *
+	 * @param string $html           HTML fragment.
+	 * @param array  $rules_by_ref   Rules by style reference (id or legacy id, as strings).
+	 * @param array  $valid_ids      Style ids a rule may apply, as keys.
+	 * @param bool   $require_styled Whether a root needs the `typost-styled` class.
+	 * @param array  $font_ids       For the admin card: style id => font id the
+	 *                               admin font loader must load for its spans.
+	 *                               The frontend passes none.
+	 * @return string
+	 */
+	public static function wrap_grep( $html, $rules_by_ref, $valid_ids, $require_styled = true, $font_ids = array() ) {
+		if ( self::has_registered_shortcode( (string) $html ) ) {
+			return $html;
+		}
+		$root_for_tag = function ( $processor ) use ( $rules_by_ref, $require_styled ) {
+			if ( ( $require_styled && ! $processor->has_class( 'typost-styled' ) ) || $processor->has_class( 'typost-fit' ) ) {
+				return null;
+			}
+			foreach ( $processor->class_list() as $class_name ) {
+				if ( preg_match( '/^typost-ps-([A-Za-z0-9_-]+)$/', $class_name, $m ) && isset( $rules_by_ref[ $m[1] ] ) ) {
+					return $m[1];
+				}
+			}
+			return null;
+		};
+		$open_tag_for = function ( $style_id ) use ( $valid_ids, $font_ids ) {
+			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
+		};
+		$ranges_for_root = function ( $ref, $plain ) use ( $rules_by_ref, $open_tag_for ) {
+			return Typost_PS_Grep::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
+		};
+		return Typost_PS_Text_Ranges::wrap( $html, $root_for_tag, $ranges_for_root );
+	}
+
+	/**
+	 * The GREP rules of every style that has some, for this request.
+	 *
+	 * @return array array( 'rules' => ref => rules, 'ids' => style id => true ).
+	 */
+	private function get_grep_style_map() {
+		if ( null === $this->grep_style_map ) {
+			$rules = array();
+			$ids   = array();
+			foreach ( $this->get_styles() as $style ) {
+				if ( ! isset( $style['id'] ) ) {
+					continue;
+				}
+				$ids[ intval( $style['id'] ) ] = true;
+				if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) ) {
+					continue;
+				}
+				$rules[ (string) $style['id'] ] = $style['grepRules'];
+				if ( ! empty( $style['legacyId'] ) ) {
+					$rules[ (string) $style['legacyId'] ] = $style['grepRules'];
+				}
+			}
+			$this->grep_style_map = array(
+				'rules' => $rules,
+				'ids'   => $ids,
+			);
+		}
+		return $this->grep_style_map;
+	}
+
+	/**
+	 * Style references plus the styles their GREP rules apply.
+	 *
+	 * One level is enough: a GREP span carries `data-style-id`, not a
+	 * `typost-ps-N` class, so the rules of the style it applies never run
+	 * inside it.
+	 *
+	 * @param array $refs Style references.
+	 * @return string[]
+	 */
+	private function with_grep_targets( array $refs ) {
+		$map = $this->get_grep_style_map();
+		if ( empty( $map['rules'] ) ) {
+			return $refs;
+		}
+		$out = array_map( 'strval', $refs );
+		foreach ( $refs as $ref ) {
+			$ref = (string) $ref;
+			if ( isset( $map['rules'][ $ref ] ) ) {
+				foreach ( Typost_PS_Grep::target_style_ids( $map['rules'][ $ref ] ) as $target ) {
+					$out[] = (string) $target;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * CSS that keeps a style's OpenType features inside its GREP spans.
+	 *
+	 * `font-feature-settings` is one property, so a span whose style sets
+	 * `c2sc` would otherwise drop the `onum` of the paragraph around it. For
+	 * each rule whose style sets features, when the paragraph style sets
+	 * features too, this writes both lists (the paragraph's first) for that
+	 * span inside that paragraph. The selector, (0,8,0), beats the span
+	 * style's own (0,6,0) rule. Fonts' variation settings are not combined.
+	 *
+	 * @param array $style  Style record.
+	 * @param array $styles Every stored style.
+	 * @return string CSS, '' when there is nothing to combine.
+	 */
+	public static function grep_feature_css( $style, $styles ) {
+		if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) || ! isset( $style['id'] ) ) {
+			return '';
+		}
+		$own_features = self::resolved_features( $style, $styles );
+		if ( empty( $own_features ) ) {
+			return '';
+		}
+
+		$refs = array( (string) intval( $style['id'] ) );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$refs[] = esc_attr( $style['legacyId'] );
+		}
+
+		$css = array();
+		foreach ( Typost_PS_Grep::target_style_ids( $style['grepRules'] ) as $target_id ) {
+			$target = null;
+			foreach ( $styles as $candidate ) {
+				if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) === $target_id ) {
+					$target = $candidate;
+					break;
+				}
+			}
+			if ( null === $target ) {
+				continue;
+			}
+			$target_features = self::resolved_features( $target, $styles );
+			if ( empty( $target_features ) ) {
+				continue;
+			}
+			$features  = array_values( array_unique( array_merge( $own_features, $target_features ) ) );
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$selectors[] = sprintf( '.typost-ps-%1$s .typost-grep.typost-grep.typost-grep[data-style-id="%2$d"][data-style-id][data-style-id][data-style-id]', $ref, $target_id );
+			}
+			$css[] = sprintf(
+				"%s {\n    font-feature-settings: %s;\n}",
+				implode( ",\n", $selectors ),
+				implode( ', ', array_map( function ( $f ) {
+					return '"' . esc_attr( $f ) . '" 1';
+				}, $features ) )
+			);
+		}
+		return implode( "\n\n", $css );
+	}
+
+	/**
+	 * A style's resolved OpenType features (#200 Based On included).
+	 *
+	 * @param array $style  Style record.
+	 * @param array $styles Every stored style.
+	 * @return string[]
+	 */
+	private static function resolved_features( $style, $styles ) {
+		$props = empty( $style['basedOn'] )
+			? ( isset( $style['properties'] ) ? $style['properties'] : array() )
+			: self::resolve_properties( $style, $styles );
+		return ! empty( $props['features'] ) && is_array( $props['features'] ) ? array_values( $props['features'] ) : array();
+	}
+
+	/**
+	 * Sanitize the `grepRules` of a create or update request.
+	 *
+	 * Built-in patterns are open to every author (`edit_posts`, the routes'
+	 * capability). Adding or changing a custom pattern needs
+	 * `manage_options`: a slow pattern costs server time on every uncached
+	 * render of every post that uses the style. An author may keep a custom
+	 * pattern an administrator stored.
+	 *
+	 * @param mixed $raw      Request value.
+	 * @param int   $own_id   The style's id (0 for a new style).
+	 * @param array $existing The style's stored rules.
+	 * @param array $styles   Every stored style.
+	 * @return array See Typost_PS_Grep::sanitize_rules().
+	 */
+	private function sanitize_request_grep_rules( $raw, $own_id, $existing, $styles ) {
+		if ( null === $raw || '' === $raw || array() === $raw ) {
+			return Typost_PS_Grep::sanitize_rules( array(), array() );
+		}
+		$style_ids = array();
+		foreach ( $styles as $style ) {
+			if ( isset( $style['id'] ) ) {
+				$style_ids[] = intval( $style['id'] );
+			}
+		}
+		return Typost_PS_Grep::sanitize_rules( $raw, array(
+			'own_id'           => $own_id,
+			'style_ids'        => $style_ids,
+			'existing'         => $existing,
+			'can_write_custom' => current_user_can( 'manage_options' ),
+		) );
+	}
+
+	/**
+	 * The 400 response for rules that failed sanitize_rules().
+	 *
+	 * @param array $grep Result of sanitize_rules().
+	 * @return WP_REST_Response
+	 */
+	private static function grep_error_response( $grep ) {
+		return new WP_REST_Response( array(
+			'message'   => $grep['error'],
+			'field'     => 'grepRules',
+			'ruleIndex' => $grep['index'],
+			'ruleField' => $grep['field'],
+		), 400 );
+	}
+
+	/**
+	 * Whether GREP styles work on this site (WordPress 6.9+).
+	 *
+	 * @return bool
+	 */
+	public static function grep_supported() {
+		return Typost_PS_Text_Ranges::is_supported();
+	}
+
+	/**
+	 * The pattern choices of the admin form, in order.
+	 *
+	 * @return array List of array( 'value' => string, 'label' => string ).
+	 */
+	public static function grep_pattern_options() {
+		$options = array();
+		foreach ( Typost_PS_Grep::pattern_labels() as $value => $label ) {
+			$options[] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+		return $options;
+	}
+
 	/**
 	 * Print one <style> element with the rules for the referenced styles.
 	 *
@@ -1050,8 +1406,9 @@ final class Typost_Paragraph_Styles {
 	 */
 	private function print_style_rules( array $refs, $element_id ) {
 		$blocks     = array();
+		$grep       = array();
 		$all_styles = $this->get_styles();
-		foreach ( $this->styles_for_refs( $refs ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $refs ) ) as $style ) {
 			$key = isset( $style['id'] ) ? (string) $style['id'] : '';
 			if ( '' === $key || isset( $this->printed_style_ids[ $key ] ) ) {
 				continue;
@@ -1061,7 +1418,13 @@ final class Typost_Paragraph_Styles {
 			if ( '' !== $block ) {
 				$blocks[] = $block;
 			}
+			$block = self::grep_feature_css( $style, $all_styles );
+			if ( '' !== $block ) {
+				$grep[] = $block;
+			}
 		}
+		// GREP feature rules after the styles they combine (#196)
+		$blocks = array_merge( $blocks, $grep );
 		if ( empty( $blocks ) ) {
 			return;
 		}
@@ -1199,7 +1562,7 @@ final class Typost_Paragraph_Styles {
 		if ( ! is_array( $font_ids ) ) {
 			$font_ids = array();
 		}
-		foreach ( $this->styles_for_refs( $this->get_forced_style_refs() ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $this->get_forced_style_refs() ) ) as $style ) {
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
 				$font_ids[] = $font_id;
@@ -1358,7 +1721,8 @@ final class Typost_Paragraph_Styles {
 			return $ids;
 		}
 
-		foreach ( $this->styles_for_refs( $style_refs ) as $style ) {
+		// The styles GREP rules apply (#196) render in this content too
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $style_refs ) ) as $style ) {
 			// A font the style inherits from its parent (#200) loads too
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
@@ -1627,6 +1991,12 @@ final class Typost_Paragraph_Styles {
 			$properties = self::drop_inherited_properties( $properties, $this->resolved_style_properties( $styles, $based_on ) );
 		}
 
+		// GREP styles (#196): a new style has no stored rules to keep
+		$grep = $this->sanitize_request_grep_rules( $request->get_param( 'grepRules' ), 0, array(), $styles );
+		if ( '' !== $grep['error'] ) {
+			return self::grep_error_response( $grep );
+		}
+
 		$new_id = $this->get_next_id();
 
 		$new_style = array(
@@ -1638,6 +2008,9 @@ final class Typost_Paragraph_Styles {
 		);
 		if ( $based_on ) {
 			$new_style['basedOn'] = $based_on;
+		}
+		if ( ! empty( $grep['rules'] ) ) {
+			$new_style['grepRules'] = $grep['rules'];
 		}
 
 		$styles[] = $new_style;
@@ -1715,6 +2088,22 @@ final class Typost_Paragraph_Styles {
 			$styles[ $index ]['basedOn'] = $based_on;
 		} else {
 			unset( $styles[ $index ]['basedOn'] );
+		}
+
+		// GREP styles (#196). Absent leaves the rules as they are, so an
+		// Update Style from an editor (which sends properties only) keeps
+		// them; an empty list removes them.
+		if ( $request->has_param( 'grepRules' ) ) {
+			$existing = isset( $styles[ $index ]['grepRules'] ) && is_array( $styles[ $index ]['grepRules'] ) ? $styles[ $index ]['grepRules'] : array();
+			$grep     = $this->sanitize_request_grep_rules( $request->get_param( 'grepRules' ), $id, $existing, $styles );
+			if ( '' !== $grep['error'] ) {
+				return self::grep_error_response( $grep );
+			}
+			if ( empty( $grep['rules'] ) ) {
+				unset( $styles[ $index ]['grepRules'] );
+			} else {
+				$styles[ $index ]['grepRules'] = $grep['rules'];
+			}
 		}
 
 		$styles[ $index ]['modified'] = current_time( 'Y-m-d' );
@@ -1822,10 +2211,29 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// GREP rules that apply the deleted style go with it (#196)
+		$grep_changed = array();
+		foreach ( $styles as $i => $style ) {
+			if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) ) {
+				continue;
+			}
+			$kept = array_values( array_filter( $style['grepRules'], function ( $rule ) use ( $id ) {
+				return ! ( is_array( $rule ) && isset( $rule['styleId'] ) && intval( $rule['styleId'] ) === $id );
+			} ) );
+			if ( count( $kept ) !== count( $style['grepRules'] ) ) {
+				if ( empty( $kept ) ) {
+					unset( $styles[ $i ]['grepRules'] );
+				} else {
+					$styles[ $i ]['grepRules'] = $kept;
+				}
+				$grep_changed[] = intval( $style['id'] );
+			}
+		}
+
 		array_splice( $styles, $index, 1 );
 		$this->save_styles( $styles );
 
-		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached ), 200 );
+		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached, 'grepChanged' => $grep_changed ), 200 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -1936,6 +2344,16 @@ final class Typost_Paragraph_Styles {
 			// basedOn let the save store only the overrides.
 			'styles'          => array_values( $this->get_client_styles() ),
 			'newFontSizeUnit' => 'px' === $new_unit ? 'px' : 'rem',
+			// GREP styles (#196): the form shows the list only on WordPress
+			// 6.9+, and offers custom patterns to administrators only (the
+			// REST routes check the same capability).
+			'grep'            => array(
+				'supported'      => self::grep_supported(),
+				'canWriteCustom' => self::grep_supported() && current_user_can( 'manage_options' ),
+				'maxRules'       => Typost_PS_Grep::MAX_RULES,
+				'maxLength'      => Typost_PS_Grep::MAX_PATTERN_LENGTH,
+				'patterns'       => self::grep_pattern_options(),
+			),
 		) );
 	}
 
@@ -2137,9 +2555,11 @@ final class Typost_Paragraph_Styles {
 	 * @param array      $font        Result of resolve_font_label() for the style.
 	 * @param array|null $inheritance Null for a style without a parent, else
 	 *                                array( 'own' => array, 'parent' => string ).
+	 * @param array      $grep_rows   GREP rules (#196), each array( pattern
+	 *                                label, style name ), in rule order.
 	 * @return string HTML.
 	 */
-	public static function render_card_details( $props, $font, $inheritance = null ) {
+	public static function render_card_details( $props, $font, $inheritance = null, $grep_rows = array() ) {
 		$props     = is_array( $props ) ? $props : array();
 		$own       = is_array( $inheritance ) && isset( $inheritance['own'] ) && is_array( $inheritance['own'] ) ? $inheritance['own'] : null;
 		$font_name = self::font_display_name( $font );
@@ -2387,6 +2807,15 @@ final class Typost_Paragraph_Styles {
 		if ( ! empty( $paragraph_rows ) ) {
 			$html .= $detail( $paragraph_rows );
 		}
+		if ( is_array( $grep_rows ) && ! empty( $grep_rows ) ) {
+			$grep_parts = array();
+			foreach ( $grep_rows as $grep_row ) {
+				/* translators: 1: a GREP pattern, such as "Acronyms (NASA)", 2: the style applied to its matches */
+				$grep_parts[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $grep_row[0], $grep_row[1] );
+			}
+			// GREP rules are not inherited through Based On, so no source label
+			$html .= $detail( array( array( __( 'GREP styles:', 'typost-paragraph-styles' ), implode( '; ', $grep_parts ) ) ) );
+		}
 
 		return '<div class="typost-ps-style-card-details" data-font-label="' . esc_attr( $font_name ) . '">' . $html . '</div>';
 	}
@@ -2402,16 +2831,28 @@ final class Typost_Paragraph_Styles {
 	 * @param int   $style_id   Style ID.
 	 * @param array $font       Result of resolve_font_label() for the style.
 	 * @param array $manual_ids Font IDs of manual definitions, as keys.
+	 * @param array $grep       Optional GREP rules to run over the sample
+	 *                          (#196): array( 'rules' => rules, 'ids' =>
+	 *                          style id => true, 'fonts' => style id => font
+	 *                          id, so the loader also adds the kit of a font
+	 *                          that only a rule's style uses ).
 	 * @return string HTML.
 	 */
-	public static function render_card_preview( $style_id, $font, $manual_ids ) {
+	public static function render_card_preview( $style_id, $font, $manual_ids, $grep = null ) {
 		list( $text, $lang ) = self::admin_preview_text();
 		$style_id = intval( $style_id );
 		$font_id  = isset( $font['font_id'] ) ? absint( $font['font_id'] ) : 0;
 
-		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
-		$html .= '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
+		$sample = '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
 			. ( $font_id ? ' data-typost-font-id="' . esc_attr( $font_id ) . '"' : '' ) . '>' . esc_html( $text ) . '</p>';
+		// GREP styles (#196) style the sample through the same engine as
+		// the frontend, so the card shows what a post shows.
+		if ( is_array( $grep ) && ! empty( $grep['rules'] ) && self::grep_supported() ) {
+			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false, isset( $grep['fonts'] ) ? $grep['fonts'] : array() );
+		}
+
+		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
+		$html .= $sample;
 		// Check the font the style renders in: a deleted font can be replaced by a manual one.
 		if ( $font_id && isset( $manual_ids[ $font_id ] ) ) {
 			$html .= '<p class="typost-ps-preview-note">' . esc_html__( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ) . '</p>';
@@ -2489,8 +2930,16 @@ final class Typost_Paragraph_Styles {
 		// Based On (#200): the styles based on this one render from it, so
 		// their cards change too (values, "Based on" name). Their previews
 		// already follow through the CSS; their details come back here.
+		// GREP styles (#196): a card whose rules apply this style names it
+		// and previews it, so it comes back too.
+		$related_ids = self::descendant_ids( $styles, $id );
+		foreach ( $styles as $candidate ) {
+			if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) !== $id && in_array( $id, Typost_PS_Grep::target_style_ids( isset( $candidate['grepRules'] ) ? $candidate['grepRules'] : array() ), true ) ) {
+				$related_ids[] = intval( $candidate['id'] );
+			}
+		}
 		$related = array();
-		foreach ( self::descendant_ids( $styles, $id ) as $descendant_id ) {
+		foreach ( array_values( array_unique( $related_ids ) ) as $descendant_id ) {
 			$descendant_index = $this->find_style_index( $styles, $descendant_id );
 			if ( false !== $descendant_index ) {
 				$related[] = array_merge( array( 'id' => $descendant_id ), self::render_admin_card_parts( $styles[ $descendant_index ], $styles, $context ) );
@@ -2541,9 +2990,50 @@ final class Typost_Paragraph_Styles {
 			);
 		}
 		$font = self::resolve_font_label( isset( $props['fontId'] ) ? $props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+
+		// GREP styles (#196): listed and previewed only where they run
+		$grep_rows = array();
+		$grep      = null;
+		if ( ! empty( $style['grepRules'] ) && is_array( $style['grepRules'] ) && self::grep_supported() ) {
+			$names      = array();
+			$grep_fonts = array();
+			$targets    = Typost_PS_Grep::target_style_ids( $style['grepRules'] );
+			foreach ( $styles as $candidate ) {
+				if ( isset( $candidate['id'] ) ) {
+					$names[ intval( $candidate['id'] ) ] = isset( $candidate['name'] ) ? (string) $candidate['name'] : '';
+					if ( in_array( intval( $candidate['id'] ), $targets, true ) ) {
+						$candidate_props = self::resolve_properties( $candidate, $styles );
+						$candidate_font  = self::resolve_font_label( isset( $candidate_props['fontId'] ) ? $candidate_props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+						if ( $candidate_font['font_id'] ) {
+							$grep_fonts[ intval( $candidate['id'] ) ] = $candidate_font['font_id'];
+						}
+					}
+				}
+			}
+			$labels = Typost_PS_Grep::pattern_labels();
+			foreach ( $style['grepRules'] as $rule ) {
+				if ( ! is_array( $rule ) || ! isset( $rule['pattern'] ) ) {
+					continue;
+				}
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					/* translators: %s: a regular expression */
+					$pattern_label = sprintf( __( 'Custom (%s)', 'typost-paragraph-styles' ), isset( $rule['regex'] ) ? (string) $rule['regex'] : '' );
+				} else {
+					$pattern_label = isset( $labels[ $rule['pattern'] ] ) ? $labels[ $rule['pattern'] ] : (string) $rule['pattern'];
+				}
+				$target      = isset( $rule['styleId'] ) ? intval( $rule['styleId'] ) : 0;
+				$grep_rows[] = array( $pattern_label, isset( $names[ $target ] ) ? $names[ $target ] : __( 'A deleted style', 'typost-paragraph-styles' ) );
+			}
+			$grep = array(
+				'rules' => $style['grepRules'],
+				'ids'   => array_fill_keys( array_keys( $names ), true ),
+				'fonts' => $grep_fonts,
+			);
+		}
+
 		return array(
-			'details' => self::render_card_details( $props, $font, $inheritance ),
-			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'] ),
+			'details' => self::render_card_details( $props, $font, $inheritance, $grep_rows ),
+			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'], $grep ),
 		);
 	}
 
@@ -2591,6 +3081,7 @@ final class Typost_Paragraph_Styles {
 	private function save_styles( $styles ) {
 		// Re-index array to ensure sequential numeric keys
 		$styles = array_values( $styles );
+		$this->grep_style_map = null;
 		update_option( self::OPTION_KEY, $styles );
 		set_transient( self::CACHE_KEY, $styles, 12 * HOUR_IN_SECONDS );
 		// Regenerate CSS cache

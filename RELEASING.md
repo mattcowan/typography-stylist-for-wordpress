@@ -380,6 +380,38 @@ There is deliberately no scheduled nightly build: a nightly with no
 consumers is CI noise, and the on-demand button plus `-beta.N` pre-releases
 cover every real "give someone a build" case with better traceability.
 
+### The weekly compatibility run is not a nightly build
+
+`.github/workflows/compat.yml` (#189) does run on a schedule, once a week
+(Mondays 05:23 UTC) and on demand (**Actions → Compatibility → Run
+workflow**). It is not the nightly rejected above, for two reasons:
+
+- **It builds nothing for anyone.** It produces no zip. It runs tests only:
+  Jest after upgrading every installed `@wordpress/*` package to its latest
+  version, and the Playwright E2E suite in `wp-env` with WordPress trunk
+  (the nightly build) and the latest Gutenberg plugin.
+- **Its inputs change between runs.** The push and pull request CI installs
+  from the lockfiles, so a scheduled run of it would test the same thing
+  every time and find nothing. This run tests against what WordPress and
+  Gutenberg will ship next, which changes every day, so a failure means
+  something upstream moved: an unstable editor API the plugin uses
+  (`__unstableSplitSelection` through the `splitting` support,
+  `__experimentalTextAlign`, the iframed canvas) or a new package release.
+  Weekly is enough to find that before a WordPress release.
+
+It never runs on push or pull request, so it adds no pull request check and
+cannot block a merge, and the CI workflow and its lockfiles are unchanged.
+A failed scheduled run sends the usual GitHub Actions failure email to the
+user who last changed its `cron` line; the Playwright report is attached to
+the run. GitHub disables scheduled workflows in a public repository after
+60 days with no repository activity, without a warning: after a pause in
+development, re-enable it in the Actions tab.
+
+Jest cannot see every break: of the editor packages the source imports,
+`@wordpress/block-editor` is mocked in the unit tests and `blocks`,
+`components`, `data` and `rich-text` are not installed at all (WordPress
+provides them at runtime), so an API change there shows only in the E2E job.
+
 ## 10. Zip parity note
 
 The zip attached to a GitHub Release and the zip wp.org serves are
@@ -390,9 +422,10 @@ the archives.
 
 ## Future work
 
-- **E2E in CI**: the Playwright suite (`npm run test:e2e`) needs a live
-  WordPress install; a `wp-env`-based job could run it in CI. Skipped for
-  now to keep the pipeline simple.
+- **E2E on pull requests**: the Playwright suite runs in `wp-env` in the
+  weekly compatibility run (§ 9), not on push or pull request. Running it
+  there too, against the stable WordPress in `.wp-env.json`, is possible
+  but would add minutes and browser flakiness to every pull request.
 - **Real 2x banner**: `.wordpress-org/banner-1544x500.png` is currently a
   copy of the 772×250 file, not a true retina banner — regenerate from
   source art when convenient.

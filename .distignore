@@ -39,6 +39,8 @@ __mocks__
 /.env.example
 /.gitignore
 /.npmignore
+/.wp-env.json
+/.wp-env.override.json
 /.phpunit.result.cache
 /composer.json
 /composer.lock
