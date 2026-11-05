@@ -1374,8 +1374,8 @@ msgid "Detach Style removed these settings from the block: %s."
 msgstr "Détacher le style a retiré ces réglages du bloc : %s."
 
 #: assets/js/editor.js:221
-msgid "Indents and spacing set in em are now in px, at the current text size."
-msgstr "Les retraits et les espacements définis en em sont maintenant en px, à la taille de texte actuelle."
+msgid "Some values set in em are now in px, at the current text size."
+msgstr "Certaines valeurs définies en em sont maintenant en px, à la taille de texte actuelle."
 
 #: assets/js/editor.js:208
 msgid "first letter hang"
@@ -1384,3 +1384,7 @@ msgstr "débord de la première lettre"
 #: assets/js/editor.js:195
 msgid "“Indent the first line only after a paragraph with the same style”"
 msgstr "« Mettre la première ligne en retrait seulement après un paragraphe du même style »"
+
+#: assets/js/editor.js:200
+msgid "GREP rules"
+msgstr "règles GREP"

@@ -4,7 +4,9 @@
  * @jest-environment jsdom
  */
 
-const { buildDetachBlockSettings, measureBlockFontSize } = require('../assets/js/lib/ps-utils');
+const fs = require('fs');
+const path = require('path');
+const { buildDetachBlockSettings, measureBlockFontSize, readEditorPalette } = require('../assets/js/lib/ps-utils');
 
 const PALETTE = [
 	{ slug: 'accent1', color: '#123456' },
@@ -61,6 +63,26 @@ describe('buildDetachBlockSettings', () => {
 			expect(removed).toEqual(['textColor']);
 		});
 
+		it('never writes a fully transparent saved color, since the text would vanish', () => {
+			const { attributes, removed } = buildDetachBlockSettings(
+				{ textColor: 'var:preset|color|gone|#00000000', textStrokeWidth: 2, textStrokeColor: '#000000' },
+				{},
+				{ palette: [] }
+			);
+			expect(attributes).toEqual({});
+			expect(removed).toEqual(['textColor', 'textStrokeWidth']);
+		});
+
+		it('never keeps a palette color that is fully transparent in the palette', () => {
+			const { attributes, removed } = buildDetachBlockSettings(
+				{ textColor: 'var:preset|color|clear' },
+				{},
+				{ palette: [{ slug: 'clear', color: '#ffffff00' }] }
+			);
+			expect(attributes).toEqual({});
+			expect(removed).toEqual(['textColor']);
+		});
+
 		it('says nothing of a transparent fill the style never rendered', () => {
 			const { removed } = buildDetachBlockSettings({ textColor: 'transparent' }, {});
 			expect(removed).toEqual([]);
@@ -101,6 +123,27 @@ describe('buildDetachBlockSettings', () => {
 			);
 			expect(attributes.style.spacing).toEqual({ margin: { top: '30px' }, padding: { left: '60px' } });
 			expect(emConverted).toBe(true);
+		});
+
+		it('keeps em margins as they are where the style wrote them on the same wrapper', () => {
+			// A Typography Stylist block: the style's margins are on the wrapper, so em
+			// reads the wrapper's size before and after. Its indents move from the
+			// text element to the wrapper, so they still convert.
+			const { attributes, emConverted } = buildDetachBlockSettings(
+				{ spaceBefore: '1.5em', spaceAfter: '2em', indentStart: '1em' },
+				{},
+				{ fontSizePx: 48, keepMarginEm: true }
+			);
+			expect(attributes.style.spacing).toEqual({
+				margin: { top: '1.5em', bottom: '2em' },
+				padding: { left: '48px' },
+			});
+			expect(emConverted).toBe(true);
+		});
+
+		it('does not claim a conversion when only margins in em stay', () => {
+			const { emConverted } = buildDetachBlockSettings({ spaceBefore: '1.5em' }, {}, { fontSizePx: 48, keepMarginEm: true });
+			expect(emConverted).toBe(false);
 		});
 
 		it('rounds a converted value to three decimals', () => {
@@ -184,6 +227,16 @@ describe('buildDetachBlockSettings', () => {
 			expect(removed).toEqual(['textStrokeWidth', 'firstLineIndent', 'indentAfterSame', 'wordSpacing', 'textWrap', 'alignLast']);
 		});
 
+		it('reports GREP rules, which are on the style record and go with the class', () => {
+			expect(buildDetachBlockSettings({}, {}, { hasGrepRules: true }).removed).toEqual(['grepRules']);
+			expect(buildDetachBlockSettings({}, {}, { hasGrepRules: false }).removed).toEqual([]);
+		});
+
+		it('does not report GREP rules on a fit block, where they never matched', () => {
+			expect(buildDetachBlockSettings({}, {}, { hasGrepRules: true, isFit: true }).removed).toEqual([]);
+			expect(buildDetachBlockSettings({ fontSize: 'fit' }, {}, { hasGrepRules: true }).removed).toEqual([]);
+		});
+
 		it('does not report what the style does not set', () => {
 			const { removed } = buildDetachBlockSettings({
 				textStrokeWidth: 0,
@@ -238,6 +291,54 @@ describe('buildDetachBlockSettings', () => {
 
 	it.each([[undefined], [null], ['text']])('copes with properties of %p', (properties) => {
 		expect(buildDetachBlockSettings(properties, undefined, undefined)).toEqual({ attributes: {}, removed: [], emConverted: false });
+	});
+});
+
+describe('readEditorPalette', () => {
+	const withSettings = (settings) => {
+		window.wp = { data: { select: () => ({ getSettings: () => settings }) } };
+	};
+	const custom = [{ slug: 'mine', color: '#111111' }];
+	const theme = [{ slug: 'accent', color: '#222222' }];
+	const defaults = [{ slug: 'vivid-red', color: '#cf2e2e' }];
+	const slugs = (palette) => palette.map((c) => c.slug);
+
+	afterEach(() => {
+		delete window.wp;
+	});
+
+	it('merges every origin, though core sets settings.colors to only one', () => {
+		withSettings({ colors: theme, __experimentalFeatures: { color: { palette: { custom, theme, default: defaults } } } });
+		expect(slugs(readEditorPalette())).toEqual(['mine', 'accent', 'vivid-red']);
+	});
+
+	it('finds a default palette color for a style that uses one', () => {
+		withSettings({ colors: theme, __experimentalFeatures: { color: { palette: { theme, default: defaults } } } });
+		const { attributes } = buildDetachBlockSettings({ textColor: 'var:preset|color|vivid-red' }, {}, { palette: readEditorPalette() });
+		expect(attributes).toEqual({ textColor: 'vivid-red' });
+	});
+
+	it('leaves the default origin out when the theme turned it off, since it has no CSS then', () => {
+		withSettings({ __experimentalFeatures: { color: { defaultPalette: false, palette: { theme, default: defaults } } } });
+		expect(slugs(readEditorPalette())).toEqual(['accent']);
+	});
+
+	it('falls back to settings.colors with no features', () => {
+		withSettings({ colors: theme });
+		expect(slugs(readEditorPalette())).toEqual(['accent']);
+	});
+
+	it('returns an empty list outside the block editor', () => {
+		expect(readEditorPalette()).toEqual([]);
+		withSettings({});
+		expect(readEditorPalette()).toEqual([]);
+	});
+});
+
+describe('the block text color rule', () => {
+	it('passes the block color to the text element, past a theme heading color', () => {
+		const css = fs.readFileSync(path.join(__dirname, '../../blocks/typography-stylist/style.css'), 'utf8');
+		expect(css).toMatch(/\.wp-block-typost\.has-text-color > :is\(\.typost-styled, \.typost-block-content\)\s*\{\s*color: inherit;/);
 	});
 });
 

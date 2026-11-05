@@ -494,12 +494,15 @@
 	 * what went.
 	 *
 	 * A style's indents are logical and block padding is physical, so the
-	 * text direction picks the side. A block's margin and padding sit on the
-	 * wrapper of a Typography Stylist block, and a core block's own size can
-	 * change when the style goes, so an em value would resolve against
-	 * another size: it becomes px at the size the text renders at now
-	 * (fontSizePx). A transparent fill is never kept: the outline that shows
-	 * such text has no block setting, and the text would vanish.
+	 * text direction picks the side. An em value that would resolve against
+	 * another size becomes px at the size the text renders at now
+	 * (fontSizePx): a core block loses the style's size, and a Typography
+	 * Stylist block's indent moves from the text element to the wrapper.
+	 * That block's margins stay in em (keepMarginEm): the style wrote them on
+	 * the wrapper too, so the same value gives the same result on every
+	 * theme, where a px value measured in the editor might not. A color that
+	 * is fully transparent is never kept: the outline that shows such text
+	 * has no block setting, and the text would vanish.
 	 *
 	 * @param {Object} properties The detached style's resolved properties.
 	 * @param {Object} attrs      The block's attributes.
@@ -509,6 +512,8 @@
 	 * @param {number}  [options.fontSizePx] The rendered font size.
 	 * @param {boolean} [options.isFit]      A fit to width block: the style's indents never applied.
 	 * @param {boolean} [options.coreBlock]  A core block, which holds no copy of the style's type settings.
+	 * @param {boolean} [options.keepMarginEm] The style's margins are on the element the block's margins go to.
+	 * @param {boolean} [options.hasGrepRules] The style has GREP rules, which are on its record, not in its properties.
 	 * @return {{attributes: Object, removed: string[], emConverted: boolean}}
 	 */
 	function buildDetachBlockSettings(properties, attrs, options) {
@@ -545,10 +550,11 @@
 				var entry = (Array.isArray(opts.palette) ? opts.palette : []).filter(function (candidate) {
 					return candidate && paletteSlugToKebab(candidate.slug) === slug;
 				})[0];
-				if (entry) {
+				var fallback = paletteColorFallback(color);
+				if (entry && !isFullyTransparentColor(normalizeHexColor(entry.color))) {
 					attributes.textColor = entry.slug;
-				} else if (paletteColorFallback(color)) {
-					write('color', '', paletteColorFallback(color));
+				} else if (!entry && fallback && !isFullyTransparentColor(fallback)) {
+					write('color', '', fallback);
 				} else {
 					removed.push('textColor');
 				}
@@ -566,7 +572,7 @@
 			var current = spacing[group];
 			if (current !== undefined && current !== null && (typeof current !== 'object' || current[side] !== undefined)) return;
 			var written = value;
-			if (fontSizePx && /em$/.test(value)) {
+			if (fontSizePx && /em$/.test(value) && !(group === 'margin' && opts.keepMarginEm)) {
 				written = String(Number(Math.round(Number(parseFloat(value) * fontSizePx + 'e3')) + 'e-3')) + 'px';
 				emConverted = true;
 			}
@@ -591,6 +597,8 @@
 			if (opts.coreBlock && normalizeAlignment(props.alignment) === 'justify') removed.push('alignment');
 			if (normalizeAlignLast(props.alignment, props.alignLast)) removed.push('alignLast');
 		}
+		// The GREP rules go with the class; text in a fit block never matched
+		if (opts.hasGrepRules && !isFit) removed.push('grepRules');
 
 		// A Typography Stylist block keeps these as its working copy; a core
 		// block has only the class
@@ -611,17 +619,25 @@
 		return { attributes: attributes, removed: removed, emConverted: emConverted };
 	}
 
-	/** The editor's color palette as [{slug, color}]; [] outside the block editor. */
+	/**
+	 * The editor's color palette as [{slug, color}], [] outside the block
+	 * editor. Every origin, because a style can use a site, theme or default
+	 * color, and core sets settings.colors to only one of them
+	 * (custom ?? theme ?? default). The default origin only when the theme
+	 * keeps it: with defaultPalette false core prints no CSS for those colors,
+	 * so a kept slug would show nothing.
+	 */
 	function readEditorPalette() {
 		var data = typeof window !== 'undefined' && window.wp && window.wp.data;
 		var store = data && data.select && data.select('core/block-editor');
 		var settings = store && store.getSettings ? store.getSettings() : null;
 		if (!settings) return [];
-		if (Array.isArray(settings.colors)) return settings.colors;
-		var features = settings.__experimentalFeatures;
-		var palette = features && features.color && features.color.palette;
-		if (!palette) return [];
-		return [].concat(palette.custom || [], palette.theme || [], palette.default || []);
+		var color = settings.__experimentalFeatures && settings.__experimentalFeatures.color;
+		var palette = color && color.palette;
+		if (palette) {
+			return [].concat(palette.custom || [], palette.theme || [], color.defaultPalette === false ? [] : (palette.default || []));
+		}
+		return Array.isArray(settings.colors) ? settings.colors : [];
 	}
 
 	/**

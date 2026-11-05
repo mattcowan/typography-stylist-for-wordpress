@@ -197,6 +197,7 @@
 			textWrap: __('line breaking', 'typost-paragraph-styles'),
 			alignment: __('justified alignment', 'typost-paragraph-styles'),
 			alignLast: __('last line alignment', 'typost-paragraph-styles'),
+			grepRules: __('GREP rules', 'typost-paragraph-styles'),
 			fontId: __('font', 'typost-paragraph-styles'),
 			fontWeight: __('font weight', 'typost-paragraph-styles'),
 			fontStyle: __('font style', 'typost-paragraph-styles'),
@@ -218,7 +219,7 @@
 			));
 		}
 		if (result.emConverted) {
-			parts.push(__('Indents and spacing set in em are now in px, at the current text size.', 'typost-paragraph-styles'));
+			parts.push(__('Some values set in em are now in px, at the current text size.', 'typost-paragraph-styles'));
 		}
 		if (parts.length) {
 			notices.createNotice('info', parts.join(' '), { id: 'typost-ps-detach', isDismissible: true });
@@ -269,6 +270,7 @@
 						palette: utils.readEditorPalette(),
 						fontSizePx: utils.measureBlockFontSize(clientId),
 						coreBlock: true,
+						hasGrepRules: !!(detached.grepRules && detached.grepRules.length),
 					}
 				);
 				Object.assign(update, kept.attributes);

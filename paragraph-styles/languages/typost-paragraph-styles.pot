@@ -1374,7 +1374,7 @@ msgid "Detach Style removed these settings from the block: %s."
 msgstr ""
 
 #: assets/js/editor.js:221
-msgid "Indents and spacing set in em are now in px, at the current text size."
+msgid "Some values set in em are now in px, at the current text size."
 msgstr ""
 
 #: assets/js/editor.js:208
@@ -1383,4 +1383,8 @@ msgstr ""
 
 #: assets/js/editor.js:195
 msgid "“Indent the first line only after a paragraph with the same style”"
+msgstr ""
+
+#: assets/js/editor.js:200
+msgid "GREP rules"
 msgstr ""

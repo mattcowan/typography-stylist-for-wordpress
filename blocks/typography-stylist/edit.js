@@ -569,7 +569,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							const kept = psUtils.buildDetachBlockSettings(
 								detachedProps,
 								{ textColor: blockPropsRef.current.blockTextColor, style: blockPropsRef.current.blockStyle },
-								{ isRtl: isRTL(), palette: psUtils.readEditorPalette(), fontSizePx: psUtils.measureBlockFontSize(curClientId), isFit: isFitNow }
+								{
+									isRtl: isRTL(),
+									palette: psUtils.readEditorPalette(),
+									fontSizePx: psUtils.measureBlockFontSize(curClientId),
+									isFit: isFitNow,
+									// The style wrote its margins on this wrapper too
+									keepMarginEm: true,
+									hasGrepRules: !!(detachedStyle.grepRules && detachedStyle.grepRules.length),
+								}
 							);
 							Object.assign(newAttrs, kept.attributes);
 							document.dispatchEvent(new CustomEvent('typost-paragraph-style-detached', { detail: kept }));
