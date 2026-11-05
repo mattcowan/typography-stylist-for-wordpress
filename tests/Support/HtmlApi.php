@@ -27,6 +27,13 @@ final class HtmlApi {
             if (!is_file($dir . 'html-api/class-wp-html-processor.php') || !is_file($dir . 'class-wp-token-map.php')) {
                 return false;
             }
+            // WordPress 7.1's serialize_token() calls wp_scrub_utf8(). 6.9 does
+            // not: CI's sparse 6.9 checkout has no utf8.php, and a full 6.9
+            // utf8.php needs more of core to load.
+            if (false !== strpos((string) file_get_contents($dir . 'html-api/class-wp-html-processor.php'), 'wp_scrub_utf8(')) {
+                require_once $dir . 'compat-utf8.php';
+                require_once $dir . 'utf8.php';
+            }
             require_once $dir . 'class-wp-token-map.php';
             require_once $dir . 'html-api/html5-named-character-references.php';
             foreach (array(

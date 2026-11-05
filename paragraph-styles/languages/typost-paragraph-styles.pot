@@ -834,6 +834,10 @@ msgstr ""
 msgid "The pattern is not valid: %s"
 msgstr ""
 
+#: includes/class-typost-ps-grep.php:229
+msgid "The regular expression engine gave no details."
+msgstr ""
+
 #: includes/class-typost-ps-grep.php:197
 msgid "The pattern takes too long on some text, so it would be turned off. Make it simpler, for example without a repeated group inside a repeated group."
 msgstr ""

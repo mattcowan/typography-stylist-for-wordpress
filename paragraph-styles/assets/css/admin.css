@@ -315,6 +315,11 @@
 	margin: 0 0 8px;
 }
 
+/* Core's delete red is 4.40:1 on this row's gray; WCAG 1.4.3 asks for 4.5:1 */
+.typost-ps-grep-rule .button-link.typost-ps-grep-remove {
+	color: #b32d2e;
+}
+
 .typost-ps-grep-empty {
 	margin: 8px 0 0;
 	font-style: italic;

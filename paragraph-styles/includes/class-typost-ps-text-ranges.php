@@ -21,16 +21,24 @@
  *     of them.
  *  3. A second callback returns the ranges to wrap, as byte offsets into
  *     that plain text.
- *  4. Write the HTML back token by token with serialize_token(). A text
- *     node that a range covers is written as escaped pieces, the covered
- *     pieces inside the range's opening tag and a </span>.
+ *  4. Write the HTML back token by token: tags and comments with
+ *     serialize_token(), text with escape(). A text node that a range covers
+ *     is written as escaped pieces, the covered pieces inside the range's
+ *     opening tag and a </span>.
+ *
+ * Text is not written with serialize_token(), because that turns every ' and
+ * " into &apos; and &quot;. render_block runs inside do_blocks (the_content,
+ * priority 9), before wptexturize (priority 10), which does not read those
+ * entities: the block would keep straight quotes while its neighbors get
+ * curly ones.
  *
  * Fails open: when the HTML API is not there (WordPress before 6.9, where
  * serialize_token() is not public), when the parser stops on markup it does
- * not support, or when nothing is wrapped, the original HTML is returned
- * byte for byte. When something is wrapped, the whole fragment is written
- * in the HTML API's normalized form (double-quoted attributes, lower-case
- * tag names), which renders the same.
+ * not support or on an unterminated token at the end of the HTML, or when
+ * nothing is wrapped, the original HTML is returned byte for byte. When
+ * something is wrapped, the whole fragment is written in the HTML API's
+ * normalized form (double-quoted attributes, lower-case tag names, decoded
+ * text), which renders the same.
  *
  * @package Typography_Stylist_Paragraph_Styles
  */
@@ -167,7 +175,7 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 				$depth = $processor->get_current_depth();
 				$index = count( $tokens );
 
-				$tokens[] = $processor->serialize_token();
+				$tokens[] = '#text' === $type ? self::escape( $processor->get_modifiable_text() ) : $processor->serialize_token();
 
 				if ( '#tag' !== $type && '#text' !== $type ) {
 					if ( $root >= 0 && 0 === $skip_depth && '#comment' !== $type && '#funky-comment' !== $type ) {
@@ -247,7 +255,9 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 				}
 			}
 
-			if ( null !== $processor->get_last_error() || empty( $roots ) ) {
+			// An unterminated token at the end (<a href="x) stops the walk with
+			// no error, and writing the tokens back would drop it.
+			if ( null !== $processor->get_last_error() || $processor->paused_at_incomplete_token() || empty( $roots ) ) {
 				return $html;
 			}
 
@@ -309,7 +319,7 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 						continue;
 					}
 					if ( $start > $pos ) {
-						$html .= self::escape( substr( $text, $pos - $seg_start, $start - $pos ) );
+						$html .= self::escape_gap( $text, $pos - $seg_start, $start - $pos );
 					}
 					$html   .= $ranges[ $i ][2] . self::escape( substr( $text, $start - $seg_start, $end - $start ) ) . '</span>';
 					$pos     = $end;
@@ -320,7 +330,7 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 					continue;
 				}
 				if ( $pos < $seg_end ) {
-					$html .= self::escape( substr( $text, $pos - $seg_start ) );
+					$html .= self::escape_gap( $text, $pos - $seg_start, $seg_end - $pos );
 				}
 				$out[ $token_index ] = $html;
 			}
@@ -329,13 +339,56 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 		}
 
 		/**
-		 * Escape text the way serialize_token() does.
+		 * Escape the text between two wrappers, or after the last one.
+		 *
+		 * wptexturize() reads the text between two tags on its own, so it reads
+		 * a quote at the start of that text as an opening quote: "NASA's" would
+		 * become NASA‘s, and "NASA". would end in “ (WordPress core ticket
+		 * #43313 covers the same defect after any inline tag). A quote that touches the
+		 * matched text closes it, so it is curled here, by wptexturize() itself
+		 * (so the site's locale and run_wptexturize still decide), with the
+		 * text around it as context. wptexturize() leaves the entity it writes
+		 * alone on its later pass. Where it will not run on the content, the
+		 * quote stays literal like every other quote.
+		 *
+		 * @param string $text   The text node.
+		 * @param int    $offset Offset of the gap in the node. 0: nothing was
+		 *                       wrapped before it in this node.
+		 * @param int    $length Length of the gap.
+		 * @return string
+		 */
+		private static function escape_gap( $text, $offset, $length ) {
+			$gap = (string) substr( $text, $offset, $length );
+			if ( 0 === $offset || ! preg_match( '/^[\'"]/', $gap ) ) {
+				return self::escape( $gap );
+			}
+
+			// A match that ends in a space or an opening bracket leaves an
+			// opening quote, which wptexturize() reads correctly by itself.
+			$before = substr( $text, $offset - 1, 1 );
+			if ( ! preg_match( '/^[0-9A-Za-z\x80-\xFF]$/', $before ) || ! function_exists( 'wptexturize' ) || false === has_filter( 'the_content', 'wptexturize' ) ) {
+				return self::escape( $gap );
+			}
+
+			$previous = preg_match( '/^[0-9]$/', $before ) ? '1' : 'x';
+			$next     = preg_match( '/^.[0-9A-Za-z\x80-\xFF]/', $gap ) ? 's' : ' ';
+			$curled   = wptexturize( $previous . $gap[0] . $next );
+			return substr( $curled, 1, -1 ) . self::escape( substr( $gap, 1 ) );
+		}
+
+		/**
+		 * Escape text for a text node: `&`, `<` and `>`. Quotes stay literal
+		 * (see the file comment), which is valid in text and is what the block
+		 * had before it was parsed. A carriage return and a null byte follow
+		 * serialize_token() in WordPress 7.1: the parser would read a literal
+		 * carriage return as a line feed.
 		 *
 		 * @param string $text Decoded text.
 		 * @return string
 		 */
 		public static function escape( $text ) {
-			return htmlspecialchars( $text, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8' );
+			$html = htmlspecialchars( $text, ENT_NOQUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8' );
+			return str_replace( array( "\r", "\x00" ), array( '&#xD;', "\u{FFFD}" ), $html );
 		}
 	}
 }

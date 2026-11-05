@@ -832,6 +832,10 @@ msgstr "El patrón usa «%s», que los estilos GREP no admiten. Los patrones deb
 msgid "The pattern is not valid: %s"
 msgstr "El patrón no es válido: %s"
 
+#: includes/class-typost-ps-grep.php:229
+msgid "The regular expression engine gave no details."
+msgstr "El motor de expresiones regulares no dio detalles."
+
 #: includes/class-typost-ps-grep.php:197
 msgid "The pattern takes too long on some text, so it would be turned off. Make it simpler, for example without a repeated group inside a repeated group."
 msgstr "El patrón tarda demasiado con algunos textos, así que se desactivaría. Simplifícalo, por ejemplo sin un grupo repetido dentro de otro grupo repetido."

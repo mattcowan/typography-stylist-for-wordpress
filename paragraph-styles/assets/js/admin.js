@@ -991,13 +991,16 @@
 	 * @param {Document} doc
 	 * @param {Object}   rule     Stored rule (or a new one).
 	 * @param {Object}   ctx      {ownId, styles, settings: grepSettings()}.
-	 * @return {Element} li
+	 * @return {Element} li, holding the named group (a role on the li itself
+	 *                   would remove its list item semantics)
 	 */
 	function buildGrepRow(doc, rule, ctx) {
 		var settings = ctx.settings;
 		var r = normalizeGrepRule(rule);
 		var uid = 'typost-ps-grep-' + ctx.ownId + '-' + (++grepRowCount);
-		var row = makeEl(doc, 'li', { className: 'typost-ps-grep-rule', role: 'group' });
+		var row = makeEl(doc, 'li', { className: 'typost-ps-grep-rule' });
+		var group = makeEl(doc, 'div', { role: 'group' });
+		row.appendChild(group);
 
 		var fields = makeEl(doc, 'div', { className: 'typost-ps-edit-row' });
 
@@ -1063,13 +1066,13 @@
 		styleField.appendChild(styleSelect);
 		fields.appendChild(styleField);
 
-		row.appendChild(fields);
+		group.appendChild(fields);
 
 		var actions = makeEl(doc, 'p', { className: 'typost-ps-grep-actions' });
 		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-up' }, __('Move up', 'typost-paragraph-styles')));
 		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-down' }, __('Move down', 'typost-paragraph-styles')));
 		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button-link button-link-delete typost-ps-grep-remove' }, __('Remove', 'typost-paragraph-styles')));
-		row.appendChild(actions);
+		group.appendChild(actions);
 
 		updateGrepRow(row);
 		return row;
@@ -1107,7 +1110,7 @@
 		rows.forEach(function(row, index) {
 			var n = index + 1;
 			/* translators: %d: rule number */
-			row.setAttribute('aria-label', fill(__('GREP rule %d', 'typost-paragraph-styles'), n));
+			row.querySelector('[role="group"]').setAttribute('aria-label', fill(__('GREP rule %d', 'typost-paragraph-styles'), n));
 			['pattern', 'regex', 'styleId'].forEach(function(name) {
 				var input = row.querySelector('[data-grep="' + name + '"]');
 				if (input) {

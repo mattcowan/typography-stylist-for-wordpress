@@ -192,6 +192,13 @@ class ParagraphStylesGrepTest extends TestCase {
         $this->assertStringContainsString('UTF-8', \Typost_PS_Grep::validate_pattern("\xC3"));
     }
 
+    public function test_the_compile_error_fallback_is_safe_on_php_7_4() {
+        // preg_last_error_msg() is PHP 8+; the plugin requires PHP 7.4. No warning reaches this branch here, so read the source.
+        $source = file_get_contents(TYPOST_PLUGIN_DIR . '/paragraph-styles/includes/class-typost-ps-grep.php');
+        $this->assertGreaterThan(0, preg_match_all('/preg_last_error_msg\(\)/', $source, $calls));
+        $this->assertSame(count($calls[0]), preg_match_all("/function_exists\( 'preg_last_error_msg' \) \? preg_last_error_msg\(\)/", $source));
+    }
+
     public function test_dollar_matches_only_at_the_end_as_in_javascript() {
         $this->assertSame(array(), \Typost_PS_Grep::match_all('a$', "a\n"));
         $this->assertSame(array(array(0, 1)), \Typost_PS_Grep::match_all('a$', 'a'));

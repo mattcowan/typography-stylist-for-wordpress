@@ -832,6 +832,10 @@ msgstr "Le motif utilise « %s », que les styles GREP ne prennent pas en charge
 msgid "The pattern is not valid: %s"
 msgstr "Le motif n’est pas valide : %s"
 
+#: includes/class-typost-ps-grep.php:229
+msgid "The regular expression engine gave no details."
+msgstr "Le moteur d’expressions régulières n’a donné aucun détail."
+
 #: includes/class-typost-ps-grep.php:197
 msgid "The pattern takes too long on some text, so it would be turned off. Make it simpler, for example without a repeated group inside a repeated group."
 msgstr "Le motif prend trop de temps sur certains textes : il serait désactivé. Simplifiez-le, par exemple sans groupe répété à l’intérieur d’un groupe répété."

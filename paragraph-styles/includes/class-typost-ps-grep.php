@@ -16,10 +16,13 @@
  *
  * Patterns are PCRE with the `u` (UTF-8) and `D` (`$` only at the very
  * end, as in JavaScript) modifiers. A custom pattern must also be valid in
- * a JavaScript `RegExp` with the `u` flag, so an editor preview can run the
- * same pattern later: js_incompatibility() accepts the subset both engines
- * read the same way, and the admin form also compiles it with `new
- * RegExp( pattern, 'u' )` before saving.
+ * a JavaScript `RegExp` with the `u` flag, so an editor preview can compile
+ * the same pattern later: js_incompatibility() accepts a subset of syntax
+ * both engines accept, and the admin form also compiles it with `new
+ * RegExp( pattern, 'u' )` before saving. The check is on syntax only. On
+ * text that is not ASCII, `\d`, `\w`, `\b` and `\s` match different text:
+ * see js_incompatibility(). Only PCRE runs today, so this matters only when
+ * an editor preview is built.
  *
  * @package Typography_Stylist_Paragraph_Styles
  */
@@ -219,7 +222,11 @@ if ( ! class_exists( 'Typost_PS_Grep' ) ) {
 			restore_error_handler();
 
 			if ( false === $result ) {
-				return '' !== $message ? $message : preg_last_error_msg();
+				if ( '' !== $message ) {
+					return $message;
+				}
+				// PHP 8+ only; the plugin requires PHP 7.4.
+				return function_exists( 'preg_last_error_msg' ) ? preg_last_error_msg() : __( 'The regular expression engine gave no details.', 'typost-paragraph-styles' );
 			}
 			return '';
 		}
@@ -369,8 +376,18 @@ if ( ! class_exists( 'Typost_PS_Grep' ) ) {
 		}
 
 		/**
-		 * The part of a pattern that PCRE and a JavaScript `u` RegExp would
-		 * read differently (or only one of them reads), '' when none.
+		 * The part of a pattern outside the syntax that PCRE and a JavaScript
+		 * `u` RegExp both accept, '' when none.
+		 *
+		 * This shares validation, not matching. PCRE's `u` modifier also makes
+		 * `\d`, `\w` and `\b` follow Unicode, while they stay ASCII in a
+		 * JavaScript `u` RegExp: `\d` matches "٣" and `\w` matches "é" only in
+		 * PCRE, and `f\b` matches "café" only in JavaScript. `\s` follows
+		 * Unicode in both, but U+FEFF matches only in JavaScript and U+0085
+		 * only in PCRE (measured on PHP 8.4 with PCRE 10.44, and Node 24). On
+		 * ASCII text they agree. `\p{…}` reads the same in both, which is why
+		 * the built-in patterns use it. This matters only when an editor
+		 * preview runs a pattern in the browser.
 		 *
 		 * Accepted: literals, `.`, `^`, `$`, `|`, groups `(…)`, `(?:…)`,
 		 * `(?<name>…)`, lookarounds `(?=` `(?!` `(?<=` `(?<!`, quantifiers
@@ -713,10 +730,14 @@ if ( ! class_exists( 'Typost_PS_Grep' ) ) {
 		 * The opening tag of a GREP span.
 		 *
 		 * @param int $style_id Style id.
+		 * @param int $font_id  Font the admin font loader must load for this
+		 *                      span (the admin card only), 0 for none. The
+		 *                      frontend passes none.
 		 * @return string
 		 */
-		public static function open_tag( $style_id ) {
-			return '<span class="typost-styled typost-grep" data-style-id="' . intval( $style_id ) . '">';
+		public static function open_tag( $style_id, $font_id = 0 ) {
+			$font = $font_id > 0 ? ' data-typost-font-id="' . intval( $font_id ) . '"' : '';
+			return '<span class="typost-styled typost-grep" data-style-id="' . intval( $style_id ) . '"' . $font . '>';
 		}
 
 		/**

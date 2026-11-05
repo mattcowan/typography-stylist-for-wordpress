@@ -79,8 +79,16 @@ describe('fill and read', () => {
 		fillGrepRules(form, STYLES[0], STYLES, GREP);
 		const [first, second] = rows(form);
 
-		expect(first.getAttribute('role')).toBe('group');
-		expect(first.getAttribute('aria-label')).toBe('GREP rule 1');
+		// The li stays a list item; the named group is inside it, around every control
+		expect(first.tagName).toBe('LI');
+		expect(first.getAttribute('role')).toBeNull();
+		expect(first.getAttribute('aria-label')).toBeNull();
+		expect(first.children).toHaveLength(1);
+		const group = first.firstElementChild;
+		expect(group.getAttribute('role')).toBe('group');
+		expect(group.getAttribute('aria-label')).toBe('GREP rule 1');
+		expect(group.querySelector('[data-grep="pattern"]')).not.toBeNull();
+		expect(group.querySelector('.typost-ps-grep-remove')).not.toBeNull();
 		expect(second.querySelector('[data-grep="regex"]').getAttribute('data-field')).toBe('grep-1-regex');
 		expect(first.querySelector('.typost-ps-grep-up').disabled).toBe(true);
 		expect(second.querySelector('.typost-ps-grep-down').disabled).toBe(true);
@@ -153,8 +161,8 @@ describe('add, move, remove', () => {
 		expect(readGrepRules(form).map((r) => r.pattern)).toEqual(['custom', 'fractions']);
 		// The row is first now, so Move up is disabled: focus goes to Move down
 		expect(target).toBe(second.querySelector('.typost-ps-grep-down'));
-		expect(second.getAttribute('aria-label')).toBe('GREP rule 1');
-		expect(first.getAttribute('aria-label')).toBe('GREP rule 2');
+		expect(second.querySelector('[role="group"]').getAttribute('aria-label')).toBe('GREP rule 1');
+		expect(first.querySelector('[role="group"]').getAttribute('aria-label')).toBe('GREP rule 2');
 	});
 
 	test('removing focuses the next row, else the previous, else Add', () => {

@@ -51,7 +51,25 @@ class ParagraphStylesGrepTransferTest extends ExportTestCase {
             array('pattern' => 'fractions', 'style' => 's3'),
             array('pattern' => 'custom', 'regex' => '[A-Z]{2,}', 'style' => 's2'),
         ), $styles[0]['grepRules']);
-        $this->assertArrayNotHasKey('grepRules', $styles[1]);
+        // A style with no rules says so, so Overwrite can clear the target's rules
+        $this->assertSame(array(), $styles[1]['grepRules']);
+    }
+
+    public function test_overwriting_from_a_style_with_no_rules_clears_the_rules_of_the_target() {
+        $source = $this->module(array(
+            array('id' => 1, 'name' => 'Body', 'properties' => array('lineHeight' => 2)),
+        ), 2);
+        $text = json_encode($this->exportWith($source, array('sections' => array('paragraphStyles')))['file']);
+        $this->assertStringContainsString('"grepRules":[]', $text);
+
+        $this->registerSection($this->module(array(
+            array('id' => 4, 'name' => 'Body', 'properties' => array(), 'grepRules' => array(array('pattern' => 'numbers', 'styleId' => 5))),
+            array('id' => 5, 'name' => 'Figures', 'properties' => array()),
+        ), 6));
+        $this->export()->import($this->parse($text), array('sections' => array('paragraphStyles' => array('s1' => array('action' => 'overwrite')))));
+
+        $this->assertArrayNotHasKey('grepRules', $this->storedStyle('Body'));
+        $this->assertEquals(2, $this->storedStyle('Body')['properties']['lineHeight']);
     }
 
     public function test_exporting_a_style_adds_the_styles_its_rules_apply() {

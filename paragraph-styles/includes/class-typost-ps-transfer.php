@@ -17,8 +17,10 @@
  * "style": "s3"}, {"pattern": "custom", "regex": "…", "style": "s4"}]`:
  * the style a rule applies is a file key too (and is exported with it),
  * and a built-in pattern is written by name, so a later release can fix
- * it. A style written before #196 has no `grepRules` key; importing it
- * over an existing style keeps that style's rules.
+ * it. A style with no rules writes an empty list, so importing it over an
+ * existing style removes that style's rules. A style written before #196
+ * has no `grepRules` key; importing it over an existing style keeps that
+ * style's rules.
  *
  * Import gives every added style a new ID and saves every style in one
  * write, after a dry run that checks names, parents and chains.
@@ -199,11 +201,10 @@ final class Typost_PS_Transfer {
 				'basedOn'    => $parent_key,
 				'properties' => self::export_fonts( $properties, $fonts, null !== $parent_key ),
 			);
-			$rules = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
-			if ( ! empty( $rules ) ) {
-				$entry['grepRules'] = $rules;
-			}
-			$out[] = $entry;
+			// Always written: plan() reads no key as "keep the existing rules",
+			// so an empty list is how Overwrite removes them.
+			$entry['grepRules'] = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
+			$out[]              = $entry;
 		}
 
 		return array(

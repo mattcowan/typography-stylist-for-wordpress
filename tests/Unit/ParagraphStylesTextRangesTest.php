@@ -41,6 +41,7 @@ class ParagraphStylesTextRangesTest extends TestCase {
     protected function tearDown(): void {
         // Later tests run as on WordPress before 6.9, whatever this loaded
         HtmlApi::setSupported(false);
+        unset($GLOBALS['shortcode_tags']);
         parent::tearDown();
     }
 
@@ -96,6 +97,51 @@ class ParagraphStylesTextRangesTest extends TestCase {
         $this->assertSame(array(0 => 'a<i>&lt;</span>b<i>&amp;</span>c'), $out);
     }
 
+    public function test_escape_leaves_quotes_literal_and_keeps_the_html_apis_other_text_rules() {
+        $this->assertSame('He said "it\'s" &lt;b&gt; &amp;', \Typost_PS_Text_Ranges::escape('He said "it\'s" <b> &'));
+        // A decoded carriage return would otherwise read back as a line feed (WordPress 7.1's serializer)
+        $this->assertSame("a&#xD;b\u{FFFD}", \Typost_PS_Text_Ranges::escape("a\rb\x00"));
+    }
+
+    public function test_map_ranges_leaves_quotes_literal() {
+        $out = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 13, 0, '"NASA" isn\'t ')), array(array(1, 5, '<i>')));
+        $this->assertSame(array(0 => '"<i>NASA</span>" isn\'t '), $out);
+    }
+
+    public function test_a_quote_right_after_a_wrapper_is_curled_with_the_text_before_it() {
+        // wptexturize() reads each text between tags on its own, so it reads this quote as an opening one
+        Functions\when('wptexturize')->alias(function ($text) {
+            return strtr($text, array(
+                "x's" => 'x&#8217;s',
+                "1's" => '1&#8217;s',
+                "x' " => 'x&#8217; ',
+                "1' " => '1&#8242; ',
+                'x" ' => 'x&#8221; ',
+                '1" ' => '1&#8243; ',
+            ));
+        });
+        $map = function ($text) {
+            $at = strpos($text, 'NASA');
+            return \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, strlen($text), 0, $text)), array(array($at, $at + 4, '<i>')))[0];
+        };
+
+        // Not in the_content's filters: nothing will curl the other quotes, so this one stays literal
+        $this->assertSame('<i>NASA</span>\'s', $map('NASA\'s'));
+
+        Functions\when('has_filter')->justReturn(10);
+        $this->assertSame('<i>NASA</span>&#8217;s team', $map('NASA\'s team'));
+        $this->assertSame('He said "<i>NASA</span>&#8221;.', $map('He said "NASA".'));
+        $this->assertSame('<i>NASA</span>&#8217;', $map('NASA\''));
+        $this->assertSame('<i>NASA</span> it\'s', $map('NASA it\'s'), 'only the quote that touches the wrapper');
+
+        $digit = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 8, 0, '6\' and 7')), array(array(0, 1, '<i>')));
+        $this->assertSame(array(0 => '<i>6</span>&#8242; and 7'), $digit);
+
+        // A match that ends in an opening character leaves the next quote an opening quote
+        $open = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 5, 0, '( "a"')), array(array(0, 2, '<i>')));
+        $this->assertSame(array(0 => '<i>( </span>"a"'), $open);
+    }
+
     public function test_without_the_html_api_the_html_comes_back_unchanged() {
         HtmlApi::setSupported(false);
         $html = '<p class="typost-styled typost-ps-3">NASA</p>';
@@ -136,6 +182,30 @@ class ParagraphStylesTextRangesTest extends TestCase {
         $this->requireParser();
         $out = $this->wrapPattern('<p class="typost-ps-3">R&amp;D &lt;3</p>', '/&|</');
         $this->assertSame('<p class="typost-ps-3">R<span class="g">&amp;</span>D <span class="g">&lt;</span>3</p>', $out);
+    }
+
+    public function test_quotes_in_every_text_node_stay_literal_for_wptexturize() {
+        $this->requireParser();
+        // the_content runs do_blocks at 9 and wptexturize at 10, and wptexturize does not read &apos; or &quot;
+        $out = $this->wrapPattern(
+            '<div><h2>It\'s "here"</h2><p class="typost-ps-3" title="it\'s">He said "NASA isn\'t" <em>"go"</em></p></div>',
+            '/NASA/'
+        );
+        $this->assertSame(
+            '<div><h2>It\'s "here"</h2><p class="typost-ps-3" title="it&apos;s">He said "<span class="g">NASA</span> isn\'t" <em>"go"</em></p></div>',
+            $out
+        );
+    }
+
+    public function test_an_unterminated_trailing_token_returns_the_original_bytes() {
+        $this->requireParser();
+        foreach (array(
+            '<p class="typost-ps-3">NASA</p><a href="x',
+            '<p class="typost-ps-3">NASA <a href="x',
+            '<p class="typost-ps-3">NASA <!-- not closed',
+        ) as $html) {
+            $this->assertSame($html, $this->wrapPattern($html, '/NASA/'), $html);
+        }
     }
 
     public function test_code_and_line_breaks_separate_the_text() {
@@ -207,6 +277,72 @@ class ParagraphStylesTextRangesTest extends TestCase {
         $this->assertStringContainsString('data-style-id="9">NASA</span>', $out);
     }
 
+    /** Register shortcodes through a stand-in for core's regex (the shape do_shortcode() matches). */
+    private function registerShortcodes(array $tags) {
+        $GLOBALS['shortcode_tags'] = array_fill_keys($tags, '__return_empty_string');
+        Functions\when('get_shortcode_regex')->justReturn('\[(\[?)(' . implode('|', $tags) . ')(?![\w-])[^\]]*\](\]?)');
+    }
+
+    public function test_a_block_with_a_registered_shortcode_is_left_for_do_shortcode() {
+        $this->requireParser();
+        $this->registerShortcodes(array('foo'));
+        $wrap = function ($html) {
+            return \Typost_Paragraph_Styles::wrap_grep($html, $this->acronymRules(), array(9 => true));
+        };
+
+        // Patterns must not match inside it, and its quotes must survive
+        foreach (array(
+            '<p class="typost-styled typost-ps-3">[foo id="NASA"] and NASA</p>',
+            '<p class="typost-styled typost-ps-3">[[foo]] and NASA</p>',
+            // Written back decoded, this text would become a real shortcode
+            '<p class="typost-styled typost-ps-3">&#91;foo&#93; and NASA</p>',
+            '<p class="typost-styled typost-ps-3">&lsqb;foo&rsqb; and NASA</p>',
+        ) as $html) {
+            $this->assertSame($html, $wrap($html), $html);
+        }
+
+        // Control: brackets that are not a registered shortcode do not stop the rules
+        $this->assertStringContainsString('data-style-id="9">NASA</span>', $wrap('<p class="typost-styled typost-ps-3">[sic] and NASA</p>'));
+        $this->assertStringContainsString('data-style-id="9">NASA</span>', $wrap('<p class="typost-styled typost-ps-3">[foobar] and NASA</p>'));
+    }
+
+    public function test_with_no_shortcodes_registered_brackets_do_not_stop_the_rules() {
+        $this->requireParser();
+        // The core regex with no tag names would match any "[ "
+        Functions\when('get_shortcode_regex')->justReturn('\[(\[?)()(?![\w-])[^\]]*\](\]?)');
+        $GLOBALS['shortcode_tags'] = array();
+        $out = \Typost_Paragraph_Styles::wrap_grep('<p class="typost-styled typost-ps-3">[ ] and NASA</p>', $this->acronymRules(), array(9 => true));
+        $this->assertStringContainsString('data-style-id="9">NASA</span>', $out);
+    }
+
+    public function test_the_gate_reads_the_blocks_style_references_against_the_rules() {
+        $rules = array('3' => array(array('pattern' => 'numbers', 'styleId' => 9)), 'ps_123_456' => array(array('pattern' => 'numbers', 'styleId' => 9)));
+        $this->assertTrue(\Typost_Paragraph_Styles::references_grep_rules('<p class="typost-styled typost-ps-3">1</p>', $rules));
+        $this->assertTrue(\Typost_Paragraph_Styles::references_grep_rules('<p class="a typost-ps-ps_123_456 b">1</p>', $rules));
+        $this->assertTrue(\Typost_Paragraph_Styles::references_grep_rules("<p class='typost-ps-7 typost-ps-3'>1</p>", $rules));
+        $this->assertFalse(\Typost_Paragraph_Styles::references_grep_rules('<p class="typost-styled typost-ps-7">1</p>', $rules));
+        $this->assertFalse(\Typost_Paragraph_Styles::references_grep_rules('<p class="typost-ps-33">1</p>', $rules), 'a longer id is another style');
+        $this->assertFalse(\Typost_Paragraph_Styles::references_grep_rules('<p class="typost-ps-ps_123">1</p>', $rules));
+        $this->assertFalse(\Typost_Paragraph_Styles::references_grep_rules('', $rules));
+        $this->assertFalse(\Typost_Paragraph_Styles::references_grep_rules('<p class="typost-ps-3">1</p>', array()));
+    }
+
+    public function test_render_block_filter_finds_a_legacy_reference_and_skips_a_style_with_no_rules() {
+        $this->requireParser();
+        $this->options['typost_paragraph_styles'] = array(
+            array('id' => 3, 'legacyId' => 'ps_123_456', 'name' => 'Body', 'properties' => array(), 'grepRules' => array(array('pattern' => 'numbers', 'styleId' => 9))),
+            array('id' => 7, 'name' => 'Plain', 'properties' => array()),
+            array('id' => 9, 'name' => 'Figures', 'properties' => array()),
+        );
+        $module = (new \ReflectionClass(\Typost_Paragraph_Styles::class))->newInstanceWithoutConstructor();
+
+        $out = $module->apply_grep_styles('<p class="typost-styled typost-ps-ps_123_456">1</p>', array('blockName' => 'core/paragraph'));
+        $this->assertSame('<p class="typost-styled typost-ps-ps_123_456"><span class="typost-styled typost-grep" data-style-id="9">1</span></p>', $out);
+
+        $plain = '<p class="typost-styled typost-ps-7">1</p>';
+        $this->assertSame($plain, $module->apply_grep_styles($plain, array('blockName' => 'core/paragraph')));
+    }
+
     public function test_render_block_filter_runs_only_for_styled_blocks_with_rules() {
         $this->requireParser();
         $this->options['typost_paragraph_styles'] = array(
@@ -222,6 +358,35 @@ class ParagraphStylesTextRangesTest extends TestCase {
         $this->assertSame($html, $module->apply_grep_styles($html, array('blockName' => 'core/list-item')));
         $this->assertSame('<p>1/2</p>', $module->apply_grep_styles('<p>1/2</p>', array('blockName' => 'core/paragraph')));
     }
+
+    public function test_the_admin_card_names_the_font_of_a_rules_style_and_the_frontend_does_not() {
+        $this->requireParser();
+        Functions\when('esc_html_e')->alias(function ($text) { echo $text; });
+        $styles = array(
+            array('id' => 3, 'name' => 'Body', 'properties' => array('fontId' => 1), 'grepRules' => array(
+                array('pattern' => 'fractions', 'styleId' => 9),
+                array('pattern' => 'custom', 'regex' => 'offices', 'styleId' => 12),
+                array('pattern' => 'custom', 'regex' => 'off\b', 'styleId' => 14),
+            )),
+            // Its font was deleted and replaced
+            array('id' => 9, 'name' => 'Fraction', 'properties' => array('fontId' => 5)),
+            array('id' => 12, 'name' => 'No font', 'properties' => array()),
+            // Inherits its font from a parent
+            array('id' => 13, 'name' => 'Parent', 'properties' => array('fontId' => 8)),
+            array('id' => 14, 'name' => 'Child', 'basedOn' => 13, 'properties' => array()),
+        );
+        $context = array('lookup' => array(1 => 'Body font', 6 => 'Kit', 8 => 'Parent font'), 'mappings' => array(5 => 6), 'manual_ids' => array());
+        $preview = \Typost_Paragraph_Styles::render_admin_card_parts($styles[0], $styles, $context)['preview'];
+
+        $this->assertStringContainsString('<span class="typost-styled typost-grep" data-style-id="9" data-typost-font-id="6">1/2</span>', $preview);
+        $this->assertStringContainsString('<span class="typost-styled typost-grep" data-style-id="12">offices</span>', $preview);
+        $this->assertStringContainsString('<span class="typost-styled typost-grep" data-style-id="14" data-typost-font-id="8">off</span>', $preview);
+
+        // The frontend path writes no loader attribute
+        $front = \Typost_Paragraph_Styles::wrap_grep('<p class="typost-styled typost-ps-3">1/2</p>', array('3' => $styles[0]['grepRules']), array(9 => true));
+        $this->assertSame('<p class="typost-styled typost-ps-3"><span class="typost-styled typost-grep" data-style-id="9">1/2</span></p>', $front);
+    }
+
     public function test_the_admin_card_lists_the_rules_and_previews_them_through_the_engine() {
         $this->requireParser();
         Functions\when('esc_html_e')->alias(function ($text) { echo $text; });

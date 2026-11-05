@@ -831,7 +831,59 @@ final class Typost_Paragraph_Styles {
 		if ( empty( $map['rules'] ) || ! Typost_PS_Text_Ranges::is_supported() ) {
 			return $block_content;
 		}
+		// A full parse only for a block whose style has rules: on a site with
+		// any rule, this filter sees every styled block.
+		if ( ! self::references_grep_rules( $block_content, $map['rules'] ) ) {
+			return $block_content;
+		}
 		return self::wrap_grep( $block_content, $map['rules'], $map['ids'] );
+	}
+
+	/**
+	 * Whether HTML mentions the `typost-ps-{ref}` class of a style with rules.
+	 *
+	 * A cheap test before the parser. wrap_grep() reads the classes properly,
+	 * with the same reference form (an id, or a legacy `ps_123_456`), so a
+	 * false positive only costs that parse.
+	 *
+	 * @param string $html         HTML fragment.
+	 * @param array  $rules_by_ref Rules by style reference (id or legacy id).
+	 * @return bool
+	 */
+	public static function references_grep_rules( $html, $rules_by_ref ) {
+		if ( empty( $rules_by_ref ) || ! preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', (string) $html, $matches ) ) {
+			return false;
+		}
+		foreach ( $matches[1] as $ref ) {
+			if ( isset( $rules_by_ref[ $ref ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether HTML holds a registered shortcode, written out or as entities.
+	 *
+	 * GREP runs before do_shortcode (the_content, priority 11), so a shortcode
+	 * is still plain text here: a pattern could match inside it. The entity
+	 * form counts because wrapped text is written back decoded: `&#91;foo&#93;`,
+	 * how an author shows a shortcode as text, would become a real one.
+	 *
+	 * @param string $html HTML fragment.
+	 * @return bool
+	 */
+	private static function has_registered_shortcode( $html ) {
+		// With no tags, the core regex would match any "[ " (do_shortcode() has the same check).
+		if ( empty( $GLOBALS['shortcode_tags'] ) || ! function_exists( 'get_shortcode_regex' ) ) {
+			return false;
+		}
+		$text = false !== strpos( $html, '&' ) ? html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : $html;
+		if ( false === strpos( $text, '[' ) ) {
+			return false;
+		}
+		// A regex error (false) also leaves the block alone.
+		return 0 !== preg_match( '/' . get_shortcode_regex() . '/', $text );
 	}
 
 	/**
@@ -844,14 +896,22 @@ final class Typost_Paragraph_Styles {
 	 * carries neither class, so its text never changes. Fit-to-width text
 	 * (`typost-fit`) is left alone: its lines were measured in the editor,
 	 * and a span with another size or features would change their width.
+	 * A fragment with a registered shortcode comes back unchanged (see
+	 * has_registered_shortcode()).
 	 *
 	 * @param string $html           HTML fragment.
 	 * @param array  $rules_by_ref   Rules by style reference (id or legacy id, as strings).
 	 * @param array  $valid_ids      Style ids a rule may apply, as keys.
 	 * @param bool   $require_styled Whether a root needs the `typost-styled` class.
+	 * @param array  $font_ids       For the admin card: style id => font id the
+	 *                               admin font loader must load for its spans.
+	 *                               The frontend passes none.
 	 * @return string
 	 */
-	public static function wrap_grep( $html, $rules_by_ref, $valid_ids, $require_styled = true ) {
+	public static function wrap_grep( $html, $rules_by_ref, $valid_ids, $require_styled = true, $font_ids = array() ) {
+		if ( self::has_registered_shortcode( (string) $html ) ) {
+			return $html;
+		}
 		$root_for_tag = function ( $processor ) use ( $rules_by_ref, $require_styled ) {
 			if ( ( $require_styled && ! $processor->has_class( 'typost-styled' ) ) || $processor->has_class( 'typost-fit' ) ) {
 				return null;
@@ -863,8 +923,8 @@ final class Typost_Paragraph_Styles {
 			}
 			return null;
 		};
-		$open_tag_for = function ( $style_id ) use ( $valid_ids ) {
-			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id ) : '';
+		$open_tag_for = function ( $style_id ) use ( $valid_ids, $font_ids ) {
+			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
 		};
 		$ranges_for_root = function ( $ref, $plain ) use ( $rules_by_ref, $open_tag_for ) {
 			return Typost_PS_Grep::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
@@ -2477,7 +2537,9 @@ final class Typost_Paragraph_Styles {
 	 * @param array $manual_ids Font IDs of manual definitions, as keys.
 	 * @param array $grep       Optional GREP rules to run over the sample
 	 *                          (#196): array( 'rules' => rules, 'ids' =>
-	 *                          style id => true ).
+	 *                          style id => true, 'fonts' => style id => font
+	 *                          id, so the loader also adds the kit of a font
+	 *                          that only a rule's style uses ).
 	 * @return string HTML.
 	 */
 	public static function render_card_preview( $style_id, $font, $manual_ids, $grep = null ) {
@@ -2490,7 +2552,7 @@ final class Typost_Paragraph_Styles {
 		// GREP styles (#196) style the sample through the same engine as
 		// the frontend, so the card shows what a post shows.
 		if ( is_array( $grep ) && ! empty( $grep['rules'] ) && self::grep_supported() ) {
-			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false );
+			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false, isset( $grep['fonts'] ) ? $grep['fonts'] : array() );
 		}
 
 		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
@@ -2637,10 +2699,19 @@ final class Typost_Paragraph_Styles {
 		$grep_rows = array();
 		$grep      = null;
 		if ( ! empty( $style['grepRules'] ) && is_array( $style['grepRules'] ) && self::grep_supported() ) {
-			$names = array();
+			$names      = array();
+			$grep_fonts = array();
+			$targets    = Typost_PS_Grep::target_style_ids( $style['grepRules'] );
 			foreach ( $styles as $candidate ) {
 				if ( isset( $candidate['id'] ) ) {
 					$names[ intval( $candidate['id'] ) ] = isset( $candidate['name'] ) ? (string) $candidate['name'] : '';
+					if ( in_array( intval( $candidate['id'] ), $targets, true ) ) {
+						$candidate_props = self::resolve_properties( $candidate, $styles );
+						$candidate_font  = self::resolve_font_label( isset( $candidate_props['fontId'] ) ? $candidate_props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+						if ( $candidate_font['font_id'] ) {
+							$grep_fonts[ intval( $candidate['id'] ) ] = $candidate_font['font_id'];
+						}
+					}
 				}
 			}
 			$labels = Typost_PS_Grep::pattern_labels();
@@ -2660,6 +2731,7 @@ final class Typost_Paragraph_Styles {
 			$grep = array(
 				'rules' => $style['grepRules'],
 				'ids'   => array_fill_keys( array_keys( $names ), true ),
+				'fonts' => $grep_fonts,
 			);
 		}
 
