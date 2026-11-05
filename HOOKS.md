@@ -458,7 +458,8 @@ add_filter('typost_force_enqueue_paragraph_style_ids', function($ids) {
 - No First Letter Hang moves a letter or a line into the margin. This applies to Typography Stylist blocks and to core Paragraph and Heading blocks with a paragraph style.
 - Fit-to-width lines that had a hang get smaller, so they still fill the block and do not go past its end edge. This also applies to content saved before 2.3.5.
 - The OpenType features of the plugin are reset to `font-feature-settings: normal` (class only, see below). The reset applies to every `.typost-styled` element and its descendants, so it also removes features that your theme sets on those elements (for example `onum` on headings). The font keeps its default features, such as standard ligatures and kerning. The Case setting (All Caps, Small Caps and others) does not change. Small caps from the `smcp` and `c2sc` feature toggles are features, so they are reset.
-- The feature reset does not apply to block editor content, also when a page shows the editor on the frontend.
+- A paragraph style's outline is removed, and outline-only text (a transparent fill) takes the text color of its parent element (class only, see below). Other text colors of a style do not change.
+- The feature reset and the outline change do not apply to block editor content, also when a page shows the editor on the frontend.
 
 Add the `typost-plain` class to the element, or to an ancestor, such as `<body>`:
 
@@ -469,7 +470,7 @@ toggle.addEventListener('change', () => {
 });
 ```
 
-You can also set the custom property `--typost-plain: 1` in your own CSS. The property removes the hangs only, because a custom property cannot change `font-feature-settings`:
+You can also set the custom property `--typost-plain: 1` in your own CSS. The property removes the hangs only, because a custom property cannot change `font-feature-settings`. It also keeps the outline, because outline-only text with no outline does not show:
 
 ```css
 /* Hangs off, features kept */
@@ -484,6 +485,7 @@ You can also set the custom property `--typost-plain: 1` in your own CSS. The pr
 - The switch works on the frontend only. The editor shows the hang that the author set.
 - Fit-to-width lines are not measured again. When the feature reset changes the width of letters (for example a swash capital in place of a plain capital), a line can be a little wider or narrower than the block. A theme rule such as `* { font-feature-settings: normal !important }` has the same result.
 - Do not use `--typost-hang-on`. It is internal, and the plugin sets it for centered and end-aligned text.
+- Do not set `--typost-plain-outline` or `--typost-plain-fill`. They are internal, and the `typost-plain` class sets them together. If you set only `--typost-plain-outline`, outline-only text does not show.
 
 ---
 

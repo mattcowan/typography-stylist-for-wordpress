@@ -943,8 +943,8 @@ msgstr "La couleur de palette %1$s (%2$s) est %3$s sur ce site et %4$s dans le f
 #. translators: 1: palette color slug, 2: list of style names
 #: includes/class-typost-ps-transfer.php:892
 #, php-format
-msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s."
-msgstr "La couleur de palette « %1$s » est absente de la palette de ce thème, et le fichier n’indique pas sa couleur. Ces styles prennent la couleur du texte environnant tant que le thème ne la définit pas : %2$s."
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
+msgstr "La couleur de palette « %1$s » est absente de la palette de ce thème, et le fichier n’indique pas sa couleur. Ces styles prennent la couleur du texte environnant, ou la couleur de texte par défaut du navigateur pour un texte avec contour seul, tant que le thème ne la définit pas : %2$s."
 
 #. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
 #: assets/js/admin.js:479
@@ -964,14 +964,20 @@ msgstr "Contraste faible : le contour a un rapport de %1$s:1 avec le fond du th�
 msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
 msgstr "Contraste faible : la couleur du texte ne se détache ni du fond du thème (%2$s) ni du contour ; le meilleur rapport est %1$s:1. Le texte doit atteindre au moins %3$s:1 avec l’un des deux (WCAG 1.4.3)."
 
-#: assets/js/admin.js:857
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
+msgstr "Contraste faible : un contour large au-dessus du remplissage couvre la plus grande partie de chaque lettre, et son rapport avec le fond du thème (%2$s) est de %1$s:1. Le texte doit atteindre au moins %3$s:1 (WCAG 1.4.3). Utilisez un contour plus fin ou une autre couleur de contour, ou placez le contour derrière le remplissage."
+
+#: assets/js/admin.js:864
 msgid "Enter a hex color, such as #c00 or #cc0000."
 msgstr "Saisissez une couleur hexadécimale, comme #c00 ou #cc0000."
 
-#: assets/js/admin.js:861
+#: assets/js/admin.js:868
 msgid "Enter an outline width from 0 to 20."
 msgstr "Saisissez une épaisseur de contour entre 0 et 20."
 
-#: assets/js/admin.js:864
-msgid "Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color."
-msgstr "Un texte transparent n’affiche que son contour. Donnez au contour une épaisseur et sa propre couleur, ou choisissez une autre couleur de texte."
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
+msgstr "Un texte transparent n’affiche que son contour. Donnez au contour une épaisseur et sa propre couleur visible, ou choisissez une autre couleur de texte."

@@ -587,6 +587,12 @@ final class Typost_Paragraph_Styles {
 				$block_selectors[] = self::block_color_selector( esc_attr( $style['legacyId'] ) );
 			}
 			$css .= "\n\n" . implode( ",\n", $block_selectors ) . " {\n    color: inherit;\n}";
+			// Outline-only text in forced colors. Firefox keeps a transparent
+			// fill there and the stroke follows it, so the text would vanish;
+			// measured in Firefox and Chromium with emulated forced colors.
+			if ( false !== strpos( $text_color, 'transparent' ) ) {
+				$css .= "\n\n@media (forced-colors: active) {\n" . $selector . " {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}";
+			}
 		}
 
 		if ( $hang > 0 ) {
@@ -769,7 +775,11 @@ final class Typost_Paragraph_Styles {
 	 * unprefixed property; Chrome, Firefox 49 and Safari 3 support it). The
 	 * stroke is centered on the glyph outline, so a thick stroke on top eats
 	 * into the letter; `paint-order: stroke fill` draws it behind the fill
-	 * instead. With no color of its own the outline is the text color.
+	 * instead. With no color of its own the outline is the text color. The
+	 * width reads `--typost-plain-outline`, which `.typost-plain` sets to 1
+	 * (the plain typography switch, #315). It is not `--typost-plain`: a
+	 * theme may set that alone (documented in HOOKS.md, hangs only), and on
+	 * outline-only text a width of 0 with no new fill would hide the text.
 	 * Mirrors strokeDeclarations() in ps-utils.js.
 	 *
 	 * @param array $props Resolved properties.
@@ -780,8 +790,8 @@ final class Typost_Paragraph_Styles {
 		if ( $width <= 0 ) {
 			return array();
 		}
-		$rules = array( '-webkit-text-stroke-width: ' . $width . 'px' );
-		$color = self::color_css_value( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
+		$rules = array( '-webkit-text-stroke-width: calc(' . $width . 'px * (1 - var(--typost-plain-outline, 0)))' );
+		$color = self::stroke_color_css_value( $props );
 		if ( '' !== $color ) {
 			$rules[] = '-webkit-text-stroke-color: ' . $color;
 		}
@@ -792,12 +802,68 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * The outline color of a style as a CSS value (#215), '' for none.
+	 *
+	 * A missing preset variable makes the declaration invalid at computed
+	 * time, so the outline falls back to currentcolor. On filled text that
+	 * is the fill. On outline-only text it is transparent, and the text
+	 * would not show, so a palette outline with no fallback that shows uses
+	 * the system text color there. Mirrors strokeColorCssValue() in
+	 * ps-utils.js.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return string
+	 */
+	private static function stroke_color_css_value( $props ) {
+		$color = self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
+		$fill  = self::normalize_color( isset( $props['textColor'] ) ? $props['textColor'] : '', true );
+		if ( 'transparent' === $fill && preg_match( self::PALETTE_COLOR_PATTERN, $color, $m ) ) {
+			$fallback = isset( $m[2] ) ? $m[2] : '';
+			if ( '' === $fallback || self::is_fully_transparent_color( $fallback ) ) {
+				return 'var(--wp--preset--color--' . $m[1] . ', CanvasText)';
+			}
+		}
+		return self::color_css_value( $color );
+	}
+
+	/**
+	 * Whether a normalized hex color has zero alpha (#215). Mirrors
+	 * isFullyTransparentColor() in ps-utils.js.
+	 *
+	 * @param string $color Normalized hex color.
+	 * @return bool
+	 */
+	private static function is_fully_transparent_color( $color ) {
+		return 1 === preg_match( '/^#[0-9a-f]{6}00$/', $color );
+	}
+
+	/**
+	 * Whether a style's outline can show text that has a transparent fill
+	 * (#215): it needs a width and a color of its own, and that color must
+	 * not be fully transparent. A palette color counts, because the theme
+	 * decides its value (stroke_color_css_value() covers a theme without
+	 * it). Mirrors hasOutlinePartner() in ps-utils.js.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return bool
+	 */
+	private static function has_outline_partner( $props ) {
+		if ( self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 ) <= 0 ) {
+			return false;
+		}
+		$color = self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
+		return '' !== $color && ! self::is_fully_transparent_color( $color );
+	}
+
+	/**
 	 * The text color declaration value of a style (#215), '' for none.
 	 *
-	 * A transparent fill is written only with an outline that has its own
-	 * color: without one the text would not show at all (an outline with no
-	 * color is drawn in the text color, which would then be transparent).
-	 * Mirrors textColorCssValue() in ps-utils.js.
+	 * A transparent fill is written only with an outline that shows
+	 * (has_outline_partner()): without one the text would not show at all.
+	 * It reads `--typost-plain-fill`, so the plain typography switch (#315,
+	 * `.typost-plain` in frontend.css sets it to currentColor, which on
+	 * `color` means inherit) gives the text a fill again. Mirrors
+	 * textColorCssValue() in ps-utils.js.
 	 *
 	 * @param array $props Resolved properties.
 	 * @return string
@@ -805,9 +871,7 @@ final class Typost_Paragraph_Styles {
 	private static function text_color_css_value( $props ) {
 		$color = self::color_css_value( isset( $props['textColor'] ) ? $props['textColor'] : '', true );
 		if ( 'transparent' === $color ) {
-			$outlined = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 ) > 0
-				&& '' !== self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' );
-			return $outlined ? $color : '';
+			return self::has_outline_partner( $props ) ? 'var(--typost-plain-fill, transparent)' : '';
 		}
 		return $color;
 	}
@@ -1395,6 +1459,8 @@ final class Typost_Paragraph_Styles {
 		$data['paragraphStyles']        = $this->get_client_styles();
 		$data['paragraphStylesOptions'] = array(
 			'toolbarButton' => $this->toolbar_button_enabled(),
+			// The style browser's sample surface (#215)
+			'themeColors'   => self::get_theme_colors(),
 		);
 		return $data;
 	}
@@ -2576,7 +2642,9 @@ final class Typost_Paragraph_Styles {
 	 * The preview surface of the admin cards (#215): the theme's background
 	 * and text color, and the palette's preset variables, which a settings
 	 * page does not print. The text color is at (0,0,0), so a style's own
-	 * color always wins.
+	 * color always wins. The two colors are written only as a pair: a theme
+	 * background under the admin's text color, or a theme text color on the
+	 * admin's background, can make the sample unreadable.
 	 *
 	 * @return string CSS.
 	 */
@@ -2590,10 +2658,8 @@ final class Typost_Paragraph_Styles {
 		if ( $vars ) {
 			$css .= ".typost-ps-preview {\n    " . implode( ";\n    ", $vars ) . ";\n}\n";
 		}
-		if ( '' !== $theme['background'] ) {
+		if ( '' !== $theme['background'] && '' !== $theme['text'] ) {
 			$css .= ".typost-ps-preview .typost-ps-preview-sample {\n    background-color: " . $theme['background'] . ";\n    padding: 8px 12px;\n}\n";
-		}
-		if ( '' !== $theme['text'] ) {
 			$css .= ":where(.typost-ps-preview-sample) {\n    color: " . $theme['text'] . ";\n}\n";
 		}
 		return $css;
@@ -3378,7 +3444,7 @@ final class Typost_Paragraph_Styles {
 	 * case value and whether fake small caps are allowed. Alignment (#207):
 	 * 'none' when not set, else the value and the last line alignment of
 	 * justified text. Outline (#215): 'none' with no width, else the width,
-	 * the color and the position. Twin: groupSignature().
+	 * the color (comparable_color()) and the position. Twin: groupSignature().
 	 *
 	 * @param string $lead  'fontSize', 'textCase', 'alignment' or 'textStrokeWidth'.
 	 * @param array  $props Properties.
@@ -3390,7 +3456,7 @@ final class Typost_Paragraph_Styles {
 			if ( $width <= 0 ) {
 				return 'none';
 			}
-			return $width . '|' . self::normalize_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' )
+			return $width . '|' . self::comparable_color( isset( $props['textStrokeColor'] ) ? $props['textStrokeColor'] : '' )
 				. '|' . ( isset( $props['textStrokePosition'] ) && 'behind' === $props['textStrokePosition'] ? 'behind' : '' );
 		}
 		if ( 'alignment' === $lead ) {
@@ -3422,6 +3488,23 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * A stored color in the form two styles compare by (#215): a palette
+	 * color by its slug only. Its saved fallback records the palette's color
+	 * at save time, and the Edit form rebuilds it with the current color, so
+	 * after a theme change the same palette color has another fallback. A
+	 * child must not read that as an override and stop following its parent.
+	 * Mirrors comparableColor() in ps-utils.js.
+	 *
+	 * @param mixed $value             Stored color.
+	 * @param bool  $allow_transparent Whether `transparent` is allowed.
+	 * @return string
+	 */
+	private static function comparable_color( $value, $allow_transparent = false ) {
+		$color = self::normalize_color( $value, $allow_transparent );
+		return preg_match( self::PALETTE_COLOR_PATTERN, $color, $m ) ? 'var:preset|color|' . $m[1] : $color;
+	}
+
+	/**
 	 * Whether one non-group property has the same value in two property sets.
 	 *
 	 * Absent compares as the key's empty value, and values compare as the
@@ -3447,7 +3530,7 @@ final class Typost_Paragraph_Styles {
 			case 'initialHang':
 				return self::normalize_hang( $va ) === self::normalize_hang( $vb );
 			case 'textColor':
-				return self::normalize_color( $va, true ) === self::normalize_color( $vb, true );
+				return self::comparable_color( $va, true ) === self::comparable_color( $vb, true );
 			case 'features':
 				$fa = is_array( $va ) ? array_map( 'strval', $va ) : array();
 				$fb = is_array( $vb ) ? array_map( 'strval', $vb ) : array();

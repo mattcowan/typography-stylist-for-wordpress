@@ -457,14 +457,17 @@
 	 *
 	 * @param {Object} values readEditForm() result.
 	 * @param {Object} ctx    colorContext().
+	 * @param {string} unit   resolveEditFontSizeUnit(): a px size is whole
+	 *                        (fixedSizeFor()), so 18.66 is large text only
+	 *                        in a rem style.
 	 * @return {string}
 	 */
-	function contrastMessage(values, ctx) {
+	function contrastMessage(values, ctx, unit) {
 		var utils = getUtils();
 		if (!utils || (values.textColor === undefined && values.textStrokeWidth === undefined)) {
 			return '';
 		}
-		var props = utils.buildPropertiesFromState(stateFromEditValues(values, 'px'));
+		var props = utils.buildPropertiesFromState(stateFromEditValues(values, unit));
 		var background = ctx.themeColors && ctx.themeColors.background ? String(ctx.themeColors.background) : '#ffffff';
 		var problem = utils.findContrastProblem(props, {
 			palette: ctx.palette,
@@ -480,7 +483,9 @@
 			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
 			outline: __('Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing.', 'typost-paragraph-styles'),
 			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
-			'text-outline': __('Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3).', 'typost-paragraph-styles')
+			'text-outline': __('Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3).', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			'outline-covers': __('Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill.', 'typost-paragraph-styles')
 		};
 		var args = [String(problem.ratio), background, String(problem.required)];
 		return templates[problem.pair].replace(/%(\d)\$s/g, function(match, n) {
@@ -513,7 +518,7 @@
 		if (!notice) {
 			return;
 		}
-		var message = contrastMessage(readEditForm(form), ctx);
+		var message = contrastMessage(readEditForm(form), ctx, form.getAttribute('data-size-unit'));
 		if (notice.textContent !== message) {
 			notice.textContent = message;
 		}
@@ -653,6 +658,8 @@
 		if (sizeInput) {
 			sizeInput.setAttribute('step', unit === 'px' ? '1' : 'any');
 		}
+		// For the contrast notice, which runs on every later change
+		form.setAttribute('data-size-unit', unit === 'px' ? 'px' : 'rem');
 
 		setInput(form, 'name', style && style.name);
 		fillBasedOn(form, style, styles);
@@ -860,8 +867,10 @@
 		if (values.textStrokeWidth !== undefined && (values.textStrokeWidth < 0 || values.textStrokeWidth > 20)) {
 			return { field: 'textStrokeWidth', message: __('Enter an outline width from 0 to 20.', 'typost-paragraph-styles') };
 		}
-		if (values.textColor === 'transparent' && !(values.textStrokeWidth > 0 && values.textStrokeColor)) {
-			return { field: 'textColor', message: __('Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color.', 'typost-paragraph-styles') };
+		// The width and color as the generators read them: 0.004 rounds to no
+		// outline, and #cc000000 draws nothing
+		if (values.textColor === 'transparent' && !getUtils().hasOutlinePartner(values)) {
+			return { field: 'textColor', message: __('Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color.', 'typost-paragraph-styles') };
 		}
 		var axesUnchanged = opts.baseline && opts.baseline.fontVariationSettings === values.fontVariationSettings;
 		if (values.fontVariationSettings && !axesUnchanged) {
@@ -1388,14 +1397,14 @@
 		applyColorPicker(this);
 		updateColorFields($(this).closest('form')[0]);
 	});
-	$(document).on('change input', '.typost-ps-edit-form [data-field="textColor"], .typost-ps-edit-form [data-field="textColorCustom"], .typost-ps-edit-form [data-field="textStrokeColor"], .typost-ps-edit-form [data-field="textStrokeColorCustom"], .typost-ps-edit-form [data-field="textStrokeWidth"], .typost-ps-edit-form [data-field="fontSize"], .typost-ps-edit-form [data-field="fontSizeMin"], .typost-ps-edit-form [data-field="fontWeight"]', function() {
+	// A select fires both input and change on one pick, so it binds change only
+	$(document).on('change', '.typost-ps-edit-form [data-field="textColor"], .typost-ps-edit-form [data-field="textStrokeColor"], .typost-ps-edit-form [data-field="fontWeight"]', function() {
+		updateColorFields($(this).closest('form')[0]);
+	});
+	$(document).on('change input', '.typost-ps-edit-form [data-field="textColorCustom"], .typost-ps-edit-form [data-field="textStrokeColorCustom"], .typost-ps-edit-form [data-field="textStrokeWidth"], .typost-ps-edit-form [data-field="fontSize"], .typost-ps-edit-form [data-field="fontSizeMin"]', function() {
 		var form = $(this).closest('form')[0];
 		if (/Custom$/.test(this.getAttribute('data-field') || '')) {
-			var picker = form.querySelector('[data-color-picker-for="' + this.getAttribute('data-field') + '"]');
-			var hex = getUtils().normalizeHexColor(this.value);
-			if (picker && hex) {
-				picker.value = hex.slice(0, 7);
-			}
+			syncColorPicker(form, this.getAttribute('data-field'));
 		}
 		updateColorFields(form);
 	});

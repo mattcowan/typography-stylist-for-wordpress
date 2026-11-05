@@ -902,7 +902,7 @@ msgstr "El contorno se centra en el borde de cada letra: encima del relleno, un 
 
 #: includes/admin-tab.php:376
 msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
-msgstr "Un color hexadecimal como #c00 o #cc0000. Añada dos dígitos para la transparencia: #cc000080 es medio transparente."
+msgstr "Un color hexadecimal como #c00 o #cc0000. Añade dos dígitos para la transparencia: #cc000080 es medio transparente."
 
 #: includes/admin-tab.php:377
 msgid "In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text."
@@ -943,8 +943,8 @@ msgstr "El color de paleta %1$s (%2$s) es %3$s en este sitio y %4$s en el archiv
 #. translators: 1: palette color slug, 2: list of style names
 #: includes/class-typost-ps-transfer.php:892
 #, php-format
-msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s."
-msgstr "El color de paleta «%1$s» no está en la paleta de este tema y el archivo no indica su color. Estos estilos muestran el color del texto que los rodea hasta que el tema lo defina: %2$s."
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
+msgstr "El color de paleta «%1$s» no está en la paleta de este tema y el archivo no indica su color. Estos estilos muestran el color del texto que los rodea, o el color de texto predeterminado del navegador si el texto solo tiene contorno, hasta que el tema lo defina: %2$s."
 
 #. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
 #: assets/js/admin.js:479
@@ -964,14 +964,20 @@ msgstr "Contraste bajo: el contorno tiene una relación de %1$s:1 con el fondo d
 msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
 msgstr "Contraste bajo: el color del texto no destaca ni sobre el fondo del tema (%2$s) ni sobre el contorno; la mejor relación es %1$s:1. El texto necesita al menos %3$s:1 con uno de los dos (WCAG 1.4.3)."
 
-#: assets/js/admin.js:857
-msgid "Enter a hex color, such as #c00 or #cc0000."
-msgstr "Introduzca un color hexadecimal, como #c00 o #cc0000."
-
-#: assets/js/admin.js:861
-msgid "Enter an outline width from 0 to 20."
-msgstr "Introduzca un grosor de contorno entre 0 y 20."
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
+msgstr "Contraste bajo: un contorno ancho encima del relleno cubre la mayor parte de cada letra y tiene una relación de %1$s:1 con el fondo del tema (%2$s). El texto necesita al menos %3$s:1 (WCAG 1.4.3). Usa un contorno más fino u otro color de contorno, o pon el contorno detrás del relleno."
 
 #: assets/js/admin.js:864
-msgid "Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color."
-msgstr "El texto transparente solo muestra su contorno. Dé al contorno un grosor y un color propio, o elija otro color de texto."
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr "Introduce un color hexadecimal, como #c00 o #cc0000."
+
+#: assets/js/admin.js:868
+msgid "Enter an outline width from 0 to 20."
+msgstr "Introduce un grosor de contorno entre 0 y 20."
+
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
+msgstr "El texto transparente solo muestra su contorno. Da al contorno un grosor y un color propio visible, o elige otro color de texto."

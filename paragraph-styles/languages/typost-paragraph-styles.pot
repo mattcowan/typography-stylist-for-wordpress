@@ -945,7 +945,7 @@ msgstr ""
 #. translators: 1: palette color slug, 2: list of style names
 #: includes/class-typost-ps-transfer.php:892
 #, php-format
-msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s."
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
 msgstr ""
 
 #. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
@@ -966,14 +966,20 @@ msgstr ""
 msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
 msgstr ""
 
-#: assets/js/admin.js:857
-msgid "Enter a hex color, such as #c00 or #cc0000."
-msgstr ""
-
-#: assets/js/admin.js:861
-msgid "Enter an outline width from 0 to 20."
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
 msgstr ""
 
 #: assets/js/admin.js:864
-msgid "Transparent text shows only its outline. Give the outline a width and a color of its own, or choose another text color."
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr ""
+
+#: assets/js/admin.js:868
+msgid "Enter an outline width from 0 to 20."
+msgstr ""
+
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
 msgstr ""

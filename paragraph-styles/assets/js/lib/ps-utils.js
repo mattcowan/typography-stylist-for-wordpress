@@ -317,24 +317,87 @@
 	function strokeDeclarations(props) {
 		var width = normalizeStrokeWidth(props.textStrokeWidth);
 		if (width <= 0) return [];
-		var rules = ['-webkit-text-stroke-width: ' + phpFloatStr(width) + 'px'];
-		var color = colorCssValue(props.textStrokeColor);
+		var rules = ['-webkit-text-stroke-width: calc(' + phpFloatStr(width) + 'px * (1 - var(--typost-plain-outline, 0)))'];
+		var color = strokeColorCssValue(props);
 		if (color) rules.push('-webkit-text-stroke-color: ' + color);
 		if (props.textStrokePosition === 'behind') rules.push('paint-order: stroke fill');
 		return rules;
 	}
 
 	/**
+	 * The outline color of a style as a CSS value, '' for none (#215). On
+	 * outline-only text, a palette outline with no fallback that shows uses
+	 * the system text color when the theme lacks the preset. Twin of PHP
+	 * stroke_color_css_value(), which explains it.
+	 */
+	function strokeColorCssValue(props) {
+		var color = normalizeColor(props.textStrokeColor);
+		if (normalizeColor(props.textColor, true) === 'transparent') {
+			var m = color.match(PALETTE_COLOR_PATTERN);
+			if (m && (!m[2] || isFullyTransparentColor(m[2]))) {
+				return 'var(--wp--preset--color--' + m[1] + ', CanvasText)';
+			}
+		}
+		return colorCssValue(color);
+	}
+
+	/** Whether a normalized hex color has zero alpha (twin of PHP is_fully_transparent_color()). */
+	function isFullyTransparentColor(color) {
+		return /^#[0-9a-f]{6}00$/.test(color);
+	}
+
+	/**
+	 * Whether a style's outline can show text that has a transparent fill
+	 * (#215): a width and a color of its own that is not fully transparent.
+	 * Twin of PHP has_outline_partner(), which explains it.
+	 *
+	 * @param {Object} props Properties.
+	 * @return {boolean}
+	 */
+	function hasOutlinePartner(props) {
+		var p = props || {};
+		if (normalizeStrokeWidth(p.textStrokeWidth) <= 0) return false;
+		var color = normalizeColor(p.textStrokeColor);
+		return !!color && !isFullyTransparentColor(color);
+	}
+
+	/**
 	 * The text color of a style as a CSS value, '' for none (#215). A
-	 * transparent fill needs an outline with its own color, or the text
-	 * would not show. Twin of PHP text_color_css_value().
+	 * transparent fill needs an outline that shows, and reads the plain
+	 * typography switch. Twin of PHP text_color_css_value(), which explains
+	 * it.
 	 */
 	function textColorCssValue(props) {
 		var color = colorCssValue(props.textColor, true);
 		if (color === 'transparent') {
-			return normalizeStrokeWidth(props.textStrokeWidth) > 0 && normalizeColor(props.textStrokeColor) ? color : '';
+			return hasOutlinePartner(props) ? 'var(--typost-plain-fill, transparent)' : '';
 		}
 		return color;
+	}
+
+	/**
+	 * The surface of a style browser sample (#215), the twin of the admin
+	 * card's admin_preview_surface_css(): the sample carries the style's
+	 * real class, so a white text color or an outline would otherwise sit
+	 * on the modal's own background. Only for a style with a color or an
+	 * outline, and only when the theme has both colors. The theme text
+	 * color applies only when the style's class writes no color of its own,
+	 * as an inline style would beat the class.
+	 *
+	 * @param {Object} properties  Resolved style properties.
+	 * @param {Object} themeColors {background, text}, '' when unknown.
+	 * @return {?Object} Inline style, or null for none.
+	 */
+	function buildStyleSampleSurface(properties, themeColors) {
+		var props = properties || {};
+		var theme = themeColors || {};
+		var ownColor = textColorCssValue(props);
+		if ((!ownColor && normalizeStrokeWidth(props.textStrokeWidth) <= 0) || !theme.background || !theme.text) {
+			return null;
+		}
+		var surface = { backgroundColor: String(theme.background), padding: '4px 8px' };
+		if (!ownColor) surface.color = String(theme.text);
+		return surface;
 	}
 
 	/** The visual element of a Typography Stylist block with its own text color (twin of PHP block_color_selector()). */
@@ -555,7 +618,7 @@
 
 		// Text color and outline (#215): style-only like #207, so only the
 		// admin Edit form reports them
-		if (state.textColor !== undefined && normalizeColor(state.textColor, true) !== normalizeColor(styleProps.textColor, true)) return true;
+		if (state.textColor !== undefined && comparableColor(state.textColor, true) !== comparableColor(styleProps.textColor, true)) return true;
 		if (state.textStrokeWidth !== undefined && groupSignature('textStrokeWidth', state) !== groupSignature('textStrokeWidth', styleProps)) return true;
 
 		return false;
@@ -956,6 +1019,17 @@
 	}
 
 	/**
+	 * A stored color in the form two styles compare by (#215): a palette
+	 * color by its slug only. Twin of PHP comparable_color(), which explains
+	 * it.
+	 */
+	function comparableColor(value, allowTransparent) {
+		var color = normalizeColor(value, allowTransparent);
+		var m = color.match(PALETTE_COLOR_PATTERN);
+		return m ? 'var:preset|color|' + m[1] : color;
+	}
+
+	/**
 	 * A comparable form of a group, as the CSS generators read it. Twin of
 	 * PHP group_signature().
 	 */
@@ -963,7 +1037,7 @@
 		var p = props || {};
 		if (lead === 'textStrokeWidth') {
 			var w = normalizeStrokeWidth(p.textStrokeWidth);
-			return w > 0 ? phpFloatStr(w) + '|' + normalizeColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
+			return w > 0 ? phpFloatStr(w) + '|' + comparableColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
 		}
 		if (lead === 'alignment') {
 			var a = normalizeAlignment(p.alignment);
@@ -1005,7 +1079,7 @@
 			case 'initialHang':
 				return normalizeHang(va) === normalizeHang(vb);
 			case 'textColor':
-				return normalizeColor(va, true) === normalizeColor(vb, true);
+				return comparableColor(va, true) === comparableColor(vb, true);
 			case 'features':
 				var fa = (Array.isArray(va) ? va : []).map(String).sort();
 				var fb = (Array.isArray(vb) ? vb : []).map(String).sort();
@@ -1548,6 +1622,10 @@
 				blockSelectors.push(blockColorSelector(String(style.legacyId)));
 			}
 			css += '\n\n' + blockSelectors.join(',\n') + ' {\n    color: inherit;\n}';
+			// Outline-only text in forced colors: Firefox would paint nothing (PHP twin)
+			if (textColor.indexOf('transparent') !== -1) {
+				css += '\n\n@media (forced-colors: active) {\n' + selector + ' {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}';
+			}
 		}
 		if (hang > 0) {
 			css += coreBlockHangCss(id);
@@ -2243,15 +2321,30 @@
 	 */
 	function isLargeText(props) {
 		var p = props || {};
-		var size = 0;
-		if (p.fontSize === 'responsive' || p.fontSize === 'fit') {
-			size = parseFloat(p.fontSizeMin) || 0;
-		} else if (p.fontSize !== undefined && isFinite(p.fontSize)) {
-			size = Number(p.fontSize) || 0;
-		}
+		var size = contrastFontSize(p);
 		var weight = parseInt(p.fontWeight, 10) || (p.fontWeight === 'bold' ? 700 : 400);
 		return size >= 24 || (size >= 18.66 && weight >= 700);
 	}
+
+	/**
+	 * The font size in px the contrast check reads: the smallest size of a
+	 * fluid or fit style, 0 when the style has no size of its own.
+	 *
+	 * @param {Object} p Properties.
+	 * @return {number}
+	 */
+	function contrastFontSize(p) {
+		if (p.fontSize === 'responsive' || p.fontSize === 'fit') {
+			return parseFloat(p.fontSizeMin) || 0;
+		}
+		return p.fontSize !== undefined && isFinite(p.fontSize) ? Number(p.fontSize) || 0 : 0;
+	}
+
+	// An outline is centered on the edge of each letter, so an outline on top
+	// about as wide as a stem (about a tenth of the font size in text weights)
+	// covers the stem: WCAG's Understanding 1.4.3 then counts it as the color
+	// of the letter, not as a border around it.
+	var OUTLINE_COVERS_LETTER_RATIO = 0.1;
 
 	/**
 	 * A stored color as a color the contrast check can read: a custom color
@@ -2287,6 +2380,10 @@
 	 * - A fill with an outline: the text reads when the fill stands out from
 	 *   the background (a narrow outline) or from the outline (a wide halo,
 	 *   which acts as the background), so it is flagged only when both fail.
+	 * - A fill that passes, with a wide outline on top: the outline covers
+	 *   the letter, so the outline against the background also counts. A
+	 *   style with no size counts as 16px, as isLargeText() counts it as
+	 *   not large.
 	 *
 	 * A fill with no color of its own is the theme's text color, and an
 	 * outline with no color is the fill's color.
@@ -2295,8 +2392,9 @@
 	 * @param {Object} context {palette: [{slug, color}], background: CSS color,
 	 *                         text: the theme's text color}.
 	 * @return {?{ratio: number, required: number, pair: string}} pair is
-	 *         'text', 'outline' or 'text-outline'; ratio rounded down to two
-	 *         decimals, as a ratio just under the line must not read as on it.
+	 *         'text', 'outline', 'text-outline' or 'outline-covers'; ratio
+	 *         rounded down to two decimals, as a ratio just under the line
+	 *         must not read as on it.
 	 */
 	function findContrastProblem(props, context) {
 		var p = props || {};
@@ -2320,7 +2418,11 @@
 		}
 		if (!fill) return null;
 		var fillRatio = contrastRatio(fill, background);
-		if (fillRatio >= required) return null;
+		if (fillRatio >= required) {
+			var covers = outline && p.textStrokePosition !== 'behind' && width / (contrastFontSize(p) || 16) >= OUTLINE_COVERS_LETTER_RATIO;
+			var coverRatio = covers ? contrastRatio(outline, background) : required;
+			return coverRatio < required ? { ratio: floor2(coverRatio), required: required, pair: 'outline-covers' } : null;
+		}
 		if (outline && width > 0) {
 			var bg = compositeColor(background, { r: 255, g: 255, b: 255, a: 1 });
 			var halo = contrastRatio(fill, compositeColor(outline, bg));
@@ -2350,6 +2452,8 @@
 		paletteColorFallback: paletteColorFallback,
 		colorCssValue: colorCssValue,
 		normalizeStrokeWidth: normalizeStrokeWidth,
+		hasOutlinePartner: hasOutlinePartner,
+		buildStyleSampleSurface: buildStyleSampleSurface,
 		parseCssColor: parseCssColor,
 		contrastRatio: contrastRatio,
 		isLargeText: isLargeText,

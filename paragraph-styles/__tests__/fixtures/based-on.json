@@ -725,7 +725,10 @@
 		{ "label": "no line breaking and an empty one", "key": "textWrap", "a": { "textWrap": "" }, "b": {}, "equal": true },
 		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false },
 		{ "label": "text colors compare normalized (#215)", "key": "textColor", "a": { "textColor": "#ABC" }, "b": { "textColor": "#aabbcc" }, "equal": true },
-		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false }
+		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false },
+		{ "label": "a palette color with another saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#990000" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "a palette color with no saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "two palette colors with the same fallback differ (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "var:preset|color|accent-2|#cc0000" }, "equal": false }
 	],
 	"css": [
 		{
@@ -871,6 +874,18 @@
 			"full": {},
 			"parent": { "textStrokeWidth": 2 },
 			"expected": { "textStrokeWidth": 0 }
+		},
+		{
+			"label": "palette colors (#215 review): a new fallback after a theme change is no override, for the text color and the outline",
+			"full": { "textColor": "var:preset|color|accent-1|#990000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee" },
+			"parent": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base" },
+			"expected": {}
+		},
+		{
+			"label": "palette colors (#215 review): another outline slug is the whole group",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee", "textStrokePosition": "behind" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" }
 		}
 	]
 }

@@ -184,6 +184,29 @@ describe('validation', () => {
 		expect(validateEditValues(readEditForm(form), {})).toBeNull();
 	});
 
+	test('transparent text: a width that rounds to 0 is no outline (review of #215)', () => {
+		const form = buildForm();
+		fillEditForm(form, { id: 1, name: 'X', properties: {} }, '', 'rem', []);
+		field(form, 'textColor').value = 'transparent';
+		field(form, 'textStrokeColor').value = 'preset:accent-1';
+		field(form, 'textStrokeWidth').value = '0.004';
+		expect(validateEditValues(readEditForm(form), {}).field).toBe('textColor');
+		field(form, 'textStrokeWidth').value = '0.01';
+		expect(validateEditValues(readEditForm(form), {})).toBeNull();
+	});
+
+	test('transparent text: an outline color with zero alpha is not a partner (review of #215)', () => {
+		const form = buildForm();
+		fillEditForm(form, { id: 1, name: 'X', properties: {} }, '', 'rem', []);
+		field(form, 'textColor').value = 'transparent';
+		field(form, 'textStrokeWidth').value = '2';
+		field(form, 'textStrokeColor').value = 'custom';
+		field(form, 'textStrokeColorCustom').value = '#cc000000';
+		expect(validateEditValues(readEditForm(form), {}).field).toBe('textColor');
+		field(form, 'textStrokeColorCustom').value = '#cc0000';
+		expect(validateEditValues(readEditForm(form), {})).toBeNull();
+	});
+
 	test('the outline width stays within 0–20', () => {
 		const form = buildForm();
 		fillEditForm(form, { id: 1, name: 'X', properties: {} }, '', 'rem', []);
@@ -219,6 +242,37 @@ describe('contrast notice', () => {
 		expect(contrastMessage(Object.assign({}, values, { fontSize: '16' }), ctx)).toMatch(/4\.5:1/);
 	});
 
+	test('a rem style keeps the decimals of its size for the large text rule (review of #215)', () => {
+		// 3.03:1, so it passes only as large text: 18.66px and bold
+		const values = { sizeMode: 'fixed', fontSize: '18.66', fontWeight: '700', textColor: '#949494' };
+		const ctx = { palette: PALETTE, themeColors: { background: '#ffffff' } };
+		expect(contrastMessage(values, ctx, 'rem')).toBe('');
+		// A px size is stored and rendered as a whole number: 18px is not large
+		expect(contrastMessage(values, ctx, 'px')).toMatch(/4\.5:1/);
+	});
+
+	test('the form\'s notice uses the unit the form was filled with', () => {
+		const properties = { fontSize: '18.66', fontSizeUnit: 'rem', fontWeight: '700', textColor: '#949494' };
+		const form = buildForm();
+		field(form, 'fontSize').setAttribute('type', 'text');
+		field(form, 'fontWeight').innerHTML = '<option value="">Default</option><option value="700">700</option>';
+		fillEditForm(form, { id: 1, name: 'X', properties }, '', 'rem', []);
+		expect(field(form, 'fontSize').value).toBe('18.66');
+		expect(form.querySelector('.typost-ps-edit-contrast').textContent).toBe('');
+
+		const pxForm = buildForm();
+		fillEditForm(pxForm, { id: 1, name: 'X', properties: Object.assign({}, properties, { fontSizeUnit: 'px' }) }, '', 'px', []);
+		expect(pxForm.querySelector('.typost-ps-edit-contrast').textContent).toMatch(/4\.5:1/);
+	});
+
+	test('a wide outline on top that hides the letter names the outline', () => {
+		const values = { sizeMode: 'fixed', fontSize: '16', textColor: '#000000', textStrokeWidth: 3, textStrokeColor: '#eeeeee', textStrokePosition: '' };
+		const ctx = { palette: PALETTE, themeColors: { background: '#ffffff' } };
+		const message = contrastMessage(values, ctx, 'rem');
+		expect(message).toMatch(/^Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of 1\.\d+:1 against the theme background \(#ffffff\)\. Text needs at least 4\.5:1/);
+		expect(contrastMessage(Object.assign({}, values, { textStrokePosition: 'behind' }), ctx, 'rem')).toBe('');
+	});
+
 	test('outline-only text: the outline against the background, against a dark theme too', () => {
 		const ctx = { palette: PALETTE, themeColors: { background: '#111111' } };
 		const values = { textColor: 'transparent', textStrokeWidth: 2, textStrokeColor: '#333333' };
@@ -228,5 +282,29 @@ describe('contrast notice', () => {
 
 	test('nothing to check without a color or an outline', () => {
 		expect(contrastMessage({}, { palette: PALETTE, themeColors: {} })).toBe('');
+	});
+});
+
+describe('color field handlers (source scan: the jQuery bindings do not run under Jest)', () => {
+	const source = require('fs').readFileSync(require('path').join(__dirname, '../assets/js/admin.js'), 'utf8');
+	const bindings = source.match(/\$\(document\)\.on\('[^']+', '[^']*(?:textColor|textStrokeColor)[^']*'/g) || [];
+
+	test('the scan finds the bindings', () => {
+		expect(bindings.length).toBeGreaterThanOrEqual(1);
+	});
+
+	test('a select binds change only, so one pick updates the fields once', () => {
+		bindings.forEach((binding) => {
+			const events = binding.match(/\.on\('([^']+)'/)[1];
+			['textColor', 'textStrokeColor', 'fontWeight'].forEach((name) => {
+				if (binding.includes(`[data-field="${name}"]`)) {
+					expect(events).toBe('change');
+				}
+			});
+		});
+	});
+
+	test('the hex field goes through syncColorPicker(), not a copy of it', () => {
+		expect(source.match(/picker\.value = hex\.slice\(0, 7\)/g)).toHaveLength(1);
 	});
 });

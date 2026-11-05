@@ -889,7 +889,7 @@ final class Typost_PS_Transfer {
 			} elseif ( '' === $color['value'] ) {
 				$warnings[] = sprintf(
 					/* translators: 1: palette color slug, 2: list of style names */
-					__( 'The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: %2$s.', 'typost-paragraph-styles' ),
+					__( 'The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s.', 'typost-paragraph-styles' ),
 					$slug,
 					implode( ', ', $names )
 				);

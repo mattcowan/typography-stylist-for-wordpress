@@ -211,6 +211,61 @@ class ParagraphStylesTextColorTest extends TestCase {
         $this->resetPalette();
     }
 
+    /**
+     * A theme with only one of the two: the sample must not take a background
+     * with the admin's text color, or a text color on the admin's background.
+     *
+     * @dataProvider oneThemeColor
+     */
+    public function test_the_preview_surface_writes_the_theme_colors_only_as_a_pair($styles) {
+        $this->instance();
+        $this->stubGlobalSettings(
+            array('theme' => array(array('slug' => 'base', 'name' => 'Base', 'color' => '#fafafa'))),
+            true,
+            $styles
+        );
+        $css = \Typost_Paragraph_Styles::admin_preview_surface_css();
+        $this->assertStringContainsString('--wp--preset--color--base: #fafafa', $css);
+        $this->assertStringNotContainsString('background-color', $css);
+        $this->assertStringNotContainsString('.typost-ps-preview-sample', $css);
+        $this->resetPalette();
+    }
+
+    public function oneThemeColor() {
+        return array(
+            'background only' => array(array('background' => '#111111')),
+            'text only'       => array(array('text' => '#eeeeee')),
+            'neither'         => array(array()),
+        );
+    }
+
+    public function test_the_editor_data_carries_the_theme_colors() {
+        $instance = $this->instance();
+        $this->stubGlobalSettings(
+            array('theme' => array(array('slug' => 'base', 'name' => 'Base', 'color' => '#fafafa'))),
+            true,
+            array('background' => 'var:preset|color|base', 'text' => '#111111')
+        );
+        Functions\when('get_option')->justReturn(array());
+        Functions\when('get_transient')->justReturn(false);
+        Functions\when('set_transient')->justReturn(true);
+        $data = $instance->add_editor_data(array());
+        $this->assertSame(array('background' => '#fafafa', 'text' => '#111111'), $data['paragraphStylesOptions']['themeColors']);
+        $this->resetPalette();
+    }
+
+    public function test_a_palette_color_compares_by_slug() {
+        $this->instance();
+        $parent = array('textColor' => 'var:preset|color|accent-1|#cc0000', 'textStrokeWidth' => 2, 'textStrokeColor' => 'var:preset|color|base');
+        // The theme changed its palette, and the child's form rebuilt the fallback
+        $own = array('textColor' => 'var:preset|color|accent-1|#990000', 'textStrokeWidth' => 2, 'textStrokeColor' => 'var:preset|color|base|#fafafa');
+        $this->assertSame(array(), \Typost_Paragraph_Styles::drop_inherited_properties($own, $parent));
+        $this->assertSame(array(), \Typost_Paragraph_Styles::compute_overrides($own, $parent));
+        // Another slug stays an override
+        $other = array('textColor' => 'var:preset|color|accent-2|#cc0000');
+        $this->assertSame($other, \Typost_Paragraph_Styles::drop_inherited_properties($other, $parent));
+    }
+
     public function test_card_details_name_palette_colors_and_the_outline() {
         $this->instance();
         $this->stubGlobalSettings(array('theme' => array(array('slug' => 'accent-1', 'name' => 'Accent', 'color' => '#cc0000'))));

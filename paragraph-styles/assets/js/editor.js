@@ -56,6 +56,7 @@
 	var resolveStyleList         = utils.resolveStyleList;
 	var buildApplyEventDetail    = utils.buildApplyEventDetail;
 	var buildStylePreviewStyle   = utils.buildStylePreviewStyle;
+	var buildStyleSampleSurface  = utils.buildStyleSampleSurface;
 	var isCoreStyleBlock         = utils.isCoreStyleBlock;
 	var getCoreBlockStyleRef     = utils.getCoreBlockStyleRef;
 	var applyStyleToClassName    = utils.applyStyleToClassName;
@@ -88,6 +89,12 @@
 	// Get paragraph styles from localized data
 	function getStyles() {
 		return (window.typostData && window.typostData.paragraphStyles) || [];
+	}
+
+	// The theme's background and text color, for the browser sample's surface
+	function getThemeColors() {
+		var options = window.typostData && window.typostData.paragraphStylesOptions;
+		return (options && options.themeColors) || {};
 	}
 
 	// DOM ids for the browser's listbox rows and group headings. One browser
@@ -1109,7 +1116,7 @@
 			},
 				el('span', {
 					className: 'typost-ps-browser-sample typost-ps-' + style.id,
-					style: preview.style,
+					style: Object.assign({}, preview.style, buildStyleSampleSurface(style.properties, getThemeColors())),
 					// Purely visual: the selected text (or the style name)
 					// rendered in the style. The meta line below carries the
 					// name, font, weight and size, so this is not read as well.
@@ -1573,7 +1580,10 @@
 			'.typost-ps-browser-group-heading { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #50575e; margin: 12px 0 4px; padding: 0 12px; }',
 			'.typost-ps-browser-group:first-child .typost-ps-browser-group-heading { margin-top: 0; }',
 			// Long sample text must not push the modal wide
-			'.typost-ps-browser-sample { display: block; color: #1e1e1e; overflow-wrap: anywhere; }',
+			'.typost-ps-browser-sample { display: block; overflow-wrap: anywhere; }',
+			// No specificity, so a style's own color wins: at (0,1,0) this rule
+			// came after the style class and hid its color and transparent fill
+			':where(.typost-ps-browser-sample) { color: #1e1e1e; }',
 			'.typost-ps-browser-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }',
 			'.typost-ps-browser-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
 			// #50575e is 6.4:1 on the #f0f0f0 hover background; #757575 at 11px was 4.0:1 (QA finding A11Y-3)

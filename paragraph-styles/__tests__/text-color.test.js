@@ -28,11 +28,15 @@ const {
 	contrastRatio,
 	isLargeText,
 	findContrastProblem,
+	hasOutlinePartner,
+	buildStyleSampleSurface,
 	resolveStyleProperties,
 	computeStyleOverrides,
 } = require('../assets/js/lib/ps-utils');
 
 const fixture = require('./fixtures/text-color-css.json');
+const fs = require('fs');
+const path = require('path');
 
 describe('buildStyleCssBlock (shared fixture)', () => {
 	test('the fixture is read', () => {
@@ -132,8 +136,108 @@ describe('colors', () => {
 	});
 });
 
+describe('outline-only text stays visible (review of #215)', () => {
+	test('an outline needs a width and a color that shows', () => {
+		expect(hasOutlinePartner({ textStrokeWidth: 2, textStrokeColor: '#000000' })).toBe(true);
+		expect(hasOutlinePartner({ textStrokeWidth: 2, textStrokeColor: 'var:preset|color|contrast' })).toBe(true);
+		expect(hasOutlinePartner({ textStrokeWidth: 2, textStrokeColor: '#cc000001' })).toBe(true);
+		expect(hasOutlinePartner({ textStrokeWidth: 2, textStrokeColor: '#cc000000' })).toBe(false);
+		expect(hasOutlinePartner({ textStrokeWidth: 2, textStrokeColor: '#c000' })).toBe(false);
+		expect(hasOutlinePartner({ textStrokeWidth: 2 })).toBe(false);
+		expect(hasOutlinePartner({ textStrokeWidth: 0.004, textStrokeColor: '#000000' })).toBe(false);
+		expect(hasOutlinePartner({ textStrokeColor: '#000000' })).toBe(false);
+		expect(hasOutlinePartner(null)).toBe(false);
+	});
+});
+
+describe('plain typography switch (review of #215)', () => {
+	const css = fs.readFileSync(path.join(__dirname, '../../assets/css/frontend.css'), 'utf8');
+
+	test('.typost-plain turns off the hang and the outline, and restores the fill', () => {
+		expect(css).toContain('.typost-plain {\n    --typost-plain: 1;\n    --typost-plain-outline: 1;\n    --typost-plain-fill: currentColor;\n}');
+	});
+
+	test('editor content resets them, after the switch at equal specificity', () => {
+		const reset = '.editor-styles-wrapper,\n.block-editor-block-list__block {\n    --typost-plain: 0;\n    --typost-plain-outline: 0;\n    --typost-plain-fill: initial;\n}';
+		expect(css).toContain(reset);
+		expect(css.indexOf(reset)).toBeGreaterThan(css.indexOf('.typost-plain {'));
+	});
+
+	test('the outline and the transparent fill read the switch', () => {
+		const out = buildStyleCssBlock({ id: 8, properties: { textColor: 'transparent', textStrokeWidth: 1.5, textStrokeColor: '#000000' } });
+		expect(out).toContain('color: var(--typost-plain-fill, transparent);');
+		expect(out).toContain('-webkit-text-stroke-width: calc(1.5px * (1 - var(--typost-plain-outline, 0)));');
+	});
+
+	test('a theme\'s bare --typost-plain cannot hide outline-only text: the width does not read it', () => {
+		const out = buildStyleCssBlock({ id: 8, properties: { textColor: 'transparent', textStrokeWidth: 2, textStrokeColor: '#000000' } });
+		expect(out).not.toContain('var(--typost-plain,');
+	});
+
+	test('a style with no color or outline does not mention it', () => {
+		const out = buildStyleCssBlock({ id: 8, properties: { fontWeight: '700', letterSpacing: 20, fontSize: '32', fontSizeUnit: 'rem' } });
+		expect(out).toContain('font-weight: 700');
+		expect(out).not.toContain('typost-plain');
+	});
+});
+
+describe('style browser sample surface (review of #215)', () => {
+	const theme = { background: '#111111', text: '#eeeeee' };
+
+	test('a style with no color and no outline gets no surface', () => {
+		expect(buildStyleSampleSurface({ fontWeight: '700' }, theme)).toBeNull();
+		// A transparent fill with no outline writes no CSS at all
+		expect(buildStyleSampleSurface({ textColor: 'transparent' }, theme)).toBeNull();
+	});
+
+	test('a text color gets the background, and the class keeps the color', () => {
+		const surface = buildStyleSampleSurface({ textColor: '#ffffff' }, theme);
+		expect(surface.backgroundColor).toBe('#111111');
+		expect(surface).not.toHaveProperty('color');
+		expect(surface.padding).toBeTruthy();
+	});
+
+	test('an outline with no text color also gets the theme text color', () => {
+		const surface = buildStyleSampleSurface({ textStrokeWidth: 2 }, theme);
+		expect(surface.backgroundColor).toBe('#111111');
+		expect(surface.color).toBe('#eeeeee');
+	});
+
+	test('outline-only text keeps its transparent fill', () => {
+		const surface = buildStyleSampleSurface({ textColor: 'transparent', textStrokeWidth: 2, textStrokeColor: '#ffffff' }, theme);
+		expect(surface.backgroundColor).toBe('#111111');
+		expect(surface).not.toHaveProperty('color');
+	});
+
+	test('the theme colors count only as a pair', () => {
+		const props = { textColor: '#ffffff' };
+		expect(buildStyleSampleSurface(props, { background: '#111111', text: '' })).toBeNull();
+		expect(buildStyleSampleSurface(props, { background: '', text: '#eeeeee' })).toBeNull();
+		expect(buildStyleSampleSurface(props, {})).toBeNull();
+		expect(buildStyleSampleSurface(props)).toBeNull();
+		expect(buildStyleSampleSurface(null, theme)).toBeNull();
+	});
+
+	test('the sample\'s default color has no specificity, so a style\'s color wins', () => {
+		const source = fs.readFileSync(path.join(__dirname, '../assets/js/editor.js'), 'utf8');
+		expect(source).toContain(':where(.typost-ps-browser-sample) { color: #1e1e1e; }');
+		expect(source).not.toMatch(/'\.typost-ps-browser-sample \{[^']*color:/);
+	});
+});
+
 describe('Based On', () => {
 	const parent = { id: 1, name: 'Display', properties: { textColor: '#111111', textStrokeWidth: 2, textStrokeColor: '#cc0000', textStrokePosition: 'behind' } };
+
+	test('a child keeps following a parent palette color after the theme changes it', () => {
+		const paletteParent = { id: 1, properties: { textColor: 'var:preset|color|accent-1|#cc0000', textStrokeWidth: 2, textStrokeColor: 'var:preset|color|base|#ffffff' } };
+		const child = { id: 2, basedOn: 1, ownProperties: { fontWeight: '700' }, properties: { textColor: 'var:preset|color|accent-1|#cc0000', fontWeight: '700' } };
+		// The Edit form rebuilds a palette pick with the palette's current color
+		const state = { fontWeight: '700', explicitFontWeight: '700', textColor: 'var:preset|color|accent-1|#990000', textStrokeWidth: 2, textStrokeColor: 'var:preset|color|base|#fafafa' };
+		const saved = buildStyleUpdateProperties(state, child, [paletteParent, child]);
+		expect(saved).not.toHaveProperty('textColor');
+		expect(saved).not.toHaveProperty('textStrokeWidth');
+		expect(saved).not.toHaveProperty('textStrokeColor');
+	});
 
 	test('the outline inherits as a group', () => {
 		const child = { id: 2, basedOn: 1, properties: { textStrokeWidth: 1 } };
@@ -163,6 +267,11 @@ describe('editors (style-only properties)', () => {
 		expect(isStyleModified(Object.assign({}, style, { textColor: '#cc0000' }), style)).toBe(true);
 		expect(isStyleModified(Object.assign({}, style, { textStrokePosition: '' }), style)).toBe(true);
 		expect(isStyleModified(Object.assign({}, style, { textStrokeWidth: 0 }), style)).toBe(true);
+	});
+
+	test('a palette color with a newer fallback is not a change', () => {
+		expect(isStyleModified(Object.assign({}, style, { textColor: 'var:preset|color|accent-1|#990000' }), style)).toBe(false);
+		expect(isStyleModified(Object.assign({}, style, { textColor: 'var:preset|color|accent-2|#cc0000' }), style)).toBe(true);
 	});
 
 	test('Update Style and Save as New from an editor keep the style\'s color and outline', () => {
@@ -249,6 +358,52 @@ describe('contrast (WCAG 1.4.3)', () => {
 	test('an outline with no color of its own uses the fill, and no fill uses the theme text color', () => {
 		expect(findContrastProblem({ textStrokeWidth: 1 }, white)).toBeNull();
 		expect(findContrastProblem({ textStrokeWidth: 1 }, { background: '#ffffff', text: '#eeeeee' }).pair).toBe('text-outline');
+	});
+
+	describe('an outline on top that covers the letter (review of #215)', () => {
+		const wide = { textColor: '#000000', textStrokeWidth: 3, textStrokeColor: '#eeeeee', fontSize: '16' };
+
+		test('a wide outline on top is checked against the background', () => {
+			const problem = findContrastProblem(wide, white);
+			expect(problem.pair).toBe('outline-covers');
+			expect(problem.required).toBe(4.5);
+			expect(problem.ratio).toBeLessThan(1.2);
+		});
+
+		test('the threshold is one tenth of the font size', () => {
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokeWidth: 1.6 }), white).pair).toBe('outline-covers');
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokeWidth: 1.5 }), white)).toBeNull();
+		});
+
+		test('a thin outline counts as the letter', () => {
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokeWidth: 1 }), white)).toBeNull();
+			expect(findContrastProblem(Object.assign({}, wide, { fontSize: '64' }), white)).toBeNull();
+		});
+
+		test('an outline behind the fill does not cover it', () => {
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokePosition: 'behind' }), white)).toBeNull();
+		});
+
+		test('an outline that reads against the background passes', () => {
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokeColor: '#333333' }), white)).toBeNull();
+		});
+
+		test('a fluid size counts by its smallest size, no size as 16px', () => {
+			const fluid = { textColor: '#000000', textStrokeWidth: 3, textStrokeColor: '#eeeeee', fontSize: 'responsive', fontSizeMin: 16, fontSizeMax: 96 };
+			expect(findContrastProblem(fluid, white).pair).toBe('outline-covers');
+			const noSize = { textColor: '#000000', textStrokeWidth: 3, textStrokeColor: '#eeeeee' };
+			expect(findContrastProblem(noSize, white).pair).toBe('outline-covers');
+		});
+
+		test('large text uses 3:1 for the outline too', () => {
+			const large = { textColor: '#000000', textStrokeWidth: 4, textStrokeColor: '#949494', fontSize: '32' };
+			expect(findContrastProblem(large, white)).toBeNull();
+			expect(findContrastProblem(Object.assign({}, large, { textStrokeColor: '#aaaaaa' }), white)).toEqual(expect.objectContaining({ pair: 'outline-covers', required: 3 }));
+		});
+
+		test('an outline color the check cannot read is not flagged', () => {
+			expect(findContrastProblem(Object.assign({}, wide, { textStrokeColor: 'var:preset|color|fancy' }), white)).toBeNull();
+		});
 	});
 
 	test('the background defaults to white', () => {

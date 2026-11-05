@@ -597,7 +597,7 @@ class ParagraphStylesTransferTest extends ExportTestCase {
         $this->assertSame(array('fancy'), array_column($section['colorRows'], 'key'));
         $this->assertSame('slug', $section['colorRows'][0]['choice']);
         $this->assertSame('#123456', $section['colorRows'][0]['incoming']);
-        $this->assertContains('The palette color “gone” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color until the theme defines it: Lost.', $section['warnings']);
+        $this->assertContains('The palette color “gone” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: Lost.', $section['warnings']);
 
         $this->export()->import($this->parse($text), array());
         $this->assertSame('var:preset|color|accent-1|#0000ff', $this->storedStyle('Kicker')['properties']['textColor']);
