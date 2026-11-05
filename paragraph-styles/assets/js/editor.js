@@ -181,7 +181,8 @@
 	 * Tell the author what Detach removed from a whole block, and that em
 	 * values became px (#346). An editor notice, because Detach can come
 	 * from the style browser, which closes, so a panel cannot hold it. It
-	 * stays until dismissed, and core speaks it. Nothing to say, no notice.
+	 * stays until dismissed, and core speaks it. Nothing to say, no notice,
+	 * and an earlier Detach's notice goes.
 	 *
 	 * @param {{removed: string[], emConverted: boolean}} result See buildDetachBlockSettings().
 	 */
@@ -223,6 +224,9 @@
 		}
 		if (parts.length) {
 			notices.createNotice('info', parts.join(' '), { id: 'typost-ps-detach', isDismissible: true });
+		} else if (notices.removeNotice) {
+			// An earlier Detach's notice would no longer match this block
+			notices.removeNotice('typost-ps-detach');
 		}
 	}
 
