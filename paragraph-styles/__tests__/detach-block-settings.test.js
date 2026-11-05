@@ -294,6 +294,44 @@ describe('buildDetachBlockSettings', () => {
 	});
 });
 
+describe('the notice labels', () => {
+	it('has a label for every key the function can report, so the notice never shows a raw key', () => {
+		const everything = {
+			textColor: '#ff000000',
+			textStrokeWidth: 2,
+			firstLineIndent: '2em',
+			indentAfterSame: true,
+			wordSpacing: 50,
+			textWrap: 'balance',
+			alignment: 'justify',
+			alignLast: 'center',
+			fontId: 12,
+			fontWeight: '700',
+			fontStyle: 'italic',
+			fontSize: '24',
+			letterSpacing: 10,
+			lineHeight: 1.5,
+			features: ['smcp'],
+			fontVariationSettings: '"wght" 700',
+			initialHang: 0.2,
+			textCase: 'uppercase',
+		};
+		const { removed } = buildDetachBlockSettings(everything, {}, { coreBlock: true, hasGrepRules: true });
+		// The control: every report in the function, so a new one fails here until it is listed
+		const source = fs.readFileSync(path.join(__dirname, '../assets/js/lib/ps-utils.js'), 'utf8');
+		const reported = [...new Set([...source.matchAll(/removed\.push\('([a-zA-Z]+)'\)/g)].map((m) => m[1]))];
+		expect(reported.length).toBeGreaterThan(15);
+		expect([...removed].sort()).toEqual([...reported].sort());
+
+		const editor = fs.readFileSync(path.join(__dirname, '../assets/js/editor.js'), 'utf8');
+		const labels = editor.slice(editor.indexOf('var labels = {'), editor.indexOf('var names ='));
+		expect(labels.length).toBeGreaterThan(100);
+		for (const key of removed) {
+			expect(labels).toMatch(new RegExp(`\\b${key}: __\\(`));
+		}
+	});
+});
+
 describe('readEditorPalette', () => {
 	const withSettings = (settings) => {
 		window.wp = { data: { select: () => ({ getSettings: () => settings }) } };
