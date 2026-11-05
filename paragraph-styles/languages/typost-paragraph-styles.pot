@@ -830,7 +830,7 @@ msgid "Indents and spacing"
 msgstr ""
 
 #: includes/admin-tab.php:335
-msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these."
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
 msgstr ""
 
 #: includes/admin-tab.php:336

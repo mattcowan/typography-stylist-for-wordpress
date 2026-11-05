@@ -828,8 +828,8 @@ msgid "Indents and spacing"
 msgstr "Sangrías y espaciado"
 
 #: includes/admin-tab.php:335
-msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these."
-msgstr "Las sangrías y el espaciado se aplican a párrafos y encabezados completos. No tienen efecto cuando el estilo se aplica a un texto seleccionado. La izquierda y la derecha siguen la dirección del texto: en un texto de derecha a izquierda, la sangría izquierda está a la derecha. Los ajustes de espaciado o de sangría de texto propios de un bloque tienen prioridad sobre estos."
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
+msgstr "Las sangrías y el espaciado se aplican a párrafos y encabezados completos. No tienen efecto cuando el estilo se aplica a un texto seleccionado. La izquierda y la derecha siguen la dirección del texto: en un texto de derecha a izquierda, la sangría izquierda está a la derecha. En un bloque nativo Párrafo o Encabezado, los ajustes de espaciado o de sangría de texto propios del bloque tienen prioridad sobre estos."
 
 #: includes/admin-tab.php:336
 msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."

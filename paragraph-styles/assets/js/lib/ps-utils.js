@@ -203,6 +203,10 @@
 	// never takes it (see ALIGNMENT_GUARD in PHP)
 	var ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
+	// A fit-to-width block never takes a style's indents (see INDENT_GUARD in
+	// PHP); spacing stays unguarded
+	var INDENT_GUARD = ':not(.typost-fit)';
+
 	/** '' for Default or an unknown value, otherwise the alignment. */
 	function normalizeAlignment(value) {
 		return typeof value === 'string' && ALIGNMENT_VALUES.indexOf(value) !== -1 ? value : '';
@@ -375,15 +379,15 @@
 		var hanging = first !== '' && first.charAt(0) === '-' ? first.slice(1) : '';
 		var padStart = start && hanging ? 'calc(' + start + ' + ' + hanging + ')' : (start || hanging);
 
-		var rules = [];
+		var indents = [];
 		if (padStart || end) {
-			rules.push('box-sizing: border-box');
+			indents.push('box-sizing: border-box');
 		}
 		if (padStart) {
-			rules.push('padding-inline-start: ' + padStart);
+			indents.push('padding-inline-start: ' + padStart);
 		}
 		if (end) {
-			rules.push('padding-inline-end: ' + end);
+			indents.push('padding-inline-end: ' + end);
 		}
 		var indentRules = [];
 		if (first) {
@@ -393,7 +397,7 @@
 			}
 		}
 		if (!after) {
-			rules = rules.concat(indentRules);
+			indents = indents.concat(indentRules);
 		}
 		var margins = [];
 		if (before) {
@@ -402,33 +406,43 @@
 		if (afterSpace) {
 			margins.push('margin-block-end: ' + afterSpace);
 		}
-		rules = rules.concat(margins);
 
-		if (!rules.length && !after) return '';
+		if (!indents.length && !margins.length && !after) return '';
 
 		var main = [];
+		var block = [];
 		var wrapper = [];
 		var inner = [];
-		var next = [];
+		var previous = [];
 		ids.forEach(function (ref) {
 			var cls = '.typost-ps-' + ref;
 			var s = '.typost-styled' + cls + cls + cls + cls + cls;
 			var w = '.wp-block-typost:has(> ' + s + ')';
 			main.push(cls, s);
+			block.push(s);
 			wrapper.push(w);
 			inner.push('.wp-block-typost > ' + s);
-			next.push(':is(' + w + ', ' + s + ') + ' + s);
-			next.push(':is(' + w + ', ' + s + ') + .wp-block-typost > ' + s);
+			previous.push(w, s);
+		});
+		// Either class of the style can come before either class, so the one
+		// :is() lists every form
+		var next = [];
+		block.forEach(function (s) {
+			next.push(':is(' + previous.join(', ') + ') + ' + s + INDENT_GUARD);
+			next.push(':is(' + previous.join(', ') + ') + .wp-block-typost > ' + s + INDENT_GUARD);
 		});
 
 		function rule(selectors, declarations) {
 			return selectors.join(',\n') + ' {\n    ' + declarations.join(';\n    ') + ';\n}';
 		}
 		var blocks = [];
-		if (rules.length) {
-			blocks.push(rule(main, rules));
+		if (indents.length) {
+			blocks.push(rule(main.map(function (part) {
+				return part + INDENT_GUARD;
+			}), indents));
 		}
 		if (margins.length) {
+			blocks.push(rule(main, margins));
 			blocks.push(rule(wrapper, margins));
 			var zero = [];
 			if (before) zero.push('margin-block-start: 0');

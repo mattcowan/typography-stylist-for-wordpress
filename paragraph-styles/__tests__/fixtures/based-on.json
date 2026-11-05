@@ -912,7 +912,7 @@
 				}
 			],
 			"id": 2,
-			"css": ".typost-ps-2,\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    box-sizing: border-box;\n    padding-inline-start: 2em;\n    padding-inline-end: 1em;\n    margin-block-end: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2) {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 0;\n}"
+			"css": ".typost-ps-2:not(.typost-fit),\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2:not(.typost-fit) {\n    box-sizing: border-box;\n    padding-inline-start: 2em;\n    padding-inline-end: 1em;\n}\n\n.typost-ps-2,\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2) {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 0;\n}"
 		}
 	],
 	"overrides": [

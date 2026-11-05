@@ -194,9 +194,10 @@
 
 	// Indent and spacing fields (#199): a number input named by the key and
 	// a unit select named key + 'Unit'. Only the first line indent can be
-	// negative. LENGTH_MAX mirrors the sanitizer's caps.
+	// negative. Fit to width hides the indents, which fitOwnValues() discards,
+	// so only the spacing fields count there.
 	var LENGTH_FIELDS = ['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'];
-	var LENGTH_MAX = { px: 1000, em: 50 };
+	var FIT_LENGTH_FIELDS = ['spaceBefore', 'spaceAfter'];
 
 	/**
 	 * Split a stored length ('1.5em', '-24px') into the form's number and
@@ -644,9 +645,13 @@
 			}
 		}
 		// Indents and spacing (#199): zero or more (the first line indent can
-		// be negative), up to the sanitizer's caps
-		for (var i = 0; i < LENGTH_FIELDS.length; i++) {
-			var key = LENGTH_FIELDS[i];
+		// be negative), up to the sanitizer's caps. A hidden field holds what
+		// it held before fit mode: it is not saved, so it must not block Save,
+		// and an error could not focus it.
+		var lengthFields = values.sizeMode === 'fit' ? FIT_LENGTH_FIELDS : LENGTH_FIELDS;
+		var lengthMax = getUtils().LENGTH_MAX;
+		for (var i = 0; i < lengthFields.length; i++) {
+			var key = lengthFields[i];
 			var length = values[key] ? /^(-?[\d.e+-]+)(px|em)$/.exec(values[key]) : null;
 			if (!length) {
 				continue;
@@ -655,7 +660,7 @@
 			if (amount < 0 && key !== 'firstLineIndent') {
 				return { field: key, message: __('Enter 0 or more.', 'typost-paragraph-styles') };
 			}
-			if (Math.abs(amount) > LENGTH_MAX[length[2]]) {
+			if (Math.abs(amount) > lengthMax[length[2]]) {
 				return { field: key, message: __('Enter a value up to 1000px or 50em.', 'typost-paragraph-styles') };
 			}
 		}

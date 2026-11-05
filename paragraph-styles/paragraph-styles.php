@@ -129,6 +129,17 @@ final class Typost_Paragraph_Styles {
 	const ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
 	/**
+	 * Guard on the indent rules (#199): a fit-to-width block (`typost-fit`)
+	 * under a style that is not fit never takes them. text-indent inherits
+	 * into each `.typost-line`, which is sized to fill the width, so the
+	 * line runs past the edge; the padding shrinks every line; and the
+	 * style's `--typost-hang-on: 0` leaves line 1 short, because measurement
+	 * sized it as hung. Spacing has no such effect and stays unguarded.
+	 * Mirrors INDENT_GUARD in ps-utils.js.
+	 */
+	const INDENT_GUARD = ':not(.typost-fit)';
+
+	/**
 	 * @var array<string,int> Units a paragraph indent or spacing value (#199)
 	 * can use, with the largest value each accepts. Mirrors LENGTH_MAX in
 	 * ps-utils.js.
@@ -728,15 +739,25 @@ final class Typost_Paragraph_Styles {
 	 *   indent does for `.wp-block-paragraph + .wp-block-paragraph`. A
 	 *   Typography Stylist block carries the class on the inner visual
 	 *   element, so its wrapper is matched with `:has()`; all four pairs of
-	 *   block types are covered.
+	 *   block types are covered. A legacy id and the numeric id are one
+	 *   style, so the previous paragraph can carry either class.
 	 * - Space before and after are block margins. In a Typography Stylist
 	 *   block they go on the `.wp-block-typost` wrapper and the inner
 	 *   element's margins become 0: the inner margins would collapse with
 	 *   the wrapper's (the larger wins) or, with block padding, add to them.
-	 *   On the wrapper the block's own spacing setting (an inline style)
-	 *   wins, as it does on core blocks, where the class is on the block.
+	 *   An em value on the wrapper resolves against the wrapper's inherited
+	 *   font size, not the style's size, so px is the exact unit there.
+	 * - A block's own settings: on a core Paragraph or Heading block the
+	 *   class is on the block, so its inline margin, padding and text-indent
+	 *   override the style. A Typography Stylist block differs. Its spacing
+	 *   is inline on the wrapper (useBlockProps() in the editor,
+	 *   Typost::add_block_support_attributes() on the frontend): its margin
+	 *   overrides the style's wrapper margin, and its padding adds to the
+	 *   indents, which are padding on the inner element.
 	 * - Fit-to-width styles write no indents: each line fills the width, and
-	 *   an indent would push line 1 past the edge. Spacing is kept.
+	 *   an indent would push line 1 past the edge. Spacing is kept. A fit
+	 *   block under a style that is not fit skips the indent rules through
+	 *   INDENT_GUARD, so the indents have a rule of their own.
 	 *
 	 * Mirrors paragraphLayoutCss() in ps-utils.js; the shared fixture
 	 * `__tests__/fixtures/paragraph-layout-css.json` holds both to the same
@@ -763,15 +784,15 @@ final class Typost_Paragraph_Styles {
 		$hanging   = '' !== $first && '-' === $first[0] ? substr( $first, 1 ) : '';
 		$pad_start = '' !== $start && '' !== $hanging ? 'calc(' . $start . ' + ' . $hanging . ')' : ( '' !== $start ? $start : $hanging );
 
-		$rules = array();
+		$indents = array();
 		if ( '' !== $pad_start || '' !== $end ) {
-			$rules[] = 'box-sizing: border-box';
+			$indents[] = 'box-sizing: border-box';
 		}
 		if ( '' !== $pad_start ) {
-			$rules[] = 'padding-inline-start: ' . $pad_start;
+			$indents[] = 'padding-inline-start: ' . $pad_start;
 		}
 		if ( '' !== $end ) {
-			$rules[] = 'padding-inline-end: ' . $end;
+			$indents[] = 'padding-inline-end: ' . $end;
 		}
 		$indent_rules = array();
 		if ( '' !== $first ) {
@@ -781,7 +802,7 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 		if ( ! $after ) {
-			$rules = array_merge( $rules, $indent_rules );
+			$indents = array_merge( $indents, $indent_rules );
 		}
 		$margins = array();
 		if ( '' !== $before ) {
@@ -790,27 +811,26 @@ final class Typost_Paragraph_Styles {
 		if ( '' !== $after_s ) {
 			$margins[] = 'margin-block-end: ' . $after_s;
 		}
-		$rules = array_merge( $rules, $margins );
 
-		if ( empty( $rules ) && ! $after ) {
+		if ( empty( $indents ) && empty( $margins ) && ! $after ) {
 			return '';
 		}
 
-		$plain   = array();
-		$block   = array();
-		$wrapper = array();
-		$inner   = array();
-		$next    = array();
+		$plain    = array();
+		$block    = array();
+		$wrapper  = array();
+		$inner    = array();
+		$previous = array();
 		foreach ( $ids as $ref ) {
-			$cls       = '.typost-ps-' . $ref;
-			$s         = '.typost-styled' . str_repeat( $cls, 5 );
-			$w         = '.wp-block-typost:has(> ' . $s . ')';
-			$plain[]   = $cls;
-			$block[]   = $s;
-			$wrapper[] = $w;
-			$inner[]   = '.wp-block-typost > ' . $s;
-			$next[]    = ':is(' . $w . ', ' . $s . ') + ' . $s;
-			$next[]    = ':is(' . $w . ', ' . $s . ') + .wp-block-typost > ' . $s;
+			$cls        = '.typost-ps-' . $ref;
+			$s          = '.typost-styled' . str_repeat( $cls, 5 );
+			$w          = '.wp-block-typost:has(> ' . $s . ')';
+			$plain[]    = $cls;
+			$block[]    = $s;
+			$wrapper[]  = $w;
+			$inner[]    = '.wp-block-typost > ' . $s;
+			$previous[] = $w;
+			$previous[] = $s;
 		}
 		// Plain and block-level forms in the same order as selectorSet():
 		// per id, its preview class then its boosted class
@@ -819,15 +839,26 @@ final class Typost_Paragraph_Styles {
 			$main[] = $p;
 			$main[] = $block[ $i ];
 		}
+		// Either class of the style can come before either class, so the one
+		// :is() lists every form
+		$next = array();
+		foreach ( $block as $s ) {
+			$next[] = ':is(' . implode( ', ', $previous ) . ') + ' . $s . self::INDENT_GUARD;
+			$next[] = ':is(' . implode( ', ', $previous ) . ') + .wp-block-typost > ' . $s . self::INDENT_GUARD;
+		}
 
 		$rule = function ( $selectors, $declarations ) {
 			return implode( ",\n", $selectors ) . " {\n    " . implode( ";\n    ", $declarations ) . ";\n}";
 		};
 		$blocks = array();
-		if ( ! empty( $rules ) ) {
-			$blocks[] = $rule( $main, $rules );
+		if ( ! empty( $indents ) ) {
+			$guarded  = array_map( function ( $part ) {
+				return $part . self::INDENT_GUARD;
+			}, $main );
+			$blocks[] = $rule( $guarded, $indents );
 		}
 		if ( ! empty( $margins ) ) {
+			$blocks[] = $rule( $main, $margins );
 			$blocks[] = $rule( $wrapper, $margins );
 			$zero     = array();
 			if ( '' !== $before ) {
@@ -2277,7 +2308,7 @@ final class Typost_Paragraph_Styles {
 		);
 
 		// Variable font axes, shown as the sanitizer stored them
-		$axes_display =! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
+		$axes_display = ! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
 
 		// First letter hang (#242)
 		$hang_value   = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;

@@ -828,8 +828,8 @@ msgid "Indents and spacing"
 msgstr "Retraits et espacement"
 
 #: includes/admin-tab.php:335
-msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these."
-msgstr "Les retraits et l’espacement s’appliquent à des paragraphes et des titres entiers. Ils n’ont aucun effet quand le style est appliqué à un texte sélectionné. La gauche et la droite suivent le sens du texte : dans un texte de droite à gauche, le retrait gauche est à droite. Les réglages d’espacement ou de retrait de texte propres à un bloc l’emportent sur ceux-ci."
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
+msgstr "Les retraits et l’espacement s’appliquent à des paragraphes et des titres entiers. Ils n’ont aucun effet quand le style est appliqué à un texte sélectionné. La gauche et la droite suivent le sens du texte : dans un texte de droite à gauche, le retrait gauche est à droite. Sur un bloc natif Paragraphe ou Titre, les réglages d’espacement ou de retrait de texte propres au bloc l’emportent sur ceux-ci."
 
 #: includes/admin-tab.php:336
 msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."

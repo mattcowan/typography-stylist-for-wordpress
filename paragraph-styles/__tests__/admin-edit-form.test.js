@@ -985,6 +985,35 @@ describe('indents and paragraph spacing (#199)', () => {
 		expect(props.spaceAfter).toBe('12px');
 	});
 
+	test('fit to width does not check the hidden indents, and still checks the spacing (#199 review)', () => {
+		const { form, baseline } = openForm(STYLE);
+		// Bad values left in the fields before the switch to fit
+		setField(form, 'indentStart', '-4');
+		setField(form, 'indentEnd', '-4');
+		setField(form, 'firstLineIndentUnit', 'px');
+		setField(form, 'firstLineIndent', '5000');
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'indentStart' });
+
+		setField(form, 'sizeMode', 'fit');
+		setField(form, 'fontSizeMin', '16');
+		setField(form, 'fontSizePreferred', '32');
+		setField(form, 'fontSizeMax', '64');
+		updateConditionalFields(form);
+		['indentStart', 'indentEnd', 'firstLineIndent'].forEach((key) => {
+			expect(form.querySelector(`[data-field="${key}"]`).closest('[data-show-for-size]').hidden).toBe(true);
+		});
+		expect(validateEditValues(readEditForm(form), { baseline })).toBeNull();
+
+		setField(form, 'spaceAfter', '-4');
+		expect(validateEditValues(readEditForm(form), { baseline })).toEqual({ field: 'spaceAfter', message: 'Enter 0 or more.' });
+	});
+
+	test('the caps come from ps-utils, with no copy in admin.js (#199 review)', () => {
+		const source = require('fs').readFileSync(require('path').resolve(__dirname, '../assets/js/admin.js'), 'utf8');
+		expect(source).toContain('getUtils().LENGTH_MAX');
+		expect(source).not.toMatch(/LENGTH_MAX\s*=/);
+	});
+
 	test('a style based on another can unset an inherited value', () => {
 		const { resolveStyleList } = require('../assets/js/lib/ps-utils.js');
 		const styles = resolveStyleList([

@@ -44,6 +44,40 @@ describe('CSS matches the shared fixture', () => {
 		});
 	});
 
+	test('a fit-to-width block takes no indent, whatever its style is, and keeps the spacing (#199 review)', () => {
+		let indentRules = 0;
+		let marginRules = 0;
+		fixture.cases.forEach((c) => {
+			c.css.split('\n\n').forEach((block) => {
+				const selectors = block.slice(0, block.indexOf(' {')).split(',\n');
+				if (/box-sizing|padding-inline|text-indent: -?\d/.test(block)) {
+					indentRules++;
+					selectors.forEach((selector) => expect(selector).toMatch(/:not\(\.typost-fit\)$/));
+				}
+				if (/margin-block/.test(block)) {
+					marginRules++;
+					expect(block).not.toContain('.typost-fit');
+				}
+			});
+		});
+		// A control: an indent or margin rule the patterns miss would pass above
+		expect(indentRules).toBeGreaterThanOrEqual(9);
+		expect(marginRules).toBeGreaterThanOrEqual(9);
+	});
+
+	test('"only after the same style" pairs a numeric class and a legacy class (#199 review)', () => {
+		const css = buildStyleCssBlock({ id: 8, legacyId: 'ps_1_2', properties: { firstLineIndent: '1em', indentAfterSame: true } });
+		const S8 = '.typost-styled' + '.typost-ps-8'.repeat(5);
+		const SL = '.typost-styled' + '.typost-ps-ps_1_2'.repeat(5);
+		const prev = `:is(.wp-block-typost:has(> ${S8}), ${S8}, .wp-block-typost:has(> ${SL}), ${SL})`;
+		expect(css).toBe([
+			`${prev} + ${S8}:not(.typost-fit)`,
+			`${prev} + .wp-block-typost > ${S8}:not(.typost-fit)`,
+			`${prev} + ${SL}:not(.typost-fit)`,
+			`${prev} + .wp-block-typost > ${SL}:not(.typost-fit)`,
+		].join(',\n') + ' {\n    text-indent: 1em;\n}');
+	});
+
 	test('a style without the new keys writes the same CSS as before', () => {
 		const props = { fontWeight: '700', letterSpacing: 20, alignment: 'center', initialHang: 0.1 };
 		const css = buildStyleCssBlock({ id: 3, properties: props });

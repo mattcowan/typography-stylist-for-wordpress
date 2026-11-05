@@ -332,7 +332,7 @@ foreach ( $form_features as $feature ) {
 			?>
 			<fieldset class="typost-ps-edit-group">
 				<legend><?php esc_html_e( 'Indents and spacing', 'typost-paragraph-styles' ); ?></legend>
-				<p class="typost-ps-edit-help" id="typost-ps-edit-layout-help"><?php esc_html_e( 'Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. A block’s own spacing or text indent setting overrides these.', 'typost-paragraph-styles' ); ?></p>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-layout-help"><?php esc_html_e( 'Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these.', 'typost-paragraph-styles' ); ?></p>
 				<p class="typost-ps-edit-help" data-show-for-size="fit"><?php esc_html_e( 'Fit to width sets the width of each line itself, so a Fit to width style does not use indents.', 'typost-paragraph-styles' ); ?></p>
 				<div class="typost-ps-edit-row">
 					<?php foreach ( $length_fields as $length_field ) : ?>
