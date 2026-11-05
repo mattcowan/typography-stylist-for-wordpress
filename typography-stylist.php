@@ -2239,17 +2239,22 @@ class Typost {
             return $block_content;
         }
 
-        $tag = '<div'
-            . ('' !== (string) $id ? ' id="' . esc_attr($id) . '"' : '')
-            . ' class="' . esc_attr(implode(' ', array_merge(array('wp-block-typost'), $classes))) . '"'
-            . ('' !== $style ? ' style="' . esc_attr($style) . '"' : '')
-            . '>';
-
-        // Only the wrapper save.js writes: anything else is not this block's form
+        // The wrapper save.js writes, which has only a class. Core's own filters
+        // run first at this priority and can add a class to it: its layout support
+        // adds wp-container-content-* to a block in a Row. Any other form is not
+        // this block's wrapper, so it is left alone.
         return preg_replace_callback(
-            '/^(\s*)<div class="wp-block-typost">/',
-            function ($matches) use ($tag) {
-                return $matches[1] . $tag;
+            '/^(\s*)<div class="([^"]*)">/',
+            function ($matches) use ($id, $style, $classes) {
+                $existing = preg_split('/\s+/', trim($matches[2]), -1, PREG_SPLIT_NO_EMPTY);
+                if (!in_array('wp-block-typost', $existing, true)) {
+                    return $matches[0];
+                }
+                return $matches[1] . '<div'
+                    . ('' !== (string) $id ? ' id="' . esc_attr($id) . '"' : '')
+                    . ' class="' . esc_attr(implode(' ', array_values(array_unique(array_merge($existing, $classes))))) . '"'
+                    . ('' !== $style ? ' style="' . esc_attr($style) . '"' : '')
+                    . '>';
             },
             $block_content,
             1

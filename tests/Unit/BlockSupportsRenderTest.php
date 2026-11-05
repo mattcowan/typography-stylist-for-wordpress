@@ -121,6 +121,36 @@ class BlockSupportsRenderTest extends TestCase {
         $this->assertSame("\n" . '<div class="wp-block-typost alignfull"><p>Text <span class="wp-block-typost">in</span></p></div>', $out);
     }
 
+    public function test_a_class_core_added_first_is_kept_and_the_settings_still_apply() {
+        // Core's layout support runs at the same priority and is registered
+        // first, so a block in a Row reaches this filter with its class added
+        $html = '<div class="wp-block-typost wp-container-content-ceb7f5b3"><p>Text</p></div>';
+        $out = $this->render($html, array('blockName' => 'typost/block', 'attrs' => array('style' => array())), array(
+            'class' => 'wp-block-typost-block has-text-color',
+            'style' => 'color:#ff0000;',
+        ));
+
+        $this->assertSame(
+            '<div class="wp-block-typost wp-container-content-ceb7f5b3 has-text-color" style="color:#ff0000;"><p>Text</p></div>',
+            $out
+        );
+    }
+
+    public function test_a_class_already_on_the_wrapper_is_not_written_twice() {
+        $html = '<div class="wp-block-typost alignwide"><p>Text</p></div>';
+        $out = $this->render($html, array('blockName' => 'typost/block', 'attrs' => array('align' => 'wide')), array('class' => 'alignwide'));
+
+        $this->assertSame($html, $out);
+    }
+
+    public function test_a_first_div_that_is_not_the_block_wrapper_is_left_alone() {
+        foreach (array('<div class="wp-block-typost-other"><p>Text</p></div>', '<div class="other"><div class="wp-block-typost">x</div></div>') as $html) {
+            $out = $this->render($html, array('blockName' => 'typost/block', 'attrs' => array('align' => 'wide')), array('class' => 'alignwide'));
+
+            $this->assertSame($html, $out);
+        }
+    }
+
     public function test_html_with_another_wrapper_form_is_left_alone() {
         $html = '<div data-x="1" class="wp-block-typost"><p>Text</p></div>';
         $out = $this->render($html, array('blockName' => 'typost/block', 'attrs' => array('align' => 'full')), array('class' => 'alignfull'));
