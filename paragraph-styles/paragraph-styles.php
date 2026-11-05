@@ -35,6 +35,8 @@ if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
  * to provide paragraph style presets with CSS class-based rendering.
  */
 require_once __DIR__ . '/includes/class-typost-ps-transfer.php';
+require_once __DIR__ . '/includes/class-typost-ps-text-ranges.php';
+require_once __DIR__ . '/includes/class-typost-ps-grep.php';
 
 final class Typost_Paragraph_Styles {
 
@@ -58,6 +60,16 @@ final class Typost_Paragraph_Styles {
 
 	/** @var string[]|null Memoized typost_force_enqueue_paragraph_style_ids result */
 	private $forced_style_refs = null;
+
+	/** @var array|null Memoized GREP rules by style reference (#196), see get_grep_style_map() */
+	private $grep_style_map = null;
+
+	/**
+	 * Blocks whose styled element GREP rules apply to (#196): the core
+	 * blocks that take a style through their className (#219) and the
+	 * Typography Stylist block.
+	 */
+	const GREP_BLOCKS = array( 'core/paragraph', 'core/heading', 'typost/block' );
 
 	/** @var string Option key for storing paragraph styles */
 	const OPTION_KEY = 'typost_paragraph_styles';
@@ -132,6 +144,36 @@ final class Typost_Paragraph_Styles {
 	const ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
 	/**
+	 * Guard on the indent rules (#199): a fit-to-width block (`typost-fit`)
+	 * under a style that is not fit never takes them. text-indent inherits
+	 * into each `.typost-line`, which is sized to fill the width, so the
+	 * line runs past the edge; the padding shrinks every line; and the
+	 * style's `--typost-hang-on: 0` leaves line 1 short, because measurement
+	 * sized it as hung. Spacing has no such effect and stays unguarded.
+	 * Mirrors INDENT_GUARD in ps-utils.js.
+	 */
+	const INDENT_GUARD = ':not(.typost-fit)';
+
+	/**
+	 * @var array<string,int> Units a paragraph indent or spacing value (#199)
+	 * can use, with the largest value each accepts. Mirrors LENGTH_MAX in
+	 * ps-utils.js.
+	 */
+	const LENGTH_MAX = array(
+		'px' => 1000,
+		'em' => 50,
+	);
+
+	/**
+	 * @var string[] Indents and paragraph spacing (#199) that are plain
+	 * lengths, zero or more: left and right indent (logical start and end,
+	 * so they follow the text direction) and space before and after. The
+	 * first line indent can be negative and has its own group. Mirrors
+	 * SPACING_PROPERTIES in ps-utils.js.
+	 */
+	const SPACING_PROPERTIES = array( 'indentStart', 'indentEnd', 'spaceBefore', 'spaceAfter' );
+
+	/**
 	 * Most styles a Based On chain may hold, the style itself included (#200).
 	 * Resolution stops there, so bad data in the option cannot loop.
 	 * Mirrors MAX_BASED_ON_LEVELS in ps-utils.js.
@@ -147,6 +189,9 @@ final class Typost_Paragraph_Styles {
 		'fontSize'        => array( 'fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize' ),
 		'textCase'        => array( 'textCase', 'fakeSmallCaps' ),
 		'alignment'       => array( 'alignment', 'alignLast' ),
+		// #199: a child with its own first line indent must not keep the
+		// parent's "only after the same style"
+		'firstLineIndent' => array( 'firstLineIndent', 'indentAfterSame' ),
 		'textStrokeWidth' => array( 'textStrokeWidth', 'textStrokeColor', 'textStrokePosition' ),
 	);
 
@@ -180,6 +225,10 @@ final class Typost_Paragraph_Styles {
 		'initialHang'           => 0,
 		'wordSpacing'           => 0,
 		'textWrap'              => '',
+		'indentStart'           => '',
+		'indentEnd'             => '',
+		'spaceBefore'           => '',
+		'spaceAfter'            => '',
 		'textColor'             => '',
 	);
 
@@ -244,6 +293,9 @@ final class Typost_Paragraph_Styles {
 		// CSS output — frontend: the rules for the styles the page uses, in
 		// the head; a footer pass prints the styles that blocks rendered
 		// after the head (classic-theme widgets, custom query loops).
+		// GREP styles (#196) wrap matches at render time; before the
+		// collector, so the styles the rules apply are collected too.
+		add_filter( 'render_block', array( $this, 'apply_grep_styles' ), 9, 2 );
 		add_filter( 'render_block', array( $this, 'collect_rendered_style_refs' ) );
 		add_action( 'wp_head', array( $this, 'output_style_css' ), 6 );
 		// Last, so blocks a popup or modal plugin renders in wp_footer count.
@@ -511,7 +563,15 @@ final class Typost_Paragraph_Styles {
 		}
 		$css_rules = array_merge( $css_rules, self::stroke_declarations( $props ) );
 
-		if ( empty( $css_rules ) && empty( $align_rules ) ) {
+		// Indents and paragraph spacing (#199): rules of their own, never on
+		// the inline-span selector (see paragraph_layout_css())
+		$layout_ids = array( (string) $id );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$layout_ids[] = esc_attr( $style['legacyId'] );
+		}
+		$layout_css = self::paragraph_layout_css( $props, $hang, $layout_ids );
+
+		if ( empty( $css_rules ) && empty( $align_rules ) && '' === $layout_css ) {
 			return '';
 		}
 
@@ -573,6 +633,9 @@ final class Typost_Paragraph_Styles {
 			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
 		}
 
+		if ( '' !== $layout_css ) {
+			$css .= ( '' === $css ? '' : "\n\n" ) . $layout_css;
+		}
 		// The Typography Stylist block's own text color (#215). The color
 		// support colors the block's wrapper (`has-text-color`, with a preset
 		// class or an inline color), and the style class is on the visual
@@ -907,6 +970,216 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * Normalize an indent or spacing value (#199) to the stored form.
+	 *
+	 * Accepts a number with a `px` or `em` unit ("24px", "1.5em", " .5EM ").
+	 * Returns '' for zero, for anything else (no unit, other units, a
+	 * number alone), and for a negative value unless `$allow_negative`
+	 * (only the first line indent, where negative is a hanging indent).
+	 * The number is capped at LENGTH_MAX and rounded to three decimals, so
+	 * it prints the same here and in JS. Mirrors normalizeLength() in
+	 * ps-utils.js.
+	 *
+	 * @param mixed $value          Raw value.
+	 * @param bool  $allow_negative Accept a negative value.
+	 * @return string Length such as "1.5em", or '' for none.
+	 */
+	public static function normalize_length( $value, $allow_negative = false ) {
+		if ( ! is_string( $value ) || ! preg_match( '/^\s*(-?)(\d+(?:\.\d*)?|\.\d+)\s*(px|em)\s*$/i', $value, $m ) ) {
+			return '';
+		}
+		$unit = strtolower( $m[3] );
+		$n    = min( (float) $m[2], self::LENGTH_MAX[ $unit ] );
+		// Below 0.0005 rounds to 0; PHP would also print it in exponent form
+		if ( ! is_finite( $n ) || $n < 0.0005 ) {
+			return '';
+		}
+		$negative = '-' === $m[1];
+		if ( $negative && ! $allow_negative ) {
+			return '';
+		}
+		return ( $negative ? '-' : '' ) . round( $n, 3 ) . $unit;
+	}
+
+	/**
+	 * Whether a style's first line indent applies only after a paragraph
+	 * with the same style (#199). Only for a positive indent: a hanging
+	 * indent is a whole-paragraph shape, which every paragraph keeps.
+	 * Mirrors indentAfterSameApplies() in ps-utils.js.
+	 *
+	 * @param array $props Properties.
+	 * @return bool
+	 */
+	private static function indent_after_same_applies( $props ) {
+		$first = self::normalize_length( isset( $props['firstLineIndent'] ) ? $props['firstLineIndent'] : '', true );
+		return '' !== $first && '-' !== $first[0] && isset( $props['indentAfterSame'] ) && true === $props['indentAfterSame'];
+	}
+
+	/**
+	 * The indent and paragraph spacing rules of a style (#199).
+	 *
+	 * A paragraph-level setting, so the rules go on the plain preview class
+	 * (the settings tab card) and the block-level selector, never on the
+	 * inline-span selector: inline start and end padding would move a
+	 * selected word, and text-indent and block margins do nothing on a span.
+	 * Each value is a length with px or em, stored by normalize_length().
+	 *
+	 * - Indents are padding, with `box-sizing: border-box` only when the
+	 *   style sets one: core Paragraph and Heading blocks in a constrained
+	 *   layout get `margin-left/right: auto !important` from core, so a
+	 *   margin indent did nothing, and padding on a content-box element
+	 *   only widened it (measured on Twenty Twenty-Five, #199 review).
+	 *   Logical properties, so the indents follow the text direction.
+	 * - A negative first line indent is a hanging indent: the start padding
+	 *   grows by its size and `text-indent` pulls the first line back. The
+	 *   `hanging` keyword is shorter but too new (Chrome 146).
+	 * - A first line indent turns the First Letter Hang off where it
+	 *   applies (`--typost-hang-on: 0`): the hang lines a swash up with the
+	 *   text edge, which an indented first line no longer starts at. The
+	 *   class rule also beats the editors' hang `text-indent` rules, so the
+	 *   editor and the frontend agree.
+	 * - "Only after the same style" moves the first line indent into a rule
+	 *   for a paragraph that follows one with the same style, as core's Text
+	 *   indent does for `.wp-block-paragraph + .wp-block-paragraph`. A
+	 *   Typography Stylist block carries the class on the inner visual
+	 *   element, so its wrapper is matched with `:has()`; all four pairs of
+	 *   block types are covered. A legacy id and the numeric id are one
+	 *   style, so the previous paragraph can carry either class.
+	 * - Space before and after are block margins. In a Typography Stylist
+	 *   block they go on the `.wp-block-typost` wrapper and the inner
+	 *   element's margins become 0: the inner margins would collapse with
+	 *   the wrapper's (the larger wins) or, with block padding, add to them.
+	 *   An em value on the wrapper resolves against the wrapper's inherited
+	 *   font size, not the style's size, so px is the exact unit there.
+	 * - A block's own settings: on a core Paragraph or Heading block the
+	 *   class is on the block, so its inline margin, padding and text-indent
+	 *   override the style. A Typography Stylist block differs. Its spacing
+	 *   is inline on the wrapper (useBlockProps() in the editor,
+	 *   Typost::add_block_support_attributes() on the frontend): its margin
+	 *   overrides the style's wrapper margin, and its padding adds to the
+	 *   indents, which are padding on the inner element.
+	 * - Fit-to-width styles write no indents: each line fills the width, and
+	 *   an indent would push line 1 past the edge. Spacing is kept. A fit
+	 *   block under a style that is not fit skips the indent rules through
+	 *   INDENT_GUARD, so the indents have a rule of their own.
+	 *
+	 * Mirrors paragraphLayoutCss() in ps-utils.js; the shared fixture
+	 * `__tests__/fixtures/paragraph-layout-css.json` holds both to the same
+	 * text.
+	 *
+	 * @param array    $props Resolved properties.
+	 * @param float    $hang  The style's normalized hang.
+	 * @param string[] $ids   The style's id, then its legacy id if any.
+	 * @return string CSS rule blocks separated by a blank line, or ''.
+	 */
+	private static function paragraph_layout_css( $props, $hang, $ids ) {
+		$is_fit = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
+		$length = function ( $key, $allow_negative = false ) use ( $props ) {
+			return self::normalize_length( isset( $props[ $key ] ) ? $props[ $key ] : '', $allow_negative );
+		};
+
+		$start   = $is_fit ? '' : $length( 'indentStart' );
+		$end     = $is_fit ? '' : $length( 'indentEnd' );
+		$first   = $is_fit ? '' : $length( 'firstLineIndent', true );
+		$after   = '' !== $first && self::indent_after_same_applies( $props );
+		$before  = $length( 'spaceBefore' );
+		$after_s = $length( 'spaceAfter' );
+
+		$hanging   = '' !== $first && '-' === $first[0] ? substr( $first, 1 ) : '';
+		$pad_start = '' !== $start && '' !== $hanging ? 'calc(' . $start . ' + ' . $hanging . ')' : ( '' !== $start ? $start : $hanging );
+
+		$indents = array();
+		if ( '' !== $pad_start || '' !== $end ) {
+			$indents[] = 'box-sizing: border-box';
+		}
+		if ( '' !== $pad_start ) {
+			$indents[] = 'padding-inline-start: ' . $pad_start;
+		}
+		if ( '' !== $end ) {
+			$indents[] = 'padding-inline-end: ' . $end;
+		}
+		$indent_rules = array();
+		if ( '' !== $first ) {
+			$indent_rules[] = 'text-indent: ' . $first;
+			if ( $hang > 0 ) {
+				$indent_rules[] = '--typost-hang-on: 0';
+			}
+		}
+		if ( ! $after ) {
+			$indents = array_merge( $indents, $indent_rules );
+		}
+		$margins = array();
+		if ( '' !== $before ) {
+			$margins[] = 'margin-block-start: ' . $before;
+		}
+		if ( '' !== $after_s ) {
+			$margins[] = 'margin-block-end: ' . $after_s;
+		}
+
+		if ( empty( $indents ) && empty( $margins ) && ! $after ) {
+			return '';
+		}
+
+		$plain    = array();
+		$block    = array();
+		$wrapper  = array();
+		$inner    = array();
+		$previous = array();
+		foreach ( $ids as $ref ) {
+			$cls        = '.typost-ps-' . $ref;
+			$s          = '.typost-styled' . str_repeat( $cls, 5 );
+			$w          = '.wp-block-typost:has(> ' . $s . ')';
+			$plain[]    = $cls;
+			$block[]    = $s;
+			$wrapper[]  = $w;
+			$inner[]    = '.wp-block-typost > ' . $s;
+			$previous[] = $w;
+			$previous[] = $s;
+		}
+		// Plain and block-level forms in the same order as selectorSet():
+		// per id, its preview class then its boosted class
+		$main = array();
+		foreach ( $plain as $i => $p ) {
+			$main[] = $p;
+			$main[] = $block[ $i ];
+		}
+		// Either class of the style can come before either class, so the one
+		// :is() lists every form
+		$next = array();
+		foreach ( $block as $s ) {
+			$next[] = ':is(' . implode( ', ', $previous ) . ') + ' . $s . self::INDENT_GUARD;
+			$next[] = ':is(' . implode( ', ', $previous ) . ') + .wp-block-typost > ' . $s . self::INDENT_GUARD;
+		}
+
+		$rule = function ( $selectors, $declarations ) {
+			return implode( ",\n", $selectors ) . " {\n    " . implode( ";\n    ", $declarations ) . ";\n}";
+		};
+		$blocks = array();
+		if ( ! empty( $indents ) ) {
+			$guarded  = array_map( function ( $part ) {
+				return $part . self::INDENT_GUARD;
+			}, $main );
+			$blocks[] = $rule( $guarded, $indents );
+		}
+		if ( ! empty( $margins ) ) {
+			$blocks[] = $rule( $main, $margins );
+			$blocks[] = $rule( $wrapper, $margins );
+			$zero     = array();
+			if ( '' !== $before ) {
+				$zero[] = 'margin-block-start: 0';
+			}
+			if ( '' !== $after_s ) {
+				$zero[] = 'margin-block-end: 0';
+			}
+			$blocks[] = $rule( $inner, $zero );
+		}
+		if ( $after ) {
+			$blocks[] = $rule( $next, $indent_rules );
+		}
+		return implode( "\n\n", $blocks );
+	}
+
+	/**
 	 * The First Letter Hang rules for a style on core blocks (#219).
 	 *
 	 * The style's main rule sets `--typost-hang`, and core's block style.css
@@ -978,6 +1251,13 @@ final class Typost_Paragraph_Styles {
 		foreach ( $styles as $style ) {
 			$block = $this->generate_style_css( $style, $styles );
 			if ( $block ) {
+				$css_blocks[] = $block;
+			}
+		}
+		// GREP feature rules last, so they follow every style they combine
+		foreach ( $styles as $style ) {
+			$block = self::grep_feature_css( $style, $styles );
+			if ( '' !== $block ) {
 				$css_blocks[] = $block;
 			}
 		}
@@ -1070,6 +1350,340 @@ final class Typost_Paragraph_Styles {
 		return $block_content;
 	}
 
+	// -------------------------------------------------------------------------
+	// GREP styles (#196)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Wrap the text a style's GREP rules match, as the block renders.
+	 *
+	 * Hooked to `render_block` (priority 9, before the style collector). The
+	 * saved content never changes: the spans exist only in the rendered
+	 * HTML, so a change to a rule restyles every post on its next render.
+	 * Runs on WordPress 6.9+ (Typost_PS_Text_Ranges::is_supported()); below
+	 * that, the rules have no effect and the admin form does not show them.
+	 *
+	 * @param string $block_content Rendered block.
+	 * @param array  $block         Parsed block.
+	 * @return string
+	 */
+	public function apply_grep_styles( $block_content, $block = null ) {
+		if ( ! is_string( $block_content ) || false === strpos( $block_content, 'typost-ps-' ) ) {
+			return $block_content;
+		}
+		$name = is_array( $block ) && isset( $block['blockName'] ) ? $block['blockName'] : '';
+		if ( ! in_array( $name, self::GREP_BLOCKS, true ) ) {
+			return $block_content;
+		}
+		$map = $this->get_grep_style_map();
+		if ( empty( $map['rules'] ) || ! Typost_PS_Text_Ranges::is_supported() ) {
+			return $block_content;
+		}
+		// A full parse only for a block whose style has rules: on a site with
+		// any rule, this filter sees every styled block.
+		if ( ! self::references_grep_rules( $block_content, $map['rules'] ) ) {
+			return $block_content;
+		}
+		return self::wrap_grep( $block_content, $map['rules'], $map['ids'] );
+	}
+
+	/**
+	 * Whether HTML mentions the `typost-ps-{ref}` class of a style with rules.
+	 *
+	 * A cheap test before the parser. wrap_grep() reads the classes properly,
+	 * with the same reference form (an id, or a legacy `ps_123_456`), so a
+	 * false positive only costs that parse.
+	 *
+	 * @param string $html         HTML fragment.
+	 * @param array  $rules_by_ref Rules by style reference (id or legacy id).
+	 * @return bool
+	 */
+	public static function references_grep_rules( $html, $rules_by_ref ) {
+		if ( empty( $rules_by_ref ) || ! preg_match_all( '/typost-ps-([A-Za-z0-9_-]+)/', (string) $html, $matches ) ) {
+			return false;
+		}
+		foreach ( $matches[1] as $ref ) {
+			if ( isset( $rules_by_ref[ $ref ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Whether HTML holds a registered shortcode, written out or as entities.
+	 *
+	 * GREP runs before do_shortcode (the_content, priority 11), so a shortcode
+	 * is still plain text here: a pattern could match inside it. The entity
+	 * form counts because wrapped text is written back decoded: `&#91;foo&#93;`,
+	 * how an author shows a shortcode as text, would become a real one.
+	 *
+	 * @param string $html HTML fragment.
+	 * @return bool
+	 */
+	private static function has_registered_shortcode( $html ) {
+		// With no tags, the core regex would match any "[ " (do_shortcode() has the same check).
+		if ( empty( $GLOBALS['shortcode_tags'] ) || ! function_exists( 'get_shortcode_regex' ) ) {
+			return false;
+		}
+		$text = false !== strpos( $html, '&' ) ? html_entity_decode( $html, ENT_QUOTES | ENT_HTML5, 'UTF-8' ) : $html;
+		if ( false === strpos( $text, '[' ) ) {
+			return false;
+		}
+		// A regex error (false) also leaves the block alone.
+		return 0 !== preg_match( '/' . get_shortcode_regex() . '/', $text );
+	}
+
+	/**
+	 * Wrap GREP matches in an HTML fragment.
+	 *
+	 * A root is an element with the `typost-ps-N` class of a style that has
+	 * rules, and (unless $require_styled is false, for the admin preview)
+	 * the `typost-styled` class: a core block with a style (#219), or the
+	 * Typography Stylist block's visual copy. The block's screen reader copy
+	 * carries neither class, so its text never changes. Fit-to-width text
+	 * (`typost-fit`) is left alone: its lines were measured in the editor,
+	 * and a span with another size or features would change their width.
+	 * A fragment with a registered shortcode comes back unchanged (see
+	 * has_registered_shortcode()).
+	 *
+	 * @param string $html           HTML fragment.
+	 * @param array  $rules_by_ref   Rules by style reference (id or legacy id, as strings).
+	 * @param array  $valid_ids      Style ids a rule may apply, as keys.
+	 * @param bool   $require_styled Whether a root needs the `typost-styled` class.
+	 * @param array  $font_ids       For the admin card: style id => font id the
+	 *                               admin font loader must load for its spans.
+	 *                               The frontend passes none.
+	 * @return string
+	 */
+	public static function wrap_grep( $html, $rules_by_ref, $valid_ids, $require_styled = true, $font_ids = array() ) {
+		if ( self::has_registered_shortcode( (string) $html ) ) {
+			return $html;
+		}
+		$root_for_tag = function ( $processor ) use ( $rules_by_ref, $require_styled ) {
+			if ( ( $require_styled && ! $processor->has_class( 'typost-styled' ) ) || $processor->has_class( 'typost-fit' ) ) {
+				return null;
+			}
+			foreach ( $processor->class_list() as $class_name ) {
+				if ( preg_match( '/^typost-ps-([A-Za-z0-9_-]+)$/', $class_name, $m ) && isset( $rules_by_ref[ $m[1] ] ) ) {
+					return $m[1];
+				}
+			}
+			return null;
+		};
+		$open_tag_for = function ( $style_id ) use ( $valid_ids, $font_ids ) {
+			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
+		};
+		$ranges_for_root = function ( $ref, $plain ) use ( $rules_by_ref, $open_tag_for ) {
+			return Typost_PS_Grep::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
+		};
+		return Typost_PS_Text_Ranges::wrap( $html, $root_for_tag, $ranges_for_root );
+	}
+
+	/**
+	 * The GREP rules of every style that has some, for this request.
+	 *
+	 * @return array array( 'rules' => ref => rules, 'ids' => style id => true ).
+	 */
+	private function get_grep_style_map() {
+		if ( null === $this->grep_style_map ) {
+			$rules = array();
+			$ids   = array();
+			foreach ( $this->get_styles() as $style ) {
+				if ( ! isset( $style['id'] ) ) {
+					continue;
+				}
+				$ids[ intval( $style['id'] ) ] = true;
+				if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) ) {
+					continue;
+				}
+				$rules[ (string) $style['id'] ] = $style['grepRules'];
+				if ( ! empty( $style['legacyId'] ) ) {
+					$rules[ (string) $style['legacyId'] ] = $style['grepRules'];
+				}
+			}
+			$this->grep_style_map = array(
+				'rules' => $rules,
+				'ids'   => $ids,
+			);
+		}
+		return $this->grep_style_map;
+	}
+
+	/**
+	 * Style references plus the styles their GREP rules apply.
+	 *
+	 * One level is enough: a GREP span carries `data-style-id`, not a
+	 * `typost-ps-N` class, so the rules of the style it applies never run
+	 * inside it.
+	 *
+	 * @param array $refs Style references.
+	 * @return string[]
+	 */
+	private function with_grep_targets( array $refs ) {
+		$map = $this->get_grep_style_map();
+		if ( empty( $map['rules'] ) ) {
+			return $refs;
+		}
+		$out = array_map( 'strval', $refs );
+		foreach ( $refs as $ref ) {
+			$ref = (string) $ref;
+			if ( isset( $map['rules'][ $ref ] ) ) {
+				foreach ( Typost_PS_Grep::target_style_ids( $map['rules'][ $ref ] ) as $target ) {
+					$out[] = (string) $target;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/**
+	 * CSS that keeps a style's OpenType features inside its GREP spans.
+	 *
+	 * `font-feature-settings` is one property, so a span whose style sets
+	 * `c2sc` would otherwise drop the `onum` of the paragraph around it. For
+	 * each rule whose style sets features, when the paragraph style sets
+	 * features too, this writes both lists (the paragraph's first) for that
+	 * span inside that paragraph. The selector, (0,8,0), beats the span
+	 * style's own (0,6,0) rule. Fonts' variation settings are not combined.
+	 *
+	 * @param array $style  Style record.
+	 * @param array $styles Every stored style.
+	 * @return string CSS, '' when there is nothing to combine.
+	 */
+	public static function grep_feature_css( $style, $styles ) {
+		if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) || ! isset( $style['id'] ) ) {
+			return '';
+		}
+		$own_features = self::resolved_features( $style, $styles );
+		if ( empty( $own_features ) ) {
+			return '';
+		}
+
+		$refs = array( (string) intval( $style['id'] ) );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$refs[] = esc_attr( $style['legacyId'] );
+		}
+
+		$css = array();
+		foreach ( Typost_PS_Grep::target_style_ids( $style['grepRules'] ) as $target_id ) {
+			$target = null;
+			foreach ( $styles as $candidate ) {
+				if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) === $target_id ) {
+					$target = $candidate;
+					break;
+				}
+			}
+			if ( null === $target ) {
+				continue;
+			}
+			$target_features = self::resolved_features( $target, $styles );
+			if ( empty( $target_features ) ) {
+				continue;
+			}
+			$features  = array_values( array_unique( array_merge( $own_features, $target_features ) ) );
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$selectors[] = sprintf( '.typost-ps-%1$s .typost-grep.typost-grep.typost-grep[data-style-id="%2$d"][data-style-id][data-style-id][data-style-id]', $ref, $target_id );
+			}
+			$css[] = sprintf(
+				"%s {\n    font-feature-settings: %s;\n}",
+				implode( ",\n", $selectors ),
+				implode( ', ', array_map( function ( $f ) {
+					return '"' . esc_attr( $f ) . '" 1';
+				}, $features ) )
+			);
+		}
+		return implode( "\n\n", $css );
+	}
+
+	/**
+	 * A style's resolved OpenType features (#200 Based On included).
+	 *
+	 * @param array $style  Style record.
+	 * @param array $styles Every stored style.
+	 * @return string[]
+	 */
+	private static function resolved_features( $style, $styles ) {
+		$props = empty( $style['basedOn'] )
+			? ( isset( $style['properties'] ) ? $style['properties'] : array() )
+			: self::resolve_properties( $style, $styles );
+		return ! empty( $props['features'] ) && is_array( $props['features'] ) ? array_values( $props['features'] ) : array();
+	}
+
+	/**
+	 * Sanitize the `grepRules` of a create or update request.
+	 *
+	 * Built-in patterns are open to every author (`edit_posts`, the routes'
+	 * capability). Adding or changing a custom pattern needs
+	 * `manage_options`: a slow pattern costs server time on every uncached
+	 * render of every post that uses the style. An author may keep a custom
+	 * pattern an administrator stored.
+	 *
+	 * @param mixed $raw      Request value.
+	 * @param int   $own_id   The style's id (0 for a new style).
+	 * @param array $existing The style's stored rules.
+	 * @param array $styles   Every stored style.
+	 * @return array See Typost_PS_Grep::sanitize_rules().
+	 */
+	private function sanitize_request_grep_rules( $raw, $own_id, $existing, $styles ) {
+		if ( null === $raw || '' === $raw || array() === $raw ) {
+			return Typost_PS_Grep::sanitize_rules( array(), array() );
+		}
+		$style_ids = array();
+		foreach ( $styles as $style ) {
+			if ( isset( $style['id'] ) ) {
+				$style_ids[] = intval( $style['id'] );
+			}
+		}
+		return Typost_PS_Grep::sanitize_rules( $raw, array(
+			'own_id'           => $own_id,
+			'style_ids'        => $style_ids,
+			'existing'         => $existing,
+			'can_write_custom' => current_user_can( 'manage_options' ),
+		) );
+	}
+
+	/**
+	 * The 400 response for rules that failed sanitize_rules().
+	 *
+	 * @param array $grep Result of sanitize_rules().
+	 * @return WP_REST_Response
+	 */
+	private static function grep_error_response( $grep ) {
+		return new WP_REST_Response( array(
+			'message'   => $grep['error'],
+			'field'     => 'grepRules',
+			'ruleIndex' => $grep['index'],
+			'ruleField' => $grep['field'],
+		), 400 );
+	}
+
+	/**
+	 * Whether GREP styles work on this site (WordPress 6.9+).
+	 *
+	 * @return bool
+	 */
+	public static function grep_supported() {
+		return Typost_PS_Text_Ranges::is_supported();
+	}
+
+	/**
+	 * The pattern choices of the admin form, in order.
+	 *
+	 * @return array List of array( 'value' => string, 'label' => string ).
+	 */
+	public static function grep_pattern_options() {
+		$options = array();
+		foreach ( Typost_PS_Grep::pattern_labels() as $value => $label ) {
+			$options[] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+		return $options;
+	}
+
 	/**
 	 * Print one <style> element with the rules for the referenced styles.
 	 *
@@ -1081,8 +1695,9 @@ final class Typost_Paragraph_Styles {
 	 */
 	private function print_style_rules( array $refs, $element_id ) {
 		$blocks     = array();
+		$grep       = array();
 		$all_styles = $this->get_styles();
-		foreach ( $this->styles_for_refs( $refs ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $refs ) ) as $style ) {
 			$key = isset( $style['id'] ) ? (string) $style['id'] : '';
 			if ( '' === $key || isset( $this->printed_style_ids[ $key ] ) ) {
 				continue;
@@ -1092,7 +1707,13 @@ final class Typost_Paragraph_Styles {
 			if ( '' !== $block ) {
 				$blocks[] = $block;
 			}
+			$block = self::grep_feature_css( $style, $all_styles );
+			if ( '' !== $block ) {
+				$grep[] = $block;
+			}
 		}
+		// GREP feature rules after the styles they combine (#196)
+		$blocks = array_merge( $blocks, $grep );
 		if ( empty( $blocks ) ) {
 			return;
 		}
@@ -1230,7 +1851,7 @@ final class Typost_Paragraph_Styles {
 		if ( ! is_array( $font_ids ) ) {
 			$font_ids = array();
 		}
-		foreach ( $this->styles_for_refs( $this->get_forced_style_refs() ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $this->get_forced_style_refs() ) ) as $style ) {
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
 				$font_ids[] = $font_id;
@@ -1389,7 +2010,8 @@ final class Typost_Paragraph_Styles {
 			return $ids;
 		}
 
-		foreach ( $this->styles_for_refs( $style_refs ) as $style ) {
+		// The styles GREP rules apply (#196) render in this content too
+		foreach ( $this->styles_for_refs( $this->with_grep_targets( $style_refs ) ) as $style ) {
 			// A font the style inherits from its parent (#200) loads too
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
@@ -1660,6 +2282,12 @@ final class Typost_Paragraph_Styles {
 			$properties = self::drop_inherited_properties( $properties, $this->resolved_style_properties( $styles, $based_on ) );
 		}
 
+		// GREP styles (#196): a new style has no stored rules to keep
+		$grep = $this->sanitize_request_grep_rules( $request->get_param( 'grepRules' ), 0, array(), $styles );
+		if ( '' !== $grep['error'] ) {
+			return self::grep_error_response( $grep );
+		}
+
 		$new_id = $this->get_next_id();
 
 		$new_style = array(
@@ -1671,6 +2299,9 @@ final class Typost_Paragraph_Styles {
 		);
 		if ( $based_on ) {
 			$new_style['basedOn'] = $based_on;
+		}
+		if ( ! empty( $grep['rules'] ) ) {
+			$new_style['grepRules'] = $grep['rules'];
 		}
 
 		$styles[] = $new_style;
@@ -1748,6 +2379,22 @@ final class Typost_Paragraph_Styles {
 			$styles[ $index ]['basedOn'] = $based_on;
 		} else {
 			unset( $styles[ $index ]['basedOn'] );
+		}
+
+		// GREP styles (#196). Absent leaves the rules as they are, so an
+		// Update Style from an editor (which sends properties only) keeps
+		// them; an empty list removes them.
+		if ( $request->has_param( 'grepRules' ) ) {
+			$existing = isset( $styles[ $index ]['grepRules'] ) && is_array( $styles[ $index ]['grepRules'] ) ? $styles[ $index ]['grepRules'] : array();
+			$grep     = $this->sanitize_request_grep_rules( $request->get_param( 'grepRules' ), $id, $existing, $styles );
+			if ( '' !== $grep['error'] ) {
+				return self::grep_error_response( $grep );
+			}
+			if ( empty( $grep['rules'] ) ) {
+				unset( $styles[ $index ]['grepRules'] );
+			} else {
+				$styles[ $index ]['grepRules'] = $grep['rules'];
+			}
 		}
 
 		$styles[ $index ]['modified'] = current_time( 'Y-m-d' );
@@ -1855,10 +2502,29 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// GREP rules that apply the deleted style go with it (#196)
+		$grep_changed = array();
+		foreach ( $styles as $i => $style ) {
+			if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) ) {
+				continue;
+			}
+			$kept = array_values( array_filter( $style['grepRules'], function ( $rule ) use ( $id ) {
+				return ! ( is_array( $rule ) && isset( $rule['styleId'] ) && intval( $rule['styleId'] ) === $id );
+			} ) );
+			if ( count( $kept ) !== count( $style['grepRules'] ) ) {
+				if ( empty( $kept ) ) {
+					unset( $styles[ $i ]['grepRules'] );
+				} else {
+					$styles[ $i ]['grepRules'] = $kept;
+				}
+				$grep_changed[] = intval( $style['id'] );
+			}
+		}
+
 		array_splice( $styles, $index, 1 );
 		$this->save_styles( $styles );
 
-		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached ), 200 );
+		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached, 'grepChanged' => $grep_changed ), 200 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -1978,6 +2644,16 @@ final class Typost_Paragraph_Styles {
 			// basedOn let the save store only the overrides.
 			'styles'          => array_values( $this->get_client_styles() ),
 			'newFontSizeUnit' => 'px' === $new_unit ? 'px' : 'rem',
+			// GREP styles (#196): the form shows the list only on WordPress
+			// 6.9+, and offers custom patterns to administrators only (the
+			// REST routes check the same capability).
+			'grep'            => array(
+				'supported'      => self::grep_supported(),
+				'canWriteCustom' => self::grep_supported() && current_user_can( 'manage_options' ),
+				'maxRules'       => Typost_PS_Grep::MAX_RULES,
+				'maxLength'      => Typost_PS_Grep::MAX_PATTERN_LENGTH,
+				'patterns'       => self::grep_pattern_options(),
+			),
 			// The color fields and the contrast check (#215)
 			'palette'         => self::get_color_palette(),
 			'themeColors'     => self::get_theme_colors(),
@@ -2182,9 +2858,11 @@ final class Typost_Paragraph_Styles {
 	 * @param array      $font        Result of resolve_font_label() for the style.
 	 * @param array|null $inheritance Null for a style without a parent, else
 	 *                                array( 'own' => array, 'parent' => string ).
+	 * @param array      $grep_rows   GREP rules (#196), each array( pattern
+	 *                                label, style name ), in rule order.
 	 * @return string HTML.
 	 */
-	public static function render_card_details( $props, $font, $inheritance = null ) {
+	public static function render_card_details( $props, $font, $inheritance = null, $grep_rows = array() ) {
 		$props     = is_array( $props ) ? $props : array();
 		$own       = is_array( $inheritance ) && isset( $inheritance['own'] ) && is_array( $inheritance['own'] ) ? $inheritance['own'] : null;
 		$font_name = self::font_display_name( $font );
@@ -2321,6 +2999,37 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Indents and paragraph spacing (#199), each as its stored length. A
+		// fit to width style writes no indents (paragraph_layout_css()), so
+		// its card does not list them.
+		$length_row = function ( $label, $key, $allow_negative = false ) use ( $props, $unsets, $none ) {
+			$value = self::normalize_length( isset( $props[ $key ] ) ? $props[ $key ] : '', $allow_negative );
+			if ( '' !== $value ) {
+				return array( $label, $value, array( $key ) );
+			}
+			return $unsets( $key ) ? array( $label, $none, array( $key ) ) : null;
+		};
+		$indent_rows = array();
+		if ( ! $is_fit ) {
+			$indent_rows[] = $length_row( __( 'Left Indent:', 'typost-paragraph-styles' ), 'indentStart' );
+			$indent_rows[] = $length_row( __( 'Right Indent:', 'typost-paragraph-styles' ), 'indentEnd' );
+			$first_row     = $length_row( __( 'First Line:', 'typost-paragraph-styles' ), 'firstLineIndent', true );
+			if ( null !== $first_row && self::indent_after_same_applies( $props ) ) {
+				/* translators: %s: first line indent, such as "1.5em" */
+				$first_row[1] = sprintf( __( '%s (after the same style only)', 'typost-paragraph-styles' ), $first_row[1] );
+			}
+			$indent_rows[] = $first_row;
+		}
+		$indent_rows    = array_values( array_filter( $indent_rows ) );
+		$paragraph_rows = array_values(
+			array_filter(
+				array(
+					$length_row( __( 'Space Before:', 'typost-paragraph-styles' ), 'spaceBefore' ),
+					$length_row( __( 'Space After:', 'typost-paragraph-styles' ), 'spaceAfter' ),
+				)
+			)
+		);
+
 		// Variable font axes, shown as the sanitizer stored them
 		$axes_display = ! empty( $props['fontVariationSettings'] ) ? (string) $props['fontVariationSettings'] : ( $unsets( 'fontVariationSettings' ) ? $none : '' );
 
@@ -2422,6 +3131,21 @@ final class Typost_Paragraph_Styles {
 		if ( '' !== $wrap_display ) {
 			$html .= $detail( array( array( __( 'Line Breaking:', 'typost-paragraph-styles' ), $wrap_display, array( 'textWrap' ) ) ) );
 		}
+		if ( ! empty( $indent_rows ) ) {
+			$html .= $detail( $indent_rows );
+		}
+		if ( ! empty( $paragraph_rows ) ) {
+			$html .= $detail( $paragraph_rows );
+		}
+		if ( is_array( $grep_rows ) && ! empty( $grep_rows ) ) {
+			$grep_parts = array();
+			foreach ( $grep_rows as $grep_row ) {
+				/* translators: 1: a GREP pattern, such as "Acronyms (NASA)", 2: the style applied to its matches */
+				$grep_parts[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $grep_row[0], $grep_row[1] );
+			}
+			// GREP rules are not inherited through Based On, so no source label
+			$html .= $detail( array( array( __( 'GREP styles:', 'typost-paragraph-styles' ), implode( '; ', $grep_parts ) ) ) );
+		}
 		if ( '' !== $color_display ) {
 			$html .= $detail( array( array( __( 'Color:', 'typost-paragraph-styles' ), $color_display, array( 'textColor' ) ) ) );
 		}
@@ -2443,16 +3167,28 @@ final class Typost_Paragraph_Styles {
 	 * @param int   $style_id   Style ID.
 	 * @param array $font       Result of resolve_font_label() for the style.
 	 * @param array $manual_ids Font IDs of manual definitions, as keys.
+	 * @param array $grep       Optional GREP rules to run over the sample
+	 *                          (#196): array( 'rules' => rules, 'ids' =>
+	 *                          style id => true, 'fonts' => style id => font
+	 *                          id, so the loader also adds the kit of a font
+	 *                          that only a rule's style uses ).
 	 * @return string HTML.
 	 */
-	public static function render_card_preview( $style_id, $font, $manual_ids ) {
+	public static function render_card_preview( $style_id, $font, $manual_ids, $grep = null ) {
 		list( $text, $lang ) = self::admin_preview_text();
 		$style_id = intval( $style_id );
 		$font_id  = isset( $font['font_id'] ) ? absint( $font['font_id'] ) : 0;
 
-		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
-		$html .= '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
+		$sample = '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
 			. ( $font_id ? ' data-typost-font-id="' . esc_attr( $font_id ) . '"' : '' ) . '>' . esc_html( $text ) . '</p>';
+		// GREP styles (#196) style the sample through the same engine as
+		// the frontend, so the card shows what a post shows.
+		if ( is_array( $grep ) && ! empty( $grep['rules'] ) && self::grep_supported() ) {
+			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false, isset( $grep['fonts'] ) ? $grep['fonts'] : array() );
+		}
+
+		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
+		$html .= $sample;
 		// Check the font the style renders in: a deleted font can be replaced by a manual one.
 		if ( $font_id && isset( $manual_ids[ $font_id ] ) ) {
 			$html .= '<p class="typost-ps-preview-note">' . esc_html__( 'Your theme or another plugin loads this font on the site. This page cannot load it, so the preview can show a fallback font.', 'typost-paragraph-styles' ) . '</p>';
@@ -2735,8 +3471,16 @@ final class Typost_Paragraph_Styles {
 		// Based On (#200): the styles based on this one render from it, so
 		// their cards change too (values, "Based on" name). Their previews
 		// already follow through the CSS; their details come back here.
+		// GREP styles (#196): a card whose rules apply this style names it
+		// and previews it, so it comes back too.
+		$related_ids = self::descendant_ids( $styles, $id );
+		foreach ( $styles as $candidate ) {
+			if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) !== $id && in_array( $id, Typost_PS_Grep::target_style_ids( isset( $candidate['grepRules'] ) ? $candidate['grepRules'] : array() ), true ) ) {
+				$related_ids[] = intval( $candidate['id'] );
+			}
+		}
 		$related = array();
-		foreach ( self::descendant_ids( $styles, $id ) as $descendant_id ) {
+		foreach ( array_values( array_unique( $related_ids ) ) as $descendant_id ) {
 			$descendant_index = $this->find_style_index( $styles, $descendant_id );
 			if ( false !== $descendant_index ) {
 				$related[] = array_merge( array( 'id' => $descendant_id ), self::render_admin_card_parts( $styles[ $descendant_index ], $styles, $context ) );
@@ -2787,9 +3531,50 @@ final class Typost_Paragraph_Styles {
 			);
 		}
 		$font = self::resolve_font_label( isset( $props['fontId'] ) ? $props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+
+		// GREP styles (#196): listed and previewed only where they run
+		$grep_rows = array();
+		$grep      = null;
+		if ( ! empty( $style['grepRules'] ) && is_array( $style['grepRules'] ) && self::grep_supported() ) {
+			$names      = array();
+			$grep_fonts = array();
+			$targets    = Typost_PS_Grep::target_style_ids( $style['grepRules'] );
+			foreach ( $styles as $candidate ) {
+				if ( isset( $candidate['id'] ) ) {
+					$names[ intval( $candidate['id'] ) ] = isset( $candidate['name'] ) ? (string) $candidate['name'] : '';
+					if ( in_array( intval( $candidate['id'] ), $targets, true ) ) {
+						$candidate_props = self::resolve_properties( $candidate, $styles );
+						$candidate_font  = self::resolve_font_label( isset( $candidate_props['fontId'] ) ? $candidate_props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+						if ( $candidate_font['font_id'] ) {
+							$grep_fonts[ intval( $candidate['id'] ) ] = $candidate_font['font_id'];
+						}
+					}
+				}
+			}
+			$labels = Typost_PS_Grep::pattern_labels();
+			foreach ( $style['grepRules'] as $rule ) {
+				if ( ! is_array( $rule ) || ! isset( $rule['pattern'] ) ) {
+					continue;
+				}
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					/* translators: %s: a regular expression */
+					$pattern_label = sprintf( __( 'Custom (%s)', 'typost-paragraph-styles' ), isset( $rule['regex'] ) ? (string) $rule['regex'] : '' );
+				} else {
+					$pattern_label = isset( $labels[ $rule['pattern'] ] ) ? $labels[ $rule['pattern'] ] : (string) $rule['pattern'];
+				}
+				$target      = isset( $rule['styleId'] ) ? intval( $rule['styleId'] ) : 0;
+				$grep_rows[] = array( $pattern_label, isset( $names[ $target ] ) ? $names[ $target ] : __( 'A deleted style', 'typost-paragraph-styles' ) );
+			}
+			$grep = array(
+				'rules' => $style['grepRules'],
+				'ids'   => array_fill_keys( array_keys( $names ), true ),
+				'fonts' => $grep_fonts,
+			);
+		}
+
 		return array(
-			'details' => self::render_card_details( $props, $font, $inheritance ),
-			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'] ),
+			'details' => self::render_card_details( $props, $font, $inheritance, $grep_rows ),
+			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'], $grep ),
 		);
 	}
 
@@ -2837,6 +3622,7 @@ final class Typost_Paragraph_Styles {
 	private function save_styles( $styles ) {
 		// Re-index array to ensure sequential numeric keys
 		$styles = array_values( $styles );
+		$this->grep_style_map = null;
 		update_option( self::OPTION_KEY, $styles );
 		set_transient( self::CACHE_KEY, $styles, 12 * HOUR_IN_SECONDS );
 		// Regenerate CSS cache
@@ -2897,7 +3683,8 @@ final class Typost_Paragraph_Styles {
 	 * @param bool       $keep_empty Keep the empty values a style based on
 	 *                               another stores to unset an inherited
 	 *                               property (#200): `fontStyle`, `textCase`,
-	 *                               `alignment`, `textWrap` and
+	 *                               `alignment`, `textWrap`, the indents and
+	 *                               spacing (#199) and
 	 *                               `fontVariationSettings` as '', and
 	 *                               `initialHang` as 0. Other keys keep their
 	 *                               empty values either way.
@@ -3031,6 +3818,36 @@ final class Typost_Paragraph_Styles {
 			$clean['textWrap'] = $raw['textWrap'];
 		} elseif ( $keep_empty && isset( $raw['textWrap'] ) && '' === $raw['textWrap'] ) {
 			$clean['textWrap'] = '';
+		}
+
+		// Indents and paragraph spacing (#199): lengths in px or em, zero
+		// or more; none ('') is never stored unless it unsets an inherited
+		// value
+		foreach ( self::SPACING_PROPERTIES as $key ) {
+			if ( ! isset( $raw[ $key ] ) ) {
+				continue;
+			}
+			$length = self::normalize_length( $raw[ $key ] );
+			if ( '' !== $length ) {
+				$clean[ $key ] = $length;
+			} elseif ( $keep_empty && '' === $raw[ $key ] ) {
+				$clean[ $key ] = '';
+			}
+		}
+
+		// First line indent: negative is a hanging indent. "Only after a
+		// paragraph with the same style" is stored only as true, and only
+		// with a positive indent (indent_after_same_applies()).
+		if ( isset( $raw['firstLineIndent'] ) ) {
+			$first = self::normalize_length( $raw['firstLineIndent'], true );
+			if ( '' !== $first ) {
+				$clean['firstLineIndent'] = $first;
+				if ( '-' !== $first[0] && isset( $raw['indentAfterSame'] ) && in_array( $raw['indentAfterSame'], array( true, 1, '1', 'true' ), true ) ) {
+					$clean['indentAfterSame'] = true;
+				}
+			} elseif ( $keep_empty && '' === $raw['firstLineIndent'] ) {
+				$clean['firstLineIndent'] = '';
+			}
 		}
 
 		// Text color (#215): a custom hex color, a palette color, or
@@ -3305,6 +4122,11 @@ final class Typost_Paragraph_Styles {
 				unset( $props[ $key ] );
 			}
 		}
+		if ( array_key_exists( 'firstLineIndent', $props ) && '' === self::normalize_length( $props['firstLineIndent'], true ) ) {
+			foreach ( self::BASED_ON_GROUPS['firstLineIndent'] as $key ) {
+				unset( $props[ $key ] );
+			}
+		}
 		if ( array_key_exists( 'textStrokeWidth', $props ) && self::normalize_stroke_width( $props['textStrokeWidth'] ) <= 0 ) {
 			foreach ( self::BASED_ON_GROUPS['textStrokeWidth'] as $key ) {
 				unset( $props[ $key ] );
@@ -3357,8 +4179,8 @@ final class Typost_Paragraph_Styles {
 	 * `$full` is the whole look; the result keeps what differs from the
 	 * parent's resolved properties and stores the empty value of each
 	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
-	 * fontSize 'inherit', textCase '', alignment ''), so the style still
-	 * does not set it.
+	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent ''), so
+	 * the style still does not set it.
 	 * Used when a style gets its first parent (rebase_properties()). Twin of
 	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
 	 * cases of the shared fixture.
@@ -3422,8 +4244,8 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Whether a key belongs to the size, the case, the alignment or the
-	 * outline group.
+	 * Whether a key belongs to the size, the case, the alignment, the
+	 * first line indent or the outline group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool
@@ -3444,14 +4266,23 @@ final class Typost_Paragraph_Styles {
 	 * px), the trio for responsive and fit, and the cap for fit. Case: the
 	 * case value and whether fake small caps are allowed. Alignment (#207):
 	 * 'none' when not set, else the value and the last line alignment of
-	 * justified text. Outline (#215): 'none' with no width, else the width,
-	 * the color (comparable_color()) and the position. Twin: groupSignature().
+	 * justified text. First line indent (#199): 'none' when not set, else
+	 * the length and whether it applies only after the same style. Outline
+	 * (#215): 'none' with no width, else the width, the color
+	 * (comparable_color()) and the position. Twin: groupSignature().
 	 *
-	 * @param string $lead  'fontSize', 'textCase', 'alignment' or 'textStrokeWidth'.
+	 * @param string $lead  'fontSize', 'textCase', 'alignment', 'firstLineIndent' or 'textStrokeWidth'.
 	 * @param array  $props Properties.
 	 * @return string
 	 */
 	private static function group_signature( $lead, $props ) {
+		if ( 'firstLineIndent' === $lead ) {
+			$first = self::normalize_length( isset( $props['firstLineIndent'] ) ? $props['firstLineIndent'] : '', true );
+			if ( '' === $first ) {
+				return 'none';
+			}
+			return $first . '|' . ( self::indent_after_same_applies( $props ) ? '1' : '0' );
+		}
 		if ( 'textStrokeWidth' === $lead ) {
 			$width = self::normalize_stroke_width( isset( $props['textStrokeWidth'] ) ? $props['textStrokeWidth'] : 0 );
 			if ( $width <= 0 ) {
@@ -3530,6 +4361,11 @@ final class Typost_Paragraph_Styles {
 				return abs( (float) $va - (float) $vb ) <= 0.0005;
 			case 'initialHang':
 				return self::normalize_hang( $va ) === self::normalize_hang( $vb );
+			case 'indentStart':
+			case 'indentEnd':
+			case 'spaceBefore':
+			case 'spaceAfter':
+				return self::normalize_length( $va ) === self::normalize_length( $vb );
 			case 'textColor':
 				return self::comparable_color( $va, true ) === self::comparable_color( $vb, true );
 			case 'features':

@@ -43,4 +43,6 @@ module.exports = defineConfig({
   ],
 
   globalSetup: require.resolve('./tests/e2e-sr/global-setup.js'),
+  // Releases any key the run left held down
+  globalTeardown: require.resolve('./tests/e2e-sr/global-teardown.js'),
 });

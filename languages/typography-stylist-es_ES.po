@@ -3681,3 +3681,9 @@ msgstr "Esta parte del archivo está vacía."
 #: includes/class-typost-export-settings.php:338
 msgid "Presets not imported (they use only OpenType features this site does not know)"
 msgstr "Preajustes no importados (solo usan funciones OpenType que este sitio no conoce)"
+
+#. translators: %s: the style's GREP rules, such as "Acronyms (NASA) → Small Caps"
+#: includes/class-typost-export.php:614
+#, php-format
+msgid "GREP styles: %s."
+msgstr "Estilos GREP: %s."

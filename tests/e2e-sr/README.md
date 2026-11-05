@@ -51,6 +51,7 @@ The run opens a headed Firefox window and takes about six minutes. Do not use th
 
 ## Known harness limits
 
+- A chord can stay held after a run: Windows reported Left Alt and Escape as held once, and the cause is not known. `global-teardown.js` releases held keys when the run ends and writes `logs/stuck-keys.json` when it finds one. It does not run if the runner is killed.
 - `focusBrowser` sends keys only when NVDA reads a window title that matches `BROWSER_TITLE` in `helpers.js`. The title must start with "Add Post", "Edit Post" or "Typography Stylist", contain "WordPress" or "Word Press", and end with "Nightly" (Playwright's Firefox). A title without all three parts does not match, for example a Slack window titled "… - Making WordPress - Slack". When no window matches, the journey stops and sends no keys, and the error lists the titles it saw. If the test window was behind another window, run the journey again. If the test window's title no longer ends with "Nightly", update `BROWSER_TITLE`.
 - Speech after the capture window is not in the log: a `confirm()` that Playwright accepts at once, and a live-region message that comes after a REST round trip. The journeys check those messages in the DOM.
 - One arrow press is sometimes recorded as an empty phrase when NVDA speaks after Guidepup's one-second window. The same cell is announced correctly at the next stop.

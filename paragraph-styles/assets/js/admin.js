@@ -192,6 +192,44 @@
 	// Same check as the CSS generators: an axis pair they would drop
 	var AXIS_PAIR = /^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/;
 
+	// Indent and spacing fields (#199): a number input named by the key and
+	// a unit select named key + 'Unit'. Only the first line indent can be
+	// negative. Fit to width hides the indents, which fitOwnValues() discards,
+	// so only the spacing fields count there.
+	var LENGTH_FIELDS = ['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'];
+	var FIT_LENGTH_FIELDS = ['spaceBefore', 'spaceAfter'];
+
+	/**
+	 * Split a stored length ('1.5em', '-24px') into the form's number and
+	 * unit. None gives an empty number and the em unit.
+	 *
+	 * @param {*} value Stored value.
+	 * @return {{number: string, unit: string}}
+	 */
+	function splitLength(value) {
+		var m = typeof value === 'string' ? /^(-?[\d.]+)(px|em)$/.exec(value) : null;
+		return m ? { number: m[1], unit: m[2] } : { number: '', unit: 'em' };
+	}
+
+	/**
+	 * A length field's value as the form reads it: '' for empty or 0, else
+	 * the number and its unit ('1.5em'), not yet capped or rounded
+	 * (validateEditValues() checks the range, normalizeLength() rounds).
+	 *
+	 * @param {Element} form
+	 * @param {string}  key
+	 * @return {string}
+	 */
+	function lengthOf(form, key) {
+		var input = field(form, key);
+		var unitSelect = field(form, key + 'Unit');
+		var n = input ? parseFloat(input.value) : NaN;
+		if (!isFinite(n) || n === 0) {
+			return '';
+		}
+		return String(n) + (unitSelect && unitSelect.value === 'px' ? 'px' : 'em');
+	}
+
 	/**
 	 * Append a suffix to every id in a cloned form and to the attributes
 	 * that point at ids, so each card's labels stay tied to its own fields.
@@ -647,9 +685,11 @@
 	 * @param {string}  unit      resolveEditFontSizeUnit() for the style: a
 	 *                            px size takes whole steps, as px CSS is
 	 *                            written with whole numbers.
-	 * @param {Array}   [styles]  Every style, for the Based On choices (#200).
+	 * @param {Array}   [styles]  Every style, for the Based On choices (#200)
+	 *                            and the GREP style selects (#196).
+	 * @param {Object}  [grep]    typostPSAdmin.grep (#196).
 	 */
-	function fillEditForm(form, style, fontLabel, unit, styles) {
+	function fillEditForm(form, style, fontLabel, unit, styles, grep) {
 		var utils = getUtils();
 		var props = (style && style.properties) || {};
 		var mode = sizeModeOf(props.fontSize);
@@ -693,6 +733,17 @@
 		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
 		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
 
+		// Indents and paragraph spacing (#199)
+		LENGTH_FIELDS.forEach(function(key) {
+			var stored = utils ? utils.normalizeLength(props[key], key === 'firstLineIndent') : props[key];
+			var parts = splitLength(stored);
+			setInput(form, key, parts.number);
+			selectValue(field(form, key + 'Unit'), parts.unit);
+		});
+		var afterSame = field(form, 'indentAfterSame');
+		if (afterSame) {
+			afterSame.checked = props.indentAfterSame === true;
+		}
 		// Text color and outline (#215)
 		var palette = colorContext().palette;
 		fillColorField(form, 'textColor', props.textColor, palette);
@@ -739,6 +790,10 @@
 
 		setInput(form, 'fontVariationSettings', props.fontVariationSettings || '');
 
+		// GREP styles (#196): rules are on the style record, not in its
+		// properties, and are not inherited through Based On
+		fillGrepRules(form, style, styles, grep);
+
 		updateConditionalFields(form);
 	}
 
@@ -773,12 +828,19 @@
 		}));
 		var fake = field(form, 'fakeSmallCaps');
 		var sizeInput = field(form, 'fontSize');
+		var afterSame = field(form, 'indentAfterSame');
 		var palette = colorContext().palette;
 		var textColor = readColorField(form, 'textColor', palette);
 		var strokeColor = readColorField(form, 'textStrokeColor', palette);
 		var strokePosition = field(form, 'textStrokePosition');
 
 		return {
+			indentStart: lengthOf(form, 'indentStart'),
+			indentEnd: lengthOf(form, 'indentEnd'),
+			firstLineIndent: lengthOf(form, 'firstLineIndent'),
+			indentAfterSame: afterSame ? !!afterSame.checked : false,
+			spaceBefore: lengthOf(form, 'spaceBefore'),
+			spaceAfter: lengthOf(form, 'spaceAfter'),
 			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
 			basedOn: parseInt(field(form, 'basedOn') ? field(form, 'basedOn').value : 0, 10) || 0,
 			fontId: parseInt(field(form, 'fontId') ? field(form, 'fontId').value : 0, 10) || 0,
@@ -810,7 +872,8 @@
 			textStrokeColorCustom: strokeColor ? strokeColor.custom : '',
 			textStrokePosition: strokePosition ? strokePosition.value : undefined,
 			features: features,
-			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : ''
+			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : '',
+			grepRules: readGrepRules(form)
 		};
 	}
 
@@ -839,6 +902,7 @@
 	 *                         the axis format: a stored value the check
 	 *                         rejects (the editor writes single quotes and
 	 *                         exponents) must not block a rename.
+	 *                         grep: typostPSAdmin.grep, for the GREP checks.
 	 * @return {{field: string, message: string}|null}
 	 */
 	function validateEditValues(values, options) {
@@ -855,6 +919,26 @@
 			});
 			if (missing.length) {
 				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
+			}
+		}
+		// Indents and spacing (#199): zero or more (the first line indent can
+		// be negative), up to the sanitizer's caps. A hidden field holds what
+		// it held before fit mode: it is not saved, so it must not block Save,
+		// and an error could not focus it.
+		var lengthFields = values.sizeMode === 'fit' ? FIT_LENGTH_FIELDS : LENGTH_FIELDS;
+		var lengthMax = getUtils().LENGTH_MAX;
+		for (var i = 0; i < lengthFields.length; i++) {
+			var key = lengthFields[i];
+			var length = values[key] ? /^(-?[\d.e+-]+)(px|em)$/.exec(values[key]) : null;
+			if (!length) {
+				continue;
+			}
+			var amount = parseFloat(length[1]);
+			if (amount < 0 && key !== 'firstLineIndent') {
+				return { field: key, message: __('Enter 0 or more.', 'typost-paragraph-styles') };
+			}
+			if (Math.abs(amount) > lengthMax[length[2]]) {
+				return { field: key, message: __('Enter a value up to 1000px or 50em.', 'typost-paragraph-styles') };
 			}
 		}
 		// Text color and outline (#215)
@@ -881,7 +965,7 @@
 				return { field: 'fontVariationSettings', message: __('Each axis setting needs a four-letter tag in quotes and a number, such as "wght" 650.', 'typost-paragraph-styles') };
 			}
 		}
-		return null;
+		return validateGrepRules(values.grepRules, opts.grep);
 	}
 
 	/**
@@ -923,6 +1007,12 @@
 			alignLast: values.alignLast || '',
 			wordSpacing: Math.round(values.wordSpacing) || 0,
 			textWrap: values.textWrap || '',
+			indentStart: values.indentStart || '',
+			indentEnd: values.indentEnd || '',
+			firstLineIndent: values.firstLineIndent || '',
+			indentAfterSame: values.indentAfterSame === true,
+			spaceBefore: values.spaceBefore || '',
+			spaceAfter: values.spaceAfter || '',
 			// Text color and outline (#215); undefined (no field) is carried
 			// from the stored style by buildPropertiesForStyleSave()
 			textColor: values.textColor,
@@ -968,7 +1058,7 @@
 	 * @param {Object} style          The style (client shape).
 	 * @param {string} newUnit        typostPSAdmin.newFontSizeUnit.
 	 * @param {Array}  [styles]       Every style (client shape), to find the parent.
-	 * @return {{name: string, basedOn?: number, properties?: Object}}
+	 * @return {{name: string, basedOn?: number, properties?: Object, grepRules?: Array}}
 	 */
 	function buildEditPayload(values, baselineValues, style, newUnit, styles) {
 		var utils = getUtils();
@@ -993,6 +1083,16 @@
 		var parentId = values.basedOn !== undefined ? (parseInt(values.basedOn, 10) || 0) : currentParent;
 		if (parentId !== currentParent) {
 			payload.basedOn = parentId;
+		}
+
+		// GREP rules (#196) only when the list changed: a save that sends
+		// none leaves the stored rules alone
+		if (Array.isArray(values.grepRules)) {
+			var baselineRules = baselineValues && Array.isArray(baselineValues.grepRules) ? baselineValues.grepRules : null;
+			var rules = values.grepRules.map(normalizeGrepRule);
+			if (!baselineRules || stableStringify(rules) !== stableStringify(baselineRules.map(normalizeGrepRule))) {
+				payload.grepRules = rules;
+			}
 		}
 
 		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
@@ -1030,7 +1130,12 @@
 			alignment: p.alignment || '',
 			alignLast: p.alignLast || '',
 			wordSpacing: p.wordSpacing || 0,
-			textWrap: p.textWrap || ''
+			textWrap: p.textWrap || '',
+			// Indents (#199); space before and after stay, fit uses them
+			indentStart: p.indentStart || '',
+			indentEnd: p.indentEnd || '',
+			firstLineIndent: p.firstLineIndent || '',
+			indentAfterSame: p.indentAfterSame === true
 		});
 	}
 
@@ -1057,6 +1162,7 @@
 		var payload = buildEditPayload(values, baselineValues, style, newUnit, styles);
 		return payload.properties !== undefined
 			|| payload.basedOn !== undefined
+			|| payload.grepRules !== undefined
 			|| values.name !== baselineValues.name;
 	}
 
@@ -1190,6 +1296,408 @@
 		return el;
 	}
 
+	// -------------------------------------------------------------------------
+	// GREP styles (#196)
+	// -------------------------------------------------------------------------
+
+	var GREP_CUSTOM = 'custom';
+	var grepRowCount = 0;
+
+	/**
+	 * Replace %d / %s in a translated string (wp.i18n.sprintf is not there
+	 * under Jest).
+	 */
+	function fill(text, value) {
+		return String(text).replace(/%[ds]/, function() { return String(value); });
+	}
+
+	/**
+	 * The GREP settings of the page (typostPSAdmin.grep), with defaults.
+	 *
+	 * @param {Object} [grep]
+	 * @return {{supported: boolean, canWriteCustom: boolean, maxRules: number, maxLength: number, patterns: Array}}
+	 */
+	function grepSettings(grep) {
+		var g = grep || {};
+		return {
+			supported: !!g.supported,
+			canWriteCustom: !!g.canWriteCustom,
+			maxRules: parseInt(g.maxRules, 10) || 20,
+			maxLength: parseInt(g.maxLength, 10) || 200,
+			patterns: Array.isArray(g.patterns) ? g.patterns : []
+		};
+	}
+
+	/**
+	 * A rule as stored and compared: pattern, numeric style id, and the
+	 * expression for a custom pattern only.
+	 *
+	 * @param {Object} rule
+	 * @return {Object}
+	 */
+	function normalizeGrepRule(rule) {
+		var r = rule || {};
+		var out = {
+			pattern: typeof r.pattern === 'string' ? r.pattern : '',
+			styleId: parseInt(r.styleId, 10) || 0
+		};
+		if (out.pattern === GREP_CUSTOM) {
+			out.regex = typeof r.regex === 'string' ? r.regex : '';
+		}
+		return out;
+	}
+
+	function makeEl(doc, tag, attrs, text) {
+		var el = doc.createElement(tag);
+		Object.keys(attrs || {}).forEach(function(name) {
+			if (name === 'className') {
+				el.className = attrs[name];
+			} else {
+				el.setAttribute(name, attrs[name]);
+			}
+		});
+		if (text !== undefined) {
+			el.textContent = text;
+		}
+		return el;
+	}
+
+	/**
+	 * Build one rule's row: pattern select, the custom expression field,
+	 * the style select, and Move up / Move down / Remove buttons.
+	 *
+	 * @param {Document} doc
+	 * @param {Object}   rule     Stored rule (or a new one).
+	 * @param {Object}   ctx      {ownId, styles, settings: grepSettings()}.
+	 * @return {Element} li, holding the named group (a role on the li itself
+	 *                   would remove its list item semantics)
+	 */
+	function buildGrepRow(doc, rule, ctx) {
+		var settings = ctx.settings;
+		var r = normalizeGrepRule(rule);
+		var uid = 'typost-ps-grep-' + ctx.ownId + '-' + (++grepRowCount);
+		var row = makeEl(doc, 'li', { className: 'typost-ps-grep-rule' });
+		var group = makeEl(doc, 'div', { role: 'group' });
+		row.appendChild(group);
+
+		var fields = makeEl(doc, 'div', { className: 'typost-ps-edit-row' });
+
+		// Pattern
+		var patternField = makeEl(doc, 'p', { className: 'typost-ps-edit-field' });
+		patternField.appendChild(makeEl(doc, 'label', { 'for': uid + '-pattern' }, __('Pattern', 'typost-paragraph-styles')));
+		var patternSelect = makeEl(doc, 'select', { id: uid + '-pattern', 'data-grep': 'pattern' });
+		settings.patterns.forEach(function(option) {
+			// A custom pattern is offered to administrators, and kept in a
+			// row that already has one
+			if (option.value === GREP_CUSTOM && !settings.canWriteCustom && r.pattern !== GREP_CUSTOM) {
+				return;
+			}
+			patternSelect.appendChild(makeEl(doc, 'option', { value: option.value }, option.label));
+		});
+		patternSelect.value = r.pattern || (settings.patterns[0] ? settings.patterns[0].value : '');
+		patternField.appendChild(patternSelect);
+		fields.appendChild(patternField);
+
+		// Custom expression
+		var regexField = makeEl(doc, 'p', { className: 'typost-ps-edit-field typost-ps-grep-regex', 'data-grep-regex-field': '' });
+		regexField.appendChild(makeEl(doc, 'label', { 'for': uid + '-regex' }, __('Regular expression', 'typost-paragraph-styles')));
+		var regexInput = makeEl(doc, 'input', {
+			type: 'text',
+			id: uid + '-regex',
+			'data-grep': 'regex',
+			spellcheck: 'false',
+			autocomplete: 'off',
+			maxlength: String(settings.maxLength),
+			'aria-describedby': uid + '-regex-help'
+		});
+		regexInput.value = r.regex || '';
+		regexField.appendChild(regexInput);
+		var help = settings.canWriteCustom
+			? __('JavaScript-style syntax without slashes or flags, for example \\b[A-Z]{2,}\\b. Matching is case-sensitive.', 'typost-paragraph-styles')
+			: __('Only administrators can change a custom pattern.', 'typost-paragraph-styles');
+		regexField.appendChild(makeEl(doc, 'span', { className: 'typost-ps-edit-help', id: uid + '-regex-help' }, help));
+		if (!settings.canWriteCustom) {
+			regexInput.readOnly = true;
+		}
+		fields.appendChild(regexField);
+
+		// Style
+		var styleField = makeEl(doc, 'p', { className: 'typost-ps-edit-field' });
+		styleField.appendChild(makeEl(doc, 'label', { 'for': uid + '-style' }, __('Apply style', 'typost-paragraph-styles')));
+		var styleSelect = makeEl(doc, 'select', { id: uid + '-style', 'data-grep': 'styleId' });
+		styleSelect.appendChild(makeEl(doc, 'option', { value: '0' }, __('Choose a style', 'typost-paragraph-styles')));
+		var found = false;
+		(Array.isArray(ctx.styles) ? ctx.styles : []).forEach(function(candidate) {
+			var id = parseInt(candidate && candidate.id, 10) || 0;
+			if (!id || id === ctx.ownId) {
+				return;
+			}
+			if (id === r.styleId) {
+				found = true;
+			}
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(id) }, candidate.name || String(id)));
+		});
+		if (r.styleId && !found) {
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(r.styleId) }, __('A deleted style', 'typost-paragraph-styles')));
+		}
+		styleSelect.value = String(r.styleId || 0);
+		styleField.appendChild(styleSelect);
+		fields.appendChild(styleField);
+
+		group.appendChild(fields);
+
+		var actions = makeEl(doc, 'p', { className: 'typost-ps-grep-actions' });
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-up' }, __('Move up', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-down' }, __('Move down', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button-link button-link-delete typost-ps-grep-remove' }, __('Remove', 'typost-paragraph-styles')));
+		group.appendChild(actions);
+
+		updateGrepRow(row);
+		return row;
+	}
+
+	/**
+	 * Show the expression field only for a custom pattern.
+	 *
+	 * @param {Element} row
+	 */
+	function updateGrepRow(row) {
+		var select = row.querySelector('[data-grep="pattern"]');
+		var regexField = row.querySelector('[data-grep-regex-field]');
+		if (regexField) {
+			regexField.hidden = !select || select.value !== GREP_CUSTOM;
+		}
+	}
+
+	function grepRows(form) {
+		var list = form.querySelector('[data-grep-rules]');
+		return list ? Array.prototype.slice.call(list.children) : [];
+	}
+
+	/**
+	 * Number the rows after a change: each row's group name, its buttons'
+	 * names, the data-field names errors point at, which ends of the list
+	 * cannot move further, the empty note and the Add button's limit.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  [grep] typostPSAdmin.grep
+	 */
+	function renumberGrepRows(form, grep) {
+		var rows = grepRows(form);
+		var settings = grepSettings(grep);
+		rows.forEach(function(row, index) {
+			var n = index + 1;
+			/* translators: %d: rule number */
+			row.querySelector('[role="group"]').setAttribute('aria-label', fill(__('GREP rule %d', 'typost-paragraph-styles'), n));
+			['pattern', 'regex', 'styleId'].forEach(function(name) {
+				var input = row.querySelector('[data-grep="' + name + '"]');
+				if (input) {
+					input.setAttribute('data-field', 'grep-' + index + '-' + name);
+				}
+			});
+			var up = row.querySelector('.typost-ps-grep-up');
+			var down = row.querySelector('.typost-ps-grep-down');
+			var remove = row.querySelector('.typost-ps-grep-remove');
+			if (up) {
+				/* translators: %d: rule number */
+				up.setAttribute('aria-label', fill(__('Move rule %d up', 'typost-paragraph-styles'), n));
+				up.disabled = index === 0;
+			}
+			if (down) {
+				/* translators: %d: rule number */
+				down.setAttribute('aria-label', fill(__('Move rule %d down', 'typost-paragraph-styles'), n));
+				down.disabled = index === rows.length - 1;
+			}
+			if (remove) {
+				/* translators: %d: rule number */
+				remove.setAttribute('aria-label', fill(__('Remove rule %d', 'typost-paragraph-styles'), n));
+			}
+		});
+		var empty = form.querySelector('[data-grep-empty]');
+		if (empty) {
+			empty.hidden = rows.length > 0;
+		}
+		var add = form.querySelector('.typost-ps-grep-add');
+		if (add) {
+			add.disabled = rows.length >= settings.maxRules;
+		}
+	}
+
+	/**
+	 * Fill the GREP list from the style's rules.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style  The style (client shape).
+	 * @param {Array}   styles Every style, for the style selects.
+	 * @param {Object}  [grep] typostPSAdmin.grep
+	 */
+	function fillGrepRules(form, style, styles, grep) {
+		var list = form.querySelector('[data-grep-rules]');
+		if (!list) {
+			return;
+		}
+		while (list.firstChild) {
+			list.removeChild(list.firstChild);
+		}
+		var ctx = { ownId: parseInt(style && style.id, 10) || 0, styles: styles, settings: grepSettings(grep) };
+		(style && Array.isArray(style.grepRules) ? style.grepRules : []).forEach(function(rule) {
+			list.appendChild(buildGrepRow(form.ownerDocument, rule, ctx));
+		});
+		renumberGrepRows(form, grep);
+	}
+
+	/**
+	 * Add a rule row at the end, for the Add button.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style
+	 * @param {Array}   styles
+	 * @param {Object}  [grep]
+	 * @return {Element|null} The new row, null at the limit.
+	 */
+	function addGrepRule(form, style, styles, grep) {
+		var list = form.querySelector('[data-grep-rules]');
+		var settings = grepSettings(grep);
+		if (!list || list.children.length >= settings.maxRules) {
+			return null;
+		}
+		var first = settings.patterns[0] ? settings.patterns[0].value : '';
+		var row = buildGrepRow(form.ownerDocument, { pattern: first, styleId: 0 }, {
+			ownId: parseInt(style && style.id, 10) || 0,
+			styles: styles,
+			settings: settings
+		});
+		list.appendChild(row);
+		renumberGrepRows(form, grep);
+		return row;
+	}
+
+	/**
+	 * Move a row up (-1) or down (+1). Returns the control to focus: the
+	 * same button, or the other move button when the row reached an end
+	 * and the used one is now disabled.
+	 *
+	 * @param {Element} form
+	 * @param {Element} row
+	 * @param {number}  direction -1 or 1.
+	 * @param {Object}  [grep]
+	 * @return {Element|null}
+	 */
+	function moveGrepRule(form, row, direction, grep) {
+		var list = row.parentNode;
+		if (direction < 0 && row.previousElementSibling) {
+			list.insertBefore(row, row.previousElementSibling);
+		} else if (direction > 0 && row.nextElementSibling) {
+			list.insertBefore(row.nextElementSibling, row);
+		}
+		renumberGrepRows(form, grep);
+		var used = row.querySelector(direction < 0 ? '.typost-ps-grep-up' : '.typost-ps-grep-down');
+		var other = row.querySelector(direction < 0 ? '.typost-ps-grep-down' : '.typost-ps-grep-up');
+		if (used && !used.disabled) {
+			return used;
+		}
+		return other && !other.disabled ? other : row.querySelector('[data-grep="pattern"]');
+	}
+
+	/**
+	 * Remove a row. Returns the control to focus: the next row's pattern,
+	 * else the previous row's, else the Add button.
+	 *
+	 * @param {Element} form
+	 * @param {Element} row
+	 * @param {Object}  [grep]
+	 * @return {Element|null}
+	 */
+	function removeGrepRule(form, row, grep) {
+		var next = row.nextElementSibling || row.previousElementSibling;
+		row.parentNode.removeChild(row);
+		renumberGrepRows(form, grep);
+		return next ? next.querySelector('[data-grep="pattern"]') : form.querySelector('.typost-ps-grep-add');
+	}
+
+	/**
+	 * The rules in the form, in order; null when the form has no GREP list
+	 * (WordPress before 6.9), so a save leaves the stored rules alone.
+	 *
+	 * @param {Element} form
+	 * @return {Array|null}
+	 */
+	function readGrepRules(form) {
+		if (!form.querySelector('[data-grep-rules]')) {
+			return null;
+		}
+		return grepRows(form).map(function(row) {
+			var pattern = row.querySelector('[data-grep="pattern"]');
+			var regex = row.querySelector('[data-grep="regex"]');
+			var styleId = row.querySelector('[data-grep="styleId"]');
+			return normalizeGrepRule({
+				pattern: pattern ? pattern.value : '',
+				regex: regex ? regex.value : '',
+				styleId: styleId ? styleId.value : 0
+			});
+		});
+	}
+
+	/**
+	 * The first problem in the GREP rules, as a form error, or null.
+	 * The server checks the same and more (the PHP side of a custom
+	 * pattern, and the match limits); this adds the browser's own check,
+	 * so a pattern must compile in both engines.
+	 *
+	 * @param {Array|null} rules readGrepRules()
+	 * @param {Object}     [grep] typostPSAdmin.grep
+	 * @return {{field: string, message: string}|null}
+	 */
+	function validateGrepRules(rules, grep) {
+		var settings = grepSettings(grep);
+		if (!Array.isArray(rules)) {
+			return null;
+		}
+		for (var i = 0; i < rules.length; i++) {
+			var rule = rules[i];
+			if (!rule.pattern) {
+				return { field: 'grep-' + i + '-pattern', message: __('Choose a pattern for each GREP rule.', 'typost-paragraph-styles') };
+			}
+			if (rule.pattern === GREP_CUSTOM) {
+				if (!rule.regex) {
+					return { field: 'grep-' + i + '-regex', message: __('Enter a pattern.', 'typost-paragraph-styles') };
+				}
+				if (Array.from(rule.regex).length > settings.maxLength) {
+					/* translators: %d: the most characters a pattern can have */
+					return { field: 'grep-' + i + '-regex', message: fill(__('The pattern is too long. Use %d characters or fewer.', 'typost-paragraph-styles'), settings.maxLength) };
+				}
+				try {
+					new RegExp(rule.regex, 'u'); // eslint-disable-line no-new
+				} catch (e) {
+					/* translators: %s: the browser's error message (often in English) */
+					return { field: 'grep-' + i + '-regex', message: fill(__('The pattern is not valid in the browser: %s', 'typost-paragraph-styles'), e && e.message ? e.message : '') };
+				}
+			}
+			if (!rule.styleId) {
+				return { field: 'grep-' + i + '-styleId', message: __('Choose a style for each GREP rule.', 'typost-paragraph-styles') };
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The form field a server error about a GREP rule points at.
+	 *
+	 * @param {Object} response {field: 'grepRules', ruleIndex, ruleField}
+	 * @return {?string}
+	 */
+	function grepErrorField(response) {
+		if (!response || response.field !== 'grepRules') {
+			return null;
+		}
+		var index = parseInt(response.ruleIndex, 10);
+		if (!(index >= 0)) {
+			return null;
+		}
+		var name = ['pattern', 'regex', 'styleId'].indexOf(response.ruleField) !== -1 ? response.ruleField : 'pattern';
+		return 'grep-' + index + '-' + name;
+	}
+
 	var helpers = {
 		announce: announce,
 		focusEditName: focusEditName,
@@ -1215,7 +1723,16 @@
 		clearFormError: clearFormError,
 		replaceCardParts: replaceCardParts,
 		replaceRelatedCards: replaceRelatedCards,
-		replaceStyleCss: replaceStyleCss
+		replaceStyleCss: replaceStyleCss,
+		normalizeGrepRule: normalizeGrepRule,
+		fillGrepRules: fillGrepRules,
+		addGrepRule: addGrepRule,
+		moveGrepRule: moveGrepRule,
+		removeGrepRule: removeGrepRule,
+		readGrepRules: readGrepRules,
+		validateGrepRules: validateGrepRules,
+		grepErrorField: grepErrorField,
+		updateGrepRow: updateGrepRow
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -1349,7 +1866,7 @@
 		var form    = $container.find('form')[0];
 		var details = $card[0].querySelector('.typost-ps-style-card-details');
 		var unit    = resolveEditFontSizeUnit(style.properties, newUnit);
-		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles);
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles, typostPSAdmin.grep);
 		$(form).data('baseline', readEditForm(form));
 
 		$card.find('.typost-ps-style-actions').hide();
@@ -1437,7 +1954,8 @@
 		var values  = readEditForm(form);
 		var error   = validateEditValues(values, {
 			baseline: $(form).data('baseline'),
-			unit: resolveEditFontSizeUnit(style && style.properties, newUnit)
+			unit: resolveEditFontSizeUnit(style && style.properties, newUnit),
+			grep: typostPSAdmin.grep
 		});
 		var $save   = $(form).find('.typost-ps-save-edit-btn');
 
@@ -1487,8 +2005,9 @@
 				}
 
 				// A rename alone changes no card but the styles based on this
-				// one, whose details name it (#200)
-				if (!payload.properties && payload.basedOn === undefined && !hasDescendants(styleId)) {
+				// one, whose details name it (#200), and the cards whose GREP
+				// rules name it (#196) — refreshed to be safe
+				if (!payload.properties && payload.basedOn === undefined && payload.grepRules === undefined && !hasDescendants(styleId) && !isGrepTarget(styleId)) {
 					done();
 					closeEditForm($card);
 					announce(message);
@@ -1507,15 +2026,78 @@
 				done();
 				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
 				var serverField = xhr && xhr.responseJSON && xhr.responseJSON.field;
-				// A 400 names its field (Based on, #200) or is about the name
-				// (empty after sanitizing); a 404, a 429 or a lost connection
-				// is not any field's fault
+				// A 400 names its field (Based on, #200; a GREP rule, #196) or
+				// is about the name (empty after sanitizing); a 404, a 429 or
+				// a lost connection is not any field's fault
+				var errorField = null;
+				if (xhr && xhr.status === 400) {
+					if (serverField === 'grepRules') {
+						errorField = grepErrorField(xhr.responseJSON);
+					} else {
+						errorField = serverField === 'basedOn' ? 'basedOn' : 'name';
+					}
+				}
 				showFormError(form, {
-					field: xhr && xhr.status === 400 ? (serverField === 'basedOn' ? 'basedOn' : 'name') : null,
+					field: errorField,
 					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
 				});
 			}
 		});
+	});
+
+	// -------------------------------------------------------------------------
+	// GREP rules (#196)
+	// -------------------------------------------------------------------------
+
+	// Whether another style's rules apply this one: its card names it
+	function isGrepTarget(styleId) {
+		return styles.some(function(candidate) {
+			return Array.isArray(candidate.grepRules) && candidate.grepRules.some(function(rule) {
+				return String(rule && rule.styleId) === String(styleId);
+			});
+		});
+	}
+
+	$(document).on('click', '.typost-ps-grep-add', function() {
+		var form  = $(this).closest('form')[0];
+		var style = findStyle($(this).closest('.typost-ps-style-card').data('style-id'));
+		var row   = addGrepRule(form, style, styles, typostPSAdmin.grep);
+		if (!row) {
+			return;
+		}
+		var select = row.querySelector('[data-grep="pattern"]');
+		if (select) {
+			select.focus();
+		}
+		/* translators: %d: rule number */
+		announce(fill(wp.i18n.__('GREP rule %d added.', 'typost-paragraph-styles'), grepRows(form).length));
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-grep="pattern"]', function() {
+		updateGrepRow($(this).closest('.typost-ps-grep-rule')[0]);
+	});
+
+	$(document).on('click', '.typost-ps-grep-up, .typost-ps-grep-down', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-grep-rule')[0];
+		var up   = $(this).hasClass('typost-ps-grep-up');
+		var target = moveGrepRule(form, row, up ? -1 : 1, typostPSAdmin.grep);
+		if (target) {
+			target.focus();
+		}
+		var position = grepRows(form).indexOf(row) + 1;
+		/* translators: %d: the rule's new position in the list */
+		announce(fill(wp.i18n.__('Rule moved to position %d.', 'typost-paragraph-styles'), position));
+	});
+
+	$(document).on('click', '.typost-ps-grep-remove', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-grep-rule')[0];
+		var target = removeGrepRule(form, row, typostPSAdmin.grep);
+		if (target) {
+			target.focus();
+		}
+		announce(wp.i18n.__('GREP rule removed.', 'typost-paragraph-styles'));
 	});
 
 	// -------------------------------------------------------------------------
@@ -1612,6 +2194,14 @@
 				var detached = response && Array.isArray(response.detached) ? response.detached : [];
 				detached.forEach(function(childId) {
 					refreshCards(childId, function() {});
+				});
+				// Styles whose GREP rules applied the deleted one lost those
+				// rules (#196)
+				var grepChanged = response && Array.isArray(response.grepChanged) ? response.grepChanged : [];
+				grepChanged.forEach(function(changedId) {
+					if (detached.indexOf(changedId) === -1) {
+						refreshCards(changedId, function() {});
+					}
 				});
 				$card.slideUp(300, function() {
 					$card.remove();

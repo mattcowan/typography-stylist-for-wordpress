@@ -203,6 +203,10 @@
 	// never takes it (see ALIGNMENT_GUARD in PHP)
 	var ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
+	// A fit-to-width block never takes a style's indents (see INDENT_GUARD in
+	// PHP); spacing stays unguarded
+	var INDENT_GUARD = ':not(.typost-fit)';
+
 	/** '' for Default or an unknown value, otherwise the alignment. */
 	function normalizeAlignment(value) {
 		return typeof value === 'string' && ALIGNMENT_VALUES.indexOf(value) !== -1 ? value : '';
@@ -496,6 +500,149 @@
 		return rules;
 	}
 
+	// Units an indent or spacing value (#199) can use, with the largest value
+	// each accepts. Mirrors LENGTH_MAX in PHP.
+	var LENGTH_MAX = { px: 1000, em: 50 };
+
+	// Indents and paragraph spacing (#199) that are plain lengths, zero or
+	// more: left and right indent (logical start and end) and space before
+	// and after. The first line indent can be negative and is a Based On
+	// group with indentAfterSame. Mirrors SPACING_PROPERTIES in PHP.
+	var SPACING_PROPERTIES = ['indentStart', 'indentEnd', 'spaceBefore', 'spaceAfter'];
+
+	/**
+	 * An indent or spacing value (#199) in its stored form, such as '1.5em'
+	 * or '24px'; '' for zero, anything without a px/em unit, and a negative
+	 * value unless allowNegative (the first line indent). Capped at
+	 * LENGTH_MAX and rounded to three decimals the way normalizeHang()
+	 * rounds, so it prints like PHP normalize_length().
+	 *
+	 * @param {*}       value         Raw value.
+	 * @param {boolean} allowNegative Accept a negative value.
+	 * @return {string}
+	 */
+	function normalizeLength(value, allowNegative) {
+		if (typeof value !== 'string') return '';
+		var m = /^\s*(-?)(\d+(?:\.\d*)?|\.\d+)\s*(px|em)\s*$/i.exec(value);
+		if (!m) return '';
+		var unit = m[3].toLowerCase();
+		var n = Math.min(Number(m[2]), LENGTH_MAX[unit]);
+		// Below 0.0005 rounds to 0; String() would also print it as '1e-7'
+		if (!isFinite(n) || n < 0.0005) return '';
+		var negative = m[1] === '-';
+		if (negative && !allowNegative) return '';
+		return (negative ? '-' : '') + String(Number(Math.round(Number(n + 'e3')) + 'e-3')) + unit;
+	}
+
+	/**
+	 * Whether a style's first line indent applies only after a paragraph
+	 * with the same style (#199): only with a positive indent, since a
+	 * hanging indent shapes every paragraph. Twin of PHP
+	 * indent_after_same_applies().
+	 */
+	function indentAfterSameApplies(props) {
+		var first = normalizeLength((props || {}).firstLineIndent, true);
+		return first !== '' && first.charAt(0) !== '-' && props.indentAfterSame === true;
+	}
+
+	/**
+	 * The indent and paragraph spacing rules of a style (#199). Twin of PHP
+	 * paragraph_layout_css(), which explains each rule; the shared fixture
+	 * paragraph-layout-css.json holds both to the same text.
+	 *
+	 * @param {Object}   props Resolved properties.
+	 * @param {number}   hang  The style's normalized hang.
+	 * @param {string[]} ids   The style's id, then its legacy id if any.
+	 * @return {string} CSS rule blocks separated by a blank line, or ''.
+	 */
+	function paragraphLayoutCss(props, hang, ids) {
+		var isFit = props.fontSize === 'fit';
+		var start = isFit ? '' : normalizeLength(props.indentStart);
+		var end = isFit ? '' : normalizeLength(props.indentEnd);
+		var first = isFit ? '' : normalizeLength(props.firstLineIndent, true);
+		var after = first !== '' && indentAfterSameApplies(props);
+		var before = normalizeLength(props.spaceBefore);
+		var afterSpace = normalizeLength(props.spaceAfter);
+
+		var hanging = first !== '' && first.charAt(0) === '-' ? first.slice(1) : '';
+		var padStart = start && hanging ? 'calc(' + start + ' + ' + hanging + ')' : (start || hanging);
+
+		var indents = [];
+		if (padStart || end) {
+			indents.push('box-sizing: border-box');
+		}
+		if (padStart) {
+			indents.push('padding-inline-start: ' + padStart);
+		}
+		if (end) {
+			indents.push('padding-inline-end: ' + end);
+		}
+		var indentRules = [];
+		if (first) {
+			indentRules.push('text-indent: ' + first);
+			if (hang > 0) {
+				indentRules.push('--typost-hang-on: 0');
+			}
+		}
+		if (!after) {
+			indents = indents.concat(indentRules);
+		}
+		var margins = [];
+		if (before) {
+			margins.push('margin-block-start: ' + before);
+		}
+		if (afterSpace) {
+			margins.push('margin-block-end: ' + afterSpace);
+		}
+
+		if (!indents.length && !margins.length && !after) return '';
+
+		var main = [];
+		var block = [];
+		var wrapper = [];
+		var inner = [];
+		var previous = [];
+		ids.forEach(function (ref) {
+			var cls = '.typost-ps-' + ref;
+			var s = '.typost-styled' + cls + cls + cls + cls + cls;
+			var w = '.wp-block-typost:has(> ' + s + ')';
+			main.push(cls, s);
+			block.push(s);
+			wrapper.push(w);
+			inner.push('.wp-block-typost > ' + s);
+			previous.push(w, s);
+		});
+		// Either class of the style can come before either class, so the one
+		// :is() lists every form
+		var next = [];
+		block.forEach(function (s) {
+			next.push(':is(' + previous.join(', ') + ') + ' + s + INDENT_GUARD);
+			next.push(':is(' + previous.join(', ') + ') + .wp-block-typost > ' + s + INDENT_GUARD);
+		});
+
+		function rule(selectors, declarations) {
+			return selectors.join(',\n') + ' {\n    ' + declarations.join(';\n    ') + ';\n}';
+		}
+		var blocks = [];
+		if (indents.length) {
+			blocks.push(rule(main.map(function (part) {
+				return part + INDENT_GUARD;
+			}), indents));
+		}
+		if (margins.length) {
+			blocks.push(rule(main, margins));
+			blocks.push(rule(wrapper, margins));
+			var zero = [];
+			if (before) zero.push('margin-block-start: 0');
+			if (afterSpace) zero.push('margin-block-end: 0');
+			blocks.push(rule(inner, zero));
+		}
+		if (after) {
+			blocks.push(rule(next, indentRules));
+		}
+		return blocks.join('\n\n');
+	}
+
 	/** True for the case values that use font-variant-caps. */
 	function isSmallCapsCase(value) {
 		var c = normalizeTextCase(value);
@@ -616,6 +763,16 @@
 		if (state.wordSpacing !== undefined && phpInt(state.wordSpacing) !== phpInt(styleProps.wordSpacing)) return true;
 		if (state.textWrap !== undefined && normalizeTextWrap(state.textWrap) !== normalizeTextWrap(styleProps.textWrap)) return true;
 
+		// Indents and paragraph spacing (#199): the same rule, only the admin
+		// Edit form reports them
+		for (var s = 0; s < SPACING_PROPERTIES.length; s++) {
+			var spacingKey = SPACING_PROPERTIES[s];
+			if (state[spacingKey] !== undefined && normalizeLength(state[spacingKey]) !== normalizeLength(styleProps[spacingKey])) return true;
+		}
+		if (state.firstLineIndent !== undefined) {
+			if (normalizeLength(state.firstLineIndent, true) !== normalizeLength(styleProps.firstLineIndent, true)) return true;
+			if (indentAfterSameApplies(state) !== indentAfterSameApplies(styleProps)) return true;
+		}
 		// Text color and outline (#215): style-only like #207, so only the
 		// admin Edit form reports them
 		if (state.textColor !== undefined && comparableColor(state.textColor, true) !== comparableColor(styleProps.textColor, true)) return true;
@@ -732,6 +889,9 @@
 		if (textWrap) {
 			properties.textWrap = textWrap;
 		}
+		// Indents and paragraph spacing (#199): none is never stored, and
+		// "only after the same style" only as true with a positive indent
+		copyLayoutProperties(properties, state);
 		// Text color and outline (#215): none is never stored; the outline's
 		// color and position only with a width, the position only as behind
 		var textColor = normalizeColor(state.textColor, true);
@@ -756,6 +916,34 @@
 	}
 
 	/**
+	 * Copy a style's indents and paragraph spacing (#199) into properties,
+	 * in their stored form: SPACING_PROPERTIES and the first line indent
+	 * group. Keys that are none are left out.
+	 *
+	 * @param {Object} properties Properties to add to.
+	 * @param {Object} source     State or stored properties.
+	 * @param {Object} [only]     Copy only these keys (a map of key → true).
+	 */
+	function copyLayoutProperties(properties, source, only) {
+		var src = source || {};
+		SPACING_PROPERTIES.forEach(function (key) {
+			if (only && !only[key]) return;
+			var length = normalizeLength(src[key]);
+			if (length) {
+				properties[key] = length;
+			}
+		});
+		if (only && !only.firstLineIndent) return;
+		var first = normalizeLength(src.firstLineIndent, true);
+		if (first) {
+			properties.firstLineIndent = first;
+			if (indentAfterSameApplies(src)) {
+				properties.indentAfterSame = true;
+			}
+		}
+	}
+
+	/**
 	 * Properties to store when an editor saves over an existing style
 	 * (Update Style) or saves a variant of it (Save as New).
 	 *
@@ -769,7 +957,9 @@
 	 * textCase / fakeSmallCaps (#214) follow the same rule for an editor
 	 * (an extension's) that does not report them; both core editors do.
 	 * alignment / alignLast, wordSpacing and textWrap (#207) too: no editor
-	 * reports them, only the admin Edit form.
+	 * reports them, only the admin Edit form. So do the indents and
+	 * paragraph spacing (#199); the first line indent carries with its
+	 * "only after the same style" option.
 	 *
 	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
 	 * style that already writes a size, so its CSS does not change unit
@@ -812,6 +1002,15 @@
 		if ((!state || state.textWrap === undefined) && normalizeTextWrap(base.textWrap)) {
 			properties.textWrap = normalizeTextWrap(base.textWrap);
 		}
+		// Indents and paragraph spacing (#199): no editor control either, so
+		// the ones the state does not report come from the style. Without
+		// this an Update Style in either editor deleted them from every
+		// block that uses the style (#199 review).
+		var unreported = {};
+		SPACING_PROPERTIES.concat(['firstLineIndent']).forEach(function (key) {
+			if (!state || state[key] === undefined) unreported[key] = true;
+		});
+		copyLayoutProperties(properties, base, unreported);
 		// Text color and outline (#215): no editor control either
 		if ((!state || state.textColor === undefined) && normalizeColor(base.textColor, true)) {
 			properties.textColor = normalizeColor(base.textColor, true);
@@ -842,6 +1041,7 @@
 		fontSize: ['fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize'],
 		textCase: ['textCase', 'fakeSmallCaps'],
 		alignment: ['alignment', 'alignLast'],
+		firstLineIndent: ['firstLineIndent', 'indentAfterSame'],
 		textStrokeWidth: ['textStrokeWidth', 'textStrokeColor', 'textStrokePosition'],
 	};
 
@@ -853,8 +1053,8 @@
 	}
 
 	// The value a style based on another stores to unset a property its
-	// parent sets. The groups use fontSize 'inherit', textCase '' and
-	// alignment ''.
+	// parent sets. The groups use fontSize 'inherit', textCase '',
+	// alignment '' and firstLineIndent ''.
 	// Mirrors EMPTY_PROPERTY_VALUES in PHP.
 	var EMPTY_PROPERTY_VALUES = {
 		fontId: 0,
@@ -867,6 +1067,10 @@
 		initialHang: 0,
 		wordSpacing: 0,
 		textWrap: '',
+		indentStart: '',
+		indentEnd: '',
+		spaceBefore: '',
+		spaceAfter: '',
 		textColor: '',
 	};
 
@@ -935,6 +1139,9 @@
 		}
 		if (hasOwn(out, 'alignment') && ALIGNMENT_VALUES.indexOf(out.alignment) === -1) {
 			BASED_ON_GROUPS.alignment.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'firstLineIndent') && normalizeLength(out.firstLineIndent, true) === '') {
+			BASED_ON_GROUPS.firstLineIndent.forEach(function (key) { delete out[key]; });
 		}
 		if (hasOwn(out, 'textStrokeWidth') && normalizeStrokeWidth(out.textStrokeWidth) <= 0) {
 			BASED_ON_GROUPS.textStrokeWidth.forEach(function (key) { delete out[key]; });
@@ -1035,6 +1242,10 @@
 	 */
 	function groupSignature(lead, props) {
 		var p = props || {};
+		if (lead === 'firstLineIndent') {
+			var first = normalizeLength(p.firstLineIndent, true);
+			return first ? first + '|' + (indentAfterSameApplies(p) ? '1' : '0') : 'none';
+		}
 		if (lead === 'textStrokeWidth') {
 			var w = normalizeStrokeWidth(p.textStrokeWidth);
 			return w > 0 ? phpFloatStr(w) + '|' + comparableColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
@@ -1078,6 +1289,11 @@
 				return Math.abs((parseFloat(va) || 0) - (parseFloat(vb) || 0)) <= LINE_HEIGHT_TOLERANCE;
 			case 'initialHang':
 				return normalizeHang(va) === normalizeHang(vb);
+			case 'indentStart':
+			case 'indentEnd':
+			case 'spaceBefore':
+			case 'spaceAfter':
+				return normalizeLength(va) === normalizeLength(vb);
 			case 'textColor':
 				return comparableColor(va, true) === comparableColor(vb, true);
 			case 'features':
@@ -1224,6 +1440,10 @@
 	 *   render only through the style's class and have nothing to reset.
 	 *   (The block's own textAlign attribute is separate and overrides the
 	 *   style's alignment.)
+	 * - indentStart, indentEnd, firstLineIndent, indentAfterSame,
+	 *   spaceBefore, spaceAfter (#199) — style-only for the same reason.
+	 *   (The block's own spacing settings are separate and override the
+	 *   style's spacing.)
 	 * - textColor, textStrokeWidth, textStrokeColor, textStrokePosition
 	 *   (#215) — style-only for the same reason. The block's own text color
 	 *   (the color support) overrides the style's color through CSS.
@@ -1359,11 +1579,24 @@
 			previewSize = Math.min(max, Math.max(min, realSize));
 		}
 
+		var style = {
+			fontSize: previewSize + 'px',
+			lineHeight: 1.25,
+		};
+		// Indents and paragraph spacing (#199) reach the row through the
+		// plain class, and would only push a one-line sample around the list.
+		// The settings tab card keeps them.
+		var layout = {};
+		copyLayoutProperties(layout, props);
+		if (Object.keys(layout).length) {
+			style.paddingInlineStart = 0;
+			style.paddingInlineEnd = 0;
+			style.textIndent = 0;
+			style.marginBlockStart = 0;
+			style.marginBlockEnd = 0;
+		}
 		return {
-			style: {
-				fontSize: previewSize + 'px',
-				lineHeight: 1.25,
-			},
+			style: style,
 			sizeLabel: sizeLabel,
 		};
 	}
@@ -1593,7 +1826,13 @@
 		}
 		rules = rules.concat(strokeDeclarations(props));
 
-		if (!rules.length && !alignRules.length) return '';
+		// Indents and paragraph spacing (#199): rules of their own, never on
+		// the inline-span selector (see the PHP twin)
+		var id = parseInt(style.id, 10);
+		var hasLegacy = style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId));
+		var layoutCss = paragraphLayoutCss(props, hang, hasLegacy ? [String(id), String(style.legacyId)] : [String(id)]);
+
+		if (!rules.length && !alignRules.length && !layoutCss) return '';
 
 		// Same three selectors as generate_style_css() in PHP, byte for byte:
 		// a plain `.typost-ps-N` for previews, then the block-level and
@@ -1601,9 +1840,8 @@
 		// (0,1,1), up to (0,3,4) on the frontend and (0,5,2) in the editor where
 		// WordPress prefixes them with .editor-styles-wrapper) cannot override
 		// the style.
-		var id = parseInt(style.id, 10);
 		var selector = selectorSet(id);
-		if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+		if (hasLegacy) {
 			selector += ',\n' + selectorSet(String(style.legacyId));
 		}
 
@@ -1614,6 +1852,9 @@
 				return part + ALIGNMENT_GUARD;
 			}).join(',\n');
 			css += (css ? '\n\n' : '') + guarded + ' {\n    ' + alignRules.join(';\n    ') + ';\n}';
+		}
+		if (layoutCss) {
+			css += (css ? '\n\n' : '') + layoutCss;
 		}
 		// A Typography Stylist block's own text color wins (PHP twin)
 		if (textColor) {
@@ -2461,6 +2702,10 @@
 		alignmentToBlockAlign: alignmentToBlockAlign,
 		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
+		normalizeLength: normalizeLength,
+		indentAfterSameApplies: indentAfterSameApplies,
+		LENGTH_MAX: LENGTH_MAX,
+		SPACING_PROPERTIES: SPACING_PROPERTIES,
 		ALIGN_LAST_VALUES: ALIGN_LAST_VALUES,
 		TEXT_WRAP_VALUES: TEXT_WRAP_VALUES,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,

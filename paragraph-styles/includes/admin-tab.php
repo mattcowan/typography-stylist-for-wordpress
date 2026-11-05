@@ -312,6 +312,83 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 			</fieldset>
 
 			<?php
+			// Indents and paragraph spacing (#199). Each value is a number and
+			// a unit (em or px); 0 or empty is none. Fit to width writes no
+			// indents (each line fills the width), so those fields are hidden
+			// in fit mode; spacing stays.
+			$length_fields = array(
+				array(
+					'key'   => 'indentStart',
+					'id'    => 'indent-start',
+					'label' => __( 'Left indent', 'typost-paragraph-styles' ),
+					'unit'  => __( 'Left indent unit', 'typost-paragraph-styles' ),
+					'min'   => '0',
+					'fit'   => false,
+				),
+				array(
+					'key'   => 'indentEnd',
+					'id'    => 'indent-end',
+					'label' => __( 'Right indent', 'typost-paragraph-styles' ),
+					'unit'  => __( 'Right indent unit', 'typost-paragraph-styles' ),
+					'min'   => '0',
+					'fit'   => false,
+				),
+				array(
+					'key'   => 'firstLineIndent',
+					'id'    => 'first-line-indent',
+					'label' => __( 'First line indent', 'typost-paragraph-styles' ),
+					'unit'  => __( 'First line indent unit', 'typost-paragraph-styles' ),
+					'min'   => '',
+					'fit'   => false,
+					'help'  => __( 'A negative value gives a hanging indent. A first line indent turns the first letter hang off.', 'typost-paragraph-styles' ),
+				),
+				array(
+					'key'   => 'spaceBefore',
+					'id'    => 'space-before',
+					'label' => __( 'Space before', 'typost-paragraph-styles' ),
+					'unit'  => __( 'Space before unit', 'typost-paragraph-styles' ),
+					'min'   => '0',
+					'fit'   => true,
+				),
+				array(
+					'key'   => 'spaceAfter',
+					'id'    => 'space-after',
+					'label' => __( 'Space after', 'typost-paragraph-styles' ),
+					'unit'  => __( 'Space after unit', 'typost-paragraph-styles' ),
+					'min'   => '0',
+					'fit'   => true,
+				),
+			);
+			?>
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Indents and spacing', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-layout-help"><?php esc_html_e( 'Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these.', 'typost-paragraph-styles' ); ?></p>
+				<p class="typost-ps-edit-help" data-show-for-size="fit"><?php esc_html_e( 'Fit to width sets the width of each line itself, so a Fit to width style does not use indents.', 'typost-paragraph-styles' ); ?></p>
+				<div class="typost-ps-edit-row">
+					<?php foreach ( $length_fields as $length_field ) : ?>
+						<p class="typost-ps-edit-field"<?php echo $length_field['fit'] ? '' : ' data-show-for-size="inherit fixed responsive"'; ?>>
+							<label for="typost-ps-edit-<?php echo esc_attr( $length_field['id'] ); ?>"><?php echo esc_html( $length_field['label'] ); ?></label>
+							<span class="typost-ps-edit-length">
+								<input type="number" id="typost-ps-edit-<?php echo esc_attr( $length_field['id'] ); ?>" data-field="<?php echo esc_attr( $length_field['key'] ); ?>"<?php echo '' === $length_field['min'] ? '' : ' min="' . esc_attr( $length_field['min'] ) . '"'; ?> step="any"<?php echo isset( $length_field['help'] ) ? ' aria-describedby="typost-ps-edit-' . esc_attr( $length_field['id'] ) . '-help"' : ''; ?> />
+								<select id="typost-ps-edit-<?php echo esc_attr( $length_field['id'] ); ?>-unit" data-field="<?php echo esc_attr( $length_field['key'] ); ?>Unit" aria-label="<?php echo esc_attr( $length_field['unit'] ); ?>">
+									<option value="em">em</option>
+									<option value="px">px</option>
+								</select>
+							</span>
+							<?php if ( isset( $length_field['help'] ) ) : ?>
+								<span class="typost-ps-edit-help" id="typost-ps-edit-<?php echo esc_attr( $length_field['id'] ); ?>-help"><?php echo esc_html( $length_field['help'] ); ?></span>
+							<?php endif; ?>
+						</p>
+					<?php endforeach; ?>
+				</div>
+				<p class="typost-ps-edit-checkbox" data-show-for-size="inherit fixed responsive">
+					<input type="checkbox" id="typost-ps-edit-indent-after-same" data-field="indentAfterSame" aria-describedby="typost-ps-edit-indent-after-same-help" />
+					<label for="typost-ps-edit-indent-after-same"><?php esc_html_e( 'Indent the first line only after a paragraph with the same style', 'typost-paragraph-styles' ); ?></label>
+					<span class="typost-ps-edit-help" id="typost-ps-edit-indent-after-same-help"><?php esc_html_e( 'The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only.', 'typost-paragraph-styles' ); ?></span>
+				</p>
+			</fieldset>
+
+			<?php
 			// Text color and outline (#215). admin.js fills the selects from
 			// the stored color (a palette color the palette no longer has is
 			// added), shows the custom fields for Custom, and keeps the
@@ -417,6 +494,26 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 					</span>
 				</p>
 			</fieldset>
+
+			<?php
+			// GREP styles (#196). Only where the render-time engine runs
+			// (WordPress 6.9+). admin.js builds one row per rule from
+			// typostPSAdmin.grep: pattern, custom expression, style, and Move
+			// up / Move down / Remove buttons.
+			if ( Typost_Paragraph_Styles::grep_supported() ) :
+				?>
+			<fieldset class="typost-ps-edit-group typost-ps-edit-grep" data-grep>
+				<legend><?php esc_html_e( 'GREP styles', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-grep-help">
+					<?php esc_html_e( 'Apply another style to the text that matches a pattern, wherever this style is used on a whole block. The saved text does not change. Where two rules match the same text, the rule higher in the list wins. Text in fit to width blocks and in code is not matched.', 'typost-paragraph-styles' ); ?>
+				</p>
+				<ol class="typost-ps-grep-rules" data-grep-rules></ol>
+				<p class="typost-ps-grep-empty" data-grep-empty><?php esc_html_e( 'No GREP rules.', 'typost-paragraph-styles' ); ?></p>
+				<p>
+					<button type="button" class="button typost-ps-grep-add" aria-describedby="typost-ps-edit-grep-help"><?php esc_html_e( 'Add GREP rule', 'typost-paragraph-styles' ); ?></button>
+				</p>
+			</fieldset>
+			<?php endif; ?>
 
 			<?php // The id lets showFormError() add the message to the failing field's description ?>
 			<p class="typost-ps-edit-error" id="typost-ps-edit-error" role="alert" hidden></p>

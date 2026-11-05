@@ -160,6 +160,13 @@
 	width: 8em;
 }
 
+/* An indent or spacing value (#199): number and unit side by side */
+.typost-ps-edit-length {
+	display: inline-flex;
+	gap: 4px;
+	align-items: center;
+}
+
 .typost-ps-edit-form-inner select {
 	max-width: 100%;
 }
@@ -286,6 +293,47 @@
 .typost-ps-style-card.typost-ps-loading .typost-ps-edit-btn {
 	cursor: progress;
 }
+
+/* GREP styles (#196): one bordered row per rule, in list order */
+.typost-ps-grep-rules {
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.typost-ps-grep-rule {
+	margin: 0 0 8px;
+	padding: 8px 12px 0;
+	border-left: 3px solid #dcdcde;
+	background: #f6f7f7;
+}
+
+.typost-ps-grep-regex input {
+	width: 20em;
+	max-width: 100%;
+	font-family: Consolas, Monaco, monospace;
+}
+
+.typost-ps-grep-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	align-items: center;
+	margin: 0 0 8px;
+}
+
+/* Core's delete red is 4.40:1 on this row's gray; WCAG 1.4.3 asks for 4.5:1 */
+.typost-ps-grep-rule .button-link.typost-ps-grep-remove {
+	color: #b32d2e;
+}
+
+.typost-ps-grep-empty {
+	margin: 8px 0 0;
+	font-style: italic;
+}
+
+/* The preview's GREP spans need no styling of their own: each renders
+ * through its style's [data-style-id] rule. */
 
 /* Text color and outline (#215) */
 .typost-ps-edit-color-control {
