@@ -6,6 +6,11 @@ module.exports = defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // Single worker to avoid WordPress conflicts
+  // In CI: stop a run that is failing everywhere before the 30-minute step
+  // timeout in compat.yml kills it (#189). Each failure can wait out a 90 s
+  // test timeout three times, and the reporters write only when the run ends.
+  globalTimeout: process.env.CI ? 25 * 60 * 1000 : 0,
+  maxFailures: process.env.CI ? 10 : 0,
   // In CI: failure annotations on the run, and an HTML report that is
   // uploaded as an artifact instead of opened (#189).
   reporter: process.env.CI

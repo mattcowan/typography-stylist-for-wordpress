@@ -383,7 +383,7 @@ cover every real "give someone a build" case with better traceability.
 ### The weekly compatibility run is not a nightly build
 
 `.github/workflows/compat.yml` (#189) does run on a schedule, once a week
-(Mondays 05:17 UTC) and on demand (**Actions → Compatibility → Run
+(Mondays 05:23 UTC) and on demand (**Actions → Compatibility → Run
 workflow**). It is not the nightly rejected above, for two reasons:
 
 - **It builds nothing for anyone.** It produces no zip. It runs tests only:

@@ -2,8 +2,5 @@
 	"$schema": "https://schemas.wp.org/trunk/wp-env.json",
 	"phpVersion": "8.2",
 	"testsEnvironment": false,
-	"plugins": [ "." ],
-	"config": {
-		"SCRIPT_DEBUG": false
-	}
+	"plugins": [ "." ]
 }

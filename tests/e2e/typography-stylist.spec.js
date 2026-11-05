@@ -69,9 +69,11 @@ async function pressUntil(page, key, done, maxPresses) {
 		}
 		await page.keyboard.press(key);
 		// The store follows the DOM selection on selectionchange, a moment
-		// after the key press. Give it that moment (a boundary press changes
-		// no offset, so this cannot wait for a change alone).
-		for (let tries = 0; tries < 10; tries++) {
+		// after the key press. Give it up to a second, because a press made
+		// before the store catches up overshoots, and these loops only move
+		// forward (a boundary press changes no offset, so this cannot wait
+		// for a change alone).
+		for (let tries = 0; tries < 50; tries++) {
 			const after = await selectionOffsets(page);
 			if (after[0] !== before[0] || after[1] !== before[1]) {
 				break;
@@ -344,6 +346,60 @@ test.describe('Typography Stylist block - Quick Feature Toggles on selected text
 			['eaut', '200'],
 			['iful', '100'],
 		]);
+	});
+});
+
+// The tests above read the editor store. This one goes through the parts of
+// WordPress the store does not cover: serialization, block validation on
+// reload and the frontend.
+test.describe('Typography Stylist block - saved post', () => {
+	let postId;
+
+	test.afterEach(async ({ page }) => {
+		if (postId) {
+			await openNewPost(page);
+			await page.evaluate((id) => wp.apiFetch({ path: `/wp/v2/posts/${id}?force=true`, method: 'DELETE' }).catch(() => {}), postId).catch(() => {});
+		}
+	});
+
+	test('a styled block stays valid after a reload and the span reaches the frontend', async ({ page }) => {
+		await openNewPost(page);
+		const clientId = await insertBlock(page);
+		await select(page, clientId, ...BEAUTIFUL);
+		const modal = await openQuickFeatureToggles(page);
+		await spinbutton(modal, 'Letter Spacing (for selected text)').fill('50');
+		await expectSpan(page, clientId, 'Beautiful', { 'data-letterspacing': '50' });
+		await closeQuickFeatureToggles(page, modal);
+
+		const link = await page.evaluate(async () => {
+			const editor = wp.data.dispatch('core/editor');
+			await editor.editPost({ title: 'ZZ E2E saved post', status: 'publish' });
+			await editor.savePost();
+			return wp.data.select('core/editor').getCurrentPost().link;
+		});
+		postId = await page.evaluate(() => wp.data.select('core/editor').getCurrentPostId());
+
+		await page.goto(`${BASE}/wp-admin/post.php?post=${postId}&action=edit`, { waitUntil: 'domcontentloaded' });
+		await page.waitForFunction(() => window.wp && wp.data && wp.data.select('core/block-editor').getBlocks().length > 0);
+		const reloaded = await page.evaluate(() => {
+			const [block] = wp.data.select('core/block-editor').getBlocks();
+			return {
+				name: block.name,
+				isValid: block.isValid,
+				content: String(block.attributes.content),
+				dirty: wp.data.select('core/editor').isEditedPostDirty(),
+			};
+		});
+		expect(reloaded.name).toBe('typost/block');
+		expect(reloaded.isValid).toBe(true);
+		expect(reloaded.dirty).toBe(false);
+		expect(reloaded.content).toContain('data-letterspacing="50"');
+
+		await page.goto(link, { waitUntil: 'domcontentloaded' });
+		const span = page.locator('.wp-block-typost [aria-hidden="true"] .typost-styled[data-letterspacing="50"]').first();
+		await expect(span).toHaveText('Beautiful');
+		// Computed, so a stylesheet or kses change that drops it fails here
+		expect(await span.evaluate((el) => getComputedStyle(el).letterSpacing)).not.toBe('normal');
 	});
 });
 

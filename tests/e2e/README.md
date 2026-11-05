@@ -237,8 +237,7 @@ Rationale: E2E tests are for development/CI only, not needed in production plugi
 
 ## Running in wp-env (and in CI)
 
-The suite does not need the local `http://typography-stylist:8080` site. It
-runs against any WordPress where this plugin is active, through
+The suite does not need a local development site. It runs against any WordPress where this plugin is active, through
 `WP_BASE_URL`, `WP_USERNAME` and `WP_PASSWORD`. The repository's
 `.wp-env.json` maps this checkout as a plugin, so with Docker running:
 
@@ -247,10 +246,6 @@ npm run build                       # wp-env serves the minified assets
 npx @wordpress/env start            # http://localhost:8888, admin / password
 WP_BASE_URL=http://localhost:8888 WP_USERNAME=admin WP_PASSWORD=password npm run test:e2e
 ```
-
-`.wp-env.json` sets `SCRIPT_DEBUG` to `false` (wp-env turns it on by
-default): with `SCRIPT_DEBUG` on, the plugin loads `assets/js/block-editor.js`
-itself, which is the browserify source and does not run in a browser.
 
 To try the next WordPress locally, add a git-ignored `.wp-env.override.json`:
 

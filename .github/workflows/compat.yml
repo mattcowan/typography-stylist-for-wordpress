@@ -23,15 +23,17 @@
 # with no repository activity, without a warning. Re-enable it in the
 # Actions tab.
 #
-# Supply chain: this job installs packages the day they are published (no
-# Dependabot cooldown) and runs them. The token is read-only and the job
-# uses no secrets, so such a package can reach only this runner.
+# Supply chain: these jobs install packages the day they are published (no
+# Dependabot cooldown) and run them. The token is read-only, the jobs use no
+# secrets, and they do not use the npm Actions cache: a scheduled run saves
+# to the default branch's cache scope, which the CI and release workflows
+# restore. So such a package can reach only this runner.
 name: Compatibility
 
 on:
   schedule:
-    # Mondays 05:17 UTC (off the hour: scheduled runs on :00 are delayed).
-    - cron: '17 5 * * 1'
+    # Mondays 05:23 UTC (off the hour: scheduled runs on :00 are delayed).
+    - cron: '23 5 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -45,12 +47,12 @@ jobs:
   jest-latest-wordpress:
     name: Jest with the latest @wordpress/* packages
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
       - run: npm ci
       # Every @wordpress/* package npm installed (direct and transitive),
       # each at its latest version. --no-save leaves package.json and the
@@ -72,8 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # wp-env's default site and admin user, not the local
-      # http://typography-stylist:8080 development site.
+      # wp-env's default site and admin user, not a local development site.
       WP_BASE_URL: http://localhost:8888
       WP_USERNAME: admin
       WP_PASSWORD: password
@@ -82,7 +83,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-          cache: npm
       # The production build from the lockfile: this job tests what would
       # ship against the next WordPress, not newer build tools.
       - run: npm ci
@@ -112,7 +112,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-${{ github.run_id }}
+          name: playwright-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
