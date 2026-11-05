@@ -561,6 +561,19 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						if (keptAlign && !curTextAlign && !isFitNow) {
 							newAttrs.textAlign = keptAlign;
 						}
+						// The color, spacing and indents stay in the block's own
+						// settings (#346). Measured now, while the style still
+						// renders. The module's notice names what could not stay.
+						const psUtils = window.typostPSUtils;
+						if (detachedStyle && psUtils && psUtils.buildDetachBlockSettings) {
+							const kept = psUtils.buildDetachBlockSettings(
+								detachedProps,
+								{ textColor: blockPropsRef.current.blockTextColor, style: blockPropsRef.current.blockStyle },
+								{ isRtl: isRTL(), palette: psUtils.readEditorPalette(), fontSizePx: psUtils.measureBlockFontSize(curClientId), isFit: isFitNow }
+							);
+							Object.assign(newAttrs, kept.attributes);
+							document.dispatchEvent(new CustomEvent('typost-paragraph-style-detached', { detail: kept }));
+						}
 					}
 				}
 				// Layered font configuration ID support
@@ -2019,7 +2032,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize, blockTextColor: attributes.textColor, blockStyle: attributes.style };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that

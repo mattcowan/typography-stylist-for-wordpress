@@ -1310,3 +1310,77 @@ msgstr "Saisissez une épaisseur de contour entre 0 et 20."
 #: assets/js/admin.js:873
 msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
 msgstr "Un texte transparent n’affiche que son contour. Donnez au contour une épaisseur et sa propre couleur visible, ou choisissez une autre couleur de texte."
+
+#: assets/js/editor.js:193
+msgid "outline"
+msgstr "contour"
+
+#: assets/js/editor.js:194
+msgid "first line indent"
+msgstr "retrait de première ligne"
+
+#: assets/js/editor.js:196
+msgid "word spacing"
+msgstr "espacement des mots"
+
+#: assets/js/editor.js:197
+msgid "line breaking"
+msgstr "coupure de ligne"
+
+#: assets/js/editor.js:198
+msgid "justified alignment"
+msgstr "alignement justifié"
+
+#: assets/js/editor.js:199
+msgid "last line alignment"
+msgstr "alignement de la dernière ligne"
+
+#: assets/js/editor.js:200
+msgid "font"
+msgstr "police"
+
+#: assets/js/editor.js:201
+msgid "font weight"
+msgstr "graisse"
+
+#: assets/js/editor.js:202
+msgid "font style"
+msgstr "style de police"
+
+#: assets/js/editor.js:203
+msgid "font size"
+msgstr "taille de police"
+
+#: assets/js/editor.js:204
+msgid "letter spacing"
+msgstr "espacement des lettres"
+
+#: assets/js/editor.js:205
+msgid "line height"
+msgstr "hauteur de ligne"
+
+#: assets/js/editor.js:207
+msgid "variable font axes"
+msgstr "axes de police variable"
+
+#: assets/js/editor.js:209
+msgid "case"
+msgstr "casse"
+
+#. translators: %s: comma-separated list of style settings.
+#: assets/js/editor.js:216
+#, js-format
+msgid "Detach Style removed these settings from the block: %s."
+msgstr "Détacher le style a retiré ces réglages du bloc : %s."
+
+#: assets/js/editor.js:221
+msgid "Indents and spacing set in em are now in px, at the current text size."
+msgstr "Les retraits et les espacements définis en em sont maintenant en px, à la taille de texte actuelle."
+
+#: assets/js/editor.js:208
+msgid "first letter hang"
+msgstr "débord de la première lettre"
+
+#: assets/js/editor.js:195
+msgid "“Indent the first line only after a paragraph with the same style”"
+msgstr "« Mettre la première ligne en retrait seulement après un paragraphe du même style »"

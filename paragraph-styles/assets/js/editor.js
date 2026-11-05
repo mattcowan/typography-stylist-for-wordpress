@@ -178,6 +178,59 @@
 	}
 
 	/**
+	 * Tell the author what Detach removed from a whole block, and that em
+	 * values became px (#346). An editor notice, because Detach can come
+	 * from the style browser, which closes, so a panel cannot hold it. It
+	 * stays until dismissed, and core speaks it. Nothing to say, no notice.
+	 *
+	 * @param {{removed: string[], emConverted: boolean}} result See buildDetachBlockSettings().
+	 */
+	function showDetachNotice(result) {
+		var notices = window.wp && wp.data && wp.data.dispatch && wp.data.dispatch('core/notices');
+		if (!result || !notices || !notices.createNotice) return;
+		var labels = {
+			textColor: __('text color', 'typost-paragraph-styles'),
+			textStrokeWidth: __('outline', 'typost-paragraph-styles'),
+			firstLineIndent: __('first line indent', 'typost-paragraph-styles'),
+			indentAfterSame: __('“Indent the first line only after a paragraph with the same style”', 'typost-paragraph-styles'),
+			wordSpacing: __('word spacing', 'typost-paragraph-styles'),
+			textWrap: __('line breaking', 'typost-paragraph-styles'),
+			alignment: __('justified alignment', 'typost-paragraph-styles'),
+			alignLast: __('last line alignment', 'typost-paragraph-styles'),
+			fontId: __('font', 'typost-paragraph-styles'),
+			fontWeight: __('font weight', 'typost-paragraph-styles'),
+			fontStyle: __('font style', 'typost-paragraph-styles'),
+			fontSize: __('font size', 'typost-paragraph-styles'),
+			letterSpacing: __('letter spacing', 'typost-paragraph-styles'),
+			lineHeight: __('line height', 'typost-paragraph-styles'),
+			features: __('OpenType features', 'typost-paragraph-styles'),
+			fontVariationSettings: __('variable font axes', 'typost-paragraph-styles'),
+			initialHang: __('first letter hang', 'typost-paragraph-styles'),
+			textCase: __('case', 'typost-paragraph-styles'),
+		};
+		var names = (result.removed || []).map(function(key) { return labels[key] || key; });
+		var parts = [];
+		if (names.length) {
+			parts.push(sprintf(
+				/* translators: %s: comma-separated list of style settings. */
+				__('Detach Style removed these settings from the block: %s.', 'typost-paragraph-styles'),
+				names.join(', ')
+			));
+		}
+		if (result.emConverted) {
+			parts.push(__('Indents and spacing set in em are now in px, at the current text size.', 'typost-paragraph-styles'));
+		}
+		if (parts.length) {
+			notices.createNotice('info', parts.join(' '), { id: 'typost-ps-detach', isDismissible: true });
+		}
+	}
+
+	// A Typography Stylist block keeps its values in its own apply handler
+	document.addEventListener('typost-paragraph-style-detached', function(e) {
+		showDetachNotice(e.detail);
+	});
+
+	/**
 	 * Apply a style to a whole core block (style), or detach it (null).
 	 *
 	 * The style lives in the block's className as `typost-styled
@@ -204,6 +257,22 @@
 				: null;
 			if (alignUpdate) {
 				Object.assign(update, alignUpdate);
+			}
+			// The values a block setting can hold stay on the block (#346).
+			// It reads the alignment's update too, which can be in style
+			if (detached) {
+				var kept = utils.buildDetachBlockSettings(
+					detached.properties,
+					Object.assign({}, editor.getBlockAttributes(clientId), alignUpdate),
+					{
+						isRtl: isRtl,
+						palette: utils.readEditorPalette(),
+						fontSizePx: utils.measureBlockFontSize(clientId),
+						coreBlock: true,
+					}
+				);
+				Object.assign(update, kept.attributes);
+				showDetachNotice(kept);
 			}
 		}
 		// One attribute change, so Detach stays one undo step

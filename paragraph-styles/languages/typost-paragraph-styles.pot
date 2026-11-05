@@ -1310,3 +1310,77 @@ msgstr ""
 #: assets/js/admin.js:873
 msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
 msgstr ""
+
+#: assets/js/editor.js:193
+msgid "outline"
+msgstr ""
+
+#: assets/js/editor.js:194
+msgid "first line indent"
+msgstr ""
+
+#: assets/js/editor.js:196
+msgid "word spacing"
+msgstr ""
+
+#: assets/js/editor.js:197
+msgid "line breaking"
+msgstr ""
+
+#: assets/js/editor.js:198
+msgid "justified alignment"
+msgstr ""
+
+#: assets/js/editor.js:199
+msgid "last line alignment"
+msgstr ""
+
+#: assets/js/editor.js:200
+msgid "font"
+msgstr ""
+
+#: assets/js/editor.js:201
+msgid "font weight"
+msgstr ""
+
+#: assets/js/editor.js:202
+msgid "font style"
+msgstr ""
+
+#: assets/js/editor.js:203
+msgid "font size"
+msgstr ""
+
+#: assets/js/editor.js:204
+msgid "letter spacing"
+msgstr ""
+
+#: assets/js/editor.js:205
+msgid "line height"
+msgstr ""
+
+#: assets/js/editor.js:207
+msgid "variable font axes"
+msgstr ""
+
+#: assets/js/editor.js:209
+msgid "case"
+msgstr ""
+
+#. translators: %s: comma-separated list of style settings.
+#: assets/js/editor.js:216
+#, js-format
+msgid "Detach Style removed these settings from the block: %s."
+msgstr ""
+
+#: assets/js/editor.js:221
+msgid "Indents and spacing set in em are now in px, at the current text size."
+msgstr ""
+
+#: assets/js/editor.js:208
+msgid "first letter hang"
+msgstr ""
+
+#: assets/js/editor.js:195
+msgid "“Indent the first line only after a paragraph with the same style”"
+msgstr ""

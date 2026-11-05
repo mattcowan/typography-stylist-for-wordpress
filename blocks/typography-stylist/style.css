@@ -4,6 +4,11 @@
 
 .wp-block-typost {
 	position: relative;
+	/* The block's own padding stays inside its width. In a theme with no
+	   border-box reset, padding on a block with a max-width (a constrained
+	   layout) would widen the box past the column. A style's indents already
+	   use border-box, so Detach (#346) keeps the same width. */
+	box-sizing: border-box;
 }
 
 /* Screen reader only classes - ensure they exist and prevent layout impact */
