@@ -160,6 +160,13 @@
 	width: 8em;
 }
 
+/* An indent or spacing value (#199): number and unit side by side */
+.typost-ps-edit-length {
+	display: inline-flex;
+	gap: 4px;
+	align-items: center;
+}
+
 .typost-ps-edit-form-inner select {
 	max-width: 100%;
 }

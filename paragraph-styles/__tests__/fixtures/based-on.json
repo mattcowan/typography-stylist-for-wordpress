@@ -482,6 +482,70 @@
 				"3": {},
 				"4": { "alignment": "justify", "alignLast": "center", "wordSpacing": -20, "textWrap": "pretty" }
 			}
+		},
+		{
+			"label": "indents and spacing (#199): the first line indent inherits as a group with its option; the others one by one, and each can be unset",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"indentStart": "2em",
+						"indentEnd": "1em",
+						"firstLineIndent": "1.5em",
+						"indentAfterSame": true,
+						"spaceBefore": "0.5em",
+						"spaceAfter": "1em"
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "",
+						"spaceBefore": ""
+					}
+				},
+				{
+					"id": 3,
+					"name": "Body – Wide",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "3em",
+						"indentStart": "",
+						"indentEnd": ""
+					}
+				},
+				{
+					"id": 4,
+					"name": "Body – Hanging",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "-1em",
+						"spaceAfter": "24px"
+					}
+				}
+			],
+			"expected": {
+				"2": {
+					"indentStart": "2em",
+					"indentEnd": "1em",
+					"spaceAfter": "1em"
+				},
+				"3": {
+					"spaceBefore": "0.5em",
+					"spaceAfter": "1em",
+					"firstLineIndent": "3em"
+				},
+				"4": {
+					"indentStart": "2em",
+					"indentEnd": "1em",
+					"spaceBefore": "0.5em",
+					"spaceAfter": "24px",
+					"firstLineIndent": "-1em"
+				}
+			}
 		}
 	],
 	"equality": [
@@ -709,7 +773,10 @@
 		{ "label": "word spacing as number and string", "key": "wordSpacing", "a": { "wordSpacing": 50 }, "b": { "wordSpacing": "50" }, "equal": true },
 		{ "label": "no word spacing and word spacing 0", "key": "wordSpacing", "a": { "wordSpacing": 0 }, "b": {}, "equal": true },
 		{ "label": "no line breaking and an empty one", "key": "textWrap", "a": { "textWrap": "" }, "b": {}, "equal": true },
-		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false }
+		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false },
+		{ "label": "an indent written two ways", "key": "indentStart", "a": {"indentStart": "1.50em"}, "b": {"indentStart": "1.5em"}, "equal": true },
+		{ "label": "no space before and an empty one", "key": "spaceBefore", "a": {"spaceBefore": ""}, "b": {}, "equal": true },
+		{ "label": "px and em are different spacing", "key": "spaceAfter", "a": {"spaceAfter": "16px"}, "b": {"spaceAfter": "1em"}, "equal": false }
 	],
 	"css": [
 		{
@@ -799,6 +866,53 @@
 			],
 			"id": 3,
 			"css": ".typost-ps-3,\n.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3,\n.typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-5);\n    font-weight: 400;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    line-height: 1.6;\n    font-size: 0.875rem;\n    --typost-hang: 0.1;\n}\n\n.typost-styled.typost-ps-3:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-3.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-3.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "Body – First (#199) renders Body without its first line indent",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"indentStart": "2em",
+						"indentEnd": "1em",
+						"firstLineIndent": "1.5em",
+						"indentAfterSame": true,
+						"spaceBefore": "0.5em",
+						"spaceAfter": "1em"
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "",
+						"spaceBefore": ""
+					}
+				},
+				{
+					"id": 3,
+					"name": "Body – Wide",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "3em",
+						"indentStart": "",
+						"indentEnd": ""
+					}
+				},
+				{
+					"id": 4,
+					"name": "Body – Hanging",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "-1em",
+						"spaceAfter": "24px"
+					}
+				}
+			],
+			"id": 2,
+			"css": ".typost-ps-2:not(.typost-fit),\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2:not(.typost-fit) {\n    box-sizing: border-box;\n    padding-inline-start: 2em;\n    padding-inline-end: 1em;\n}\n\n.typost-ps-2,\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2) {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 0;\n}"
 		}
 	],
 	"overrides": [
@@ -843,6 +957,39 @@
 			"full": { "alignment": "justify", "alignLast": "end", "textWrap": "balance" },
 			"parent": { "alignment": "justify", "alignLast": "center", "textWrap": "balance" },
 			"expected": { "alignment": "justify", "alignLast": "end" }
+		},
+		{
+			"label": "indents and spacing (#199): what the parent sets and the look does not is stored empty",
+			"full": {
+				"fontId": 5
+			},
+			"parent": {
+				"fontId": 5,
+				"indentStart": "2em",
+				"firstLineIndent": "1.5em",
+				"indentAfterSame": true,
+				"spaceAfter": "1em"
+			},
+			"expected": {
+				"firstLineIndent": "",
+				"indentStart": "",
+				"spaceAfter": ""
+			}
+		},
+		{
+			"label": "indents (#199): the same first line indent without the option is the whole group",
+			"full": {
+				"firstLineIndent": "1.5em",
+				"spaceAfter": "1em"
+			},
+			"parent": {
+				"firstLineIndent": "1.5em",
+				"indentAfterSame": true,
+				"spaceAfter": "1em"
+			},
+			"expected": {
+				"firstLineIndent": "1.5em"
+			}
 		}
 	]
 }
