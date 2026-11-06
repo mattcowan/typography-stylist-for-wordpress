@@ -296,7 +296,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, indents, and paragraph spacing.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, hyphenation, indents, and paragraph spacing.
 text color, and outline.
 
 1. Set the typography of some text in either editor.
@@ -318,6 +318,20 @@ A style can also set how its text is aligned, how wide the spaces between words 
 - A Fit to width style uses none of these settings: fit sets the width of each line itself.
 - A centered or end-aligned style with a First Letter Hang does not hang the first letter, as for a centered block.
 - “Detach Style” keeps the alignment: the block gets it as its own alignment, unless the block already has one. Start and End become left or right, by the text direction. A core Paragraph or Heading block does not keep Justify, because WordPress has no justify alignment for these blocks. Word spacing and line breaking are removed, because a block has no setting to keep them.
+
+#### Hyphenation
+
+Since v2.3.6, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
+
+- **Hyphenate:** on or off. The default is off. Off writes no CSS, so the browser's own setting applies and soft hyphens that you type in the text (`&shy;`) still work.
+- **Shortest word to hyphenate,** **fewest letters before a hyphen** and **fewest letters after a hyphen:** 1 to 20 letters each. An empty field lets the browser decide. Chrome and Firefox use these limits; Safari ignores them and uses its own.
+- **Hyphen character:** the character shown at the end of a broken line. An empty field uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons.
+- **Language:** a browser hyphenates only when it knows the language of the text and has a dictionary for that language. WordPress themes print the site language on the page, so most text has one. The dictionaries differ by browser: for example, Chrome has none for Polish, Finnish, Catalan or Turkish, while Firefox and Safari do. Chrome never hyphenates English words that start with a capital letter, so a heading in Title Case is not hyphenated there.
+- **Accessibility:** the hyphens are a rendering effect. They are not in the text, so screen readers read the words whole and copied text has no hyphens. Frequent hyphens make readers put split words back together, which is harder for some people, including many people with dyslexia. Use hyphenation mainly for justified or narrow text.
+- A Fit to width style does not use hyphenation: each line stays on one line.
+- “Detach Style” removes hyphenation, because a block has no setting to keep it. The notice names it.
+- A style based on another inherits the hyphenation settings as one group: a style that sets its own hyphenation does not keep any of the parent's limits.
+- The CSS is `hyphens: auto`, `hyphenate-limit-chars` and `hyphenate-character`, with the `-webkit-` forms for older Safari. Styles saved before look the same.
 
 #### Indents and paragraph spacing
 
@@ -407,6 +421,7 @@ Built-in patterns:
 - **What is matched:** the text of blocks that use the style as a whole (core Paragraph and Heading blocks, and Typography Stylist blocks). Text that has the style only on a selection is not matched. Text in code, in a fit to width block, and inside HTML tags or attributes is never matched. A match can cross an inline element, for example "N*AS*A", and each piece gets the style.
 - **Your posts do not change:** the plugin applies the rules when the page is shown. Change or remove a rule, and every post follows. The page loads no script, and the screen reader copy of a Typography Stylist block does not change.
 - **A bare date:** "9/22" with no year cannot be told from a fraction, and the Fractions pattern matches it. Write dates with the year, or use a custom pattern.
+- **Quotes in a custom pattern:** the rules run before WordPress makes straight quotes and apostrophes curly. Text that you typed with straight quotes is still straight when a pattern reads it, and the page then shows it curly. To match either form, write both: `"[^"]+"|“[^”]+”`.
 - **Automatic typography across a match:** WordPress changes some characters only when the text around them is in one piece. With a Numbers rule, "3x4" stays "3x4" and does not become "3×4", and an apostrophe directly before a matched number, as in "'90s", can curl the wrong way. This changes only how these characters look, and only in a block with a match.
 - **Shortcodes:** the rules do not run on a block that contains a registered shortcode. This includes a shortcode that is written as text with entities, for example `&#91;gallery&#93;`. The block shows without the rules, and the shortcode works as usual. Text that a shortcode writes is never matched.
 - **Screen readers and part of a word:** Ordinals and Acronyms can put part of a word in a span, for example the "st" in "1st", or "PDF" in "PDFs". A core Paragraph or Heading block has no separate screen reader copy, and some screen readers, for example NVDA, can read such a word in two parts. If this is a problem for your readers, do not use a rule that matches part of a word on that text. The screen reader copy of a Typography Stylist block does not have this problem.

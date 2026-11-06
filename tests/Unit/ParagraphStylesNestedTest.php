@@ -382,6 +382,17 @@ class ParagraphStylesNestedTest extends TestCase {
         $this->assertSame('', \Typost_Paragraph_Styles::nested_css($styles[0], $styles));
     }
 
+    public function test_a_first_line_takes_no_hyphenation_from_its_style() {
+        HtmlApi::setSupported(true);
+        $styles = $this->styles();
+        $styles[0]['nestedRules'] = array(array('styleId' => 4, 'unit' => 'line'));
+        $styles[] = array('id' => 4, 'name' => 'Lead', 'properties' => array('fontWeight' => '700', 'hyphens' => 'auto', 'hyphenateLimitWord' => 6, 'hyphenateCharacter' => '='));
+        $this->assertSame(
+            ".typost-ps-1:not(.typost-fit)::first-line {\n    font-weight: 700;\n}",
+            \Typost_Paragraph_Styles::nested_css($styles[0], $styles)
+        );
+    }
+
     public function test_get_nested_css_is_the_nested_part_of_the_full_css() {
         // The editor reads it after a style changes, so a first line rule that reads the style stays current (#354)
         HtmlApi::setSupported(true);

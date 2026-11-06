@@ -306,6 +306,7 @@ describe('the notice labels', () => {
 			indentAfterSame: true,
 			wordSpacing: 50,
 			textWrap: 'balance',
+			hyphens: 'auto',
 			alignment: 'justify',
 			alignLast: 'center',
 			fontId: 12,

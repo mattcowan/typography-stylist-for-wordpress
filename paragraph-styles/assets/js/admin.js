@@ -199,6 +199,9 @@
 	var LENGTH_FIELDS = ['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'];
 	var FIT_LENGTH_FIELDS = ['spaceBefore', 'spaceAfter'];
 
+	// Hyphenation letter limits (#208), as HYPHENATE_LIMIT_KEYS in ps-utils
+	var HYPHENATE_LIMIT_FIELDS = ['hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter'];
+
 	/**
 	 * Split a stored length ('1.5em', '-24px') into the form's number and
 	 * unit. None gives an empty number and the em unit.
@@ -612,6 +615,11 @@
 		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-case]'), function(el) {
 			el.hidden = el.getAttribute('data-show-for-case').split(/\s+/).indexOf(textCase) === -1;
 		});
+		// Hyphenation (#208): the limits and the character only while it is on
+		var hyphens = field(form, 'hyphens') && field(form, 'hyphens').checked ? 'auto' : '';
+		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-hyphens]'), function(el) {
+			el.hidden = el.getAttribute('data-show-for-hyphens').split(/\s+/).indexOf(hyphens) === -1;
+		});
 		updateColorFields(form);
 	}
 
@@ -734,6 +742,17 @@
 		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
 		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
 
+		// Hyphenation (#208): a limit of 0 (auto) is an empty field
+		var hyphenation = utils ? utils.hyphenationProperties(props) : {};
+		var hyphens = field(form, 'hyphens');
+		if (hyphens) {
+			hyphens.checked = hyphenation.hyphens === 'auto';
+		}
+		HYPHENATE_LIMIT_FIELDS.forEach(function(key) {
+			setInput(form, key, hyphenation[key] || '');
+		});
+		setInput(form, 'hyphenateCharacter', hyphenation.hyphenateCharacter || '');
+
 		// Indents and paragraph spacing (#199)
 		LENGTH_FIELDS.forEach(function(key) {
 			var stored = utils ? utils.normalizeLength(props[key], key === 'firstLineIndent') : props[key];
@@ -807,6 +826,24 @@
 	}
 
 	/**
+	 * A number field where empty has a meaning of its own: '' when empty or
+	 * absent, so validation can tell it from a typed 0. Text the field cannot
+	 * read is NaN: the browser reports an empty value and badInput for it, and
+	 * reading that as empty would save Auto over the author's value.
+	 *
+	 * @param {HTMLElement} form Edit form.
+	 * @param {string}      name Field name.
+	 * @return {number|string} The number, NaN, or ''.
+	 */
+	function optionalNumberOf(form, name) {
+		var input = field(form, name);
+		if (input && input.validity && input.validity.badInput) {
+			return NaN;
+		}
+		return input && input.value.trim() !== '' ? parseFloat(input.value) : '';
+	}
+
+	/**
 	 * Read the edit form's values.
 	 *
 	 * @param {Element} form
@@ -830,6 +867,7 @@
 			return order.indexOf(tag) === -1;
 		}));
 		var fake = field(form, 'fakeSmallCaps');
+		var hyphensBox = field(form, 'hyphens');
 		var sizeInput = field(form, 'fontSize');
 		var afterSame = field(form, 'indentAfterSame');
 		var palette = colorContext().palette;
@@ -864,6 +902,13 @@
 			alignLast: field(form, 'alignLast') ? field(form, 'alignLast').value : '',
 			wordSpacing: numberOf(form, 'wordSpacing'),
 			textWrap: field(form, 'textWrap') ? field(form, 'textWrap').value : '',
+			// Hyphenation (#208). undefined when the form has no such field,
+			// so the save keeps the stored values
+			hyphens: hyphensBox ? (hyphensBox.checked ? 'auto' : '') : undefined,
+			hyphenateLimitWord: optionalNumberOf(form, 'hyphenateLimitWord'),
+			hyphenateLimitBefore: optionalNumberOf(form, 'hyphenateLimitBefore'),
+			hyphenateLimitAfter: optionalNumberOf(form, 'hyphenateLimitAfter'),
+			hyphenateCharacter: field(form, 'hyphenateCharacter') ? field(form, 'hyphenateCharacter').value.trim() : '',
 			// Text color and outline (#215). undefined when the form has no
 			// such field, so the save keeps the stored value
 			textColor: textColor ? textColor.color : undefined,
@@ -945,6 +990,22 @@
 				return { field: key, message: __('Enter a value up to 1000px or 50em.', 'typost-paragraph-styles') };
 			}
 		}
+		// Hyphenation (#208), checked only while it is on and shown, like
+		// the indents: a hidden field is not saved
+		if (values.hyphens === 'auto' && values.sizeMode !== 'fit') {
+			var hyphenUtils = getUtils();
+			for (var h = 0; h < HYPHENATE_LIMIT_FIELDS.length; h++) {
+				var limit = values[HYPHENATE_LIMIT_FIELDS[h]];
+				if (limit !== '' && !(limit >= 1 && limit <= hyphenUtils.HYPHENATE_LIMIT_MAX && Math.floor(limit) === limit)) {
+					return { field: HYPHENATE_LIMIT_FIELDS[h], message: fill(
+						/* translators: %d: largest letter limit */
+						__('Enter a whole number from 1 to %d, or leave it empty.', 'typost-paragraph-styles'), hyphenUtils.HYPHENATE_LIMIT_MAX) };
+				}
+			}
+			if (values.hyphenateCharacter && !hyphenUtils.normalizeHyphenateCharacter(values.hyphenateCharacter)) {
+				return { field: 'hyphenateCharacter', message: __('Enter up to 4 characters with no quotes, backslashes, angle brackets, braces or semicolons, or leave it empty.', 'typost-paragraph-styles') };
+			}
+		}
 		// Text color and outline (#215)
 		var colorChecks = [['textColor', 'textColorCustom'], ['textStrokeColor', 'textStrokeColorCustom']];
 		for (var c = 0; c < colorChecks.length; c++) {
@@ -974,9 +1035,9 @@
 
 	/**
 	 * Turn form values into the editor state that buildPropertiesFromState()
-	 * reads. The form reports initialHang, textCase, alignment, wordSpacing
-	 * and textWrap, so its values win over the stored ones (0, Default and
-	 * Normal included).
+	 * reads. The form reports initialHang, textCase, alignment, wordSpacing,
+	 * textWrap and hyphenation, so its values win over the stored ones (0,
+	 * Default, Normal and off included).
 	 *
 	 * @param {Object} values readEditForm() result.
 	 * @param {string} unit   resolveEditFontSizeUnit(); px makes a fixed
@@ -1011,6 +1072,13 @@
 			alignLast: values.alignLast || '',
 			wordSpacing: Math.round(values.wordSpacing) || 0,
 			textWrap: values.textWrap || '',
+			// Hyphenation (#208); undefined (no field) is carried from the
+			// stored style by buildPropertiesForStyleSave()
+			hyphens: values.hyphens,
+			hyphenateLimitWord: values.hyphenateLimitWord,
+			hyphenateLimitBefore: values.hyphenateLimitBefore,
+			hyphenateLimitAfter: values.hyphenateLimitAfter,
+			hyphenateCharacter: values.hyphenateCharacter,
 			indentStart: values.indentStart || '',
 			indentEnd: values.indentEnd || '',
 			firstLineIndent: values.firstLineIndent || '',
@@ -1121,8 +1189,8 @@
 	/**
 	 * Form values without the settings fit to width hides (PR #329 review).
 	 *
-	 * In fit mode the form hides alignment, the last line, word spacing and
-	 * line breaking, and the CSS writes none of them, but their fields keep
+	 * In fit mode the form hides alignment, the last line, word spacing,
+	 * line breaking and hyphenation (#208), and the CSS writes none of them, but their fields keep
 	 * whatever they held. A fit style sets none of them itself: with no
 	 * parent they are dropped, and a style based on another takes the
 	 * parent's values, so the save stores no override (an empty value would
@@ -1143,6 +1211,12 @@
 			alignLast: p.alignLast || '',
 			wordSpacing: p.wordSpacing || 0,
 			textWrap: p.textWrap || '',
+			// Hyphenation (#208), as a group
+			hyphens: values.hyphens === undefined ? undefined : (p.hyphens === 'auto' ? 'auto' : ''),
+			hyphenateLimitWord: p.hyphenateLimitWord || 0,
+			hyphenateLimitBefore: p.hyphenateLimitBefore || 0,
+			hyphenateLimitAfter: p.hyphenateLimitAfter || 0,
+			hyphenateCharacter: p.hyphenateCharacter || '',
 			// Indents (#199); space before and after stay, fit uses them
 			indentStart: p.indentStart || '',
 			indentEnd: p.indentEnd || '',
@@ -2377,7 +2451,7 @@
 		updateColorFields(form);
 	});
 
-	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"]', function() {
+	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"], .typost-ps-edit-form [data-field="hyphens"]', function() {
 		updateConditionalFields($(this).closest('form')[0]);
 	});
 

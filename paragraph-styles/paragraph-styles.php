@@ -132,6 +132,26 @@ final class Typost_Paragraph_Styles {
 	const TEXT_WRAP_VALUES = array( 'balance', 'pretty' );
 
 	/**
+	 * @var string[] Hyphenation letter limits (#208), in the order
+	 * `hyphenate-limit-chars` writes them (word, before, after). Each is 0
+	 * (auto, the browser's own) or 1..HYPHENATE_LIMIT_MAX. Mirrors
+	 * HYPHENATE_LIMIT_KEYS in ps-utils.js.
+	 */
+	const HYPHENATE_LIMIT_KEYS = array( 'hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter' );
+
+	/**
+	 * @var int Largest hyphenation letter limit (#208). Mirrors
+	 * HYPHENATE_LIMIT_MAX in ps-utils.js and the Edit form's fields.
+	 */
+	const HYPHENATE_LIMIT_MAX = 20;
+
+	/**
+	 * @var int Most characters (code points) in a hyphen character (#208).
+	 * Mirrors HYPHENATE_CHARACTER_MAX in ps-utils.js.
+	 */
+	const HYPHENATE_CHARACTER_MAX = 4;
+
+	/**
 	 * Guard on the alignment rule (#207): a block that sets its own
 	 * alignment keeps it. The Typography Stylist block writes it as an
 	 * inline text-align (also under a style; `text-align:center` saved,
@@ -197,6 +217,8 @@ final class Typost_Paragraph_Styles {
 		// parent's "only after the same style"
 		'firstLineIndent' => array( 'firstLineIndent', 'indentAfterSame' ),
 		'textStrokeWidth' => array( 'textStrokeWidth', 'textStrokeColor', 'textStrokePosition' ),
+		// #208: the limits and the character belong to hyphenation
+		'hyphens'         => array( 'hyphens', 'hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter', 'hyphenateCharacter' ),
 	);
 
 	/**
@@ -678,6 +700,11 @@ final class Typost_Paragraph_Styles {
 				$css_rules[] = 'text-wrap: ' . $props['textWrap'];
 				$css_rules[] = 'text-wrap-mode: inherit';
 			}
+			// Hyphenation (#208). Off writes nothing, so the browser's
+			// `hyphens: manual` keeps soft hyphens working.
+			foreach ( self::hyphenation_declarations( $props ) as $declaration ) {
+				$css_rules[] = $declaration[0] . ': ' . $declaration[1];
+			}
 		}
 
 		// Text color and outline (#215), for fit to width too. A palette
@@ -734,6 +761,138 @@ final class Typost_Paragraph_Styles {
 	 */
 	private static function normalize_text_wrap( $value ) {
 		return is_string( $value ) && in_array( $value, self::TEXT_WRAP_VALUES, true ) ? $value : '';
+	}
+
+	/**
+	 * 'auto' when a style hyphenates (#208), else '' (off: the browser's
+	 * `manual`, which still breaks at soft hyphens). Mirrors
+	 * normalizeHyphens() in ps-utils.js.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return string
+	 */
+	private static function normalize_hyphens( $value ) {
+		return 'auto' === $value ? 'auto' : '';
+	}
+
+	/**
+	 * A hyphenation letter limit as stored (#208): an integer
+	 * 1..HYPHENATE_LIMIT_MAX, or 0 for auto. Mirrors
+	 * normalizeHyphenateLimit() in ps-utils.js.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return int
+	 */
+	private static function normalize_hyphenate_limit( $value ) {
+		// is_numeric() takes trailing whitespace only from PHP 8.0, and never
+		// the wider set the JS twin's \s takes
+		if ( is_string( $value ) ) {
+			$value = self::trim_js_whitespace( $value );
+		}
+		if ( ! is_numeric( $value ) ) {
+			return 0;
+		}
+		$n = (float) $value;
+		if ( ! ( $n >= 1 ) ) {
+			return 0;
+		}
+		return (int) min( floor( $n ), self::HYPHENATE_LIMIT_MAX );
+	}
+
+	/**
+	 * A string without the whitespace around it that JavaScript's trim()
+	 * removes (and its \s matches). These code points are listed because \s
+	 * in PCRE differs under UCP. Null when the string is not valid UTF-8.
+	 *
+	 * @param string $value String.
+	 * @return string|null
+	 */
+	private static function trim_js_whitespace( $value ) {
+		return preg_replace( '/^[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+|[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+$/u', '', $value );
+	}
+
+	/**
+	 * The hyphen character as stored (#208), or '' for the browser's
+	 * default: trimmed, valid UTF-8, 1..HYPHENATE_CHARACTER_MAX code points,
+	 * and none of the characters that could end the CSS string or the
+	 * <style> element (quotes, backslash, angle brackets, braces, semicolon,
+	 * control and line separator characters). Mirrors
+	 * normalizeHyphenateCharacter() in ps-utils.js.
+	 *
+	 * @param mixed $value Stored value.
+	 * @return string
+	 */
+	public static function normalize_hyphenate_character( $value ) {
+		if ( ! is_string( $value ) ) {
+			return '';
+		}
+		$v = self::trim_js_whitespace( $value );
+		if ( ! is_string( $v ) || '' === $v ) {
+			return '';
+		}
+		if ( preg_match( '/["\'\\\\<>{};\x00-\x1F\x7F-\x{9F}\x{2028}\x{2029}]/u', $v ) ) {
+			return '';
+		}
+		$count = preg_match_all( '/./su', $v );
+		return false !== $count && $count <= self::HYPHENATE_CHARACTER_MAX ? $v : '';
+	}
+
+	/**
+	 * A style's hyphenation group as stored (#208): empty when off, else
+	 * `hyphens: 'auto'` plus each limit above 0 and the character when set.
+	 * Mirrors hyphenationProperties() in ps-utils.js.
+	 *
+	 * @param array $props Properties.
+	 * @return array
+	 */
+	private static function hyphenation_properties( $props ) {
+		if ( ! is_array( $props ) || '' === self::normalize_hyphens( isset( $props['hyphens'] ) ? $props['hyphens'] : '' ) ) {
+			return array();
+		}
+		$out = array( 'hyphens' => 'auto' );
+		foreach ( self::HYPHENATE_LIMIT_KEYS as $key ) {
+			$n = self::normalize_hyphenate_limit( isset( $props[ $key ] ) ? $props[ $key ] : 0 );
+			if ( $n > 0 ) {
+				$out[ $key ] = $n;
+			}
+		}
+		$character = self::normalize_hyphenate_character( isset( $props['hyphenateCharacter'] ) ? $props['hyphenateCharacter'] : '' );
+		if ( '' !== $character ) {
+			$out['hyphenateCharacter'] = $character;
+		}
+		return $out;
+	}
+
+	/**
+	 * CSS declarations for a style's hyphenation (#208), as [property,
+	 * value] pairs. `-webkit-hyphens` and `-webkit-hyphenate-character` are
+	 * for Safari before 17. Safari ignores `hyphenate-limit-chars` and uses
+	 * its own limits. Mirrors hyphenationDeclarations() in ps-utils.js.
+	 *
+	 * @param array $props Properties.
+	 * @return array[]
+	 */
+	private static function hyphenation_declarations( $props ) {
+		$h = self::hyphenation_properties( $props );
+		if ( empty( $h ) ) {
+			return array();
+		}
+		$out    = array( array( '-webkit-hyphens', 'auto' ), array( 'hyphens', 'auto' ) );
+		$limits = array();
+		$any    = false;
+		foreach ( self::HYPHENATE_LIMIT_KEYS as $key ) {
+			$n        = isset( $h[ $key ] ) ? $h[ $key ] : 0;
+			$any      = $any || $n > 0;
+			$limits[] = $n > 0 ? (string) $n : 'auto';
+		}
+		if ( $any ) {
+			$out[] = array( 'hyphenate-limit-chars', implode( ' ', $limits ) );
+		}
+		if ( isset( $h['hyphenateCharacter'] ) ) {
+			$out[] = array( '-webkit-hyphenate-character', '"' . $h['hyphenateCharacter'] . '"' );
+			$out[] = array( 'hyphenate-character', '"' . $h['hyphenateCharacter'] . '"' );
+		}
+		return $out;
 	}
 
 	/**
@@ -1847,7 +2006,7 @@ final class Typost_Paragraph_Styles {
 			$declarations = array();
 			foreach ( self::property_declarations( $props ) as $declaration ) {
 				$property = substr( $declaration, 0, (int) strpos( $declaration, ':' ) );
-				if ( in_array( $property, array( '--typost-hang', 'text-wrap', 'text-wrap-mode' ), true ) ) {
+				if ( in_array( $property, array( '--typost-hang', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
 					continue;
 				}
 				if ( 'font-feature-settings' === $property && ! empty( $own_features ) ) {
@@ -3371,8 +3530,9 @@ final class Typost_Paragraph_Styles {
 		// style writes none of them (generate_style_css()), so its card does
 		// not list them either.
 		$is_fit        = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
-		$align_display = '';
-		$wrap_display  = '';
+		$align_display  = '';
+		$wrap_display   = '';
+		$hyphen_display = '';
 		if ( ! $is_fit ) {
 			if ( ! empty( $props['wordSpacing'] ) ) {
 				$word_em = round( $props['wordSpacing'] / 1000, 3 );
@@ -3398,6 +3558,11 @@ final class Typost_Paragraph_Styles {
 				$wrap_display = $wrap_labels[ $props['textWrap'] ];
 			} elseif ( $unsets( 'textWrap' ) ) {
 				$wrap_display = $none;
+			}
+
+			$hyphen_display = self::hyphenation_label( $props );
+			if ( '' === $hyphen_display && $unsets( 'hyphens' ) ) {
+				$hyphen_display = $none;
 			}
 		}
 
@@ -3532,6 +3697,9 @@ final class Typost_Paragraph_Styles {
 		}
 		if ( '' !== $wrap_display ) {
 			$html .= $detail( array( array( __( 'Line Breaking:', 'typost-paragraph-styles' ), $wrap_display, array( 'textWrap' ) ) ) );
+		}
+		if ( '' !== $hyphen_display ) {
+			$html .= $detail( array( array( __( 'Hyphenation:', 'typost-paragraph-styles' ), $hyphen_display, self::BASED_ON_GROUPS['hyphens'] ) ) );
 		}
 		if ( ! empty( $indent_rows ) ) {
 			$html .= $detail( $indent_rows );
@@ -3859,6 +4027,42 @@ final class Typost_Paragraph_Styles {
 			'end'     => __( 'End', 'typost-paragraph-styles' ),
 			'justify' => __( 'Justify', 'typost-paragraph-styles' ),
 		);
+	}
+
+	/**
+	 * The card's Hyphenation value (#208): '' when off, "On", or "On
+	 * (words of 6+ letters, …)" with the limits and character the style sets.
+	 *
+	 * @param array $props Properties.
+	 * @return string
+	 */
+	public static function hyphenation_label( $props ) {
+		$h = self::hyphenation_properties( $props );
+		if ( empty( $h ) ) {
+			return '';
+		}
+		$parts = array();
+		if ( isset( $h['hyphenateLimitWord'] ) ) {
+			/* translators: %d: fewest letters in a word that is hyphenated */
+			$parts[] = sprintf( __( 'words of %d+ letters', 'typost-paragraph-styles' ), $h['hyphenateLimitWord'] );
+		}
+		if ( isset( $h['hyphenateLimitBefore'] ) ) {
+			/* translators: %d: fewest letters before a hyphen */
+			$parts[] = sprintf( __( '%d+ before the hyphen', 'typost-paragraph-styles' ), $h['hyphenateLimitBefore'] );
+		}
+		if ( isset( $h['hyphenateLimitAfter'] ) ) {
+			/* translators: %d: fewest letters after a hyphen */
+			$parts[] = sprintf( __( '%d+ after the hyphen', 'typost-paragraph-styles' ), $h['hyphenateLimitAfter'] );
+		}
+		if ( isset( $h['hyphenateCharacter'] ) ) {
+			/* translators: %s: the character shown at a line break, such as "=" */
+			$parts[] = sprintf( __( 'hyphen “%s”', 'typost-paragraph-styles' ), $h['hyphenateCharacter'] );
+		}
+		if ( empty( $parts ) ) {
+			return __( 'On', 'typost-paragraph-styles' );
+		}
+		/* translators: %s: hyphenation settings, such as "words of 6+ letters, 2+ before the hyphen" */
+		return sprintf( __( 'On (%s)', 'typost-paragraph-styles' ), implode( ', ', $parts ) );
 	}
 
 	/**
@@ -4350,6 +4554,15 @@ final class Typost_Paragraph_Styles {
 			$clean['textStrokeWidth'] = 0;
 		}
 
+		// Hyphenation (#208): off is never stored unless it unsets an
+		// inherited hyphenation; the limits and the character only with it on
+		$hyphenation = self::hyphenation_properties( $raw );
+		if ( ! empty( $hyphenation ) ) {
+			$clean = array_merge( $clean, $hyphenation );
+		} elseif ( $keep_empty && isset( $raw['hyphens'] ) && '' === $raw['hyphens'] ) {
+			$clean['hyphens'] = '';
+		}
+
 		return $clean;
 	}
 
@@ -4605,6 +4818,11 @@ final class Typost_Paragraph_Styles {
 				unset( $props[ $key ] );
 			}
 		}
+		if ( array_key_exists( 'hyphens', $props ) && '' === self::normalize_hyphens( $props['hyphens'] ) ) {
+			foreach ( self::BASED_ON_GROUPS['hyphens'] as $key ) {
+				unset( $props[ $key ] );
+			}
+		}
 		foreach ( $props as $key => $value ) {
 			if ( ! self::is_group_key( $key ) && empty( $value ) ) {
 				unset( $props[ $key ] );
@@ -4652,7 +4870,8 @@ final class Typost_Paragraph_Styles {
 	 * `$full` is the whole look; the result keeps what differs from the
 	 * parent's resolved properties and stores the empty value of each
 	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
-	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent ''), so
+	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent '',
+	 * hyphens ''), so
 	 * the style still does not set it.
 	 * Used when a style gets its first parent (rebase_properties()). Twin of
 	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
@@ -4718,7 +4937,7 @@ final class Typost_Paragraph_Styles {
 
 	/**
 	 * Whether a key belongs to the size, the case, the alignment, the
-	 * first line indent or the outline group.
+	 * first line indent, the outline or the hyphenation group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool
@@ -4744,11 +4963,26 @@ final class Typost_Paragraph_Styles {
 	 * (#215): 'none' with no width, else the width, the color
 	 * (comparable_color()) and the position. Twin: groupSignature().
 	 *
-	 * @param string $lead  'fontSize', 'textCase', 'alignment', 'firstLineIndent' or 'textStrokeWidth'.
+	 * Hyphenation (#208): 'none' when off, else 'auto', the three limits
+	 * (0 = auto) and the character.
+	 *
+	 * @param string $lead  'fontSize', 'textCase', 'alignment', 'firstLineIndent', 'textStrokeWidth' or 'hyphens'.
 	 * @param array  $props Properties.
 	 * @return string
 	 */
 	private static function group_signature( $lead, $props ) {
+		if ( 'hyphens' === $lead ) {
+			$h = self::hyphenation_properties( $props );
+			if ( empty( $h ) ) {
+				return 'none';
+			}
+			$parts = array( 'auto' );
+			foreach ( self::HYPHENATE_LIMIT_KEYS as $key ) {
+				$parts[] = (string) ( isset( $h[ $key ] ) ? $h[ $key ] : 0 );
+			}
+			$parts[] = isset( $h['hyphenateCharacter'] ) ? $h['hyphenateCharacter'] : '';
+			return implode( '|', $parts );
+		}
 		if ( 'firstLineIndent' === $lead ) {
 			$first = self::normalize_length( isset( $props['firstLineIndent'] ) ? $props['firstLineIndent'] : '', true );
 			if ( '' === $first ) {

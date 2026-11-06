@@ -560,6 +560,22 @@
 				"3": {},
 				"4": { "textColor": "#111111", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" }
 			}
+		},
+		{
+			"label": "hyphenation inherits as a group (#208): a child's own hyphenation drops the parent's limits and character, and '' unsets it",
+			"styles": [
+				{ "id": 1, "name": "Body", "properties": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" } },
+				{ "id": 2, "name": "Body Narrow", "basedOn": 1, "properties": { "hyphens": "auto", "hyphenateLimitBefore": 3 } },
+				{ "id": 3, "name": "Body Plain", "basedOn": 1, "properties": { "hyphens": "" } },
+				{ "id": 4, "name": "Body Bold", "basedOn": 1, "properties": { "fontWeight": "700" } },
+				{ "id": 5, "name": "Stray", "basedOn": 1, "properties": { "hyphenateLimitBefore": 3 } }
+			],
+			"expected": {
+				"2": { "hyphens": "auto", "hyphenateLimitBefore": 3 },
+				"3": {},
+				"4": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=", "fontWeight": "700" },
+				"5": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" }
+			}
 		}
 	],
 	"equality": [
@@ -795,7 +811,11 @@
 		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false },
 		{ "label": "a palette color with another saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#990000" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
 		{ "label": "a palette color with no saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
-		{ "label": "two palette colors with the same fallback differ (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "var:preset|color|accent-2|#cc0000" }, "equal": false }
+		{ "label": "two palette colors with the same fallback differ (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "var:preset|color|accent-2|#cc0000" }, "equal": false },
+		{ "label": "a hyphenation limit as number and string (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": "6" }, "equal": true },
+		{ "label": "an unknown hyphens value and no hyphenation (#208)", "key": "hyphens", "a": { "hyphens": "manual", "hyphenateLimitWord": 6 }, "b": {}, "equal": true },
+		{ "label": "another limit differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": 7 }, "equal": false },
+		{ "label": "another hyphen character differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateCharacter": "=" }, "b": { "hyphens": "auto" }, "equal": false }
 	],
 	"css": [
 		{
@@ -1033,6 +1053,24 @@
 			"full": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" },
 			"parent": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee", "textStrokePosition": "behind" },
 			"expected": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" }
+		},
+		{
+			"label": "hyphenation (#208): no hyphenation in the look unsets the parent's with ''",
+			"full": { "fontId": 5 },
+			"parent": { "fontId": 5, "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"expected": { "hyphens": "" }
+		},
+		{
+			"label": "hyphenation (#208): the same limit with a character is the whole group",
+			"full": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" },
+			"parent": { "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"expected": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" }
+		},
+		{
+			"label": "hyphenation (#208): the same settings are no override",
+			"full": { "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"parent": { "hyphens": "auto", "hyphenateLimitWord": "6" },
+			"expected": {}
 		}
 	]
 }

@@ -1389,6 +1389,103 @@ msgstr ""
 msgid "GREP rules"
 msgstr ""
 
+#: includes/admin-tab.php:320
+msgid "Hyphenation"
+msgstr ""
+
+#: includes/admin-tab.php:321
+msgid "Fit to width keeps each line on one line, so a Fit to width style does not use hyphenation."
+msgstr ""
+
+#: includes/admin-tab.php:325
+msgid "Hyphenate"
+msgstr ""
+
+#: includes/admin-tab.php:326
+msgid "Breaks long words at line ends, which evens out the gaps in justified or narrow text. Frequent hyphens make some readers, including many people with dyslexia, put words back together, so use it mainly where it helps. Browsers hyphenate only when they know the page language and have a dictionary for it, and the dictionaries differ by browser; Chrome does not hyphenate capitalized English words. The hyphens are not added to the text, so screen readers and copied text are unchanged. Soft hyphens typed in the text work with hyphenation off too."
+msgstr ""
+
+#: includes/admin-tab.php:330
+msgid "Shortest word to hyphenate (letters)"
+msgstr ""
+
+#: includes/admin-tab.php:331
+#: includes/admin-tab.php:335
+#: includes/admin-tab.php:339
+msgid "Auto"
+msgstr ""
+
+#: includes/admin-tab.php:334
+msgid "Fewest letters before a hyphen"
+msgstr ""
+
+#: includes/admin-tab.php:338
+msgid "Fewest letters after a hyphen"
+msgstr ""
+
+#: includes/admin-tab.php:342
+msgid "Hyphen character"
+msgstr ""
+
+#: includes/admin-tab.php:344
+msgid "Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons."
+msgstr ""
+
+#: includes/admin-tab.php:347
+msgid "Empty means the browser decides. Safari ignores these limits and uses its own."
+msgstr ""
+
+#: paragraph-styles.php:3284
+msgid "Hyphenation:"
+msgstr ""
+
+#. translators: %d: fewest letters in a word that is hyphenated
+#: paragraph-styles.php:3603
+#, php-format
+msgid "words of %d+ letters"
+msgstr ""
+
+#. translators: %d: fewest letters before a hyphen
+#: paragraph-styles.php:3607
+#, php-format
+msgid "%d+ before the hyphen"
+msgstr ""
+
+#. translators: %d: fewest letters after a hyphen
+#: paragraph-styles.php:3611
+#, php-format
+msgid "%d+ after the hyphen"
+msgstr ""
+
+#. translators: %s: the character shown at a line break, such as "="
+#: paragraph-styles.php:3615
+#, php-format
+msgid "hyphen “%s”"
+msgstr ""
+
+#: paragraph-styles.php:3618
+msgid "On"
+msgstr ""
+
+#. translators: %s: hyphenation settings, such as "words of 6+ letters, 2+ before the hyphen"
+#: paragraph-styles.php:3621
+#, php-format
+msgid "On (%s)"
+msgstr ""
+
+#. translators: %d: largest letter limit
+#: assets/js/admin.js:980
+#, js-format
+msgid "Enter a whole number from 1 to %d, or leave it empty."
+msgstr ""
+
+#: assets/js/admin.js:984
+msgid "Enter up to 4 characters with no quotes, backslashes, angle brackets, braces or semicolons, or leave it empty."
+msgstr ""
+
+#: assets/js/editor.js:199
+msgid "hyphenation"
+
 #: includes/class-typost-ps-nested.php:95
 msgid "Words"
 msgstr ""

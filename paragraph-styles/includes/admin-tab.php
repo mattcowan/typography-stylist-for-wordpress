@@ -312,6 +312,43 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 			</fieldset>
 
 			<?php
+			// Hyphenation (#208). Off by default; the letter limits and the
+			// hyphen character show only while it is on. Fit to width keeps
+			// each line on one line, so a fit style writes none of it.
+			?>
+			<fieldset class="typost-ps-edit-group">
+				<legend><?php esc_html_e( 'Hyphenation', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" data-show-for-size="fit"><?php esc_html_e( 'Fit to width keeps each line on one line, so a Fit to width style does not use hyphenation.', 'typost-paragraph-styles' ); ?></p>
+				<div data-show-for-size="inherit fixed responsive">
+					<p class="typost-ps-edit-checkbox">
+						<input type="checkbox" id="typost-ps-edit-hyphens" data-field="hyphens" aria-describedby="typost-ps-edit-hyphens-help" />
+						<label for="typost-ps-edit-hyphens"><?php esc_html_e( 'Hyphenate', 'typost-paragraph-styles' ); ?></label>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-hyphens-help"><?php esc_html_e( 'Breaks long words at line ends, which evens out the gaps in justified or narrow text. Frequent hyphens make some readers, including many people with dyslexia, put words back together, so use it mainly where it helps. Browsers hyphenate only when they know the page language and have a dictionary for it, and the dictionaries differ by browser; Chrome does not hyphenate capitalized English words. The hyphens are not added to the text, so screen readers and copied text are unchanged. Soft hyphens typed in the text work with hyphenation off too.', 'typost-paragraph-styles' ); ?></span>
+					</p>
+					<div class="typost-ps-edit-row" data-show-for-hyphens="auto">
+						<p class="typost-ps-edit-field">
+							<label for="typost-ps-edit-hyphenate-limit-word"><?php esc_html_e( 'Shortest word to hyphenate (letters)', 'typost-paragraph-styles' ); ?></label>
+							<input type="number" id="typost-ps-edit-hyphenate-limit-word" data-field="hyphenateLimitWord" min="1" max="<?php echo esc_attr( Typost_Paragraph_Styles::HYPHENATE_LIMIT_MAX ); ?>" step="1" placeholder="<?php esc_attr_e( 'Auto', 'typost-paragraph-styles' ); ?>" aria-describedby="typost-ps-edit-hyphenate-limits-help" />
+						</p>
+						<p class="typost-ps-edit-field">
+							<label for="typost-ps-edit-hyphenate-limit-before"><?php esc_html_e( 'Fewest letters before a hyphen', 'typost-paragraph-styles' ); ?></label>
+							<input type="number" id="typost-ps-edit-hyphenate-limit-before" data-field="hyphenateLimitBefore" min="1" max="<?php echo esc_attr( Typost_Paragraph_Styles::HYPHENATE_LIMIT_MAX ); ?>" step="1" placeholder="<?php esc_attr_e( 'Auto', 'typost-paragraph-styles' ); ?>" aria-describedby="typost-ps-edit-hyphenate-limits-help" />
+						</p>
+						<p class="typost-ps-edit-field">
+							<label for="typost-ps-edit-hyphenate-limit-after"><?php esc_html_e( 'Fewest letters after a hyphen', 'typost-paragraph-styles' ); ?></label>
+							<input type="number" id="typost-ps-edit-hyphenate-limit-after" data-field="hyphenateLimitAfter" min="1" max="<?php echo esc_attr( Typost_Paragraph_Styles::HYPHENATE_LIMIT_MAX ); ?>" step="1" placeholder="<?php esc_attr_e( 'Auto', 'typost-paragraph-styles' ); ?>" aria-describedby="typost-ps-edit-hyphenate-limits-help" />
+						</p>
+						<p class="typost-ps-edit-field">
+							<label for="typost-ps-edit-hyphenate-character"><?php esc_html_e( 'Hyphen character', 'typost-paragraph-styles' ); ?></label>
+							<input type="text" id="typost-ps-edit-hyphenate-character" data-field="hyphenateCharacter" maxlength="8" size="4" placeholder="<?php esc_attr_e( 'Default', 'typost-paragraph-styles' ); ?>" aria-describedby="typost-ps-edit-hyphenate-character-help" />
+							<span class="typost-ps-edit-help" id="typost-ps-edit-hyphenate-character-help"><?php esc_html_e( 'Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons.', 'typost-paragraph-styles' ); ?></span>
+						</p>
+					</div>
+					<p class="typost-ps-edit-help" id="typost-ps-edit-hyphenate-limits-help" data-show-for-hyphens="auto"><?php esc_html_e( 'Empty means the browser decides. Safari ignores these limits and uses its own.', 'typost-paragraph-styles' ); ?></p>
+				</div>
+			</fieldset>
+
+			<?php
 			// Indents and paragraph spacing (#199). Each value is a number and
 			// a unit (em or px); 0 or empty is none. Fit to width writes no
 			// indents (each line fills the width), so those fields are hidden
