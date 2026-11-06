@@ -72,6 +72,18 @@ class ParagraphStylesHyphenationTest extends TestCase {
         $this->assertSame(array('hyphens' => 'auto', 'hyphenateLimitWord' => 6, 'hyphenateLimitAfter' => 20, 'hyphenateCharacter' => '='), $clean);
     }
 
+    public function test_sanitize_reads_a_limit_with_whitespace_around_it_on_every_php_version() {
+        // is_numeric() accepts trailing whitespace only from PHP 8.0, and no version accepts NBSP
+        foreach (array('6 ', ' 6', "6\n", "\u{00A0}6\u{3000}") as $limit) {
+            $clean = $this->sanitize(array('hyphens' => 'auto', 'hyphenateLimitWord' => $limit));
+            $this->assertSame(array('hyphens' => 'auto', 'hyphenateLimitWord' => 6), $clean, 'limit ' . json_encode($limit));
+        }
+        foreach (array("6\0", "\xff6", '6 6') as $limit) {
+            $clean = $this->sanitize(array('hyphens' => 'auto', 'hyphenateLimitWord' => $limit));
+            $this->assertSame(array('hyphens' => 'auto'), $clean, 'limit ' . json_encode($limit));
+        }
+    }
+
     public function test_sanitize_drops_everything_when_off() {
         $this->assertSame(array(), $this->sanitize(array('hyphens' => 'manual', 'hyphenateLimitWord' => 6, 'hyphenateCharacter' => '=')));
         $this->assertSame(array(), $this->sanitize(array('hyphenateLimitWord' => 6)));

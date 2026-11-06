@@ -36,6 +36,20 @@ describe('CSS (shared fixture)', () => {
 		expect(buildStyleCssBlock({ id: 9, properties: c.properties })).toBe(c.css);
 	});
 
+	test('a fit line and its measuring probe never hyphenate under a style that does', () => {
+		// A fit block can keep a non-fit style's class, so its hyphens: auto is inherited
+		const fs = require('fs');
+		const path = require('path');
+		const block = path.join(__dirname, '../../blocks/typography-stylist');
+		const lineRule = fs.readFileSync(path.join(block, 'style.css'), 'utf8').match(/\.wp-block-typost \.typost-fit \.typost-line \{[^}]*white-space: nowrap[^}]*\}/);
+		expect(lineRule).not.toBeNull();
+		expect(lineRule[0]).toMatch(/-webkit-hyphens: manual;/);
+		expect(lineRule[0]).toMatch(/\bhyphens: manual;/);
+		const edit = fs.readFileSync(path.join(block, 'edit.js'), 'utf8');
+		expect(edit).toMatch(/node\.style\.hyphens = 'manual';/);
+		expect(edit).toMatch(/node\.style\.webkitHyphens = 'manual';/);
+	});
+
 	test('a style without hyphenation writes the same CSS as before', () => {
 		const props = { fontWeight: '700', textWrap: 'balance', wordSpacing: 20 };
 		expect(buildStyleCssBlock({ id: 9, properties: props })).not.toMatch(/hyphen/);

@@ -9,6 +9,22 @@
 			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
 		},
 		{
+			"label": "a limit with JavaScript whitespace around it, which PHP's is_numeric() alone rejects",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": " 6　"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 6 auto auto;\n}"
+		},
+		{
+			"label": "a limit with a NUL byte is not a number in either generator",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": "6\u0000"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
+		},
+		{
 			"label": "off writes nothing, also with limits left over",
 			"properties": {
 				"hyphens": "",

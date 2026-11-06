@@ -1340,7 +1340,7 @@
 
 	// The value a style based on another stores to unset a property its
 	// parent sets. The groups use fontSize 'inherit', textCase '',
-	// alignment '' and firstLineIndent ''.
+	// alignment '', firstLineIndent '' and hyphens ''.
 	// Mirrors EMPTY_PROPERTY_VALUES in PHP.
 	var EMPTY_PROPERTY_VALUES = {
 		fontId: 0,

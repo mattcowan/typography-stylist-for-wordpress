@@ -823,6 +823,19 @@
 	}
 
 	/**
+	 * A number field where empty has a meaning of its own: '' when empty or
+	 * absent, so validation can tell it from a typed 0.
+	 *
+	 * @param {HTMLElement} form Edit form.
+	 * @param {string}      name Field name.
+	 * @return {number|string} The number, or ''.
+	 */
+	function optionalNumberOf(form, name) {
+		var input = field(form, name);
+		return input && input.value.trim() !== '' ? parseFloat(input.value) : '';
+	}
+
+	/**
 	 * Read the edit form's values.
 	 *
 	 * @param {Element} form
@@ -884,9 +897,9 @@
 			// Hyphenation (#208). undefined when the form has no such field,
 			// so the save keeps the stored values
 			hyphens: hyphensBox ? (hyphensBox.checked ? 'auto' : '') : undefined,
-			hyphenateLimitWord: numberOf(form, 'hyphenateLimitWord'),
-			hyphenateLimitBefore: numberOf(form, 'hyphenateLimitBefore'),
-			hyphenateLimitAfter: numberOf(form, 'hyphenateLimitAfter'),
+			hyphenateLimitWord: optionalNumberOf(form, 'hyphenateLimitWord'),
+			hyphenateLimitBefore: optionalNumberOf(form, 'hyphenateLimitBefore'),
+			hyphenateLimitAfter: optionalNumberOf(form, 'hyphenateLimitAfter'),
 			hyphenateCharacter: field(form, 'hyphenateCharacter') ? field(form, 'hyphenateCharacter').value.trim() : '',
 			// Text color and outline (#215). undefined when the form has no
 			// such field, so the save keeps the stored value
@@ -974,7 +987,7 @@
 			var hyphenUtils = getUtils();
 			for (var h = 0; h < HYPHENATE_LIMIT_FIELDS.length; h++) {
 				var limit = values[HYPHENATE_LIMIT_FIELDS[h]];
-				if (limit && !(limit >= 1 && limit <= hyphenUtils.HYPHENATE_LIMIT_MAX && Math.floor(limit) === limit)) {
+				if (limit !== '' && !(limit >= 1 && limit <= hyphenUtils.HYPHENATE_LIMIT_MAX && Math.floor(limit) === limit)) {
 					return { field: HYPHENATE_LIMIT_FIELDS[h], message: fill(
 						/* translators: %d: largest letter limit */
 						__('Enter a whole number from 1 to %d, or leave it empty.', 'typost-paragraph-styles'), hyphenUtils.HYPHENATE_LIMIT_MAX) };

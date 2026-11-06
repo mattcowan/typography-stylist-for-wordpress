@@ -1428,8 +1428,8 @@ msgid "Hyphen character"
 msgstr "Caractère de césure"
 
 #: includes/admin-tab.php:344
-msgid "Empty uses the hyphen of the language. Up to 4 characters, no quotes or backslashes."
-msgstr "Vide : le trait d’union de la langue. Jusqu’à 4 caractères, sans guillemets ni barres obliques inverses."
+msgid "Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons."
+msgstr "Vide : le trait d’union de la langue. Jusqu’à 4 caractères, sans guillemets, barres obliques inverses, chevrons, accolades ni points-virgules."
 
 #: includes/admin-tab.php:347
 msgid "Empty means the browser decides. Safari ignores these limits and uses its own."

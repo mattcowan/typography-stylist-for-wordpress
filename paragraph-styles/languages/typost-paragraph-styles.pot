@@ -1428,7 +1428,7 @@ msgid "Hyphen character"
 msgstr ""
 
 #: includes/admin-tab.php:344
-msgid "Empty uses the hyphen of the language. Up to 4 characters, no quotes or backslashes."
+msgid "Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons."
 msgstr ""
 
 #: includes/admin-tab.php:347

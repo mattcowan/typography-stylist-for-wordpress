@@ -1092,6 +1092,11 @@ describe('hyphenation (#208)', () => {
 		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateLimitWord' });
 		setField(form, 'hyphenateLimitWord', '2.5');
 		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateLimitWord' });
+		// 0 is outside the range, and only an empty field means the browser's own
+		setField(form, 'hyphenateLimitWord', '0');
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateLimitWord' });
+		setField(form, 'hyphenateLimitWord', '');
+		expect(validateEditValues(readEditForm(form), { baseline })).toBeNull();
 		setField(form, 'hyphenateLimitWord', '6');
 		setField(form, 'hyphenateCharacter', '"');
 		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateCharacter' });

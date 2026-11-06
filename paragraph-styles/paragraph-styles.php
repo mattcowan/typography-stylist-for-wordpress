@@ -758,6 +758,11 @@ final class Typost_Paragraph_Styles {
 	 * @return int
 	 */
 	private static function normalize_hyphenate_limit( $value ) {
+		// is_numeric() takes trailing whitespace only from PHP 8.0, and never
+		// the wider set the JS twin's \s takes
+		if ( is_string( $value ) ) {
+			$value = self::trim_js_whitespace( $value );
+		}
 		if ( ! is_numeric( $value ) ) {
 			return 0;
 		}
@@ -766,6 +771,18 @@ final class Typost_Paragraph_Styles {
 			return 0;
 		}
 		return (int) min( floor( $n ), self::HYPHENATE_LIMIT_MAX );
+	}
+
+	/**
+	 * A string without the whitespace around it that JavaScript's trim()
+	 * removes (and its \s matches). These code points are listed because \s
+	 * in PCRE differs under UCP. Null when the string is not valid UTF-8.
+	 *
+	 * @param string $value String.
+	 * @return string|null
+	 */
+	private static function trim_js_whitespace( $value ) {
+		return preg_replace( '/^[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+|[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+$/u', '', $value );
 	}
 
 	/**
@@ -783,8 +800,7 @@ final class Typost_Paragraph_Styles {
 		if ( ! is_string( $value ) ) {
 			return '';
 		}
-		// The characters JavaScript's trim() removes
-		$v = preg_replace( '/^[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+|[\\x09-\\x0D\\x20\\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+$/u', '', $value );
+		$v = self::trim_js_whitespace( $value );
 		if ( ! is_string( $v ) || '' === $v ) {
 			return '';
 		}
@@ -4381,7 +4397,8 @@ final class Typost_Paragraph_Styles {
 	 * `$full` is the whole look; the result keeps what differs from the
 	 * parent's resolved properties and stores the empty value of each
 	 * property the parent sets and the look does not (EMPTY_PROPERTY_VALUES,
-	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent ''), so
+	 * fontSize 'inherit', textCase '', alignment '', firstLineIndent '',
+	 * hyphens ''), so
 	 * the style still does not set it.
 	 * Used when a style gets its first parent (rebase_properties()). Twin of
 	 * computeStyleOverrides() in ps-utils.js; both read the `overrides`
@@ -4447,7 +4464,7 @@ final class Typost_Paragraph_Styles {
 
 	/**
 	 * Whether a key belongs to the size, the case, the alignment, the
-	 * first line indent or the outline group.
+	 * first line indent, the outline or the hyphenation group.
 	 *
 	 * @param string $key Property key.
 	 * @return bool

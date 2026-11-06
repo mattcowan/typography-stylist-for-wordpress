@@ -341,7 +341,7 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 						<p class="typost-ps-edit-field">
 							<label for="typost-ps-edit-hyphenate-character"><?php esc_html_e( 'Hyphen character', 'typost-paragraph-styles' ); ?></label>
 							<input type="text" id="typost-ps-edit-hyphenate-character" data-field="hyphenateCharacter" maxlength="8" size="4" placeholder="<?php esc_attr_e( 'Default', 'typost-paragraph-styles' ); ?>" aria-describedby="typost-ps-edit-hyphenate-character-help" />
-							<span class="typost-ps-edit-help" id="typost-ps-edit-hyphenate-character-help"><?php esc_html_e( 'Empty uses the hyphen of the language. Up to 4 characters, no quotes or backslashes.', 'typost-paragraph-styles' ); ?></span>
+							<span class="typost-ps-edit-help" id="typost-ps-edit-hyphenate-character-help"><?php esc_html_e( 'Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons.', 'typost-paragraph-styles' ); ?></span>
 						</p>
 					</div>
 					<p class="typost-ps-edit-help" id="typost-ps-edit-hyphenate-limits-help" data-show-for-hyphens="auto"><?php esc_html_e( 'Empty means the browser decides. Safari ignores these limits and uses its own.', 'typost-paragraph-styles' ); ?></p>

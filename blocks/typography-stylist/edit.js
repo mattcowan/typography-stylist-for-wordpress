@@ -867,6 +867,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		node.style.minWidth = '0';
 		node.style.maxWidth = 'none';
 		node.style.textIndent = '0';
+		// As on the fit lines (style.css): a style's hyphenation must not give
+		// the min-content word measurement below extra break points (#208).
+		node.style.webkitHyphens = 'manual';
+		node.style.hyphens = 'manual';
 		node.style.position = 'absolute';
 		node.style.left = '-9999px';
 		node.style.top = '0';

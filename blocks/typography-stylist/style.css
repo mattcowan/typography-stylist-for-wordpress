@@ -171,11 +171,16 @@
  * widths with the rendered font size (Fraunces' opsz made lines run
  * ~17% over), so widths must scale linearly for the stored ratio to
  * hold at every container width. A manually chosen opsz axis value
- * (variable-font sliders) is size-independent and still works. */
+ * (variable-font sliders) is size-independent and still works.
+ * hyphens: a fit block can keep the class of a style that hyphenates (#208).
+ * A line is measured whole, so it must not hyphenate when it wraps at the
+ * zoom floor below. Soft hyphens typed in the text still work. */
 .wp-block-typost .typost-fit .typost-line {
 	display: block;
 	white-space: nowrap;
 	font-optical-sizing: none;
+	-webkit-hyphens: manual;
+	hyphens: manual;
 }
 
 /* Fit-to-width lines grow with browser zoom (#235).

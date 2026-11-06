@@ -1428,8 +1428,8 @@ msgid "Hyphen character"
 msgstr "Carácter de guion"
 
 #: includes/admin-tab.php:344
-msgid "Empty uses the hyphen of the language. Up to 4 characters, no quotes or backslashes."
-msgstr "Vacío usa el guion del idioma. Hasta 4 caracteres, sin comillas ni barras invertidas."
+msgid "Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons."
+msgstr "Vacío usa el guion del idioma. Hasta 4 caracteres, sin comillas, barras invertidas, corchetes angulares, llaves ni puntos y coma."
 
 #: includes/admin-tab.php:347
 msgid "Empty means the browser decides. Safari ignores these limits and uses its own."
