@@ -867,6 +867,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		node.style.minWidth = '0';
 		node.style.maxWidth = 'none';
 		node.style.textIndent = '0';
+		// As on the fit lines (style.css): a style's hyphenation must not give
+		// the min-content word measurement below extra break points (#208).
+		node.style.webkitHyphens = 'manual';
+		node.style.hyphens = 'manual';
 		node.style.position = 'absolute';
 		node.style.left = '-9999px';
 		node.style.top = '0';
@@ -906,6 +910,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// Inline spans otherwise ride along: their own fonts, weights,
 				// features and variation settings all affect the width.
 				node.querySelectorAll('[data-fontsize]').forEach(s => { s.style.fontSize = ''; });
+				// As on the frontend: a span's own style does not hyphenate here (#208)
+				node.querySelectorAll('*').forEach((s) => {
+					s.style.setProperty('-webkit-hyphens', 'manual', 'important');
+					s.style.setProperty('hyphens', 'manual', 'important');
+				});
 				const width = node.getBoundingClientRect().width;
 				// A hung line starts left of the edge, so it must fill the
 				// width plus its hang (#242). Same alignment test as the CSS.

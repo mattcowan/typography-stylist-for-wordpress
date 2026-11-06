@@ -110,7 +110,11 @@ class ExportRegistryTest extends ExportTestCase {
         $this->assertStringContainsString('foreach ( self::SPACING_PROPERTIES as $key )', substr($source, $start, $end - $start));
         $this->assertSame(1, preg_match("/const SPACING_PROPERTIES = array\\(([^)]*)\\)/", $source, $looped));
         preg_match_all("/'([A-Za-z]+)'/", $looped[1], $l);
-        return array_values(array_unique(array_merge($m[1], $l[1])));
+        // The hyphenation group (#208) is stored through hyphenation_properties()
+        $this->assertStringContainsString('self::hyphenation_properties( $raw )', substr($source, $start, $end - $start));
+        $this->assertSame(1, preg_match("/'hyphens' *=> array\\(([^)]*)\\)/", $source, $hyphens));
+        preg_match_all("/'([A-Za-z]+)'/", $hyphens[1], $h);
+        return array_values(array_unique(array_merge($m[1], $l[1], $h[1])));
     }
 
     /** One style that sets every property, as the editors would store it. */
@@ -136,6 +140,11 @@ class ExportRegistryTest extends ExportTestCase {
             'alignLast'             => 'center',
             'wordSpacing'           => 120,
             'textWrap'              => 'balance',
+            'hyphens'               => 'auto',
+            'hyphenateLimitWord'    => 6,
+            'hyphenateLimitBefore'  => 2,
+            'hyphenateLimitAfter'   => 3,
+            'hyphenateCharacter'    => '=',
             'indentStart'           => '2em',
             'indentEnd'             => '12px',
             'firstLineIndent'       => '1.5em',
@@ -184,6 +193,7 @@ class ExportRegistryTest extends ExportTestCase {
             'alignment'             => '',
             'wordSpacing'           => 0,
             'textWrap'              => '',
+            'hyphens'               => '',
             'indentStart'           => '',
             'indentEnd'             => '',
             'firstLineIndent'       => '',
