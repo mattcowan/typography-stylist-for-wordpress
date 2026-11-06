@@ -296,7 +296,7 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, indents, and paragraph spacing.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, hyphenation, indents, and paragraph spacing.
 text color, and outline.
 
 1. Set the typography of some text in either editor.
@@ -318,6 +318,20 @@ A style can also set how its text is aligned, how wide the spaces between words 
 - A Fit to width style uses none of these settings: fit sets the width of each line itself.
 - A centered or end-aligned style with a First Letter Hang does not hang the first letter, as for a centered block.
 - “Detach Style” keeps the alignment: the block gets it as its own alignment, unless the block already has one. Start and End become left or right, by the text direction. A core Paragraph or Heading block does not keep Justify, because WordPress has no justify alignment for these blocks. Word spacing and line breaking are removed, because a block has no setting to keep them.
+
+#### Hyphenation
+
+Since v2.3.6, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
+
+- **Hyphenate:** on or off. The default is off. Off writes no CSS, so the browser's own setting applies and soft hyphens that you type in the text (`&shy;`) still work.
+- **Shortest word to hyphenate,** **fewest letters before a hyphen** and **fewest letters after a hyphen:** 1 to 20 letters each. An empty field lets the browser decide. Chrome and Firefox use these limits; Safari ignores them and uses its own.
+- **Hyphen character:** the character shown at the end of a broken line. An empty field uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons.
+- **Language:** a browser hyphenates only when it knows the language of the text and has a dictionary for that language. WordPress themes print the site language on the page, so most text has one. The dictionaries differ by browser: for example, Chrome has none for Polish, Finnish, Catalan or Turkish, while Firefox and Safari do. Chrome never hyphenates English words that start with a capital letter, so a heading in Title Case is not hyphenated there.
+- **Accessibility:** the hyphens are a rendering effect. They are not in the text, so screen readers read the words whole and copied text has no hyphens. Frequent hyphens make readers put split words back together, which is harder for some people, including many people with dyslexia. Use hyphenation mainly for justified or narrow text.
+- A Fit to width style does not use hyphenation: each line stays on one line.
+- “Detach Style” removes hyphenation, because a block has no setting to keep it. The notice names it.
+- A style based on another inherits the hyphenation settings as one group: a style that sets its own hyphenation does not keep any of the parent's limits.
+- The CSS is `hyphens: auto`, `hyphenate-limit-chars` and `hyphenate-character`, with the `-webkit-` forms for older Safari. Styles saved before look the same.
 
 #### Indents and paragraph spacing
 

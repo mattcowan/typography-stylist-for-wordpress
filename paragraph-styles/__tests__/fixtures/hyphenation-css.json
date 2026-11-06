@@ -1,0 +1,125 @@
+{
+	"_comment": "Paragraph style CSS for hyphenation (#208). Read by hyphenation.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesHyphenationTest.php (generate_style_css), so both generators are held to the same text. css is the whole output for style id 9; an empty string means the style writes no CSS.",
+	"cases": [
+		{
+			"label": "on only: both hyphens declarations",
+			"properties": {
+				"hyphens": "auto"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
+		},
+		{
+			"label": "off writes nothing, also with limits left over",
+			"properties": {
+				"hyphens": "",
+				"hyphenateLimitWord": 6,
+				"hyphenateCharacter": "="
+			},
+			"css": ""
+		},
+		{
+			"label": "an unknown hyphens value is off",
+			"properties": {
+				"hyphens": "manual",
+				"hyphenateLimitWord": 6
+			},
+			"css": ""
+		},
+		{
+			"label": "all three limits and a character",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": 6,
+				"hyphenateLimitBefore": 3,
+				"hyphenateLimitAfter": 2,
+				"hyphenateCharacter": "="
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 6 3 2;\n    -webkit-hyphenate-character: \"=\";\n    hyphenate-character: \"=\";\n}"
+		},
+		{
+			"label": "one limit: the others are auto",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitBefore": 3
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: auto 3 auto;\n}"
+		},
+		{
+			"label": "limits as strings, above the cap, zero and negative",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": "7",
+				"hyphenateLimitBefore": 99,
+				"hyphenateLimitAfter": -2
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 7 20 auto;\n}"
+		},
+		{
+			"label": "a fractional limit is floored",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": 5.9
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 5 auto auto;\n}"
+		},
+		{
+			"label": "a non-ASCII character of several code points",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateCharacter": "‐→"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    -webkit-hyphenate-character: \"‐→\";\n    hyphenate-character: \"‐→\";\n}"
+		},
+		{
+			"label": "a character with a quote is dropped",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateCharacter": "\""
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
+		},
+		{
+			"label": "a character that is too long is dropped",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateCharacter": "-----"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
+		},
+		{
+			"label": "a boolean limit is ignored",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": true
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n}"
+		},
+		{
+			"label": "after word spacing and line breaking, before the color",
+			"properties": {
+				"fontWeight": "400",
+				"wordSpacing": 50,
+				"textWrap": "pretty",
+				"hyphens": "auto",
+				"hyphenateLimitWord": 6,
+				"textColor": "#112233",
+				"alignment": "justify"
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n    word-spacing: 0.05em;\n    text-wrap: pretty;\n    text-wrap-mode: inherit;\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 6 auto auto;\n    color: #112233;\n}\n\n.typost-ps-9:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id]:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit) {\n    text-align: justify;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "fit to width writes no hyphenation",
+			"properties": {
+				"fontSize": "fit",
+				"fontSizeUnit": "rem",
+				"fontSizeMin": 16,
+				"fontSizePreferred": 32,
+				"fontSizeMax": 64,
+				"fitMaxSize": 0,
+				"hyphens": "auto",
+				"hyphenateLimitWord": 6
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1rem, 2rem + 3vw, 4rem);\n}"
+		}
+	]
+}

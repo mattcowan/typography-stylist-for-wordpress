@@ -1388,3 +1388,101 @@ msgstr "« Mettre la première ligne en retrait seulement après un paragraphe d
 #: assets/js/editor.js:200
 msgid "GREP rules"
 msgstr "règles GREP"
+
+#: includes/admin-tab.php:320
+msgid "Hyphenation"
+msgstr "Césure"
+
+#: includes/admin-tab.php:321
+msgid "Fit to width keeps each line on one line, so a Fit to width style does not use hyphenation."
+msgstr "L’ajustement à la largeur garde chaque ligne sur une seule ligne : un style Ajuster à la largeur n’utilise donc pas la césure."
+
+#: includes/admin-tab.php:325
+msgid "Hyphenate"
+msgstr "Césure automatique"
+
+#: includes/admin-tab.php:326
+msgid "Breaks long words at line ends, which evens out the gaps in justified or narrow text. Frequent hyphens make some readers, including many people with dyslexia, put words back together, so use it mainly where it helps. Browsers hyphenate only when they know the page language and have a dictionary for it, and the dictionaries differ by browser; Chrome does not hyphenate capitalized English words. The hyphens are not added to the text, so screen readers and copied text are unchanged. Soft hyphens typed in the text work with hyphenation off too."
+msgstr "Coupe les mots longs en fin de ligne, ce qui égalise les espaces dans un texte justifié ou étroit. Des césures fréquentes obligent certains lecteurs, dont beaucoup de personnes dyslexiques, à recomposer les mots : utilisez-la surtout là où elle aide. Les navigateurs ne coupent les mots que s’ils connaissent la langue de la page et ont un dictionnaire pour elle, et les dictionnaires diffèrent selon le navigateur ; Chrome ne coupe pas les mots anglais qui commencent par une majuscule. Les traits d’union ne sont pas ajoutés au texte : les lecteurs d’écran et le texte copié ne changent pas. Les traits d’union conditionnels saisis dans le texte fonctionnent aussi quand la césure est désactivée."
+
+#: includes/admin-tab.php:330
+msgid "Shortest word to hyphenate (letters)"
+msgstr "Mot le plus court à couper (lettres)"
+
+#: includes/admin-tab.php:331
+#: includes/admin-tab.php:335
+#: includes/admin-tab.php:339
+msgid "Auto"
+msgstr "Auto"
+
+#: includes/admin-tab.php:334
+msgid "Fewest letters before a hyphen"
+msgstr "Lettres minimum avant le trait d’union"
+
+#: includes/admin-tab.php:338
+msgid "Fewest letters after a hyphen"
+msgstr "Lettres minimum après le trait d’union"
+
+#: includes/admin-tab.php:342
+msgid "Hyphen character"
+msgstr "Caractère de césure"
+
+#: includes/admin-tab.php:344
+msgid "Empty uses the hyphen of the language. Up to 4 characters, no quotes or backslashes."
+msgstr "Vide : le trait d’union de la langue. Jusqu’à 4 caractères, sans guillemets ni barres obliques inverses."
+
+#: includes/admin-tab.php:347
+msgid "Empty means the browser decides. Safari ignores these limits and uses its own."
+msgstr "Vide : le navigateur décide. Safari ignore ces limites et applique les siennes."
+
+#: paragraph-styles.php:3284
+msgid "Hyphenation:"
+msgstr "Césure :"
+
+#. translators: %d: fewest letters in a word that is hyphenated
+#: paragraph-styles.php:3603
+#, php-format
+msgid "words of %d+ letters"
+msgstr "mots de %d lettres ou plus"
+
+#. translators: %d: fewest letters before a hyphen
+#: paragraph-styles.php:3607
+#, php-format
+msgid "%d+ before the hyphen"
+msgstr "%d ou plus avant le trait d’union"
+
+#. translators: %d: fewest letters after a hyphen
+#: paragraph-styles.php:3611
+#, php-format
+msgid "%d+ after the hyphen"
+msgstr "%d ou plus après le trait d’union"
+
+#. translators: %s: the character shown at a line break, such as "="
+#: paragraph-styles.php:3615
+#, php-format
+msgid "hyphen “%s”"
+msgstr "trait d’union « %s »"
+
+#: paragraph-styles.php:3618
+msgid "On"
+msgstr "Activée"
+
+#. translators: %s: hyphenation settings, such as "words of 6+ letters, 2+ before the hyphen"
+#: paragraph-styles.php:3621
+#, php-format
+msgid "On (%s)"
+msgstr "Activée (%s)"
+
+#. translators: %d: largest letter limit
+#: assets/js/admin.js:980
+#, js-format
+msgid "Enter a whole number from 1 to %d, or leave it empty."
+msgstr "Saisissez un nombre entier de 1 à %d, ou laissez le champ vide."
+
+#: assets/js/admin.js:984
+msgid "Enter up to 4 characters with no quotes, backslashes, angle brackets, braces or semicolons, or leave it empty."
+msgstr "Saisissez jusqu’à 4 caractères sans guillemets, barres obliques inverses, chevrons, accolades ni points-virgules, ou laissez le champ vide."
+
+#: assets/js/editor.js:199
+msgid "hyphenation"
+msgstr "césure"

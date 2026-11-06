@@ -196,6 +196,7 @@
 			indentAfterSame: __('“Indent the first line only after a paragraph with the same style”', 'typost-paragraph-styles'),
 			wordSpacing: __('word spacing', 'typost-paragraph-styles'),
 			textWrap: __('line breaking', 'typost-paragraph-styles'),
+			hyphens: __('hyphenation', 'typost-paragraph-styles'),
 			alignment: __('justified alignment', 'typost-paragraph-styles'),
 			alignLast: __('last line alignment', 'typost-paragraph-styles'),
 			grepRules: __('GREP rules', 'typost-paragraph-styles'),

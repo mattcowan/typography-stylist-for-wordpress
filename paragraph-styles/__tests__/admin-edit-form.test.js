@@ -90,6 +90,18 @@ function buildTemplate() {
 					<option value="">Normal</option><option value="balance">Balance lines</option><option value="pretty">Avoid short last lines</option>
 				</select>
 			</div>
+			<p data-show-for-size="fit">Fit uses no hyphenation</p>
+			<div data-show-for-size="inherit fixed responsive">
+				<input type="checkbox" id="typost-ps-edit-hyphens" data-field="hyphens" aria-describedby="typost-ps-edit-hyphens-help" />
+				<label for="typost-ps-edit-hyphens">Hyphenate</label>
+				<span id="typost-ps-edit-hyphens-help">Browsers hyphenate only when they know the page language</span>
+				<div data-show-for-hyphens="auto">
+					<input type="number" data-field="hyphenateLimitWord" min="1" max="20" step="1" />
+					<input type="number" data-field="hyphenateLimitBefore" min="1" max="20" step="1" />
+					<input type="number" data-field="hyphenateLimitAfter" min="1" max="20" step="1" />
+					<input type="text" data-field="hyphenateCharacter" maxlength="8" />
+				</div>
+			</div>
 			${['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'].map((key) => `
 				<p${key.indexOf('space') === 0 ? '' : ' data-show-for-size="inherit fixed responsive"'}>
 					<input type="number" id="typost-ps-edit-${key}" data-field="${key}" step="any" />
@@ -1026,5 +1038,76 @@ describe('indents and paragraph spacing (#199)', () => {
 		expect(buildEditPayload(readEditForm(form), baseline, styles[1], 'rem', styles).properties).toEqual({
 			fontWeight: '700', firstLineIndent: '', spaceAfter: '',
 		});
+	});
+});
+
+describe('hyphenation (#208)', () => {
+	const STYLE = {
+		id: 7,
+		name: 'Body – Justified',
+		properties: { fontWeight: '400', alignment: 'justify', hyphens: 'auto', hyphenateLimitWord: 6, hyphenateLimitAfter: 3, hyphenateCharacter: '=' },
+	};
+
+	test('the form fills from the style and an untouched form sends no properties', () => {
+		const { form, baseline } = openForm(STYLE);
+		expect(form.querySelector('[data-field="hyphens"]').checked).toBe(true);
+		expect(form.querySelector('[data-field="hyphenateLimitWord"]').value).toBe('6');
+		expect(form.querySelector('[data-field="hyphenateLimitBefore"]').value).toBe('');
+		expect(form.querySelector('[data-field="hyphenateCharacter"]').value).toBe('=');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem')).toEqual({ name: 'Body – Justified' });
+	});
+
+	test('turning it on stores it, and the limits show only while it is on', () => {
+		const style = { id: 7, name: 'Body', properties: { fontWeight: '400' } };
+		const { form, baseline } = openForm(style);
+		const limits = form.querySelector('[data-show-for-hyphens]');
+		expect(limits.hidden).toBe(true);
+		setField(form, 'hyphens', true);
+		updateConditionalFields(form);
+		expect(limits.hidden).toBe(false);
+		setField(form, 'hyphenateLimitBefore', '2');
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem').properties).toEqual({
+			fontWeight: '400', hyphens: 'auto', hyphenateLimitBefore: 2,
+		});
+	});
+
+	test('turning it off removes the whole group, also the limits left in the hidden fields', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'hyphens', false);
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({ fontWeight: '400', alignment: 'justify' });
+	});
+
+	test('an empty limit or character is the browser’s own', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'hyphenateLimitWord', '');
+		setField(form, 'hyphenateCharacter', '');
+		expect(buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties).toEqual({
+			fontWeight: '400', alignment: 'justify', hyphens: 'auto', hyphenateLimitAfter: 3,
+		});
+	});
+
+	test('validation: a limit out of range and a character that could end the CSS string', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'hyphenateLimitWord', '25');
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateLimitWord' });
+		setField(form, 'hyphenateLimitWord', '2.5');
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateLimitWord' });
+		setField(form, 'hyphenateLimitWord', '6');
+		setField(form, 'hyphenateCharacter', '"');
+		expect(validateEditValues(readEditForm(form), { baseline })).toMatchObject({ field: 'hyphenateCharacter' });
+		// Off: the hidden fields are not saved, so they do not block Save
+		setField(form, 'hyphens', false);
+		expect(validateEditValues(readEditForm(form), { baseline })).toBeNull();
+	});
+
+	test('fit to width stores no hyphenation (it hides the fields)', () => {
+		const { form, baseline } = openForm(STYLE);
+		setField(form, 'sizeMode', 'fit');
+		setField(form, 'fontSizeMin', '16');
+		setField(form, 'fontSizePreferred', '32');
+		setField(form, 'fontSizeMax', '64');
+		const props = buildEditPayload(readEditForm(form), baseline, STYLE, 'rem').properties;
+		expect(props.fontSize).toBe('fit');
+		expect(Object.keys(props).filter((key) => /hyphen/i.test(key))).toEqual([]);
 	});
 });

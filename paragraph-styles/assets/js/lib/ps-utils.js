@@ -222,6 +222,94 @@
 		return typeof value === 'string' && TEXT_WRAP_VALUES.indexOf(value) !== -1 ? value : '';
 	}
 
+	// Hyphenation (#208). The three letter limits of hyphenate-limit-chars
+	// in the order CSS writes them, each 0 (= auto, the browser's own) or
+	// 1..HYPHENATE_LIMIT_MAX. Mirror HYPHENATE_LIMIT_KEYS /
+	// HYPHENATE_LIMIT_MAX / HYPHENATE_CHARACTER_MAX in PHP.
+	var HYPHENATE_LIMIT_KEYS = ['hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter'];
+	var HYPHENATE_LIMIT_MAX = 20;
+	var HYPHENATE_CHARACTER_MAX = 4;
+
+	/** 'auto' when the style hyphenates, else '' (off: the browser's manual). */
+	function normalizeHyphens(value) {
+		return value === 'auto' ? 'auto' : '';
+	}
+
+	/** A letter limit as stored: an integer 1..HYPHENATE_LIMIT_MAX, or 0 for auto. */
+	function normalizeHyphenateLimit(value) {
+		// PHP is_numeric(): a number or a numeric string, never a boolean
+		if (typeof value === 'string' ? !/^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) : typeof value !== 'number') return 0;
+		var n = Number(value);
+		if (!(n >= 1)) return 0;
+		return Math.min(Math.floor(n), HYPHENATE_LIMIT_MAX);
+	}
+
+	/**
+	 * The hyphen character as stored, or '' for the browser's default:
+	 * trimmed, 1..HYPHENATE_CHARACTER_MAX code points, and none of the
+	 * characters that could end the CSS string or the <style> element
+	 * (quotes, backslash, angle brackets, braces, semicolon, control and
+	 * line separator characters). Twin of PHP normalize_hyphenate_character().
+	 */
+	function normalizeHyphenateCharacter(value) {
+		if (typeof value !== 'string') return '';
+		var v = value.trim();
+		if (!v || /["'\\<>{};\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(v)) return '';
+		var count = 0;
+		for (var i = 0; i < v.length; i++) {
+			var code = v.charCodeAt(i);
+			// A lone surrogate is not valid UTF-8 (PHP rejects it)
+			if (code >= 0xd800 && code <= 0xdbff) {
+				var next = v.charCodeAt(i + 1);
+				if (!(next >= 0xdc00 && next <= 0xdfff)) return '';
+				i++;
+			} else if (code >= 0xdc00 && code <= 0xdfff) {
+				return '';
+			}
+			count++;
+		}
+		return count <= HYPHENATE_CHARACTER_MAX ? v : '';
+	}
+
+	/**
+	 * The hyphenation group (#208) as stored: {} when off, else hyphens
+	 * 'auto' plus each limit above 0 and the character when set. The limits
+	 * and the character are stored only with hyphenation on.
+	 */
+	function hyphenationProperties(source) {
+		var p = source || {};
+		if (!normalizeHyphens(p.hyphens)) return {};
+		var out = { hyphens: 'auto' };
+		HYPHENATE_LIMIT_KEYS.forEach(function (key) {
+			var n = normalizeHyphenateLimit(p[key]);
+			if (n) out[key] = n;
+		});
+		var character = normalizeHyphenateCharacter(p.hyphenateCharacter);
+		if (character) out.hyphenateCharacter = character;
+		return out;
+	}
+
+	/**
+	 * The CSS declarations of a style's hyphenation (#208), as [property,
+	 * value] pairs in the order both generators write them. Twin of PHP
+	 * hyphenation_declarations().
+	 */
+	function hyphenationDeclarations(props) {
+		var h = hyphenationProperties(props);
+		if (!h.hyphens) return [];
+		// The -webkit- forms for Safari before 17
+		var out = [['-webkit-hyphens', 'auto'], ['hyphens', 'auto']];
+		var limits = HYPHENATE_LIMIT_KEYS.map(function (key) { return h[key] || 0; });
+		if (limits[0] || limits[1] || limits[2]) {
+			out.push(['hyphenate-limit-chars', limits.map(function (n) { return n ? String(n) : 'auto'; }).join(' ')]);
+		}
+		if (h.hyphenateCharacter) {
+			out.push(['-webkit-hyphenate-character', '"' + h.hyphenateCharacter + '"']);
+			out.push(['hyphenate-character', '"' + h.hyphenateCharacter + '"']);
+		}
+		return out;
+	}
+
 	// Widest text outline in px (#215). Mirrors TEXT_STROKE_MAX in PHP.
 	var TEXT_STROKE_MAX = 20;
 
@@ -594,6 +682,7 @@
 		if (props.fontSize !== 'fit') {
 			if (phpInt(props.wordSpacing)) removed.push('wordSpacing');
 			if (normalizeTextWrap(props.textWrap)) removed.push('textWrap');
+			if (normalizeHyphens(props.hyphens)) removed.push('hyphens');
 			if (opts.coreBlock && normalizeAlignment(props.alignment) === 'justify') removed.push('alignment');
 			if (normalizeAlignLast(props.alignment, props.alignLast)) removed.push('alignLast');
 		}
@@ -949,6 +1038,8 @@
 		}
 		if (state.wordSpacing !== undefined && phpInt(state.wordSpacing) !== phpInt(styleProps.wordSpacing)) return true;
 		if (state.textWrap !== undefined && normalizeTextWrap(state.textWrap) !== normalizeTextWrap(styleProps.textWrap)) return true;
+		// Hyphenation (#208): the same rule, compared as a group
+		if (state.hyphens !== undefined && groupSignature('hyphens', state) !== groupSignature('hyphens', styleProps)) return true;
 
 		// Indents and paragraph spacing (#199): the same rule, only the admin
 		// Edit form reports them
@@ -1076,6 +1167,9 @@
 		if (textWrap) {
 			properties.textWrap = textWrap;
 		}
+		// Hyphenation (#208): off is never stored, the limits and the
+		// character only with it on
+		Object.assign(properties, hyphenationProperties(state));
 		// Indents and paragraph spacing (#199): none is never stored, and
 		// "only after the same style" only as true with a positive indent
 		copyLayoutProperties(properties, state);
@@ -1189,6 +1283,10 @@
 		if ((!state || state.textWrap === undefined) && normalizeTextWrap(base.textWrap)) {
 			properties.textWrap = normalizeTextWrap(base.textWrap);
 		}
+		// Hyphenation (#208): no editor control either
+		if (!state || state.hyphens === undefined) {
+			Object.assign(properties, hyphenationProperties(base));
+		}
 		// Indents and paragraph spacing (#199): no editor control either, so
 		// the ones the state does not report come from the style. Without
 		// this an Update Style in either editor deleted them from every
@@ -1230,6 +1328,7 @@
 		alignment: ['alignment', 'alignLast'],
 		firstLineIndent: ['firstLineIndent', 'indentAfterSame'],
 		textStrokeWidth: ['textStrokeWidth', 'textStrokeColor', 'textStrokePosition'],
+		hyphens: ['hyphens', 'hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter', 'hyphenateCharacter'],
 	};
 
 	// The value that unsets a group: fontSize 'inherit', textStrokeWidth 0
@@ -1332,6 +1431,9 @@
 		}
 		if (hasOwn(out, 'textStrokeWidth') && normalizeStrokeWidth(out.textStrokeWidth) <= 0) {
 			BASED_ON_GROUPS.textStrokeWidth.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'hyphens') && !normalizeHyphens(out.hyphens)) {
+			BASED_ON_GROUPS.hyphens.forEach(function (key) { delete out[key]; });
 		}
 		Object.keys(out).forEach(function (key) {
 			var value = out[key];
@@ -1436,6 +1538,11 @@
 		if (lead === 'textStrokeWidth') {
 			var w = normalizeStrokeWidth(p.textStrokeWidth);
 			return w > 0 ? phpFloatStr(w) + '|' + comparableColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
+		}
+		if (lead === 'hyphens') {
+			var h = hyphenationProperties(p);
+			if (!h.hyphens) return 'none';
+			return 'auto|' + HYPHENATE_LIMIT_KEYS.map(function (key) { return String(h[key] || 0); }).join('|') + '|' + (h.hyphenateCharacter || '');
 		}
 		if (lead === 'alignment') {
 			var a = normalizeAlignment(p.alignment);
@@ -1634,6 +1741,8 @@
 	 * - textColor, textStrokeWidth, textStrokeColor, textStrokePosition
 	 *   (#215) — style-only for the same reason. The block's own text color
 	 *   (the color support) overrides the style's color through CSS.
+	 * - hyphens, hyphenateLimitWord/Before/After, hyphenateCharacter (#208)
+	 *   — style-only for the same reason.
 	 *
 	 * initialHang IS normalized (to 0): a style without a hang must remove a
 	 * lingering hang on apply. The inline editor ignores the key, because a
@@ -2003,6 +2112,10 @@
 				rules.push('text-wrap: ' + props.textWrap);
 				rules.push('text-wrap-mode: inherit');
 			}
+			// Hyphenation (#208). Same declarations and order as the PHP twin.
+			hyphenationDeclarations(props).forEach(function (pair) {
+				rules.push(pair[0] + ': ' + pair[1]);
+			});
 			alignRules = alignmentDeclarations(props, hang);
 		}
 
@@ -2872,6 +2985,14 @@
 		normalizeAlignment: normalizeAlignment,
 		normalizeAlignLast: normalizeAlignLast,
 		normalizeTextWrap: normalizeTextWrap,
+		normalizeHyphens: normalizeHyphens,
+		normalizeHyphenateLimit: normalizeHyphenateLimit,
+		normalizeHyphenateCharacter: normalizeHyphenateCharacter,
+		hyphenationProperties: hyphenationProperties,
+		hyphenationDeclarations: hyphenationDeclarations,
+		HYPHENATE_LIMIT_KEYS: HYPHENATE_LIMIT_KEYS,
+		HYPHENATE_LIMIT_MAX: HYPHENATE_LIMIT_MAX,
+		HYPHENATE_CHARACTER_MAX: HYPHENATE_CHARACTER_MAX,
 		TEXT_STROKE_MAX: TEXT_STROKE_MAX,
 		normalizeHexColor: normalizeHexColor,
 		normalizeColor: normalizeColor,
