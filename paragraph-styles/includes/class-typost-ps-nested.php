@@ -381,7 +381,7 @@ if ( ! class_exists( 'Typost_PS_Nested' ) ) {
 					}
 					$pos = $start;
 					for ( $i = 1; $i <= $count; $i++ ) {
-						$at = strpos( $plain, $marker, $pos );
+						$at = self::find_marker( $plain, $marker, $pos );
 						if ( false === $at ) {
 							return $length;
 						}
@@ -393,6 +393,30 @@ if ( ! class_exists( 'Typost_PS_Nested' ) ) {
 					return $length;
 			}
 			return $start;
+		}
+
+		/**
+		 * The next whole occurrence of a marker. A marker is one character, so
+		 * a match followed by a combining mark or a zero width joiner is only
+		 * the start of another character ("e" in a decomposed "é"), and
+		 * ending a rule there would split that character. Twin of
+		 * nestedFindMarker() in ps-utils.js.
+		 *
+		 * @param string $plain  Plain text.
+		 * @param string $marker The marker.
+		 * @param int    $pos    Byte offset to search from.
+		 * @return int|false Byte offset, false for none.
+		 */
+		private static function find_marker( $plain, $marker, $pos ) {
+			$at = strpos( $plain, $marker, $pos );
+			while ( false !== $at ) {
+				$after = $at + strlen( $marker );
+				if ( 1 !== preg_match( '/\G[\p{M}\x{200D}]/u', $plain, $m, 0, $after ) ) {
+					return $at;
+				}
+				$at = strpos( $plain, $marker, $after );
+			}
+			return false;
 		}
 
 		/**

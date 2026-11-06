@@ -380,5 +380,62 @@
 				"now"
 			]
 		]
+	},
+	{
+		"name": "a marker does not match the base of a letter with a combining mark",
+		"plain": "Café late now",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "e",
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Café late"
+			]
+		]
+	},
+	{
+		"name": "a marker with only a combined match runs to the end of the text",
+		"plain": "Café now",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "e",
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Café now"
+			]
+		]
+	},
+	{
+		"name": "a marker does not match inside an emoji sequence joined with ZWJ",
+		"plain": "👨‍👩 go 👨 end",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "👨",
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"👨‍👩 go "
+			]
+		]
 	}
 ]

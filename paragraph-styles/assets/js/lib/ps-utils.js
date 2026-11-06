@@ -2891,6 +2891,27 @@
 	}
 
 	/**
+	 * The next whole occurrence of a marker: see
+	 * Typost_PS_Nested::find_marker().
+	 *
+	 * @param {string} plain
+	 * @param {string} marker
+	 * @param {number} pos
+	 * @return {number} UTF-16 offset, -1 for none.
+	 */
+	function nestedFindMarker(plain, marker, pos) {
+		var at = plain.indexOf(marker, pos);
+		while (at !== -1) {
+			var after = at + marker.length;
+			if (!/^[\p{M}‍]/u.test(plain.slice(after, after + 2))) {
+				return at;
+			}
+			at = plain.indexOf(marker, after);
+		}
+		return -1;
+	}
+
+	/**
 	 * The lengths of the first `count` user-perceived characters of text
 	 * (PCRE's \X on the server): Intl.Segmenter where the browser has it,
 	 * else code points with the combining marks after them.
@@ -2961,7 +2982,7 @@
 			}
 			pos = start;
 			for (i = 1; i <= count; i++) {
-				var at = plain.indexOf(marker, pos);
+				var at = nestedFindMarker(plain, marker, pos);
 				if (at === -1) {
 					return length;
 				}
