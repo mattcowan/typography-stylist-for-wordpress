@@ -37,6 +37,7 @@ if ( ! defined( 'TYPOST_PS_VERSION' ) ) {
 require_once __DIR__ . '/includes/class-typost-ps-transfer.php';
 require_once __DIR__ . '/includes/class-typost-ps-text-ranges.php';
 require_once __DIR__ . '/includes/class-typost-ps-grep.php';
+require_once __DIR__ . '/includes/class-typost-ps-nested.php';
 
 final class Typost_Paragraph_Styles {
 
@@ -63,6 +64,9 @@ final class Typost_Paragraph_Styles {
 
 	/** @var array|null Memoized GREP rules by style reference (#196), see get_grep_style_map() */
 	private $grep_style_map = null;
+
+	/** @var array|null Memoized nested rules by style reference (#195), see get_nested_style_map() */
+	private $nested_style_map = null;
 
 	/**
 	 * Blocks whose styled element GREP rules apply to (#196): the core
@@ -317,6 +321,9 @@ final class Typost_Paragraph_Styles {
 		// after the head (classic-theme widgets, custom query loops).
 		// GREP styles (#196) wrap matches at render time; before the
 		// collector, so the styles the rules apply are collected too.
+		// Nested styles (#195) wrap the start of the text first, so a GREP
+		// match inside it is wrapped inside the nested span.
+		add_filter( 'render_block', array( $this, 'apply_nested_styles' ), 8, 2 );
 		add_filter( 'render_block', array( $this, 'apply_grep_styles' ), 9, 2 );
 		add_filter( 'render_block', array( $this, 'collect_rendered_style_refs' ) );
 		add_action( 'wp_head', array( $this, 'output_style_css' ), 6 );
@@ -430,6 +437,126 @@ final class Typost_Paragraph_Styles {
 			? ( isset( $style['properties'] ) ? $style['properties'] : array() )
 			: self::resolve_properties( $style, null === $styles ? $this->get_styles() : $styles );
 
+		$css_rules = self::property_declarations( $props );
+
+		// The alignment (#207) goes in a guarded rule of its own (below),
+		// not for fit to width
+		$hang        = isset( $props['initialHang'] ) ? self::normalize_hang( $props['initialHang'] ) : 0;
+		$is_fit      = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
+		$align_rules = $is_fit ? array() : self::alignment_declarations( $props, $hang );
+		$text_color  = self::text_color_css_value( $props );
+
+		// Indents and paragraph spacing (#199): rules of their own, never on
+		// the inline-span selector (see paragraph_layout_css())
+		$layout_ids = array( (string) $id );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$layout_ids[] = esc_attr( $style['legacyId'] );
+		}
+		$layout_css = self::paragraph_layout_css( $props, $hang, $layout_ids );
+
+		if ( empty( $css_rules ) && empty( $align_rules ) && '' === $layout_css ) {
+			return '';
+		}
+
+		// Three selectors per style:
+		//  - `.typost-ps-N` (0,1,0): previews such as the style browser rows.
+		//  - block-level and inline-span forms boosted to (0,6,0) by repeating
+		//    the class / attribute. Theme heading rules are routinely more
+		//    specific than a single class (`.entry-content h2` is (0,1,1); a
+		//    color-scheme rule with a `:not()` reached (0,3,4) on a real site,
+		//    and (0,5,2) in the editor, where WordPress prefixes theme styles
+		//    with .editor-styles-wrapper)
+		//    and were overriding the style's font-family and font-weight on
+		//    the frontend, where save.js emits no inline styles under a
+		//    styleClass. Inline `style=""` attributes still win, by design.
+		// buildStyleCssBlock() in ps-utils.js must emit the same text.
+		$selector = sprintf(
+			".typost-ps-%d,\n.typost-styled.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d,\n.typost-styled[data-style-id=\"%d\"][data-style-id][data-style-id][data-style-id][data-style-id]",
+			$id,
+			$id,
+			$id,
+			$id,
+			$id,
+			$id,
+			$id
+		);
+
+		// Backward-compatible selectors for migrated legacy IDs
+		if ( ! empty( $style['legacyId'] ) ) {
+			$legacy    = esc_attr( $style['legacyId'] );
+			$selector .= sprintf(
+				",\n.typost-ps-%s,\n.typost-styled.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s,\n.typost-styled[data-style-id=\"%s\"][data-style-id][data-style-id][data-style-id][data-style-id]",
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy,
+				$legacy
+			);
+		}
+
+		$css = '';
+		if ( ! empty( $css_rules ) ) {
+			$css = sprintf(
+				"%s {\n    %s;\n}",
+				$selector,
+				implode( ";\n    ", $css_rules )
+			);
+		}
+
+		// The alignment goes in its own rule, guarded so a block with its
+		// own alignment keeps it (see ALIGNMENT_GUARD): an inline text-align
+		// wins anyway, but core's has-text-align-* classes are (0,1,0) and
+		// the last line alignment and the hang switch would still apply.
+		if ( ! empty( $align_rules ) ) {
+			$guarded = implode( ",\n", array_map( function ( $part ) {
+				return $part . self::ALIGNMENT_GUARD;
+			}, explode( ",\n", $selector ) ) );
+			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
+		}
+
+		if ( '' !== $layout_css ) {
+			$css .= ( '' === $css ? '' : "\n\n" ) . $layout_css;
+		}
+		// The Typography Stylist block's own text color (#215). The color
+		// support colors the block's wrapper (`has-text-color`, with a preset
+		// class or an inline color), and the style class is on the visual
+		// element inside it, where the class would beat the inherited color.
+		// This rule, two classes more specific, gives the element the
+		// block's color back. A core Paragraph or Heading needs nothing: its
+		// own color is an inline style or a preset class with !important on
+		// the element itself.
+		if ( '' !== $text_color ) {
+			$block_selectors = array( self::block_color_selector( $id ) );
+			if ( ! empty( $style['legacyId'] ) ) {
+				$block_selectors[] = self::block_color_selector( esc_attr( $style['legacyId'] ) );
+			}
+			$css .= "\n\n" . implode( ",\n", $block_selectors ) . " {\n    color: inherit;\n}";
+			// Outline-only text in forced colors. Firefox keeps a transparent
+			// fill there and the stroke follows it, so the text would vanish;
+			// measured in Firefox and Chromium with emulated forced colors.
+			if ( false !== strpos( $text_color, 'transparent' ) ) {
+				$css .= "\n\n@media (forced-colors: active) {\n" . $selector . " {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}";
+			}
+		}
+
+		if ( $hang > 0 ) {
+			$css .= self::core_block_hang_css( $id );
+		}
+
+		return $css;
+	}
+
+	/**
+	 * The declarations of a style's main rule, in order: everything but the
+	 * alignment (a guarded rule of its own) and the paragraph layout. Also
+	 * the source of a nested First line rule (#195), which filters them.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return string[] "property: value" strings.
+	 */
+	private static function property_declarations( $props ) {
 		$css_rules = array();
 
 		// Font family via CSS variable
@@ -559,8 +686,7 @@ final class Typost_Paragraph_Styles {
 		// inline word-spacing beats the style, and a text-spacing tool or
 		// user style sheet that sets it with !important overrides it
 		// (WCAG 1.4.12).
-		$is_fit      = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
-		$align_rules = array();
+		$is_fit = isset( $props['fontSize'] ) && 'fit' === $props['fontSize'];
 		if ( ! $is_fit ) {
 			if ( ! empty( $props['wordSpacing'] ) ) {
 				$css_rules[] = 'word-spacing: ' . ( intval( $props['wordSpacing'] ) / 1000 ) . 'em';
@@ -579,7 +705,6 @@ final class Typost_Paragraph_Styles {
 			foreach ( self::hyphenation_declarations( $props ) as $declaration ) {
 				$css_rules[] = $declaration[0] . ': ' . $declaration[1];
 			}
-			$align_rules = self::alignment_declarations( $props, $hang );
 		}
 
 		// Text color and outline (#215), for fit to width too. A palette
@@ -590,106 +715,7 @@ final class Typost_Paragraph_Styles {
 		}
 		$css_rules = array_merge( $css_rules, self::stroke_declarations( $props ) );
 
-		// Indents and paragraph spacing (#199): rules of their own, never on
-		// the inline-span selector (see paragraph_layout_css())
-		$layout_ids = array( (string) $id );
-		if ( ! empty( $style['legacyId'] ) ) {
-			$layout_ids[] = esc_attr( $style['legacyId'] );
-		}
-		$layout_css = self::paragraph_layout_css( $props, $hang, $layout_ids );
-
-		if ( empty( $css_rules ) && empty( $align_rules ) && '' === $layout_css ) {
-			return '';
-		}
-
-		// Three selectors per style:
-		//  - `.typost-ps-N` (0,1,0): previews such as the style browser rows.
-		//  - block-level and inline-span forms boosted to (0,6,0) by repeating
-		//    the class / attribute. Theme heading rules are routinely more
-		//    specific than a single class (`.entry-content h2` is (0,1,1); a
-		//    color-scheme rule with a `:not()` reached (0,3,4) on a real site,
-		//    and (0,5,2) in the editor, where WordPress prefixes theme styles
-		//    with .editor-styles-wrapper)
-		//    and were overriding the style's font-family and font-weight on
-		//    the frontend, where save.js emits no inline styles under a
-		//    styleClass. Inline `style=""` attributes still win, by design.
-		// buildStyleCssBlock() in ps-utils.js must emit the same text.
-		$selector = sprintf(
-			".typost-ps-%d,\n.typost-styled.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d.typost-ps-%d,\n.typost-styled[data-style-id=\"%d\"][data-style-id][data-style-id][data-style-id][data-style-id]",
-			$id,
-			$id,
-			$id,
-			$id,
-			$id,
-			$id,
-			$id
-		);
-
-		// Backward-compatible selectors for migrated legacy IDs
-		if ( ! empty( $style['legacyId'] ) ) {
-			$legacy    = esc_attr( $style['legacyId'] );
-			$selector .= sprintf(
-				",\n.typost-ps-%s,\n.typost-styled.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s.typost-ps-%s,\n.typost-styled[data-style-id=\"%s\"][data-style-id][data-style-id][data-style-id][data-style-id]",
-				$legacy,
-				$legacy,
-				$legacy,
-				$legacy,
-				$legacy,
-				$legacy,
-				$legacy
-			);
-		}
-
-		$css = '';
-		if ( ! empty( $css_rules ) ) {
-			$css = sprintf(
-				"%s {\n    %s;\n}",
-				$selector,
-				implode( ";\n    ", $css_rules )
-			);
-		}
-
-		// The alignment goes in its own rule, guarded so a block with its
-		// own alignment keeps it (see ALIGNMENT_GUARD): an inline text-align
-		// wins anyway, but core's has-text-align-* classes are (0,1,0) and
-		// the last line alignment and the hang switch would still apply.
-		if ( ! empty( $align_rules ) ) {
-			$guarded = implode( ",\n", array_map( function ( $part ) {
-				return $part . self::ALIGNMENT_GUARD;
-			}, explode( ",\n", $selector ) ) );
-			$css    .= ( '' === $css ? '' : "\n\n" ) . $guarded . " {\n    " . implode( ";\n    ", $align_rules ) . ";\n}";
-		}
-
-		if ( '' !== $layout_css ) {
-			$css .= ( '' === $css ? '' : "\n\n" ) . $layout_css;
-		}
-		// The Typography Stylist block's own text color (#215). The color
-		// support colors the block's wrapper (`has-text-color`, with a preset
-		// class or an inline color), and the style class is on the visual
-		// element inside it, where the class would beat the inherited color.
-		// This rule, two classes more specific, gives the element the
-		// block's color back. A core Paragraph or Heading needs nothing: its
-		// own color is an inline style or a preset class with !important on
-		// the element itself.
-		if ( '' !== $text_color ) {
-			$block_selectors = array( self::block_color_selector( $id ) );
-			if ( ! empty( $style['legacyId'] ) ) {
-				$block_selectors[] = self::block_color_selector( esc_attr( $style['legacyId'] ) );
-			}
-			$css .= "\n\n" . implode( ",\n", $block_selectors ) . " {\n    color: inherit;\n}";
-			// Outline-only text in forced colors. Firefox keeps a transparent
-			// fill there and the stroke follows it, so the text would vanish;
-			// measured in Firefox and Chromium with emulated forced colors.
-			if ( false !== strpos( $text_color, 'transparent' ) ) {
-				$css .= "\n\n@media (forced-colors: active) {\n" . $selector . " {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}";
-			}
-		}
-
-		if ( $hang > 0 ) {
-			$css .= self::core_block_hang_css( $id );
-		}
-
-		return $css;
+		return $css_rules;
 	}
 
 	/**
@@ -1413,17 +1439,40 @@ final class Typost_Paragraph_Styles {
 				$css_blocks[] = $block;
 			}
 		}
-		// GREP feature rules last, so they follow every style they combine
+		// GREP and nested rule CSS last, so it follows every style it combines
 		foreach ( $styles as $style ) {
 			$block = self::grep_feature_css( $style, $styles );
 			if ( '' !== $block ) {
 				$css_blocks[] = $block;
 			}
 		}
+		$nested = $this->get_nested_css();
+		if ( '' !== $nested ) {
+			$css_blocks[] = $nested;
+		}
 
 		$css = implode( "\n\n", $css_blocks );
 		set_transient( self::CSS_CACHE_KEY, $css, 12 * HOUR_IN_SECONDS );
 		return $css;
+	}
+
+	/**
+	 * The CSS of every style's nested rules (#195). Part of get_all_css().
+	 * The editor also reads it after a style changes (#354): it has no JS
+	 * twin, and a First line rule copies the declarations of another style.
+	 *
+	 * @return string CSS, '' for none.
+	 */
+	public function get_nested_css() {
+		$styles = $this->get_styles();
+		$blocks = array();
+		foreach ( $styles as $style ) {
+			$block = self::nested_css( $style, $styles );
+			if ( '' !== $block ) {
+				$blocks[] = $block;
+			}
+		}
+		return implode( "\n\n", $blocks );
 	}
 
 	/**
@@ -1619,7 +1668,26 @@ final class Typost_Paragraph_Styles {
 		if ( self::has_registered_shortcode( (string) $html ) ) {
 			return $html;
 		}
-		$root_for_tag = function ( $processor ) use ( $rules_by_ref, $require_styled ) {
+		$open_tag_for    = function ( $style_id ) use ( $valid_ids, $font_ids ) {
+			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
+		};
+		$ranges_for_root = function ( $ref, $plain ) use ( $rules_by_ref, $open_tag_for ) {
+			return Typost_PS_Grep::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
+		};
+		return Typost_PS_Text_Ranges::wrap( $html, self::rule_root_callback( $rules_by_ref, $require_styled ), $ranges_for_root );
+	}
+
+	/**
+	 * The root test GREP and nested rules share: an element with the
+	 * `typost-ps-{ref}` class of a style that has rules, the `typost-styled`
+	 * class unless $require_styled is false, and not fit to width.
+	 *
+	 * @param array $rules_by_ref   Rules by style reference.
+	 * @param bool  $require_styled Whether a root needs `typost-styled`.
+	 * @return callable
+	 */
+	private static function rule_root_callback( $rules_by_ref, $require_styled ) {
+		return function ( $processor ) use ( $rules_by_ref, $require_styled ) {
 			if ( ( $require_styled && ! $processor->has_class( 'typost-styled' ) ) || $processor->has_class( 'typost-fit' ) ) {
 				return null;
 			}
@@ -1630,13 +1698,108 @@ final class Typost_Paragraph_Styles {
 			}
 			return null;
 		};
-		$open_tag_for = function ( $style_id ) use ( $valid_ids, $font_ids ) {
-			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Grep::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
+	}
+
+	// -------------------------------------------------------------------------
+	// Nested styles (#195)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Wrap the start of the text that a style's nested rules cover, as the
+	 * block renders.
+	 *
+	 * Hooked to `render_block` at priority 8, before GREP (9), so a GREP
+	 * match inside a nested span is wrapped inside it, and before the style
+	 * collector (10), so the styles the rules apply are collected. Like
+	 * GREP, it changes only the rendered HTML and runs on WordPress 6.9+.
+	 * A First line rule needs no markup: it is CSS (nested_css()).
+	 *
+	 * @param string $block_content Rendered block.
+	 * @param array  $block         Parsed block.
+	 * @return string
+	 */
+	public function apply_nested_styles( $block_content, $block = null ) {
+		if ( ! is_string( $block_content ) || false === strpos( $block_content, 'typost-ps-' ) ) {
+			return $block_content;
+		}
+		$name = is_array( $block ) && isset( $block['blockName'] ) ? $block['blockName'] : '';
+		if ( ! in_array( $name, self::GREP_BLOCKS, true ) ) {
+			return $block_content;
+		}
+		$map = $this->get_nested_style_map();
+		if ( empty( $map['rules'] ) || ! Typost_PS_Text_Ranges::is_supported() ) {
+			return $block_content;
+		}
+		if ( ! self::references_grep_rules( $block_content, $map['rules'] ) ) {
+			return $block_content;
+		}
+		return self::wrap_nested( $block_content, $map['rules'], $map['ids'] );
+	}
+
+	/**
+	 * Wrap the text nested rules cover in an HTML fragment.
+	 *
+	 * Roots as for wrap_grep(); a fragment with a registered shortcode comes
+	 * back unchanged for the same reason.
+	 *
+	 * @param string $html           HTML fragment.
+	 * @param array  $rules_by_ref   Rules by style reference (id or legacy id, as strings).
+	 * @param array  $valid_ids      Style ids a rule may apply, as keys.
+	 * @param bool   $require_styled Whether a root needs the `typost-styled` class.
+	 * @param array  $font_ids       For the admin card: style id => font id.
+	 * @return string
+	 */
+	public static function wrap_nested( $html, $rules_by_ref, $valid_ids, $require_styled = true, $font_ids = array() ) {
+		if ( self::has_registered_shortcode( (string) $html ) ) {
+			return $html;
+		}
+		$open_tag_for    = function ( $style_id ) use ( $valid_ids, $font_ids ) {
+			return isset( $valid_ids[ $style_id ] ) ? Typost_PS_Nested::open_tag( $style_id, isset( $font_ids[ $style_id ] ) ? $font_ids[ $style_id ] : 0 ) : '';
 		};
 		$ranges_for_root = function ( $ref, $plain ) use ( $rules_by_ref, $open_tag_for ) {
-			return Typost_PS_Grep::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
+			return Typost_PS_Nested::find_ranges( $plain, $rules_by_ref[ $ref ], $open_tag_for );
 		};
-		return Typost_PS_Text_Ranges::wrap( $html, $root_for_tag, $ranges_for_root );
+		return Typost_PS_Text_Ranges::wrap( $html, self::rule_root_callback( $rules_by_ref, $require_styled ), $ranges_for_root );
+	}
+
+	/**
+	 * The nested rules of every style that has some, for this request.
+	 *
+	 * @return array array( 'rules' => ref => rules, for the styles with a
+	 *               rule that wraps text; 'all' => ref => rules, First line
+	 *               rules included; 'ids' => style id => true ).
+	 */
+	private function get_nested_style_map() {
+		if ( null === $this->nested_style_map ) {
+			$rules = array();
+			$all   = array();
+			$ids   = array();
+			foreach ( $this->get_styles() as $style ) {
+				if ( ! isset( $style['id'] ) ) {
+					continue;
+				}
+				$ids[ intval( $style['id'] ) ] = true;
+				if ( empty( $style['nestedRules'] ) || ! is_array( $style['nestedRules'] ) ) {
+					continue;
+				}
+				$refs = array( (string) $style['id'] );
+				if ( ! empty( $style['legacyId'] ) ) {
+					$refs[] = (string) $style['legacyId'];
+				}
+				foreach ( $refs as $ref ) {
+					$all[ $ref ] = $style['nestedRules'];
+					if ( Typost_PS_Nested::has_text_rules( $style['nestedRules'] ) ) {
+						$rules[ $ref ] = $style['nestedRules'];
+					}
+				}
+			}
+			$this->nested_style_map = array(
+				'rules' => $rules,
+				'all'   => $all,
+				'ids'   => $ids,
+			);
+		}
+		return $this->nested_style_map;
 	}
 
 	/**
@@ -1670,27 +1833,34 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Style references plus the styles their GREP rules apply.
+	 * Style references plus the styles their GREP rules (#196) and nested
+	 * rules (#195) apply.
 	 *
-	 * One level is enough: a GREP span carries `data-style-id`, not a
+	 * One level is enough: a rule span carries `data-style-id`, not a
 	 * `typost-ps-N` class, so the rules of the style it applies never run
 	 * inside it.
 	 *
 	 * @param array $refs Style references.
 	 * @return string[]
 	 */
-	private function with_grep_targets( array $refs ) {
-		$map = $this->get_grep_style_map();
-		if ( empty( $map['rules'] ) ) {
+	private function with_rule_targets( array $refs ) {
+		$grep   = $this->get_grep_style_map();
+		$nested = $this->get_nested_style_map();
+		if ( empty( $grep['rules'] ) && empty( $nested['all'] ) ) {
 			return $refs;
 		}
 		$out = array_map( 'strval', $refs );
 		foreach ( $refs as $ref ) {
-			$ref = (string) $ref;
-			if ( isset( $map['rules'][ $ref ] ) ) {
-				foreach ( Typost_PS_Grep::target_style_ids( $map['rules'][ $ref ] ) as $target ) {
-					$out[] = (string) $target;
-				}
+			$ref     = (string) $ref;
+			$targets = array();
+			if ( isset( $grep['rules'][ $ref ] ) ) {
+				$targets = Typost_PS_Grep::target_style_ids( $grep['rules'][ $ref ] );
+			}
+			if ( isset( $nested['all'][ $ref ] ) ) {
+				$targets = array_merge( $targets, Typost_PS_Nested::target_style_ids( $nested['all'][ $ref ] ) );
+			}
+			foreach ( $targets as $target ) {
+				$out[] = (string) $target;
 			}
 		}
 		return array_values( array_unique( $out ) );
@@ -1714,25 +1884,28 @@ final class Typost_Paragraph_Styles {
 		if ( empty( $style['grepRules'] ) || ! is_array( $style['grepRules'] ) || ! isset( $style['id'] ) ) {
 			return '';
 		}
+		return self::rule_feature_css( $style, $styles, Typost_PS_Grep::target_style_ids( $style['grepRules'] ), 'typost-grep' );
+	}
+
+	/**
+	 * Feature rules for the spans that a style's rules write (#196, #195).
+	 *
+	 * @param array  $style      Style record.
+	 * @param array  $styles     Every stored style.
+	 * @param int[]  $target_ids The styles the rules apply.
+	 * @param string $span_class The rule spans' class (`typost-grep`, `typost-nested`).
+	 * @return string CSS, '' when there is nothing to combine.
+	 */
+	private static function rule_feature_css( $style, $styles, $target_ids, $span_class ) {
 		$own_features = self::resolved_features( $style, $styles );
 		if ( empty( $own_features ) ) {
 			return '';
 		}
 
-		$refs = array( (string) intval( $style['id'] ) );
-		if ( ! empty( $style['legacyId'] ) ) {
-			$refs[] = esc_attr( $style['legacyId'] );
-		}
-
-		$css = array();
-		foreach ( Typost_PS_Grep::target_style_ids( $style['grepRules'] ) as $target_id ) {
-			$target = null;
-			foreach ( $styles as $candidate ) {
-				if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) === $target_id ) {
-					$target = $candidate;
-					break;
-				}
-			}
+		$refs = self::style_refs_of( $style );
+		$css  = array();
+		foreach ( $target_ids as $target_id ) {
+			$target = self::find_style_by_id( $styles, $target_id );
 			if ( null === $target ) {
 				continue;
 			}
@@ -1743,15 +1916,117 @@ final class Typost_Paragraph_Styles {
 			$features  = array_values( array_unique( array_merge( $own_features, $target_features ) ) );
 			$selectors = array();
 			foreach ( $refs as $ref ) {
-				$selectors[] = sprintf( '.typost-ps-%1$s .typost-grep.typost-grep.typost-grep[data-style-id="%2$d"][data-style-id][data-style-id][data-style-id]', $ref, $target_id );
+				$selectors[] = sprintf( '.typost-ps-%1$s .%3$s.%3$s.%3$s[data-style-id="%2$d"][data-style-id][data-style-id][data-style-id]', $ref, $target_id, $span_class );
 			}
 			$css[] = sprintf(
 				"%s {\n    font-feature-settings: %s;\n}",
 				implode( ",\n", $selectors ),
-				implode( ', ', array_map( function ( $f ) {
-					return '"' . esc_attr( $f ) . '" 1';
-				}, $features ) )
+				self::feature_list_css( $features )
 			);
+		}
+		return implode( "\n\n", $css );
+	}
+
+	/**
+	 * A feature list as a font-feature-settings value.
+	 *
+	 * @param string[] $features Feature tags.
+	 * @return string
+	 */
+	private static function feature_list_css( $features ) {
+		return implode( ', ', array_map( function ( $f ) {
+			return '"' . esc_attr( $f ) . '" 1';
+		}, $features ) );
+	}
+
+	/**
+	 * The class references of a style: its id and its legacy id.
+	 *
+	 * @param array $style Style record.
+	 * @return string[]
+	 */
+	private static function style_refs_of( $style ) {
+		$refs = array( (string) intval( $style['id'] ) );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$refs[] = esc_attr( $style['legacyId'] );
+		}
+		return $refs;
+	}
+
+	/**
+	 * A stored style by id.
+	 *
+	 * @param array $styles Every stored style.
+	 * @param int   $id     Style id.
+	 * @return array|null
+	 */
+	private static function find_style_by_id( $styles, $id ) {
+		foreach ( $styles as $candidate ) {
+			if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) === intval( $id ) ) {
+				return $candidate;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The CSS of a style's nested rules (#195): the feature rules of its
+	 * nested spans (see grep_feature_css()), and its First line rule.
+	 *
+	 * A First line rule is `::first-line` on the paragraph with the
+	 * declarations of the style it applies that a first line can take (no
+	 * hang, no line breaking, no alignment or layout). Its features follow
+	 * the paragraph's own, as in the spans. The spans of the rules before it
+	 * sit inside the first line: a property their style sets wins there,
+	 * the others come from the first line. Fit-to-width text is left out,
+	 * as for the spans.
+	 *
+	 * @param array $style  Style record.
+	 * @param array $styles Every stored style.
+	 * @return string CSS, '' for none.
+	 */
+	public static function nested_css( $style, $styles ) {
+		// Below WordPress 6.9 the rules have no effect, First line included
+		if ( empty( $style['nestedRules'] ) || ! is_array( $style['nestedRules'] ) || ! isset( $style['id'] ) || ! Typost_PS_Text_Ranges::is_supported() ) {
+			return '';
+		}
+		$css   = array();
+		$block = self::rule_feature_css( $style, $styles, Typost_PS_Nested::target_style_ids( $style['nestedRules'], true ), 'typost-nested' );
+		if ( '' !== $block ) {
+			$css[] = $block;
+		}
+
+		$line_id = Typost_PS_Nested::line_style_id( $style['nestedRules'] );
+		$target  = $line_id > 0 ? self::find_style_by_id( $styles, $line_id ) : null;
+		if ( null !== $target ) {
+			$props        = empty( $target['basedOn'] )
+				? ( isset( $target['properties'] ) ? $target['properties'] : array() )
+				: self::resolve_properties( $target, $styles );
+			$own_features = self::resolved_features( $style, $styles );
+			$declarations = array();
+			foreach ( self::property_declarations( $props ) as $declaration ) {
+				$property = substr( $declaration, 0, (int) strpos( $declaration, ':' ) );
+				if ( in_array( $property, array( '--typost-hang', 'text-wrap', 'text-wrap-mode', '-webkit-hyphens', 'hyphens', 'hyphenate-limit-chars', '-webkit-hyphenate-character', 'hyphenate-character' ), true ) ) {
+					continue;
+				}
+				if ( 'font-feature-settings' === $property && ! empty( $own_features ) ) {
+					$declaration = 'font-feature-settings: ' . self::feature_list_css( array_values( array_unique( array_merge( $own_features, self::resolved_features( $target, $styles ) ) ) ) );
+				}
+				$declarations[] = $declaration;
+			}
+			if ( ! empty( $declarations ) ) {
+				$selectors = array();
+				foreach ( self::style_refs_of( $style ) as $ref ) {
+					$selectors[] = '.typost-ps-' . $ref . ':not(.typost-fit)::first-line';
+				}
+				$css[] = implode( ",\n", $selectors ) . " {\n    " . implode( ";\n    ", $declarations ) . ";\n}";
+				// generate_style_css() writes this for the style's own selectors
+				// only. Without it, an outline-only first line vanishes in
+				// forced colors in Firefox.
+				if ( false !== strpos( self::text_color_css_value( $props ), 'transparent' ) ) {
+					$css[] = "@media (forced-colors: active) {\n" . implode( ",\n", $selectors ) . " {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}";
+				}
+			}
 		}
 		return implode( "\n\n", $css );
 	}
@@ -1819,6 +2094,71 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * Sanitize the `nestedRules` of a create or update request (#195).
+	 *
+	 * @param mixed $raw    Request value.
+	 * @param int   $own_id The style's id (0 for a new style).
+	 * @param array $styles Every stored style.
+	 * @return array See Typost_PS_Nested::sanitize_rules().
+	 */
+	private function sanitize_request_nested_rules( $raw, $own_id, $styles ) {
+		$style_ids = array();
+		foreach ( $styles as $style ) {
+			if ( isset( $style['id'] ) ) {
+				$style_ids[] = intval( $style['id'] );
+			}
+		}
+		return Typost_PS_Nested::sanitize_rules( array() === $raw ? null : $raw, array(
+			'own_id'    => $own_id,
+			'style_ids' => $style_ids,
+		) );
+	}
+
+	/**
+	 * The 400 response for nested rules that failed sanitize_rules().
+	 *
+	 * @param array $nested Result of sanitize_rules().
+	 * @return WP_REST_Response
+	 */
+	private static function nested_error_response( $nested ) {
+		return new WP_REST_Response( array(
+			'message'   => $nested['error'],
+			'field'     => 'nestedRules',
+			'ruleIndex' => $nested['index'],
+			'ruleField' => $nested['field'],
+		), 400 );
+	}
+
+	/**
+	 * The admin form's choices for nested rules (#195).
+	 *
+	 * @return array
+	 */
+	public static function nested_admin_settings() {
+		$units = array();
+		foreach ( Typost_PS_Nested::unit_labels() as $value => $label ) {
+			$units[] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+		$ends = array();
+		foreach ( Typost_PS_Nested::end_labels() as $value => $label ) {
+			$ends[] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+		return array(
+			'supported' => self::grep_supported(),
+			'maxRules'  => Typost_PS_Nested::MAX_RULES,
+			'maxCount'  => Typost_PS_Nested::MAX_COUNT,
+			'units'     => $units,
+			'ends'      => $ends,
+		);
+	}
+
+	/**
 	 * Whether GREP styles work on this site (WordPress 6.9+).
 	 *
 	 * @return bool
@@ -1855,8 +2195,9 @@ final class Typost_Paragraph_Styles {
 	private function print_style_rules( array $refs, $element_id ) {
 		$blocks     = array();
 		$grep       = array();
+		$nested     = array();
 		$all_styles = $this->get_styles();
-		foreach ( $this->styles_for_refs( $this->with_grep_targets( $refs ) ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_rule_targets( $refs ) ) as $style ) {
 			$key = isset( $style['id'] ) ? (string) $style['id'] : '';
 			if ( '' === $key || isset( $this->printed_style_ids[ $key ] ) ) {
 				continue;
@@ -1870,9 +2211,13 @@ final class Typost_Paragraph_Styles {
 			if ( '' !== $block ) {
 				$grep[] = $block;
 			}
+			$block = self::nested_css( $style, $all_styles );
+			if ( '' !== $block ) {
+				$nested[] = $block;
+			}
 		}
-		// GREP feature rules after the styles they combine (#196)
-		$blocks = array_merge( $blocks, $grep );
+		// GREP and nested rule CSS after the styles it combines (#196, #195)
+		$blocks = array_merge( $blocks, $grep, $nested );
 		if ( empty( $blocks ) ) {
 			return;
 		}
@@ -2010,7 +2355,7 @@ final class Typost_Paragraph_Styles {
 		if ( ! is_array( $font_ids ) ) {
 			$font_ids = array();
 		}
-		foreach ( $this->styles_for_refs( $this->with_grep_targets( $this->get_forced_style_refs() ) ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_rule_targets( $this->get_forced_style_refs() ) ) as $style ) {
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
 				$font_ids[] = $font_id;
@@ -2170,7 +2515,7 @@ final class Typost_Paragraph_Styles {
 		}
 
 		// The styles GREP rules apply (#196) render in this content too
-		foreach ( $this->styles_for_refs( $this->with_grep_targets( $style_refs ) ) as $style ) {
+		foreach ( $this->styles_for_refs( $this->with_rule_targets( $style_refs ) ) as $style ) {
 			// A font the style inherits from its parent (#200) loads too
 			$font_id = $this->resolved_font_id( $style );
 			if ( $font_id > 0 ) {
@@ -2243,6 +2588,8 @@ final class Typost_Paragraph_Styles {
 			'toolbarButton' => $this->toolbar_button_enabled(),
 			// The style browser's sample surface (#215)
 			'themeColors'   => self::get_theme_colors(),
+			// The editor previews nested styles (#195) where they render
+			'nestedPreview' => self::grep_supported(),
 		);
 		return $data;
 	}
@@ -2385,6 +2732,15 @@ final class Typost_Paragraph_Styles {
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
+
+		// The editor refreshes its nested rule CSS from this after a style changes (#354)
+		register_rest_route( self::REST_NAMESPACE, '/paragraph-styles/nested-css', array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'rest_get_nested_css' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			),
+		) );
 	}
 
 	/**
@@ -2446,6 +2802,11 @@ final class Typost_Paragraph_Styles {
 		if ( '' !== $grep['error'] ) {
 			return self::grep_error_response( $grep );
 		}
+		// Nested styles (#195)
+		$nested = $this->sanitize_request_nested_rules( $request->get_param( 'nestedRules' ), 0, $styles );
+		if ( '' !== $nested['error'] ) {
+			return self::nested_error_response( $nested );
+		}
 
 		$new_id = $this->get_next_id();
 
@@ -2461,6 +2822,9 @@ final class Typost_Paragraph_Styles {
 		}
 		if ( ! empty( $grep['rules'] ) ) {
 			$new_style['grepRules'] = $grep['rules'];
+		}
+		if ( ! empty( $nested['rules'] ) ) {
+			$new_style['nestedRules'] = $nested['rules'];
 		}
 
 		$styles[] = $new_style;
@@ -2553,6 +2917,19 @@ final class Typost_Paragraph_Styles {
 				unset( $styles[ $index ]['grepRules'] );
 			} else {
 				$styles[ $index ]['grepRules'] = $grep['rules'];
+			}
+		}
+
+		// Nested styles (#195): absent = unchanged, an empty list removes them
+		if ( $request->has_param( 'nestedRules' ) ) {
+			$nested = $this->sanitize_request_nested_rules( $request->get_param( 'nestedRules' ), $id, $styles );
+			if ( '' !== $nested['error'] ) {
+				return self::nested_error_response( $nested );
+			}
+			if ( empty( $nested['rules'] ) ) {
+				unset( $styles[ $index ]['nestedRules'] );
+			} else {
+				$styles[ $index ]['nestedRules'] = $nested['rules'];
 			}
 		}
 
@@ -2680,10 +3057,31 @@ final class Typost_Paragraph_Styles {
 			}
 		}
 
+		// Nested rules that apply it too (#195). The rules after a removed
+		// one then start earlier: the Delete confirmation says so first
+		// (nestedRuleUsers() in admin.js).
+		$nested_changed = array();
+		foreach ( $styles as $i => $style ) {
+			if ( empty( $style['nestedRules'] ) || ! is_array( $style['nestedRules'] ) ) {
+				continue;
+			}
+			$kept = array_values( array_filter( $style['nestedRules'], function ( $rule ) use ( $id ) {
+				return ! ( is_array( $rule ) && isset( $rule['styleId'] ) && intval( $rule['styleId'] ) === $id );
+			} ) );
+			if ( count( $kept ) !== count( $style['nestedRules'] ) ) {
+				if ( empty( $kept ) ) {
+					unset( $styles[ $i ]['nestedRules'] );
+				} else {
+					$styles[ $i ]['nestedRules'] = $kept;
+				}
+				$nested_changed[] = intval( $style['id'] );
+			}
+		}
+
 		array_splice( $styles, $index, 1 );
 		$this->save_styles( $styles );
 
-		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached, 'grepChanged' => $grep_changed ), 200 );
+		return new WP_REST_Response( array( 'deleted' => true, 'detached' => $detached, 'grepChanged' => $grep_changed, 'nestedChanged' => $nested_changed ), 200 );
 	}
 
 	// -------------------------------------------------------------------------
@@ -2705,7 +3103,7 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/editor.js',
-			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor' ),
+			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready' ),
 			TYPOST_PS_VERSION,
 			true
 		);
@@ -2813,6 +3211,8 @@ final class Typost_Paragraph_Styles {
 				'maxLength'      => Typost_PS_Grep::MAX_PATTERN_LENGTH,
 				'patterns'       => self::grep_pattern_options(),
 			),
+			// Nested styles (#195): same WordPress 6.9 gate
+			'nested'          => self::nested_admin_settings(),
 			// The color fields and the contrast check (#215)
 			'palette'         => self::get_color_palette(),
 			'themeColors'     => self::get_theme_colors(),
@@ -3019,9 +3419,11 @@ final class Typost_Paragraph_Styles {
 	 *                                array( 'own' => array, 'parent' => string ).
 	 * @param array      $grep_rows   GREP rules (#196), each array( pattern
 	 *                                label, style name ), in rule order.
+	 * @param array      $nested_rows Nested rules (#195), each array( rule
+	 *                                label, style name ), in rule order.
 	 * @return string HTML.
 	 */
-	public static function render_card_details( $props, $font, $inheritance = null, $grep_rows = array() ) {
+	public static function render_card_details( $props, $font, $inheritance = null, $grep_rows = array(), $nested_rows = array() ) {
 		$props     = is_array( $props ) ? $props : array();
 		$own       = is_array( $inheritance ) && isset( $inheritance['own'] ) && is_array( $inheritance['own'] ) ? $inheritance['own'] : null;
 		$font_name = self::font_display_name( $font );
@@ -3314,6 +3716,15 @@ final class Typost_Paragraph_Styles {
 			// GREP rules are not inherited through Based On, so no source label
 			$html .= $detail( array( array( __( 'GREP styles:', 'typost-paragraph-styles' ), implode( '; ', $grep_parts ) ) ) );
 		}
+		// Nested styles (#195), in their order; not inherited either
+		if ( is_array( $nested_rows ) && ! empty( $nested_rows ) ) {
+			$nested_parts = array();
+			foreach ( $nested_rows as $nested_row ) {
+				/* translators: 1: a nested rule, such as "Up to 3 words", 2: the style it applies */
+				$nested_parts[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $nested_row[0], $nested_row[1] );
+			}
+			$html .= $detail( array( array( __( 'Nested styles:', 'typost-paragraph-styles' ), implode( '; ', $nested_parts ) ) ) );
+		}
 		if ( '' !== $color_display ) {
 			$html .= $detail( array( array( __( 'Color:', 'typost-paragraph-styles' ), $color_display, array( 'textColor' ) ) ) );
 		}
@@ -3340,22 +3751,39 @@ final class Typost_Paragraph_Styles {
 	 *                          style id => true, 'fonts' => style id => font
 	 *                          id, so the loader also adds the kit of a font
 	 *                          that only a rule's style uses ).
+	 * @param array $nested     Optional nested rules (#195), same shape.
 	 * @return string HTML.
 	 */
-	public static function render_card_preview( $style_id, $font, $manual_ids, $grep = null ) {
+	public static function render_card_preview( $style_id, $font, $manual_ids, $grep = null, $nested = null ) {
 		list( $text, $lang ) = self::admin_preview_text();
 		$style_id = intval( $style_id );
 		$font_id  = isset( $font['font_id'] ) ? absint( $font['font_id'] ) : 0;
 
 		$sample = '<p class="typost-ps-preview-sample ' . esc_attr( 'typost-ps-' . $style_id ) . '" lang="' . esc_attr( $lang ) . '"'
 			. ( $font_id ? ' data-typost-font-id="' . esc_attr( $font_id ) . '"' : '' ) . '>' . esc_html( $text ) . '</p>';
-		// GREP styles (#196) style the sample through the same engine as
-		// the frontend, so the card shows what a post shows.
+		// Nested styles (#195) and GREP styles (#196) style the sample
+		// through the same engine as the frontend, nested first, so the
+		// card shows what a post shows. A First line rule is CSS: the
+		// sample has the style's class, which its ::first-line rule reads.
+		if ( is_array( $nested ) && ! empty( $nested['rules'] ) && self::grep_supported() ) {
+			$sample = self::wrap_nested( $sample, array( (string) $style_id => $nested['rules'] ), $nested['ids'], false, isset( $nested['fonts'] ) ? $nested['fonts'] : array() );
+		}
 		if ( is_array( $grep ) && ! empty( $grep['rules'] ) && self::grep_supported() ) {
 			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false, isset( $grep['fonts'] ) ? $grep['fonts'] : array() );
 		}
 
-		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
+		// A First line rule has no span to carry its style's font, so the
+		// wrapper names it for the admin font loader (#354)
+		$line_font = 0;
+		if ( is_array( $nested ) && ! empty( $nested['rules'] ) && ! empty( $nested['fonts'] ) ) {
+			$line_id = Typost_PS_Nested::line_style_id( $nested['rules'] );
+			if ( isset( $nested['fonts'][ $line_id ] ) ) {
+				$line_font = absint( $nested['fonts'][ $line_id ] );
+			}
+		}
+
+		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '"'
+			. ( $line_font ? ' data-typost-font-id="' . esc_attr( $line_font ) . '"' : '' ) . '>';
 		$html .= $sample;
 		// Check the font the style renders in: a deleted font can be replaced by a manual one.
 		if ( $font_id && isset( $manual_ids[ $font_id ] ) ) {
@@ -3650,6 +4078,15 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
+	 * GET /paragraph-styles/nested-css
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function rest_get_nested_css() {
+		return new WP_REST_Response( array( 'css' => $this->get_nested_css() ), 200 );
+	}
+
+	/**
 	 * GET /paragraph-styles/{id}/admin-card
 	 *
 	 * The admin tab's edit form saves through PATCH, then asks for the
@@ -3679,7 +4116,10 @@ final class Typost_Paragraph_Styles {
 		// and previews it, so it comes back too.
 		$related_ids = self::descendant_ids( $styles, $id );
 		foreach ( $styles as $candidate ) {
-			if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) !== $id && in_array( $id, Typost_PS_Grep::target_style_ids( isset( $candidate['grepRules'] ) ? $candidate['grepRules'] : array() ), true ) ) {
+			if ( isset( $candidate['id'] ) && intval( $candidate['id'] ) !== $id && (
+				in_array( $id, Typost_PS_Grep::target_style_ids( isset( $candidate['grepRules'] ) ? $candidate['grepRules'] : array() ), true )
+				|| in_array( $id, Typost_PS_Nested::target_style_ids( isset( $candidate['nestedRules'] ) ? $candidate['nestedRules'] : array() ), true ) // #195
+			) ) {
 				$related_ids[] = intval( $candidate['id'] );
 			}
 		}
@@ -3776,9 +4216,41 @@ final class Typost_Paragraph_Styles {
 			);
 		}
 
+		// Nested styles (#195): the same, where they run
+		$nested_rows = array();
+		if ( ! empty( $style['nestedRules'] ) && is_array( $style['nestedRules'] ) && self::grep_supported() ) {
+			$names        = array();
+			$nested_fonts = array();
+			$targets      = Typost_PS_Nested::target_style_ids( $style['nestedRules'] );
+			foreach ( $styles as $candidate ) {
+				if ( ! isset( $candidate['id'] ) ) {
+					continue;
+				}
+				$names[ intval( $candidate['id'] ) ] = isset( $candidate['name'] ) ? (string) $candidate['name'] : '';
+				if ( in_array( intval( $candidate['id'] ), $targets, true ) ) {
+					$candidate_props = self::resolve_properties( $candidate, $styles );
+					$candidate_font  = self::resolve_font_label( isset( $candidate_props['fontId'] ) ? $candidate_props['fontId'] : 0, $context['lookup'], $context['mappings'] );
+					if ( $candidate_font['font_id'] ) {
+						$nested_fonts[ intval( $candidate['id'] ) ] = $candidate_font['font_id'];
+					}
+				}
+			}
+			foreach ( $style['nestedRules'] as $rule ) {
+				$target        = is_array( $rule ) && isset( $rule['styleId'] ) ? intval( $rule['styleId'] ) : 0;
+				$nested_rows[] = array( Typost_PS_Nested::rule_label( $rule ), isset( $names[ $target ] ) ? $names[ $target ] : __( 'A deleted style', 'typost-paragraph-styles' ) );
+			}
+			$nested = array(
+				'rules' => $style['nestedRules'],
+				'ids'   => array_fill_keys( array_keys( $names ), true ),
+				'fonts' => $nested_fonts,
+			);
+		} else {
+			$nested = null;
+		}
+
 		return array(
-			'details' => self::render_card_details( $props, $font, $inheritance, $grep_rows ),
-			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'], $grep ),
+			'details' => self::render_card_details( $props, $font, $inheritance, $grep_rows, $nested_rows ),
+			'preview' => self::render_card_preview( intval( $style['id'] ), $font, $context['manual_ids'], $grep, $nested ),
 		);
 	}
 
@@ -3826,7 +4298,8 @@ final class Typost_Paragraph_Styles {
 	private function save_styles( $styles ) {
 		// Re-index array to ensure sequential numeric keys
 		$styles = array_values( $styles );
-		$this->grep_style_map = null;
+		$this->grep_style_map   = null;
+		$this->nested_style_map = null;
 		update_option( self::OPTION_KEY, $styles );
 		set_transient( self::CACHE_KEY, $styles, 12 * HOUR_IN_SECONDS );
 		// Regenerate CSS cache

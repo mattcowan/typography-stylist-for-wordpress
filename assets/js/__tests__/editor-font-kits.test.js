@@ -100,6 +100,18 @@ describe('collectFontIdsFromAttributes', () => {
 		expect(collectFontIdsFromAttributes(list, STYLES)).toEqual([5, 12, 40]);
 	});
 
+	test('follows a style to the fonts of the styles its nested rules apply (#195)', () => {
+		const styles = [
+			{ id: 1, legacyId: 'ps_1_2', properties: { fontId: 5 }, nestedRules: [{ styleId: 2, unit: 'words', count: 1 }, { styleId: 3, unit: 'line' }, { styleId: 9, unit: 'words', count: 1 }] },
+			{ id: 2, properties: { fontId: 12 } },
+			{ id: 3, properties: { fontId: 40 } },
+			{ id: 4, properties: { fontId: 77 } },
+		];
+		expect(collectFontIdsFromAttributes([{ paragraphStyleId: 1 }], styles)).toEqual([5, 12, 40]);
+		expect(collectFontIdsFromAttributes([{ paragraphStyleId: 'ps_1_2' }], styles)).toEqual([5, 12, 40]);
+		expect(collectFontIdsFromAttributes([{ paragraphStyleId: 4 }], styles)).toEqual([77]);
+	});
+
 	test('handles missing input', () => {
 		expect(collectFontIdsFromAttributes(null, null)).toEqual([]);
 	});

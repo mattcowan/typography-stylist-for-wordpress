@@ -22,6 +22,12 @@
  * has no `grepRules` key; importing it over an existing style keeps that
  * style's rules.
  *
+ * Nested styles (#195) are written the same way, as `"nestedRules":
+ * [{"style": "s3", "unit": "marker", "count": 1, "marker": ":", "end":
+ * "through"}, {"style": "s4", "unit": "line"}]`, always written, and a
+ * file with no `nestedRules` key keeps an overwritten style's rules. The
+ * marker is written as the character itself (JSON keeps any character).
+ *
  * Import gives every added style a new ID and saves every style in one
  * write, after a dry run that checks names, parents and chains.
  *
@@ -141,7 +147,8 @@ final class Typost_PS_Transfer {
 		}
 
 		// A style needs the styles it is based on, or it cannot be imported
-		// as it looks here, and the styles its GREP rules apply (#196).
+		// as it looks here, and the styles its GREP rules (#196) and nested
+		// rules (#195) apply.
 		// Added styles can need others in turn, so this runs until nothing
 		// is added.
 		$notes    = array();
@@ -168,6 +175,18 @@ final class Typost_PS_Transfer {
 					$notes[]                = sprintf(
 						/* translators: 1: name of the style added to the export, 2: name of the style whose GREP rule applies it */
 						__( '“%1$s” was added because a GREP rule of “%2$s” applies it.', 'typost-paragraph-styles' ),
+						$by_id[ $target_id ]['name'],
+						$current['name']
+					);
+				}
+			}
+			foreach ( Typost_PS_Nested::target_style_ids( isset( $current['nestedRules'] ) ? $current['nestedRules'] : array() ) as $target_id ) {
+				if ( isset( $by_id[ $target_id ] ) && ! isset( $selected[ $target_id ] ) ) {
+					$selected[ $target_id ] = true;
+					$queue[]                = $target_id;
+					$notes[]                = sprintf(
+						/* translators: 1: name of the style added to the export, 2: name of the style whose nested rule applies it */
+						__( '“%1$s” was added because a nested rule of “%2$s” applies it.', 'typost-paragraph-styles' ),
 						$by_id[ $target_id ]['name'],
 						$current['name']
 					);
@@ -204,8 +223,9 @@ final class Typost_PS_Transfer {
 			);
 			// Always written: plan() reads no key as "keep the existing rules",
 			// so an empty list is how Overwrite removes them.
-			$entry['grepRules'] = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
-			$out[]              = $entry;
+			$entry['grepRules']   = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
+			$entry['nestedRules'] = self::export_nested_rules( isset( $style['nestedRules'] ) ? $style['nestedRules'] : array(), $keys );
+			$out[]                = $entry;
 		}
 
 		return array(
@@ -382,6 +402,31 @@ final class Typost_PS_Transfer {
 	}
 
 	/**
+	 * A style's nested rules with file style keys (#195). A rule whose
+	 * style is not in the file (it was deleted) is left out.
+	 *
+	 * @param mixed $rules Stored rules.
+	 * @param array $keys  Style ID => file key.
+	 * @return array[]
+	 */
+	private static function export_nested_rules( $rules, $keys ) {
+		$out = array();
+		foreach ( is_array( $rules ) ? $rules : array() as $rule ) {
+			if ( ! is_array( $rule ) || empty( $rule['styleId'] ) || ! isset( $rule['unit'], $keys[ intval( $rule['styleId'] ) ] ) ) {
+				continue;
+			}
+			$entry = array( 'style' => $keys[ intval( $rule['styleId'] ) ] );
+			foreach ( array( 'unit', 'count', 'marker', 'end' ) as $field ) {
+				if ( isset( $rule[ $field ] ) ) {
+					$entry[ $field ] = $rule[ $field ];
+				}
+			}
+			$out[] = $entry;
+		}
+		return $out;
+	}
+
+	/**
 	 * Replace a style's numeric font ID with its file font key.
 	 *
 	 * A font that no longer exists (deleted, no replacement) is left out; a
@@ -457,17 +502,57 @@ final class Typost_PS_Transfer {
 					}
 				}
 			}
+			// Nested rules (#195): null when the file has none. Each rule
+			// gets the checks of Save (a placeholder style stands in for its
+			// file key), and one that fails rejects the whole file.
+			$nested_rules = null;
+			if ( array_key_exists( 'nestedRules', $raw ) ) {
+				$file_rules = $raw['nestedRules'];
+				if ( ! is_array( $file_rules ) || array_values( $file_rules ) !== $file_rules ) {
+					return $invalid;
+				}
+				$check = array();
+				foreach ( $file_rules as $rule ) {
+					if ( ! is_array( $rule ) || ! isset( $rule['style'] ) || ! is_string( $rule['style'] ) || $rule['style'] === $raw['key'] ) {
+						return $invalid;
+					}
+					$check[] = array_merge( $rule, array( 'styleId' => 1 ) );
+				}
+				$nested = Typost_PS_Nested::sanitize_rules( $check, array( 'style_ids' => array( 1 ) ) );
+				if ( '' !== $nested['error'] ) {
+					return new WP_Error(
+						'typost_import_invalid_file',
+						$nested['index'] >= 0
+							/* translators: 1: style name, 2: rule number, 3: why the rule is rejected */
+							? sprintf( __( '“%1$s”, nested rule %2$d: %3$s Nothing was saved.', 'typost-paragraph-styles' ), $name, $nested['index'] + 1, $nested['error'] )
+							/* translators: 1: style name, 2: why the rules are rejected */
+							: sprintf( __( '“%1$s”: %2$s Nothing was saved.', 'typost-paragraph-styles' ), $name, $nested['error'] ),
+						array( 'status' => 400 )
+					);
+				}
+				$nested_rules = array();
+				foreach ( $nested['rules'] as $index => $clean ) {
+					unset( $clean['styleId'] );
+					$nested_rules[] = array_merge( array( 'style' => $file_rules[ $index ]['style'] ), $clean );
+				}
+			}
 			$items[ $raw['key'] ] = array(
-				'key'        => $raw['key'],
-				'name'       => $name,
-				'basedOn'    => $based_on,
-				'properties' => $properties,
-				'grepRules'  => $grep_rules,
+				'key'         => $raw['key'],
+				'name'        => $name,
+				'basedOn'     => $based_on,
+				'properties'  => $properties,
+				'grepRules'   => $grep_rules,
+				'nestedRules' => $nested_rules,
 			);
 		}
 		foreach ( $items as $item ) {
 			if ( null !== $item['basedOn'] && ! isset( $items[ $item['basedOn'] ] ) ) {
 				return $invalid;
+			}
+			foreach ( is_array( $item['nestedRules'] ) ? $item['nestedRules'] : array() as $rule ) {
+				if ( ! isset( $items[ $rule['style'] ] ) ) {
+					return $invalid;
+				}
 			}
 			foreach ( is_array( $item['grepRules'] ) ? $item['grepRules'] : array() as $index => $rule ) {
 				if ( ! isset( $items[ $rule['style'] ] ) ) {
@@ -604,6 +689,12 @@ final class Typost_PS_Transfer {
 				/* translators: 1: a GREP pattern, such as "Acronyms (NASA)", 2: the style applied to its matches */
 				$grep[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $pattern_label, $target );
 			}
+			// Nested rules (#195), in their order
+			$nested = array();
+			foreach ( is_array( $item['nestedRules'] ) ? $item['nestedRules'] : array() as $rule ) {
+				/* translators: 1: a nested rule, such as "Up to 3 words", 2: the style it applies */
+				$nested[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), Typost_PS_Nested::rule_label( $rule ), $by_key[ $rule['style'] ]['name'] );
+			}
 
 			$lower    = self::lower( $item['name'] );
 			$existing = isset( $by_name[ $lower ] ) ? $by_name[ $lower ] : null;
@@ -624,6 +715,7 @@ final class Typost_PS_Transfer {
 				'suggestedName' => $defaults[ $item['key'] ]['suggestedName'],
 				'affected'      => $affected,
 				'grep'          => $grep,
+				'nested'        => $nested,
 			);
 		}
 
@@ -633,6 +725,9 @@ final class Typost_PS_Transfer {
 			if ( ! Typost_Paragraph_Styles::grep_supported() ) {
 				$warnings[] = __( 'GREP styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated.', 'typost-paragraph-styles' );
 			}
+		}
+		if ( self::file_has_grep_rules( $items, 'nestedRules' ) && ! Typost_Paragraph_Styles::grep_supported() ) {
+			$warnings[] = __( 'Nested styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated.', 'typost-paragraph-styles' );
 		}
 		return array(
 			'items'        => $rows,
@@ -646,14 +741,15 @@ final class Typost_PS_Transfer {
 	}
 
 	/**
-	 * Whether any style in the file has GREP rules.
+	 * Whether any style in the file has GREP rules (or nested rules, #195).
 	 *
 	 * @param array[] $items read_items().
+	 * @param string  $field 'grepRules' or 'nestedRules'.
 	 * @return bool
 	 */
-	private static function file_has_grep_rules( $items ) {
+	private static function file_has_grep_rules( $items, $field = 'grepRules' ) {
 		foreach ( $items as $item ) {
-			if ( ! empty( $item['grepRules'] ) ) {
+			if ( ! empty( $item[ $field ] ) ) {
 				return true;
 			}
 		}
@@ -1002,6 +1098,42 @@ final class Typost_PS_Transfer {
 						unset( $working[ $i ]['grepRules'] );
 					} else {
 						$working[ $i ]['grepRules'] = $rules;
+					}
+				}
+			}
+		}
+
+		// Nested rules (#195), the same way. A rule left out moves the
+		// rules after it to where it started, which the warning says.
+		foreach ( $imported_keys as $key => $name ) {
+			$file_rules = isset( $by_key[ $key ]['nestedRules'] ) ? $by_key[ $key ]['nestedRules'] : null;
+			if ( null === $file_rules ) {
+				continue;
+			}
+			$own_id = $key_to_id[ $key ];
+			$rules  = array();
+			foreach ( $file_rules as $index => $rule ) {
+				$target_id = ! empty( $key_to_id[ $rule['style'] ] ) ? intval( $key_to_id[ $rule['style'] ] ) : 0;
+				if ( ! $target_id || $target_id === $own_id ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: name of the style the rule applies */
+						__( '“%1$s”, nested rule %2$d: “%3$s” is not imported, so the rule is left out and the rules after it start earlier.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$by_key[ $rule['style'] ]['name']
+					);
+					continue;
+				}
+				$clean            = $rule;
+				unset( $clean['style'] );
+				$rules[] = array_merge( array( 'styleId' => $target_id ), $clean );
+			}
+			foreach ( $working as $i => $style ) {
+				if ( intval( $style['id'] ) === $own_id ) {
+					if ( empty( $rules ) ) {
+						unset( $working[ $i ]['nestedRules'] );
+					} else {
+						$working[ $i ]['nestedRules'] = $rules;
 					}
 				}
 			}

@@ -321,7 +321,12 @@ if ( ! class_exists( 'Typost_PS_Text_Ranges' ) ) {
 					if ( $start > $pos ) {
 						$html .= self::escape_gap( $text, $pos - $seg_start, $start - $pos );
 					}
-					$html   .= $ranges[ $i ][2] . self::escape( substr( $text, $start - $seg_start, $end - $start ) ) . '</span>';
+					// Text right after the wrapper before it, as nested rules
+					// write: a quote there closes that text, as in a gap
+					$inner   = $was_hit && $start === $pos
+						? self::escape_gap( $text, $start - $seg_start, $end - $start )
+						: self::escape( substr( $text, $start - $seg_start, $end - $start ) );
+					$html   .= $ranges[ $i ][2] . $inner . '</span>';
 					$pos     = $end;
 					$was_hit = true;
 				}
