@@ -1616,3 +1616,9 @@ msgstr "Règle imbriquée supprimée."
 #: assets/js/editor.js:202
 msgid "nested styles"
 msgstr "styles imbriqués"
+
+#. translators: %s: comma-separated list of style names
+#: assets/js/admin.js:2684
+#, js-format
+msgid "Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles."
+msgstr "Les règles imbriquées qui appliquent ce style seront retirées de : %s. Les règles suivantes commenceront plus tôt dans chaque publication qui utilise ces styles."

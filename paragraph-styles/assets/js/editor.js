@@ -1525,6 +1525,8 @@
 	 * print on the next load.
 	 */
 	var dynamicCssInjected = false;
+	var dynamicNestedCss = ''; // From the server: nested_css() has no JS twin (#354)
+	var nestedCssRequest = 0;
 
 	function refreshDynamicStyleCss() {
 		dynamicCssInjected = true;
@@ -1566,9 +1568,45 @@
 				(doc.head || doc.documentElement).appendChild(styleEl);
 			}
 			styleEl.textContent = css;
+
+			// After the main rules, as in get_all_css()
+			var nestedEl = doc.getElementById('typost-ps-dynamic-nested-css');
+			if (dynamicNestedCss && !nestedEl) {
+				nestedEl = doc.createElement('style');
+				nestedEl.id = 'typost-ps-dynamic-nested-css';
+				(doc.head || doc.documentElement).appendChild(nestedEl);
+			}
+			if (nestedEl) {
+				nestedEl.textContent = dynamicNestedCss;
+			}
 		}
 
 		watchForCanvasRemount();
+	}
+
+	/**
+	 * Read the nested rule CSS from the server after a style changes (#354).
+	 * A First line rule copies the declarations of the style it applies, and
+	 * a feature rule combines two styles' features, so they change when
+	 * either style does. Only the latest response counts. If the request
+	 * fails, the rules stay as they were until a reload.
+	 */
+	function refreshNestedCss() {
+		var options = window.typostData && window.typostData.paragraphStylesOptions;
+		var hasRules = getStyles().some(function(style) {
+			return Array.isArray(style.nestedRules) && style.nestedRules.length > 0;
+		});
+		if (!options || !options.nestedPreview || !wp.apiFetch || (!hasRules && !dynamicNestedCss)) {
+			return;
+		}
+		var request = ++nestedCssRequest;
+		wp.apiFetch({ path: '/typost/v1/paragraph-styles/nested-css' }).then(function(response) {
+			if (request !== nestedCssRequest) {
+				return;
+			}
+			dynamicNestedCss = response && typeof response.css === 'string' ? response.css : '';
+			refreshDynamicStyleCss();
+		}).catch(function() {});
 	}
 
 	// The canvas iframe is unmounted and recreated by editor mode switches
@@ -1605,6 +1643,7 @@
 	// The panel dispatches this after every save/update (before it applies the
 	// style), so the rules exist by the time the span/block starts relying on them.
 	document.addEventListener('typost-paragraph-styles-updated', refreshDynamicStyleCss);
+	document.addEventListener('typost-paragraph-styles-updated', refreshNestedCss);
 
 	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)
@@ -1709,6 +1748,14 @@
 		var decorated = []; // {root, records, signature}
 		var scheduled = false;
 		var watchedDocs = [];
+		var ruleMap = null; // Rebuilt after typost-paragraph-styles-updated
+
+		function currentRuleMap() {
+			if (!ruleMap) {
+				ruleMap = utils.buildNestedRuleMap(getStyles());
+			}
+			return ruleMap;
+		}
 
 		function canvasDocuments() {
 			var docs = [document];
@@ -1800,7 +1847,7 @@
 
 		function sync() {
 			scheduled = false;
-			var map = utils.buildNestedRuleMap(getStyles());
+			var map = currentRuleMap();
 
 			// Entries whose element left the page, lost its style, or can be edited
 			decorated.slice().forEach(function(entry) {
@@ -1848,7 +1895,8 @@
 					undecorate(decorated[i].root);
 				}
 			}
-			if (scheduled) {
+			// A site with no text rules has nothing to scan on every store change
+			if (scheduled || (!decorated.length && !Object.keys(currentRuleMap().rules).length)) {
 				return;
 			}
 			// The store changes on every keystroke: re-decorate at most every
@@ -1858,7 +1906,10 @@
 		}
 
 		wp.data.subscribe(schedule);
-		document.addEventListener('typost-paragraph-styles-updated', schedule);
+		document.addEventListener('typost-paragraph-styles-updated', function() {
+			ruleMap = null;
+			schedule();
+		});
 		schedule();
 	}
 

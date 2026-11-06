@@ -1287,16 +1287,33 @@ final class Typost_Paragraph_Styles {
 				$css_blocks[] = $block;
 			}
 		}
-		foreach ( $styles as $style ) {
-			$block = self::nested_css( $style, $styles );
-			if ( '' !== $block ) {
-				$css_blocks[] = $block;
-			}
+		$nested = $this->get_nested_css();
+		if ( '' !== $nested ) {
+			$css_blocks[] = $nested;
 		}
 
 		$css = implode( "\n\n", $css_blocks );
 		set_transient( self::CSS_CACHE_KEY, $css, 12 * HOUR_IN_SECONDS );
 		return $css;
+	}
+
+	/**
+	 * The CSS of every style's nested rules (#195). Part of get_all_css().
+	 * The editor also reads it after a style changes (#354): it has no JS
+	 * twin, and a First line rule copies the declarations of another style.
+	 *
+	 * @return string CSS, '' for none.
+	 */
+	public function get_nested_css() {
+		$styles = $this->get_styles();
+		$blocks = array();
+		foreach ( $styles as $style ) {
+			$block = self::nested_css( $style, $styles );
+			if ( '' !== $block ) {
+				$blocks[] = $block;
+			}
+		}
+		return implode( "\n\n", $blocks );
 	}
 
 	/**
@@ -1844,6 +1861,12 @@ final class Typost_Paragraph_Styles {
 					$selectors[] = '.typost-ps-' . $ref . ':not(.typost-fit)::first-line';
 				}
 				$css[] = implode( ",\n", $selectors ) . " {\n    " . implode( ";\n    ", $declarations ) . ";\n}";
+				// generate_style_css() writes this for the style's own selectors
+				// only. Without it, an outline-only first line vanishes in
+				// forced colors in Firefox.
+				if ( false !== strpos( self::text_color_css_value( $props ), 'transparent' ) ) {
+					$css[] = "@media (forced-colors: active) {\n" . implode( ",\n", $selectors ) . " {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}";
+				}
 			}
 		}
 		return implode( "\n\n", $css );
@@ -2550,6 +2573,15 @@ final class Typost_Paragraph_Styles {
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
+
+		// The editor refreshes its nested rule CSS from this after a style changes (#354)
+		register_rest_route( self::REST_NAMESPACE, '/paragraph-styles/nested-css', array(
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'rest_get_nested_css' ),
+				'permission_callback' => array( $this, 'check_permissions' ),
+			),
+		) );
 	}
 
 	/**
@@ -2867,7 +2899,8 @@ final class Typost_Paragraph_Styles {
 		}
 
 		// Nested rules that apply it too (#195). The rules after a removed
-		// one then start earlier: the author sees it in nestedChanged.
+		// one then start earlier: the Delete confirmation says so first
+		// (nestedRuleUsers() in admin.js).
 		$nested_changed = array();
 		foreach ( $styles as $i => $style ) {
 			if ( empty( $style['nestedRules'] ) || ! is_array( $style['nestedRules'] ) ) {
@@ -3571,7 +3604,18 @@ final class Typost_Paragraph_Styles {
 			$sample = self::wrap_grep( $sample, array( (string) $style_id => $grep['rules'] ), $grep['ids'], false, isset( $grep['fonts'] ) ? $grep['fonts'] : array() );
 		}
 
-		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '">';
+		// A First line rule has no span to carry its style's font, so the
+		// wrapper names it for the admin font loader (#354)
+		$line_font = 0;
+		if ( is_array( $nested ) && ! empty( $nested['rules'] ) && ! empty( $nested['fonts'] ) ) {
+			$line_id = Typost_PS_Nested::line_style_id( $nested['rules'] );
+			if ( isset( $nested['fonts'][ $line_id ] ) ) {
+				$line_font = absint( $nested['fonts'][ $line_id ] );
+			}
+		}
+
+		$html  = '<div class="typost-ps-preview" id="' . esc_attr( 'typost-ps-preview-' . $style_id ) . '"'
+			. ( $line_font ? ' data-typost-font-id="' . esc_attr( $line_font ) . '"' : '' ) . '>';
 		$html .= $sample;
 		// Check the font the style renders in: a deleted font can be replaced by a manual one.
 		if ( $font_id && isset( $manual_ids[ $font_id ] ) ) {
@@ -3827,6 +3871,15 @@ final class Typost_Paragraph_Styles {
 			'balance' => __( 'Balance lines', 'typost-paragraph-styles' ),
 			'pretty'  => __( 'Avoid short last lines', 'typost-paragraph-styles' ),
 		);
+	}
+
+	/**
+	 * GET /paragraph-styles/nested-css
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function rest_get_nested_css() {
+		return new WP_REST_Response( array( 'css' => $this->get_nested_css() ), 200 );
 	}
 
 	/**

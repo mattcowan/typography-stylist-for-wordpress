@@ -22,6 +22,7 @@ const {
 	updateNestedRow,
 	fillGrepRules,
 	readGrepRules,
+	nestedRuleUsers,
 } = require('../assets/js/admin.js');
 
 const NESTED = {
@@ -77,6 +78,30 @@ function buildForm() {
 function rows(form) {
 	return Array.from(form.querySelectorAll('[data-nested-rules] > li'));
 }
+
+describe('deleting a style that nested rules apply', () => {
+	test('names the styles that lose a rule, once each', () => {
+		const styles = [
+			...STYLES,
+			{ id: 4, name: 'Twice', nestedRules: [{ styleId: 2, unit: 'words', count: 1 }, { styleId: '2', unit: 'line' }] },
+		];
+		expect(nestedRuleUsers(styles, 2)).toEqual(['Step', 'Twice']);
+		expect(nestedRuleUsers(styles, '3')).toEqual(['Step']);
+		expect(nestedRuleUsers(styles, 1)).toEqual([]);
+		expect(nestedRuleUsers(null, 1)).toEqual([]);
+	});
+});
+
+describe('the character field', () => {
+	test('is long enough for one character the server accepts, so the browser does not cut it', () => {
+		const form = buildForm();
+		fillNestedRules(form, STYLES[0], STYLES, NESTED);
+		const marker = rows(form)[0].querySelector('[data-nested="marker"]');
+		// A family emoji with joiners is one character and 11 UTF-16 units
+		expect(Number(marker.getAttribute('maxlength'))).toBeGreaterThanOrEqual('👨‍👩‍👧‍👦'.length);
+		expect(Number(marker.getAttribute('maxlength'))).toBe(32);
+	});
+});
 
 function visible(row) {
 	return Array.from(row.querySelectorAll('[data-nested-field]'))

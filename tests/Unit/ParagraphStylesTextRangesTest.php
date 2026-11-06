@@ -140,6 +140,13 @@ class ParagraphStylesTextRangesTest extends TestCase {
         // A match that ends in an opening character leaves the next quote an opening quote
         $open = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 5, 0, '( "a"')), array(array(0, 2, '<i>')));
         $this->assertSame(array(0 => '<i>( </span>"a"'), $open);
+
+        // Two wrappers side by side (nested rules follow each other): the same quote, inside the second
+        $adjacent = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 13, 0, 'O\'Brien spoke')), array(array(0, 1, '<i>'), array(1, 8, '<b>')));
+        $this->assertSame(array(0 => '<i>O</span><b>&#8217;Brien </span>spoke'), $adjacent);
+        // The first wrapper of a node is not after anything
+        $first = \Typost_PS_Text_Ranges::map_ranges_to_segments(array(array(0, 6, 0, '\'a b c')), array(array(0, 2, '<i>')));
+        $this->assertSame(array(0 => '<i>\'a</span> b c'), $first);
     }
 
     public function test_without_the_html_api_the_html_comes_back_unchanged() {

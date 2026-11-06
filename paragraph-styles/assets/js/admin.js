@@ -1865,7 +1865,10 @@
 			'data-nested': 'marker',
 			autocomplete: 'off',
 			spellcheck: 'false',
-			maxlength: '8',
+			// UTF-16 units, not characters: a family emoji is one character and
+			// 11 units. Cutting it would save another character without an
+			// error. The server's limit is Typost_PS_Nested::MAX_MARKER_BYTES.
+			maxlength: '32',
 			'aria-describedby': uid + '-marker-help'
 		});
 		markerInput.value = r.marker || '';
@@ -2065,6 +2068,24 @@
 	 * @param {Object}     [nested] typostPSAdmin.nested
 	 * @return {{field: string, message: string}|null}
 	 */
+	/**
+	 * The names of the styles with a nested rule that applies a style. The
+	 * server removes those rules when the style is deleted (#195).
+	 *
+	 * @param {Array}         list    Every style.
+	 * @param {number|string} styleId Style id.
+	 * @return {string[]} Style names, each once.
+	 */
+	function nestedRuleUsers(list, styleId) {
+		return (Array.isArray(list) ? list : []).filter(function(style) {
+			return style && Array.isArray(style.nestedRules) && style.nestedRules.some(function(rule) {
+				return rule && String(rule.styleId) === String(styleId);
+			});
+		}).map(function(style) {
+			return style.name;
+		});
+	}
+
 	function validateNestedRules(rules, nested) {
 		var settings = nestedSettings(nested);
 		if (!Array.isArray(rules)) {
@@ -2161,7 +2182,8 @@
 		readNestedRules: readNestedRules,
 		validateNestedRules: validateNestedRules,
 		nestedErrorField: nestedErrorField,
-		updateNestedRow: updateNestedRow
+		updateNestedRow: updateNestedRow,
+		nestedRuleUsers: nestedRuleUsers
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -2649,10 +2671,21 @@
 		var name    = $card.find('.typost-ps-style-name').text();
 
 		/* translators: %s: style name */
-		if (!confirm(wp.i18n.sprintf(
+		var question = wp.i18n.sprintf(
 			wp.i18n.__('Are you sure you want to delete “%s”? This cannot be undone.', 'typost-paragraph-styles'),
 			name
-		))) {
+		);
+		// A nested rule that goes with the style moves the rules after it, on
+		// every post that uses those styles (#195)
+		var nestedUsers = nestedRuleUsers(styles, styleId);
+		if (nestedUsers.length) {
+			question += '\n\n' + wp.i18n.sprintf(
+				/* translators: %s: comma-separated list of style names */
+				wp.i18n.__('Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles.', 'typost-paragraph-styles'),
+				nestedUsers.join(', ')
+			);
+		}
+		if (!confirm(question)) {
 			return;
 		}
 

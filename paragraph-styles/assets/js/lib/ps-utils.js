@@ -3113,6 +3113,11 @@
 				span.className = 'typost-styled typost-nested';
 				span.setAttribute('data-style-id', String(range.styleId));
 				span.setAttribute(NESTED_PREVIEW_ATTR, '');
+				// A press takes the spans off in its capture phase. A press on a
+				// span would leave Chromium no node to place the caret in: the
+				// block is selected, and typing goes nowhere. So the target
+				// must be the parent, which stays.
+				span.style.pointerEvents = 'none';
 				span.appendChild(doc.createTextNode(node.data.slice(start - segStart, end - segStart)));
 				pieces.push(span);
 				pos = end;
@@ -3134,23 +3139,50 @@
 	}
 
 	/**
+	 * Whether a record's parts are exactly what applyNestedPreview() wrote.
+	 * RichText rewrites an element in place when the block's value changes:
+	 * it reuses a child of the same node name, drops its attributes and
+	 * replaces its text. So a part being in the element proves nothing; the
+	 * marker and the text must also be unchanged.
+	 *
+	 * @param {Element} root
+	 * @param {Object}  record
+	 * @return {boolean}
+	 */
+	function nestedRecordIsUntouched(root, record) {
+		var parent = record.parts[0] && record.parts[0].parentNode;
+		if (!parent || !root.contains(parent)) {
+			return false;
+		}
+		var text = '';
+		for (var i = 0; i < record.parts.length; i++) {
+			var part = record.parts[i];
+			if (part.parentNode !== parent || (part.nodeType === 1 && !part.hasAttribute(NESTED_PREVIEW_ATTR))) {
+				return false;
+			}
+			text += part.textContent;
+		}
+		return text === record.original.data;
+	}
+
+	/**
 	 * Take the preview off: the original text nodes go back where they
-	 * were, and any preview span left over (the editor rewrote the element
-	 * around it) is unwrapped.
+	 * were, and any preview span left over is unwrapped. Where the editor
+	 * wrote a new value over a preview, what it wrote stays: the original
+	 * text node is out of date by then, and putting it back would leave text
+	 * in the element that a later edit reads as the block's content.
 	 *
 	 * @param {Element} root
 	 * @param {Array}   [records] applyNestedPreview()'s result.
 	 */
 	function removeNestedPreview(root, records) {
 		(records || []).slice().reverse().forEach(function(record) {
-			var first = record.parts[0];
-			if (first && first.parentNode && root.contains(first)) {
-				first.parentNode.insertBefore(record.original, first);
+			if (!nestedRecordIsUntouched(root, record)) {
+				return;
 			}
+			record.parts[0].parentNode.insertBefore(record.original, record.parts[0]);
 			record.parts.forEach(function(part) {
-				if (part.parentNode) {
-					part.parentNode.removeChild(part);
-				}
+				part.parentNode.removeChild(part);
 			});
 		});
 		if (!root || !root.querySelectorAll) {

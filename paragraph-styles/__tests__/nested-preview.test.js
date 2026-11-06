@@ -65,12 +65,24 @@ describe('the preview', () => {
 		const p = document.querySelector('p');
 		const records = applyNestedPreview(p, RULES, { 2: true, 3: true });
 		expect(records.length).toBe(3);
+		const open = (id) => `<span class="typost-styled typost-nested" data-style-id="${id}" data-typost-nested-preview="" style="pointer-events: none;">`;
 		expect(p.innerHTML).toBe(
-			'<span class="typost-styled typost-nested" data-style-id="2" data-typost-nested-preview="">Step </span>'
-			+ '<em><span class="typost-styled typost-nested" data-style-id="2" data-typost-nested-preview="">2</span></em>'
-			+ '<span class="typost-styled typost-nested" data-style-id="2" data-typost-nested-preview="">:</span> '
-			+ '<span class="typost-styled typost-nested" data-style-id="3" data-typost-nested-preview="">Fold in</span> the flour.'
+			`${open(2)}Step </span>`
+			+ `<em>${open(2)}2</span></em>`
+			+ `${open(2)}:</span> `
+			+ `${open(3)}Fold in</span> the flour.`
 		);
+	});
+
+	test('the pointer passes through a preview span, so a press lands on an element that stays', () => {
+		// The span comes off in the capture phase of the press. If it were the
+		// target, Chromium would have no node to place the caret in.
+		document.body.innerHTML = '<p>Step 1: go now</p>';
+		const p = document.querySelector('p');
+		applyNestedPreview(p, RULES);
+		const spans = Array.from(p.querySelectorAll(`[${NESTED_PREVIEW_ATTR}]`));
+		expect(spans.length).toBeGreaterThan(0);
+		spans.forEach((span) => expect(span.style.pointerEvents).toBe('none'));
 	});
 
 	test('removing puts the very same text nodes back', () => {
@@ -96,12 +108,91 @@ describe('the preview', () => {
 		expect(p.textContent).toBe('Step 1: go now');
 	});
 
+	// What RichText's applyValue() does to a decorated element when the block's
+	// value changes while it is not selected (undo, another author's edit): it
+	// reuses each child of the same node name, drops attributes the new value
+	// does not have, and rewrites the text in place.
+	function rewriteLikeRichText(p, firstChildText, restText) {
+		const span = p.firstChild;
+		Array.from(span.attributes).forEach((attr) => span.removeAttribute(attr.name));
+		span.className = 'typost-styled';
+		span.firstChild.data = firstChildText;
+		if (span.nextSibling) {
+			p.replaceChild(p.ownerDocument.createTextNode(restText), span.nextSibling);
+		} else {
+			p.appendChild(p.ownerDocument.createTextNode(restText));
+		}
+	}
+
+	test('a value the editor wrote over the preview stays: the old text does not come back', () => {
+		document.body.innerHTML = '<p>Hello world</p>';
+		const p = document.querySelector('p');
+		const records = applyNestedPreview(p, [{ styleId: 2, unit: 'words', count: 1, end: 'through' }]);
+		rewriteLikeRichText(p, 'Hello', ' world');
+		removeNestedPreview(p, records);
+		expect(p.innerHTML).toBe('<span class="typost-styled">Hello</span> world');
+	});
+
+	test('a value of the same shape with other text also stays', () => {
+		document.body.innerHTML = '<p>Hello world</p>';
+		const p = document.querySelector('p');
+		const records = applyNestedPreview(p, [{ styleId: 2, unit: 'words', count: 1, end: 'through' }]);
+		// The span and the text node are both reused, so every part is still in place
+		p.firstChild.firstChild.data = 'Hola ';
+		p.lastChild.data = 'mundo';
+		removeNestedPreview(p, records);
+		expect(p.textContent).toBe('Hola mundo');
+		expect(p.querySelector(`[${NESTED_PREVIEW_ATTR}]`)).toBeNull();
+	});
+
+	test('a preview span that lost only its marker is not undone', () => {
+		document.body.innerHTML = '<p>Hello world</p>';
+		const p = document.querySelector('p');
+		const records = applyNestedPreview(p, [{ styleId: 2, unit: 'words', count: 1, end: 'through' }]);
+		p.firstChild.removeAttribute(NESTED_PREVIEW_ATTR);
+		removeNestedPreview(p, records);
+		expect(p.firstChild.nodeName).toBe('SPAN');
+		expect(p.textContent).toBe('Hello world');
+	});
+
+	test('one rewritten text node does not stop the others from going back', () => {
+		document.body.innerHTML = '<p>Step <em>2</em>: Fold in the flour.</p>';
+		const p = document.querySelector('p');
+		const original = p.querySelector('em').firstChild;
+		const records = applyNestedPreview(p, RULES);
+		p.firstChild.firstChild.data = 'Stage ';
+		removeNestedPreview(p, records);
+		expect(p.querySelector('em').firstChild).toBe(original);
+		expect(p.textContent).toBe('Stage 2: Fold in the flour.');
+	});
+
 	test('a deleted style and a First line rule write no span', () => {
 		document.body.innerHTML = '<p>one two</p>';
 		const p = document.querySelector('p');
 		expect(applyNestedPreview(p, [{ styleId: 9, unit: 'words', count: 1 }], { 2: true })).toEqual([]);
 		expect(applyNestedPreview(p, [{ styleId: 2, unit: 'line' }], { 2: true })).toEqual([]);
 		expect(p.innerHTML).toBe('one two');
+	});
+});
+
+describe('the editor CSS after a style changes (#354)', () => {
+	const source = fs.readFileSync(path.join(__dirname, '../assets/js/editor.js'), 'utf8');
+
+	test('asks the server for the nested CSS, so there is no JS twin of nested_css()', () => {
+		expect(source).toMatch(/path: '\/typost\/v1\/paragraph-styles\/nested-css'/);
+		expect(source).toMatch(/addEventListener\('typost-paragraph-styles-updated', refreshNestedCss\)/);
+	});
+
+	test('a late response cannot replace a newer one', () => {
+		expect(source).toMatch(/var request = \+\+nestedCssRequest;/);
+		expect(source).toMatch(/request !== nestedCssRequest/);
+	});
+
+	test('the nested CSS follows the main rules, so it wins where they are equal', () => {
+		const main = source.indexOf("doc.getElementById('typost-ps-dynamic-css')");
+		const nested = source.indexOf("doc.getElementById('typost-ps-dynamic-nested-css')");
+		expect(main).toBeGreaterThan(-1);
+		expect(nested).toBeGreaterThan(main);
 	});
 });
 

@@ -202,6 +202,16 @@
                 var legacy = style.legacyId ? String(style.legacyId) : '';
                 if ((id && styleRefs.indexOf(id) !== -1) || (legacy && styleRefs.indexOf(legacy) !== -1)) {
                     addId(style.properties && style.properties.fontId);
+                    // The editor previews nested styles (#195), so the fonts of
+                    // the styles their rules apply are in use too
+                    (Array.isArray(style.nestedRules) ? style.nestedRules : []).forEach(function(rule) {
+                        var targetId = rule && rule.styleId !== undefined ? String(rule.styleId) : '';
+                        paragraphStyles.forEach(function(target) {
+                            if (target && targetId && String(target.id) === targetId) {
+                                addId(target.properties && target.properties.fontId);
+                            }
+                        });
+                    });
                 }
             });
         }

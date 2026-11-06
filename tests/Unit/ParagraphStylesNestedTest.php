@@ -382,6 +382,56 @@ class ParagraphStylesNestedTest extends TestCase {
         $this->assertSame('', \Typost_Paragraph_Styles::nested_css($styles[0], $styles));
     }
 
+    public function test_get_nested_css_is_the_nested_part_of_the_full_css() {
+        // The editor reads it after a style changes, so a first line rule that reads the style stays current (#354)
+        HtmlApi::setSupported(true);
+        $styles = $this->styles();
+        $styles[0]['nestedRules'] = array(array('styleId' => 2, 'unit' => 'line'));
+        $module = $this->module($styles);
+        $nested = $module->get_nested_css();
+        $this->assertSame(".typost-ps-1:not(.typost-fit)::first-line {\n    font-weight: 700;\n}", $nested);
+        $this->assertStringContainsString($nested, $module->get_all_css());
+
+        $this->assertSame('', $this->module($this->styles())->get_nested_css());
+        HtmlApi::setSupported(false);
+        $this->assertSame('', $module->get_nested_css());
+    }
+
+    public function test_the_card_loads_the_font_of_a_style_only_a_first_line_rule_uses() {
+        // No span carries that font, so the preview wrapper names it for the admin font loader (#354)
+        $this->requireParser();
+        $html = \Typost_Paragraph_Styles::render_card_preview(1, array('font_id' => 0), array(), null, array(
+            'rules' => array(array('styleId' => 3, 'unit' => 'line')),
+            'ids'   => array(3 => true),
+            'fonts' => array(3 => 8),
+        ));
+        $this->assertStringContainsString('<div class="typost-ps-preview" id="typost-ps-preview-1" data-typost-font-id="8">', $html);
+
+        // A style with no font adds nothing
+        $html = \Typost_Paragraph_Styles::render_card_preview(1, array('font_id' => 0), array(), null, array(
+            'rules' => array(array('styleId' => 3, 'unit' => 'line')),
+            'ids'   => array(3 => true),
+            'fonts' => array(),
+        ));
+        $this->assertStringContainsString('<div class="typost-ps-preview" id="typost-ps-preview-1">', $html);
+    }
+
+    public function test_a_first_line_with_a_transparent_fill_stays_visible_in_forced_colors() {
+        HtmlApi::setSupported(true);
+        $styles = $this->styles();
+        $styles[0]['legacyId'] = 'ps_1_2';
+        $styles[0]['nestedRules'] = array(array('styleId' => 4, 'unit' => 'line'));
+        $styles[] = array('id' => 4, 'name' => 'Outline', 'properties' => array('textColor' => 'transparent', 'textStrokeWidth' => 2, 'textStrokeColor' => '#000000'));
+        $css = \Typost_Paragraph_Styles::nested_css($styles[0], $styles);
+        $this->assertStringContainsString(
+            "@media (forced-colors: active) {\n.typost-ps-1:not(.typost-fit)::first-line,\n.typost-ps-ps_1_2:not(.typost-fit)::first-line {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}",
+            $css
+        );
+        // A first line with a real color needs none
+        $styles[count($styles) - 1]['properties']['textColor'] = '#111111';
+        $this->assertStringNotContainsString('forced-colors', \Typost_Paragraph_Styles::nested_css($styles[0], $styles));
+    }
+
     public function test_the_style_css_itself_is_unchanged_by_the_declarations_refactor() {
         $module = $this->module($this->styles());
         $styles = $this->styles();
