@@ -577,6 +577,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									// The style wrote its margins on this wrapper too
 									keepMarginEm: true,
 									hasGrepRules: !!(detachedStyle.grepRules && detachedStyle.grepRules.length),
+									hasNestedRules: !!(detachedStyle.nestedRules && detachedStyle.nestedRules.length),
 								}
 							);
 							Object.assign(newAttrs, kept.attributes);

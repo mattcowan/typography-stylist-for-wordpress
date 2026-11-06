@@ -742,6 +742,10 @@
 			if (Array.isArray(item.grep) && item.grep.length) {
 				notes.push(formatString(l10n.grepRules, [item.grep.join('; ')]));
 			}
+			// Nested styles (#195), in their order
+			if (Array.isArray(item.nested) && item.nested.length) {
+				notes.push(formatString(l10n.nestedRules, [item.nested.join('; ')]));
+			}
 			if (notes.length) {
 				nameCell.appendChild(el('span', { id: noteId, class: 'typost-import-note' }, notes.join(' ')));
 			}

@@ -514,6 +514,7 @@
 	 * @param {boolean} [options.coreBlock]  A core block, which holds no copy of the style's type settings.
 	 * @param {boolean} [options.keepMarginEm] The style's margins are on the element the block's margins go to.
 	 * @param {boolean} [options.hasGrepRules] The style has GREP rules, which are on its record, not in its properties.
+	 * @param {boolean} [options.hasNestedRules] The style has nested rules (#195), also on its record.
 	 * @return {{attributes: Object, removed: string[], emConverted: boolean}}
 	 */
 	function buildDetachBlockSettings(properties, attrs, options) {
@@ -599,6 +600,8 @@
 		}
 		// The GREP rules go with the class; text in a fit block never matched
 		if (opts.hasGrepRules && !isFit) removed.push('grepRules');
+		// So do the nested rules (#195), which skip fit text too
+		if (opts.hasNestedRules && !isFit) removed.push('nestedRules');
 
 		// A Typography Stylist block keeps these as its working copy; a core
 		// block has only the class
@@ -2860,6 +2863,355 @@
 		return { ratio: floor2(fillRatio), required: required, pair: 'text' };
 	}
 
+
+	// -------------------------------------------------------------------------
+	// Nested styles (#195): the editor preview
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Plain text added for an element whose text is not read, as
+	 * Typost_PS_Text_Ranges::OBJECT_MARK.
+	 */
+	var NESTED_OBJECT_MARK = '￼';
+
+	/** Elements whose text the engine never reads (Typost_PS_Text_Ranges::SKIP_ELEMENTS). */
+	var NESTED_SKIP_ELEMENTS = ['SCRIPT', 'STYLE', 'TEMPLATE', 'TEXTAREA', 'TITLE', 'XMP', 'NOSCRIPT', 'NOEMBED', 'NOFRAMES', 'IFRAME', 'SVG', 'MATH', 'CODE', 'KBD', 'SAMP', 'PRE', 'SELECT', 'BUTTON'];
+
+	/** Void elements (Typost_PS_Text_Ranges::VOID_ELEMENTS). */
+	var NESTED_VOID_ELEMENTS = ['AREA', 'BR', 'EMBED', 'HR', 'IMG', 'INPUT', 'WBR', 'SOURCE', 'TRACK'];
+
+	/** The attribute that marks the editor's preview spans. */
+	var NESTED_PREVIEW_ATTR = 'data-typost-nested-preview';
+
+	function nestedSkipSpaces(plain, pos) {
+		var re = /[\s￼]+/y;
+		re.lastIndex = pos;
+		var m = re.exec(plain);
+		return m ? pos + m[0].length : pos;
+	}
+
+	/**
+	 * The lengths of the first `count` user-perceived characters of text
+	 * (PCRE's \X on the server): Intl.Segmenter where the browser has it,
+	 * else code points with the combining marks after them.
+	 *
+	 * @param {string} text
+	 * @param {number} count
+	 * @return {number} UTF-16 length.
+	 */
+	function nestedGraphemesLength(text, count) {
+		var length = 0;
+		var n = 0;
+		if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+			var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
+			var step;
+			while (n < count && !(step = it.next()).done) {
+				length += step.value.segment.length;
+				n++;
+			}
+			return length;
+		}
+		var re = /[\s\S]\p{M}*/gu;
+		var m;
+		while (n < count && (m = re.exec(text))) {
+			length += m[0].length;
+			n++;
+		}
+		return length;
+	}
+
+	/**
+	 * Where a rule that starts at `start` ends. Twin of
+	 * Typost_PS_Nested::rule_end(), in UTF-16 offsets.
+	 */
+	function nestedRuleEnd(plain, start, rule) {
+		var length = plain.length;
+		var count = Math.max(1, Math.min(100, parseInt(rule.count, 10) || 1));
+		var through = rule.end !== 'upto';
+		var pos;
+		var i;
+
+		if (rule.unit === 'words') {
+			pos = start;
+			var wordEnd = start;
+			var word = /[^\s￼]+/y;
+			for (i = 0; i < count; i++) {
+				word.lastIndex = pos;
+				var m = word.exec(plain);
+				if (!m) {
+					break;
+				}
+				pos += m[0].length;
+				wordEnd = pos;
+				var next = nestedSkipSpaces(plain, pos);
+				if (next === pos) {
+					break;
+				}
+				pos = next;
+			}
+			return through ? pos : wordEnd;
+		}
+		if (rule.unit === 'characters') {
+			return start + nestedGraphemesLength(plain.slice(start), count);
+		}
+		if (rule.unit === 'marker') {
+			var marker = typeof rule.marker === 'string' ? rule.marker : '';
+			if (!marker) {
+				return start;
+			}
+			pos = start;
+			for (i = 1; i <= count; i++) {
+				var at = plain.indexOf(marker, pos);
+				if (at === -1) {
+					return length;
+				}
+				if (i === count) {
+					return through ? at + marker.length : at;
+				}
+				pos = at + marker.length;
+			}
+			return length;
+		}
+		return start;
+	}
+
+	/**
+	 * The text a style's nested rules cover: the twin of
+	 * Typost_PS_Nested::find_ranges() (#195), in UTF-16 offsets. Each rule
+	 * starts at its first character after the previous rule that is not a
+	 * space; a First line rule (CSS) stops the count; a rule whose style is
+	 * not in validIds keeps its text but writes no range.
+	 *
+	 * @param {string} plain
+	 * @param {Array}  rules
+	 * @param {Object} [validIds] style id => true; omitted = every style.
+	 * @return {Array<{start: number, end: number, styleId: number}>}
+	 */
+	function nestedRuleRanges(plain, rules, validIds) {
+		var out = [];
+		if (typeof plain !== 'string' || !plain || !Array.isArray(rules)) {
+			return out;
+		}
+		var pos = 0;
+		for (var r = 0; r < rules.length; r++) {
+			var rule = rules[r];
+			if (!rule || typeof rule !== 'object' || !rule.unit || rule.unit === 'line' || pos >= plain.length) {
+				break;
+			}
+			pos = nestedSkipSpaces(plain, pos);
+			if (pos >= plain.length) {
+				break;
+			}
+			var end = nestedRuleEnd(plain, pos, rule);
+			var styleId = parseInt(rule.styleId, 10) || 0;
+			if (end > pos && styleId && (!validIds || validIds[styleId])) {
+				out.push({ start: pos, end: end, styleId: styleId });
+			}
+			pos = end;
+		}
+		return out;
+	}
+
+	/**
+	 * Whether rules hold a rule that wraps text (not only First line).
+	 *
+	 * @param {Array} rules
+	 * @return {boolean}
+	 */
+	function hasNestedTextRules(rules) {
+		return Array.isArray(rules) && rules.some(function(rule) {
+			return rule && rule.unit && rule.unit !== 'line';
+		});
+	}
+
+	/**
+	 * A root element's plain text with the text node at each place, read as
+	 * Typost_PS_Text_Ranges reads the rendered HTML: a <br> is "\n", a
+	 * skipped or void element is U+FFFC (<wbr> nothing), comments nothing.
+	 *
+	 * @param {Element} root
+	 * @return {{plain: string, segments: Array<{node: Text, start: number}>}}
+	 */
+	function collectNestedText(root) {
+		var plain = '';
+		var segments = [];
+		(function walk(node) {
+			for (var child = node.firstChild; child; child = child.nextSibling) {
+				if (child.nodeType === 3) {
+					if (child.data) {
+						segments.push({ node: child, start: plain.length });
+						plain += child.data;
+					}
+					continue;
+				}
+				if (child.nodeType !== 1) {
+					continue;
+				}
+				var name = String(child.tagName).toUpperCase();
+				if (NESTED_SKIP_ELEMENTS.indexOf(name) !== -1 || (child.namespaceURI && child.namespaceURI !== 'http://www.w3.org/1999/xhtml')) {
+					plain += NESTED_OBJECT_MARK;
+					continue;
+				}
+				if (NESTED_VOID_ELEMENTS.indexOf(name) !== -1) {
+					if (name === 'BR') {
+						plain += '\n';
+					} else if (name !== 'WBR') {
+						plain += NESTED_OBJECT_MARK;
+					}
+					continue;
+				}
+				walk(child);
+			}
+		})(root);
+		return { plain: plain, segments: segments };
+	}
+
+	/**
+	 * Wrap the text a style's nested rules cover inside an element of the
+	 * block editor, for the preview (#195). Each covered piece of a text
+	 * node gets its own `<span class="typost-styled typost-nested"
+	 * data-style-id="B" data-typost-nested-preview>`, as the server writes
+	 * it. Returns what removeNestedPreview() needs to put the very same text
+	 * nodes back.
+	 *
+	 * The spans must never reach the saved content: the editor script adds
+	 * them only to a block that is not selected and has no focus, and takes
+	 * them off before the block can be edited.
+	 *
+	 * @param {Element} root
+	 * @param {Array}   rules
+	 * @param {Object}  [validIds]
+	 * @return {Array<{original: Text, parts: Node[]}>}
+	 */
+	function applyNestedPreview(root, rules, validIds) {
+		var records = [];
+		if (!root || !hasNestedTextRules(rules)) {
+			return records;
+		}
+		var text = collectNestedText(root);
+		var ranges = nestedRuleRanges(text.plain, rules, validIds);
+		if (!ranges.length) {
+			return records;
+		}
+		var doc = root.ownerDocument;
+		text.segments.forEach(function(segment) {
+			var node = segment.node;
+			var segStart = segment.start;
+			var segEnd = segStart + node.data.length;
+			var pieces = [];
+			var pos = segStart;
+			ranges.forEach(function(range) {
+				var start = Math.max(range.start, segStart);
+				var end = Math.min(range.end, segEnd);
+				if (end <= start) {
+					return;
+				}
+				if (start > pos) {
+					pieces.push(doc.createTextNode(node.data.slice(pos - segStart, start - segStart)));
+				}
+				var span = doc.createElement('span');
+				span.className = 'typost-styled typost-nested';
+				span.setAttribute('data-style-id', String(range.styleId));
+				span.setAttribute(NESTED_PREVIEW_ATTR, '');
+				span.appendChild(doc.createTextNode(node.data.slice(start - segStart, end - segStart)));
+				pieces.push(span);
+				pos = end;
+			});
+			if (!pieces.length) {
+				return;
+			}
+			if (pos < segEnd) {
+				pieces.push(doc.createTextNode(node.data.slice(pos - segStart)));
+			}
+			var parent = node.parentNode;
+			pieces.forEach(function(piece) {
+				parent.insertBefore(piece, node);
+			});
+			parent.removeChild(node);
+			records.push({ original: node, parts: pieces });
+		});
+		return records;
+	}
+
+	/**
+	 * Take the preview off: the original text nodes go back where they
+	 * were, and any preview span left over (the editor rewrote the element
+	 * around it) is unwrapped.
+	 *
+	 * @param {Element} root
+	 * @param {Array}   [records] applyNestedPreview()'s result.
+	 */
+	function removeNestedPreview(root, records) {
+		(records || []).slice().reverse().forEach(function(record) {
+			var first = record.parts[0];
+			if (first && first.parentNode && root.contains(first)) {
+				first.parentNode.insertBefore(record.original, first);
+			}
+			record.parts.forEach(function(part) {
+				if (part.parentNode) {
+					part.parentNode.removeChild(part);
+				}
+			});
+		});
+		if (!root || !root.querySelectorAll) {
+			return;
+		}
+		Array.prototype.slice.call(root.querySelectorAll('[' + NESTED_PREVIEW_ATTR + ']')).forEach(function(span) {
+			var parent = span.parentNode;
+			while (span.firstChild) {
+				parent.insertBefore(span.firstChild, span);
+			}
+			parent.removeChild(span);
+		});
+	}
+
+	/**
+	 * The nested rules by style reference (id and legacy id) for the styles
+	 * with a rule that wraps text, and the ids of every style.
+	 *
+	 * @param {Array} styles
+	 * @return {{rules: Object, ids: Object}}
+	 */
+	function buildNestedRuleMap(styles) {
+		var rules = {};
+		var ids = {};
+		(Array.isArray(styles) ? styles : []).forEach(function(style) {
+			if (!style || style.id === undefined) {
+				return;
+			}
+			ids[parseInt(style.id, 10)] = true;
+			if (hasNestedTextRules(style.nestedRules)) {
+				rules[String(style.id)] = style.nestedRules;
+				if (style.legacyId) {
+					rules[String(style.legacyId)] = style.nestedRules;
+				}
+			}
+		});
+		return { rules: rules, ids: ids };
+	}
+
+	/**
+	 * The style reference of a root element with nested rules, as the
+	 * server's root test reads it: `typost-styled` and a `typost-ps-{ref}`
+	 * class of a style with rules, not fit to width. '' for none.
+	 *
+	 * @param {Element} element
+	 * @param {Object}  rulesByRef
+	 * @return {string}
+	 */
+	function nestedRootRef(element, rulesByRef) {
+		if (!element || !element.classList || !element.classList.contains('typost-styled') || element.classList.contains('typost-fit')) {
+			return '';
+		}
+		for (var i = 0; i < element.classList.length; i++) {
+			var m = /^typost-ps-([A-Za-z0-9_-]+)$/.exec(element.classList[i]);
+			if (m && Object.prototype.hasOwnProperty.call(rulesByRef, m[1])) {
+				return m[1];
+			}
+		}
+		return '';
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
@@ -2938,6 +3290,14 @@
 		buildStyleCssBlock: buildStyleCssBlock,
 		pxToRem: pxToRem,
 		responsiveZoomVw: responsiveZoomVw,
+		NESTED_PREVIEW_ATTR: NESTED_PREVIEW_ATTR,
+		nestedRuleRanges: nestedRuleRanges,
+		hasNestedTextRules: hasNestedTextRules,
+		collectNestedText: collectNestedText,
+		applyNestedPreview: applyNestedPreview,
+		removeNestedPreview: removeNestedPreview,
+		buildNestedRuleMap: buildNestedRuleMap,
+		nestedRootRef: nestedRootRef,
 	};
 
 	if (typeof window !== 'undefined') {

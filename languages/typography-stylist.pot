@@ -3688,3 +3688,9 @@ msgstr ""
 #, php-format
 msgid "GREP styles: %s."
 msgstr ""
+
+#. translators: %s: the style's nested rules, such as "Up to 3 words → Small Caps"
+#: includes/class-typost-export.php:616
+#, php-format
+msgid "Nested styles: %s."
+msgstr ""

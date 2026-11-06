@@ -513,6 +513,24 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 					<button type="button" class="button typost-ps-grep-add" aria-describedby="typost-ps-edit-grep-help"><?php esc_html_e( 'Add GREP rule', 'typost-paragraph-styles' ); ?></button>
 				</p>
 			</fieldset>
+
+			<?php
+			// Nested styles (#195), on the same WordPress 6.9 gate. admin.js
+			// builds one row per rule from typostPSAdmin.nested: style,
+			// Through / Up to, count, unit, character, and Move up / Move
+			// down / Remove buttons.
+			?>
+			<fieldset class="typost-ps-edit-group typost-ps-edit-nested" data-nested>
+				<legend><?php esc_html_e( 'Nested styles', 'typost-paragraph-styles' ); ?></legend>
+				<p class="typost-ps-edit-help" id="typost-ps-edit-nested-help">
+					<?php esc_html_e( 'Apply other styles to the start of the text, wherever this style is used on a whole block: for example Bold through the first colon, then Small caps up to 3 words. Each rule starts where the one before it stopped, at its first character that is not a space. The saved text does not change. Through includes the space after the last word, or the character itself; Up to stops before it. First line follows the screen width, so it can only be the last rule. Fit to width blocks are left as they are.', 'typost-paragraph-styles' ); ?>
+				</p>
+				<ol class="typost-ps-nested-rules" data-nested-rules></ol>
+				<p class="typost-ps-nested-empty" data-nested-empty><?php esc_html_e( 'No nested rules.', 'typost-paragraph-styles' ); ?></p>
+				<p>
+					<button type="button" class="button typost-ps-nested-add" aria-describedby="typost-ps-edit-nested-help"><?php esc_html_e( 'Add nested rule', 'typost-paragraph-styles' ); ?></button>
+				</p>
+			</fieldset>
 			<?php endif; ?>
 
 			<?php // The id lets showFormError() add the message to the failing field's description ?>
