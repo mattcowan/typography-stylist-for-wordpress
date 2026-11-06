@@ -183,6 +183,13 @@
 	hyphens: manual;
 }
 
+/* A span in a fit line can have a hyphenating style of its own, and a style's
+ * span selector is (0,6,0), so only !important holds here. */
+.wp-block-typost .typost-fit .typost-line * {
+	-webkit-hyphens: manual !important;
+	hyphens: manual !important;
+}
+
 /* Fit-to-width lines grow with browser zoom (#235).
  * A line is calc(R * 100cqi), and zoom makes the container narrower in CSS
  * px, so on screen the line kept its size at every zoom level (WCAG 1.4.4).

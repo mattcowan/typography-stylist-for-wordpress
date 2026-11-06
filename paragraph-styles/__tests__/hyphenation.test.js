@@ -50,6 +50,21 @@ describe('CSS (shared fixture)', () => {
 		expect(edit).toMatch(/node\.style\.webkitHyphens = 'manual';/);
 	});
 
+	test('a styled span inside a fit line does not hyphenate either, whatever its style says', () => {
+		// A style's span selector is (0,6,0), so only !important on the descendants beats it
+		const fs = require('fs');
+		const path = require('path');
+		const block = path.join(__dirname, '../../blocks/typography-stylist');
+		const css = fs.readFileSync(path.join(block, 'style.css'), 'utf8');
+		const rule = css.match(/\.wp-block-typost \.typost-fit \.typost-line \* \{[^}]*\}/);
+		expect(rule).not.toBeNull();
+		expect(rule[0]).toMatch(/-webkit-hyphens: manual !important;/);
+		expect(rule[0]).toMatch(/\bhyphens: manual !important;/);
+		// The probe holds the same spans
+		const edit = fs.readFileSync(path.join(block, 'edit.js'), 'utf8');
+		expect(edit).toMatch(/node\.querySelectorAll\('\*'\)\.forEach\(\(s\) => \{\s*s\.style\.setProperty\('-webkit-hyphens', 'manual', 'important'\);\s*s\.style\.setProperty\('hyphens', 'manual', 'important'\);/);
+	});
+
 	test('a style without hyphenation writes the same CSS as before', () => {
 		const props = { fontWeight: '700', textWrap: 'balance', wordSpacing: 20 };
 		expect(buildStyleCssBlock({ id: 9, properties: props })).not.toMatch(/hyphen/);

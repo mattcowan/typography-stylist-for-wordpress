@@ -824,14 +824,19 @@
 
 	/**
 	 * A number field where empty has a meaning of its own: '' when empty or
-	 * absent, so validation can tell it from a typed 0.
+	 * absent, so validation can tell it from a typed 0. Text the field cannot
+	 * read is NaN: the browser reports an empty value and badInput for it, and
+	 * reading that as empty would save Auto over the author's value.
 	 *
 	 * @param {HTMLElement} form Edit form.
 	 * @param {string}      name Field name.
-	 * @return {number|string} The number, or ''.
+	 * @return {number|string} The number, NaN, or ''.
 	 */
 	function optionalNumberOf(form, name) {
 		var input = field(form, name);
+		if (input && input.validity && input.validity.badInput) {
+			return NaN;
+		}
 		return input && input.value.trim() !== '' ? parseFloat(input.value) : '';
 	}
 
