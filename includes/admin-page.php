@@ -745,6 +745,9 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
         if (!in_array($active_tab, $tab_ids, true)) {
             $active_tab = $tabs[0]['id'];
         }
+        // No aria-controls on the tabs: with it, NVDA in Firefox says each tab
+        // twice on every arrow key (#349). Each panel names its tab with
+        // aria-labelledby.
         ?>
         <nav class="typost-admin-tabs nav-tab-wrapper" role="tablist" aria-label="<?php esc_attr_e('Settings sections', 'typography-stylist'); ?>">
             <?php foreach ($tabs as $tab): ?>
@@ -755,7 +758,6 @@ function typost_render_admin_template($instance, $presets, $custom_fonts, $adobe
                 role="tab"
                 aria-selected="<?php echo $tab['id'] === $active_tab ? 'true' : 'false'; ?>"
                 tabindex="<?php echo $tab['id'] === $active_tab ? '0' : '-1'; ?>"
-                aria-controls="typost-tab-<?php echo esc_attr($tab['id']); ?>"
                 id="typost-tab-button-<?php echo esc_attr($tab['id']); ?>">
                 <?php echo esc_html($tab['label']); ?>
             </button>

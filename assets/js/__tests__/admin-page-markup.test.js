@@ -27,6 +27,22 @@ describe('Delete Font modal markup (E-11)', () => {
 	});
 });
 
+describe('Settings tabs markup (#349)', () => {
+	const tablist = template.match(/<nav class="typost-admin-tabs[\s\S]*?<\/nav>/);
+
+	test('a tab has no aria-controls, which makes NVDA announce it twice', () => {
+		expect(tablist).not.toBeNull();
+		// The control: this is the real tab markup
+		expect(tablist[0]).toMatch(/role="tab"/);
+		expect(tablist[0]).toMatch(/aria-selected=/);
+		expect(tablist[0]).not.toMatch(/aria-controls=/);
+	});
+
+	test('each panel still names its tab', () => {
+		expect(template).toMatch(/role="tabpanel"\s+aria-labelledby="typost-tab-button-presets"/);
+	});
+});
+
 describe('Fonts region markup (E-12)', () => {
 	// The tag holds an inline <?php ... ?> whose ?> would end a [^>]* match,
 	// so take the rest of the line (. does not cross a newline).

@@ -132,6 +132,9 @@ test.describe('Settings tabs with NVDA', () => {
     expect(firstTabPhrase, 'a tab should be announced as a tab').toMatch(/tab/i);
     for (const t of tabs) {
       expect(t.phrase, 'every arrowed tab should be announced with its name').toMatch(/tab/i);
+      // aria-controls on a tab made NVDA say "X, tab, selected. X, tab, selected" (#349)
+      const halves = t.phrase.split('. ');
+      expect(halves.length === 2 && halves[0] === halves[1], `the tab should be announced once: ${t.phrase}`).toBe(false);
     }
     expect(selectPhrase, 'the scheme select should carry its label').toMatch(/color scheme/i);
     expect(changedPhrase, 'ArrowDown should announce the new option').not.toBe('');
