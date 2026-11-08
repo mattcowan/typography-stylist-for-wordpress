@@ -497,6 +497,10 @@ The front end gets CSS only, with no JavaScript. A font loads only on the pages 
 
 ## Changelog
 
+### Version 2.3.6
+
+- **Fixed: NVDA said each settings tab twice.** With NVDA in Firefox, each arrow key on the tabs at Settings → Typography Stylist announced the tab two times. Each tab is now announced one time. The arrow keys, Home and End work as before (#349).
+
 ### Version 2.3.5
 
 - **New: Export & Import.** Settings → Typography Stylist → Export & Import moves paragraph styles, presets, the settings on the Options and Accessibility tabs, and the Feature Visibility and variable font axes of each font to another site. The file names each font by its family, and import matches it to a font on the other site. You see every font, style, preset, and option before anything is saved, and you choose what to do with each conflict. Imported styles get new IDs and keep their "Based on" links.
