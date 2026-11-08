@@ -119,6 +119,61 @@ describe('fill and read', () => {
 	});
 });
 
+describe('outline position default', () => {
+	test('a style with no outline opens on Behind the fill', () => {
+		const form = buildForm();
+		fillEditForm(form, { id: 1, name: 'X', properties: {} }, '', 'rem', []);
+		expect(field(form, 'textStrokePosition').value).toBe('behind');
+	});
+
+	test('a width that rounds to 0 is no outline, so it opens on Behind the fill too', () => {
+		const form = buildForm();
+		fillEditForm(form, { id: 1, name: 'X', properties: { textStrokeWidth: 0.004 } }, '', 'rem', []);
+		expect(field(form, 'textStrokePosition').value).toBe('behind');
+	});
+
+	test('an existing outline keeps its saved position', () => {
+		const onTop = buildForm();
+		fillEditForm(onTop, { id: 1, name: 'X', properties: { textStrokeWidth: 2 } }, '', 'rem', []);
+		expect(field(onTop, 'textStrokePosition').value).toBe('');
+
+		const behind = buildForm();
+		fillEditForm(behind, { id: 1, name: 'X', properties: { textStrokeWidth: 2, textStrokePosition: 'behind' } }, '', 'rem', []);
+		expect(field(behind, 'textStrokePosition').value).toBe('behind');
+	});
+
+	test('an outline inherited from the parent style keeps the parent\'s position', () => {
+		// properties arrive resolved for a style based on another (#200)
+		const form = buildForm();
+		const style = { id: 2, name: 'Child', basedOn: 1, ownProperties: {}, properties: { textStrokeWidth: 2 } };
+		fillEditForm(form, style, '', 'rem', []);
+		expect(field(form, 'textStrokePosition').value).toBe('');
+	});
+
+	test('a new outline saves behind the fill unless the author picks On top', () => {
+		const form = buildForm();
+		const style = { id: 1, name: 'Display', properties: {} };
+		fillEditForm(form, style, '', 'rem', []);
+		const baseline = readEditForm(form);
+		field(form, 'textStrokeWidth').value = '2';
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem', []).properties).toEqual({
+			textStrokeWidth: 2, textStrokePosition: 'behind',
+		});
+		field(form, 'textStrokePosition').value = '';
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem', []).properties).toEqual({ textStrokeWidth: 2 });
+	});
+
+	test('the default writes nothing for a style with no outline', () => {
+		const form = buildForm();
+		const style = { id: 1, name: 'Display', properties: { fontWeight: '700' } };
+		fillEditForm(form, style, '', 'rem', []);
+		const baseline = readEditForm(form);
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem', [])).toEqual({ name: 'Display' });
+		field(form, 'fontWeight').value = '';
+		expect(buildEditPayload(readEditForm(form), baseline, style, 'rem', []).properties).toEqual({});
+	});
+});
+
 describe('save', () => {
 	test('an untouched form sends no properties, also when the palette color changed since', () => {
 		const form = buildForm();

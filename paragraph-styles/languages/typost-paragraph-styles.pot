@@ -1229,6 +1229,10 @@ msgstr ""
 msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
 msgstr ""
 
+#: includes/admin-tab.php:487
+msgid "In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top of the fill shows lines inside the letter. Behind the fill hides these lines, but outline-only text has no fill to hide them."
+msgstr ""
+
 #: includes/admin-tab.php:376
 msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
 msgstr ""
