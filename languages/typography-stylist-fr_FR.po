@@ -3687,3 +3687,9 @@ msgstr "Préréglages non importés (ils n’utilisent que des fonctionnalités 
 #, php-format
 msgid "GREP styles: %s."
 msgstr "Styles GREP : %s."
+
+#. translators: %s: the style's nested rules, such as "Up to 3 words → Small Caps"
+#: includes/class-typost-export.php:616
+#, php-format
+msgid "Nested styles: %s."
+msgstr "Styles imbriqués : %s."

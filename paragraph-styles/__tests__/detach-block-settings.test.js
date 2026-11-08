@@ -235,6 +235,9 @@ describe('buildDetachBlockSettings', () => {
 		it('does not report GREP rules on a fit block, where they never matched', () => {
 			expect(buildDetachBlockSettings({}, {}, { hasGrepRules: true, isFit: true }).removed).toEqual([]);
 			expect(buildDetachBlockSettings({ fontSize: 'fit' }, {}, { hasGrepRules: true }).removed).toEqual([]);
+			// Nested rules (#195) the same way
+			expect(buildDetachBlockSettings({}, {}, { hasGrepRules: true, hasNestedRules: true }).removed).toEqual(['grepRules', 'nestedRules']);
+			expect(buildDetachBlockSettings({ fontSize: 'fit' }, {}, { hasNestedRules: true }).removed).toEqual([]);
 		});
 
 		it('does not report what the style does not set', () => {
@@ -317,7 +320,7 @@ describe('the notice labels', () => {
 			initialHang: 0.2,
 			textCase: 'uppercase',
 		};
-		const { removed } = buildDetachBlockSettings(everything, {}, { coreBlock: true, hasGrepRules: true });
+		const { removed } = buildDetachBlockSettings(everything, {}, { coreBlock: true, hasGrepRules: true, hasNestedRules: true });
 		// The control: every report in the function, so a new one fails here until it is listed
 		const source = fs.readFileSync(path.join(__dirname, '../assets/js/lib/ps-utils.js'), 'utf8');
 		const reported = [...new Set([...source.matchAll(/removed\.push\('([a-zA-Z]+)'\)/g)].map((m) => m[1]))];

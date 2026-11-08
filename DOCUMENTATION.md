@@ -431,6 +431,31 @@ Built-in patterns:
 - **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect.
 - **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). The import preview lists each custom pattern, and refuses a file with a pattern that fails. If you overwrite a style with a style that has no rules, the rules are removed. If the file was made before GREP styles existed, the rules stay.
 
+#### Nested styles (v2.3.6+, WordPress 6.9+)
+
+Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph differently: "**Step 1:** WHISK THE EGGS until pale." Nested styles, named after the same feature in Adobe InDesign, do this automatically, and follow the text when you edit it.
+
+1. Make a style for each part, for example "Bold" with only weight 700, and "Small caps" with `c2sc` or the case "Small caps". A style that sets only a few things works like a character style.
+2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Step".
+3. Under "Nested styles", click "Add nested rule". Choose the style to apply, then how far it goes:
+   - **Words:** a number of words. "Through" takes the space after the last word too; "Up to" stops at the end of the word.
+   - **Characters:** a number of characters. An accented letter or an emoji counts as one character.
+   - **A character you type:** for example `:` or `—`, and how many times it must occur. "Through" includes the character; "Up to" stops before it, so the next rule starts with it. An emoji can match part of a longer emoji, such as one half of a flag. If this occurs, use a letter or a punctuation mark.
+   - **First line:** the first line of the paragraph, at every screen width.
+4. Add more rules and put them in order with "Move up" and "Move down". Save. Every block that uses "Step" shows the change on its next page load.
+
+For the example above: rule 1 is Bold, Through, 1, A character you type, `:`; rule 2 is Small caps, Up to, 3, Words.
+
+- **Each rule starts where the one before it stopped,** at its first character that is not a space. If the text is shorter than a rule, or the character never occurs, the rule ends at the end of the text, and the rules after it do nothing.
+- **First line must be the last rule.** Where the first line ends depends on the screen width, so no rule can start after it. A rule before it keeps its own settings; for the settings that its style does not set, the text takes the first line style. For example, a Bold first letter in an uppercase first line is bold and uppercase.
+- **Features add up:** the nested text keeps the OpenType features of the paragraph style and adds the features of the nested style. GREP rules still apply inside nested text.
+- **What is styled:** blocks that use the style as a whole (core Paragraph and Heading blocks, and Typography Stylist blocks). Text that has the style only on a selection, and fit to width blocks, are left as they are.
+- **Your posts do not change:** the plugin applies the rules when the page is shown, and the page loads no script. The screen reader copy of a Typography Stylist block does not change. On a core block, a rule that ends inside a word (a number of characters, or a character inside a word) can make some screen readers read that word in two parts.
+- **In the editor:** a block shows its nested styles while you are not editing it. When you click into the block or select it, the nested styles go away until you leave it, so they never go into your content. First line shows all the time.
+- **If you delete a style** that a rule applies, the rule is removed, and the rules after it start earlier.
+- **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect, First line included.
+- **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). A rule that is not valid makes the import refuse the file. A typed character such as `—` is kept as it is.
+
 ---
 
 ## Admin Interface Guide
@@ -485,6 +510,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - The form opens with the settings that are saved now. A change that you made in the editor after this page opened is in the form.
 - The form also has “Based on” (see “Based On” under Paragraph Styles). A style that is based on another style shows “Based on” on its card, marks each value as “Inherited” or “Override”, and has a “Reset to Base” button in its form. After a save, the cards of the styles based on it show their new values too.
 - On WordPress 6.9 or later, the form also has “GREP styles” (see “GREP styles” under Paragraph Styles): a list of rules, each with a pattern and the style to apply, with buttons to move a rule up or down and to remove it. The card lists the rules, and its sample shows them.
+- On WordPress 6.9 or later, the form also has “Nested styles” (see “Nested styles” under Paragraph Styles): a list of rules, each with the style to apply, Through or Up to, a count, a unit, and the character for that unit, with buttons to move a rule up or down and to remove it. The card lists the rules, and its sample shows them.
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab

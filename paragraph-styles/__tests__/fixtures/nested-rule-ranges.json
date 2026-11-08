@@ -1,0 +1,441 @@
+[
+	{
+		"name": "issue example",
+		"plain": "Step 1: Whisk the eggs until pale.",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": ":",
+				"end": "through"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 3,
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Step 1:"
+			],
+			[
+				3,
+				"Whisk the eggs"
+			]
+		]
+	},
+	{
+		"name": "words through takes the spaces after",
+		"plain": "One two  three",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 2,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"One two  "
+			]
+		]
+	},
+	{
+		"name": "words up to stops at the word",
+		"plain": "One two  three",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 2,
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"One two"
+			]
+		]
+	},
+	{
+		"name": "a line break separates words",
+		"plain": "Yes, no\nmaybe",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 2,
+				"end": "upto"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Yes, no"
+			],
+			[
+				3,
+				"maybe"
+			]
+		]
+	},
+	{
+		"name": "an image separates words",
+		"plain": "A￼B C",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 1,
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"A"
+			]
+		]
+	},
+	{
+		"name": "no-break space separates words",
+		"plain": "Step 1: go",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 1,
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Step"
+			]
+		]
+	},
+	{
+		"name": "characters count graphemes",
+		"plain": "été x",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "characters",
+				"count": 2
+			}
+		],
+		"covered": [
+			[
+				2,
+				"ét"
+			]
+		]
+	},
+	{
+		"name": "a flag is one character",
+		"plain": "🇫🇷 France",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "characters",
+				"count": 1
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"🇫🇷"
+			],
+			[
+				3,
+				"France"
+			]
+		]
+	},
+	{
+		"name": "characters include inner spaces",
+		"plain": "Q: why?",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "characters",
+				"count": 4
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Q: w"
+			]
+		]
+	},
+	{
+		"name": "marker through the nth",
+		"plain": "a—b—c",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 2,
+				"marker": "—",
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"a—b—"
+			]
+		]
+	},
+	{
+		"name": "marker up to the nth, next rule starts at it",
+		"plain": "Q: x",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": ":",
+				"end": "upto"
+			},
+			{
+				"styleId": 3,
+				"unit": "characters",
+				"count": 1
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Q"
+			],
+			[
+				3,
+				":"
+			]
+		]
+	},
+	{
+		"name": "a missing marker runs to the end",
+		"plain": "No colon here",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": ":",
+				"end": "upto"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"No colon here"
+			]
+		]
+	},
+	{
+		"name": "shorter text stops the rule",
+		"plain": "Only two",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "words",
+				"count": 5,
+				"end": "through"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Only two"
+			]
+		]
+	},
+	{
+		"name": "leading spaces are skipped",
+		"plain": "  Step 1: \n Mix well",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": ":",
+				"end": "through"
+			},
+			{
+				"styleId": 3,
+				"unit": "characters",
+				"count": 3
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Step 1:"
+			],
+			[
+				3,
+				"Mix"
+			]
+		]
+	},
+	{
+		"name": "a deleted style keeps its text",
+		"plain": "one two three",
+		"rules": [
+			{
+				"styleId": 99,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "upto"
+			},
+			{
+				"styleId": 2,
+				"unit": "line"
+			}
+		],
+		"covered": [
+			[
+				3,
+				"two"
+			]
+		]
+	},
+	{
+		"name": "first line alone wraps nothing",
+		"plain": "one",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "line"
+			}
+		],
+		"covered": []
+	},
+	{
+		"name": "an emoji marker",
+		"plain": "Go 👍 now",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "👍",
+				"end": "through"
+			},
+			{
+				"styleId": 3,
+				"unit": "words",
+				"count": 1,
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Go 👍"
+			],
+			[
+				3,
+				"now"
+			]
+		]
+	},
+	{
+		"name": "a marker does not match the base of a letter with a combining mark",
+		"plain": "Café late now",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "e",
+				"end": "through"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Café late"
+			]
+		]
+	},
+	{
+		"name": "a marker with only a combined match runs to the end of the text",
+		"plain": "Café now",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "e",
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"Café now"
+			]
+		]
+	},
+	{
+		"name": "a marker does not match inside an emoji sequence joined with ZWJ",
+		"plain": "👨‍👩 go 👨 end",
+		"rules": [
+			{
+				"styleId": 2,
+				"unit": "marker",
+				"count": 1,
+				"marker": "👨",
+				"end": "upto"
+			}
+		],
+		"covered": [
+			[
+				2,
+				"👨‍👩 go "
+			]
+		]
+	}
+]

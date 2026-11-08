@@ -294,14 +294,16 @@
 	cursor: progress;
 }
 
-/* GREP styles (#196): one bordered row per rule, in list order */
-.typost-ps-grep-rules {
+/* GREP styles (#196) and nested styles (#195): one bordered row per rule, in list order */
+.typost-ps-grep-rules,
+.typost-ps-nested-rules {
 	margin: 8px 0 0;
 	padding: 0;
 	list-style: none;
 }
 
-.typost-ps-grep-rule {
+.typost-ps-grep-rule,
+.typost-ps-nested-rule {
 	margin: 0 0 8px;
 	padding: 8px 12px 0;
 	border-left: 3px solid #dcdcde;
@@ -323,11 +325,27 @@
 }
 
 /* Core's delete red is 4.40:1 on this row's gray; WCAG 1.4.3 asks for 4.5:1 */
-.typost-ps-grep-rule .button-link.typost-ps-grep-remove {
+.typost-ps-grep-rule .button-link.typost-ps-grep-remove,
+.typost-ps-nested-rule .button-link.typost-ps-nested-remove {
 	color: #b32d2e;
 }
 
-.typost-ps-grep-empty {
+/* Nested rules (#195): one character, and Through / Up to in full */
+.typost-ps-edit-form-inner .typost-ps-nested-marker input[type="text"] {
+	width: 4em;
+	text-align: center;
+}
+
+.typost-ps-nested-rule [data-nested="end"] {
+	min-width: 7.5em;
+}
+
+.typost-ps-nested-rule [data-nested="unit"] {
+	min-width: 13em;
+}
+
+.typost-ps-grep-empty,
+.typost-ps-nested-empty {
 	margin: 8px 0 0;
 	font-style: italic;
 }

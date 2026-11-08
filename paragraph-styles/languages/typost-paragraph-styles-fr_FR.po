@@ -1486,3 +1486,237 @@ msgstr "Saisissez jusqu’à 4 caractères sans guillemets, barres obliques inve
 #: assets/js/editor.js:199
 msgid "hyphenation"
 msgstr "césure"
+
+#: includes/class-typost-ps-nested.php:95
+msgid "Words"
+msgstr "Mots"
+
+#: includes/class-typost-ps-nested.php:96
+msgid "Characters"
+msgstr "Caractères"
+
+#: includes/class-typost-ps-nested.php:97
+msgid "A character you type"
+msgstr "Un caractère que vous saisissez"
+
+#: includes/class-typost-ps-nested.php:37
+#: includes/class-typost-ps-nested.php:98
+#: includes/class-typost-ps-nested.php:116
+#: includes/class-typost-ps-nested.php:143
+msgid "First line"
+msgstr "Première ligne"
+
+#: includes/class-typost-ps-nested.php:26
+#: includes/class-typost-ps-nested.php:33
+#: includes/class-typost-ps-nested.php:109
+msgid "Through"
+msgstr "Jusqu’à (inclus)"
+
+#: includes/class-typost-ps-nested.php:28
+#: includes/class-typost-ps-nested.php:33
+#: includes/class-typost-ps-nested.php:110
+msgid "Up to"
+msgstr "Jusqu’à (non inclus)"
+
+#. translators: %d: number of words
+#: includes/class-typost-ps-nested.php:129
+#, php-format
+msgid "Through %d word"
+msgid_plural "Through %d words"
+msgstr[0] "Jusqu’à %d mot (inclus)"
+msgstr[1] "Jusqu’à %d mots (inclus)"
+
+#. translators: %d: number of words
+#: includes/class-typost-ps-nested.php:131
+#, php-format
+msgid "Up to %d word"
+msgid_plural "Up to %d words"
+msgstr[0] "Jusqu’à %d mot (non inclus)"
+msgstr[1] "Jusqu’à %d mots (non inclus)"
+
+#. translators: %d: number of characters
+#: includes/class-typost-ps-nested.php:134
+#, php-format
+msgid "%d character"
+msgid_plural "%d characters"
+msgstr[0] "%d caractère"
+msgstr[1] "%d caractères"
+
+#. translators: 1: how many times the character occurs, 2: the character, such as ":"
+#: includes/class-typost-ps-nested.php:139
+#, php-format
+msgid "Through %1$d “%2$s”"
+msgstr "Jusqu’à %1$d « %2$s » (inclus)"
+
+#. translators: 1: how many times the character occurs, 2: the character, such as ":"
+#: includes/class-typost-ps-nested.php:141
+#, php-format
+msgid "Up to %1$d “%2$s”"
+msgstr "Jusqu’à %1$d « %2$s » (non inclus)"
+
+#: includes/class-typost-ps-nested.php:175
+msgid "Nested styles must be a list of rules."
+msgstr "Les styles imbriqués doivent être une liste de règles."
+
+#. translators: %d: the most nested rules a style can have
+#: includes/class-typost-ps-nested.php:180
+#, php-format
+msgid "A style can have %d nested rules at most."
+msgstr "Un style peut avoir au plus %d règles imbriquées."
+
+#: includes/class-typost-ps-nested.php:195
+msgid "A nested rule is not valid."
+msgstr "Une règle imbriquée n’est pas valide."
+
+#: includes/class-typost-ps-nested.php:200
+#: assets/js/admin.js:2076
+msgid "Choose a style for each nested rule."
+msgstr "Choisissez un style pour chaque règle imbriquée."
+
+#: includes/class-typost-ps-nested.php:203
+msgid "A nested rule cannot apply the style it belongs to. Choose another style."
+msgstr "Une règle imbriquée ne peut pas appliquer le style auquel elle appartient. Choisissez un autre style."
+
+#: includes/class-typost-ps-nested.php:208
+msgid "Choose a unit for each nested rule."
+msgstr "Choisissez une unité pour chaque règle imbriquée."
+
+#: includes/class-typost-ps-nested.php:218
+#: assets/js/admin.js:2080
+msgid "A First line rule must be the last nested rule: where the first line ends depends on the screen width, so no rule can start after it."
+msgstr "Une règle Première ligne doit être la dernière règle imbriquée : la fin de la première ligne dépend de la largeur de l’écran, aucune règle ne peut donc commencer après elle."
+
+#. translators: %d: the highest count
+#: includes/class-typost-ps-nested.php:230
+#: assets/js/admin.js:2086
+#, php-format
+msgid "Enter a whole number from 1 to %d."
+msgstr "Saisissez un nombre entier de 1 à %d."
+
+#: includes/class-typost-ps-nested.php:246
+msgid "Choose Through or Up to."
+msgstr "Choisissez Jusqu’à (inclus) ou Jusqu’à (non inclus)."
+
+#: includes/class-typost-ps-nested.php:267
+#: assets/js/admin.js:2090
+msgid "Type the character that ends the rule, such as a colon."
+msgstr "Saisissez le caractère qui termine la règle, par exemple les deux-points."
+
+#: includes/class-typost-ps-nested.php:270
+#: assets/js/admin.js:2093
+msgid "Type one character only."
+msgstr "Saisissez un seul caractère."
+
+#: includes/class-typost-ps-nested.php:273
+#: assets/js/admin.js:2096
+msgid "This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol."
+msgstr "Ce caractère ne peut pas terminer une règle. Saisissez une lettre, un chiffre, un signe de ponctuation ou un symbole."
+
+#: paragraph-styles.php:3525
+msgid "Nested styles:"
+msgstr "Styles imbriqués :"
+
+#: includes/admin-tab.php:524
+msgid "Nested styles"
+msgstr "Styles imbriqués"
+
+#: includes/admin-tab.php:526
+msgid "Apply other styles to the start of the text, wherever this style is used on a whole block: for example Bold through the first colon, then Small caps up to 3 words. Each rule starts where the one before it stopped, at its first character that is not a space. The saved text does not change. Through includes the space after the last word, or the character itself; Up to stops before it. First line follows the screen width, so it can only be the last rule. Fit to width blocks are left as they are."
+msgstr "Appliquez d’autres styles au début du texte, partout où ce style est utilisé sur un bloc entier : par exemple Gras jusqu’aux premiers deux-points, puis Petites capitales sur 3 mots. Chaque règle commence là où la précédente s’est arrêtée, à son premier caractère qui n’est pas une espace. Le texte enregistré ne change pas. Jusqu’à (inclus) comprend l’espace après le dernier mot, ou le caractère lui-même ; Jusqu’à (non inclus) s’arrête avant. Première ligne suit la largeur de l’écran, elle ne peut donc être que la dernière règle. Les blocs ajustés à la largeur restent tels quels."
+
+#: includes/admin-tab.php:529
+msgid "No nested rules."
+msgstr "Aucune règle imbriquée."
+
+#: includes/admin-tab.php:531
+msgid "Add nested rule"
+msgstr "Ajouter une règle imbriquée"
+
+#. translators: 1: name of the style added to the export, 2: name of the style whose nested rule applies it
+#: includes/class-typost-ps-transfer.php:189
+#, php-format
+msgid "“%1$s” was added because a nested rule of “%2$s” applies it."
+msgstr "« %1$s » a été ajouté, car une règle imbriquée de « %2$s » l’applique."
+
+#. translators: 1: style name, 2: rule number, 3: why the rule is rejected
+#: includes/class-typost-ps-transfer.php:527
+#, php-format
+msgid "“%1$s”, nested rule %2$d: %3$s Nothing was saved."
+msgstr "« %1$s », règle imbriquée %2$d : %3$s Rien n’a été enregistré."
+
+#: includes/class-typost-ps-transfer.php:730
+msgid "Nested styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated."
+msgstr "Les styles imbriqués nécessitent WordPress 6.9 ou une version ultérieure. Ils sont importés, mais sans effet sur ce site tant que WordPress n’est pas mis à jour."
+
+#. translators: 1: style name, 2: rule number, 3: name of the style the rule applies
+#: includes/class-typost-ps-transfer.php:1120
+#, php-format
+msgid "“%1$s”, nested rule %2$d: “%3$s” is not imported, so the rule is left out and the rules after it start earlier."
+msgstr "« %1$s », règle imbriquée %2$d : « %3$s » n’est pas importé, la règle est donc omise et les règles suivantes commencent plus tôt."
+
+#: assets/js/admin.js:1844
+msgid "Ends"
+msgstr "Fin"
+
+#: assets/js/admin.js:1857
+msgid "Count"
+msgstr "Nombre"
+
+#: assets/js/admin.js:196
+#: assets/js/admin.js:225
+#: assets/js/admin.js:742
+#: assets/js/admin.js:1859
+msgid "Unit"
+msgstr "Unité"
+
+#: assets/js/admin.js:1872
+msgid "Character"
+msgstr "Caractère"
+
+#: assets/js/admin.js:1874
+msgid "One character, such as : or —. Matching is case-sensitive."
+msgstr "Un caractère, par exemple : ou —. La casse est respectée."
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1928
+#, js-format
+msgid "Nested rule %d"
+msgstr "Règle imbriquée %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1940
+#, js-format
+msgid "Move nested rule %d up"
+msgstr "Monter la règle imbriquée %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1945
+#, js-format
+msgid "Move nested rule %d down"
+msgstr "Descendre la règle imbriquée %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1950
+#, js-format
+msgid "Remove nested rule %d"
+msgstr "Supprimer la règle imbriquée %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:2554
+#, js-format
+msgid "Nested rule %d added."
+msgstr "Règle imbriquée %d ajoutée."
+
+#: assets/js/admin.js:2580
+msgid "Nested rule removed."
+msgstr "Règle imbriquée supprimée."
+
+#: assets/js/editor.js:202
+msgid "nested styles"
+msgstr "styles imbriqués"
+
+#. translators: %s: comma-separated list of style names
+#: assets/js/admin.js:2684
+#, js-format
+msgid "Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles."
+msgstr "Les règles imbriquées qui appliquent ce style seront retirées de : %s. Les règles suivantes commenceront plus tôt dans chaque publication qui utilise ces styles."

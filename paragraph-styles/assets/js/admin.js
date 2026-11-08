@@ -696,8 +696,9 @@
 	 * @param {Array}   [styles]  Every style, for the Based On choices (#200)
 	 *                            and the GREP style selects (#196).
 	 * @param {Object}  [grep]    typostPSAdmin.grep (#196).
+	 * @param {Object}  [nested]  typostPSAdmin.nested (#195).
 	 */
-	function fillEditForm(form, style, fontLabel, unit, styles, grep) {
+	function fillEditForm(form, style, fontLabel, unit, styles, grep, nested) {
 		var utils = getUtils();
 		var props = (style && style.properties) || {};
 		var mode = sizeModeOf(props.fontSize);
@@ -812,6 +813,8 @@
 		// GREP styles (#196): rules are on the style record, not in its
 		// properties, and are not inherited through Based On
 		fillGrepRules(form, style, styles, grep);
+		// Nested styles (#195), the same way
+		fillNestedRules(form, style, styles, nested);
 
 		updateConditionalFields(form);
 	}
@@ -918,7 +921,8 @@
 			textStrokePosition: strokePosition ? strokePosition.value : undefined,
 			features: features,
 			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : '',
-			grepRules: readGrepRules(form)
+			grepRules: readGrepRules(form),
+			nestedRules: readNestedRules(form)
 		};
 	}
 
@@ -1026,7 +1030,7 @@
 				return { field: 'fontVariationSettings', message: __('Each axis setting needs a four-letter tag in quotes and a number, such as "wght" 650.', 'typost-paragraph-styles') };
 			}
 		}
-		return validateGrepRules(values.grepRules, opts.grep);
+		return validateGrepRules(values.grepRules, opts.grep) || validateNestedRules(values.nestedRules, opts.nested);
 	}
 
 	/**
@@ -1162,6 +1166,14 @@
 				payload.grepRules = rules;
 			}
 		}
+		// Nested rules (#195), the same way
+		if (Array.isArray(values.nestedRules)) {
+			var baselineNested = baselineValues && Array.isArray(baselineValues.nestedRules) ? baselineValues.nestedRules : null;
+			var nestedRules = values.nestedRules.map(normalizeNestedRule);
+			if (!baselineNested || stableStringify(nestedRules) !== stableStringify(baselineNested.map(normalizeNestedRule))) {
+				payload.nestedRules = nestedRules;
+			}
+		}
 
 		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
 			// Relative to the current parent: the server applies a Based On
@@ -1237,6 +1249,7 @@
 		return payload.properties !== undefined
 			|| payload.basedOn !== undefined
 			|| payload.grepRules !== undefined
+			|| payload.nestedRules !== undefined
 			|| values.name !== baselineValues.name;
 	}
 
@@ -1772,6 +1785,446 @@
 		return 'grep-' + index + '-' + name;
 	}
 
+
+	// -------------------------------------------------------------------------
+	// Nested styles (#195)
+	// -------------------------------------------------------------------------
+
+	var NESTED_UNITS_WITH_END = ['words', 'marker'];
+	var NESTED_FIELDS = ['styleId', 'end', 'count', 'unit', 'marker'];
+	var nestedRowCount = 0;
+
+	/**
+	 * The nested rule settings of the page (typostPSAdmin.nested), with
+	 * defaults.
+	 *
+	 * @param {Object} [nested]
+	 * @return {{supported: boolean, maxRules: number, maxCount: number, units: Array, ends: Array}}
+	 */
+	function nestedSettings(nested) {
+		var n = nested || {};
+		return {
+			supported: !!n.supported,
+			maxRules: parseInt(n.maxRules, 10) || 10,
+			maxCount: parseInt(n.maxCount, 10) || 100,
+			units: Array.isArray(n.units) ? n.units : [],
+			ends: Array.isArray(n.ends) ? n.ends : []
+		};
+	}
+
+	/**
+	 * A rule as Typost_PS_Nested::sanitize_rules() stores it. A count that
+	 * is not a whole number stays as the text typed, so the check can name
+	 * it.
+	 *
+	 * @param {Object} rule
+	 * @return {Object}
+	 */
+	function normalizeNestedRule(rule) {
+		var r = rule || {};
+		var out = {
+			styleId: parseInt(r.styleId, 10) || 0,
+			unit: typeof r.unit === 'string' ? r.unit : ''
+		};
+		if (out.unit === 'line') {
+			return out;
+		}
+		var count = typeof r.count === 'number' ? r.count : String(r.count === undefined || r.count === null ? '' : r.count).trim();
+		out.count = typeof count === 'string' && /^\d+$/.test(count) ? parseInt(count, 10) : count;
+		if (out.unit === 'marker') {
+			out.marker = typeof r.marker === 'string' ? r.marker : '';
+		}
+		if (NESTED_UNITS_WITH_END.indexOf(out.unit) !== -1) {
+			out.end = r.end === 'upto' ? 'upto' : 'through';
+		}
+		return out;
+	}
+
+	/**
+	 * Whether a string can be one user-perceived character. Only Intl.Segmenter
+	 * can tell. A browser without it says yes and the server decides: counting
+	 * code points would refuse a flag or a family emoji, also on a style that
+	 * already has one.
+	 *
+	 * @param {string} text
+	 * @return {boolean}
+	 */
+	function canBeOneCharacter(text) {
+		if (typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') {
+			return true;
+		}
+		var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
+		return !it.next().done && it.next().done;
+	}
+
+	/**
+	 * A string's length in UTF-8 bytes, which is what the server's marker limit
+	 * counts (Typost_PS_Nested::MAX_MARKER_BYTES).
+	 *
+	 * @param {string} text
+	 * @return {number}
+	 */
+	function utf8ByteLength(text) {
+		return Array.from(text).reduce(function(total, ch) {
+			var code = ch.codePointAt(0);
+			return total + (code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4);
+		}, 0);
+	}
+
+	function selectWith(doc, attrs, options, value) {
+		var select = makeEl(doc, 'select', attrs);
+		options.forEach(function(option) {
+			select.appendChild(makeEl(doc, 'option', { value: option.value }, option.label));
+		});
+		select.value = value;
+		return select;
+	}
+
+	/**
+	 * Build one rule's row, in the order the rule reads: Apply style,
+	 * Through / Up to, Count, Unit, Character; then Move up / Move down /
+	 * Remove.
+	 *
+	 * @param {Document} doc
+	 * @param {Object}   rule Stored rule (or a new one).
+	 * @param {Object}   ctx  {ownId, styles, settings: nestedSettings()}.
+	 * @return {Element}
+	 */
+	function buildNestedRow(doc, rule, ctx) {
+		var settings = ctx.settings;
+		var r = normalizeNestedRule(rule);
+		var uid = 'typost-ps-nested-' + ctx.ownId + '-' + (++nestedRowCount);
+		var row = makeEl(doc, 'li', { className: 'typost-ps-nested-rule' });
+		var group = makeEl(doc, 'div', { role: 'group' });
+		row.appendChild(group);
+		var fields = makeEl(doc, 'div', { className: 'typost-ps-edit-row' });
+
+		function addField(name, label, control, extraClass) {
+			var p = makeEl(doc, 'p', { className: 'typost-ps-edit-field' + (extraClass ? ' ' + extraClass : ''), 'data-nested-field': name });
+			p.appendChild(makeEl(doc, 'label', { 'for': control.id }, label));
+			p.appendChild(control);
+			fields.appendChild(p);
+			return p;
+		}
+
+		// Style
+		var styleSelect = makeEl(doc, 'select', { id: uid + '-style', 'data-nested': 'styleId' });
+		styleSelect.appendChild(makeEl(doc, 'option', { value: '0' }, __('Choose a style', 'typost-paragraph-styles')));
+		var found = false;
+		(Array.isArray(ctx.styles) ? ctx.styles : []).forEach(function(candidate) {
+			var id = parseInt(candidate && candidate.id, 10) || 0;
+			if (!id || id === ctx.ownId) {
+				return;
+			}
+			if (id === r.styleId) {
+				found = true;
+			}
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(id) }, candidate.name || String(id)));
+		});
+		if (r.styleId && !found) {
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(r.styleId) }, __('A deleted style', 'typost-paragraph-styles')));
+		}
+		styleSelect.value = String(r.styleId || 0);
+		addField('styleId', __('Apply style', 'typost-paragraph-styles'), styleSelect);
+
+		addField('end', __('Ends', 'typost-paragraph-styles'),
+			selectWith(doc, { id: uid + '-end', 'data-nested': 'end' }, settings.ends, r.end || 'through'));
+
+		var countInput = makeEl(doc, 'input', {
+			type: 'number',
+			id: uid + '-count',
+			'data-nested': 'count',
+			min: '1',
+			max: String(settings.maxCount),
+			step: '1',
+			inputmode: 'numeric'
+		});
+		countInput.value = r.count !== undefined && r.count !== '' ? String(r.count) : '1';
+		addField('count', __('Count', 'typost-paragraph-styles'), countInput, 'typost-ps-nested-count');
+
+		addField('unit', __('Unit', 'typost-paragraph-styles'),
+			selectWith(doc, { id: uid + '-unit', 'data-nested': 'unit' }, settings.units, r.unit || (settings.units[0] ? settings.units[0].value : '')));
+
+		var markerInput = makeEl(doc, 'input', {
+			type: 'text',
+			id: uid + '-marker',
+			'data-nested': 'marker',
+			autocomplete: 'off',
+			spellcheck: 'false',
+			// UTF-16 units, not characters: a family emoji is one character and
+			// 11 units. Cutting it would save another character without an
+			// error. The server's limit is Typost_PS_Nested::MAX_MARKER_BYTES.
+			maxlength: '32',
+			'aria-describedby': uid + '-marker-help'
+		});
+		markerInput.value = r.marker || '';
+		var markerField = addField('marker', __('Character', 'typost-paragraph-styles'), markerInput, 'typost-ps-nested-marker');
+		markerField.appendChild(makeEl(doc, 'span', { className: 'typost-ps-edit-help', id: uid + '-marker-help' },
+			__('One character, such as : or —. Matching is case-sensitive.', 'typost-paragraph-styles')));
+
+		group.appendChild(fields);
+
+		var actions = makeEl(doc, 'p', { className: 'typost-ps-grep-actions typost-ps-nested-actions' });
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-nested-up' }, __('Move up', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-nested-down' }, __('Move down', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button-link button-link-delete typost-ps-nested-remove' }, __('Remove', 'typost-paragraph-styles')));
+		group.appendChild(actions);
+
+		updateNestedRow(row);
+		return row;
+	}
+
+	/**
+	 * Show the fields the unit uses: Through / Up to for words and a typed
+	 * character, a count for every unit but First line, the character for
+	 * a typed character.
+	 *
+	 * @param {Element} row
+	 */
+	function updateNestedRow(row) {
+		var unitSelect = row.querySelector('[data-nested="unit"]');
+		var unit = unitSelect ? unitSelect.value : '';
+		var show = {
+			end: NESTED_UNITS_WITH_END.indexOf(unit) !== -1,
+			count: unit !== 'line',
+			marker: unit === 'marker'
+		};
+		Object.keys(show).forEach(function(name) {
+			var p = row.querySelector('[data-nested-field="' + name + '"]');
+			if (p) {
+				p.hidden = !show[name];
+			}
+		});
+	}
+
+	function nestedRows(form) {
+		var list = form.querySelector('[data-nested-rules]');
+		return list ? Array.prototype.slice.call(list.children) : [];
+	}
+
+	/**
+	 * Number the rows after a change (see renumberGrepRows()).
+	 *
+	 * @param {Element} form
+	 * @param {Object}  [nested] typostPSAdmin.nested
+	 */
+	function renumberNestedRows(form, nested) {
+		var rows = nestedRows(form);
+		var settings = nestedSettings(nested);
+		rows.forEach(function(row, index) {
+			var n = index + 1;
+			/* translators: %d: rule number */
+			row.querySelector('[role="group"]').setAttribute('aria-label', fill(__('Nested rule %d', 'typost-paragraph-styles'), n));
+			NESTED_FIELDS.forEach(function(name) {
+				var input = row.querySelector('[data-nested="' + name + '"]');
+				if (input) {
+					input.setAttribute('data-field', 'nested-' + index + '-' + name);
+				}
+			});
+			var up = row.querySelector('.typost-ps-nested-up');
+			var down = row.querySelector('.typost-ps-nested-down');
+			var remove = row.querySelector('.typost-ps-nested-remove');
+			if (up) {
+				/* translators: %d: rule number */
+				up.setAttribute('aria-label', fill(__('Move nested rule %d up', 'typost-paragraph-styles'), n));
+				up.disabled = index === 0;
+			}
+			if (down) {
+				/* translators: %d: rule number */
+				down.setAttribute('aria-label', fill(__('Move nested rule %d down', 'typost-paragraph-styles'), n));
+				down.disabled = index === rows.length - 1;
+			}
+			if (remove) {
+				/* translators: %d: rule number */
+				remove.setAttribute('aria-label', fill(__('Remove nested rule %d', 'typost-paragraph-styles'), n));
+			}
+		});
+		var empty = form.querySelector('[data-nested-empty]');
+		if (empty) {
+			empty.hidden = rows.length > 0;
+		}
+		var add = form.querySelector('.typost-ps-nested-add');
+		if (add) {
+			add.disabled = rows.length >= settings.maxRules;
+		}
+	}
+
+	/**
+	 * Fill the nested list from the style's rules.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style
+	 * @param {Array}   styles
+	 * @param {Object}  [nested] typostPSAdmin.nested
+	 */
+	function fillNestedRules(form, style, styles, nested) {
+		var list = form.querySelector('[data-nested-rules]');
+		if (!list) {
+			return;
+		}
+		while (list.firstChild) {
+			list.removeChild(list.firstChild);
+		}
+		var ctx = { ownId: parseInt(style && style.id, 10) || 0, styles: styles, settings: nestedSettings(nested) };
+		(style && Array.isArray(style.nestedRules) ? style.nestedRules : []).forEach(function(rule) {
+			list.appendChild(buildNestedRow(form.ownerDocument, rule, ctx));
+		});
+		renumberNestedRows(form, nested);
+	}
+
+	/**
+	 * Add a rule row at the end (3 words, through, no style yet), for the
+	 * Add button.
+	 *
+	 * @return {Element|null} The new row, null at the limit.
+	 */
+	function addNestedRule(form, style, styles, nested) {
+		var list = form.querySelector('[data-nested-rules]');
+		var settings = nestedSettings(nested);
+		if (!list || list.children.length >= settings.maxRules) {
+			return null;
+		}
+		var row = buildNestedRow(form.ownerDocument, { styleId: 0, unit: 'words', count: 1, end: 'through' }, {
+			ownId: parseInt(style && style.id, 10) || 0,
+			styles: styles,
+			settings: settings
+		});
+		list.appendChild(row);
+		renumberNestedRows(form, nested);
+		return row;
+	}
+
+	/**
+	 * Move a row up (-1) or down (+1); returns the control to focus, as
+	 * moveGrepRule() does.
+	 */
+	function moveNestedRule(form, row, direction, nested) {
+		var list = row.parentNode;
+		if (direction < 0 && row.previousElementSibling) {
+			list.insertBefore(row, row.previousElementSibling);
+		} else if (direction > 0 && row.nextElementSibling) {
+			list.insertBefore(row.nextElementSibling, row);
+		}
+		renumberNestedRows(form, nested);
+		var used = row.querySelector(direction < 0 ? '.typost-ps-nested-up' : '.typost-ps-nested-down');
+		var other = row.querySelector(direction < 0 ? '.typost-ps-nested-down' : '.typost-ps-nested-up');
+		if (used && !used.disabled) {
+			return used;
+		}
+		return other && !other.disabled ? other : row.querySelector('[data-nested="styleId"]');
+	}
+
+	/**
+	 * Remove a row; returns the control to focus: the next row's style,
+	 * else the previous row's, else the Add button.
+	 */
+	function removeNestedRule(form, row, nested) {
+		var next = row.nextElementSibling || row.previousElementSibling;
+		row.parentNode.removeChild(row);
+		renumberNestedRows(form, nested);
+		return next ? next.querySelector('[data-nested="styleId"]') : form.querySelector('.typost-ps-nested-add');
+	}
+
+	/**
+	 * The rules in the form, in order; null when the form has no nested
+	 * list (WordPress before 6.9), so a save leaves the stored rules alone.
+	 *
+	 * @param {Element} form
+	 * @return {Array|null}
+	 */
+	function readNestedRules(form) {
+		if (!form.querySelector('[data-nested-rules]')) {
+			return null;
+		}
+		return nestedRows(form).map(function(row) {
+			var values = {};
+			NESTED_FIELDS.forEach(function(name) {
+				var input = row.querySelector('[data-nested="' + name + '"]');
+				values[name] = input ? input.value : '';
+			});
+			return normalizeNestedRule(values);
+		});
+	}
+
+	/**
+	 * The first problem in the nested rules, as a form error, or null.
+	 * The server checks the same.
+	 *
+	 * @param {Array|null} rules readNestedRules()
+	 * @param {Object}     [nested] typostPSAdmin.nested
+	 * @return {{field: string, message: string}|null}
+	 */
+	/**
+	 * The names of the styles with a nested rule that applies a style. The
+	 * server removes those rules when the style is deleted (#195).
+	 *
+	 * @param {Array}         list    Every style.
+	 * @param {number|string} styleId Style id.
+	 * @return {string[]} Style names, each once.
+	 */
+	function nestedRuleUsers(list, styleId) {
+		return (Array.isArray(list) ? list : []).filter(function(style) {
+			return style && Array.isArray(style.nestedRules) && style.nestedRules.some(function(rule) {
+				return rule && String(rule.styleId) === String(styleId);
+			});
+		}).map(function(style) {
+			return style.name;
+		});
+	}
+
+	function validateNestedRules(rules, nested) {
+		var settings = nestedSettings(nested);
+		if (!Array.isArray(rules)) {
+			return null;
+		}
+		for (var i = 0; i < rules.length; i++) {
+			var rule = rules[i];
+			if (!rule.styleId) {
+				return { field: 'nested-' + i + '-styleId', message: __('Choose a style for each nested rule.', 'typost-paragraph-styles') };
+			}
+			if (rule.unit === 'line') {
+				if (i !== rules.length - 1) {
+					return { field: 'nested-' + i + '-unit', message: __('A First line rule must be the last nested rule: where the first line ends depends on the screen width, so no rule can start after it.', 'typost-paragraph-styles') };
+				}
+				continue;
+			}
+			if (typeof rule.count !== 'number' || rule.count < 1 || rule.count > settings.maxCount) {
+				/* translators: %d: the highest count */
+				return { field: 'nested-' + i + '-count', message: fill(__('Enter a whole number from 1 to %d.', 'typost-paragraph-styles'), settings.maxCount) };
+			}
+			if (rule.unit === 'marker') {
+				if (!rule.marker) {
+					return { field: 'nested-' + i + '-marker', message: __('Type the character that ends the rule, such as a colon.', 'typost-paragraph-styles') };
+				}
+				if (!canBeOneCharacter(rule.marker)) {
+					return { field: 'nested-' + i + '-marker', message: __('Type one character only.', 'typost-paragraph-styles') };
+				}
+				if (utf8ByteLength(rule.marker) > 32 || /[\u0000-\u001F\u007F-\u009F￼]/.test(rule.marker)) {
+					return { field: 'nested-' + i + '-marker', message: __('This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.', 'typost-paragraph-styles') };
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The form field a server error about a nested rule points at.
+	 *
+	 * @param {Object} response {field: 'nestedRules', ruleIndex, ruleField}
+	 * @return {?string}
+	 */
+	function nestedErrorField(response) {
+		if (!response || response.field !== 'nestedRules') {
+			return null;
+		}
+		var index = parseInt(response.ruleIndex, 10);
+		if (!(index >= 0)) {
+			return null;
+		}
+		var name = NESTED_FIELDS.indexOf(response.ruleField) !== -1 ? response.ruleField : 'styleId';
+		return 'nested-' + index + '-' + name;
+	}
+
 	var helpers = {
 		announce: announce,
 		focusEditName: focusEditName,
@@ -1806,7 +2259,17 @@
 		readGrepRules: readGrepRules,
 		validateGrepRules: validateGrepRules,
 		grepErrorField: grepErrorField,
-		updateGrepRow: updateGrepRow
+		updateGrepRow: updateGrepRow,
+		normalizeNestedRule: normalizeNestedRule,
+		fillNestedRules: fillNestedRules,
+		addNestedRule: addNestedRule,
+		moveNestedRule: moveNestedRule,
+		removeNestedRule: removeNestedRule,
+		readNestedRules: readNestedRules,
+		validateNestedRules: validateNestedRules,
+		nestedErrorField: nestedErrorField,
+		updateNestedRow: updateNestedRow,
+		nestedRuleUsers: nestedRuleUsers
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -1940,7 +2403,7 @@
 		var form    = $container.find('form')[0];
 		var details = $card[0].querySelector('.typost-ps-style-card-details');
 		var unit    = resolveEditFontSizeUnit(style.properties, newUnit);
-		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles, typostPSAdmin.grep);
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles, typostPSAdmin.grep, typostPSAdmin.nested);
 		$(form).data('baseline', readEditForm(form));
 
 		$card.find('.typost-ps-style-actions').hide();
@@ -2029,7 +2492,8 @@
 		var error   = validateEditValues(values, {
 			baseline: $(form).data('baseline'),
 			unit: resolveEditFontSizeUnit(style && style.properties, newUnit),
-			grep: typostPSAdmin.grep
+			grep: typostPSAdmin.grep,
+			nested: typostPSAdmin.nested
 		});
 		var $save   = $(form).find('.typost-ps-save-edit-btn');
 
@@ -2081,7 +2545,7 @@
 				// A rename alone changes no card but the styles based on this
 				// one, whose details name it (#200), and the cards whose GREP
 				// rules name it (#196) — refreshed to be safe
-				if (!payload.properties && payload.basedOn === undefined && payload.grepRules === undefined && !hasDescendants(styleId) && !isGrepTarget(styleId)) {
+				if (!payload.properties && payload.basedOn === undefined && payload.grepRules === undefined && payload.nestedRules === undefined && !hasDescendants(styleId) && !isGrepTarget(styleId)) {
 					done();
 					closeEditForm($card);
 					announce(message);
@@ -2107,6 +2571,8 @@
 				if (xhr && xhr.status === 400) {
 					if (serverField === 'grepRules') {
 						errorField = grepErrorField(xhr.responseJSON);
+					} else if (serverField === 'nestedRules') {
+						errorField = nestedErrorField(xhr.responseJSON);
 					} else {
 						errorField = serverField === 'basedOn' ? 'basedOn' : 'name';
 					}
@@ -2123,11 +2589,14 @@
 	// GREP rules (#196)
 	// -------------------------------------------------------------------------
 
-	// Whether another style's rules apply this one: its card names it
+	// Whether another style's GREP or nested rules (#195) apply this one:
+	// its card names it
 	function isGrepTarget(styleId) {
 		return styles.some(function(candidate) {
-			return Array.isArray(candidate.grepRules) && candidate.grepRules.some(function(rule) {
-				return String(rule && rule.styleId) === String(styleId);
+			return ['grepRules', 'nestedRules'].some(function(key) {
+				return Array.isArray(candidate[key]) && candidate[key].some(function(rule) {
+					return String(rule && rule.styleId) === String(styleId);
+				});
 			});
 		});
 	}
@@ -2172,6 +2641,51 @@
 			target.focus();
 		}
 		announce(wp.i18n.__('GREP rule removed.', 'typost-paragraph-styles'));
+	});
+
+	// -------------------------------------------------------------------------
+	// Nested rules (#195)
+	// -------------------------------------------------------------------------
+
+	$(document).on('click', '.typost-ps-nested-add', function() {
+		var form  = $(this).closest('form')[0];
+		var style = findStyle($(this).closest('.typost-ps-style-card').data('style-id'));
+		var row   = addNestedRule(form, style, styles, typostPSAdmin.nested);
+		if (!row) {
+			return;
+		}
+		var select = row.querySelector('[data-nested="styleId"]');
+		if (select) {
+			select.focus();
+		}
+		/* translators: %d: rule number */
+		announce(fill(wp.i18n.__('Nested rule %d added.', 'typost-paragraph-styles'), nestedRows(form).length));
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-nested="unit"]', function() {
+		updateNestedRow($(this).closest('.typost-ps-nested-rule')[0]);
+	});
+
+	$(document).on('click', '.typost-ps-nested-up, .typost-ps-nested-down', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-nested-rule')[0];
+		var up   = $(this).hasClass('typost-ps-nested-up');
+		var target = moveNestedRule(form, row, up ? -1 : 1, typostPSAdmin.nested);
+		if (target) {
+			target.focus();
+		}
+		/* translators: %d: the rule's new position in the list */
+		announce(fill(wp.i18n.__('Rule moved to position %d.', 'typost-paragraph-styles'), nestedRows(form).indexOf(row) + 1));
+	});
+
+	$(document).on('click', '.typost-ps-nested-remove', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-nested-rule')[0];
+		var target = removeNestedRule(form, row, typostPSAdmin.nested);
+		if (target) {
+			target.focus();
+		}
+		announce(wp.i18n.__('Nested rule removed.', 'typost-paragraph-styles'));
 	});
 
 	// -------------------------------------------------------------------------
@@ -2243,10 +2757,21 @@
 		var name    = $card.find('.typost-ps-style-name').text();
 
 		/* translators: %s: style name */
-		if (!confirm(wp.i18n.sprintf(
+		var question = wp.i18n.sprintf(
 			wp.i18n.__('Are you sure you want to delete “%s”? This cannot be undone.', 'typost-paragraph-styles'),
 			name
-		))) {
+		);
+		// A nested rule that goes with the style moves the rules after it, on
+		// every post that uses those styles (#195)
+		var nestedUsers = nestedRuleUsers(styles, styleId);
+		if (nestedUsers.length) {
+			question += '\n\n' + wp.i18n.sprintf(
+				/* translators: %s: comma-separated list of style names */
+				wp.i18n.__('Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles.', 'typost-paragraph-styles'),
+				nestedUsers.join(', ')
+			);
+		}
+		if (!confirm(question)) {
 			return;
 		}
 
@@ -2272,6 +2797,14 @@
 				// Styles whose GREP rules applied the deleted one lost those
 				// rules (#196)
 				var grepChanged = response && Array.isArray(response.grepChanged) ? response.grepChanged : [];
+				// and their nested rules (#195)
+				if (response && Array.isArray(response.nestedChanged)) {
+					response.nestedChanged.forEach(function(changedId) {
+						if (grepChanged.indexOf(changedId) === -1) {
+							grepChanged.push(changedId);
+						}
+					});
+				}
 				grepChanged.forEach(function(changedId) {
 					if (detached.indexOf(changedId) === -1) {
 						refreshCards(changedId, function() {});

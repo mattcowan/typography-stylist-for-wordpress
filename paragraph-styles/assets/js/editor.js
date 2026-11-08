@@ -200,6 +200,7 @@
 			alignment: __('justified alignment', 'typost-paragraph-styles'),
 			alignLast: __('last line alignment', 'typost-paragraph-styles'),
 			grepRules: __('GREP rules', 'typost-paragraph-styles'),
+			nestedRules: __('nested styles', 'typost-paragraph-styles'),
 			fontId: __('font', 'typost-paragraph-styles'),
 			fontWeight: __('font weight', 'typost-paragraph-styles'),
 			fontStyle: __('font style', 'typost-paragraph-styles'),
@@ -276,6 +277,7 @@
 						fontSizePx: utils.measureBlockFontSize(clientId),
 						coreBlock: true,
 						hasGrepRules: !!(detached.grepRules && detached.grepRules.length),
+						hasNestedRules: !!(detached.nestedRules && detached.nestedRules.length),
 					}
 				);
 				Object.assign(update, kept.attributes);
@@ -1524,6 +1526,10 @@
 	 * print on the next load.
 	 */
 	var dynamicCssInjected = false;
+	var dynamicNestedCss = ''; // From the server: nested_css() has no JS twin (#354)
+	var serverMainCss = '';
+	var serverCssFetched = false;
+	var serverCssRequest = 0;
 
 	function refreshDynamicStyleCss() {
 		dynamicCssInjected = true;
@@ -1565,9 +1571,61 @@
 				(doc.head || doc.documentElement).appendChild(styleEl);
 			}
 			styleEl.textContent = css;
+
+			// After the main rules, as in get_all_css()
+			var nestedEl = doc.getElementById('typost-ps-dynamic-nested-css');
+			if (dynamicNestedCss && !nestedEl) {
+				nestedEl = doc.createElement('style');
+				nestedEl.id = 'typost-ps-dynamic-nested-css';
+				(doc.head || doc.documentElement).appendChild(nestedEl);
+			}
+			if (nestedEl) {
+				nestedEl.textContent = dynamicNestedCss;
+			}
+			// The rules printed with the page are out of date. Left in place,
+			// they keep a declaration a style dropped. A rebuilt canvas brings
+			// them back, and this runs again for it.
+			if (serverCssFetched) {
+				var loadedMain = doc.getElementById('typost-paragraph-styles-inline-inline-css');
+				if (loadedMain) {
+					loadedMain.textContent = serverMainCss;
+				}
+				var loadedNested = doc.getElementById('typost-paragraph-styles-nested-inline-css');
+				if (loadedNested) {
+					loadedNested.textContent = '';
+				}
+			}
 		}
 
 		watchForCanvasRemount();
+	}
+
+	/**
+	 * Read the current CSS from the server after a style changes (#354).
+	 * refreshDynamicStyleCss() shows the change at once, but it only adds
+	 * rules: a declaration a style dropped stays in the rules printed with the
+	 * page. It also has no twin of the nested rules: a First line rule copies
+	 * the declarations of the style it applies, and a feature rule combines two
+	 * styles' features. Only the latest response counts. If the request fails,
+	 * the rules stay as they were until a reload.
+	 */
+	function refreshServerCss() {
+		if (!wp.apiFetch) {
+			return;
+		}
+		var request = ++serverCssRequest;
+		wp.apiFetch({ path: '/typost/v1/paragraph-styles/editor-css' }).then(function(response) {
+			if (request !== serverCssRequest) {
+				return;
+			}
+			if (!response || typeof response.main !== 'string' || typeof response.nested !== 'string') {
+				return;
+			}
+			serverMainCss = response.main;
+			dynamicNestedCss = response.nested;
+			serverCssFetched = true;
+			refreshDynamicStyleCss();
+		}).catch(function() {});
 	}
 
 	// The canvas iframe is unmounted and recreated by editor mode switches
@@ -1604,6 +1662,7 @@
 	// The panel dispatches this after every save/update (before it applies the
 	// style), so the rules exist by the time the span/block starts relying on them.
 	document.addEventListener('typost-paragraph-styles-updated', refreshDynamicStyleCss);
+	document.addEventListener('typost-paragraph-styles-updated', refreshServerCss);
 
 	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)
@@ -1678,6 +1737,205 @@
 		var styleEl = document.createElement('style');
 		styleEl.textContent = css;
 		document.head.appendChild(styleEl);
+	}
+
+	// -------------------------------------------------------------------------
+	// Nested styles preview (#195)
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Show nested styles in the editor canvas, as the frontend renders
+	 * them, without ever putting their spans in the content.
+	 *
+	 * The text the rules cover is wrapped (utils.applyNestedPreview(), the
+	 * twin of the server's counting) only in blocks that are not selected
+	 * and hold no focus. RichText reads its element's DOM only while it is
+	 * being edited (input, composition and selection events on the focused
+	 * element), and the block content is serialized from the block
+	 * attributes, not from the DOM. So the spans come off before the block
+	 * can be edited: when the block is selected (store), and synchronously,
+	 * in the capture phase, on a pointer press or a focus inside it, before
+	 * the browser places a caret or RichText sees the focus. A First line
+	 * rule is CSS and needs none of this.
+	 */
+	function initNestedPreview() {
+		var options = window.typostData && window.typostData.paragraphStylesOptions;
+		if (!options || !options.nestedPreview || !wp.data || !wp.data.subscribe || typeof utils.applyNestedPreview !== 'function') {
+			return;
+		}
+
+		var decorated = []; // {root, records, signature}
+		var scheduled = false;
+		var watchedDocs = [];
+		var ruleMap = null; // Rebuilt after typost-paragraph-styles-updated
+
+		function currentRuleMap() {
+			if (!ruleMap) {
+				ruleMap = utils.buildNestedRuleMap(getStyles());
+			}
+			return ruleMap;
+		}
+
+		function canvasDocuments() {
+			var docs = [document];
+			var frames = document.querySelectorAll('iframe[name="editor-canvas"]');
+			for (var i = 0; i < frames.length; i++) {
+				try {
+					if (frames[i].contentDocument) {
+						docs.push(frames[i].contentDocument);
+					}
+				} catch (e) {
+					// Inaccessible frame
+				}
+			}
+			return docs;
+		}
+
+		// Whether the block around a root is being edited, or could be
+		function isActive(root) {
+			var blockEl = root.closest('[data-block]');
+			var store = wp.data.select('core/block-editor');
+			if (!blockEl || !store) {
+				return true;
+			}
+			var clientId = blockEl.getAttribute('data-block');
+			if (store.isBlockSelected(clientId) || store.isBlockMultiSelected(clientId)
+				|| (store.hasSelectedInnerBlock && store.hasSelectedInnerBlock(clientId, true))
+				|| (store.isMultiSelecting && store.isMultiSelecting())) {
+				return true;
+			}
+			var active = root.ownerDocument.activeElement;
+			return !!(active && active !== root.ownerDocument.body && (root.contains(active) || active.contains(root)));
+		}
+
+		function entryFor(root) {
+			for (var i = 0; i < decorated.length; i++) {
+				if (decorated[i].root === root) {
+					return i;
+				}
+			}
+			return -1;
+		}
+
+		function undecorate(root) {
+			var index = entryFor(root);
+			if (index === -1) {
+				return;
+			}
+			utils.removeNestedPreview(root, decorated[index].records);
+			decorated.splice(index, 1);
+		}
+
+		// Whether every preview span is still where it was written
+		function intact(entry) {
+			return entry.root.isConnected && entry.records.every(function(record) {
+				return record.parts.every(function(part) {
+					return entry.root.contains(part);
+				});
+			});
+		}
+
+		// Capture phase: the spans come off before anything else in the
+		// canvas reacts to a press or a focus inside the block
+		function onPress(event) {
+			var target = event.target;
+			if (!target || target.nodeType !== 1) {
+				return;
+			}
+			// Inside the element, or anywhere in its block (the block wrapper
+			// of a Typography Stylist block takes focus too); not a press on
+			// the canvas around it, which would flicker every block
+			var block = target.closest ? target.closest('[data-block]') : null;
+			for (var i = decorated.length - 1; i >= 0; i--) {
+				var root = decorated[i].root;
+				if (root.contains(target) || (block && block === root.closest('[data-block]'))) {
+					undecorate(root);
+				}
+			}
+		}
+
+		function watch(doc) {
+			if (watchedDocs.indexOf(doc) !== -1) {
+				return;
+			}
+			watchedDocs.push(doc);
+			['pointerdown', 'mousedown', 'touchstart', 'focusin', 'dragstart'].forEach(function(type) {
+				doc.addEventListener(type, onPress, true);
+			});
+		}
+
+		function sync() {
+			scheduled = false;
+			var map = currentRuleMap();
+
+			// Entries whose element left the page, lost its style, or can be edited
+			decorated.slice().forEach(function(entry) {
+				if (!entry.root.isConnected || isActive(entry.root) || !utils.nestedRootRef(entry.root, map.rules)) {
+					undecorate(entry.root);
+				}
+			});
+			if (!Object.keys(map.rules).length) {
+				return;
+			}
+
+			canvasDocuments().forEach(function(doc) {
+				watch(doc);
+				var candidates = doc.querySelectorAll('[data-block] .typost-styled[class*="typost-ps-"], .typost-styled[data-block][class*="typost-ps-"]');
+				for (var i = 0; i < candidates.length; i++) {
+					var root = candidates[i];
+					var ref = utils.nestedRootRef(root, map.rules);
+					if (!ref || isActive(root)) {
+						continue;
+					}
+					var rules = map.rules[ref];
+					var signature = JSON.stringify([utils.collectNestedText(root).plain, rules]);
+					var index = entryFor(root);
+					if (index !== -1) {
+						if (decorated[index].signature === signature && intact(decorated[index])) {
+							continue;
+						}
+						undecorate(root);
+					}
+					// Spans left over from a rewrite the records missed
+					utils.removeNestedPreview(root);
+					var records = utils.applyNestedPreview(root, rules, map.ids);
+					if (records.length) {
+						decorated.push({ root: root, records: records, signature: signature });
+					}
+				}
+			});
+		}
+
+		function schedule() {
+			// A decorated block that became editable (selected from the List
+			// View or the keyboard) loses its spans at once
+			for (var i = decorated.length - 1; i >= 0; i--) {
+				if (isActive(decorated[i].root)) {
+					undecorate(decorated[i].root);
+				}
+			}
+			// A site with no text rules has nothing to scan on every store change
+			if (scheduled || (!decorated.length && !Object.keys(currentRuleMap().rules).length)) {
+				return;
+			}
+			// The store changes on every keystroke: re-decorate at most every
+			// 150 ms (taking spans off never waits, see above)
+			scheduled = true;
+			window.setTimeout(sync, 150);
+		}
+
+		wp.data.subscribe(schedule);
+		document.addEventListener('typost-paragraph-styles-updated', function() {
+			ruleMap = null;
+			schedule();
+		});
+		schedule();
+	}
+
+	if (wp.domReady) {
+		wp.domReady(initNestedPreview);
+	} else {
+		initNestedPreview();
 	}
 
 	// -------------------------------------------------------------------------
