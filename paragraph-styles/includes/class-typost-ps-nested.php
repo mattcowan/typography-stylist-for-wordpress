@@ -266,10 +266,11 @@ if ( ! class_exists( 'Typost_PS_Nested' ) ) {
 			if ( ! is_string( $marker ) || '' === $marker ) {
 				return __( 'Type the character that ends the rule, such as a colon.', 'typost-paragraph-styles' );
 			}
-			if ( strlen( $marker ) > self::MAX_MARKER_BYTES || 1 !== preg_match( '/^\X$/u', $marker ) ) {
+			if ( 1 !== preg_match( '/^\X$/u', $marker ) ) {
 				return __( 'Type one character only.', 'typost-paragraph-styles' );
 			}
-			if ( preg_match( '/[\p{Cc}\x{FFFC}]/u', $marker ) ) {
+			// One long emoji sequence can pass the check above and be over the limit.
+			if ( strlen( $marker ) > self::MAX_MARKER_BYTES || preg_match( '/[\p{Cc}\x{FFFC}]/u', $marker ) ) {
 				return __( 'This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.', 'typost-paragraph-styles' );
 			}
 			return '';

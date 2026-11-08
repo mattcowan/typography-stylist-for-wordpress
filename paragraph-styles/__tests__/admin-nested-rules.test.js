@@ -221,6 +221,41 @@ describe('validation', () => {
 		expect(validateNestedRules(null, NESTED)).toBeNull();
 	});
 
+	test('one character over the server limit of 32 bytes gets the message for it, not "one character"', () => {
+		// 35 bytes and 15 UTF-16 units: the field's maxlength lets it through
+		const long = '\u{1F469}\u{1F3FB}‍❤️‍\u{1F48B}‍\u{1F468}\u{1F3FB}';
+		expect(long.length).toBeLessThanOrEqual(32);
+		const error = validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker: long, end: 'upto' }], NESTED);
+		expect(error.field).toBe('nested-0-marker');
+		expect(error.message).toBe('This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.');
+		// 25 bytes: inside the limit
+		const family = '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}';
+		expect(validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker: family, end: 'upto' }], NESTED)).toBeNull();
+		// Several characters are still "one character", also over the limit
+		expect(validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker: 'é'.repeat(20), end: 'upto' }], NESTED).message).toBe('Type one character only.');
+	});
+
+	describe('in a browser with no Intl.Segmenter', () => {
+		const segmenter = Intl.Segmenter;
+		beforeEach(() => {
+			delete Intl.Segmenter;
+		});
+		afterEach(() => {
+			Intl.Segmenter = segmenter;
+		});
+
+		test('the server decides how many characters a marker has, so a valid one is not refused', () => {
+			['\u{1F1EB}\u{1F1F7}', '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}', 'é', ':'].forEach((marker) => {
+				expect(validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker, end: 'upto' }], NESTED)).toBeNull();
+			});
+		});
+
+		test('the other marker checks still run', () => {
+			expect(validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker: '', end: 'upto' }], NESTED).field).toBe('nested-0-marker');
+			expect(validateNestedRules([{ styleId: 2, unit: 'marker', count: 1, marker: '\t', end: 'upto' }], NESTED).field).toBe('nested-0-marker');
+		});
+	});
+
 	test('validateEditValues reports a nested problem after GREP and the other fields', () => {
 		const values = { name: 'Step', sizeMode: 'inherit', fontVariationSettings: '', grepRules: [], nestedRules: [{ ...ok, styleId: 0 }] };
 		expect(validateEditValues(values, { nested: NESTED }).field).toBe('nested-0-styleId');

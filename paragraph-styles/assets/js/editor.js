@@ -1527,7 +1527,9 @@
 	 */
 	var dynamicCssInjected = false;
 	var dynamicNestedCss = ''; // From the server: nested_css() has no JS twin (#354)
-	var nestedCssRequest = 0;
+	var serverMainCss = '';
+	var serverCssFetched = false;
+	var serverCssRequest = 0;
 
 	function refreshDynamicStyleCss() {
 		dynamicCssInjected = true;
@@ -1580,32 +1582,48 @@
 			if (nestedEl) {
 				nestedEl.textContent = dynamicNestedCss;
 			}
+			// The rules printed with the page are out of date. Left in place,
+			// they keep a declaration a style dropped. A rebuilt canvas brings
+			// them back, and this runs again for it.
+			if (serverCssFetched) {
+				var loadedMain = doc.getElementById('typost-paragraph-styles-inline-inline-css');
+				if (loadedMain) {
+					loadedMain.textContent = serverMainCss;
+				}
+				var loadedNested = doc.getElementById('typost-paragraph-styles-nested-inline-css');
+				if (loadedNested) {
+					loadedNested.textContent = '';
+				}
+			}
 		}
 
 		watchForCanvasRemount();
 	}
 
 	/**
-	 * Read the nested rule CSS from the server after a style changes (#354).
-	 * A First line rule copies the declarations of the style it applies, and
-	 * a feature rule combines two styles' features, so they change when
-	 * either style does. Only the latest response counts. If the request
-	 * fails, the rules stay as they were until a reload.
+	 * Read the current CSS from the server after a style changes (#354).
+	 * refreshDynamicStyleCss() shows the change at once, but it only adds
+	 * rules: a declaration a style dropped stays in the rules printed with the
+	 * page. It also has no twin of the nested rules: a First line rule copies
+	 * the declarations of the style it applies, and a feature rule combines two
+	 * styles' features. Only the latest response counts. If the request fails,
+	 * the rules stay as they were until a reload.
 	 */
-	function refreshNestedCss() {
-		var options = window.typostData && window.typostData.paragraphStylesOptions;
-		var hasRules = getStyles().some(function(style) {
-			return Array.isArray(style.nestedRules) && style.nestedRules.length > 0;
-		});
-		if (!options || !options.nestedPreview || !wp.apiFetch || (!hasRules && !dynamicNestedCss)) {
+	function refreshServerCss() {
+		if (!wp.apiFetch) {
 			return;
 		}
-		var request = ++nestedCssRequest;
-		wp.apiFetch({ path: '/typost/v1/paragraph-styles/nested-css' }).then(function(response) {
-			if (request !== nestedCssRequest) {
+		var request = ++serverCssRequest;
+		wp.apiFetch({ path: '/typost/v1/paragraph-styles/editor-css' }).then(function(response) {
+			if (request !== serverCssRequest) {
 				return;
 			}
-			dynamicNestedCss = response && typeof response.css === 'string' ? response.css : '';
+			if (!response || typeof response.main !== 'string' || typeof response.nested !== 'string') {
+				return;
+			}
+			serverMainCss = response.main;
+			dynamicNestedCss = response.nested;
+			serverCssFetched = true;
 			refreshDynamicStyleCss();
 		}).catch(function() {});
 	}
@@ -1644,7 +1662,7 @@
 	// The panel dispatches this after every save/update (before it applies the
 	// style), so the rules exist by the time the span/block starts relying on them.
 	document.addEventListener('typost-paragraph-styles-updated', refreshDynamicStyleCss);
-	document.addEventListener('typost-paragraph-styles-updated', refreshNestedCss);
+	document.addEventListener('typost-paragraph-styles-updated', refreshServerCss);
 
 	// -------------------------------------------------------------------------
 	// Inline styles for the panel (injected once)

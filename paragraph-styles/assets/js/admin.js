@@ -1841,22 +1841,34 @@
 	}
 
 	/**
-	 * How many user-perceived characters a string has (Intl.Segmenter
-	 * where the browser has it, else code points with their combining marks).
+	 * Whether a string can be one user-perceived character. Only Intl.Segmenter
+	 * can tell. A browser without it says yes and the server decides: counting
+	 * code points would refuse a flag or a family emoji, also on a style that
+	 * already has one.
+	 *
+	 * @param {string} text
+	 * @return {boolean}
+	 */
+	function canBeOneCharacter(text) {
+		if (typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') {
+			return true;
+		}
+		var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
+		return !it.next().done && it.next().done;
+	}
+
+	/**
+	 * A string's length in UTF-8 bytes, which is what the server's marker limit
+	 * counts (Typost_PS_Nested::MAX_MARKER_BYTES).
 	 *
 	 * @param {string} text
 	 * @return {number}
 	 */
-	function countGraphemes(text) {
-		if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
-			var n = 0;
-			var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
-			while (!it.next().done) {
-				n++;
-			}
-			return n;
-		}
-		return Array.from(text.replace(/\p{M}+/gu, '')).length;
+	function utf8ByteLength(text) {
+		return Array.from(text).reduce(function(total, ch) {
+			var code = ch.codePointAt(0);
+			return total + (code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4);
+		}, 0);
 	}
 
 	function selectWith(doc, attrs, options, value) {
@@ -2184,10 +2196,10 @@
 				if (!rule.marker) {
 					return { field: 'nested-' + i + '-marker', message: __('Type the character that ends the rule, such as a colon.', 'typost-paragraph-styles') };
 				}
-				if (countGraphemes(rule.marker) !== 1) {
+				if (!canBeOneCharacter(rule.marker)) {
 					return { field: 'nested-' + i + '-marker', message: __('Type one character only.', 'typost-paragraph-styles') };
 				}
-				if (/[\u0000-\u001F\u007F-\u009F￼]/.test(rule.marker)) {
+				if (utf8ByteLength(rule.marker) > 32 || /[\u0000-\u001F\u007F-\u009F￼]/.test(rule.marker)) {
 					return { field: 'nested-' + i + '-marker', message: __('This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.', 'typost-paragraph-styles') };
 				}
 			}

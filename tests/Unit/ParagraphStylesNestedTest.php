@@ -276,6 +276,18 @@ class ParagraphStylesNestedTest extends TestCase {
         }
     }
 
+    public function test_one_character_over_the_byte_limit_gets_its_own_message() {
+        // 35 bytes: one character, so "Type one character only" would be wrong
+        $long = "\u{1F469}\u{1F3FB}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F48B}\u{200D}\u{1F468}\u{1F3FB}";
+        $this->assertSame(35, strlen($long));
+        $this->assertSame(
+            'This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.',
+            \Typost_PS_Nested::validate_marker($long)
+        );
+        // Several characters over the limit are still "one character"
+        $this->assertSame('Type one character only.', \Typost_PS_Nested::validate_marker(str_repeat('é', 20)));
+    }
+
     public function test_rule_labels() {
         $this->assertSame('Through 1 “:”', \Typost_PS_Nested::rule_label(array('unit' => 'marker', 'count' => 1, 'marker' => ':', 'end' => 'through')));
         $this->assertSame('Up to 3 words', \Typost_PS_Nested::rule_label(array('unit' => 'words', 'count' => 3, 'end' => 'upto')));
@@ -406,6 +418,64 @@ class ParagraphStylesNestedTest extends TestCase {
         $this->assertSame('', $this->module($this->styles())->get_nested_css());
         HtmlApi::setSupported(false);
         $this->assertSame('', $module->get_nested_css());
+    }
+
+    public function test_the_editor_prints_the_nested_rules_in_their_own_element() {
+        // The editor replaces both elements after a style changes, so a declaration the style dropped goes too
+        HtmlApi::setSupported(true);
+        $printed = array();
+        $order   = array();
+        Functions\when('is_admin')->justReturn(true);
+        Functions\when('wp_register_style')->justReturn(true);
+        Functions\when('wp_enqueue_style')->alias(function ($handle) use (&$order) { $order[] = $handle; });
+        Functions\when('wp_add_inline_style')->alias(function ($handle, $css) use (&$printed) { $printed[$handle] = $css; });
+
+        $styles = $this->styles();
+        $styles[0]['nestedRules'] = array(array('styleId' => 2, 'unit' => 'line'));
+        $module = $this->module($styles);
+        $module->enqueue_editor_style_css();
+
+        $this->assertSame(array('typost-paragraph-styles-inline', 'typost-paragraph-styles-nested'), $order);
+        $this->assertSame($module->get_nested_css(), $printed['typost-paragraph-styles-nested']);
+        $this->assertStringNotContainsString('::first-line', $printed['typost-paragraph-styles-inline']);
+        $this->assertStringContainsString('.typost-ps-2,', $printed['typost-paragraph-styles-inline']);
+        // The two together are the full CSS
+        $this->assertSame($module->get_all_css(), $printed['typost-paragraph-styles-inline'] . "\n\n" . $printed['typost-paragraph-styles-nested']);
+
+        // No rules, no element
+        $printed = array();
+        $order   = array();
+        $this->module($this->styles())->enqueue_editor_style_css();
+        $this->assertSame(array('typost-paragraph-styles-inline'), $order);
+    }
+
+    public function test_the_editor_css_route_returns_the_main_and_nested_parts() {
+        // The editor replaces what the page printed with these after a style changes (#354)
+        HtmlApi::setSupported(true);
+        $styles = $this->styles();
+        $styles[0]['nestedRules'] = array(array('styleId' => 2, 'unit' => 'line'));
+        $module = $this->module($styles);
+        $data = $module->rest_get_editor_css()->get_data();
+        $this->assertSame(array('main', 'nested'), array_keys($data));
+        $this->assertSame($module->get_nested_css(), $data['nested']);
+        $this->assertStringContainsString('.typost-ps-2,', $data['main']);
+        $this->assertStringNotContainsString('::first-line', $data['main']);
+        $this->assertSame($module->get_all_css(), $data['main'] . "\n\n" . $data['nested']);
+
+        // Both are strings with no style left, or the editor would keep the old rules
+        $this->assertSame(array('main' => '', 'nested' => ''), $this->module(array())->rest_get_editor_css()->get_data());
+    }
+
+    public function test_the_nested_rules_do_not_wait_for_the_style_cache() {
+        // A cached main part still gets the current nested rules
+        HtmlApi::setSupported(true);
+        Functions\when('get_transient')->alias(function ($key) {
+            return \Typost_Paragraph_Styles::CSS_CACHE_KEY === $key ? '.cached {}' : false;
+        });
+        $styles = $this->styles();
+        $styles[0]['nestedRules'] = array(array('styleId' => 2, 'unit' => 'line'));
+        $module = $this->module($styles);
+        $this->assertSame(".cached {}\n\n" . $module->get_nested_css(), $module->get_all_css());
     }
 
     public function test_the_card_loads_the_font_of_a_style_only_a_first_line_rule_uses() {

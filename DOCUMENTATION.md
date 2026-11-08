@@ -440,7 +440,7 @@ Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph di
 3. Under "Nested styles", click "Add nested rule". Choose the style to apply, then how far it goes:
    - **Words:** a number of words. "Through" takes the space after the last word too; "Up to" stops at the end of the word.
    - **Characters:** a number of characters. An accented letter or an emoji counts as one character.
-   - **A character you type:** for example `:` or `—`, and how many times it must occur. "Through" includes the character; "Up to" stops before it, so the next rule starts with it.
+   - **A character you type:** for example `:` or `—`, and how many times it must occur. "Through" includes the character; "Up to" stops before it, so the next rule starts with it. An emoji can match part of a longer emoji, such as one half of a flag. If this occurs, use a letter or a punctuation mark.
    - **First line:** the first line of the paragraph, at every screen width.
 4. Add more rules and put them in order with "Move up" and "Move down". Save. Every block that uses "Step" shows the change on its next page load.
 

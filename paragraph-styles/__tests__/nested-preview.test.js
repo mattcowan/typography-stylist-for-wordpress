@@ -178,14 +178,14 @@ describe('the preview', () => {
 describe('the editor CSS after a style changes (#354)', () => {
 	const source = fs.readFileSync(path.join(__dirname, '../assets/js/editor.js'), 'utf8');
 
-	test('asks the server for the nested CSS, so there is no JS twin of nested_css()', () => {
-		expect(source).toMatch(/path: '\/typost\/v1\/paragraph-styles\/nested-css'/);
-		expect(source).toMatch(/addEventListener\('typost-paragraph-styles-updated', refreshNestedCss\)/);
+	test('asks the server for the CSS, so there is no JS twin of nested_css()', () => {
+		expect(source).toMatch(/path: '\/typost\/v1\/paragraph-styles\/editor-css'/);
+		expect(source).toMatch(/addEventListener\('typost-paragraph-styles-updated', refreshServerCss\)/);
 	});
 
 	test('a late response cannot replace a newer one', () => {
-		expect(source).toMatch(/var request = \+\+nestedCssRequest;/);
-		expect(source).toMatch(/request !== nestedCssRequest/);
+		expect(source).toMatch(/var request = \+\+serverCssRequest;/);
+		expect(source).toMatch(/request !== serverCssRequest/);
 	});
 
 	test('the nested CSS follows the main rules, so it wins where they are equal', () => {
@@ -193,6 +193,25 @@ describe('the editor CSS after a style changes (#354)', () => {
 		const nested = source.indexOf("doc.getElementById('typost-ps-dynamic-nested-css')");
 		expect(main).toBeGreaterThan(-1);
 		expect(nested).toBeGreaterThan(main);
+	});
+
+	test('a successful read replaces the page-load rules, so a declaration a style dropped goes too', () => {
+		expect(source).toMatch(/serverCssFetched = true;/);
+		expect(source).toMatch(/if \(serverCssFetched\) \{\s*var loadedMain = doc\.getElementById\('typost-paragraph-styles-inline-inline-css'\);/);
+		expect(source).toMatch(/loadedMain\.textContent = serverMainCss;/);
+		expect(source).toMatch(/var loadedNested = doc\.getElementById\('typost-paragraph-styles-nested-inline-css'\);/);
+		expect(source).toMatch(/loadedNested\.textContent = '';/);
+	});
+
+	test('a response with no CSS leaves the rules as they are', () => {
+		expect(source).toMatch(/if \(!response \|\| typeof response\.main !== 'string' \|\| typeof response\.nested !== 'string'\) \{\s*return;/);
+	});
+
+	test('the read runs on every style change, also on a site with no nested rules', () => {
+		const start = source.indexOf('function refreshServerCss()');
+		expect(start).toBeGreaterThan(-1);
+		const body = source.slice(start, source.indexOf("wp.apiFetch({ path: '/typost/v1/paragraph-styles/editor-css'", start));
+		expect(body).not.toMatch(/nestedPreview|nestedRules/);
 	});
 });
 

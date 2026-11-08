@@ -1417,11 +1417,23 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Generate all paragraph style CSS (cached).
+	 * Generate all paragraph style CSS. The nested rules come last, so they
+	 * follow every style they combine.
 	 *
 	 * @return string Full CSS string for all styles.
 	 */
 	public function get_all_css() {
+		$main   = $this->get_main_css();
+		$nested = $this->get_nested_css();
+		return '' !== $main && '' !== $nested ? $main . "\n\n" . $nested : $main . $nested;
+	}
+
+	/**
+	 * Every style's own rules and GREP rules (cached), with no nested rules.
+	 *
+	 * @return string CSS, '' for none.
+	 */
+	private function get_main_css() {
 		$cached = get_transient( self::CSS_CACHE_KEY );
 		if ( false !== $cached ) {
 			return $cached;
@@ -1439,16 +1451,12 @@ final class Typost_Paragraph_Styles {
 				$css_blocks[] = $block;
 			}
 		}
-		// GREP and nested rule CSS last, so it follows every style it combines
+		// GREP rule CSS last, so it follows every style it combines
 		foreach ( $styles as $style ) {
 			$block = self::grep_feature_css( $style, $styles );
 			if ( '' !== $block ) {
 				$css_blocks[] = $block;
 			}
-		}
-		$nested = $this->get_nested_css();
-		if ( '' !== $nested ) {
-			$css_blocks[] = $nested;
 		}
 
 		$css = implode( "\n\n", $css_blocks );
@@ -2444,15 +2452,23 @@ final class Typost_Paragraph_Styles {
 			return;
 		}
 
-		$css = $this->get_all_css();
-		if ( empty( $css ) ) {
-			return;
+		$css = $this->get_main_css();
+		if ( ! empty( $css ) ) {
+			// Register a dummy handle and attach inline CSS to it
+			wp_register_style( 'typost-paragraph-styles-inline', false );
+			wp_enqueue_style( 'typost-paragraph-styles-inline' );
+			wp_add_inline_style( 'typost-paragraph-styles-inline', $css );
 		}
 
-		// Register a dummy handle and attach inline CSS to it
-		wp_register_style( 'typost-paragraph-styles-inline', false );
-		wp_enqueue_style( 'typost-paragraph-styles-inline' );
-		wp_add_inline_style( 'typost-paragraph-styles-inline', $css );
+		// In its own element, as the nested rules must follow the editor's
+		// dynamic main rules: editor.js empties it after it reads the current
+		// rules (#354).
+		$nested = $this->get_nested_css();
+		if ( '' !== $nested ) {
+			wp_register_style( 'typost-paragraph-styles-nested', false );
+			wp_enqueue_style( 'typost-paragraph-styles-nested' );
+			wp_add_inline_style( 'typost-paragraph-styles-nested', $nested );
+		}
 	}
 
 	// -------------------------------------------------------------------------
@@ -2733,11 +2749,11 @@ final class Typost_Paragraph_Styles {
 			),
 		) );
 
-		// The editor refreshes its nested rule CSS from this after a style changes (#354)
-		register_rest_route( self::REST_NAMESPACE, '/paragraph-styles/nested-css', array(
+		// The editor replaces the CSS printed with the page from this after a style changes (#354)
+		register_rest_route( self::REST_NAMESPACE, '/paragraph-styles/editor-css', array(
 			array(
 				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'rest_get_nested_css' ),
+				'callback'            => array( $this, 'rest_get_editor_css' ),
 				'permission_callback' => array( $this, 'check_permissions' ),
 			),
 		) );
@@ -4078,12 +4094,16 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * GET /paragraph-styles/nested-css
+	 * GET /paragraph-styles/editor-css
 	 *
-	 * @return WP_REST_Response
+	 * @return WP_REST_Response main: the rules enqueue_editor_style_css() prints
+	 *                          on its first handle. nested: the nested rules.
 	 */
-	public function rest_get_nested_css() {
-		return new WP_REST_Response( array( 'css' => $this->get_nested_css() ), 200 );
+	public function rest_get_editor_css() {
+		return new WP_REST_Response( array(
+			'main'   => $this->get_main_css(),
+			'nested' => $this->get_nested_css(),
+		), 200 );
 	}
 
 	/**
