@@ -732,6 +732,14 @@
 		if (basisLength && !(Number(basisLength[1]) > 0)) basisLength = null;
 		var basisExpression = !basisLength && /^(clamp|min|max|calc)\(.+\)$/.test(basis) ? basis : '';
 
+		// Rounds by textual exponent shift; a product String() writes in
+		// exponent form (1e-7) would give NaN that way, and is 0 at this
+		// precision anyway (PR #368 review)
+		function round(x, digits) {
+			var rounded = Number(Math.round(Number(x + 'e' + digits)) + 'e-' + digits);
+			return isFinite(rounded) ? rounded : Number(x.toFixed(digits));
+		}
+
 		// An em value at the size it resolved against; px at the rendered
 		// size when that size is not known
 		function emToPx(value) {
@@ -739,8 +747,7 @@
 			var n = parseFloat(value);
 			if (basis === 'keep') return value;
 			if (basisLength) {
-				var digits = basisLength[2] === 'rem' ? 4 : 3;
-				return String(Number(Math.round(Number(n * Number(basisLength[1]) + 'e' + digits)) + 'e-' + digits)) + basisLength[2];
+				return String(round(n * Number(basisLength[1]), basisLength[2] === 'rem' ? 4 : 3)) + basisLength[2];
 			}
 			if (basisExpression) {
 				followsTextSize = true;
@@ -748,7 +755,7 @@
 			}
 			if (!fontSizePx) return value;
 			emConverted = true;
-			return String(Number(Math.round(Number(n * fontSizePx + 'e3')) + 'e-3')) + 'px';
+			return String(round(n * fontSizePx, 3)) + 'px';
 		}
 
 		// Space before and after, and the indents
@@ -777,8 +784,10 @@
 		if (keepsFirstLine && (!afterSame || opts.followsSameStyle)) {
 			var typography = style.typography && typeof style.typography === 'object' ? style.typography : {};
 			var ownIndent = typography.textIndent;
-			// A Text indent the block has (0 too) already showed over the style's
-			if (ownIndent === undefined || ownIndent === null || ownIndent === '') {
+			// A Text indent the block has (the string '0' too) already showed
+			// over the style's. Core writes nothing for a falsy value (a number
+			// 0), so then the style's indent showed (PR #368 review)
+			if (!ownIndent) {
 				nextStyle = nextStyle || Object.assign({}, style);
 				nextStyle.typography = Object.assign({}, nextStyle.typography, { textIndent: emToPx(firstLine) });
 			}

@@ -3680,10 +3680,12 @@ export function resolveHangTextAlign(textAlign, styleAlignment, isFit, isRtl) {
 /**
  * Whether the block has its own Line indent (core's Text indent support,
  * WordPress 7.0+, #348), which core writes as an inline text-indent on the
- * wrapper. Any stored value counts, 0 too, because style.css matches the
- * declaration, not its value: the visual copy then takes the wrapper's
- * indent and the First Letter Hang is off, as under a style's first line
- * indent. Fit-to-width blocks ignore it (style.css).
+ * wrapper. Every value core writes counts, the string '0' too, because
+ * style.css matches the declaration, not its value: the visual copy then
+ * takes the wrapper's indent and the First Letter Hang is off, as under a
+ * style's first line indent. Core writes only a truthy value (PHP
+ * is_valid_style_value(), JS generateRule()), so a number 0 does not count.
+ * Fit-to-width blocks ignore it (style.css).
  *
  * @param {Object} style The block's style attribute.
  * @return {boolean}
@@ -3693,8 +3695,9 @@ export function hasBlockTextIndent(style) {
 	if (!typography || typeof typography !== 'object') {
 		return false;
 	}
-	const value = typography.textIndent;
-	return value !== undefined && value !== null && value !== '';
+	// Core's style engine writes only a truthy value (the string '0' is one,
+	// a number 0 is not), so a falsy value never reaches the CSS test
+	return !!typography.textIndent;
 }
 
 /**

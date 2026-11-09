@@ -5267,8 +5267,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							{__('The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it.', 'typography-stylist')}
 						</p>
 					)}
-					{/* The block's own Line indent turns the hang off (#348, style.css) */}
-					{fontSize !== 'fit' && hasBlockTextIndent(attributes.style) && (
+					{/* The block's own Line indent turns the hang off (#348, style.css); only said when there is a hang to lose */}
+					{fontSize !== 'fit' && normalizeHang(initialHang) > 0 && hasBlockTextIndent(attributes.style) && (
 						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
 							{__('The hang has no effect while the block has a Line indent. Remove the Line indent to use the hang.', 'typography-stylist')}
 						</p>

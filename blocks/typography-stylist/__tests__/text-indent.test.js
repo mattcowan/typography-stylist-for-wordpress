@@ -73,7 +73,10 @@ describe('hasBlockTextIndent', () => {
 	});
 
 	it('is false with no value', () => {
-		for (const style of [undefined, null, {}, { typography: {} }, { typography: { textIndent: '' } }, { typography: { textIndent: null } }, { typography: 'x' }]) {
+		// A number 0 too: core's style engine writes nothing for it (PHP
+		// is_valid_style_value() keeps only the string '0'; JS generateRule()
+		// drops falsy values), so the CSS presence test does not match (PR #368 review)
+		for (const style of [undefined, null, {}, { typography: {} }, { typography: { textIndent: '' } }, { typography: { textIndent: null } }, { typography: { textIndent: 0 } }, { typography: 'x' }]) {
 			expect(hasBlockTextIndent(style)).toBe(false);
 		}
 	});

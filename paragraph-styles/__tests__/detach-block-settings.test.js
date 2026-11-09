@@ -339,6 +339,12 @@ describe('buildDetachBlockSettings', () => {
 			expect(attributes).toEqual({});
 		});
 
+		it('keeps the style\'s indent over a number 0, which core does not write (PR #368 review)', () => {
+			// Core's style engine drops a falsy value (PHP is_valid_style_value(), JS generateRule())
+			const { attributes } = buildDetachBlockSettings({ firstLineIndent: '24px' }, { style: { typography: { textIndent: 0 } } }, { textIndent: true });
+			expect(attributes.style.typography.textIndent).toBe('24px');
+		});
+
 		it('keeps the other typography values, such as an alignment Detach also keeps', () => {
 			const { attributes } = buildDetachBlockSettings(
 				{ firstLineIndent: '24px' },
@@ -662,6 +668,14 @@ describe('em values follow the text size (#363)', () => {
 	it('margins on the wrapper still stay in em (keepMarginEm)', () => {
 		const { attributes } = buildDetachBlockSettings({ spaceBefore: '1em', indentStart: '1em' }, {}, { emBasis: '20px', keepMarginEm: true });
 		expect(attributes.style.spacing).toEqual({ margin: { top: '1em' }, padding: { left: '20px' } });
+	});
+
+	it('a product too small for plain notation rounds to 0, never NaN (PR #368 review)', () => {
+		// 0.001 × 0.0001 = 1e-7, which String() writes in exponent form
+		const fixed = buildDetachBlockSettings({ indentStart: '0.001em' }, {}, { emBasis: '0.0001rem' });
+		expect(fixed.attributes.style.spacing.padding.left).toBe('0rem');
+		const measured = buildDetachBlockSettings({ indentStart: '0.001em' }, {}, { fontSizePx: 0.0001 });
+		expect(measured.attributes.style.spacing.padding.left).toBe('0px');
 	});
 
 	it.each([[''], [undefined], ['bogus'], ['0px'], ['-2px']])('basis %p falls back to the measured size', (emBasis) => {
