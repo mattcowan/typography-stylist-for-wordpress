@@ -192,6 +192,47 @@
 	// Same check as the CSS generators: an axis pair they would drop
 	var AXIS_PAIR = /^"([a-zA-Z]{4})"\s+(-?\d+(?:\.\d+)?)$/;
 
+	// Indent and spacing fields (#199): a number input named by the key and
+	// a unit select named key + 'Unit'. Only the first line indent can be
+	// negative. Fit to width hides the indents, which fitOwnValues() discards,
+	// so only the spacing fields count there.
+	var LENGTH_FIELDS = ['indentStart', 'indentEnd', 'firstLineIndent', 'spaceBefore', 'spaceAfter'];
+	var FIT_LENGTH_FIELDS = ['spaceBefore', 'spaceAfter'];
+
+	// Hyphenation letter limits (#208), as HYPHENATE_LIMIT_KEYS in ps-utils
+	var HYPHENATE_LIMIT_FIELDS = ['hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter'];
+
+	/**
+	 * Split a stored length ('1.5em', '-24px') into the form's number and
+	 * unit. None gives an empty number and the em unit.
+	 *
+	 * @param {*} value Stored value.
+	 * @return {{number: string, unit: string}}
+	 */
+	function splitLength(value) {
+		var m = typeof value === 'string' ? /^(-?[\d.]+)(px|em)$/.exec(value) : null;
+		return m ? { number: m[1], unit: m[2] } : { number: '', unit: 'em' };
+	}
+
+	/**
+	 * A length field's value as the form reads it: '' for empty or 0, else
+	 * the number and its unit ('1.5em'), not yet capped or rounded
+	 * (validateEditValues() checks the range, normalizeLength() rounds).
+	 *
+	 * @param {Element} form
+	 * @param {string}  key
+	 * @return {string}
+	 */
+	function lengthOf(form, key) {
+		var input = field(form, key);
+		var unitSelect = field(form, key + 'Unit');
+		var n = input ? parseFloat(input.value) : NaN;
+		if (!isFinite(n) || n === 0) {
+			return '';
+		}
+		return String(n) + (unitSelect && unitSelect.value === 'px' ? 'px' : 'em');
+	}
+
 	/**
 	 * Append a suffix to every id in a cloned form and to the attributes
 	 * that point at ids, so each card's labels stay tied to its own fields.
@@ -295,6 +336,252 @@
 		}
 	}
 
+	// -------------------------------------------------------------------------
+	// Text color and outline (#215)
+	// -------------------------------------------------------------------------
+
+	// The two color fields: each has a select (data-field = the property)
+	// and a custom hex field (data-field = property + 'Custom')
+	var COLOR_FIELDS = ['textColor', 'textStrokeColor'];
+
+	/**
+	 * The palette and the theme's colors (typostPSAdmin.palette and
+	 * .themeColors). Read when needed, so a test can set them.
+	 *
+	 * @return {{palette: Array, themeColors: Object}}
+	 */
+	function colorContext() {
+		var data = typeof typostPSAdmin !== 'undefined' && typostPSAdmin ? typostPSAdmin : {};
+		return {
+			palette: Array.isArray(data.palette) ? data.palette : [],
+			themeColors: data.themeColors && typeof data.themeColors === 'object' ? data.themeColors : {}
+		};
+	}
+
+	function paletteEntry(palette, slug) {
+		for (var i = 0; i < palette.length; i++) {
+			if (palette[i] && palette[i].slug === slug) {
+				return palette[i];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Fill a color select and its custom field from a stored color. A
+	 * palette color the palette no longer has is added as an option, and
+	 * the stored value is kept on the select, so an untouched form saves it
+	 * unchanged (its fallback included).
+	 *
+	 * @param {Element} form
+	 * @param {string}  name    'textColor' or 'textStrokeColor'.
+	 * @param {string}  stored  Stored color.
+	 * @param {Array}   palette Palette entries.
+	 */
+	function fillColorField(form, name, stored, palette) {
+		var select = field(form, name);
+		var custom = field(form, name + 'Custom');
+		if (!select) {
+			return;
+		}
+		var utils = getUtils();
+		var color = utils.normalizeColor(stored, name === 'textColor');
+		var slug = utils.paletteColorSlug(color);
+		select.setAttribute('data-stored', color);
+		if (custom) {
+			custom.value = '';
+		}
+		if (slug) {
+			var label = paletteEntry(palette, slug)
+				? ''
+				: /* translators: %s: palette color slug, such as accent-1 */ __('%s (not in the theme palette)', 'typost-paragraph-styles').replace('%s', function() { return slug; });
+			selectValue(select, 'preset:' + slug, label);
+		} else if (color && color !== 'transparent') {
+			selectValue(select, 'custom');
+			if (custom) {
+				custom.value = color;
+			}
+		} else {
+			selectValue(select, color);
+		}
+		syncColorPicker(form, name + 'Custom');
+	}
+
+	/**
+	 * A color field's value as a style stores it.
+	 *
+	 * @param {Element} form
+	 * @param {string}  name    'textColor' or 'textStrokeColor'.
+	 * @param {Array}   palette Palette entries.
+	 * @return {{color: string, mode: string, custom: string}|undefined}
+	 *         undefined when the form has no such field. color is '' for an
+	 *         invalid custom color (mode 'custom' tells validation).
+	 */
+	function readColorField(form, name, palette) {
+		var select = field(form, name);
+		if (!select) {
+			return undefined;
+		}
+		var utils = getUtils();
+		var custom = field(form, name + 'Custom');
+		var value = select.value;
+		var out = { color: '', mode: value, custom: custom ? custom.value.trim() : '' };
+		if (value === 'custom') {
+			out.color = utils.normalizeHexColor(out.custom);
+		} else if (value.indexOf('preset:') === 0) {
+			var slug = value.slice(7);
+			var entry = paletteEntry(palette, slug);
+			var stored = select.getAttribute('data-stored') || '';
+			// A palette color stores the palette's color as its fallback; a
+			// slug the palette no longer has keeps the one it was saved with
+			out.color = entry
+				? utils.buildPaletteColor(slug, String(entry.color))
+				: (utils.paletteColorSlug(stored) === slug ? stored : utils.buildPaletteColor(slug, ''));
+		} else if (value === 'transparent' && name === 'textColor') {
+			out.color = 'transparent';
+		}
+		return out;
+	}
+
+	/** Copy a custom hex field to its color picker (the picker has no alpha). */
+	function syncColorPicker(form, customName) {
+		var custom = field(form, customName);
+		var picker = form.querySelector('[data-color-picker-for="' + customName + '"]');
+		var utils = getUtils();
+		var hex = custom ? utils.normalizeHexColor(custom.value) : '';
+		if (picker && hex) {
+			picker.value = hex.slice(0, 7);
+		}
+	}
+
+	/**
+	 * Copy the color picker to its custom hex field, keeping the alpha
+	 * digits the field had (the picker has no alpha channel).
+	 *
+	 * @param {Element} picker
+	 */
+	function applyColorPicker(picker) {
+		var form = picker.form || (picker.closest ? picker.closest('form') : null);
+		var custom = form ? field(form, picker.getAttribute('data-color-picker-for')) : null;
+		if (!custom) {
+			return;
+		}
+		var current = getUtils().normalizeHexColor(custom.value);
+		var alpha = current.length === 9 ? current.slice(7) : '';
+		custom.value = String(picker.value).toLowerCase() + alpha;
+	}
+
+	/**
+	 * The color a swatch shows for a select: a palette color, the custom
+	 * color, or nothing.
+	 *
+	 * @param {Object} read    readColorField() result.
+	 * @param {Array}  palette Palette entries.
+	 * @return {string} CSS color, '' for none.
+	 */
+	function swatchColor(read, palette) {
+		if (!read || !read.color || read.color === 'transparent') {
+			return '';
+		}
+		var utils = getUtils();
+		var slug = utils.paletteColorSlug(read.color);
+		if (slug) {
+			var entry = paletteEntry(palette, slug);
+			return entry ? String(entry.color) : utils.paletteColorFallback(read.color);
+		}
+		return read.color;
+	}
+
+	/**
+	 * The contrast notice text for the form's values (#215, WCAG 1.4.3), ''
+	 * when the colors pass or cannot be checked.
+	 *
+	 * @param {Object} values readEditForm() result.
+	 * @param {Object} ctx    colorContext().
+	 * @param {string} unit   resolveEditFontSizeUnit(): a px size is whole
+	 *                        (fixedSizeFor()), so 18.66 is large text only
+	 *                        in a rem style.
+	 * @return {string}
+	 */
+	function contrastMessage(values, ctx, unit) {
+		var utils = getUtils();
+		if (!utils || (values.textColor === undefined && values.textStrokeWidth === undefined)) {
+			return '';
+		}
+		var props = utils.buildPropertiesFromState(stateFromEditValues(values, unit));
+		var background = ctx.themeColors && ctx.themeColors.background ? String(ctx.themeColors.background) : '#ffffff';
+		var problem = utils.findContrastProblem(props, {
+			palette: ctx.palette,
+			background: background,
+			text: ctx.themeColors && ctx.themeColors.text ? String(ctx.themeColors.text) : ''
+		});
+		if (!problem) {
+			return '';
+		}
+		var templates = {
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			text: __('Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3).', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			outline: __('Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing.', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			'text-outline': __('Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3).', 'typost-paragraph-styles'),
+			/* translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for */
+			'outline-covers': __('Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill.', 'typost-paragraph-styles')
+		};
+		var args = [String(problem.ratio), background, String(problem.required)];
+		return templates[problem.pair].replace(/%(\d)\$s/g, function(match, n) {
+			return args[parseInt(n, 10) - 1];
+		});
+	}
+
+	/**
+	 * Show the custom fields, the swatches and the contrast notice for the
+	 * color fields. The notice joins the color selects' descriptions while
+	 * it shows, and leaves them when empty.
+	 *
+	 * @param {Element} form
+	 */
+	function updateColorFields(form) {
+		var ctx = colorContext();
+		COLOR_FIELDS.forEach(function(name) {
+			var select = field(form, name);
+			Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-color="' + name + '"]'), function(el) {
+				el.hidden = !select || select.value !== 'custom';
+			});
+			var swatch = form.querySelector('[data-swatch-for="' + name + '"]');
+			if (swatch) {
+				var color = swatchColor(readColorField(form, name, ctx.palette), ctx.palette);
+				swatch.style.background = color;
+				swatch.classList.toggle('is-empty', !color);
+			}
+		});
+		var notice = form.querySelector('.typost-ps-edit-contrast');
+		if (!notice) {
+			return;
+		}
+		var message = contrastMessage(readEditForm(form), ctx, form.getAttribute('data-size-unit'));
+		if (notice.textContent !== message) {
+			notice.textContent = message;
+		}
+		COLOR_FIELDS.forEach(function(name) {
+			var select = field(form, name);
+			if (!select || !notice.id) {
+				return;
+			}
+			var ids = (select.getAttribute('aria-describedby') || '').split(/\s+/).filter(function(id) {
+				return id && id !== notice.id;
+			});
+			if (message) {
+				ids.push(notice.id);
+			}
+			if (ids.length) {
+				select.setAttribute('aria-describedby', ids.join(' '));
+			} else {
+				select.removeAttribute('aria-describedby');
+			}
+		});
+	}
+
 	/**
 	 * Show the fields that belong to the chosen size mode, case and
 	 * alignment. The justify note (#207) also joins the alignment select's
@@ -328,6 +615,12 @@
 		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-case]'), function(el) {
 			el.hidden = el.getAttribute('data-show-for-case').split(/\s+/).indexOf(textCase) === -1;
 		});
+		// Hyphenation (#208): the limits and the character only while it is on
+		var hyphens = field(form, 'hyphens') && field(form, 'hyphens').checked ? 'auto' : '';
+		Array.prototype.forEach.call(form.querySelectorAll('[data-show-for-hyphens]'), function(el) {
+			el.hidden = el.getAttribute('data-show-for-hyphens').split(/\s+/).indexOf(hyphens) === -1;
+		});
+		updateColorFields(form);
 	}
 
 	/**
@@ -400,9 +693,12 @@
 	 * @param {string}  unit      resolveEditFontSizeUnit() for the style: a
 	 *                            px size takes whole steps, as px CSS is
 	 *                            written with whole numbers.
-	 * @param {Array}   [styles]  Every style, for the Based On choices (#200).
+	 * @param {Array}   [styles]  Every style, for the Based On choices (#200)
+	 *                            and the GREP style selects (#196).
+	 * @param {Object}  [grep]    typostPSAdmin.grep (#196).
+	 * @param {Object}  [nested]  typostPSAdmin.nested (#195).
 	 */
-	function fillEditForm(form, style, fontLabel, unit, styles) {
+	function fillEditForm(form, style, fontLabel, unit, styles, grep, nested) {
 		var utils = getUtils();
 		var props = (style && style.properties) || {};
 		var mode = sizeModeOf(props.fontSize);
@@ -411,6 +707,8 @@
 		if (sizeInput) {
 			sizeInput.setAttribute('step', unit === 'px' ? '1' : 'any');
 		}
+		// For the contrast notice, which runs on every later change
+		form.setAttribute('data-size-unit', unit === 'px' ? 'px' : 'rem');
 
 		setInput(form, 'name', style && style.name);
 		fillBasedOn(form, style, styles);
@@ -443,6 +741,40 @@
 		selectValue(field(form, 'alignLast'), utils ? utils.normalizeAlignLast(alignment, props.alignLast) : (props.alignLast || ''));
 		setInput(form, 'wordSpacing', parseInt(props.wordSpacing, 10) || 0);
 		selectValue(field(form, 'textWrap'), utils ? utils.normalizeTextWrap(props.textWrap) : (props.textWrap || ''));
+
+		// Hyphenation (#208): a limit of 0 (auto) is an empty field
+		var hyphenation = utils ? utils.hyphenationProperties(props) : {};
+		var hyphens = field(form, 'hyphens');
+		if (hyphens) {
+			hyphens.checked = hyphenation.hyphens === 'auto';
+		}
+		HYPHENATE_LIMIT_FIELDS.forEach(function(key) {
+			setInput(form, key, hyphenation[key] || '');
+		});
+		setInput(form, 'hyphenateCharacter', hyphenation.hyphenateCharacter || '');
+
+		// Indents and paragraph spacing (#199)
+		LENGTH_FIELDS.forEach(function(key) {
+			var stored = utils ? utils.normalizeLength(props[key], key === 'firstLineIndent') : props[key];
+			var parts = splitLength(stored);
+			setInput(form, key, parts.number);
+			selectValue(field(form, key + 'Unit'), parts.unit);
+		});
+		var afterSame = field(form, 'indentAfterSame');
+		if (afterSame) {
+			afterSame.checked = props.indentAfterSame === true;
+		}
+		// Text color and outline (#215)
+		var palette = colorContext().palette;
+		fillColorField(form, 'textColor', props.textColor, palette);
+		var strokeWidth = utils ? utils.normalizeStrokeWidth(props.textStrokeWidth) : (parseFloat(props.textStrokeWidth) || 0);
+		setInput(form, 'textStrokeWidth', strokeWidth);
+		fillColorField(form, 'textStrokeColor', props.textStrokeColor, palette);
+		// A style with no outline opens on Behind the fill, so a new outline
+		// keeps the letters' shape. An outline (own or from the parent
+		// style) keeps its saved position; '' is On top. The position is
+		// stored only with a width, so the default alone writes nothing.
+		selectValue(field(form, 'textStrokePosition'), strokeWidth <= 0 || props.textStrokePosition === 'behind' ? 'behind' : '');
 
 		var features = Array.isArray(props.features) ? props.features.map(String) : [];
 		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
@@ -483,6 +815,12 @@
 
 		setInput(form, 'fontVariationSettings', props.fontVariationSettings || '');
 
+		// GREP styles (#196): rules are on the style record, not in its
+		// properties, and are not inherited through Based On
+		fillGrepRules(form, style, styles, grep);
+		// Nested styles (#195), the same way
+		fillNestedRules(form, style, styles, nested);
+
 		updateConditionalFields(form);
 	}
 
@@ -490,6 +828,24 @@
 		var input = field(form, name);
 		var n = input ? parseFloat(input.value) : NaN;
 		return isFinite(n) ? n : 0;
+	}
+
+	/**
+	 * A number field where empty has a meaning of its own: '' when empty or
+	 * absent, so validation can tell it from a typed 0. Text the field cannot
+	 * read is NaN: the browser reports an empty value and badInput for it, and
+	 * reading that as empty would save Auto over the author's value.
+	 *
+	 * @param {HTMLElement} form Edit form.
+	 * @param {string}      name Field name.
+	 * @return {number|string} The number, NaN, or ''.
+	 */
+	function optionalNumberOf(form, name) {
+		var input = field(form, name);
+		if (input && input.validity && input.validity.badInput) {
+			return NaN;
+		}
+		return input && input.value.trim() !== '' ? parseFloat(input.value) : '';
 	}
 
 	/**
@@ -516,9 +872,21 @@
 			return order.indexOf(tag) === -1;
 		}));
 		var fake = field(form, 'fakeSmallCaps');
+		var hyphensBox = field(form, 'hyphens');
 		var sizeInput = field(form, 'fontSize');
+		var afterSame = field(form, 'indentAfterSame');
+		var palette = colorContext().palette;
+		var textColor = readColorField(form, 'textColor', palette);
+		var strokeColor = readColorField(form, 'textStrokeColor', palette);
+		var strokePosition = field(form, 'textStrokePosition');
 
 		return {
+			indentStart: lengthOf(form, 'indentStart'),
+			indentEnd: lengthOf(form, 'indentEnd'),
+			firstLineIndent: lengthOf(form, 'firstLineIndent'),
+			indentAfterSame: afterSame ? !!afterSame.checked : false,
+			spaceBefore: lengthOf(form, 'spaceBefore'),
+			spaceAfter: lengthOf(form, 'spaceAfter'),
 			name: field(form, 'name') ? field(form, 'name').value.trim() : '',
 			basedOn: parseInt(field(form, 'basedOn') ? field(form, 'basedOn').value : 0, 10) || 0,
 			fontId: parseInt(field(form, 'fontId') ? field(form, 'fontId').value : 0, 10) || 0,
@@ -539,8 +907,27 @@
 			alignLast: field(form, 'alignLast') ? field(form, 'alignLast').value : '',
 			wordSpacing: numberOf(form, 'wordSpacing'),
 			textWrap: field(form, 'textWrap') ? field(form, 'textWrap').value : '',
+			// Hyphenation (#208). undefined when the form has no such field,
+			// so the save keeps the stored values
+			hyphens: hyphensBox ? (hyphensBox.checked ? 'auto' : '') : undefined,
+			hyphenateLimitWord: optionalNumberOf(form, 'hyphenateLimitWord'),
+			hyphenateLimitBefore: optionalNumberOf(form, 'hyphenateLimitBefore'),
+			hyphenateLimitAfter: optionalNumberOf(form, 'hyphenateLimitAfter'),
+			hyphenateCharacter: field(form, 'hyphenateCharacter') ? field(form, 'hyphenateCharacter').value.trim() : '',
+			// Text color and outline (#215). undefined when the form has no
+			// such field, so the save keeps the stored value
+			textColor: textColor ? textColor.color : undefined,
+			textColorMode: textColor ? textColor.mode : '',
+			textColorCustom: textColor ? textColor.custom : '',
+			textStrokeWidth: field(form, 'textStrokeWidth') ? numberOf(form, 'textStrokeWidth') : undefined,
+			textStrokeColor: strokeColor ? strokeColor.color : undefined,
+			textStrokeColorMode: strokeColor ? strokeColor.mode : '',
+			textStrokeColorCustom: strokeColor ? strokeColor.custom : '',
+			textStrokePosition: strokePosition ? strokePosition.value : undefined,
 			features: features,
-			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : ''
+			fontVariationSettings: field(form, 'fontVariationSettings') ? field(form, 'fontVariationSettings').value.trim() : '',
+			grepRules: readGrepRules(form),
+			nestedRules: readNestedRules(form)
 		};
 	}
 
@@ -569,6 +956,7 @@
 	 *                         the axis format: a stored value the check
 	 *                         rejects (the editor writes single quotes and
 	 *                         exponents) must not block a rename.
+	 *                         grep: typostPSAdmin.grep, for the GREP checks.
 	 * @return {{field: string, message: string}|null}
 	 */
 	function validateEditValues(values, options) {
@@ -587,6 +975,57 @@
 				return { field: missing[0], message: __('Enter all three sizes, each greater than 0.', 'typost-paragraph-styles') };
 			}
 		}
+		// Indents and spacing (#199): zero or more (the first line indent can
+		// be negative), up to the sanitizer's caps. A hidden field holds what
+		// it held before fit mode: it is not saved, so it must not block Save,
+		// and an error could not focus it.
+		var lengthFields = values.sizeMode === 'fit' ? FIT_LENGTH_FIELDS : LENGTH_FIELDS;
+		var lengthMax = getUtils().LENGTH_MAX;
+		for (var i = 0; i < lengthFields.length; i++) {
+			var key = lengthFields[i];
+			var length = values[key] ? /^(-?[\d.e+-]+)(px|em)$/.exec(values[key]) : null;
+			if (!length) {
+				continue;
+			}
+			var amount = parseFloat(length[1]);
+			if (amount < 0 && key !== 'firstLineIndent') {
+				return { field: key, message: __('Enter 0 or more.', 'typost-paragraph-styles') };
+			}
+			if (Math.abs(amount) > lengthMax[length[2]]) {
+				return { field: key, message: __('Enter a value up to 1000px or 50em.', 'typost-paragraph-styles') };
+			}
+		}
+		// Hyphenation (#208), checked only while it is on and shown, like
+		// the indents: a hidden field is not saved
+		if (values.hyphens === 'auto' && values.sizeMode !== 'fit') {
+			var hyphenUtils = getUtils();
+			for (var h = 0; h < HYPHENATE_LIMIT_FIELDS.length; h++) {
+				var limit = values[HYPHENATE_LIMIT_FIELDS[h]];
+				if (limit !== '' && !(limit >= 1 && limit <= hyphenUtils.HYPHENATE_LIMIT_MAX && Math.floor(limit) === limit)) {
+					return { field: HYPHENATE_LIMIT_FIELDS[h], message: fill(
+						/* translators: %d: largest letter limit */
+						__('Enter a whole number from 1 to %d, or leave it empty.', 'typost-paragraph-styles'), hyphenUtils.HYPHENATE_LIMIT_MAX) };
+				}
+			}
+			if (values.hyphenateCharacter && !hyphenUtils.normalizeHyphenateCharacter(values.hyphenateCharacter)) {
+				return { field: 'hyphenateCharacter', message: __('Enter up to 4 characters with no quotes, backslashes, angle brackets, braces or semicolons, or leave it empty.', 'typost-paragraph-styles') };
+			}
+		}
+		// Text color and outline (#215)
+		var colorChecks = [['textColor', 'textColorCustom'], ['textStrokeColor', 'textStrokeColorCustom']];
+		for (var c = 0; c < colorChecks.length; c++) {
+			if (values[colorChecks[c][0] + 'Mode'] === 'custom' && !values[colorChecks[c][0]]) {
+				return { field: colorChecks[c][1], message: __('Enter a hex color, such as #c00 or #cc0000.', 'typost-paragraph-styles') };
+			}
+		}
+		if (values.textStrokeWidth !== undefined && (values.textStrokeWidth < 0 || values.textStrokeWidth > 20)) {
+			return { field: 'textStrokeWidth', message: __('Enter an outline width from 0 to 20.', 'typost-paragraph-styles') };
+		}
+		// The width and color as the generators read them: 0.004 rounds to no
+		// outline, and #cc000000 draws nothing
+		if (values.textColor === 'transparent' && !getUtils().hasOutlinePartner(values)) {
+			return { field: 'textColor', message: __('Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color.', 'typost-paragraph-styles') };
+		}
 		var axesUnchanged = opts.baseline && opts.baseline.fontVariationSettings === values.fontVariationSettings;
 		if (values.fontVariationSettings && !axesUnchanged) {
 			var bad = values.fontVariationSettings.split(',').some(function(pair) {
@@ -596,14 +1035,14 @@
 				return { field: 'fontVariationSettings', message: __('Each axis setting needs a four-letter tag in quotes and a number, such as "wght" 650.', 'typost-paragraph-styles') };
 			}
 		}
-		return null;
+		return validateGrepRules(values.grepRules, opts.grep) || validateNestedRules(values.nestedRules, opts.nested);
 	}
 
 	/**
 	 * Turn form values into the editor state that buildPropertiesFromState()
-	 * reads. The form reports initialHang, textCase, alignment, wordSpacing
-	 * and textWrap, so its values win over the stored ones (0, Default and
-	 * Normal included).
+	 * reads. The form reports initialHang, textCase, alignment, wordSpacing,
+	 * textWrap and hyphenation, so its values win over the stored ones (0,
+	 * Default, Normal and off included).
 	 *
 	 * @param {Object} values readEditForm() result.
 	 * @param {string} unit   resolveEditFontSizeUnit(); px makes a fixed
@@ -637,7 +1076,26 @@
 			alignment: values.alignment || '',
 			alignLast: values.alignLast || '',
 			wordSpacing: Math.round(values.wordSpacing) || 0,
-			textWrap: values.textWrap || ''
+			textWrap: values.textWrap || '',
+			// Hyphenation (#208); undefined (no field) is carried from the
+			// stored style by buildPropertiesForStyleSave()
+			hyphens: values.hyphens,
+			hyphenateLimitWord: values.hyphenateLimitWord,
+			hyphenateLimitBefore: values.hyphenateLimitBefore,
+			hyphenateLimitAfter: values.hyphenateLimitAfter,
+			hyphenateCharacter: values.hyphenateCharacter,
+			indentStart: values.indentStart || '',
+			indentEnd: values.indentEnd || '',
+			firstLineIndent: values.firstLineIndent || '',
+			indentAfterSame: values.indentAfterSame === true,
+			spaceBefore: values.spaceBefore || '',
+			spaceAfter: values.spaceAfter || '',
+			// Text color and outline (#215); undefined (no field) is carried
+			// from the stored style by buildPropertiesForStyleSave()
+			textColor: values.textColor,
+			textStrokeWidth: values.textStrokeWidth,
+			textStrokeColor: values.textStrokeColor,
+			textStrokePosition: values.textStrokePosition
 		};
 	}
 
@@ -677,7 +1135,7 @@
 	 * @param {Object} style          The style (client shape).
 	 * @param {string} newUnit        typostPSAdmin.newFontSizeUnit.
 	 * @param {Array}  [styles]       Every style (client shape), to find the parent.
-	 * @return {{name: string, basedOn?: number, properties?: Object}}
+	 * @return {{name: string, basedOn?: number, properties?: Object, grepRules?: Array}}
 	 */
 	function buildEditPayload(values, baselineValues, style, newUnit, styles) {
 		var utils = getUtils();
@@ -704,6 +1162,24 @@
 			payload.basedOn = parentId;
 		}
 
+		// GREP rules (#196) only when the list changed: a save that sends
+		// none leaves the stored rules alone
+		if (Array.isArray(values.grepRules)) {
+			var baselineRules = baselineValues && Array.isArray(baselineValues.grepRules) ? baselineValues.grepRules : null;
+			var rules = values.grepRules.map(normalizeGrepRule);
+			if (!baselineRules || stableStringify(rules) !== stableStringify(baselineRules.map(normalizeGrepRule))) {
+				payload.grepRules = rules;
+			}
+		}
+		// Nested rules (#195), the same way
+		if (Array.isArray(values.nestedRules)) {
+			var baselineNested = baselineValues && Array.isArray(baselineValues.nestedRules) ? baselineValues.nestedRules : null;
+			var nestedRules = values.nestedRules.map(normalizeNestedRule);
+			if (!baselineNested || stableStringify(nestedRules) !== stableStringify(baselineNested.map(normalizeNestedRule))) {
+				payload.nestedRules = nestedRules;
+			}
+		}
+
 		if (!baseline || stableStringify(properties) !== stableStringify(baseline)) {
 			// Relative to the current parent: the server applies a Based On
 			// change itself (rebase_properties()), so a save with edits and a
@@ -718,8 +1194,8 @@
 	/**
 	 * Form values without the settings fit to width hides (PR #329 review).
 	 *
-	 * In fit mode the form hides alignment, the last line, word spacing and
-	 * line breaking, and the CSS writes none of them, but their fields keep
+	 * In fit mode the form hides alignment, the last line, word spacing,
+	 * line breaking and hyphenation (#208), and the CSS writes none of them, but their fields keep
 	 * whatever they held. A fit style sets none of them itself: with no
 	 * parent they are dropped, and a style based on another takes the
 	 * parent's values, so the save stores no override (an empty value would
@@ -739,7 +1215,18 @@
 			alignment: p.alignment || '',
 			alignLast: p.alignLast || '',
 			wordSpacing: p.wordSpacing || 0,
-			textWrap: p.textWrap || ''
+			textWrap: p.textWrap || '',
+			// Hyphenation (#208), as a group
+			hyphens: values.hyphens === undefined ? undefined : (p.hyphens === 'auto' ? 'auto' : ''),
+			hyphenateLimitWord: p.hyphenateLimitWord || 0,
+			hyphenateLimitBefore: p.hyphenateLimitBefore || 0,
+			hyphenateLimitAfter: p.hyphenateLimitAfter || 0,
+			hyphenateCharacter: p.hyphenateCharacter || '',
+			// Indents (#199); space before and after stay, fit uses them
+			indentStart: p.indentStart || '',
+			indentEnd: p.indentEnd || '',
+			firstLineIndent: p.firstLineIndent || '',
+			indentAfterSame: p.indentAfterSame === true
 		});
 	}
 
@@ -766,6 +1253,8 @@
 		var payload = buildEditPayload(values, baselineValues, style, newUnit, styles);
 		return payload.properties !== undefined
 			|| payload.basedOn !== undefined
+			|| payload.grepRules !== undefined
+			|| payload.nestedRules !== undefined
 			|| values.name !== baselineValues.name;
 	}
 
@@ -899,6 +1388,848 @@
 		return el;
 	}
 
+	// -------------------------------------------------------------------------
+	// GREP styles (#196)
+	// -------------------------------------------------------------------------
+
+	var GREP_CUSTOM = 'custom';
+	var grepRowCount = 0;
+
+	/**
+	 * Replace %d / %s in a translated string (wp.i18n.sprintf is not there
+	 * under Jest).
+	 */
+	function fill(text, value) {
+		return String(text).replace(/%[ds]/, function() { return String(value); });
+	}
+
+	/**
+	 * The GREP settings of the page (typostPSAdmin.grep), with defaults.
+	 *
+	 * @param {Object} [grep]
+	 * @return {{supported: boolean, canWriteCustom: boolean, maxRules: number, maxLength: number, patterns: Array}}
+	 */
+	function grepSettings(grep) {
+		var g = grep || {};
+		return {
+			supported: !!g.supported,
+			canWriteCustom: !!g.canWriteCustom,
+			maxRules: parseInt(g.maxRules, 10) || 20,
+			maxLength: parseInt(g.maxLength, 10) || 200,
+			patterns: Array.isArray(g.patterns) ? g.patterns : []
+		};
+	}
+
+	/**
+	 * A rule as stored and compared: pattern, numeric style id, and the
+	 * expression for a custom pattern only.
+	 *
+	 * @param {Object} rule
+	 * @return {Object}
+	 */
+	function normalizeGrepRule(rule) {
+		var r = rule || {};
+		var out = {
+			pattern: typeof r.pattern === 'string' ? r.pattern : '',
+			styleId: parseInt(r.styleId, 10) || 0
+		};
+		if (out.pattern === GREP_CUSTOM) {
+			out.regex = typeof r.regex === 'string' ? r.regex : '';
+		}
+		return out;
+	}
+
+	function makeEl(doc, tag, attrs, text) {
+		var el = doc.createElement(tag);
+		Object.keys(attrs || {}).forEach(function(name) {
+			if (name === 'className') {
+				el.className = attrs[name];
+			} else {
+				el.setAttribute(name, attrs[name]);
+			}
+		});
+		if (text !== undefined) {
+			el.textContent = text;
+		}
+		return el;
+	}
+
+	/**
+	 * Build one rule's row: pattern select, the custom expression field,
+	 * the style select, and Move up / Move down / Remove buttons.
+	 *
+	 * @param {Document} doc
+	 * @param {Object}   rule     Stored rule (or a new one).
+	 * @param {Object}   ctx      {ownId, styles, settings: grepSettings()}.
+	 * @return {Element} li, holding the named group (a role on the li itself
+	 *                   would remove its list item semantics)
+	 */
+	function buildGrepRow(doc, rule, ctx) {
+		var settings = ctx.settings;
+		var r = normalizeGrepRule(rule);
+		var uid = 'typost-ps-grep-' + ctx.ownId + '-' + (++grepRowCount);
+		var row = makeEl(doc, 'li', { className: 'typost-ps-grep-rule' });
+		var group = makeEl(doc, 'div', { role: 'group' });
+		row.appendChild(group);
+
+		var fields = makeEl(doc, 'div', { className: 'typost-ps-edit-row' });
+
+		// Pattern
+		var patternField = makeEl(doc, 'p', { className: 'typost-ps-edit-field' });
+		patternField.appendChild(makeEl(doc, 'label', { 'for': uid + '-pattern' }, __('Pattern', 'typost-paragraph-styles')));
+		var patternSelect = makeEl(doc, 'select', { id: uid + '-pattern', 'data-grep': 'pattern' });
+		settings.patterns.forEach(function(option) {
+			// A custom pattern is offered to administrators, and kept in a
+			// row that already has one
+			if (option.value === GREP_CUSTOM && !settings.canWriteCustom && r.pattern !== GREP_CUSTOM) {
+				return;
+			}
+			patternSelect.appendChild(makeEl(doc, 'option', { value: option.value }, option.label));
+		});
+		patternSelect.value = r.pattern || (settings.patterns[0] ? settings.patterns[0].value : '');
+		patternField.appendChild(patternSelect);
+		fields.appendChild(patternField);
+
+		// Custom expression
+		var regexField = makeEl(doc, 'p', { className: 'typost-ps-edit-field typost-ps-grep-regex', 'data-grep-regex-field': '' });
+		regexField.appendChild(makeEl(doc, 'label', { 'for': uid + '-regex' }, __('Regular expression', 'typost-paragraph-styles')));
+		var regexInput = makeEl(doc, 'input', {
+			type: 'text',
+			id: uid + '-regex',
+			'data-grep': 'regex',
+			spellcheck: 'false',
+			autocomplete: 'off',
+			maxlength: String(settings.maxLength),
+			'aria-describedby': uid + '-regex-help'
+		});
+		regexInput.value = r.regex || '';
+		regexField.appendChild(regexInput);
+		var help = settings.canWriteCustom
+			? __('JavaScript-style syntax without slashes or flags, for example \\b[A-Z]{2,}\\b. Matching is case-sensitive.', 'typost-paragraph-styles')
+			: __('Only administrators can change a custom pattern.', 'typost-paragraph-styles');
+		regexField.appendChild(makeEl(doc, 'span', { className: 'typost-ps-edit-help', id: uid + '-regex-help' }, help));
+		if (!settings.canWriteCustom) {
+			regexInput.readOnly = true;
+		}
+		fields.appendChild(regexField);
+
+		// Style
+		var styleField = makeEl(doc, 'p', { className: 'typost-ps-edit-field' });
+		styleField.appendChild(makeEl(doc, 'label', { 'for': uid + '-style' }, __('Apply style', 'typost-paragraph-styles')));
+		var styleSelect = makeEl(doc, 'select', { id: uid + '-style', 'data-grep': 'styleId' });
+		styleSelect.appendChild(makeEl(doc, 'option', { value: '0' }, __('Choose a style', 'typost-paragraph-styles')));
+		var found = false;
+		(Array.isArray(ctx.styles) ? ctx.styles : []).forEach(function(candidate) {
+			var id = parseInt(candidate && candidate.id, 10) || 0;
+			if (!id || id === ctx.ownId) {
+				return;
+			}
+			if (id === r.styleId) {
+				found = true;
+			}
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(id) }, candidate.name || String(id)));
+		});
+		if (r.styleId && !found) {
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(r.styleId) }, __('A deleted style', 'typost-paragraph-styles')));
+		}
+		styleSelect.value = String(r.styleId || 0);
+		styleField.appendChild(styleSelect);
+		fields.appendChild(styleField);
+
+		group.appendChild(fields);
+
+		var actions = makeEl(doc, 'p', { className: 'typost-ps-grep-actions' });
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-up' }, __('Move up', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-grep-down' }, __('Move down', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button-link button-link-delete typost-ps-grep-remove' }, __('Remove', 'typost-paragraph-styles')));
+		group.appendChild(actions);
+
+		updateGrepRow(row);
+		return row;
+	}
+
+	/**
+	 * Show the expression field only for a custom pattern.
+	 *
+	 * @param {Element} row
+	 */
+	function updateGrepRow(row) {
+		var select = row.querySelector('[data-grep="pattern"]');
+		var regexField = row.querySelector('[data-grep-regex-field]');
+		if (regexField) {
+			regexField.hidden = !select || select.value !== GREP_CUSTOM;
+		}
+	}
+
+	function grepRows(form) {
+		var list = form.querySelector('[data-grep-rules]');
+		return list ? Array.prototype.slice.call(list.children) : [];
+	}
+
+	/**
+	 * Number the rows after a change: each row's group name, its buttons'
+	 * names, the data-field names errors point at, which ends of the list
+	 * cannot move further, the empty note and the Add button's limit.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  [grep] typostPSAdmin.grep
+	 */
+	function renumberGrepRows(form, grep) {
+		var rows = grepRows(form);
+		var settings = grepSettings(grep);
+		rows.forEach(function(row, index) {
+			var n = index + 1;
+			/* translators: %d: rule number */
+			row.querySelector('[role="group"]').setAttribute('aria-label', fill(__('GREP rule %d', 'typost-paragraph-styles'), n));
+			['pattern', 'regex', 'styleId'].forEach(function(name) {
+				var input = row.querySelector('[data-grep="' + name + '"]');
+				if (input) {
+					input.setAttribute('data-field', 'grep-' + index + '-' + name);
+				}
+			});
+			var up = row.querySelector('.typost-ps-grep-up');
+			var down = row.querySelector('.typost-ps-grep-down');
+			var remove = row.querySelector('.typost-ps-grep-remove');
+			if (up) {
+				/* translators: %d: rule number */
+				up.setAttribute('aria-label', fill(__('Move rule %d up', 'typost-paragraph-styles'), n));
+				up.disabled = index === 0;
+			}
+			if (down) {
+				/* translators: %d: rule number */
+				down.setAttribute('aria-label', fill(__('Move rule %d down', 'typost-paragraph-styles'), n));
+				down.disabled = index === rows.length - 1;
+			}
+			if (remove) {
+				/* translators: %d: rule number */
+				remove.setAttribute('aria-label', fill(__('Remove rule %d', 'typost-paragraph-styles'), n));
+			}
+		});
+		var empty = form.querySelector('[data-grep-empty]');
+		if (empty) {
+			empty.hidden = rows.length > 0;
+		}
+		var add = form.querySelector('.typost-ps-grep-add');
+		if (add) {
+			add.disabled = rows.length >= settings.maxRules;
+		}
+	}
+
+	/**
+	 * Fill the GREP list from the style's rules.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style  The style (client shape).
+	 * @param {Array}   styles Every style, for the style selects.
+	 * @param {Object}  [grep] typostPSAdmin.grep
+	 */
+	function fillGrepRules(form, style, styles, grep) {
+		var list = form.querySelector('[data-grep-rules]');
+		if (!list) {
+			return;
+		}
+		while (list.firstChild) {
+			list.removeChild(list.firstChild);
+		}
+		var ctx = { ownId: parseInt(style && style.id, 10) || 0, styles: styles, settings: grepSettings(grep) };
+		(style && Array.isArray(style.grepRules) ? style.grepRules : []).forEach(function(rule) {
+			list.appendChild(buildGrepRow(form.ownerDocument, rule, ctx));
+		});
+		renumberGrepRows(form, grep);
+	}
+
+	/**
+	 * Add a rule row at the end, for the Add button.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style
+	 * @param {Array}   styles
+	 * @param {Object}  [grep]
+	 * @return {Element|null} The new row, null at the limit.
+	 */
+	function addGrepRule(form, style, styles, grep) {
+		var list = form.querySelector('[data-grep-rules]');
+		var settings = grepSettings(grep);
+		if (!list || list.children.length >= settings.maxRules) {
+			return null;
+		}
+		var first = settings.patterns[0] ? settings.patterns[0].value : '';
+		var row = buildGrepRow(form.ownerDocument, { pattern: first, styleId: 0 }, {
+			ownId: parseInt(style && style.id, 10) || 0,
+			styles: styles,
+			settings: settings
+		});
+		list.appendChild(row);
+		renumberGrepRows(form, grep);
+		return row;
+	}
+
+	/**
+	 * Move a row up (-1) or down (+1). Returns the control to focus: the
+	 * same button, or the other move button when the row reached an end
+	 * and the used one is now disabled.
+	 *
+	 * @param {Element} form
+	 * @param {Element} row
+	 * @param {number}  direction -1 or 1.
+	 * @param {Object}  [grep]
+	 * @return {Element|null}
+	 */
+	function moveGrepRule(form, row, direction, grep) {
+		var list = row.parentNode;
+		if (direction < 0 && row.previousElementSibling) {
+			list.insertBefore(row, row.previousElementSibling);
+		} else if (direction > 0 && row.nextElementSibling) {
+			list.insertBefore(row.nextElementSibling, row);
+		}
+		renumberGrepRows(form, grep);
+		var used = row.querySelector(direction < 0 ? '.typost-ps-grep-up' : '.typost-ps-grep-down');
+		var other = row.querySelector(direction < 0 ? '.typost-ps-grep-down' : '.typost-ps-grep-up');
+		if (used && !used.disabled) {
+			return used;
+		}
+		return other && !other.disabled ? other : row.querySelector('[data-grep="pattern"]');
+	}
+
+	/**
+	 * Remove a row. Returns the control to focus: the next row's pattern,
+	 * else the previous row's, else the Add button.
+	 *
+	 * @param {Element} form
+	 * @param {Element} row
+	 * @param {Object}  [grep]
+	 * @return {Element|null}
+	 */
+	function removeGrepRule(form, row, grep) {
+		var next = row.nextElementSibling || row.previousElementSibling;
+		row.parentNode.removeChild(row);
+		renumberGrepRows(form, grep);
+		return next ? next.querySelector('[data-grep="pattern"]') : form.querySelector('.typost-ps-grep-add');
+	}
+
+	/**
+	 * The rules in the form, in order; null when the form has no GREP list
+	 * (WordPress before 6.9), so a save leaves the stored rules alone.
+	 *
+	 * @param {Element} form
+	 * @return {Array|null}
+	 */
+	function readGrepRules(form) {
+		if (!form.querySelector('[data-grep-rules]')) {
+			return null;
+		}
+		return grepRows(form).map(function(row) {
+			var pattern = row.querySelector('[data-grep="pattern"]');
+			var regex = row.querySelector('[data-grep="regex"]');
+			var styleId = row.querySelector('[data-grep="styleId"]');
+			return normalizeGrepRule({
+				pattern: pattern ? pattern.value : '',
+				regex: regex ? regex.value : '',
+				styleId: styleId ? styleId.value : 0
+			});
+		});
+	}
+
+	/**
+	 * The first problem in the GREP rules, as a form error, or null.
+	 * The server checks the same and more (the PHP side of a custom
+	 * pattern, and the match limits); this adds the browser's own check,
+	 * so a pattern must compile in both engines.
+	 *
+	 * @param {Array|null} rules readGrepRules()
+	 * @param {Object}     [grep] typostPSAdmin.grep
+	 * @return {{field: string, message: string}|null}
+	 */
+	function validateGrepRules(rules, grep) {
+		var settings = grepSettings(grep);
+		if (!Array.isArray(rules)) {
+			return null;
+		}
+		for (var i = 0; i < rules.length; i++) {
+			var rule = rules[i];
+			if (!rule.pattern) {
+				return { field: 'grep-' + i + '-pattern', message: __('Choose a pattern for each GREP rule.', 'typost-paragraph-styles') };
+			}
+			if (rule.pattern === GREP_CUSTOM) {
+				if (!rule.regex) {
+					return { field: 'grep-' + i + '-regex', message: __('Enter a pattern.', 'typost-paragraph-styles') };
+				}
+				if (Array.from(rule.regex).length > settings.maxLength) {
+					/* translators: %d: the most characters a pattern can have */
+					return { field: 'grep-' + i + '-regex', message: fill(__('The pattern is too long. Use %d characters or fewer.', 'typost-paragraph-styles'), settings.maxLength) };
+				}
+				try {
+					new RegExp(rule.regex, 'u'); // eslint-disable-line no-new
+				} catch (e) {
+					/* translators: %s: the browser's error message (often in English) */
+					return { field: 'grep-' + i + '-regex', message: fill(__('The pattern is not valid in the browser: %s', 'typost-paragraph-styles'), e && e.message ? e.message : '') };
+				}
+			}
+			if (!rule.styleId) {
+				return { field: 'grep-' + i + '-styleId', message: __('Choose a style for each GREP rule.', 'typost-paragraph-styles') };
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The form field a server error about a GREP rule points at.
+	 *
+	 * @param {Object} response {field: 'grepRules', ruleIndex, ruleField}
+	 * @return {?string}
+	 */
+	function grepErrorField(response) {
+		if (!response || response.field !== 'grepRules') {
+			return null;
+		}
+		var index = parseInt(response.ruleIndex, 10);
+		if (!(index >= 0)) {
+			return null;
+		}
+		var name = ['pattern', 'regex', 'styleId'].indexOf(response.ruleField) !== -1 ? response.ruleField : 'pattern';
+		return 'grep-' + index + '-' + name;
+	}
+
+
+	// -------------------------------------------------------------------------
+	// Nested styles (#195)
+	// -------------------------------------------------------------------------
+
+	var NESTED_UNITS_WITH_END = ['words', 'marker'];
+	var NESTED_FIELDS = ['styleId', 'end', 'count', 'unit', 'marker'];
+	var nestedRowCount = 0;
+
+	/**
+	 * The nested rule settings of the page (typostPSAdmin.nested), with
+	 * defaults.
+	 *
+	 * @param {Object} [nested]
+	 * @return {{supported: boolean, maxRules: number, maxCount: number, units: Array, ends: Array}}
+	 */
+	function nestedSettings(nested) {
+		var n = nested || {};
+		return {
+			supported: !!n.supported,
+			maxRules: parseInt(n.maxRules, 10) || 10,
+			maxCount: parseInt(n.maxCount, 10) || 100,
+			units: Array.isArray(n.units) ? n.units : [],
+			ends: Array.isArray(n.ends) ? n.ends : []
+		};
+	}
+
+	/**
+	 * A rule as Typost_PS_Nested::sanitize_rules() stores it. A count that
+	 * is not a whole number stays as the text typed, so the check can name
+	 * it.
+	 *
+	 * @param {Object} rule
+	 * @return {Object}
+	 */
+	function normalizeNestedRule(rule) {
+		var r = rule || {};
+		var out = {
+			styleId: parseInt(r.styleId, 10) || 0,
+			unit: typeof r.unit === 'string' ? r.unit : ''
+		};
+		if (out.unit === 'line') {
+			return out;
+		}
+		var count = typeof r.count === 'number' ? r.count : String(r.count === undefined || r.count === null ? '' : r.count).trim();
+		out.count = typeof count === 'string' && /^\d+$/.test(count) ? parseInt(count, 10) : count;
+		if (out.unit === 'marker') {
+			out.marker = typeof r.marker === 'string' ? r.marker : '';
+		}
+		if (NESTED_UNITS_WITH_END.indexOf(out.unit) !== -1) {
+			out.end = r.end === 'upto' ? 'upto' : 'through';
+		}
+		return out;
+	}
+
+	/**
+	 * Whether a string can be one user-perceived character. Only Intl.Segmenter
+	 * can tell. A browser without it says yes and the server decides: counting
+	 * code points would refuse a flag or a family emoji, also on a style that
+	 * already has one.
+	 *
+	 * @param {string} text
+	 * @return {boolean}
+	 */
+	function canBeOneCharacter(text) {
+		if (typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') {
+			return true;
+		}
+		var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
+		return !it.next().done && it.next().done;
+	}
+
+	/**
+	 * A string's length in UTF-8 bytes, which is what the server's marker limit
+	 * counts (Typost_PS_Nested::MAX_MARKER_BYTES).
+	 *
+	 * @param {string} text
+	 * @return {number}
+	 */
+	function utf8ByteLength(text) {
+		return Array.from(text).reduce(function(total, ch) {
+			var code = ch.codePointAt(0);
+			return total + (code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4);
+		}, 0);
+	}
+
+	function selectWith(doc, attrs, options, value) {
+		var select = makeEl(doc, 'select', attrs);
+		options.forEach(function(option) {
+			select.appendChild(makeEl(doc, 'option', { value: option.value }, option.label));
+		});
+		select.value = value;
+		return select;
+	}
+
+	/**
+	 * Build one rule's row, in the order the rule reads: Apply style,
+	 * Through / Up to, Count, Unit, Character; then Move up / Move down /
+	 * Remove.
+	 *
+	 * @param {Document} doc
+	 * @param {Object}   rule Stored rule (or a new one).
+	 * @param {Object}   ctx  {ownId, styles, settings: nestedSettings()}.
+	 * @return {Element}
+	 */
+	function buildNestedRow(doc, rule, ctx) {
+		var settings = ctx.settings;
+		var r = normalizeNestedRule(rule);
+		var uid = 'typost-ps-nested-' + ctx.ownId + '-' + (++nestedRowCount);
+		var row = makeEl(doc, 'li', { className: 'typost-ps-nested-rule' });
+		var group = makeEl(doc, 'div', { role: 'group' });
+		row.appendChild(group);
+		var fields = makeEl(doc, 'div', { className: 'typost-ps-edit-row' });
+
+		function addField(name, label, control, extraClass) {
+			var p = makeEl(doc, 'p', { className: 'typost-ps-edit-field' + (extraClass ? ' ' + extraClass : ''), 'data-nested-field': name });
+			p.appendChild(makeEl(doc, 'label', { 'for': control.id }, label));
+			p.appendChild(control);
+			fields.appendChild(p);
+			return p;
+		}
+
+		// Style
+		var styleSelect = makeEl(doc, 'select', { id: uid + '-style', 'data-nested': 'styleId' });
+		styleSelect.appendChild(makeEl(doc, 'option', { value: '0' }, __('Choose a style', 'typost-paragraph-styles')));
+		var found = false;
+		(Array.isArray(ctx.styles) ? ctx.styles : []).forEach(function(candidate) {
+			var id = parseInt(candidate && candidate.id, 10) || 0;
+			if (!id || id === ctx.ownId) {
+				return;
+			}
+			if (id === r.styleId) {
+				found = true;
+			}
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(id) }, candidate.name || String(id)));
+		});
+		if (r.styleId && !found) {
+			styleSelect.appendChild(makeEl(doc, 'option', { value: String(r.styleId) }, __('A deleted style', 'typost-paragraph-styles')));
+		}
+		styleSelect.value = String(r.styleId || 0);
+		addField('styleId', __('Apply style', 'typost-paragraph-styles'), styleSelect);
+
+		addField('end', __('Ends', 'typost-paragraph-styles'),
+			selectWith(doc, { id: uid + '-end', 'data-nested': 'end' }, settings.ends, r.end || 'through'));
+
+		var countInput = makeEl(doc, 'input', {
+			type: 'number',
+			id: uid + '-count',
+			'data-nested': 'count',
+			min: '1',
+			max: String(settings.maxCount),
+			step: '1',
+			inputmode: 'numeric'
+		});
+		countInput.value = r.count !== undefined && r.count !== '' ? String(r.count) : '1';
+		addField('count', __('Count', 'typost-paragraph-styles'), countInput, 'typost-ps-nested-count');
+
+		addField('unit', __('Unit', 'typost-paragraph-styles'),
+			selectWith(doc, { id: uid + '-unit', 'data-nested': 'unit' }, settings.units, r.unit || (settings.units[0] ? settings.units[0].value : '')));
+
+		var markerInput = makeEl(doc, 'input', {
+			type: 'text',
+			id: uid + '-marker',
+			'data-nested': 'marker',
+			autocomplete: 'off',
+			spellcheck: 'false',
+			// UTF-16 units, not characters: a family emoji is one character and
+			// 11 units. Cutting it would save another character without an
+			// error. The server's limit is Typost_PS_Nested::MAX_MARKER_BYTES.
+			maxlength: '32',
+			'aria-describedby': uid + '-marker-help'
+		});
+		markerInput.value = r.marker || '';
+		var markerField = addField('marker', __('Character', 'typost-paragraph-styles'), markerInput, 'typost-ps-nested-marker');
+		markerField.appendChild(makeEl(doc, 'span', { className: 'typost-ps-edit-help', id: uid + '-marker-help' },
+			__('One character, such as : or —. Matching is case-sensitive.', 'typost-paragraph-styles')));
+
+		group.appendChild(fields);
+
+		var actions = makeEl(doc, 'p', { className: 'typost-ps-grep-actions typost-ps-nested-actions' });
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-nested-up' }, __('Move up', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button typost-ps-nested-down' }, __('Move down', 'typost-paragraph-styles')));
+		actions.appendChild(makeEl(doc, 'button', { type: 'button', className: 'button-link button-link-delete typost-ps-nested-remove' }, __('Remove', 'typost-paragraph-styles')));
+		group.appendChild(actions);
+
+		updateNestedRow(row);
+		return row;
+	}
+
+	/**
+	 * Show the fields the unit uses: Through / Up to for words and a typed
+	 * character, a count for every unit but First line, the character for
+	 * a typed character.
+	 *
+	 * @param {Element} row
+	 */
+	function updateNestedRow(row) {
+		var unitSelect = row.querySelector('[data-nested="unit"]');
+		var unit = unitSelect ? unitSelect.value : '';
+		var show = {
+			end: NESTED_UNITS_WITH_END.indexOf(unit) !== -1,
+			count: unit !== 'line',
+			marker: unit === 'marker'
+		};
+		Object.keys(show).forEach(function(name) {
+			var p = row.querySelector('[data-nested-field="' + name + '"]');
+			if (p) {
+				p.hidden = !show[name];
+			}
+		});
+	}
+
+	function nestedRows(form) {
+		var list = form.querySelector('[data-nested-rules]');
+		return list ? Array.prototype.slice.call(list.children) : [];
+	}
+
+	/**
+	 * Number the rows after a change (see renumberGrepRows()).
+	 *
+	 * @param {Element} form
+	 * @param {Object}  [nested] typostPSAdmin.nested
+	 */
+	function renumberNestedRows(form, nested) {
+		var rows = nestedRows(form);
+		var settings = nestedSettings(nested);
+		rows.forEach(function(row, index) {
+			var n = index + 1;
+			/* translators: %d: rule number */
+			row.querySelector('[role="group"]').setAttribute('aria-label', fill(__('Nested rule %d', 'typost-paragraph-styles'), n));
+			NESTED_FIELDS.forEach(function(name) {
+				var input = row.querySelector('[data-nested="' + name + '"]');
+				if (input) {
+					input.setAttribute('data-field', 'nested-' + index + '-' + name);
+				}
+			});
+			var up = row.querySelector('.typost-ps-nested-up');
+			var down = row.querySelector('.typost-ps-nested-down');
+			var remove = row.querySelector('.typost-ps-nested-remove');
+			if (up) {
+				/* translators: %d: rule number */
+				up.setAttribute('aria-label', fill(__('Move nested rule %d up', 'typost-paragraph-styles'), n));
+				up.disabled = index === 0;
+			}
+			if (down) {
+				/* translators: %d: rule number */
+				down.setAttribute('aria-label', fill(__('Move nested rule %d down', 'typost-paragraph-styles'), n));
+				down.disabled = index === rows.length - 1;
+			}
+			if (remove) {
+				/* translators: %d: rule number */
+				remove.setAttribute('aria-label', fill(__('Remove nested rule %d', 'typost-paragraph-styles'), n));
+			}
+		});
+		var empty = form.querySelector('[data-nested-empty]');
+		if (empty) {
+			empty.hidden = rows.length > 0;
+		}
+		var add = form.querySelector('.typost-ps-nested-add');
+		if (add) {
+			add.disabled = rows.length >= settings.maxRules;
+		}
+	}
+
+	/**
+	 * Fill the nested list from the style's rules.
+	 *
+	 * @param {Element} form
+	 * @param {Object}  style
+	 * @param {Array}   styles
+	 * @param {Object}  [nested] typostPSAdmin.nested
+	 */
+	function fillNestedRules(form, style, styles, nested) {
+		var list = form.querySelector('[data-nested-rules]');
+		if (!list) {
+			return;
+		}
+		while (list.firstChild) {
+			list.removeChild(list.firstChild);
+		}
+		var ctx = { ownId: parseInt(style && style.id, 10) || 0, styles: styles, settings: nestedSettings(nested) };
+		(style && Array.isArray(style.nestedRules) ? style.nestedRules : []).forEach(function(rule) {
+			list.appendChild(buildNestedRow(form.ownerDocument, rule, ctx));
+		});
+		renumberNestedRows(form, nested);
+	}
+
+	/**
+	 * Add a rule row at the end (3 words, through, no style yet), for the
+	 * Add button.
+	 *
+	 * @return {Element|null} The new row, null at the limit.
+	 */
+	function addNestedRule(form, style, styles, nested) {
+		var list = form.querySelector('[data-nested-rules]');
+		var settings = nestedSettings(nested);
+		if (!list || list.children.length >= settings.maxRules) {
+			return null;
+		}
+		var row = buildNestedRow(form.ownerDocument, { styleId: 0, unit: 'words', count: 1, end: 'through' }, {
+			ownId: parseInt(style && style.id, 10) || 0,
+			styles: styles,
+			settings: settings
+		});
+		list.appendChild(row);
+		renumberNestedRows(form, nested);
+		return row;
+	}
+
+	/**
+	 * Move a row up (-1) or down (+1); returns the control to focus, as
+	 * moveGrepRule() does.
+	 */
+	function moveNestedRule(form, row, direction, nested) {
+		var list = row.parentNode;
+		if (direction < 0 && row.previousElementSibling) {
+			list.insertBefore(row, row.previousElementSibling);
+		} else if (direction > 0 && row.nextElementSibling) {
+			list.insertBefore(row.nextElementSibling, row);
+		}
+		renumberNestedRows(form, nested);
+		var used = row.querySelector(direction < 0 ? '.typost-ps-nested-up' : '.typost-ps-nested-down');
+		var other = row.querySelector(direction < 0 ? '.typost-ps-nested-down' : '.typost-ps-nested-up');
+		if (used && !used.disabled) {
+			return used;
+		}
+		return other && !other.disabled ? other : row.querySelector('[data-nested="styleId"]');
+	}
+
+	/**
+	 * Remove a row; returns the control to focus: the next row's style,
+	 * else the previous row's, else the Add button.
+	 */
+	function removeNestedRule(form, row, nested) {
+		var next = row.nextElementSibling || row.previousElementSibling;
+		row.parentNode.removeChild(row);
+		renumberNestedRows(form, nested);
+		return next ? next.querySelector('[data-nested="styleId"]') : form.querySelector('.typost-ps-nested-add');
+	}
+
+	/**
+	 * The rules in the form, in order; null when the form has no nested
+	 * list (WordPress before 6.9), so a save leaves the stored rules alone.
+	 *
+	 * @param {Element} form
+	 * @return {Array|null}
+	 */
+	function readNestedRules(form) {
+		if (!form.querySelector('[data-nested-rules]')) {
+			return null;
+		}
+		return nestedRows(form).map(function(row) {
+			var values = {};
+			NESTED_FIELDS.forEach(function(name) {
+				var input = row.querySelector('[data-nested="' + name + '"]');
+				values[name] = input ? input.value : '';
+			});
+			return normalizeNestedRule(values);
+		});
+	}
+
+	/**
+	 * The first problem in the nested rules, as a form error, or null.
+	 * The server checks the same.
+	 *
+	 * @param {Array|null} rules readNestedRules()
+	 * @param {Object}     [nested] typostPSAdmin.nested
+	 * @return {{field: string, message: string}|null}
+	 */
+	/**
+	 * The names of the styles with a nested rule that applies a style. The
+	 * server removes those rules when the style is deleted (#195).
+	 *
+	 * @param {Array}         list    Every style.
+	 * @param {number|string} styleId Style id.
+	 * @return {string[]} Style names, each once.
+	 */
+	function nestedRuleUsers(list, styleId) {
+		return (Array.isArray(list) ? list : []).filter(function(style) {
+			return style && Array.isArray(style.nestedRules) && style.nestedRules.some(function(rule) {
+				return rule && String(rule.styleId) === String(styleId);
+			});
+		}).map(function(style) {
+			return style.name;
+		});
+	}
+
+	function validateNestedRules(rules, nested) {
+		var settings = nestedSettings(nested);
+		if (!Array.isArray(rules)) {
+			return null;
+		}
+		for (var i = 0; i < rules.length; i++) {
+			var rule = rules[i];
+			if (!rule.styleId) {
+				return { field: 'nested-' + i + '-styleId', message: __('Choose a style for each nested rule.', 'typost-paragraph-styles') };
+			}
+			if (rule.unit === 'line') {
+				if (i !== rules.length - 1) {
+					return { field: 'nested-' + i + '-unit', message: __('A First line rule must be the last nested rule: where the first line ends depends on the screen width, so no rule can start after it.', 'typost-paragraph-styles') };
+				}
+				continue;
+			}
+			if (typeof rule.count !== 'number' || rule.count < 1 || rule.count > settings.maxCount) {
+				/* translators: %d: the highest count */
+				return { field: 'nested-' + i + '-count', message: fill(__('Enter a whole number from 1 to %d.', 'typost-paragraph-styles'), settings.maxCount) };
+			}
+			if (rule.unit === 'marker') {
+				if (!rule.marker) {
+					return { field: 'nested-' + i + '-marker', message: __('Type the character that ends the rule, such as a colon.', 'typost-paragraph-styles') };
+				}
+				if (!canBeOneCharacter(rule.marker)) {
+					return { field: 'nested-' + i + '-marker', message: __('Type one character only.', 'typost-paragraph-styles') };
+				}
+				if (utf8ByteLength(rule.marker) > 32 || /[\u0000-\u001F\u007F-\u009F￼]/.test(rule.marker)) {
+					return { field: 'nested-' + i + '-marker', message: __('This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol.', 'typost-paragraph-styles') };
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The form field a server error about a nested rule points at.
+	 *
+	 * @param {Object} response {field: 'nestedRules', ruleIndex, ruleField}
+	 * @return {?string}
+	 */
+	function nestedErrorField(response) {
+		if (!response || response.field !== 'nestedRules') {
+			return null;
+		}
+		var index = parseInt(response.ruleIndex, 10);
+		if (!(index >= 0)) {
+			return null;
+		}
+		var name = NESTED_FIELDS.indexOf(response.ruleField) !== -1 ? response.ruleField : 'styleId';
+		return 'nested-' + index + '-' + name;
+	}
+
 	var helpers = {
 		announce: announce,
 		focusEditName: focusEditName,
@@ -908,6 +2239,9 @@
 		suffixIds: suffixIds,
 		sizeModeOf: sizeModeOf,
 		updateConditionalFields: updateConditionalFields,
+		updateColorFields: updateColorFields,
+		applyColorPicker: applyColorPicker,
+		contrastMessage: contrastMessage,
 		fillEditForm: fillEditForm,
 		updateResetToBase: updateResetToBase,
 		readEditForm: readEditForm,
@@ -921,7 +2255,26 @@
 		clearFormError: clearFormError,
 		replaceCardParts: replaceCardParts,
 		replaceRelatedCards: replaceRelatedCards,
-		replaceStyleCss: replaceStyleCss
+		replaceStyleCss: replaceStyleCss,
+		normalizeGrepRule: normalizeGrepRule,
+		fillGrepRules: fillGrepRules,
+		addGrepRule: addGrepRule,
+		moveGrepRule: moveGrepRule,
+		removeGrepRule: removeGrepRule,
+		readGrepRules: readGrepRules,
+		validateGrepRules: validateGrepRules,
+		grepErrorField: grepErrorField,
+		updateGrepRow: updateGrepRow,
+		normalizeNestedRule: normalizeNestedRule,
+		fillNestedRules: fillNestedRules,
+		addNestedRule: addNestedRule,
+		moveNestedRule: moveNestedRule,
+		removeNestedRule: removeNestedRule,
+		readNestedRules: readNestedRules,
+		validateNestedRules: validateNestedRules,
+		nestedErrorField: nestedErrorField,
+		updateNestedRow: updateNestedRow,
+		nestedRuleUsers: nestedRuleUsers
 	};
 
 	if (typeof module !== 'undefined' && module.exports) {
@@ -1055,7 +2408,7 @@
 		var form    = $container.find('form')[0];
 		var details = $card[0].querySelector('.typost-ps-style-card-details');
 		var unit    = resolveEditFontSizeUnit(style.properties, newUnit);
-		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles);
+		fillEditForm(form, style, details ? details.getAttribute('data-font-label') : '', unit, styles, typostPSAdmin.grep, typostPSAdmin.nested);
 		$(form).data('baseline', readEditForm(form));
 
 		$card.find('.typost-ps-style-actions').hide();
@@ -1096,7 +2449,26 @@
 		});
 	});
 
-	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"]', function() {
+	// Color fields (#215): the custom fields, swatches and the contrast
+	// notice follow every change; the size and weight change the notice's
+	// threshold (large text)
+	$(document).on('input', '.typost-ps-edit-form [data-color-picker-for]', function() {
+		applyColorPicker(this);
+		updateColorFields($(this).closest('form')[0]);
+	});
+	// A select fires both input and change on one pick, so it binds change only
+	$(document).on('change', '.typost-ps-edit-form [data-field="textColor"], .typost-ps-edit-form [data-field="textStrokeColor"], .typost-ps-edit-form [data-field="fontWeight"]', function() {
+		updateColorFields($(this).closest('form')[0]);
+	});
+	$(document).on('change input', '.typost-ps-edit-form [data-field="textColorCustom"], .typost-ps-edit-form [data-field="textStrokeColorCustom"], .typost-ps-edit-form [data-field="textStrokeWidth"], .typost-ps-edit-form [data-field="fontSize"], .typost-ps-edit-form [data-field="fontSizeMin"]', function() {
+		var form = $(this).closest('form')[0];
+		if (/Custom$/.test(this.getAttribute('data-field') || '')) {
+			syncColorPicker(form, this.getAttribute('data-field'));
+		}
+		updateColorFields(form);
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-field="sizeMode"], .typost-ps-edit-form [data-field="textCase"], .typost-ps-edit-form [data-field="alignment"], .typost-ps-edit-form [data-field="hyphens"]', function() {
 		updateConditionalFields($(this).closest('form')[0]);
 	});
 
@@ -1124,7 +2496,9 @@
 		var values  = readEditForm(form);
 		var error   = validateEditValues(values, {
 			baseline: $(form).data('baseline'),
-			unit: resolveEditFontSizeUnit(style && style.properties, newUnit)
+			unit: resolveEditFontSizeUnit(style && style.properties, newUnit),
+			grep: typostPSAdmin.grep,
+			nested: typostPSAdmin.nested
 		});
 		var $save   = $(form).find('.typost-ps-save-edit-btn');
 
@@ -1174,8 +2548,9 @@
 				}
 
 				// A rename alone changes no card but the styles based on this
-				// one, whose details name it (#200)
-				if (!payload.properties && payload.basedOn === undefined && !hasDescendants(styleId)) {
+				// one, whose details name it (#200), and the cards whose GREP
+				// rules name it (#196) — refreshed to be safe
+				if (!payload.properties && payload.basedOn === undefined && payload.grepRules === undefined && payload.nestedRules === undefined && !hasDescendants(styleId) && !isGrepTarget(styleId)) {
 					done();
 					closeEditForm($card);
 					announce(message);
@@ -1194,15 +2569,128 @@
 				done();
 				var serverMessage = xhr && xhr.responseJSON && xhr.responseJSON.message;
 				var serverField = xhr && xhr.responseJSON && xhr.responseJSON.field;
-				// A 400 names its field (Based on, #200) or is about the name
-				// (empty after sanitizing); a 404, a 429 or a lost connection
-				// is not any field's fault
+				// A 400 names its field (Based on, #200; a GREP rule, #196) or
+				// is about the name (empty after sanitizing); a 404, a 429 or
+				// a lost connection is not any field's fault
+				var errorField = null;
+				if (xhr && xhr.status === 400) {
+					if (serverField === 'grepRules') {
+						errorField = grepErrorField(xhr.responseJSON);
+					} else if (serverField === 'nestedRules') {
+						errorField = nestedErrorField(xhr.responseJSON);
+					} else {
+						errorField = serverField === 'basedOn' ? 'basedOn' : 'name';
+					}
+				}
 				showFormError(form, {
-					field: xhr && xhr.status === 400 ? (serverField === 'basedOn' ? 'basedOn' : 'name') : null,
+					field: errorField,
 					message: serverMessage || wp.i18n.__('Failed to update style. Please try again.', 'typost-paragraph-styles')
 				});
 			}
 		});
+	});
+
+	// -------------------------------------------------------------------------
+	// GREP rules (#196)
+	// -------------------------------------------------------------------------
+
+	// Whether another style's GREP or nested rules (#195) apply this one:
+	// its card names it
+	function isGrepTarget(styleId) {
+		return styles.some(function(candidate) {
+			return ['grepRules', 'nestedRules'].some(function(key) {
+				return Array.isArray(candidate[key]) && candidate[key].some(function(rule) {
+					return String(rule && rule.styleId) === String(styleId);
+				});
+			});
+		});
+	}
+
+	$(document).on('click', '.typost-ps-grep-add', function() {
+		var form  = $(this).closest('form')[0];
+		var style = findStyle($(this).closest('.typost-ps-style-card').data('style-id'));
+		var row   = addGrepRule(form, style, styles, typostPSAdmin.grep);
+		if (!row) {
+			return;
+		}
+		var select = row.querySelector('[data-grep="pattern"]');
+		if (select) {
+			select.focus();
+		}
+		/* translators: %d: rule number */
+		announce(fill(wp.i18n.__('GREP rule %d added.', 'typost-paragraph-styles'), grepRows(form).length));
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-grep="pattern"]', function() {
+		updateGrepRow($(this).closest('.typost-ps-grep-rule')[0]);
+	});
+
+	$(document).on('click', '.typost-ps-grep-up, .typost-ps-grep-down', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-grep-rule')[0];
+		var up   = $(this).hasClass('typost-ps-grep-up');
+		var target = moveGrepRule(form, row, up ? -1 : 1, typostPSAdmin.grep);
+		if (target) {
+			target.focus();
+		}
+		var position = grepRows(form).indexOf(row) + 1;
+		/* translators: %d: the rule's new position in the list */
+		announce(fill(wp.i18n.__('Rule moved to position %d.', 'typost-paragraph-styles'), position));
+	});
+
+	$(document).on('click', '.typost-ps-grep-remove', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-grep-rule')[0];
+		var target = removeGrepRule(form, row, typostPSAdmin.grep);
+		if (target) {
+			target.focus();
+		}
+		announce(wp.i18n.__('GREP rule removed.', 'typost-paragraph-styles'));
+	});
+
+	// -------------------------------------------------------------------------
+	// Nested rules (#195)
+	// -------------------------------------------------------------------------
+
+	$(document).on('click', '.typost-ps-nested-add', function() {
+		var form  = $(this).closest('form')[0];
+		var style = findStyle($(this).closest('.typost-ps-style-card').data('style-id'));
+		var row   = addNestedRule(form, style, styles, typostPSAdmin.nested);
+		if (!row) {
+			return;
+		}
+		var select = row.querySelector('[data-nested="styleId"]');
+		if (select) {
+			select.focus();
+		}
+		/* translators: %d: rule number */
+		announce(fill(wp.i18n.__('Nested rule %d added.', 'typost-paragraph-styles'), nestedRows(form).length));
+	});
+
+	$(document).on('change', '.typost-ps-edit-form [data-nested="unit"]', function() {
+		updateNestedRow($(this).closest('.typost-ps-nested-rule')[0]);
+	});
+
+	$(document).on('click', '.typost-ps-nested-up, .typost-ps-nested-down', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-nested-rule')[0];
+		var up   = $(this).hasClass('typost-ps-nested-up');
+		var target = moveNestedRule(form, row, up ? -1 : 1, typostPSAdmin.nested);
+		if (target) {
+			target.focus();
+		}
+		/* translators: %d: the rule's new position in the list */
+		announce(fill(wp.i18n.__('Rule moved to position %d.', 'typost-paragraph-styles'), nestedRows(form).indexOf(row) + 1));
+	});
+
+	$(document).on('click', '.typost-ps-nested-remove', function() {
+		var form = $(this).closest('form')[0];
+		var row  = $(this).closest('.typost-ps-nested-rule')[0];
+		var target = removeNestedRule(form, row, typostPSAdmin.nested);
+		if (target) {
+			target.focus();
+		}
+		announce(wp.i18n.__('Nested rule removed.', 'typost-paragraph-styles'));
 	});
 
 	// -------------------------------------------------------------------------
@@ -1274,10 +2762,21 @@
 		var name    = $card.find('.typost-ps-style-name').text();
 
 		/* translators: %s: style name */
-		if (!confirm(wp.i18n.sprintf(
+		var question = wp.i18n.sprintf(
 			wp.i18n.__('Are you sure you want to delete “%s”? This cannot be undone.', 'typost-paragraph-styles'),
 			name
-		))) {
+		);
+		// A nested rule that goes with the style moves the rules after it, on
+		// every post that uses those styles (#195)
+		var nestedUsers = nestedRuleUsers(styles, styleId);
+		if (nestedUsers.length) {
+			question += '\n\n' + wp.i18n.sprintf(
+				/* translators: %s: comma-separated list of style names */
+				wp.i18n.__('Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles.', 'typost-paragraph-styles'),
+				nestedUsers.join(', ')
+			);
+		}
+		if (!confirm(question)) {
 			return;
 		}
 
@@ -1299,6 +2798,22 @@
 				var detached = response && Array.isArray(response.detached) ? response.detached : [];
 				detached.forEach(function(childId) {
 					refreshCards(childId, function() {});
+				});
+				// Styles whose GREP rules applied the deleted one lost those
+				// rules (#196)
+				var grepChanged = response && Array.isArray(response.grepChanged) ? response.grepChanged : [];
+				// and their nested rules (#195)
+				if (response && Array.isArray(response.nestedChanged)) {
+					response.nestedChanged.forEach(function(changedId) {
+						if (grepChanged.indexOf(changedId) === -1) {
+							grepChanged.push(changedId);
+						}
+					});
+				}
+				grepChanged.forEach(function(changedId) {
+					if (detached.indexOf(changedId) === -1) {
+						refreshCards(changedId, function() {});
+					}
 				});
 				$card.slideUp(300, function() {
 					$card.remove();

@@ -37,6 +37,13 @@ h6 .typost-styled {
  * rules read it), and resets the OpenType features the plugin writes. A
  * theme may set --typost-plain: 1 itself instead; that removes the hangs
  * only, because a custom property cannot switch font-feature-settings.
+ * The class also removes a paragraph style's outline (--typost-plain-outline)
+ * and gives outline-only text a fill again: --typost-plain-fill replaces the
+ * style's transparent, and currentColor on the color property means inherit
+ * (CSS Color 4). A style's other text colors stay. These two go together:
+ * --typost-plain alone must not remove the outline, or outline-only text
+ * would have no outline and no fill. So the theme's bare property still
+ * removes the hangs only.
  * !important beats the inline style of a span or block. Case and small caps
  * from the Case setting (font-variant-caps, text-transform) are kept; small
  * caps from the smcp/c2sc feature toggles are features and are reset.
@@ -47,9 +54,19 @@ h6 .typost-styled {
  * frontend (not in an iframe), and a body-level .typost-plain would then
  * reset the features the author is editing. Every block in the editor is,
  * or is inside, .block-editor-block-list__block; the canvas root is
- * .editor-styles-wrapper. */
+ * .editor-styles-wrapper. The reset below keeps the outline and the
+ * transparent fill there too: they share the style's rule with the frontend. */
 .typost-plain {
     --typost-plain: 1;
+    --typost-plain-outline: 1;
+    --typost-plain-fill: currentColor;
+}
+
+.editor-styles-wrapper,
+.block-editor-block-list__block {
+    --typost-plain: 0;
+    --typost-plain-outline: 0;
+    --typost-plain-fill: initial;
 }
 
 .typost-plain .typost-styled:not(.editor-styles-wrapper *, .block-editor-block-list__block, .block-editor-block-list__block *),

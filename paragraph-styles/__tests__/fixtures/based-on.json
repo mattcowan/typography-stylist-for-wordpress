@@ -482,6 +482,100 @@
 				"3": {},
 				"4": { "alignment": "justify", "alignLast": "center", "wordSpacing": -20, "textWrap": "pretty" }
 			}
+		},
+		{
+			"label": "indents and spacing (#199): the first line indent inherits as a group with its option; the others one by one, and each can be unset",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"indentStart": "2em",
+						"indentEnd": "1em",
+						"firstLineIndent": "1.5em",
+						"indentAfterSame": true,
+						"spaceBefore": "0.5em",
+						"spaceAfter": "1em"
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "",
+						"spaceBefore": ""
+					}
+				},
+				{
+					"id": 3,
+					"name": "Body – Wide",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "3em",
+						"indentStart": "",
+						"indentEnd": ""
+					}
+				},
+				{
+					"id": 4,
+					"name": "Body – Hanging",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "-1em",
+						"spaceAfter": "24px"
+					}
+				}
+			],
+			"expected": {
+				"2": {
+					"indentStart": "2em",
+					"indentEnd": "1em",
+					"spaceAfter": "1em"
+				},
+				"3": {
+					"spaceBefore": "0.5em",
+					"spaceAfter": "1em",
+					"firstLineIndent": "3em"
+				},
+				"4": {
+					"indentStart": "2em",
+					"indentEnd": "1em",
+					"spaceBefore": "0.5em",
+					"spaceAfter": "24px",
+					"firstLineIndent": "-1em"
+				}
+			}
+		},
+		{
+			"label": "text color inherits on its own and the outline as a group (#215): a child's own outline drops the parent's outline color and position",
+			"styles": [
+				{ "id": 1, "name": "Display", "properties": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" } },
+				{ "id": 2, "name": "Display Thin", "basedOn": 1, "properties": { "textStrokeWidth": 0.5 } },
+				{ "id": 3, "name": "Display Plain", "basedOn": 1, "properties": { "textColor": "", "textStrokeWidth": 0 } },
+				{ "id": 4, "name": "Display Dark", "basedOn": 1, "properties": { "textColor": "#111111" } }
+			],
+			"expected": {
+				"2": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 0.5 },
+				"3": {},
+				"4": { "textColor": "#111111", "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind" }
+			}
+		},
+		{
+			"label": "hyphenation inherits as a group (#208): a child's own hyphenation drops the parent's limits and character, and '' unsets it",
+			"styles": [
+				{ "id": 1, "name": "Body", "properties": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" } },
+				{ "id": 2, "name": "Body Narrow", "basedOn": 1, "properties": { "hyphens": "auto", "hyphenateLimitBefore": 3 } },
+				{ "id": 3, "name": "Body Plain", "basedOn": 1, "properties": { "hyphens": "" } },
+				{ "id": 4, "name": "Body Bold", "basedOn": 1, "properties": { "fontWeight": "700" } },
+				{ "id": 5, "name": "Stray", "basedOn": 1, "properties": { "hyphenateLimitBefore": 3 } }
+			],
+			"expected": {
+				"2": { "hyphens": "auto", "hyphenateLimitBefore": 3 },
+				"3": {},
+				"4": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=", "fontWeight": "700" },
+				"5": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" }
+			}
 		}
 	],
 	"equality": [
@@ -709,7 +803,19 @@
 		{ "label": "word spacing as number and string", "key": "wordSpacing", "a": { "wordSpacing": 50 }, "b": { "wordSpacing": "50" }, "equal": true },
 		{ "label": "no word spacing and word spacing 0", "key": "wordSpacing", "a": { "wordSpacing": 0 }, "b": {}, "equal": true },
 		{ "label": "no line breaking and an empty one", "key": "textWrap", "a": { "textWrap": "" }, "b": {}, "equal": true },
-		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false }
+		{ "label": "balance and pretty differ", "key": "textWrap", "a": { "textWrap": "balance" }, "b": { "textWrap": "pretty" }, "equal": false },
+		{ "label": "an indent written two ways", "key": "indentStart", "a": {"indentStart": "1.50em"}, "b": {"indentStart": "1.5em"}, "equal": true },
+		{ "label": "no space before and an empty one", "key": "spaceBefore", "a": {"spaceBefore": ""}, "b": {}, "equal": true },
+		{ "label": "px and em are different spacing", "key": "spaceAfter", "a": {"spaceAfter": "16px"}, "b": {"spaceAfter": "1em"}, "equal": false },
+		{ "label": "text colors compare normalized (#215)", "key": "textColor", "a": { "textColor": "#ABC" }, "b": { "textColor": "#aabbcc" }, "equal": true },
+		{ "label": "a palette color and its value differ (#215)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "#cc0000" }, "equal": false },
+		{ "label": "a palette color with another saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#990000" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "a palette color with no saved fallback is the same color (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1" }, "b": { "textColor": "var:preset|color|accent-1|#cc0000" }, "equal": true },
+		{ "label": "two palette colors with the same fallback differ (#215 review)", "key": "textColor", "a": { "textColor": "var:preset|color|accent-1|#cc0000" }, "b": { "textColor": "var:preset|color|accent-2|#cc0000" }, "equal": false },
+		{ "label": "a hyphenation limit as number and string (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": "6" }, "equal": true },
+		{ "label": "an unknown hyphens value and no hyphenation (#208)", "key": "hyphens", "a": { "hyphens": "manual", "hyphenateLimitWord": 6 }, "b": {}, "equal": true },
+		{ "label": "another limit differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": 7 }, "equal": false },
+		{ "label": "another hyphen character differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateCharacter": "=" }, "b": { "hyphens": "auto" }, "equal": false }
 	],
 	"css": [
 		{
@@ -799,6 +905,53 @@
 			],
 			"id": 3,
 			"css": ".typost-ps-3,\n.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3,\n.typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-5);\n    font-weight: 400;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    line-height: 1.6;\n    font-size: 0.875rem;\n    --typost-hang: 0.1;\n}\n\n.typost-styled.typost-ps-3:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-3.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-3.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-3.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-3.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "Body – First (#199) renders Body without its first line indent",
+			"styles": [
+				{
+					"id": 1,
+					"name": "Body",
+					"properties": {
+						"indentStart": "2em",
+						"indentEnd": "1em",
+						"firstLineIndent": "1.5em",
+						"indentAfterSame": true,
+						"spaceBefore": "0.5em",
+						"spaceAfter": "1em"
+					}
+				},
+				{
+					"id": 2,
+					"name": "Body – First",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "",
+						"spaceBefore": ""
+					}
+				},
+				{
+					"id": 3,
+					"name": "Body – Wide",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "3em",
+						"indentStart": "",
+						"indentEnd": ""
+					}
+				},
+				{
+					"id": 4,
+					"name": "Body – Hanging",
+					"basedOn": 1,
+					"properties": {
+						"firstLineIndent": "-1em",
+						"spaceAfter": "24px"
+					}
+				}
+			],
+			"id": 2,
+			"css": ".typost-ps-2:not(.typost-fit),\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2:not(.typost-fit) {\n    box-sizing: border-box;\n    padding-inline-start: 2em;\n    padding-inline-end: 1em;\n}\n\n.typost-ps-2,\n.typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost:has(> .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2) {\n    margin-block-end: 1em;\n}\n\n.wp-block-typost > .typost-styled.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2.typost-ps-2 {\n    margin-block-end: 0;\n}"
 		}
 	],
 	"overrides": [
@@ -843,6 +996,81 @@
 			"full": { "alignment": "justify", "alignLast": "end", "textWrap": "balance" },
 			"parent": { "alignment": "justify", "alignLast": "center", "textWrap": "balance" },
 			"expected": { "alignment": "justify", "alignLast": "end" }
+		},
+		{
+			"label": "indents and spacing (#199): what the parent sets and the look does not is stored empty",
+			"full": {
+				"fontId": 5
+			},
+			"parent": {
+				"fontId": 5,
+				"indentStart": "2em",
+				"firstLineIndent": "1.5em",
+				"indentAfterSame": true,
+				"spaceAfter": "1em"
+			},
+			"expected": {
+				"firstLineIndent": "",
+				"indentStart": "",
+				"spaceAfter": ""
+			}
+		},
+		{
+			"label": "indents (#199): the same first line indent without the option is the whole group",
+			"full": {
+				"firstLineIndent": "1.5em",
+				"spaceAfter": "1em"
+			},
+			"parent": {
+				"firstLineIndent": "1.5em",
+				"indentAfterSame": true,
+				"spaceAfter": "1em"
+			},
+			"expected": {
+				"firstLineIndent": "1.5em"
+			}
+		},
+		{
+			"label": "outline (#215): another position is the whole group; a color the look lacks is unset with ''",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "#000000" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textStrokePosition": "behind", "textColor": "#111111" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "#000000", "textColor": "" }
+		},
+		{
+			"label": "outline (#215): no outline in the look unsets the parent's with 0",
+			"full": {},
+			"parent": { "textStrokeWidth": 2 },
+			"expected": { "textStrokeWidth": 0 }
+		},
+		{
+			"label": "palette colors (#215 review): a new fallback after a theme change is no override, for the text color and the outline",
+			"full": { "textColor": "var:preset|color|accent-1|#990000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee" },
+			"parent": { "textColor": "var:preset|color|accent-1|#cc0000", "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base" },
+			"expected": {}
+		},
+		{
+			"label": "palette colors (#215 review): another outline slug is the whole group",
+			"full": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" },
+			"parent": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|base|#eeeeee", "textStrokePosition": "behind" },
+			"expected": { "textStrokeWidth": 2, "textStrokeColor": "var:preset|color|contrast|#eeeeee", "textStrokePosition": "behind" }
+		},
+		{
+			"label": "hyphenation (#208): no hyphenation in the look unsets the parent's with ''",
+			"full": { "fontId": 5 },
+			"parent": { "fontId": 5, "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"expected": { "hyphens": "" }
+		},
+		{
+			"label": "hyphenation (#208): the same limit with a character is the whole group",
+			"full": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" },
+			"parent": { "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"expected": { "hyphens": "auto", "hyphenateLimitWord": 6, "hyphenateCharacter": "=" }
+		},
+		{
+			"label": "hyphenation (#208): the same settings are no override",
+			"full": { "hyphens": "auto", "hyphenateLimitWord": 6 },
+			"parent": { "hyphens": "auto", "hyphenateLimitWord": "6" },
+			"expected": {}
 		}
 	]
 }

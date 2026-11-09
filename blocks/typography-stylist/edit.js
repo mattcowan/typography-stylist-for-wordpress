@@ -561,6 +561,28 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						if (keptAlign && !curTextAlign && !isFitNow) {
 							newAttrs.textAlign = keptAlign;
 						}
+						// The color, spacing and indents stay in the block's own
+						// settings (#346). Measured now, while the style still
+						// renders. The module's notice names what could not stay.
+						const psUtils = window.typostPSUtils;
+						if (detachedStyle && psUtils && psUtils.buildDetachBlockSettings) {
+							const kept = psUtils.buildDetachBlockSettings(
+								detachedProps,
+								{ textColor: blockPropsRef.current.blockTextColor, style: blockPropsRef.current.blockStyle },
+								{
+									isRtl: isRTL(),
+									palette: psUtils.readEditorPalette(),
+									fontSizePx: psUtils.measureBlockFontSize(curClientId),
+									isFit: isFitNow,
+									// The style wrote its margins on this wrapper too
+									keepMarginEm: true,
+									hasGrepRules: !!(detachedStyle.grepRules && detachedStyle.grepRules.length),
+									hasNestedRules: !!(detachedStyle.nestedRules && detachedStyle.nestedRules.length),
+								}
+							);
+							Object.assign(newAttrs, kept.attributes);
+							document.dispatchEvent(new CustomEvent('typost-paragraph-style-detached', { detail: kept }));
+						}
 					}
 				}
 				// Layered font configuration ID support
@@ -846,6 +868,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		node.style.minWidth = '0';
 		node.style.maxWidth = 'none';
 		node.style.textIndent = '0';
+		// As on the fit lines (style.css): a style's hyphenation must not give
+		// the min-content word measurement below extra break points (#208).
+		node.style.webkitHyphens = 'manual';
+		node.style.hyphens = 'manual';
 		node.style.position = 'absolute';
 		node.style.left = '-9999px';
 		node.style.top = '0';
@@ -885,6 +911,11 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				// Inline spans otherwise ride along: their own fonts, weights,
 				// features and variation settings all affect the width.
 				node.querySelectorAll('[data-fontsize]').forEach(s => { s.style.fontSize = ''; });
+				// As on the frontend: a span's own style does not hyphenate here (#208)
+				node.querySelectorAll('*').forEach((s) => {
+					s.style.setProperty('-webkit-hyphens', 'manual', 'important');
+					s.style.setProperty('hyphens', 'manual', 'important');
+				});
 				const width = node.getBoundingClientRect().width;
 				// A hung line starts left of the edge, so it must fill the
 				// width plus its hang (#242). Same alignment test as the CSS.
@@ -2019,7 +2050,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize, blockTextColor: attributes.textColor, blockStyle: attributes.style };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that

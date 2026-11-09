@@ -1,0 +1,188 @@
+{
+	"_comment": "Paragraph style CSS for text color and outline (#215). Read by text-color.test.js (buildStyleCssBlock) and tests/Unit/ParagraphStylesTextColorTest.php (generate_style_css), so both generators are held to the same text. css is the whole output for style id 8 (with legacyId when given); an empty string means the style writes no CSS.",
+	"cases": [
+		{
+			"label": "palette color with its saved fallback",
+			"properties": {
+				"textColor": "var:preset|color|accent-1|#cc0000"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--wp--preset--color--accent-1, #cc0000);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "palette color with no fallback (a palette color that is not hex)",
+			"properties": {
+				"textColor": "var:preset|color|contrast"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--wp--preset--color--contrast);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "custom color with transparency (a tint)",
+			"properties": {
+				"textColor": "#cc000080"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: #cc000080;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "short hex is expanded and lowercased",
+			"properties": {
+				"textColor": "#ABC"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: #aabbcc;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "outline-only text: transparent fill, palette outline behind the fill",
+			"properties": {
+				"fontSize": "96",
+				"fontSizeUnit": "rem",
+				"textColor": "transparent",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "var:preset|color|contrast|#111111",
+				"textStrokePosition": "behind"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: 6rem;\n    color: var(--typost-plain-fill, transparent);\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: var(--wp--preset--color--contrast, #111111);\n    paint-order: stroke fill;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n@media (forced-colors: active) {\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}"
+		},
+		{
+			"label": "transparent fill without an outline color writes no color",
+			"properties": {
+				"textColor": "transparent",
+				"textStrokeWidth": 2
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n}"
+		},
+		{
+			"label": "transparent fill without an outline writes nothing",
+			"properties": {
+				"textColor": "transparent"
+			},
+			"css": ""
+		},
+		{
+			"label": "outline on top in the text color, half a pixel",
+			"properties": {
+				"textStrokeWidth": 0.5
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(0.5px * (1 - var(--typost-plain-outline, 0)));\n}"
+		},
+		{
+			"label": "outline width capped at 20px and rounded to two decimals",
+			"properties": {
+				"textStrokeWidth": "25",
+				"textStrokeColor": "#fff"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(20px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: #ffffff;\n}"
+		},
+		{
+			"label": "outline width rounded to two decimals",
+			"properties": {
+				"textStrokeWidth": 1.255,
+				"textStrokeColor": "#000000"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(1.26px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: #000000;\n}"
+		},
+		{
+			"label": "outline color and position without a width write nothing",
+			"properties": {
+				"textStrokeColor": "#000000",
+				"textStrokePosition": "behind"
+			},
+			"css": ""
+		},
+		{
+			"label": "an invalid color writes nothing",
+			"properties": {
+				"textColor": "red",
+				"textStrokeWidth": 1,
+				"textStrokeColor": "url(x)"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(1px * (1 - var(--typost-plain-outline, 0)));\n}"
+		},
+		{
+			"label": "color after the other declarations, block color rule after the alignment rule",
+			"properties": {
+				"fontWeight": "700",
+				"textCase": "uppercase",
+				"alignment": "center",
+				"wordSpacing": 50,
+				"textColor": "#336699"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n    text-transform: uppercase;\n    font-variant-caps: normal;\n    word-spacing: 0.05em;\n    color: #336699;\n}\n\n.typost-ps-8:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id]:not([style^=\"text-align:\"], [style*=\";text-align:\"], [style*=\"; text-align:\"], [class*=\"has-text-align-\"], .typost-fit) {\n    text-align: center;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "fit to width keeps its color and outline",
+			"properties": {
+				"fontSize": "fit",
+				"fontSizeUnit": "rem",
+				"fontSizeMin": 32,
+				"fontSizePreferred": 48,
+				"fontSizeMax": 96,
+				"fitMaxSize": 0,
+				"alignment": "center",
+				"textColor": "var:preset|color|accent-1|#cc0000",
+				"textStrokeWidth": 1,
+				"textStrokeColor": "#000000"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(2rem, 3rem + 4vw, 6rem);\n    color: var(--wp--preset--color--accent-1, #cc0000);\n    -webkit-text-stroke-width: calc(1px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: #000000;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "the block color rule comes before the core-block hang rules",
+			"properties": {
+				"initialHang": 0.5,
+				"textColor": "#336699"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.5;\n    color: #336699;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "a legacy id gets its own block color selector",
+			"properties": {
+				"textColor": "var:preset|color|accent-1|#cc0000"
+			},
+			"legacyId": "ps_1709312345_123",
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id],\n.typost-ps-ps_1709312345_123,\n.typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123,\n.typost-styled[data-style-id=\"ps_1709312345_123\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--wp--preset--color--accent-1, #cc0000);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123.typost-ps-ps_1709312345_123 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "outline-only text: a palette outline with no fallback uses the system text color when the theme lacks it",
+			"properties": {
+				"textColor": "transparent",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "var:preset|color|contrast"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--typost-plain-fill, transparent);\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: var(--wp--preset--color--contrast, CanvasText);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n@media (forced-colors: active) {\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}"
+		},
+		{
+			"label": "outline-only text: a palette outline with a fully transparent fallback uses the system text color too",
+			"properties": {
+				"textColor": "transparent",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "var:preset|color|contrast|#11111100"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--typost-plain-fill, transparent);\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: var(--wp--preset--color--contrast, CanvasText);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n@media (forced-colors: active) {\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}"
+		},
+		{
+			"label": "a palette outline with no fallback on filled text needs no system color (it falls back to the fill)",
+			"properties": {
+				"textColor": "#111111",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "var:preset|color|contrast"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: #111111;\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: var(--wp--preset--color--contrast);\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}"
+		},
+		{
+			"label": "a transparent fill with a fully transparent outline color writes no color",
+			"properties": {
+				"textColor": "transparent",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "#cc000000"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: #cc000000;\n}"
+		},
+		{
+			"label": "a nearly transparent outline color still counts as the outline of transparent text",
+			"properties": {
+				"textColor": "transparent",
+				"textStrokeWidth": 2,
+				"textStrokeColor": "#cc000001"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: var(--typost-plain-fill, transparent);\n    -webkit-text-stroke-width: calc(2px * (1 - var(--typost-plain-outline, 0)));\n    -webkit-text-stroke-color: #cc000001;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n@media (forced-colors: active) {\n.typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}"
+		}
+	]
+}

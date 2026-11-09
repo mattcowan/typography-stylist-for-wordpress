@@ -778,3 +778,949 @@ msgstr "Saltos de línea"
 #: includes/admin-tab.php:279
 msgid "Balance lines gives the lines of a short heading similar lengths. Avoid short last lines suits body text. A browser that does not support the choice uses normal line breaks."
 msgstr "Equilibrar las líneas da longitudes parecidas a las líneas de un título corto. Evitar últimas líneas cortas es adecuado para el texto principal. Un navegador que no admite la opción usa saltos de línea normales."
+
+#: includes/class-typost-ps-grep.php:121
+msgid "Acronyms (NASA)"
+msgstr "Siglas (NASA)"
+
+#: includes/class-typost-ps-grep.php:122
+msgid "Fractions (1/2, not dates)"
+msgstr "Fracciones (1/2, no fechas)"
+
+#: includes/class-typost-ps-grep.php:123
+msgid "Ordinals (the “st” in 1st)"
+msgstr "Ordinales (el «st» de 1st)"
+
+#: includes/class-typost-ps-grep.php:124
+msgid "Numbers"
+msgstr "Números"
+
+#: includes/class-typost-ps-grep.php:125
+msgid "Ampersand (&)"
+msgstr "Et (&)"
+
+#: includes/class-typost-ps-grep.php:126
+msgid "Custom pattern"
+msgstr "Patrón personalizado"
+
+#: includes/class-typost-ps-grep.php:170
+#: assets/js/admin.js:1282
+msgid "Enter a pattern."
+msgstr "Introduce un patrón."
+
+#: includes/class-typost-ps-grep.php:173
+msgid "The pattern is not valid UTF-8 text."
+msgstr "El patrón no es un texto UTF-8 válido."
+
+#: includes/class-typost-ps-grep.php:178
+#: assets/js/admin.js:1286
+#, php-format
+msgid "The pattern is too long. Use %d characters or fewer."
+msgstr "El patrón es demasiado largo. Usa %d caracteres como máximo."
+
+#: includes/class-typost-ps-grep.php:181
+msgid "The pattern contains a control character, such as a tab or a line break. Use \\t or \\n instead."
+msgstr "El patrón contiene un carácter de control, como un tabulador o un salto de línea. Usa \\t o \\n en su lugar."
+
+#: includes/class-typost-ps-grep.php:187
+#, php-format
+msgid "The pattern uses “%s”, which GREP styles do not support. Patterns must work the same in PHP and in the browser."
+msgstr "El patrón usa «%s», que los estilos GREP no admiten. Los patrones deben funcionar igual en PHP y en el navegador."
+
+#: includes/class-typost-ps-grep.php:193
+#, php-format
+msgid "The pattern is not valid: %s"
+msgstr "El patrón no es válido: %s"
+
+#: includes/class-typost-ps-grep.php:229
+msgid "The regular expression engine gave no details."
+msgstr "El motor de expresiones regulares no dio detalles."
+
+#: includes/class-typost-ps-grep.php:197
+msgid "The pattern takes too long on some text, so it would be turned off. Make it simpler, for example without a repeated group inside a repeated group."
+msgstr "El patrón tarda demasiado con algunos textos, así que se desactivaría. Simplifícalo, por ejemplo sin un grupo repetido dentro de otro grupo repetido."
+
+#: includes/class-typost-ps-grep.php:468
+msgid "(after a lookahead or lookbehind)"
+msgstr "(después de una aserción de anticipación o retroceso)"
+
+#: includes/class-typost-ps-grep.php:617
+msgid "GREP styles must be a list of rules."
+msgstr "Los estilos GREP deben ser una lista de reglas."
+
+#: includes/class-typost-ps-grep.php:622
+#, php-format
+msgid "A style can have %d GREP rules at most."
+msgstr "Un estilo puede tener %d reglas GREP como máximo."
+
+#: includes/class-typost-ps-grep.php:644
+msgid "A GREP rule is not valid."
+msgstr "Una regla GREP no es válida."
+
+#: includes/class-typost-ps-grep.php:648
+#: assets/js/admin.js:1278
+msgid "Choose a pattern for each GREP rule."
+msgstr "Elige un patrón para cada regla GREP."
+
+#: includes/class-typost-ps-grep.php:653
+#: assets/js/admin.js:1296
+msgid "Choose a style for each GREP rule."
+msgstr "Elige un estilo para cada regla GREP."
+
+#: includes/class-typost-ps-grep.php:656
+msgid "A GREP rule cannot apply the style it belongs to. Choose another style."
+msgstr "Una regla GREP no puede aplicar el estilo al que pertenece. Elige otro estilo."
+
+#: includes/class-typost-ps-grep.php:666
+msgid "Only administrators can add or change a custom GREP pattern. Choose a built-in pattern."
+msgstr "Solo los administradores pueden añadir o cambiar un patrón GREP personalizado. Elige un patrón integrado."
+
+#: paragraph-styles.php:2653
+#: includes/class-typost-ps-transfer.php:448
+#, php-format
+msgid "Custom (%s)"
+msgstr "Personalizado (%s)"
+
+#: paragraph-styles.php:2458
+#: includes/class-typost-ps-transfer.php:460
+#, php-format
+msgid "%1$s → %2$s"
+msgstr "%1$s → %2$s"
+
+#: paragraph-styles.php:2461
+msgid "GREP styles:"
+msgstr "Estilos GREP:"
+
+#: includes/admin-tab.php:331
+msgid "GREP styles"
+msgstr "Estilos GREP"
+
+#: includes/admin-tab.php:333
+msgid "Apply another style to the text that matches a pattern, wherever this style is used on a whole block. The saved text does not change. Where two rules match the same text, the rule higher in the list wins. Text in fit to width blocks and in code is not matched."
+msgstr "Aplica otro estilo al texto que coincide con un patrón, allí donde este estilo se use en un bloque entero. El texto guardado no cambia. Cuando dos reglas coinciden con el mismo texto, gana la regla más alta de la lista. No se buscan coincidencias en el texto de los bloques ajustados al ancho ni en el código."
+
+#: includes/admin-tab.php:336
+msgid "No GREP rules."
+msgstr "No hay reglas GREP."
+
+#: includes/admin-tab.php:338
+msgid "Add GREP rule"
+msgstr "Añadir regla GREP"
+
+#: includes/class-typost-ps-transfer.php:168
+#, php-format
+msgid "“%1$s” was added because a GREP rule of “%2$s” applies it."
+msgstr "Se ha añadido «%1$s» porque una regla GREP de «%2$s» lo aplica."
+
+#: includes/class-typost-ps-transfer.php:340
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: %3$s Nothing was saved."
+msgstr "«%1$s», regla GREP %2$d: %3$s No se ha guardado nada."
+
+#: includes/class-typost-ps-transfer.php:451
+#, php-format
+msgid "“%1$s” has a custom GREP pattern, which runs on every page that uses the style: %2$s (applies “%3$s”)."
+msgstr "«%1$s» tiene un patrón GREP personalizado, que se ejecuta en cada página que usa el estilo: %2$s (aplica «%3$s»)."
+
+#: includes/class-typost-ps-transfer.php:489
+msgid "GREP styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated."
+msgstr "Los estilos GREP necesitan WordPress 6.9 o posterior. Se importan, pero no tienen efecto en este sitio hasta que se actualice WordPress."
+
+#: includes/class-typost-ps-transfer.php:770
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: this site does not know the pattern “%3$s”, so the rule is left out."
+msgstr "«%1$s», regla GREP %2$d: este sitio no conoce el patrón «%3$s», así que la regla se omite."
+
+#: includes/class-typost-ps-transfer.php:781
+#, php-format
+msgid "“%1$s”, GREP rule %2$d: “%3$s” is not imported, so the rule is left out."
+msgstr "«%1$s», regla GREP %2$d: «%3$s» no se importa, así que la regla se omite."
+
+#: assets/js/admin.js:1006
+msgid "Pattern"
+msgstr "Patrón"
+
+#: assets/js/admin.js:1022
+msgid "Regular expression"
+msgstr "Expresión regular"
+
+#: assets/js/admin.js:1035
+msgid "JavaScript-style syntax without slashes or flags, for example \\b[A-Z]{2,}\\b. Matching is case-sensitive."
+msgstr "Sintaxis de tipo JavaScript sin barras ni modificadores, por ejemplo \\b[A-Z]{2,}\\b. Distingue mayúsculas y minúsculas."
+
+#: assets/js/admin.js:1036
+msgid "Only administrators can change a custom pattern."
+msgstr "Solo los administradores pueden cambiar un patrón personalizado."
+
+#: assets/js/admin.js:1045
+msgid "Apply style"
+msgstr "Aplicar estilo"
+
+#: assets/js/admin.js:1047
+msgid "Choose a style"
+msgstr "Elige un estilo"
+
+#: assets/js/admin.js:1069
+msgid "Move up"
+msgstr "Subir"
+
+#: assets/js/admin.js:1070
+msgid "Move down"
+msgstr "Bajar"
+
+#: assets/js/admin.js:1071
+msgid "Remove"
+msgstr "Quitar"
+
+#: assets/js/admin.js:1110
+#, js-format
+msgid "GREP rule %d"
+msgstr "Regla GREP %d"
+
+#: assets/js/admin.js:1122
+#, js-format
+msgid "Move rule %d up"
+msgstr "Subir la regla %d"
+
+#: assets/js/admin.js:1127
+#, js-format
+msgid "Move rule %d down"
+msgstr "Bajar la regla %d"
+
+#: assets/js/admin.js:1132
+#, js-format
+msgid "Remove rule %d"
+msgstr "Quitar la regla %d"
+
+#: assets/js/admin.js:1292
+#, js-format
+msgid "The pattern is not valid in the browser: %s"
+msgstr "El patrón no es válido en el navegador: %s"
+
+#: assets/js/admin.js:1670
+#, js-format
+msgid "GREP rule %d added."
+msgstr "Regla GREP %d añadida."
+
+#: assets/js/admin.js:1687
+#, js-format
+msgid "Rule moved to position %d."
+msgstr "Regla movida a la posición %d."
+
+#: assets/js/admin.js:1697
+msgid "GREP rule removed."
+msgstr "Regla GREP quitada."
+
+#: includes/admin-tab.php:293
+msgid "Left indent"
+msgstr "Sangría izquierda"
+
+#: includes/admin-tab.php:294
+msgid "Left indent unit"
+msgstr "Unidad de la sangría izquierda"
+
+#: includes/admin-tab.php:301
+msgid "Right indent"
+msgstr "Sangría derecha"
+
+#: includes/admin-tab.php:302
+msgid "Right indent unit"
+msgstr "Unidad de la sangría derecha"
+
+#: includes/admin-tab.php:309
+msgid "First line indent"
+msgstr "Sangría de primera línea"
+
+#: includes/admin-tab.php:310
+msgid "First line indent unit"
+msgstr "Unidad de la sangría de primera línea"
+
+#: includes/admin-tab.php:313
+msgid "A negative value gives a hanging indent. A first line indent turns the first letter hang off."
+msgstr "Un valor negativo da una sangría francesa. Una sangría de primera línea desactiva el desborde de la primera letra."
+
+#: includes/admin-tab.php:318
+msgid "Space before"
+msgstr "Espacio antes"
+
+#: includes/admin-tab.php:319
+msgid "Space before unit"
+msgstr "Unidad del espacio antes"
+
+#: includes/admin-tab.php:326
+msgid "Space after"
+msgstr "Espacio después"
+
+#: includes/admin-tab.php:327
+msgid "Space after unit"
+msgstr "Unidad del espacio después"
+
+#: includes/admin-tab.php:334
+msgid "Indents and spacing"
+msgstr "Sangrías y espaciado"
+
+#: includes/admin-tab.php:335
+msgid "Indents and spacing apply to whole paragraphs and headings. They have no effect when the style is applied to selected text. Left and right follow the text direction: in right-to-left text, the left indent is on the right. On a core Paragraph or Heading block, the block’s own spacing or text indent setting overrides these."
+msgstr "Las sangrías y el espaciado se aplican a párrafos y encabezados completos. No tienen efecto cuando el estilo se aplica a un texto seleccionado. La izquierda y la derecha siguen la dirección del texto: en un texto de derecha a izquierda, la sangría izquierda está a la derecha. En un bloque nativo Párrafo o Encabezado, los ajustes de espaciado o de sangría de texto propios del bloque tienen prioridad sobre estos."
+
+#: includes/admin-tab.php:336
+msgid "Fit to width sets the width of each line itself, so a Fit to width style does not use indents."
+msgstr "Ajustar al ancho fija por sí mismo el ancho de cada línea, por lo que un estilo ajustado al ancho no usa sangrías."
+
+#: includes/admin-tab.php:356
+msgid "Indent the first line only after a paragraph with the same style"
+msgstr "Sangrar la primera línea solo después de un párrafo con el mismo estilo"
+
+#: includes/admin-tab.php:357
+msgid "The book convention: the first paragraph after a heading has no indent. Applies to a positive first line indent only."
+msgstr "La convención de los libros: el primer párrafo después de un encabezado no tiene sangría. Solo se aplica a una sangría de primera línea positiva."
+
+#: paragraph-styles.php:2260
+msgid "Left Indent:"
+msgstr "Sangría izquierda:"
+
+#: paragraph-styles.php:2261
+msgid "Right Indent:"
+msgstr "Sangría derecha:"
+
+#: paragraph-styles.php:2262
+msgid "First Line:"
+msgstr "Primera línea:"
+
+#: paragraph-styles.php:2265
+#, php-format
+msgid "%s (after the same style only)"
+msgstr "%s (solo después del mismo estilo)"
+
+#: paragraph-styles.php:2273
+msgid "Space Before:"
+msgstr "Espacio antes:"
+
+#: paragraph-styles.php:2274
+msgid "Space After:"
+msgstr "Espacio después:"
+
+#: assets/js/admin.js:656
+msgid "Enter 0 or more."
+msgstr "Introduce 0 o más."
+
+#: assets/js/admin.js:659
+msgid "Enter a value up to 1000px or 50em."
+msgstr "Introduce un valor de hasta 1000px o 50em."
+
+#: paragraph-styles.php:2291
+msgid "text color"
+msgstr "color del texto"
+
+#. translators: 1: outline width in pixels, 2: outline color, 3: "behind the fill" or "on top of the fill"
+#: paragraph-styles.php:2294
+#, php-format
+msgid "%1$spx, %2$s, %3$s"
+msgstr "%1$s px, %2$s, %3$s"
+
+#: paragraph-styles.php:2298
+msgid "behind the fill"
+msgstr "detrás del relleno"
+
+#: paragraph-styles.php:2299
+msgid "on top of the fill"
+msgstr "encima del relleno"
+
+#: paragraph-styles.php:2359
+msgid "Color:"
+msgstr "Color:"
+
+#: paragraph-styles.php:2362
+msgid "Outline:"
+msgstr "Contorno:"
+
+#: paragraph-styles.php:2560
+#: includes/admin-tab.php:331
+msgid "Transparent (outline only)"
+msgstr "Transparente (solo contorno)"
+
+#. translators: %s: palette color slug, such as accent-1
+#: paragraph-styles.php:2572
+#: assets/js/admin.js:356
+#, php-format,js-format
+msgid "%s (not in the theme palette)"
+msgstr "%s (no está en la paleta del tema)"
+
+#: includes/admin-tab.php:39
+msgid "Theme palette"
+msgstr "Paleta del tema"
+
+#: includes/admin-tab.php:40
+msgid "Site palette"
+msgstr "Paleta del sitio"
+
+#: includes/admin-tab.php:41
+msgid "Default palette"
+msgstr "Paleta predeterminada"
+
+#. translators: 1: palette color name, 2: its color value
+#: includes/admin-tab.php:57
+#, php-format
+msgid "%1$s (%2$s)"
+msgstr "%1$s (%2$s)"
+
+#: includes/admin-tab.php:321
+msgid "Color and outline"
+msgstr "Color y contorno"
+
+#: includes/admin-tab.php:324
+msgid "Text color"
+msgstr "Color del texto"
+
+#: includes/admin-tab.php:328
+msgid "Default (theme color)"
+msgstr "Predeterminado (color del tema)"
+
+#: includes/admin-tab.php:330
+#: includes/admin-tab.php:356
+msgid "Custom color"
+msgstr "Color personalizado"
+
+#: includes/admin-tab.php:334
+msgid "A palette color follows the theme: when the theme changes that color, every style that uses it changes too. A block’s own text color setting overrides this."
+msgstr "Un color de la paleta sigue al tema: cuando el tema cambia ese color, todos los estilos que lo usan cambian también. El ajuste de color del texto de un bloque tiene prioridad sobre este."
+
+#: includes/admin-tab.php:337
+msgid "Custom text color"
+msgstr "Color de texto personalizado"
+
+#: includes/admin-tab.php:340
+msgid "Pick the custom text color"
+msgstr "Elegir el color de texto personalizado"
+
+#: includes/admin-tab.php:346
+msgid "Outline width (px, 0 = none)"
+msgstr "Grosor del contorno (px, 0 = ninguno)"
+
+#: includes/admin-tab.php:350
+msgid "Outline color"
+msgstr "Color del contorno"
+
+#: includes/admin-tab.php:354
+msgid "Same as the text"
+msgstr "Igual que el texto"
+
+#: includes/admin-tab.php:361
+msgid "Custom outline color"
+msgstr "Color de contorno personalizado"
+
+#: includes/admin-tab.php:364
+msgid "Pick the custom outline color"
+msgstr "Elegir el color de contorno personalizado"
+
+#: includes/admin-tab.php:368
+msgid "Outline position"
+msgstr "Posición del contorno"
+
+#: includes/admin-tab.php:370
+msgid "On top of the fill"
+msgstr "Encima del relleno"
+
+#: includes/admin-tab.php:371
+msgid "Behind the fill"
+msgstr "Detrás del relleno"
+
+#: includes/admin-tab.php:373
+msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
+msgstr "El contorno se centra en el borde de cada letra: encima del relleno, un contorno grueso adelgaza las letras. Detrás del relleno, conservan su forma."
+
+#: includes/admin-tab.php:487
+msgid "In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top of the fill shows lines inside the letter. Behind the fill hides these lines, but outline-only text has no fill to hide them."
+msgstr "En algunas fuentes, a menudo fuentes variables, las partes de una letra se superponen, y un contorno encima del relleno muestra líneas dentro de la letra. Detrás del relleno, estas líneas quedan ocultas, pero el texto solo de contorno no tiene relleno que las oculte."
+
+#: includes/admin-tab.php:376
+msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
+msgstr "Un color hexadecimal como #c00 o #cc0000. Añade dos dígitos para la transparencia: #cc000080 es medio transparente."
+
+#: includes/admin-tab.php:377
+msgid "In Windows High Contrast mode (forced colors), the browser draws text and outline in the system text color, so outline-only text shows as solid text."
+msgstr "En el modo de contraste alto de Windows (colores forzados), el navegador dibuja el texto y el contorno en el color de texto del sistema, así que el texto solo con contorno se ve relleno."
+
+#: includes/class-typost-ps-transfer.php:526
+msgid "Palette colors this theme does not have"
+msgstr "Colores de paleta que este tema no tiene"
+
+#. translators: %s: list of style names
+#: includes/class-typost-ps-transfer.php:552
+#, php-format
+msgid "Used by: %s"
+msgstr "Usado por: %s"
+
+#: includes/class-typost-ps-transfer.php:553
+msgid "Not in the palette"
+msgstr "No está en la paleta"
+
+#. translators: %s: palette color slug
+#: includes/class-typost-ps-transfer.php:559
+#, php-format
+msgid "Keep the palette color “%s” (shows the file’s color until the theme has it)"
+msgstr "Mantener el color de paleta «%s» (muestra el color del archivo hasta que el tema lo tenga)"
+
+#. translators: %s: hex color
+#: includes/class-typost-ps-transfer.php:564
+#, php-format
+msgid "Use the color from the file (%s) as a custom color"
+msgstr "Usar el color del archivo (%s) como color personalizado"
+
+#. translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names
+#: includes/class-typost-ps-transfer.php:881
+#, php-format
+msgid "The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s."
+msgstr "El color de paleta %1$s (%2$s) es %3$s en este sitio y %4$s en el archivo. Estos estilos siguen la paleta de este sitio: %5$s."
+
+#. translators: 1: palette color slug, 2: list of style names
+#: includes/class-typost-ps-transfer.php:892
+#, php-format
+msgid "The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s."
+msgstr "El color de paleta «%1$s» no está en la paleta de este tema y el archivo no indica su color. Estos estilos muestran el color del texto que los rodea, o el color de texto predeterminado del navegador si el texto solo tiene contorno, hasta que el tema lo defina: %2$s."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:479
+#, js-format
+msgid "Low contrast: the text color has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 to be readable (WCAG 1.4.3)."
+msgstr "Contraste bajo: el color del texto tiene una relación de %1$s:1 con el fondo del tema (%2$s). El texto necesita al menos %3$s:1 para ser legible (WCAG 1.4.3)."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:481
+#, js-format
+msgid "Low contrast: the outline has a ratio of %1$s:1 against the theme background (%2$s). Outline-only text needs at least %3$s:1 (WCAG 1.4.3), and a thin outline loses more to smoothing."
+msgstr "Contraste bajo: el contorno tiene una relación de %1$s:1 con el fondo del tema (%2$s). El texto solo con contorno necesita al menos %3$s:1 (WCAG 1.4.3), y un contorno fino pierde más con el suavizado."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:483
+#, js-format
+msgid "Low contrast: the text color stands out from neither the theme background (%2$s) nor the outline; the better ratio is %1$s:1. Text needs at least %3$s:1 against one of them (WCAG 1.4.3)."
+msgstr "Contraste bajo: el color del texto no destaca ni sobre el fondo del tema (%2$s) ni sobre el contorno; la mejor relación es %1$s:1. El texto necesita al menos %3$s:1 con uno de los dos (WCAG 1.4.3)."
+
+#. translators: 1: contrast ratio, 2: the theme's background color, 3: the ratio WCAG asks for
+#: assets/js/admin.js:488
+#, js-format
+msgid "Low contrast: a wide outline on top of the fill covers most of each letter, and it has a ratio of %1$s:1 against the theme background (%2$s). Text needs at least %3$s:1 (WCAG 1.4.3). Use a thinner outline or another outline color, or put the outline behind the fill."
+msgstr "Contraste bajo: un contorno ancho encima del relleno cubre la mayor parte de cada letra y tiene una relación de %1$s:1 con el fondo del tema (%2$s). El texto necesita al menos %3$s:1 (WCAG 1.4.3). Usa un contorno más fino u otro color de contorno, o pon el contorno detrás del relleno."
+
+#: assets/js/admin.js:864
+msgid "Enter a hex color, such as #c00 or #cc0000."
+msgstr "Introduce un color hexadecimal, como #c00 o #cc0000."
+
+#: assets/js/admin.js:868
+msgid "Enter an outline width from 0 to 20."
+msgstr "Introduce un grosor de contorno entre 0 y 20."
+
+#: assets/js/admin.js:873
+msgid "Transparent text shows only its outline. Give the outline a width and a visible color of its own, or choose another text color."
+msgstr "El texto transparente solo muestra su contorno. Da al contorno un grosor y un color propio visible, o elige otro color de texto."
+
+#: assets/js/editor.js:193
+msgid "outline"
+msgstr "contorno"
+
+#: assets/js/editor.js:194
+msgid "first line indent"
+msgstr "sangría de primera línea"
+
+#: assets/js/editor.js:196
+msgid "word spacing"
+msgstr "espaciado entre palabras"
+
+#: assets/js/editor.js:197
+msgid "line breaking"
+msgstr "saltos de línea"
+
+#: assets/js/editor.js:198
+msgid "justified alignment"
+msgstr "alineación justificada"
+
+#: assets/js/editor.js:199
+msgid "last line alignment"
+msgstr "alineación de la última línea"
+
+#: assets/js/editor.js:200
+msgid "font"
+msgstr "fuente"
+
+#: assets/js/editor.js:201
+msgid "font weight"
+msgstr "grosor de fuente"
+
+#: assets/js/editor.js:202
+msgid "font style"
+msgstr "estilo de fuente"
+
+#: assets/js/editor.js:203
+msgid "font size"
+msgstr "tamaño de fuente"
+
+#: assets/js/editor.js:204
+msgid "letter spacing"
+msgstr "espaciado entre letras"
+
+#: assets/js/editor.js:205
+msgid "line height"
+msgstr "altura de línea"
+
+#: assets/js/editor.js:207
+msgid "variable font axes"
+msgstr "ejes de fuente variable"
+
+#: assets/js/editor.js:209
+msgid "case"
+msgstr "mayúsculas y minúsculas"
+
+#. translators: %s: comma-separated list of style settings.
+#: assets/js/editor.js:216
+#, js-format
+msgid "Detach Style removed these settings from the block: %s."
+msgstr "Desvincular estilo eliminó estos ajustes del bloque: %s."
+
+#: assets/js/editor.js:221
+msgid "Some values set in em are now in px, at the current text size."
+msgstr "Algunos valores definidos en em ahora están en px, con el tamaño de texto actual."
+
+#: assets/js/editor.js:208
+msgid "first letter hang"
+msgstr "desborde de la primera letra"
+
+#: assets/js/editor.js:195
+msgid "“Indent the first line only after a paragraph with the same style”"
+msgstr "«Sangrar la primera línea solo después de un párrafo con el mismo estilo»"
+
+#: assets/js/editor.js:200
+msgid "GREP rules"
+msgstr "reglas GREP"
+
+#: includes/admin-tab.php:320
+msgid "Hyphenation"
+msgstr "División de palabras"
+
+#: includes/admin-tab.php:321
+msgid "Fit to width keeps each line on one line, so a Fit to width style does not use hyphenation."
+msgstr "Ajustar al ancho mantiene cada línea en una sola línea, así que un estilo Ajustar al ancho no usa la división de palabras."
+
+#: includes/admin-tab.php:325
+msgid "Hyphenate"
+msgstr "Dividir palabras"
+
+#: includes/admin-tab.php:326
+msgid "Breaks long words at line ends, which evens out the gaps in justified or narrow text. Frequent hyphens make some readers, including many people with dyslexia, put words back together, so use it mainly where it helps. Browsers hyphenate only when they know the page language and have a dictionary for it, and the dictionaries differ by browser; Chrome does not hyphenate capitalized English words. The hyphens are not added to the text, so screen readers and copied text are unchanged. Soft hyphens typed in the text work with hyphenation off too."
+msgstr "Divide las palabras largas al final de la línea, lo que iguala los espacios en un texto justificado o estrecho. Los guiones frecuentes obligan a algunos lectores, entre ellos muchas personas con dislexia, a recomponer las palabras, así que úselo sobre todo donde ayude. Los navegadores solo dividen palabras cuando conocen el idioma de la página y tienen un diccionario para él, y los diccionarios varían según el navegador; Chrome no divide las palabras en inglés que empiezan con mayúscula. Los guiones no se añaden al texto, así que los lectores de pantalla y el texto copiado no cambian. Los guiones suaves escritos en el texto también funcionan con la división desactivada."
+
+#: includes/admin-tab.php:330
+msgid "Shortest word to hyphenate (letters)"
+msgstr "Palabra más corta que se divide (letras)"
+
+#: includes/admin-tab.php:331
+#: includes/admin-tab.php:335
+#: includes/admin-tab.php:339
+msgid "Auto"
+msgstr "Automático"
+
+#: includes/admin-tab.php:334
+msgid "Fewest letters before a hyphen"
+msgstr "Mínimo de letras antes del guion"
+
+#: includes/admin-tab.php:338
+msgid "Fewest letters after a hyphen"
+msgstr "Mínimo de letras después del guion"
+
+#: includes/admin-tab.php:342
+msgid "Hyphen character"
+msgstr "Carácter de guion"
+
+#: includes/admin-tab.php:344
+msgid "Empty uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons."
+msgstr "Vacío usa el guion del idioma. Hasta 4 caracteres, sin comillas, barras invertidas, corchetes angulares, llaves ni puntos y coma."
+
+#: includes/admin-tab.php:347
+msgid "Empty means the browser decides. Safari ignores these limits and uses its own."
+msgstr "Vacío significa que decide el navegador. Safari ignora estos límites y usa los suyos."
+
+#: paragraph-styles.php:3284
+msgid "Hyphenation:"
+msgstr "División de palabras:"
+
+#. translators: %d: fewest letters in a word that is hyphenated
+#: paragraph-styles.php:3603
+#, php-format
+msgid "words of %d+ letters"
+msgstr "palabras de %d letras o más"
+
+#. translators: %d: fewest letters before a hyphen
+#: paragraph-styles.php:3607
+#, php-format
+msgid "%d+ before the hyphen"
+msgstr "%d o más antes del guion"
+
+#. translators: %d: fewest letters after a hyphen
+#: paragraph-styles.php:3611
+#, php-format
+msgid "%d+ after the hyphen"
+msgstr "%d o más después del guion"
+
+#. translators: %s: the character shown at a line break, such as "="
+#: paragraph-styles.php:3615
+#, php-format
+msgid "hyphen “%s”"
+msgstr "guion «%s»"
+
+#: paragraph-styles.php:3618
+msgid "On"
+msgstr "Activada"
+
+#. translators: %s: hyphenation settings, such as "words of 6+ letters, 2+ before the hyphen"
+#: paragraph-styles.php:3621
+#, php-format
+msgid "On (%s)"
+msgstr "Activada (%s)"
+
+#. translators: %d: largest letter limit
+#: assets/js/admin.js:980
+#, js-format
+msgid "Enter a whole number from 1 to %d, or leave it empty."
+msgstr "Introduzca un número entero de 1 a %d, o déjelo vacío."
+
+#: assets/js/admin.js:984
+msgid "Enter up to 4 characters with no quotes, backslashes, angle brackets, braces or semicolons, or leave it empty."
+msgstr "Introduzca hasta 4 caracteres sin comillas, barras invertidas, corchetes angulares, llaves ni puntos y coma, o déjelo vacío."
+
+#: assets/js/editor.js:199
+msgid "hyphenation"
+msgstr "división de palabras"
+
+#: includes/class-typost-ps-nested.php:95
+msgid "Words"
+msgstr "Palabras"
+
+#: includes/class-typost-ps-nested.php:96
+msgid "Characters"
+msgstr "Caracteres"
+
+#: includes/class-typost-ps-nested.php:97
+msgid "A character you type"
+msgstr "Un carácter que escribes"
+
+#: includes/class-typost-ps-nested.php:37
+#: includes/class-typost-ps-nested.php:98
+#: includes/class-typost-ps-nested.php:116
+#: includes/class-typost-ps-nested.php:143
+msgid "First line"
+msgstr "Primera línea"
+
+#: includes/class-typost-ps-nested.php:26
+#: includes/class-typost-ps-nested.php:33
+#: includes/class-typost-ps-nested.php:109
+msgid "Through"
+msgstr "Hasta (incluido)"
+
+#: includes/class-typost-ps-nested.php:28
+#: includes/class-typost-ps-nested.php:33
+#: includes/class-typost-ps-nested.php:110
+msgid "Up to"
+msgstr "Hasta (sin incluir)"
+
+#. translators: %d: number of words
+#: includes/class-typost-ps-nested.php:129
+#, php-format
+msgid "Through %d word"
+msgid_plural "Through %d words"
+msgstr[0] "Hasta %d palabra (incluida)"
+msgstr[1] "Hasta %d palabras (incluidas)"
+
+#. translators: %d: number of words
+#: includes/class-typost-ps-nested.php:131
+#, php-format
+msgid "Up to %d word"
+msgid_plural "Up to %d words"
+msgstr[0] "Hasta %d palabra (sin incluir)"
+msgstr[1] "Hasta %d palabras (sin incluir)"
+
+#. translators: %d: number of characters
+#: includes/class-typost-ps-nested.php:134
+#, php-format
+msgid "%d character"
+msgid_plural "%d characters"
+msgstr[0] "%d carácter"
+msgstr[1] "%d caracteres"
+
+#. translators: 1: how many times the character occurs, 2: the character, such as ":"
+#: includes/class-typost-ps-nested.php:139
+#, php-format
+msgid "Through %1$d “%2$s”"
+msgstr "Hasta %1$d «%2$s» (incluido)"
+
+#. translators: 1: how many times the character occurs, 2: the character, such as ":"
+#: includes/class-typost-ps-nested.php:141
+#, php-format
+msgid "Up to %1$d “%2$s”"
+msgstr "Hasta %1$d «%2$s» (sin incluir)"
+
+#: includes/class-typost-ps-nested.php:175
+msgid "Nested styles must be a list of rules."
+msgstr "Los estilos anidados deben ser una lista de reglas."
+
+#. translators: %d: the most nested rules a style can have
+#: includes/class-typost-ps-nested.php:180
+#, php-format
+msgid "A style can have %d nested rules at most."
+msgstr "Un estilo puede tener como máximo %d reglas anidadas."
+
+#: includes/class-typost-ps-nested.php:195
+msgid "A nested rule is not valid."
+msgstr "Una regla anidada no es válida."
+
+#: includes/class-typost-ps-nested.php:200
+#: assets/js/admin.js:2076
+msgid "Choose a style for each nested rule."
+msgstr "Elige un estilo para cada regla anidada."
+
+#: includes/class-typost-ps-nested.php:203
+msgid "A nested rule cannot apply the style it belongs to. Choose another style."
+msgstr "Una regla anidada no puede aplicar el estilo al que pertenece. Elige otro estilo."
+
+#: includes/class-typost-ps-nested.php:208
+msgid "Choose a unit for each nested rule."
+msgstr "Elige una unidad para cada regla anidada."
+
+#: includes/class-typost-ps-nested.php:218
+#: assets/js/admin.js:2080
+msgid "A First line rule must be the last nested rule: where the first line ends depends on the screen width, so no rule can start after it."
+msgstr "Una regla de Primera línea debe ser la última regla anidada: dónde termina la primera línea depende del ancho de la pantalla, así que ninguna regla puede empezar después."
+
+#. translators: %d: the highest count
+#: includes/class-typost-ps-nested.php:230
+#: assets/js/admin.js:2086
+#, php-format
+msgid "Enter a whole number from 1 to %d."
+msgstr "Introduce un número entero del 1 al %d."
+
+#: includes/class-typost-ps-nested.php:246
+msgid "Choose Through or Up to."
+msgstr "Elige Hasta (incluido) o Hasta (sin incluir)."
+
+#: includes/class-typost-ps-nested.php:267
+#: assets/js/admin.js:2090
+msgid "Type the character that ends the rule, such as a colon."
+msgstr "Escribe el carácter que termina la regla, por ejemplo los dos puntos."
+
+#: includes/class-typost-ps-nested.php:270
+#: assets/js/admin.js:2093
+msgid "Type one character only."
+msgstr "Escribe un solo carácter."
+
+#: includes/class-typost-ps-nested.php:273
+#: assets/js/admin.js:2096
+msgid "This character cannot end a rule. Type a letter, a digit, a punctuation mark or a symbol."
+msgstr "Este carácter no puede terminar una regla. Escribe una letra, un dígito, un signo de puntuación o un símbolo."
+
+#: paragraph-styles.php:3525
+msgid "Nested styles:"
+msgstr "Estilos anidados:"
+
+#: includes/admin-tab.php:524
+msgid "Nested styles"
+msgstr "Estilos anidados"
+
+#: includes/admin-tab.php:526
+msgid "Apply other styles to the start of the text, wherever this style is used on a whole block: for example Bold through the first colon, then Small caps up to 3 words. Each rule starts where the one before it stopped, at its first character that is not a space. The saved text does not change. Through includes the space after the last word, or the character itself; Up to stops before it. First line follows the screen width, so it can only be the last rule. Fit to width blocks are left as they are."
+msgstr "Aplica otros estilos al principio del texto, allí donde este estilo se use en un bloque entero: por ejemplo Negrita hasta los primeros dos puntos y después Versalitas en 3 palabras. Cada regla empieza donde se detuvo la anterior, en su primer carácter que no sea un espacio. El texto guardado no cambia. Hasta (incluido) incluye el espacio tras la última palabra, o el propio carácter; Hasta (sin incluir) se detiene antes. Primera línea sigue el ancho de la pantalla, así que solo puede ser la última regla. Los bloques ajustados al ancho se dejan como están."
+
+#: includes/admin-tab.php:529
+msgid "No nested rules."
+msgstr "No hay reglas anidadas."
+
+#: includes/admin-tab.php:531
+msgid "Add nested rule"
+msgstr "Añadir regla anidada"
+
+#. translators: 1: name of the style added to the export, 2: name of the style whose nested rule applies it
+#: includes/class-typost-ps-transfer.php:189
+#, php-format
+msgid "“%1$s” was added because a nested rule of “%2$s” applies it."
+msgstr "Se ha añadido «%1$s» porque una regla anidada de «%2$s» lo aplica."
+
+#. translators: 1: style name, 2: rule number, 3: why the rule is rejected
+#: includes/class-typost-ps-transfer.php:527
+#, php-format
+msgid "“%1$s”, nested rule %2$d: %3$s Nothing was saved."
+msgstr "«%1$s», regla anidada %2$d: %3$s No se ha guardado nada."
+
+#: includes/class-typost-ps-transfer.php:730
+msgid "Nested styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated."
+msgstr "Los estilos anidados necesitan WordPress 6.9 o posterior. Se importan, pero no tienen efecto en este sitio hasta que se actualice WordPress."
+
+#. translators: 1: style name, 2: rule number, 3: name of the style the rule applies
+#: includes/class-typost-ps-transfer.php:1120
+#, php-format
+msgid "“%1$s”, nested rule %2$d: “%3$s” is not imported, so the rule is left out and the rules after it start earlier."
+msgstr "«%1$s», regla anidada %2$d: «%3$s» no se importa, así que la regla se omite y las reglas siguientes empiezan antes."
+
+#: assets/js/admin.js:1844
+msgid "Ends"
+msgstr "Termina"
+
+#: assets/js/admin.js:1857
+msgid "Count"
+msgstr "Cantidad"
+
+#: assets/js/admin.js:196
+#: assets/js/admin.js:225
+#: assets/js/admin.js:742
+#: assets/js/admin.js:1859
+msgid "Unit"
+msgstr "Unidad"
+
+#: assets/js/admin.js:1872
+msgid "Character"
+msgstr "Carácter"
+
+#: assets/js/admin.js:1874
+msgid "One character, such as : or —. Matching is case-sensitive."
+msgstr "Un carácter, como : o —. Distingue mayúsculas y minúsculas."
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1928
+#, js-format
+msgid "Nested rule %d"
+msgstr "Regla anidada %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1940
+#, js-format
+msgid "Move nested rule %d up"
+msgstr "Subir la regla anidada %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1945
+#, js-format
+msgid "Move nested rule %d down"
+msgstr "Bajar la regla anidada %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:1950
+#, js-format
+msgid "Remove nested rule %d"
+msgstr "Eliminar la regla anidada %d"
+
+#. translators: %d: rule number
+#: assets/js/admin.js:2554
+#, js-format
+msgid "Nested rule %d added."
+msgstr "Regla anidada %d añadida."
+
+#: assets/js/admin.js:2580
+msgid "Nested rule removed."
+msgstr "Regla anidada eliminada."
+
+#: assets/js/editor.js:202
+msgid "nested styles"
+msgstr "estilos anidados"
+
+#. translators: %s: comma-separated list of style names
+#: assets/js/admin.js:2684
+#, js-format
+msgid "Nested rules that apply this style will be removed from: %s. The rules after them will start earlier on every post that uses those styles."
+msgstr "Las reglas anidadas que aplican este estilo se eliminarán de: %s. Las reglas siguientes empezarán antes en cada entrada que use esos estilos."

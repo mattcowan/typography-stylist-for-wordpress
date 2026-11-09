@@ -13,6 +13,21 @@
  * source site. A style with a parent is written with its own properties
  * only, exactly as stored, so inheritance survives the trip.
  *
+ * GREP styles (#196) are written as `"grepRules": [{"pattern": "acronyms",
+ * "style": "s3"}, {"pattern": "custom", "regex": "…", "style": "s4"}]`:
+ * the style a rule applies is a file key too (and is exported with it),
+ * and a built-in pattern is written by name, so a later release can fix
+ * it. A style with no rules writes an empty list, so importing it over an
+ * existing style removes that style's rules. A style written before #196
+ * has no `grepRules` key; importing it over an existing style keeps that
+ * style's rules.
+ *
+ * Nested styles (#195) are written the same way, as `"nestedRules":
+ * [{"style": "s3", "unit": "marker", "count": 1, "marker": ":", "end":
+ * "through"}, {"style": "s4", "unit": "line"}]`, always written, and a
+ * file with no `nestedRules` key keeps an overwritten style's rules. The
+ * marker is written as the character itself (JSON keeps any character).
+ *
  * Import gives every added style a new ID and saves every style in one
  * write, after a dry run that checks names, parents and chains.
  *
@@ -132,25 +147,50 @@ final class Typost_PS_Transfer {
 		}
 
 		// A style needs the styles it is based on, or it cannot be imported
-		// as it looks here.
+		// as it looks here, and the styles its GREP rules (#196) and nested
+		// rules (#195) apply.
+		// Added styles can need others in turn, so this runs until nothing
+		// is added.
 		$notes    = array();
 		$selected = $picked;
-		foreach ( array_keys( $picked ) as $id ) {
+		$queue    = array_keys( $picked );
+		while ( ! empty( $queue ) ) {
+			$id      = array_shift( $queue );
 			$current = $by_id[ $id ];
-			$seen    = array( $id => true );
-			while ( ! empty( $current['basedOn'] ) && isset( $by_id[ intval( $current['basedOn'] ) ] ) && ! isset( $seen[ intval( $current['basedOn'] ) ] ) ) {
-				$parent_id          = intval( $current['basedOn'] );
-				$seen[ $parent_id ] = true;
-				if ( ! isset( $selected[ $parent_id ] ) ) {
-					$selected[ $parent_id ] = true;
+			if ( ! empty( $current['basedOn'] ) && isset( $by_id[ intval( $current['basedOn'] ) ] ) && ! isset( $selected[ intval( $current['basedOn'] ) ] ) ) {
+				$parent_id              = intval( $current['basedOn'] );
+				$selected[ $parent_id ] = true;
+				$queue[]                = $parent_id;
+				$notes[]                = sprintf(
+					/* translators: 1: name of the style added to the export, 2: name of the style based on it */
+					__( '“%1$s” was added because “%2$s” is based on it.', 'typost-paragraph-styles' ),
+					$by_id[ $parent_id ]['name'],
+					$current['name']
+				);
+			}
+			foreach ( Typost_PS_Grep::target_style_ids( isset( $current['grepRules'] ) ? $current['grepRules'] : array() ) as $target_id ) {
+				if ( isset( $by_id[ $target_id ] ) && ! isset( $selected[ $target_id ] ) ) {
+					$selected[ $target_id ] = true;
+					$queue[]                = $target_id;
 					$notes[]                = sprintf(
-						/* translators: 1: name of the style added to the export, 2: name of the style based on it */
-						__( '“%1$s” was added because “%2$s” is based on it.', 'typost-paragraph-styles' ),
-						$by_id[ $parent_id ]['name'],
+						/* translators: 1: name of the style added to the export, 2: name of the style whose GREP rule applies it */
+						__( '“%1$s” was added because a GREP rule of “%2$s” applies it.', 'typost-paragraph-styles' ),
+						$by_id[ $target_id ]['name'],
 						$current['name']
 					);
 				}
-				$current = $by_id[ $parent_id ];
+			}
+			foreach ( Typost_PS_Nested::target_style_ids( isset( $current['nestedRules'] ) ? $current['nestedRules'] : array() ) as $target_id ) {
+				if ( isset( $by_id[ $target_id ] ) && ! isset( $selected[ $target_id ] ) ) {
+					$selected[ $target_id ] = true;
+					$queue[]                = $target_id;
+					$notes[]                = sprintf(
+						/* translators: 1: name of the style added to the export, 2: name of the style whose nested rule applies it */
+						__( '“%1$s” was added because a nested rule of “%2$s” applies it.', 'typost-paragraph-styles' ),
+						$by_id[ $target_id ]['name'],
+						$current['name']
+					);
+				}
 			}
 		}
 
@@ -163,7 +203,8 @@ final class Typost_PS_Transfer {
 			}
 		}
 
-		$out = array();
+		$out     = array();
+		$palette = Typost_Paragraph_Styles::get_color_palette();
 		foreach ( $styles as $style ) {
 			if ( ! isset( $style['id'] ) || ! isset( $keys[ intval( $style['id'] ) ] ) ) {
 				continue;
@@ -174,18 +215,215 @@ final class Typost_PS_Transfer {
 			$properties = null === $parent_key
 				? Typost_Paragraph_Styles::compact_properties( Typost_Paragraph_Styles::resolve_properties( $style, $styles ) )
 				: ( isset( $style['properties'] ) && is_array( $style['properties'] ) ? $style['properties'] : array() );
-			$out[]      = array(
+			$entry      = array(
 				'key'        => $keys[ intval( $style['id'] ) ],
 				'name'       => (string) $style['name'],
 				'basedOn'    => $parent_key,
-				'properties' => self::export_fonts( $properties, $fonts, null !== $parent_key ),
+				'properties' => self::export_fonts( self::export_colors( $properties, $palette ), $fonts, null !== $parent_key ),
 			);
+			// Always written: plan() reads no key as "keep the existing rules",
+			// so an empty list is how Overwrite removes them.
+			$entry['grepRules']   = self::export_grep_rules( isset( $style['grepRules'] ) ? $style['grepRules'] : array(), $keys );
+			$entry['nestedRules'] = self::export_nested_rules( isset( $style['nestedRules'] ) ? $style['nestedRules'] : array(), $keys );
+			$out[]                = $entry;
 		}
 
 		return array(
 			'data'  => $out,
 			'notes' => $notes,
 		);
+	}
+
+	/** @var string[] Properties that hold a color (#215) */
+	const COLOR_KEYS = array( 'textColor', 'textStrokeColor' );
+
+	/**
+	 * Write each palette color as `{slug, value}` (#215). A palette slug
+	 * means another color, or nothing, on a site with another theme, so the
+	 * file also carries the color it is on this site: the palette's color
+	 * now when it is a hex color, else the color the style saved with it.
+	 * A custom color is written as it is.
+	 *
+	 * @param array   $properties Style properties.
+	 * @param array[] $palette    Typost_Paragraph_Styles::get_color_palette().
+	 * @return array
+	 */
+	private static function export_colors( $properties, $palette ) {
+		foreach ( self::COLOR_KEYS as $key ) {
+			if ( ! isset( $properties[ $key ] ) ) {
+				continue;
+			}
+			$slug = Typost_Paragraph_Styles::palette_color_slug( $properties[ $key ] );
+			if ( '' === $slug ) {
+				continue;
+			}
+			$value = Typost_Paragraph_Styles::palette_color_fallback( $properties[ $key ] );
+			foreach ( $palette as $entry ) {
+				if ( $entry['slug'] === $slug && '' !== Typost_Paragraph_Styles::normalize_hex_color( $entry['color'] ) ) {
+					$value = Typost_Paragraph_Styles::normalize_hex_color( $entry['color'] );
+				}
+			}
+			$properties[ $key ] = '' !== $value
+				? array(
+					'slug'  => $slug,
+					'value' => $value,
+				)
+				: array( 'slug' => $slug );
+		}
+		return $properties;
+	}
+
+	/**
+	 * The palette colors a file's styles use (#215).
+	 *
+	 * @param array[] $items read_items().
+	 * @return array<string,array> Slug => {value: string ('' when the file
+	 *                             has none), styles: string[]}.
+	 */
+	private static function file_palette_colors( $items ) {
+		$out = array();
+		foreach ( $items as $item ) {
+			foreach ( self::COLOR_KEYS as $key ) {
+				$color = isset( $item['properties'][ $key ] ) ? $item['properties'][ $key ] : null;
+				if ( ! is_array( $color ) || ! isset( $color['slug'] ) || ! is_string( $color['slug'] ) || ! preg_match( '/^[a-z0-9-]{1,100}$/', $color['slug'] ) ) {
+					continue;
+				}
+				$slug = $color['slug'];
+				if ( ! isset( $out[ $slug ] ) ) {
+					$out[ $slug ] = array(
+						'value'  => isset( $color['value'] ) ? Typost_Paragraph_Styles::normalize_hex_color( $color['value'] ) : '',
+						'styles' => array(),
+					);
+				}
+				if ( ! in_array( $item['name'], $out[ $slug ]['styles'], true ) ) {
+					$out[ $slug ]['styles'][] = $item['name'];
+				}
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * This site's palette by slug.
+	 *
+	 * @return array<string,array>
+	 */
+	private static function palette_by_slug() {
+		$out = array();
+		foreach ( Typost_Paragraph_Styles::get_color_palette() as $entry ) {
+			$out[ $entry['slug'] ] = $entry;
+		}
+		return $out;
+	}
+
+	/**
+	 * The import choices for palette colors (#215): `color:{slug}` keys in
+	 * the section's choices, 'slug' (keep the palette reference, which
+	 * renders the file's color until the theme defines the slug) or 'value'
+	 * (store the file's color as a custom color). Only slugs this site's
+	 * palette does not have are asked about; a slug it has always keeps
+	 * the reference.
+	 *
+	 * @param mixed $choices Section choices.
+	 * @return array<string,string> Slug => 'slug'|'value'.
+	 */
+	private static function color_choices( $choices ) {
+		$out = array();
+		foreach ( is_array( $choices ) ? $choices : array() as $key => $choice ) {
+			if ( is_string( $key ) && 0 === strpos( $key, 'color:' ) && in_array( $choice, array( 'slug', 'value' ), true ) ) {
+				$out[ substr( $key, 6 ) ] = $choice;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Turn the file's `{slug, value}` colors into stored colors (#215).
+	 *
+	 * A slug this site's palette has keeps the reference, with this site's
+	 * color as the fallback (the file's when this site's is not hex). One it does not have keeps the reference with
+	 * the file's color as the fallback, or becomes that color as a custom
+	 * color when the author chose so.
+	 *
+	 * @param array                $properties Properties from the file.
+	 * @param array<string,string> $choices    color_choices().
+	 * @param array<string,array>  $palette    palette_by_slug().
+	 * @return array
+	 */
+	private static function map_colors( $properties, $choices, $palette ) {
+		foreach ( self::COLOR_KEYS as $key ) {
+			if ( ! isset( $properties[ $key ] ) || ! is_array( $properties[ $key ] ) ) {
+				continue;
+			}
+			$color = $properties[ $key ];
+			$slug  = isset( $color['slug'] ) && is_string( $color['slug'] ) ? $color['slug'] : '';
+			$value = isset( $color['value'] ) ? Typost_Paragraph_Styles::normalize_hex_color( $color['value'] ) : '';
+			if ( ! preg_match( '/^[a-z0-9-]{1,100}$/', $slug ) ) {
+				unset( $properties[ $key ] );
+				continue;
+			}
+			if ( isset( $palette[ $slug ] ) ) {
+				// The fallback is this site's color; a palette color that is
+				// not hex keeps the file's
+				$local              = Typost_Paragraph_Styles::normalize_hex_color( $palette[ $slug ]['color'] );
+				$local              = '' !== $local ? $local : $value;
+				$properties[ $key ] = 'var:preset|color|' . $slug . ( '' !== $local ? '|' . $local : '' );
+			} elseif ( '' !== $value && isset( $choices[ $slug ] ) && 'value' === $choices[ $slug ] ) {
+				$properties[ $key ] = $value;
+			} else {
+				$properties[ $key ] = 'var:preset|color|' . $slug . ( '' !== $value ? '|' . $value : '' );
+			}
+		}
+		return $properties;
+	}
+
+	/**
+	 * A style's GREP rules with file style keys (#196). A rule whose style
+	 * is not in the file (it was deleted) is left out.
+	 *
+	 * @param mixed $rules Stored rules.
+	 * @param array $keys  Style ID => file key.
+	 * @return array[]
+	 */
+	private static function export_grep_rules( $rules, $keys ) {
+		$out = array();
+		foreach ( is_array( $rules ) ? $rules : array() as $rule ) {
+			if ( ! is_array( $rule ) || empty( $rule['styleId'] ) || ! isset( $rule['pattern'], $keys[ intval( $rule['styleId'] ) ] ) ) {
+				continue;
+			}
+			$entry = array( 'pattern' => (string) $rule['pattern'] );
+			if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+				$entry['regex'] = isset( $rule['regex'] ) ? (string) $rule['regex'] : '';
+			}
+			$entry['style'] = $keys[ intval( $rule['styleId'] ) ];
+			$out[]          = $entry;
+		}
+		return $out;
+	}
+
+	/**
+	 * A style's nested rules with file style keys (#195). A rule whose
+	 * style is not in the file (it was deleted) is left out.
+	 *
+	 * @param mixed $rules Stored rules.
+	 * @param array $keys  Style ID => file key.
+	 * @return array[]
+	 */
+	private static function export_nested_rules( $rules, $keys ) {
+		$out = array();
+		foreach ( is_array( $rules ) ? $rules : array() as $rule ) {
+			if ( ! is_array( $rule ) || empty( $rule['styleId'] ) || ! isset( $rule['unit'], $keys[ intval( $rule['styleId'] ) ] ) ) {
+				continue;
+			}
+			$entry = array( 'style' => $keys[ intval( $rule['styleId'] ) ] );
+			foreach ( array( 'unit', 'count', 'marker', 'end' ) as $field ) {
+				if ( isset( $rule[ $field ] ) ) {
+					$entry[ $field ] = $rule[ $field ];
+				}
+			}
+			$out[] = $entry;
+		}
+		return $out;
 	}
 
 	/**
@@ -247,16 +485,93 @@ final class Typost_PS_Transfer {
 			if ( ! is_array( $properties ) ) {
 				return $invalid;
 			}
+			// GREP rules (#196): null when the file has none (a file written
+			// before #196 keeps an overwritten style's own rules)
+			$grep_rules = null;
+			if ( array_key_exists( 'grepRules', $raw ) ) {
+				$grep_rules = $raw['grepRules'];
+				if ( ! is_array( $grep_rules ) || array_values( $grep_rules ) !== $grep_rules || count( $grep_rules ) > Typost_PS_Grep::MAX_RULES ) {
+					return $invalid;
+				}
+				foreach ( $grep_rules as $rule ) {
+					if ( ! is_array( $rule ) || ! isset( $rule['pattern'], $rule['style'] ) || ! is_string( $rule['pattern'] ) || ! is_string( $rule['style'] ) || $rule['style'] === $raw['key'] ) {
+						return $invalid;
+					}
+					if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] && ( ! isset( $rule['regex'] ) || ! is_string( $rule['regex'] ) ) ) {
+						return $invalid;
+					}
+				}
+			}
+			// Nested rules (#195): null when the file has none. Each rule
+			// gets the checks of Save (a placeholder style stands in for its
+			// file key), and one that fails rejects the whole file.
+			$nested_rules = null;
+			if ( array_key_exists( 'nestedRules', $raw ) ) {
+				$file_rules = $raw['nestedRules'];
+				if ( ! is_array( $file_rules ) || array_values( $file_rules ) !== $file_rules ) {
+					return $invalid;
+				}
+				$check = array();
+				foreach ( $file_rules as $rule ) {
+					if ( ! is_array( $rule ) || ! isset( $rule['style'] ) || ! is_string( $rule['style'] ) || $rule['style'] === $raw['key'] ) {
+						return $invalid;
+					}
+					$check[] = array_merge( $rule, array( 'styleId' => 1 ) );
+				}
+				$nested = Typost_PS_Nested::sanitize_rules( $check, array( 'style_ids' => array( 1 ) ) );
+				if ( '' !== $nested['error'] ) {
+					return new WP_Error(
+						'typost_import_invalid_file',
+						$nested['index'] >= 0
+							/* translators: 1: style name, 2: rule number, 3: why the rule is rejected */
+							? sprintf( __( '“%1$s”, nested rule %2$d: %3$s Nothing was saved.', 'typost-paragraph-styles' ), $name, $nested['index'] + 1, $nested['error'] )
+							/* translators: 1: style name, 2: why the rules are rejected */
+							: sprintf( __( '“%1$s”: %2$s Nothing was saved.', 'typost-paragraph-styles' ), $name, $nested['error'] ),
+						array( 'status' => 400 )
+					);
+				}
+				$nested_rules = array();
+				foreach ( $nested['rules'] as $index => $clean ) {
+					unset( $clean['styleId'] );
+					$nested_rules[] = array_merge( array( 'style' => $file_rules[ $index ]['style'] ), $clean );
+				}
+			}
 			$items[ $raw['key'] ] = array(
-				'key'        => $raw['key'],
-				'name'       => $name,
-				'basedOn'    => $based_on,
-				'properties' => $properties,
+				'key'         => $raw['key'],
+				'name'        => $name,
+				'basedOn'     => $based_on,
+				'properties'  => $properties,
+				'grepRules'   => $grep_rules,
+				'nestedRules' => $nested_rules,
 			);
 		}
 		foreach ( $items as $item ) {
 			if ( null !== $item['basedOn'] && ! isset( $items[ $item['basedOn'] ] ) ) {
 				return $invalid;
+			}
+			foreach ( is_array( $item['nestedRules'] ) ? $item['nestedRules'] : array() as $rule ) {
+				if ( ! isset( $items[ $rule['style'] ] ) ) {
+					return $invalid;
+				}
+			}
+			foreach ( is_array( $item['grepRules'] ) ? $item['grepRules'] : array() as $index => $rule ) {
+				if ( ! isset( $items[ $rule['style'] ] ) ) {
+					return $invalid;
+				}
+				// A custom pattern runs on every page render that uses the
+				// style, so it gets the same checks as Save, and one that
+				// fails rejects the whole file.
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					$error = Typost_PS_Grep::validate_pattern( $rule['regex'] );
+					if ( '' !== $error ) {
+						return new WP_Error(
+							'typost_import_invalid_file',
+							/* translators: 1: style name, 2: rule number, 3: why the pattern is rejected */
+							sprintf( __( '“%1$s”, GREP rule %2$d: %3$s Nothing was saved.', 'typost-paragraph-styles' ), $item['name'], $index + 1, $error ),
+							array( 'status' => 400 )
+						);
+					}
+				}
 			}
 		}
 
@@ -349,8 +664,38 @@ final class Typost_PS_Transfer {
 		foreach ( $items as $item ) {
 			$by_key[ $item['key'] ] = $item;
 		}
-		$rows = array();
+		$rows   = array();
+		$notes  = array();
+		$labels = Typost_PS_Grep::pattern_labels();
 		foreach ( $items as $item ) {
+			// GREP rules (#196): what each rule applies, and every custom
+			// pattern listed on its own, because it runs on each page render
+			$grep = array();
+			foreach ( is_array( $item['grepRules'] ) ? $item['grepRules'] : array() as $rule ) {
+				$target = $by_key[ $rule['style'] ]['name'];
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					/* translators: %s: a regular expression */
+					$pattern_label = sprintf( __( 'Custom (%s)', 'typost-paragraph-styles' ), $rule['regex'] );
+					$notes[]       = sprintf(
+						/* translators: 1: style name, 2: a regular expression, 3: name of the style applied to its matches */
+						__( '“%1$s” has a custom GREP pattern, which runs on every page that uses the style: %2$s (applies “%3$s”).', 'typost-paragraph-styles' ),
+						$item['name'],
+						$rule['regex'],
+						$target
+					);
+				} else {
+					$pattern_label = isset( $labels[ $rule['pattern'] ] ) ? $labels[ $rule['pattern'] ] : $rule['pattern'];
+				}
+				/* translators: 1: a GREP pattern, such as "Acronyms (NASA)", 2: the style applied to its matches */
+				$grep[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), $pattern_label, $target );
+			}
+			// Nested rules (#195), in their order
+			$nested = array();
+			foreach ( is_array( $item['nestedRules'] ) ? $item['nestedRules'] : array() as $rule ) {
+				/* translators: 1: a nested rule, such as "Up to 3 words", 2: the style it applies */
+				$nested[] = sprintf( __( '%1$s → %2$s', 'typost-paragraph-styles' ), Typost_PS_Nested::rule_label( $rule ), $by_key[ $rule['style'] ]['name'] );
+			}
+
 			$lower    = self::lower( $item['name'] );
 			$existing = isset( $by_name[ $lower ] ) ? $by_name[ $lower ] : null;
 			$affected = array();
@@ -369,14 +714,89 @@ final class Typost_PS_Transfer {
 				'action'        => $defaults[ $item['key'] ]['action'],
 				'suggestedName' => $defaults[ $item['key'] ]['suggestedName'],
 				'affected'      => $affected,
+				'grep'          => $grep,
+				'nested'        => $nested,
 			);
 		}
 
-		$plan = $this->plan( $items, $defaults, $fonts );
+		$plan     = $this->plan( $items, $defaults, $fonts );
+		$warnings = is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'];
+		if ( ! empty( $notes ) || self::file_has_grep_rules( $items ) ) {
+			if ( ! Typost_Paragraph_Styles::grep_supported() ) {
+				$warnings[] = __( 'GREP styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated.', 'typost-paragraph-styles' );
+			}
+		}
+		if ( self::file_has_grep_rules( $items, 'nestedRules' ) && ! Typost_Paragraph_Styles::grep_supported() ) {
+			$warnings[] = __( 'Nested styles need WordPress 6.9 or later. They are imported, but have no effect on this site until WordPress is updated.', 'typost-paragraph-styles' );
+		}
 		return array(
-			'items'    => $rows,
-			'warnings' => is_wp_error( $plan ) ? array( $plan->get_error_message() ) : $plan['warnings'],
+			'items'        => $rows,
+			'notes'        => $notes,
+			'warnings'     => $warnings,
+			// Palette colors this site's palette does not have (#215), in
+			// core's generic row form
+			'colorRows'    => self::color_rows( $items ),
+			'colorHeading' => __( 'Palette colors this theme does not have', 'typost-paragraph-styles' ),
 		);
+	}
+
+	/**
+	 * Whether any style in the file has GREP rules (or nested rules, #195).
+	 *
+	 * @param array[] $items read_items().
+	 * @param string  $field 'grepRules' or 'nestedRules'.
+	 * @return bool
+	 */
+	private static function file_has_grep_rules( $items, $field = 'grepRules' ) {
+		foreach ( $items as $item ) {
+			if ( ! empty( $item[ $field ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * One row per palette color the file uses and this site's palette does
+	 * not have (#215). Keeping the slug renders the file's color (the
+	 * fallback) until the theme defines the slug; using the file's color
+	 * stores it as a custom color, so it stays that color with any theme.
+	 * A slug with no color in the file has nothing to choose: it is a
+	 * warning instead (plan()).
+	 *
+	 * @param array[] $items read_items().
+	 * @return array[] Rows: {key, name, detail, incoming, choices, choice}.
+	 */
+	private static function color_rows( $items ) {
+		$palette = self::palette_by_slug();
+		$rows    = array();
+		foreach ( self::file_palette_colors( $items ) as $slug => $color ) {
+			if ( isset( $palette[ $slug ] ) || '' === $color['value'] ) {
+				continue;
+			}
+			$rows[] = array(
+				'key'      => $slug,
+				'name'     => $slug,
+				/* translators: %s: list of style names */
+				'detail'   => sprintf( __( 'Used by: %s', 'typost-paragraph-styles' ), implode( ', ', $color['styles'] ) ),
+				'current'  => __( 'Not in the palette', 'typost-paragraph-styles' ),
+				'incoming' => $color['value'],
+				'choices'  => array(
+					array(
+						'value' => 'slug',
+						/* translators: %s: palette color slug */
+						'label' => sprintf( __( 'Keep the palette color “%s” (shows the file’s color until the theme has it)', 'typost-paragraph-styles' ), $slug ),
+					),
+					array(
+						'value' => 'value',
+						/* translators: %s: hex color */
+						'label' => sprintf( __( 'Use the color from the file (%s) as a custom color', 'typost-paragraph-styles' ), $color['value'] ),
+					),
+				),
+				'choice'   => 'slug',
+			);
+		}
+		return $rows;
 	}
 
 	/**
@@ -473,6 +893,16 @@ final class Typost_PS_Transfer {
 	 * @return array|WP_Error
 	 */
 	private function plan( $items, $choices, $fonts ) {
+		$palette         = self::palette_by_slug();
+		$color_choices   = self::color_choices( $choices );
+		$file_colors     = self::file_palette_colors( $items );
+		$items           = array_map(
+			function ( $item ) use ( $color_choices, $palette ) {
+				$item['properties'] = self::map_colors( $item['properties'], $color_choices, $palette );
+				return $item;
+			},
+			$items
+		);
 		$existing_styles = $this->module->get_styles();
 		$working         = array_values( $existing_styles );
 		$by_name         = self::styles_by_name( $working );
@@ -620,6 +1050,95 @@ final class Typost_PS_Transfer {
 			}
 		}
 
+		// GREP rules (#196), once every style has its ID: each rule's style
+		// is the imported style, or the style on this site that stands in
+		// for a skipped one. A rule whose style is not imported is left out.
+		$built_in = Typost_PS_Grep::built_in_patterns();
+		foreach ( $imported_keys as $key => $name ) {
+			$file_rules = $by_key[ $key ]['grepRules'];
+			if ( null === $file_rules ) {
+				continue;
+			}
+			$own_id = $key_to_id[ $key ];
+			$rules  = array();
+			foreach ( $file_rules as $index => $rule ) {
+				if ( Typost_PS_Grep::CUSTOM !== $rule['pattern'] && ! isset( $built_in[ $rule['pattern'] ] ) ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: pattern name from the file */
+						__( '“%1$s”, GREP rule %2$d: this site does not know the pattern “%3$s”, so the rule is left out.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$rule['pattern']
+					);
+					continue;
+				}
+				$target_id = ! empty( $key_to_id[ $rule['style'] ] ) ? intval( $key_to_id[ $rule['style'] ] ) : 0;
+				if ( ! $target_id || $target_id === $own_id ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: name of the style the rule applies */
+						__( '“%1$s”, GREP rule %2$d: “%3$s” is not imported, so the rule is left out.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$by_key[ $rule['style'] ]['name']
+					);
+					continue;
+				}
+				$clean = array(
+					'pattern' => $rule['pattern'],
+					'styleId' => $target_id,
+				);
+				if ( Typost_PS_Grep::CUSTOM === $rule['pattern'] ) {
+					$clean['regex'] = $rule['regex'];
+				}
+				$rules[] = $clean;
+			}
+			foreach ( $working as $i => $style ) {
+				if ( intval( $style['id'] ) === $own_id ) {
+					if ( empty( $rules ) ) {
+						unset( $working[ $i ]['grepRules'] );
+					} else {
+						$working[ $i ]['grepRules'] = $rules;
+					}
+				}
+			}
+		}
+
+		// Nested rules (#195), the same way. A rule left out moves the
+		// rules after it to where it started, which the warning says.
+		foreach ( $imported_keys as $key => $name ) {
+			$file_rules = isset( $by_key[ $key ]['nestedRules'] ) ? $by_key[ $key ]['nestedRules'] : null;
+			if ( null === $file_rules ) {
+				continue;
+			}
+			$own_id = $key_to_id[ $key ];
+			$rules  = array();
+			foreach ( $file_rules as $index => $rule ) {
+				$target_id = ! empty( $key_to_id[ $rule['style'] ] ) ? intval( $key_to_id[ $rule['style'] ] ) : 0;
+				if ( ! $target_id || $target_id === $own_id ) {
+					$result['warnings'][] = sprintf(
+						/* translators: 1: style name, 2: rule number, 3: name of the style the rule applies */
+						__( '“%1$s”, nested rule %2$d: “%3$s” is not imported, so the rule is left out and the rules after it start earlier.', 'typost-paragraph-styles' ),
+						$name,
+						$index + 1,
+						$by_key[ $rule['style'] ]['name']
+					);
+					continue;
+				}
+				$clean            = $rule;
+				unset( $clean['style'] );
+				$rules[] = array_merge( array( 'styleId' => $target_id ), $clean );
+			}
+			foreach ( $working as $i => $style ) {
+				if ( intval( $style['id'] ) === $own_id ) {
+					if ( empty( $rules ) ) {
+						unset( $working[ $i ]['nestedRules'] );
+					} else {
+						$working[ $i ]['nestedRules'] = $rules;
+					}
+				}
+			}
+		}
+
 		foreach ( $imported_keys as $key => $name ) {
 			$record = self::find_style( $working, $key_to_id[ $key ] );
 			$look   = Typost_Paragraph_Styles::resolve_properties( $record, $working );
@@ -635,9 +1154,66 @@ final class Typost_PS_Transfer {
 			$result['warnings'] = array_merge( $result['warnings'], self::font_support_warnings( $name, $look, $fonts ) );
 		}
 
+		$result['warnings'] = array_merge( $result['warnings'], self::palette_warnings( $file_colors, $palette, $color_choices, $imported_keys, $by_key ) );
+
 		$result['styles'] = $working;
 		$result['nextId'] = $next;
 		return $result;
+	}
+
+	/**
+	 * Warnings for palette colors (#215): a slug this site's palette has
+	 * with another color than in the file (the style follows this site's
+	 * palette), and a slug it does not have that the file gives no color
+	 * for (the style shows the inherited text color until the theme defines
+	 * it). Only for styles the import writes.
+	 *
+	 * @param array<string,array>  $file_colors   file_palette_colors().
+	 * @param array<string,array>  $palette       palette_by_slug().
+	 * @param array<string,string> $color_choices color_choices().
+	 * @param array<string,string> $imported_keys File key => name of each style written.
+	 * @param array[]              $by_key        Items by file key.
+	 * @return string[]
+	 */
+	private static function palette_warnings( $file_colors, $palette, $color_choices, $imported_keys, $by_key ) {
+		$written = array();
+		foreach ( array_keys( $imported_keys ) as $key ) {
+			$written[ $by_key[ $key ]['name'] ] = $imported_keys[ $key ];
+		}
+		$warnings = array();
+		foreach ( $file_colors as $slug => $color ) {
+			$names = array();
+			foreach ( $color['styles'] as $file_name ) {
+				if ( isset( $written[ $file_name ] ) ) {
+					$names[] = $written[ $file_name ];
+				}
+			}
+			if ( empty( $names ) ) {
+				continue;
+			}
+			if ( isset( $palette[ $slug ] ) ) {
+				$local = Typost_Paragraph_Styles::normalize_hex_color( $palette[ $slug ]['color'] );
+				if ( '' !== $color['value'] && $local !== $color['value'] ) {
+					$warnings[] = sprintf(
+						/* translators: 1: palette color name, 2: its slug, 3: its color on this site, 4: its color in the file, 5: list of style names */
+						__( 'The palette color %1$s (%2$s) is %3$s on this site and %4$s in the file. These styles follow this site’s palette: %5$s.', 'typost-paragraph-styles' ),
+						$palette[ $slug ]['name'],
+						$slug,
+						$palette[ $slug ]['color'],
+						$color['value'],
+						implode( ', ', $names )
+					);
+				}
+			} elseif ( '' === $color['value'] ) {
+				$warnings[] = sprintf(
+					/* translators: 1: palette color slug, 2: list of style names */
+					__( 'The palette color “%1$s” is not in this theme’s palette, and the file has no color for it. These styles show the surrounding text color, or the browser’s default text color for outline-only text, until the theme defines it: %2$s.', 'typost-paragraph-styles' ),
+					$slug,
+					implode( ', ', $names )
+				);
+			}
+		}
+		return $warnings;
 	}
 
 	/**

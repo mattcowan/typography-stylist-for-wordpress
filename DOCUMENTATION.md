@@ -296,7 +296,8 @@ For named typography settings that you make in the editor, use paragraph styles 
 
 ### Paragraph Styles
 
-A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, and line breaking.
+A paragraph style is a named set of typography settings. It holds the font, weight, italic, size, letter spacing, line height, OpenType features, variable font axes, case, the First Letter Hang, and (set on the Paragraph Styles tab) alignment, word spacing, line breaking, hyphenation, indents, and paragraph spacing.
+text color, and outline.
 
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
@@ -317,6 +318,51 @@ A style can also set how its text is aligned, how wide the spaces between words 
 - A Fit to width style uses none of these settings: fit sets the width of each line itself.
 - A centered or end-aligned style with a First Letter Hang does not hang the first letter, as for a centered block.
 - “Detach Style” keeps the alignment: the block gets it as its own alignment, unless the block already has one. Start and End become left or right, by the text direction. A core Paragraph or Heading block does not keep Justify, because WordPress has no justify alignment for these blocks. Word spacing and line breaking are removed, because a block has no setting to keep them.
+
+#### Hyphenation
+
+Since v2.3.6, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
+
+- **Hyphenate:** on or off. The default is off. Off writes no CSS, so the browser's own setting applies and soft hyphens that you type in the text (`&shy;`) still work.
+- **Shortest word to hyphenate,** **fewest letters before a hyphen** and **fewest letters after a hyphen:** 1 to 20 letters each. An empty field lets the browser decide. Chrome and Firefox use these limits; Safari ignores them and uses its own.
+- **Hyphen character:** the character shown at the end of a broken line. An empty field uses the hyphen of the language. Up to 4 characters, with no quotes, backslashes, angle brackets, braces or semicolons.
+- **Language:** a browser hyphenates only when it knows the language of the text and has a dictionary for that language. WordPress themes print the site language on the page, so most text has one. The dictionaries differ by browser: for example, Chrome has none for Polish, Finnish, Catalan or Turkish, while Firefox and Safari do. Chrome never hyphenates English words that start with a capital letter, so a heading in Title Case is not hyphenated there.
+- **Accessibility:** the hyphens are a rendering effect. They are not in the text, so screen readers read the words whole and copied text has no hyphens. Frequent hyphens make readers put split words back together, which is harder for some people, including many people with dyslexia. Use hyphenation mainly for justified or narrow text.
+- A Fit to width style does not use hyphenation: each line stays on one line.
+- “Detach Style” removes hyphenation, because a block has no setting to keep it. The notice names it.
+- A style based on another inherits the hyphenation settings as one group: a style that sets its own hyphenation does not keep any of the parent's limits.
+- The CSS is `hyphens: auto`, `hyphenate-limit-chars` and `hyphenate-character`, with the `-webkit-` forms for older Safari. Styles saved before look the same.
+
+#### Indents and paragraph spacing
+
+Since v2.3.6, a style can also set indents and the space before and after a paragraph, as in a paragraph style in InDesign. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+
+- **Left indent** and **Right indent:** move the whole paragraph in from the start or end edge. They follow the text direction: in right-to-left text, such as Arabic or Hebrew, the left indent is on the right.
+- **First line indent:** moves only the first line. A negative value gives a hanging indent: the first line starts at the edge and the other lines are indented, as in a bibliography or a numbered list written as text.
+- **Indent the first line only after a paragraph with the same style:** the book convention. The first paragraph after a heading (or after any paragraph with another style) has no indent, and every next paragraph with the style has one. It matches WordPress's own Text indent setting for paragraphs, which also indents only a paragraph that follows a paragraph. It applies to a positive first line indent only: a hanging indent stays on every paragraph.
+- **Space before** and **Space after:** the space above and below the paragraph. Two spaces that meet do not add up: the larger one is used, as in CSS. Space before also applies to the first block of a page or a group.
+- On a core Paragraph or Heading block, the block's own settings win: the spacing (margin and padding) in the block's sidebar and the Text indent setting override the style's values.
+- On a Typography Stylist block, the block's margin overrides the style's space before and after. The block's padding adds to the style's indents, because they are on different elements.
+- On a Typography Stylist block, space before and after go on the outer element of the block, not on the text element. An em value uses the font size of the outer element, which is the size it inherits from the page, not the size of the style. The same style can give different spacing on this block and on a core block. Use px for exact spacing on a Typography Stylist block.
+- Indents and spacing apply to whole paragraphs and headings. When you apply the style to selected text, the selected words do not move. The form says so.
+- A first line indent turns the First Letter Hang off on the paragraphs it indents: the hang lines up a swash capital with the text edge, and an indented first line does not start at the edge. With “only after a paragraph with the same style”, the first paragraph keeps its hang.
+- A Fit to width style uses no indents: fit sets the width of each line itself. A Fit to width block also uses no indents from a style that is not Fit to width. Space before and after work.
+- “Detach Style” on a whole block keeps the indents and spacing in the block's own settings, where you can edit them in its sidebar: space before and after become Margin top and bottom, and the left and right indents become Padding, on the correct side for the text direction. A value the block already sets does not change. A value in em becomes px, at the size the text has when you click “Detach Style”. The exception is Margin on a Typography Stylist block, which stays in em, because it uses the same size before and after. A first line indent and “only after a paragraph with the same style” have no block setting, so they are removed, and a notice names them. A hanging indent is removed with its first line indent, so all its lines start at the left indent. In a theme with no border-box reset, Padding on a core Paragraph or Heading block in the content column can make the block wider than the column. On selected text, nothing changes: “Detach Style” writes the style's text settings on the text, and a span has no indents or spacing.
+
+#### Text color and outline
+
+A style can set a text color and an outline. Set them in the “Color and outline” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+
+- **Text color:** a color from the theme's palette (listed first), a color from the site's palette in Global Styles, a color from the WordPress default palette when the theme keeps it, or a custom hex color. A palette color follows the theme: if the theme changes its “Accent” color, every style that uses “Accent” changes too. The style also stores the color the palette had when you saved it, so a theme that no longer has that color still shows it. A custom color can be partly transparent: add two digits to the hex code (`#cc000080` is half transparent). This is how a style gets a tint.
+- **Outline:** a width from 0 to 20 pixels, a color (by default the text color), and a position. “On top of the fill” draws the outline over the letters; the outline is centered on the edge of each letter, so a thick outline makes them look thinner. “Behind the fill” keeps their shape. In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top shows lines inside the letter; behind the fill hides them, except in outline-only text, which has no fill. A new outline starts behind the fill. An outline you saved before keeps its position.
+- **Outline only:** choose “Transparent (outline only)” as the text color. The outline then needs a width and a visible color of its own, or the text would not show; the form asks for them. If the outline is a palette color with no stored color and the theme does not have it, the outline uses the browser's default text color.
+- **A block's own text color:** the text color setting of a block overrides the style's color. The outline stays. On an outline-only style, the block's color fills the letters, so the text is no longer outline-only.
+- **Contrast check:** the form warns when the colors fall below the contrast WCAG asks for (1.4.3): 4.5:1, or 3:1 for large text (24px, or 18.66px and bold; a responsive size counts by its smallest size). It checks against the theme's background color, or white when the theme sets none. Outline-only text is checked by its outline against the background. Text with a fill and an outline is flagged when the fill stands out from neither the background nor the outline: a thin outline counts as part of the letter, and a wide outline acts as the background of the letter. An outline on top of the fill that is at least one tenth of the font size covers most of the letter, so the outline must also stand out from the background (a style with no size counts as 16px). A thin outline also loses contrast to font smoothing, so test outline-only text at the size you use it. The check cannot read every color, for example an `oklch()` palette color; such a color is not checked.
+- **Plain typography switch:** the `typost-plain` class removes the outline, and outline-only text takes the text color of its parent element. Other text colors do not change. See [HOOKS.md](HOOKS.md#plain-typography-switch).
+- **High contrast:** in Windows High Contrast mode (forced colors), the browser draws the text and the outline in the system text color, so outline-only text shows as solid text. It stays readable; it loses the outline effect.
+- The card on the tab shows the color by its palette name, or with “(not in the theme palette)” when the theme no longer has it, and the sample shows the style on the theme's background color.
+- “Detach Style” on a whole block keeps the text color as the block's own Text color, unless the block already has one. A palette color stays a palette color; if the theme no longer has it, the block gets the color the style stored. The outline has no block setting, so it is removed, and a notice names it. An outline-only style also loses its transparent fill, so the text stays visible. On selected text, the color and outline are removed.
+- **Export and import:** the export file writes a palette color as its palette slug and its color on your site. On import, a slug that the other site's palette has keeps the link to that palette, and the preview warns when that color is not the same as in the file. For a slug that the other palette does not have, choose to keep the slug (the style shows the color from the file until the theme defines the slug) or to use the color from the file as a custom color.
 
 In a Typography Stylist block, the Paragraph Style panel in the Quick Feature Toggles works on the selected text, like the other controls there. With text selected, “Save Current Settings as Style” makes the style from the settings of the selected text, and only that text gets the style. A style made from selected text includes the case of that text. It does not include the First Letter Hang, which applies to the whole block. “Update Style” and “Detach Style” work on the style of the selected text. With only the caret in the block, the panel works on the whole block. The Paragraph Style panel in the block sidebar always works on the whole block.
 
@@ -350,6 +396,65 @@ The style goes into the block’s “Additional CSS class(es)” field as `typos
 The block’s own sidebar settings, for example font size, letter spacing, and line height, override the style. The theme’s block styles, for example “Outline”, keep working. “Update Style” on text elsewhere also changes these blocks. If the style was deleted, the panel shows “Missing style”. Click “Detach Style” to remove the class.
 
 A First Letter Hang in the style also applies to these blocks. It has no effect when the block is centered, aligned to the end, has a drop cap, or has a text indent.
+
+#### GREP styles (v2.3.6+, WordPress 6.9+)
+
+Some OpenType features are right for only part of the text. `frac` turns "1/2" into a fraction, but it also changes a date such as "9/22/2026". GREP styles, named after the same feature in Adobe InDesign, apply a style to the text that matches a pattern, automatically.
+
+1. Make a style for the matched text, for example "Fraction" with only the `frac` feature, or "Small caps" with `c2sc`. A style that sets only a few things works like a character style.
+2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Body".
+3. Under "GREP styles", click "Add GREP rule", choose a pattern, and choose the style to apply.
+4. Save. Every block that uses "Body" shows the change on its next page load.
+
+Built-in patterns:
+
+| Pattern | Matches | Typical style |
+|---|---|---|
+| Acronyms | 2 or more capital letters as a word, for example "NASA" ("PDFs" matches "PDF") | `c2sc` small caps |
+| Fractions | a number, `/` or `⁄`, a number, not part of a date or a decimal (1/2 and 3/16; not 9/22/2026 or 2026/9/22) | `frac` |
+| Ordinals | the letters after a number: "st", "nd", "rd", "th", and French "er", "re", "e", "ème" | `ordn` or `sups` |
+| Numbers | runs of digits, with the separators inside a number (1,000.50) | `onum` or `tnum` |
+| Ampersand | `&` | a different font |
+
+- **Order:** the rules run from the top. Where two rules match the same text, the higher rule wins and the lower rule skips that text. Put Fractions above Numbers, so a fraction keeps `frac`.
+- **Features add up:** the matched text keeps the OpenType features of the paragraph style and adds the features of the rule's style. Variable font axes do not add up: the rule's style replaces them.
+- **What is matched:** the text of blocks that use the style as a whole (core Paragraph and Heading blocks, and Typography Stylist blocks). Text that has the style only on a selection is not matched. Text in code, in a fit to width block, and inside HTML tags or attributes is never matched. A match can cross an inline element, for example "N*AS*A", and each piece gets the style.
+- **Your posts do not change:** the plugin applies the rules when the page is shown. Change or remove a rule, and every post follows. The page loads no script, and the screen reader copy of a Typography Stylist block does not change.
+- **A bare date:** "9/22" with no year cannot be told from a fraction, and the Fractions pattern matches it. Write dates with the year, or use a custom pattern.
+- **Quotes in a custom pattern:** the rules run before WordPress makes straight quotes and apostrophes curly. Text that you typed with straight quotes is still straight when a pattern reads it, and the page then shows it curly. To match either form, write both: `"[^"]+"|“[^”]+”`.
+- **Automatic typography across a match:** WordPress changes some characters only when the text around them is in one piece. With a Numbers rule, "3x4" stays "3x4" and does not become "3×4", and an apostrophe directly before a matched number, as in "'90s", can curl the wrong way. This changes only how these characters look, and only in a block with a match.
+- **Shortcodes:** the rules do not run on a block that contains a registered shortcode. This includes a shortcode that is written as text with entities, for example `&#91;gallery&#93;`. The block shows without the rules, and the shortcode works as usual. Text that a shortcode writes is never matched.
+- **Screen readers and part of a word:** Ordinals and Acronyms can put part of a word in a span, for example the "st" in "1st", or "PDF" in "PDFs". A core Paragraph or Heading block has no separate screen reader copy, and some screen readers, for example NVDA, can read such a word in two parts. If this is a problem for your readers, do not use a rule that matches part of a word on that text. The screen reader copy of a Typography Stylist block does not have this problem.
+- **Custom patterns (administrators only):** choose "Custom pattern" and type a regular expression, without slashes or flags. Matching is case-sensitive. A pattern must be valid in PHP and in the browser, so some PHP-only syntax is refused (for example `(?>…)`, `a++`, `(?i)`, `\x{41}`), and so is a pattern that is too slow on some text. The form says why. PHP runs the pattern on the page. PHP reads `\d`, `\w` and `\b` with Unicode, so `\d` also matches "٣" and `\w` also matches "é". A browser reads these three as ASCII only, and `\s` also differs on a few characters. This has an effect only when a future editor preview runs a pattern in the browser. To get the same result in both, use `\p{L}`, `\p{Lu}` and `\p{Nd}`. Authors who are not administrators can use the built-in patterns and keep a custom pattern that an administrator added. A custom pattern runs on every page render of every post that uses the style, so keep it simple.
+- **If something fails:** a rule whose pattern fails on a page (for example on very long text) is skipped there, and the text shows without it. A block with HTML that is not complete is also left as it is. A rule whose style was deleted is removed with the style.
+- **Preview:** the style card on the Paragraph Styles tab shows the rules on its sample text. The block editor does not show them yet: check the result on the page.
+- **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect.
+- **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). The import preview lists each custom pattern, and refuses a file with a pattern that fails. If you overwrite a style with a style that has no rules, the rules are removed. If the file was made before GREP styles existed, the rules stay.
+
+#### Nested styles (v2.3.6+, WordPress 6.9+)
+
+Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph differently: "**Step 1:** WHISK THE EGGS until pale." Nested styles, named after the same feature in Adobe InDesign, do this automatically, and follow the text when you edit it.
+
+1. Make a style for each part, for example "Bold" with only weight 700, and "Small caps" with `c2sc` or the case "Small caps". A style that sets only a few things works like a character style.
+2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Step".
+3. Under "Nested styles", click "Add nested rule". Choose the style to apply, then how far it goes:
+   - **Words:** a number of words. "Through" takes the space after the last word too; "Up to" stops at the end of the word.
+   - **Characters:** a number of characters. An accented letter or an emoji counts as one character.
+   - **A character you type:** for example `:` or `—`, and how many times it must occur. "Through" includes the character; "Up to" stops before it, so the next rule starts with it. An emoji can match part of a longer emoji, such as one half of a flag. If this occurs, use a letter or a punctuation mark.
+   - **First line:** the first line of the paragraph, at every screen width.
+4. Add more rules and put them in order with "Move up" and "Move down". Save. Every block that uses "Step" shows the change on its next page load.
+
+For the example above: rule 1 is Bold, Through, 1, A character you type, `:`; rule 2 is Small caps, Up to, 3, Words.
+
+- **Each rule starts where the one before it stopped,** at its first character that is not a space. If the text is shorter than a rule, or the character never occurs, the rule ends at the end of the text, and the rules after it do nothing.
+- **First line must be the last rule.** Where the first line ends depends on the screen width, so no rule can start after it. A rule before it keeps its own settings; for the settings that its style does not set, the text takes the first line style. For example, a Bold first letter in an uppercase first line is bold and uppercase.
+- **Features add up:** the nested text keeps the OpenType features of the paragraph style and adds the features of the nested style. GREP rules still apply inside nested text.
+- **What is styled:** blocks that use the style as a whole (core Paragraph and Heading blocks, and Typography Stylist blocks). Text that has the style only on a selection, and fit to width blocks, are left as they are.
+- **Your posts do not change:** the plugin applies the rules when the page is shown, and the page loads no script. The screen reader copy of a Typography Stylist block does not change. On a core block, a rule that ends inside a word (a number of characters, or a character inside a word) can make some screen readers read that word in two parts.
+- **In the editor:** a block shows its nested styles while you are not editing it. When you click into the block or select it, the nested styles go away until you leave it, so they never go into your content. First line shows all the time.
+- **If you delete a style** that a rule applies, the rule is removed, and the rules after it start earlier.
+- **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect, First line included.
+- **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). A rule that is not valid makes the import refuse the file. A typed character such as `—` is kept as it is.
 
 ---
 
@@ -404,6 +509,8 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - The form keeps the size unit of a style. A style that has a size keeps its unit (px or rem). A size that you add to a style without one uses the unit of new content (the “Write new font sizes in px” option). A fixed size in px is a whole number: the form removes the decimals, because the page shows px sizes without them.
 - The form opens with the settings that are saved now. A change that you made in the editor after this page opened is in the form.
 - The form also has “Based on” (see “Based On” under Paragraph Styles). A style that is based on another style shows “Based on” on its card, marks each value as “Inherited” or “Override”, and has a “Reset to Base” button in its form. After a save, the cards of the styles based on it show their new values too.
+- On WordPress 6.9 or later, the form also has “GREP styles” (see “GREP styles” under Paragraph Styles): a list of rules, each with a pattern and the style to apply, with buttons to move a rule up or down and to remove it. The card lists the rules, and its sample shows them.
+- On WordPress 6.9 or later, the form also has “Nested styles” (see “Nested styles” under Paragraph Styles): a list of rules, each with the style to apply, Through or Up to, a count, a unit, and the character for that unit, with buttons to move a rule up or down and to remove it. The card lists the rules, and its sample shows them.
 - You make styles in the editor, with “Save Current Settings as Style”.
 
 ### Font Features Tab
@@ -820,7 +927,7 @@ fetch('/wp-json/typost/v1/adobe-fonts', {
 
 /* Plain typography switch (since 2.3.5). Put it on any ancestor. */
 .typost-plain {
-    /* No First Letter Hang, OpenType features reset to normal */
+    /* No First Letter Hang, no paragraph style outline, OpenType features reset to normal */
 }
 ```
 

@@ -610,6 +610,10 @@ class Typost_Export {
             'existsAs'           => __('A style with this name exists.', 'typography-stylist'),
             /* translators: %s: comma-separated list of style names */
             'overwriteAffects'   => __('Overwriting it also changes the styles based on it: %s.', 'typography-stylist'),
+            /* translators: %s: the style's GREP rules, such as "Acronyms (NASA) → Small Caps" */
+            'grepRules'          => __('GREP styles: %s.', 'typography-stylist'),
+            /* translators: %s: the style's nested rules, such as "Up to 3 words → Small Caps" */
+            'nestedRules'        => __('Nested styles: %s.', 'typography-stylist'),
             'actionAdd'          => __('Add', 'typography-stylist'),
             'actionSkip'         => __('Skip', 'typography-stylist'),
             'actionRename'       => __('Add with a new name', 'typography-stylist'),

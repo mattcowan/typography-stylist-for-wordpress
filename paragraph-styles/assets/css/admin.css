@@ -160,6 +160,13 @@
 	width: 8em;
 }
 
+/* An indent or spacing value (#199): number and unit side by side */
+.typost-ps-edit-length {
+	display: inline-flex;
+	gap: 4px;
+	align-items: center;
+}
+
 .typost-ps-edit-form-inner select {
 	max-width: 100%;
 }
@@ -285,4 +292,106 @@
 /* Edit fetches the stored style before the form opens */
 .typost-ps-style-card.typost-ps-loading .typost-ps-edit-btn {
 	cursor: progress;
+}
+
+/* GREP styles (#196) and nested styles (#195): one bordered row per rule, in list order */
+.typost-ps-grep-rules,
+.typost-ps-nested-rules {
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.typost-ps-grep-rule,
+.typost-ps-nested-rule {
+	margin: 0 0 8px;
+	padding: 8px 12px 0;
+	border-left: 3px solid #dcdcde;
+	background: #f6f7f7;
+}
+
+.typost-ps-grep-regex input {
+	width: 20em;
+	max-width: 100%;
+	font-family: Consolas, Monaco, monospace;
+}
+
+.typost-ps-grep-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	align-items: center;
+	margin: 0 0 8px;
+}
+
+/* Core's delete red is 4.40:1 on this row's gray; WCAG 1.4.3 asks for 4.5:1 */
+.typost-ps-grep-rule .button-link.typost-ps-grep-remove,
+.typost-ps-nested-rule .button-link.typost-ps-nested-remove {
+	color: #b32d2e;
+}
+
+/* Nested rules (#195): one character, and Through / Up to in full */
+.typost-ps-edit-form-inner .typost-ps-nested-marker input[type="text"] {
+	width: 4em;
+	text-align: center;
+}
+
+.typost-ps-nested-rule [data-nested="end"] {
+	min-width: 7.5em;
+}
+
+.typost-ps-nested-rule [data-nested="unit"] {
+	min-width: 13em;
+}
+
+.typost-ps-grep-empty,
+.typost-ps-nested-empty {
+	margin: 8px 0 0;
+	font-style: italic;
+}
+
+/* The preview's GREP spans need no styling of their own: each renders
+ * through its style's [data-style-id] rule. */
+
+/* Text color and outline (#215) */
+.typost-ps-edit-color-control {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+}
+
+/* Decorative: the select names the color. A border at 3:1 on white
+   (#8c8f94) keeps a white swatch visible. */
+.typost-ps-color-swatch {
+	flex: none;
+	width: 22px;
+	height: 22px;
+	border: 1px solid #8c8f94;
+	border-radius: 2px;
+}
+
+/* No color: a diagonal line, the usual "none" mark */
+.typost-ps-color-swatch.is-empty {
+	background: linear-gradient(to top right, transparent calc(50% - 1px), #8c8f94 calc(50% - 1px), #8c8f94 calc(50% + 1px), transparent calc(50% + 1px)) !important;
+}
+
+.typost-ps-edit-hex {
+	width: 9em;
+	font-family: Consolas, Monaco, monospace;
+}
+
+.typost-ps-edit-colors input[type="color"] {
+	width: 36px;
+	height: 30px;
+	padding: 2px;
+}
+
+/* Empty while the colors pass; a warning box once admin.js fills it */
+.typost-ps-edit-contrast:not(:empty) {
+	margin: 8px 0;
+	padding: 8px 12px;
+	border-left: 4px solid #dba617;
+	background: #fcf9e8;
+	color: #1d2327;
 }

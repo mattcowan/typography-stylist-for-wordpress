@@ -203,6 +203,10 @@
 	// never takes it (see ALIGNMENT_GUARD in PHP)
 	var ALIGNMENT_GUARD = ':not([style^="text-align:"], [style*=";text-align:"], [style*="; text-align:"], [class*="has-text-align-"], .typost-fit)';
 
+	// A fit-to-width block never takes a style's indents (see INDENT_GUARD in
+	// PHP); spacing stays unguarded
+	var INDENT_GUARD = ':not(.typost-fit)';
+
 	/** '' for Default or an unknown value, otherwise the alignment. */
 	function normalizeAlignment(value) {
 		return typeof value === 'string' && ALIGNMENT_VALUES.indexOf(value) !== -1 ? value : '';
@@ -216,6 +220,282 @@
 	/** '' for normal or an unknown value, otherwise the line breaking value. */
 	function normalizeTextWrap(value) {
 		return typeof value === 'string' && TEXT_WRAP_VALUES.indexOf(value) !== -1 ? value : '';
+	}
+
+	// Hyphenation (#208). The three letter limits of hyphenate-limit-chars
+	// in the order CSS writes them, each 0 (= auto, the browser's own) or
+	// 1..HYPHENATE_LIMIT_MAX. Mirror HYPHENATE_LIMIT_KEYS /
+	// HYPHENATE_LIMIT_MAX / HYPHENATE_CHARACTER_MAX in PHP.
+	var HYPHENATE_LIMIT_KEYS = ['hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter'];
+	var HYPHENATE_LIMIT_MAX = 20;
+	var HYPHENATE_CHARACTER_MAX = 4;
+
+	/** 'auto' when the style hyphenates, else '' (off: the browser's manual). */
+	function normalizeHyphens(value) {
+		return value === 'auto' ? 'auto' : '';
+	}
+
+	/** A letter limit as stored: an integer 1..HYPHENATE_LIMIT_MAX, or 0 for auto. */
+	function normalizeHyphenateLimit(value) {
+		// PHP is_numeric(): a number or a numeric string, never a boolean
+		if (typeof value === 'string' ? !/^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) : typeof value !== 'number') return 0;
+		var n = Number(value);
+		if (!(n >= 1)) return 0;
+		return Math.min(Math.floor(n), HYPHENATE_LIMIT_MAX);
+	}
+
+	/**
+	 * The hyphen character as stored, or '' for the browser's default:
+	 * trimmed, 1..HYPHENATE_CHARACTER_MAX code points, and none of the
+	 * characters that could end the CSS string or the <style> element
+	 * (quotes, backslash, angle brackets, braces, semicolon, control and
+	 * line separator characters). Twin of PHP normalize_hyphenate_character().
+	 */
+	function normalizeHyphenateCharacter(value) {
+		if (typeof value !== 'string') return '';
+		var v = value.trim();
+		if (!v || /["'\\<>{};\u0000-\u001f\u007f-\u009f\u2028\u2029]/.test(v)) return '';
+		var count = 0;
+		for (var i = 0; i < v.length; i++) {
+			var code = v.charCodeAt(i);
+			// A lone surrogate is not valid UTF-8 (PHP rejects it)
+			if (code >= 0xd800 && code <= 0xdbff) {
+				var next = v.charCodeAt(i + 1);
+				if (!(next >= 0xdc00 && next <= 0xdfff)) return '';
+				i++;
+			} else if (code >= 0xdc00 && code <= 0xdfff) {
+				return '';
+			}
+			count++;
+		}
+		return count <= HYPHENATE_CHARACTER_MAX ? v : '';
+	}
+
+	/**
+	 * The hyphenation group (#208) as stored: {} when off, else hyphens
+	 * 'auto' plus each limit above 0 and the character when set. The limits
+	 * and the character are stored only with hyphenation on.
+	 */
+	function hyphenationProperties(source) {
+		var p = source || {};
+		if (!normalizeHyphens(p.hyphens)) return {};
+		var out = { hyphens: 'auto' };
+		HYPHENATE_LIMIT_KEYS.forEach(function (key) {
+			var n = normalizeHyphenateLimit(p[key]);
+			if (n) out[key] = n;
+		});
+		var character = normalizeHyphenateCharacter(p.hyphenateCharacter);
+		if (character) out.hyphenateCharacter = character;
+		return out;
+	}
+
+	/**
+	 * The CSS declarations of a style's hyphenation (#208), as [property,
+	 * value] pairs in the order both generators write them. Twin of PHP
+	 * hyphenation_declarations().
+	 */
+	function hyphenationDeclarations(props) {
+		var h = hyphenationProperties(props);
+		if (!h.hyphens) return [];
+		// The -webkit- forms for Safari before 17
+		var out = [['-webkit-hyphens', 'auto'], ['hyphens', 'auto']];
+		var limits = HYPHENATE_LIMIT_KEYS.map(function (key) { return h[key] || 0; });
+		if (limits[0] || limits[1] || limits[2]) {
+			out.push(['hyphenate-limit-chars', limits.map(function (n) { return n ? String(n) : 'auto'; }).join(' ')]);
+		}
+		if (h.hyphenateCharacter) {
+			out.push(['-webkit-hyphenate-character', '"' + h.hyphenateCharacter + '"']);
+			out.push(['hyphenate-character', '"' + h.hyphenateCharacter + '"']);
+		}
+		return out;
+	}
+
+	// Widest text outline in px (#215). Mirrors TEXT_STROKE_MAX in PHP.
+	var TEXT_STROKE_MAX = 20;
+
+	// A stored palette color (#215): core's `var:preset|color|{slug}` plus
+	// the color it had when saved (the CSS fallback). Mirrors
+	// PALETTE_COLOR_PATTERN in PHP.
+	var PALETTE_COLOR_PATTERN = /^var:preset\|color\|([a-z0-9-]{1,100})(?:\|(#[0-9a-f]{6}(?:[0-9a-f]{2})?))?$/;
+
+	/** A hex color as #rrggbb or #rrggbbaa, or '' (twin of PHP normalize_hex_color()). */
+	function normalizeHexColor(value) {
+		if (typeof value !== 'string') return '';
+		var m = value.trim().toLowerCase().match(/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/);
+		if (!m) return '';
+		var hex = m[1];
+		if (hex.length <= 4) {
+			hex = hex.split('').map(function (digit) { return digit + digit; }).join('');
+		}
+		return '#' + hex;
+	}
+
+	/**
+	 * A color as a style stores it (#215), or '' for none or an invalid
+	 * value: `#rrggbb[aa]`, `var:preset|color|{slug}[|#rrggbb[aa]]`, or
+	 * `transparent` where allowed. Twin of PHP normalize_color().
+	 *
+	 * @param {*}       value
+	 * @param {boolean} [allowTransparent]
+	 * @return {string}
+	 */
+	function normalizeColor(value, allowTransparent) {
+		if (typeof value !== 'string') return '';
+		var v = value.trim().toLowerCase();
+		if (v === 'transparent') return allowTransparent ? 'transparent' : '';
+		var m = v.match(PALETTE_COLOR_PATTERN);
+		if (m) return 'var:preset|color|' + m[1] + (m[2] ? '|' + m[2] : '');
+		return normalizeHexColor(v);
+	}
+
+	/**
+	 * The stored form of a palette color (#215): the slug and, when the
+	 * palette color is a hex color, that color as the CSS fallback.
+	 *
+	 * @param {string} slug  Kebab-case palette slug.
+	 * @param {string} color The palette's color value.
+	 * @return {string} '' for an invalid slug.
+	 */
+	function buildPaletteColor(slug, color) {
+		var s = typeof slug === 'string' ? slug.trim().toLowerCase() : '';
+		if (!/^[a-z0-9-]{1,100}$/.test(s)) return '';
+		var hex = normalizeHexColor(color);
+		return 'var:preset|color|' + s + (hex ? '|' + hex : '');
+	}
+
+	/** The palette slug of a stored color, '' for a custom color (#215). */
+	function paletteColorSlug(value) {
+		var m = normalizeColor(value).match(PALETTE_COLOR_PATTERN);
+		return m ? m[1] : '';
+	}
+
+	/** The fallback a stored palette color carries, '' when none (#215). */
+	function paletteColorFallback(value) {
+		var m = normalizeColor(value).match(PALETTE_COLOR_PATTERN);
+		return m && m[2] ? m[2] : '';
+	}
+
+	/**
+	 * A stored color as a CSS value (#215): a palette color reads the
+	 * theme's preset variable, with the saved color as its fallback. Twin
+	 * of PHP color_css_value().
+	 */
+	function colorCssValue(value, allowTransparent) {
+		var color = normalizeColor(value, allowTransparent);
+		var m = color.match(PALETTE_COLOR_PATTERN);
+		if (m) return 'var(--wp--preset--color--' + m[1] + (m[2] ? ', ' + m[2] : '') + ')';
+		return color;
+	}
+
+	/**
+	 * An outline width in px (#215): 0 when off or invalid, else capped at
+	 * TEXT_STROKE_MAX and rounded to two decimals. Same number rules as
+	 * normalizeHang(); twin of PHP normalize_stroke_width().
+	 */
+	function normalizeStrokeWidth(value) {
+		if (typeof value === 'string' ? !/^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(value) : typeof value !== 'number') return 0;
+		var n = Number(value);
+		if (!isFinite(n) || n < 0.005) return 0;
+		return Number(Math.round(Number(Math.min(n, TEXT_STROKE_MAX) + 'e2')) + 'e-2');
+	}
+
+	/**
+	 * The outline declarations of a style (#215). Twin of PHP
+	 * stroke_declarations(), which explains them.
+	 *
+	 * @param {Object} props Resolved properties.
+	 * @return {string[]}
+	 */
+	function strokeDeclarations(props) {
+		var width = normalizeStrokeWidth(props.textStrokeWidth);
+		if (width <= 0) return [];
+		var rules = ['-webkit-text-stroke-width: calc(' + phpFloatStr(width) + 'px * (1 - var(--typost-plain-outline, 0)))'];
+		var color = strokeColorCssValue(props);
+		if (color) rules.push('-webkit-text-stroke-color: ' + color);
+		if (props.textStrokePosition === 'behind') rules.push('paint-order: stroke fill');
+		return rules;
+	}
+
+	/**
+	 * The outline color of a style as a CSS value, '' for none (#215). On
+	 * outline-only text, a palette outline with no fallback that shows uses
+	 * the system text color when the theme lacks the preset. Twin of PHP
+	 * stroke_color_css_value(), which explains it.
+	 */
+	function strokeColorCssValue(props) {
+		var color = normalizeColor(props.textStrokeColor);
+		if (normalizeColor(props.textColor, true) === 'transparent') {
+			var m = color.match(PALETTE_COLOR_PATTERN);
+			if (m && (!m[2] || isFullyTransparentColor(m[2]))) {
+				return 'var(--wp--preset--color--' + m[1] + ', CanvasText)';
+			}
+		}
+		return colorCssValue(color);
+	}
+
+	/** Whether a normalized hex color has zero alpha (twin of PHP is_fully_transparent_color()). */
+	function isFullyTransparentColor(color) {
+		return /^#[0-9a-f]{6}00$/.test(color);
+	}
+
+	/**
+	 * Whether a style's outline can show text that has a transparent fill
+	 * (#215): a width and a color of its own that is not fully transparent.
+	 * Twin of PHP has_outline_partner(), which explains it.
+	 *
+	 * @param {Object} props Properties.
+	 * @return {boolean}
+	 */
+	function hasOutlinePartner(props) {
+		var p = props || {};
+		if (normalizeStrokeWidth(p.textStrokeWidth) <= 0) return false;
+		var color = normalizeColor(p.textStrokeColor);
+		return !!color && !isFullyTransparentColor(color);
+	}
+
+	/**
+	 * The text color of a style as a CSS value, '' for none (#215). A
+	 * transparent fill needs an outline that shows, and reads the plain
+	 * typography switch. Twin of PHP text_color_css_value(), which explains
+	 * it.
+	 */
+	function textColorCssValue(props) {
+		var color = colorCssValue(props.textColor, true);
+		if (color === 'transparent') {
+			return hasOutlinePartner(props) ? 'var(--typost-plain-fill, transparent)' : '';
+		}
+		return color;
+	}
+
+	/**
+	 * The surface of a style browser sample (#215), the twin of the admin
+	 * card's admin_preview_surface_css(): the sample carries the style's
+	 * real class, so a white text color or an outline would otherwise sit
+	 * on the modal's own background. Only for a style with a color or an
+	 * outline, and only when the theme has both colors. The theme text
+	 * color applies only when the style's class writes no color of its own,
+	 * as an inline style would beat the class.
+	 *
+	 * @param {Object} properties  Resolved style properties.
+	 * @param {Object} themeColors {background, text}, '' when unknown.
+	 * @return {?Object} Inline style, or null for none.
+	 */
+	function buildStyleSampleSurface(properties, themeColors) {
+		var props = properties || {};
+		var theme = themeColors || {};
+		var ownColor = textColorCssValue(props);
+		if ((!ownColor && normalizeStrokeWidth(props.textStrokeWidth) <= 0) || !theme.background || !theme.text) {
+			return null;
+		}
+		var surface = { backgroundColor: String(theme.background), padding: '4px 8px' };
+		if (!ownColor) surface.color = String(theme.text);
+		return surface;
+	}
+
+	/** The visual element of a Typography Stylist block with its own text color (twin of PHP block_color_selector()). */
+	function blockColorSelector(ref) {
+		var cls = '.typost-ps-' + ref;
+		return '.wp-block-typost.has-text-color > .typost-styled' + cls + cls + cls + cls + cls;
 	}
 
 	/**
@@ -284,6 +564,197 @@
 		return null;
 	}
 
+	/** Core's kebab form of a palette slug: `accent1` is `accent-1` in class and variable names. */
+	function paletteSlugToKebab(slug) {
+		return String(slug)
+			.replace(/([a-z])([A-Z])/g, '$1-$2')
+			.replace(/([a-zA-Z])(\d)/g, '$1-$2')
+			.replace(/(\d)([a-zA-Z])/g, '$1-$2')
+			.replace(/[\s_]+/g, '-')
+			.toLowerCase();
+	}
+
+	/**
+	 * What a whole block keeps of a style's own values when it is detached
+	 * (#346). The values a block setting can hold go to that setting: text
+	 * color, margin top and bottom, padding left and right. A setting the
+	 * block already has wins. The rest are reported, so the author knows
+	 * what went.
+	 *
+	 * A style's indents are logical and block padding is physical, so the
+	 * text direction picks the side. An em value that would resolve against
+	 * another size becomes px at the size the text renders at now
+	 * (fontSizePx): a core block loses the style's size, and a Typography
+	 * Stylist block's indent moves from the text element to the wrapper.
+	 * That block's margins stay in em (keepMarginEm): the style wrote them on
+	 * the wrapper too, so the same value gives the same result on every
+	 * theme, where a px value measured in the editor might not. A color that
+	 * is fully transparent is never kept: the outline that shows such text
+	 * has no block setting, and the text would vanish.
+	 *
+	 * @param {Object} properties The detached style's resolved properties.
+	 * @param {Object} attrs      The block's attributes.
+	 * @param {Object} [options]
+	 * @param {boolean} [options.isRtl]      Right-to-left text.
+	 * @param {Array}   [options.palette]    The theme palette, [{slug, color}].
+	 * @param {number}  [options.fontSizePx] The rendered font size.
+	 * @param {boolean} [options.isFit]      A fit to width block: the style's indents never applied.
+	 * @param {boolean} [options.coreBlock]  A core block, which holds no copy of the style's type settings.
+	 * @param {boolean} [options.keepMarginEm] The style's margins are on the element the block's margins go to.
+	 * @param {boolean} [options.hasGrepRules] The style has GREP rules, which are on its record, not in its properties.
+	 * @param {boolean} [options.hasNestedRules] The style has nested rules (#195), also on its record.
+	 * @return {{attributes: Object, removed: string[], emConverted: boolean}}
+	 */
+	function buildDetachBlockSettings(properties, attrs, options) {
+		var props = properties && typeof properties === 'object' ? properties : {};
+		var a = attrs && typeof attrs === 'object' ? attrs : {};
+		var opts = options || {};
+		var isFit = !!opts.isFit || props.fontSize === 'fit';
+		var fontSizePx = typeof opts.fontSizePx === 'number' && isFinite(opts.fontSizePx) && opts.fontSizePx > 0 ? opts.fontSizePx : 0;
+		var style = a.style && typeof a.style === 'object' ? a.style : {};
+		var attributes = {};
+		var removed = [];
+		var emConverted = false;
+		var nextStyle = null;
+
+		function write(group, side, value) {
+			nextStyle = nextStyle || Object.assign({}, style);
+			if (!side) {
+				nextStyle.color = Object.assign({}, nextStyle.color, { text: value });
+				return;
+			}
+			nextStyle.spacing = Object.assign({}, nextStyle.spacing);
+			nextStyle.spacing[group] = Object.assign({}, nextStyle.spacing[group]);
+			nextStyle.spacing[group][side] = value;
+		}
+
+		// Text color
+		var ownColor = style.color && typeof style.color === 'object' ? style.color : {};
+		var color = normalizeColor(props.textColor, true);
+		if (color && !a.textColor && !ownColor.text) {
+			var slug = paletteColorSlug(color);
+			if (color === 'transparent') {
+				if (hasOutlinePartner(props)) removed.push('textColor');
+			} else if (slug) {
+				var entry = (Array.isArray(opts.palette) ? opts.palette : []).filter(function (candidate) {
+					return candidate && paletteSlugToKebab(candidate.slug) === slug;
+				})[0];
+				var fallback = paletteColorFallback(color);
+				if (entry && !isFullyTransparentColor(normalizeHexColor(entry.color))) {
+					attributes.textColor = entry.slug;
+				} else if (!entry && fallback && !isFullyTransparentColor(fallback)) {
+					write('color', '', fallback);
+				} else {
+					removed.push('textColor');
+				}
+			} else if (isFullyTransparentColor(color)) {
+				removed.push('textColor');
+			} else {
+				write('color', '', color);
+			}
+		}
+
+		// Space before and after, and the indents
+		var spacing = style.spacing && typeof style.spacing === 'object' ? style.spacing : {};
+		function keepLength(group, side, value) {
+			if (!value) return;
+			var current = spacing[group];
+			if (current !== undefined && current !== null && (typeof current !== 'object' || current[side] !== undefined)) return;
+			var written = value;
+			if (fontSizePx && /em$/.test(value) && !(group === 'margin' && opts.keepMarginEm)) {
+				written = String(Number(Math.round(Number(parseFloat(value) * fontSizePx + 'e3')) + 'e-3')) + 'px';
+				emConverted = true;
+			}
+			write(group, side, written);
+		}
+		keepLength('margin', 'top', normalizeLength(props.spaceBefore));
+		keepLength('margin', 'bottom', normalizeLength(props.spaceAfter));
+		if (!isFit) {
+			keepLength('padding', opts.isRtl ? 'right' : 'left', normalizeLength(props.indentStart));
+			keepLength('padding', opts.isRtl ? 'left' : 'right', normalizeLength(props.indentEnd));
+		}
+
+		// No block setting holds these
+		if (normalizeStrokeWidth(props.textStrokeWidth) > 0) removed.push('textStrokeWidth');
+		if (!isFit && normalizeLength(props.firstLineIndent, true)) {
+			removed.push('firstLineIndent');
+			if (indentAfterSameApplies(props)) removed.push('indentAfterSame');
+		}
+		if (props.fontSize !== 'fit') {
+			if (phpInt(props.wordSpacing)) removed.push('wordSpacing');
+			if (normalizeTextWrap(props.textWrap)) removed.push('textWrap');
+			if (normalizeHyphens(props.hyphens)) removed.push('hyphens');
+			if (opts.coreBlock && normalizeAlignment(props.alignment) === 'justify') removed.push('alignment');
+			if (normalizeAlignLast(props.alignment, props.alignLast)) removed.push('alignLast');
+		}
+		// The GREP rules go with the class; text in a fit block never matched
+		if (opts.hasGrepRules && !isFit) removed.push('grepRules');
+		// So do the nested rules (#195), which skip fit text too
+		if (opts.hasNestedRules && !isFit) removed.push('nestedRules');
+
+		// A Typography Stylist block keeps these as its working copy; a core
+		// block has only the class
+		if (opts.coreBlock) {
+			if (phpInt(props.fontId) > 0) removed.push('fontId');
+			if (props.fontWeight) removed.push('fontWeight');
+			if (props.fontStyle) removed.push('fontStyle');
+			if (props.fontSize && props.fontSize !== 'inherit') removed.push('fontSize');
+			if (phpInt(props.letterSpacing)) removed.push('letterSpacing');
+			if (props.lineHeight) removed.push('lineHeight');
+			if (Array.isArray(props.features) && props.features.length) removed.push('features');
+			if (props.fontVariationSettings) removed.push('fontVariationSettings');
+			if (normalizeHang(props.initialHang) > 0) removed.push('initialHang');
+			if (props.textCase) removed.push('textCase');
+		}
+
+		if (nextStyle) attributes.style = nextStyle;
+		return { attributes: attributes, removed: removed, emConverted: emConverted };
+	}
+
+	/**
+	 * The editor's color palette as [{slug, color}], [] outside the block
+	 * editor. Every origin, because a style can use a site, theme or default
+	 * color, and core sets settings.colors to only one of them
+	 * (custom ?? theme ?? default). The default origin only when the theme
+	 * keeps it: with defaultPalette false core prints no CSS for those colors,
+	 * so a kept slug would show nothing.
+	 */
+	function readEditorPalette() {
+		var data = typeof window !== 'undefined' && window.wp && window.wp.data;
+		var store = data && data.select && data.select('core/block-editor');
+		var settings = store && store.getSettings ? store.getSettings() : null;
+		if (!settings) return [];
+		var color = settings.__experimentalFeatures && settings.__experimentalFeatures.color;
+		var palette = color && color.palette;
+		if (palette) {
+			return [].concat(palette.custom || [], palette.theme || [], color.defaultPalette === false ? [] : (palette.default || []));
+		}
+		return Array.isArray(settings.colors) ? settings.colors : [];
+	}
+
+	/**
+	 * The font size a block's text renders at now, in px, or null when the
+	 * block is not rendered (#346): the canvas iframe's copy first, since
+	 * the editor page has no blocks when the canvas is an iframe.
+	 *
+	 * @param {string} clientId
+	 * @return {?number}
+	 */
+	function measureBlockFontSize(clientId) {
+		if (!clientId || typeof document === 'undefined') return null;
+		var canvas = document.querySelector('iframe[name="editor-canvas"]');
+		var docs = [canvas && canvas.contentDocument, document];
+		for (var i = 0; i < docs.length; i++) {
+			var block = docs[i] && docs[i].querySelector('[data-block="' + clientId + '"]');
+			if (block) {
+				var el = block.querySelector('.typost-block-content') || block;
+				var size = parseFloat(docs[i].defaultView.getComputedStyle(el).fontSize);
+				return isFinite(size) && size > 0 ? size : null;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * The alignment declarations of a style (#207), for its guarded rule.
 	 * Twin of PHP alignment_declarations(): text-align-last only with
@@ -306,6 +777,149 @@
 			rules.push('--typost-hang-on: 0');
 		}
 		return rules;
+	}
+
+	// Units an indent or spacing value (#199) can use, with the largest value
+	// each accepts. Mirrors LENGTH_MAX in PHP.
+	var LENGTH_MAX = { px: 1000, em: 50 };
+
+	// Indents and paragraph spacing (#199) that are plain lengths, zero or
+	// more: left and right indent (logical start and end) and space before
+	// and after. The first line indent can be negative and is a Based On
+	// group with indentAfterSame. Mirrors SPACING_PROPERTIES in PHP.
+	var SPACING_PROPERTIES = ['indentStart', 'indentEnd', 'spaceBefore', 'spaceAfter'];
+
+	/**
+	 * An indent or spacing value (#199) in its stored form, such as '1.5em'
+	 * or '24px'; '' for zero, anything without a px/em unit, and a negative
+	 * value unless allowNegative (the first line indent). Capped at
+	 * LENGTH_MAX and rounded to three decimals the way normalizeHang()
+	 * rounds, so it prints like PHP normalize_length().
+	 *
+	 * @param {*}       value         Raw value.
+	 * @param {boolean} allowNegative Accept a negative value.
+	 * @return {string}
+	 */
+	function normalizeLength(value, allowNegative) {
+		if (typeof value !== 'string') return '';
+		var m = /^\s*(-?)(\d+(?:\.\d*)?|\.\d+)\s*(px|em)\s*$/i.exec(value);
+		if (!m) return '';
+		var unit = m[3].toLowerCase();
+		var n = Math.min(Number(m[2]), LENGTH_MAX[unit]);
+		// Below 0.0005 rounds to 0; String() would also print it as '1e-7'
+		if (!isFinite(n) || n < 0.0005) return '';
+		var negative = m[1] === '-';
+		if (negative && !allowNegative) return '';
+		return (negative ? '-' : '') + String(Number(Math.round(Number(n + 'e3')) + 'e-3')) + unit;
+	}
+
+	/**
+	 * Whether a style's first line indent applies only after a paragraph
+	 * with the same style (#199): only with a positive indent, since a
+	 * hanging indent shapes every paragraph. Twin of PHP
+	 * indent_after_same_applies().
+	 */
+	function indentAfterSameApplies(props) {
+		var first = normalizeLength((props || {}).firstLineIndent, true);
+		return first !== '' && first.charAt(0) !== '-' && props.indentAfterSame === true;
+	}
+
+	/**
+	 * The indent and paragraph spacing rules of a style (#199). Twin of PHP
+	 * paragraph_layout_css(), which explains each rule; the shared fixture
+	 * paragraph-layout-css.json holds both to the same text.
+	 *
+	 * @param {Object}   props Resolved properties.
+	 * @param {number}   hang  The style's normalized hang.
+	 * @param {string[]} ids   The style's id, then its legacy id if any.
+	 * @return {string} CSS rule blocks separated by a blank line, or ''.
+	 */
+	function paragraphLayoutCss(props, hang, ids) {
+		var isFit = props.fontSize === 'fit';
+		var start = isFit ? '' : normalizeLength(props.indentStart);
+		var end = isFit ? '' : normalizeLength(props.indentEnd);
+		var first = isFit ? '' : normalizeLength(props.firstLineIndent, true);
+		var after = first !== '' && indentAfterSameApplies(props);
+		var before = normalizeLength(props.spaceBefore);
+		var afterSpace = normalizeLength(props.spaceAfter);
+
+		var hanging = first !== '' && first.charAt(0) === '-' ? first.slice(1) : '';
+		var padStart = start && hanging ? 'calc(' + start + ' + ' + hanging + ')' : (start || hanging);
+
+		var indents = [];
+		if (padStart || end) {
+			indents.push('box-sizing: border-box');
+		}
+		if (padStart) {
+			indents.push('padding-inline-start: ' + padStart);
+		}
+		if (end) {
+			indents.push('padding-inline-end: ' + end);
+		}
+		var indentRules = [];
+		if (first) {
+			indentRules.push('text-indent: ' + first);
+			if (hang > 0) {
+				indentRules.push('--typost-hang-on: 0');
+			}
+		}
+		if (!after) {
+			indents = indents.concat(indentRules);
+		}
+		var margins = [];
+		if (before) {
+			margins.push('margin-block-start: ' + before);
+		}
+		if (afterSpace) {
+			margins.push('margin-block-end: ' + afterSpace);
+		}
+
+		if (!indents.length && !margins.length && !after) return '';
+
+		var main = [];
+		var block = [];
+		var wrapper = [];
+		var inner = [];
+		var previous = [];
+		ids.forEach(function (ref) {
+			var cls = '.typost-ps-' + ref;
+			var s = '.typost-styled' + cls + cls + cls + cls + cls;
+			var w = '.wp-block-typost:has(> ' + s + ')';
+			main.push(cls, s);
+			block.push(s);
+			wrapper.push(w);
+			inner.push('.wp-block-typost > ' + s);
+			previous.push(w, s);
+		});
+		// Either class of the style can come before either class, so the one
+		// :is() lists every form
+		var next = [];
+		block.forEach(function (s) {
+			next.push(':is(' + previous.join(', ') + ') + ' + s + INDENT_GUARD);
+			next.push(':is(' + previous.join(', ') + ') + .wp-block-typost > ' + s + INDENT_GUARD);
+		});
+
+		function rule(selectors, declarations) {
+			return selectors.join(',\n') + ' {\n    ' + declarations.join(';\n    ') + ';\n}';
+		}
+		var blocks = [];
+		if (indents.length) {
+			blocks.push(rule(main.map(function (part) {
+				return part + INDENT_GUARD;
+			}), indents));
+		}
+		if (margins.length) {
+			blocks.push(rule(main, margins));
+			blocks.push(rule(wrapper, margins));
+			var zero = [];
+			if (before) zero.push('margin-block-start: 0');
+			if (afterSpace) zero.push('margin-block-end: 0');
+			blocks.push(rule(inner, zero));
+		}
+		if (after) {
+			blocks.push(rule(next, indentRules));
+		}
+		return blocks.join('\n\n');
 	}
 
 	/** True for the case values that use font-variant-caps. */
@@ -427,6 +1041,23 @@
 		}
 		if (state.wordSpacing !== undefined && phpInt(state.wordSpacing) !== phpInt(styleProps.wordSpacing)) return true;
 		if (state.textWrap !== undefined && normalizeTextWrap(state.textWrap) !== normalizeTextWrap(styleProps.textWrap)) return true;
+		// Hyphenation (#208): the same rule, compared as a group
+		if (state.hyphens !== undefined && groupSignature('hyphens', state) !== groupSignature('hyphens', styleProps)) return true;
+
+		// Indents and paragraph spacing (#199): the same rule, only the admin
+		// Edit form reports them
+		for (var s = 0; s < SPACING_PROPERTIES.length; s++) {
+			var spacingKey = SPACING_PROPERTIES[s];
+			if (state[spacingKey] !== undefined && normalizeLength(state[spacingKey]) !== normalizeLength(styleProps[spacingKey])) return true;
+		}
+		if (state.firstLineIndent !== undefined) {
+			if (normalizeLength(state.firstLineIndent, true) !== normalizeLength(styleProps.firstLineIndent, true)) return true;
+			if (indentAfterSameApplies(state) !== indentAfterSameApplies(styleProps)) return true;
+		}
+		// Text color and outline (#215): style-only like #207, so only the
+		// admin Edit form reports them
+		if (state.textColor !== undefined && comparableColor(state.textColor, true) !== comparableColor(styleProps.textColor, true)) return true;
+		if (state.textStrokeWidth !== undefined && groupSignature('textStrokeWidth', state) !== groupSignature('textStrokeWidth', styleProps)) return true;
 
 		return false;
 	}
@@ -539,7 +1170,61 @@
 		if (textWrap) {
 			properties.textWrap = textWrap;
 		}
+		// Hyphenation (#208): off is never stored, the limits and the
+		// character only with it on
+		Object.assign(properties, hyphenationProperties(state));
+		// Indents and paragraph spacing (#199): none is never stored, and
+		// "only after the same style" only as true with a positive indent
+		copyLayoutProperties(properties, state);
+		// Text color and outline (#215): none is never stored; the outline's
+		// color and position only with a width, the position only as behind
+		var textColor = normalizeColor(state.textColor, true);
+		if (textColor) {
+			properties.textColor = textColor;
+		}
+		Object.assign(properties, strokeProperties(state));
 		return properties;
+	}
+
+	/** The outline group as stored (#215), {} for no outline. */
+	function strokeProperties(source) {
+		var out = {};
+		var width = normalizeStrokeWidth(source && source.textStrokeWidth);
+		if (width > 0) {
+			out.textStrokeWidth = width;
+			var color = normalizeColor(source.textStrokeColor);
+			if (color) out.textStrokeColor = color;
+			if (source.textStrokePosition === 'behind') out.textStrokePosition = 'behind';
+		}
+		return out;
+	}
+
+	/**
+	 * Copy a style's indents and paragraph spacing (#199) into properties,
+	 * in their stored form: SPACING_PROPERTIES and the first line indent
+	 * group. Keys that are none are left out.
+	 *
+	 * @param {Object} properties Properties to add to.
+	 * @param {Object} source     State or stored properties.
+	 * @param {Object} [only]     Copy only these keys (a map of key → true).
+	 */
+	function copyLayoutProperties(properties, source, only) {
+		var src = source || {};
+		SPACING_PROPERTIES.forEach(function (key) {
+			if (only && !only[key]) return;
+			var length = normalizeLength(src[key]);
+			if (length) {
+				properties[key] = length;
+			}
+		});
+		if (only && !only.firstLineIndent) return;
+		var first = normalizeLength(src.firstLineIndent, true);
+		if (first) {
+			properties.firstLineIndent = first;
+			if (indentAfterSameApplies(src)) {
+				properties.indentAfterSame = true;
+			}
+		}
 	}
 
 	/**
@@ -556,7 +1241,9 @@
 	 * textCase / fakeSmallCaps (#214) follow the same rule for an editor
 	 * (an extension's) that does not report them; both core editors do.
 	 * alignment / alignLast, wordSpacing and textWrap (#207) too: no editor
-	 * reports them, only the admin Edit form.
+	 * reports them, only the admin Edit form. So do the indents and
+	 * paragraph spacing (#199); the first line indent carries with its
+	 * "only after the same style" option.
 	 *
 	 * Size unit (#233, #248): Update Style (isUpdate) keeps the unit of a
 	 * style that already writes a size, so its CSS does not change unit
@@ -599,6 +1286,26 @@
 		if ((!state || state.textWrap === undefined) && normalizeTextWrap(base.textWrap)) {
 			properties.textWrap = normalizeTextWrap(base.textWrap);
 		}
+		// Hyphenation (#208): no editor control either
+		if (!state || state.hyphens === undefined) {
+			Object.assign(properties, hyphenationProperties(base));
+		}
+		// Indents and paragraph spacing (#199): no editor control either, so
+		// the ones the state does not report come from the style. Without
+		// this an Update Style in either editor deleted them from every
+		// block that uses the style (#199 review).
+		var unreported = {};
+		SPACING_PROPERTIES.concat(['firstLineIndent']).forEach(function (key) {
+			if (!state || state[key] === undefined) unreported[key] = true;
+		});
+		copyLayoutProperties(properties, base, unreported);
+		// Text color and outline (#215): no editor control either
+		if ((!state || state.textColor === undefined) && normalizeColor(base.textColor, true)) {
+			properties.textColor = normalizeColor(base.textColor, true);
+		}
+		if (!state || state.textStrokeWidth === undefined) {
+			Object.assign(properties, strokeProperties(base));
+		}
 		// Same test as the CSS generators: only these write a size ('0' does not)
 		var baseHasSize = base.fontSize === 'responsive' || base.fontSize === 'fit' ||
 			(base.fontSize !== undefined && base.fontSize !== null && base.fontSize !== '' && isFinite(base.fontSize) && Number(base.fontSize) > 0);
@@ -622,11 +1329,21 @@
 		fontSize: ['fontSize', 'fontSizeUnit', 'fontSizeMin', 'fontSizePreferred', 'fontSizeMax', 'fitMaxSize'],
 		textCase: ['textCase', 'fakeSmallCaps'],
 		alignment: ['alignment', 'alignLast'],
+		firstLineIndent: ['firstLineIndent', 'indentAfterSame'],
+		textStrokeWidth: ['textStrokeWidth', 'textStrokeColor', 'textStrokePosition'],
+		hyphens: ['hyphens', 'hyphenateLimitWord', 'hyphenateLimitBefore', 'hyphenateLimitAfter', 'hyphenateCharacter'],
 	};
 
+	// The value that unsets a group: fontSize 'inherit', textStrokeWidth 0
+	// (#215), '' for the others. Twin of PHP group_empty_value().
+	function groupEmptyValue(lead) {
+		if (lead === 'fontSize') return 'inherit';
+		return lead === 'textStrokeWidth' ? 0 : '';
+	}
+
 	// The value a style based on another stores to unset a property its
-	// parent sets. The groups use fontSize 'inherit', textCase '' and
-	// alignment ''.
+	// parent sets. The groups use fontSize 'inherit', textCase '',
+	// alignment '', firstLineIndent '' and hyphens ''.
 	// Mirrors EMPTY_PROPERTY_VALUES in PHP.
 	var EMPTY_PROPERTY_VALUES = {
 		fontId: 0,
@@ -639,6 +1356,11 @@
 		initialHang: 0,
 		wordSpacing: 0,
 		textWrap: '',
+		indentStart: '',
+		indentEnd: '',
+		spaceBefore: '',
+		spaceAfter: '',
+		textColor: '',
 	};
 
 	function hasOwn(obj, key) {
@@ -706,6 +1428,15 @@
 		}
 		if (hasOwn(out, 'alignment') && ALIGNMENT_VALUES.indexOf(out.alignment) === -1) {
 			BASED_ON_GROUPS.alignment.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'firstLineIndent') && normalizeLength(out.firstLineIndent, true) === '') {
+			BASED_ON_GROUPS.firstLineIndent.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'textStrokeWidth') && normalizeStrokeWidth(out.textStrokeWidth) <= 0) {
+			BASED_ON_GROUPS.textStrokeWidth.forEach(function (key) { delete out[key]; });
+		}
+		if (hasOwn(out, 'hyphens') && !normalizeHyphens(out.hyphens)) {
+			BASED_ON_GROUPS.hyphens.forEach(function (key) { delete out[key]; });
 		}
 		Object.keys(out).forEach(function (key) {
 			var value = out[key];
@@ -787,11 +1518,35 @@
 	}
 
 	/**
+	 * A stored color in the form two styles compare by (#215): a palette
+	 * color by its slug only. Twin of PHP comparable_color(), which explains
+	 * it.
+	 */
+	function comparableColor(value, allowTransparent) {
+		var color = normalizeColor(value, allowTransparent);
+		var m = color.match(PALETTE_COLOR_PATTERN);
+		return m ? 'var:preset|color|' + m[1] : color;
+	}
+
+	/**
 	 * A comparable form of a group, as the CSS generators read it. Twin of
 	 * PHP group_signature().
 	 */
 	function groupSignature(lead, props) {
 		var p = props || {};
+		if (lead === 'firstLineIndent') {
+			var first = normalizeLength(p.firstLineIndent, true);
+			return first ? first + '|' + (indentAfterSameApplies(p) ? '1' : '0') : 'none';
+		}
+		if (lead === 'textStrokeWidth') {
+			var w = normalizeStrokeWidth(p.textStrokeWidth);
+			return w > 0 ? phpFloatStr(w) + '|' + comparableColor(p.textStrokeColor) + '|' + (p.textStrokePosition === 'behind' ? 'behind' : '') : 'none';
+		}
+		if (lead === 'hyphens') {
+			var h = hyphenationProperties(p);
+			if (!h.hyphens) return 'none';
+			return 'auto|' + HYPHENATE_LIMIT_KEYS.map(function (key) { return String(h[key] || 0); }).join('|') + '|' + (h.hyphenateCharacter || '');
+		}
 		if (lead === 'alignment') {
 			var a = normalizeAlignment(p.alignment);
 			return a ? a + '|' + normalizeAlignLast(a, p.alignLast) : 'none';
@@ -831,6 +1586,13 @@
 				return Math.abs((parseFloat(va) || 0) - (parseFloat(vb) || 0)) <= LINE_HEIGHT_TOLERANCE;
 			case 'initialHang':
 				return normalizeHang(va) === normalizeHang(vb);
+			case 'indentStart':
+			case 'indentEnd':
+			case 'spaceBefore':
+			case 'spaceAfter':
+				return normalizeLength(va) === normalizeLength(vb);
+			case 'textColor':
+				return comparableColor(va, true) === comparableColor(vb, true);
 			case 'features':
 				var fa = (Array.isArray(va) ? va : []).map(String).sort();
 				var fb = (Array.isArray(vb) ? vb : []).map(String).sort();
@@ -867,7 +1629,7 @@
 			var mine = groupSignature(lead, f);
 			if (mine === groupSignature(lead, p)) return;
 			if (mine === 'none' || (lead === 'textCase' && !normalizeTextCase(f.textCase))) {
-				out[lead] = lead === 'fontSize' ? 'inherit' : '';
+				out[lead] = groupEmptyValue(lead);
 				return;
 			}
 			BASED_ON_GROUPS[lead].forEach(function (key) {
@@ -975,6 +1737,15 @@
 	 *   render only through the style's class and have nothing to reset.
 	 *   (The block's own textAlign attribute is separate and overrides the
 	 *   style's alignment.)
+	 * - indentStart, indentEnd, firstLineIndent, indentAfterSame,
+	 *   spaceBefore, spaceAfter (#199) — style-only for the same reason.
+	 *   (The block's own spacing settings are separate and override the
+	 *   style's spacing.)
+	 * - textColor, textStrokeWidth, textStrokeColor, textStrokePosition
+	 *   (#215) — style-only for the same reason. The block's own text color
+	 *   (the color support) overrides the style's color through CSS.
+	 * - hyphens, hyphenateLimitWord/Before/After, hyphenateCharacter (#208)
+	 *   — style-only for the same reason.
 	 *
 	 * initialHang IS normalized (to 0): a style without a hang must remove a
 	 * lingering hang on apply. The inline editor ignores the key, because a
@@ -1107,11 +1878,24 @@
 			previewSize = Math.min(max, Math.max(min, realSize));
 		}
 
+		var style = {
+			fontSize: previewSize + 'px',
+			lineHeight: 1.25,
+		};
+		// Indents and paragraph spacing (#199) reach the row through the
+		// plain class, and would only push a one-line sample around the list.
+		// The settings tab card keeps them.
+		var layout = {};
+		copyLayoutProperties(layout, props);
+		if (Object.keys(layout).length) {
+			style.paddingInlineStart = 0;
+			style.paddingInlineEnd = 0;
+			style.textIndent = 0;
+			style.marginBlockStart = 0;
+			style.marginBlockEnd = 0;
+		}
 		return {
-			style: {
-				fontSize: previewSize + 'px',
-				lineHeight: 1.25,
-			},
+			style: style,
 			sizeLabel: sizeLabel,
 		};
 	}
@@ -1331,10 +2115,27 @@
 				rules.push('text-wrap: ' + props.textWrap);
 				rules.push('text-wrap-mode: inherit');
 			}
+			// Hyphenation (#208). Same declarations and order as the PHP twin.
+			hyphenationDeclarations(props).forEach(function (pair) {
+				rules.push(pair[0] + ': ' + pair[1]);
+			});
 			alignRules = alignmentDeclarations(props, hang);
 		}
 
-		if (!rules.length && !alignRules.length) return '';
+		// Text color and outline (#215), for fit to width too (PHP twin)
+		var textColor = textColorCssValue(props);
+		if (textColor) {
+			rules.push('color: ' + textColor);
+		}
+		rules = rules.concat(strokeDeclarations(props));
+
+		// Indents and paragraph spacing (#199): rules of their own, never on
+		// the inline-span selector (see the PHP twin)
+		var id = parseInt(style.id, 10);
+		var hasLegacy = style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId));
+		var layoutCss = paragraphLayoutCss(props, hang, hasLegacy ? [String(id), String(style.legacyId)] : [String(id)]);
+
+		if (!rules.length && !alignRules.length && !layoutCss) return '';
 
 		// Same three selectors as generate_style_css() in PHP, byte for byte:
 		// a plain `.typost-ps-N` for previews, then the block-level and
@@ -1342,9 +2143,8 @@
 		// (0,1,1), up to (0,3,4) on the frontend and (0,5,2) in the editor where
 		// WordPress prefixes them with .editor-styles-wrapper) cannot override
 		// the style.
-		var id = parseInt(style.id, 10);
 		var selector = selectorSet(id);
-		if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+		if (hasLegacy) {
 			selector += ',\n' + selectorSet(String(style.legacyId));
 		}
 
@@ -1355,6 +2155,21 @@
 				return part + ALIGNMENT_GUARD;
 			}).join(',\n');
 			css += (css ? '\n\n' : '') + guarded + ' {\n    ' + alignRules.join(';\n    ') + ';\n}';
+		}
+		if (layoutCss) {
+			css += (css ? '\n\n' : '') + layoutCss;
+		}
+		// A Typography Stylist block's own text color wins (PHP twin)
+		if (textColor) {
+			var blockSelectors = [blockColorSelector(id)];
+			if (style.legacyId && /^[A-Za-z0-9_-]+$/.test(String(style.legacyId))) {
+				blockSelectors.push(blockColorSelector(String(style.legacyId)));
+			}
+			css += '\n\n' + blockSelectors.join(',\n') + ' {\n    color: inherit;\n}';
+			// Outline-only text in forced colors: Firefox would paint nothing (PHP twin)
+			if (textColor.indexOf('transparent') !== -1) {
+				css += '\n\n@media (forced-colors: active) {\n' + selector + ' {\n    color: CanvasText;\n    -webkit-text-stroke-color: CanvasText;\n}\n}';
+			}
 		}
 		if (hang > 0) {
 			css += coreBlockHangCss(id);
@@ -1967,6 +2782,602 @@
 		return -1;
 	}
 
+	// ---------------------------------------------------------------------
+	// Contrast (#215, WCAG 1.4.3)
+	// ---------------------------------------------------------------------
+
+	/**
+	 * A CSS color as {r, g, b, a} (0–255, alpha 0–1), or null when it is not
+	 * a hex, rgb()/rgba() or `transparent` value. Palette colors can be any
+	 * CSS color; one this cannot read is not checked.
+	 *
+	 * @param {string} value
+	 * @return {?Object}
+	 */
+	function parseCssColor(value) {
+		if (typeof value !== 'string') return null;
+		var v = value.trim().toLowerCase();
+		if (v === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
+		var hex = normalizeHexColor(v);
+		if (hex) {
+			return {
+				r: parseInt(hex.substr(1, 2), 16),
+				g: parseInt(hex.substr(3, 2), 16),
+				b: parseInt(hex.substr(5, 2), 16),
+				a: hex.length === 9 ? parseInt(hex.substr(7, 2), 16) / 255 : 1,
+			};
+		}
+		var m = v.match(/^rgba?\(\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*[,\s]\s*([\d.]+)\s*(?:[,\/]\s*([\d.]+%?)\s*)?\)$/);
+		if (!m) return null;
+		var alpha = m[4] === undefined ? 1 : (m[4].slice(-1) === '%' ? parseFloat(m[4]) / 100 : parseFloat(m[4]));
+		return {
+			r: Math.min(255, parseFloat(m[1])),
+			g: Math.min(255, parseFloat(m[2])),
+			b: Math.min(255, parseFloat(m[3])),
+			a: Math.max(0, Math.min(1, alpha)),
+		};
+	}
+
+	/** A color laid over an opaque background (alpha compositing). */
+	function compositeColor(color, background) {
+		var a = color.a;
+		return {
+			r: color.r * a + background.r * (1 - a),
+			g: color.g * a + background.g * (1 - a),
+			b: color.b * a + background.b * (1 - a),
+			a: 1,
+		};
+	}
+
+	/** WCAG relative luminance of an opaque color. */
+	function relativeLuminance(color) {
+		var channel = function (c) {
+			var s = c / 255;
+			return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+		};
+		return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
+	}
+
+	/**
+	 * The WCAG contrast ratio of a color over a background (1–21). A color
+	 * with transparency is laid over the background first, so a tint is
+	 * checked as it shows.
+	 *
+	 * @param {Object} color      parseCssColor() result.
+	 * @param {Object} background parseCssColor() result (made opaque over white).
+	 * @return {number}
+	 */
+	function contrastRatio(color, background) {
+		var bg = compositeColor(background, { r: 255, g: 255, b: 255, a: 1 });
+		var fg = compositeColor(color, bg);
+		var l1 = relativeLuminance(fg);
+		var l2 = relativeLuminance(bg);
+		return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+	}
+
+	/**
+	 * Whether a style's text counts as large under WCAG 1.4.3: at least
+	 * 24px, or 18.66px and bold. A fluid or fit size counts by its smallest
+	 * size; text with no size of its own is not large.
+	 *
+	 * @param {Object} props Properties.
+	 * @return {boolean}
+	 */
+	function isLargeText(props) {
+		var p = props || {};
+		var size = contrastFontSize(p);
+		var weight = parseInt(p.fontWeight, 10) || (p.fontWeight === 'bold' ? 700 : 400);
+		return size >= 24 || (size >= 18.66 && weight >= 700);
+	}
+
+	/**
+	 * The font size in px the contrast check reads: the smallest size of a
+	 * fluid or fit style, 0 when the style has no size of its own.
+	 *
+	 * @param {Object} p Properties.
+	 * @return {number}
+	 */
+	function contrastFontSize(p) {
+		if (p.fontSize === 'responsive' || p.fontSize === 'fit') {
+			return parseFloat(p.fontSizeMin) || 0;
+		}
+		return p.fontSize !== undefined && isFinite(p.fontSize) ? Number(p.fontSize) || 0 : 0;
+	}
+
+	// An outline is centered on the edge of each letter, so an outline on top
+	// about as wide as a stem (about a tenth of the font size in text weights)
+	// covers the stem: WCAG's Understanding 1.4.3 then counts it as the color
+	// of the letter, not as a border around it.
+	var OUTLINE_COVERS_LETTER_RATIO = 0.1;
+
+	/**
+	 * A stored color as a color the contrast check can read: a custom color
+	 * as stored, a palette color as the palette has it now (else its saved
+	 * fallback).
+	 *
+	 * @param {string} value   Stored color.
+	 * @param {Array}  palette [{slug, color}].
+	 * @return {?Object} parseCssColor() result.
+	 */
+	function resolveStoredColor(value, palette) {
+		var color = normalizeColor(value, true);
+		if (!color) return null;
+		var slug = paletteColorSlug(color);
+		if (slug) {
+			var entry = null;
+			(Array.isArray(palette) ? palette : []).forEach(function (candidate) {
+				if (!entry && candidate && candidate.slug === slug) entry = candidate;
+			});
+			return parseCssColor(entry ? String(entry.color) : paletteColorFallback(color));
+		}
+		return parseCssColor(color);
+	}
+
+	/**
+	 * The contrast problem of a style's text color and outline (#215), or
+	 * null when it meets WCAG 1.4.3 or cannot be checked.
+	 *
+	 * - Text with a fill and no outline: the fill against the background.
+	 * - Outline-only text (transparent fill): the outline against the
+	 *   background. WCAG's Understanding 1.4.3 counts a narrow border as part
+	 *   of the letter.
+	 * - A fill with an outline: the text reads when the fill stands out from
+	 *   the background (a narrow outline) or from the outline (a wide halo,
+	 *   which acts as the background), so it is flagged only when both fail.
+	 * - A fill that passes, with a wide outline on top: the outline covers
+	 *   the letter, so the outline against the background also counts. A
+	 *   style with no size counts as 16px, as isLargeText() counts it as
+	 *   not large.
+	 *
+	 * A fill with no color of its own is the theme's text color, and an
+	 * outline with no color is the fill's color.
+	 *
+	 * @param {Object} props   Properties (stored form).
+	 * @param {Object} context {palette: [{slug, color}], background: CSS color,
+	 *                         text: the theme's text color}.
+	 * @return {?{ratio: number, required: number, pair: string}} pair is
+	 *         'text', 'outline', 'text-outline' or 'outline-covers'; ratio
+	 *         rounded down to two decimals, as a ratio just under the line
+	 *         must not read as on it.
+	 */
+	function findContrastProblem(props, context) {
+		var p = props || {};
+		var ctx = context || {};
+		var background = parseCssColor(ctx.background || '#ffffff');
+		if (!background) return null;
+		var hasFill = !!normalizeColor(p.textColor, true);
+		var width = normalizeStrokeWidth(p.textStrokeWidth);
+		if (!hasFill && width <= 0) return null;
+		var fill = hasFill ? resolveStoredColor(p.textColor, ctx.palette) : parseCssColor(ctx.text || '');
+		var outline = width > 0
+			? (normalizeColor(p.textStrokeColor) ? resolveStoredColor(p.textStrokeColor, ctx.palette) : fill)
+			: null;
+		var required = isLargeText(p) ? 3 : 4.5;
+		var floor2 = function (n) { return Math.floor(n * 100) / 100; };
+		var outlineOnly = normalizeColor(p.textColor, true) === 'transparent';
+		if (outlineOnly) {
+			if (!outline) return null;
+			var r = contrastRatio(outline, background);
+			return r < required ? { ratio: floor2(r), required: required, pair: 'outline' } : null;
+		}
+		if (!fill) return null;
+		var fillRatio = contrastRatio(fill, background);
+		if (fillRatio >= required) {
+			var covers = outline && p.textStrokePosition !== 'behind' && width / (contrastFontSize(p) || 16) >= OUTLINE_COVERS_LETTER_RATIO;
+			var coverRatio = covers ? contrastRatio(outline, background) : required;
+			return coverRatio < required ? { ratio: floor2(coverRatio), required: required, pair: 'outline-covers' } : null;
+		}
+		if (outline && width > 0) {
+			var bg = compositeColor(background, { r: 255, g: 255, b: 255, a: 1 });
+			var halo = contrastRatio(fill, compositeColor(outline, bg));
+			if (halo >= required) return null;
+			return { ratio: floor2(Math.max(fillRatio, halo)), required: required, pair: 'text-outline' };
+		}
+		return { ratio: floor2(fillRatio), required: required, pair: 'text' };
+	}
+
+
+	// -------------------------------------------------------------------------
+	// Nested styles (#195): the editor preview
+	// -------------------------------------------------------------------------
+
+	/**
+	 * Plain text added for an element whose text is not read, as
+	 * Typost_PS_Text_Ranges::OBJECT_MARK.
+	 */
+	var NESTED_OBJECT_MARK = '￼';
+
+	/** Elements whose text the engine never reads (Typost_PS_Text_Ranges::SKIP_ELEMENTS). */
+	var NESTED_SKIP_ELEMENTS = ['SCRIPT', 'STYLE', 'TEMPLATE', 'TEXTAREA', 'TITLE', 'XMP', 'NOSCRIPT', 'NOEMBED', 'NOFRAMES', 'IFRAME', 'SVG', 'MATH', 'CODE', 'KBD', 'SAMP', 'PRE', 'SELECT', 'BUTTON'];
+
+	/** Void elements (Typost_PS_Text_Ranges::VOID_ELEMENTS). */
+	var NESTED_VOID_ELEMENTS = ['AREA', 'BR', 'EMBED', 'HR', 'IMG', 'INPUT', 'WBR', 'SOURCE', 'TRACK'];
+
+	/** The attribute that marks the editor's preview spans. */
+	var NESTED_PREVIEW_ATTR = 'data-typost-nested-preview';
+
+	function nestedSkipSpaces(plain, pos) {
+		var re = /[\s￼]+/y;
+		re.lastIndex = pos;
+		var m = re.exec(plain);
+		return m ? pos + m[0].length : pos;
+	}
+
+	/**
+	 * The next whole occurrence of a marker: see
+	 * Typost_PS_Nested::find_marker().
+	 *
+	 * @param {string} plain
+	 * @param {string} marker
+	 * @param {number} pos
+	 * @return {number} UTF-16 offset, -1 for none.
+	 */
+	function nestedFindMarker(plain, marker, pos) {
+		var at = plain.indexOf(marker, pos);
+		while (at !== -1) {
+			var after = at + marker.length;
+			if (!/^[\p{M}‍]/u.test(plain.slice(after, after + 2))) {
+				return at;
+			}
+			at = plain.indexOf(marker, after);
+		}
+		return -1;
+	}
+
+	/**
+	 * The lengths of the first `count` user-perceived characters of text
+	 * (PCRE's \X on the server): Intl.Segmenter where the browser has it,
+	 * else code points with the combining marks after them.
+	 *
+	 * @param {string} text
+	 * @param {number} count
+	 * @return {number} UTF-16 length.
+	 */
+	function nestedGraphemesLength(text, count) {
+		var length = 0;
+		var n = 0;
+		if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+			var it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text)[Symbol.iterator]();
+			var step;
+			while (n < count && !(step = it.next()).done) {
+				length += step.value.segment.length;
+				n++;
+			}
+			return length;
+		}
+		var re = /[\s\S]\p{M}*/gu;
+		var m;
+		while (n < count && (m = re.exec(text))) {
+			length += m[0].length;
+			n++;
+		}
+		return length;
+	}
+
+	/**
+	 * Where a rule that starts at `start` ends. Twin of
+	 * Typost_PS_Nested::rule_end(), in UTF-16 offsets.
+	 */
+	function nestedRuleEnd(plain, start, rule) {
+		var length = plain.length;
+		var count = Math.max(1, Math.min(100, parseInt(rule.count, 10) || 1));
+		var through = rule.end !== 'upto';
+		var pos;
+		var i;
+
+		if (rule.unit === 'words') {
+			pos = start;
+			var wordEnd = start;
+			var word = /[^\s￼]+/y;
+			for (i = 0; i < count; i++) {
+				word.lastIndex = pos;
+				var m = word.exec(plain);
+				if (!m) {
+					break;
+				}
+				pos += m[0].length;
+				wordEnd = pos;
+				var next = nestedSkipSpaces(plain, pos);
+				if (next === pos) {
+					break;
+				}
+				pos = next;
+			}
+			return through ? pos : wordEnd;
+		}
+		if (rule.unit === 'characters') {
+			return start + nestedGraphemesLength(plain.slice(start), count);
+		}
+		if (rule.unit === 'marker') {
+			var marker = typeof rule.marker === 'string' ? rule.marker : '';
+			if (!marker) {
+				return start;
+			}
+			pos = start;
+			for (i = 1; i <= count; i++) {
+				var at = nestedFindMarker(plain, marker, pos);
+				if (at === -1) {
+					return length;
+				}
+				if (i === count) {
+					return through ? at + marker.length : at;
+				}
+				pos = at + marker.length;
+			}
+			return length;
+		}
+		return start;
+	}
+
+	/**
+	 * The text a style's nested rules cover: the twin of
+	 * Typost_PS_Nested::find_ranges() (#195), in UTF-16 offsets. Each rule
+	 * starts at its first character after the previous rule that is not a
+	 * space; a First line rule (CSS) stops the count; a rule whose style is
+	 * not in validIds keeps its text but writes no range.
+	 *
+	 * @param {string} plain
+	 * @param {Array}  rules
+	 * @param {Object} [validIds] style id => true; omitted = every style.
+	 * @return {Array<{start: number, end: number, styleId: number}>}
+	 */
+	function nestedRuleRanges(plain, rules, validIds) {
+		var out = [];
+		if (typeof plain !== 'string' || !plain || !Array.isArray(rules)) {
+			return out;
+		}
+		var pos = 0;
+		for (var r = 0; r < rules.length; r++) {
+			var rule = rules[r];
+			if (!rule || typeof rule !== 'object' || !rule.unit || rule.unit === 'line' || pos >= plain.length) {
+				break;
+			}
+			pos = nestedSkipSpaces(plain, pos);
+			if (pos >= plain.length) {
+				break;
+			}
+			var end = nestedRuleEnd(plain, pos, rule);
+			var styleId = parseInt(rule.styleId, 10) || 0;
+			if (end > pos && styleId && (!validIds || validIds[styleId])) {
+				out.push({ start: pos, end: end, styleId: styleId });
+			}
+			pos = end;
+		}
+		return out;
+	}
+
+	/**
+	 * Whether rules hold a rule that wraps text (not only First line).
+	 *
+	 * @param {Array} rules
+	 * @return {boolean}
+	 */
+	function hasNestedTextRules(rules) {
+		return Array.isArray(rules) && rules.some(function(rule) {
+			return rule && rule.unit && rule.unit !== 'line';
+		});
+	}
+
+	/**
+	 * A root element's plain text with the text node at each place, read as
+	 * Typost_PS_Text_Ranges reads the rendered HTML: a <br> is "\n", a
+	 * skipped or void element is U+FFFC (<wbr> nothing), comments nothing.
+	 *
+	 * @param {Element} root
+	 * @return {{plain: string, segments: Array<{node: Text, start: number}>}}
+	 */
+	function collectNestedText(root) {
+		var plain = '';
+		var segments = [];
+		(function walk(node) {
+			for (var child = node.firstChild; child; child = child.nextSibling) {
+				if (child.nodeType === 3) {
+					if (child.data) {
+						segments.push({ node: child, start: plain.length });
+						plain += child.data;
+					}
+					continue;
+				}
+				if (child.nodeType !== 1) {
+					continue;
+				}
+				var name = String(child.tagName).toUpperCase();
+				if (NESTED_SKIP_ELEMENTS.indexOf(name) !== -1 || (child.namespaceURI && child.namespaceURI !== 'http://www.w3.org/1999/xhtml')) {
+					plain += NESTED_OBJECT_MARK;
+					continue;
+				}
+				if (NESTED_VOID_ELEMENTS.indexOf(name) !== -1) {
+					if (name === 'BR') {
+						plain += '\n';
+					} else if (name !== 'WBR') {
+						plain += NESTED_OBJECT_MARK;
+					}
+					continue;
+				}
+				walk(child);
+			}
+		})(root);
+		return { plain: plain, segments: segments };
+	}
+
+	/**
+	 * Wrap the text a style's nested rules cover inside an element of the
+	 * block editor, for the preview (#195). Each covered piece of a text
+	 * node gets its own `<span class="typost-styled typost-nested"
+	 * data-style-id="B" data-typost-nested-preview>`, as the server writes
+	 * it. Returns what removeNestedPreview() needs to put the very same text
+	 * nodes back.
+	 *
+	 * The spans must never reach the saved content: the editor script adds
+	 * them only to a block that is not selected and has no focus, and takes
+	 * them off before the block can be edited.
+	 *
+	 * @param {Element} root
+	 * @param {Array}   rules
+	 * @param {Object}  [validIds]
+	 * @return {Array<{original: Text, parts: Node[]}>}
+	 */
+	function applyNestedPreview(root, rules, validIds) {
+		var records = [];
+		if (!root || !hasNestedTextRules(rules)) {
+			return records;
+		}
+		var text = collectNestedText(root);
+		var ranges = nestedRuleRanges(text.plain, rules, validIds);
+		if (!ranges.length) {
+			return records;
+		}
+		var doc = root.ownerDocument;
+		text.segments.forEach(function(segment) {
+			var node = segment.node;
+			var segStart = segment.start;
+			var segEnd = segStart + node.data.length;
+			var pieces = [];
+			var pos = segStart;
+			ranges.forEach(function(range) {
+				var start = Math.max(range.start, segStart);
+				var end = Math.min(range.end, segEnd);
+				if (end <= start) {
+					return;
+				}
+				if (start > pos) {
+					pieces.push(doc.createTextNode(node.data.slice(pos - segStart, start - segStart)));
+				}
+				var span = doc.createElement('span');
+				span.className = 'typost-styled typost-nested';
+				span.setAttribute('data-style-id', String(range.styleId));
+				span.setAttribute(NESTED_PREVIEW_ATTR, '');
+				// A press takes the spans off in its capture phase. A press on a
+				// span would leave Chromium no node to place the caret in: the
+				// block is selected, and typing goes nowhere. So the target
+				// must be the parent, which stays.
+				span.style.pointerEvents = 'none';
+				span.appendChild(doc.createTextNode(node.data.slice(start - segStart, end - segStart)));
+				pieces.push(span);
+				pos = end;
+			});
+			if (!pieces.length) {
+				return;
+			}
+			if (pos < segEnd) {
+				pieces.push(doc.createTextNode(node.data.slice(pos - segStart)));
+			}
+			var parent = node.parentNode;
+			pieces.forEach(function(piece) {
+				parent.insertBefore(piece, node);
+			});
+			parent.removeChild(node);
+			records.push({ original: node, parts: pieces });
+		});
+		return records;
+	}
+
+	/**
+	 * Whether a record's parts are exactly what applyNestedPreview() wrote.
+	 * RichText rewrites an element in place when the block's value changes:
+	 * it reuses a child of the same node name, drops its attributes and
+	 * replaces its text. So a part being in the element proves nothing; the
+	 * marker and the text must also be unchanged.
+	 *
+	 * @param {Element} root
+	 * @param {Object}  record
+	 * @return {boolean}
+	 */
+	function nestedRecordIsUntouched(root, record) {
+		var parent = record.parts[0] && record.parts[0].parentNode;
+		if (!parent || !root.contains(parent)) {
+			return false;
+		}
+		var text = '';
+		for (var i = 0; i < record.parts.length; i++) {
+			var part = record.parts[i];
+			if (part.parentNode !== parent || (part.nodeType === 1 && !part.hasAttribute(NESTED_PREVIEW_ATTR))) {
+				return false;
+			}
+			text += part.textContent;
+		}
+		return text === record.original.data;
+	}
+
+	/**
+	 * Take the preview off: the original text nodes go back where they
+	 * were, and any preview span left over is unwrapped. Where the editor
+	 * wrote a new value over a preview, what it wrote stays: the original
+	 * text node is out of date by then, and putting it back would leave text
+	 * in the element that a later edit reads as the block's content.
+	 *
+	 * @param {Element} root
+	 * @param {Array}   [records] applyNestedPreview()'s result.
+	 */
+	function removeNestedPreview(root, records) {
+		(records || []).slice().reverse().forEach(function(record) {
+			if (!nestedRecordIsUntouched(root, record)) {
+				return;
+			}
+			record.parts[0].parentNode.insertBefore(record.original, record.parts[0]);
+			record.parts.forEach(function(part) {
+				part.parentNode.removeChild(part);
+			});
+		});
+		if (!root || !root.querySelectorAll) {
+			return;
+		}
+		Array.prototype.slice.call(root.querySelectorAll('[' + NESTED_PREVIEW_ATTR + ']')).forEach(function(span) {
+			var parent = span.parentNode;
+			while (span.firstChild) {
+				parent.insertBefore(span.firstChild, span);
+			}
+			parent.removeChild(span);
+		});
+	}
+
+	/**
+	 * The nested rules by style reference (id and legacy id) for the styles
+	 * with a rule that wraps text, and the ids of every style.
+	 *
+	 * @param {Array} styles
+	 * @return {{rules: Object, ids: Object}}
+	 */
+	function buildNestedRuleMap(styles) {
+		var rules = {};
+		var ids = {};
+		(Array.isArray(styles) ? styles : []).forEach(function(style) {
+			if (!style || style.id === undefined) {
+				return;
+			}
+			ids[parseInt(style.id, 10)] = true;
+			if (hasNestedTextRules(style.nestedRules)) {
+				rules[String(style.id)] = style.nestedRules;
+				if (style.legacyId) {
+					rules[String(style.legacyId)] = style.nestedRules;
+				}
+			}
+		});
+		return { rules: rules, ids: ids };
+	}
+
+	/**
+	 * The style reference of a root element with nested rules, as the
+	 * server's root test reads it: `typost-styled` and a `typost-ps-{ref}`
+	 * class of a style with rules, not fit to width. '' for none.
+	 *
+	 * @param {Element} element
+	 * @param {Object}  rulesByRef
+	 * @return {string}
+	 */
+	function nestedRootRef(element, rulesByRef) {
+		if (!element || !element.classList || !element.classList.contains('typost-styled') || element.classList.contains('typost-fit')) {
+			return '';
+		}
+		for (var i = 0; i < element.classList.length; i++) {
+			var m = /^typost-ps-([A-Za-z0-9_-]+)$/.exec(element.classList[i]);
+			if (m && Object.prototype.hasOwnProperty.call(rulesByRef, m[1])) {
+				return m[1];
+			}
+		}
+		return '';
+	}
+
 	var api = {
 		findFontName: findFontName,
 		isStyleModified: isStyleModified,
@@ -1979,9 +3390,38 @@
 		normalizeAlignment: normalizeAlignment,
 		normalizeAlignLast: normalizeAlignLast,
 		normalizeTextWrap: normalizeTextWrap,
+		normalizeHyphens: normalizeHyphens,
+		normalizeHyphenateLimit: normalizeHyphenateLimit,
+		normalizeHyphenateCharacter: normalizeHyphenateCharacter,
+		hyphenationProperties: hyphenationProperties,
+		hyphenationDeclarations: hyphenationDeclarations,
+		HYPHENATE_LIMIT_KEYS: HYPHENATE_LIMIT_KEYS,
+		HYPHENATE_LIMIT_MAX: HYPHENATE_LIMIT_MAX,
+		HYPHENATE_CHARACTER_MAX: HYPHENATE_CHARACTER_MAX,
+		TEXT_STROKE_MAX: TEXT_STROKE_MAX,
+		normalizeHexColor: normalizeHexColor,
+		normalizeColor: normalizeColor,
+		buildPaletteColor: buildPaletteColor,
+		paletteColorSlug: paletteColorSlug,
+		paletteColorFallback: paletteColorFallback,
+		colorCssValue: colorCssValue,
+		normalizeStrokeWidth: normalizeStrokeWidth,
+		hasOutlinePartner: hasOutlinePartner,
+		buildStyleSampleSurface: buildStyleSampleSurface,
+		parseCssColor: parseCssColor,
+		contrastRatio: contrastRatio,
+		isLargeText: isLargeText,
+		findContrastProblem: findContrastProblem,
 		alignmentToBlockAlign: alignmentToBlockAlign,
 		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
+		buildDetachBlockSettings: buildDetachBlockSettings,
+		measureBlockFontSize: measureBlockFontSize,
+		readEditorPalette: readEditorPalette,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
+		normalizeLength: normalizeLength,
+		indentAfterSameApplies: indentAfterSameApplies,
+		LENGTH_MAX: LENGTH_MAX,
+		SPACING_PROPERTIES: SPACING_PROPERTIES,
 		ALIGN_LAST_VALUES: ALIGN_LAST_VALUES,
 		TEXT_WRAP_VALUES: TEXT_WRAP_VALUES,
 		resolveBrowserActiveStyleId: resolveBrowserActiveStyleId,
@@ -2024,6 +3464,14 @@
 		buildStyleCssBlock: buildStyleCssBlock,
 		pxToRem: pxToRem,
 		responsiveZoomVw: responsiveZoomVw,
+		NESTED_PREVIEW_ATTR: NESTED_PREVIEW_ATTR,
+		nestedRuleRanges: nestedRuleRanges,
+		hasNestedTextRules: hasNestedTextRules,
+		collectNestedText: collectNestedText,
+		applyNestedPreview: applyNestedPreview,
+		removeNestedPreview: removeNestedPreview,
+		buildNestedRuleMap: buildNestedRuleMap,
+		nestedRootRef: nestedRootRef,
 	};
 
 	if (typeof window !== 'undefined') {

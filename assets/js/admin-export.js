@@ -271,6 +271,13 @@
 					taken[nameKey(name)] = true;
 				}
 			});
+			// Palette colors this site lacks (#215), in the row form
+			var colorAnswers = (state.rows && state.rows.paragraphStyles) || {};
+			(section.preview.colorRows || []).forEach(function (row) {
+				if (!colorAnswers[row.key]) {
+					errors.push({ message: formatString(l10n.errorChooseRow, [row.name]), kind: 'row', key: row.key, field: rowFieldId('paragraphStyles', row.key) });
+				}
+			});
 		}
 		return errors;
 	}
@@ -307,6 +314,14 @@
 				styles[item.key] = choice.action === 'rename'
 					? { action: 'rename', name: String(choice.name || '').trim() }
 					: { action: choice.action };
+			});
+			// Palette colors (#215): 'color:{slug}' keys never match a style
+			// key (file keys have no colon)
+			var colorAnswers = (state.rows && state.rows.paragraphStyles) || {};
+			(preview.sections.paragraphStyles.preview.colorRows || []).forEach(function (row) {
+				if (colorAnswers[row.key]) {
+					styles['color:' + row.key] = colorAnswers[row.key];
+				}
 			});
 			sections.paragraphStyles = styles;
 		}
@@ -723,6 +738,14 @@
 					notes.push(formatString(l10n.overwriteAffects, [item.affected.join(', ')]));
 				}
 			}
+			// GREP styles (#196): what each rule applies
+			if (Array.isArray(item.grep) && item.grep.length) {
+				notes.push(formatString(l10n.grepRules, [item.grep.join('; ')]));
+			}
+			// Nested styles (#195), in their order
+			if (Array.isArray(item.nested) && item.nested.length) {
+				notes.push(formatString(l10n.nestedRules, [item.nested.join('; ')]));
+			}
 			if (notes.length) {
 				nameCell.appendChild(el('span', { id: noteId, class: 'typost-import-note' }, notes.join(' ')));
 			}
@@ -747,6 +770,14 @@
 			});
 		});
 		container.appendChild(table);
+
+		// Palette colors this site's palette does not have (#215)
+		var colorRows = (section.preview && section.preview.colorRows) || [];
+		if (colorRows.length) {
+			var colorHeadingId = headingId + '-colors';
+			container.appendChild(el('h5', { id: colorHeadingId }, String(section.preview.colorHeading || '')));
+			renderRows(container, id, colorRows, colorHeadingId);
+		}
 	}
 
 	/**

@@ -296,6 +296,42 @@ describe( 'import', () => {
 		expect( result.textContent ).toContain( '“Kicker” as “Kicker (2)”' );
 	} );
 
+	it( 'shows palette colors this site lacks and sends the answer (#215)', async () => {
+		setFile( '{"format":"typost-export"}' );
+		submit( 'typost-import-form' );
+		await waitFor( () => requests.length === 1 );
+		const withColors = JSON.parse( JSON.stringify( PREVIEW ) );
+		withColors.fonts[ 0 ].choice = { action: 'map', target: 'id:1' };
+		Object.assign( withColors.sections.paragraphStyles.preview, {
+			colorHeading: 'Palette colors this theme does not have',
+			colorRows: [ {
+				key: 'accent-1',
+				name: 'accent-1',
+				detail: 'Used by: Body',
+				current: 'Not in the palette',
+				incoming: '#cc0000',
+				choices: [ { value: 'slug', label: 'Keep the palette color' }, { value: 'value', label: 'Use the color from the file (#cc0000) as a custom color' } ],
+				choice: 'slug',
+			} ],
+		} );
+		requests[ 0 ].deferred.resolve( withColors );
+
+		const heading = Array.from( document.querySelectorAll( '#typost-import-preview h5' ) ).find( ( h ) => h.textContent === 'Palette colors this theme does not have' );
+		expect( heading ).toBeTruthy();
+		const select = document.getElementById( 'typost-import-row-paragraphStyles-accent-1' );
+		expect( select.value ).toBe( 'slug' );
+		expect( select.closest( 'table' ).getAttribute( 'aria-labelledby' ) ).toBe( heading.id );
+		change( select, 'value' );
+		document.getElementById( 'typost-import-preview' ).querySelector( '.button-primary' ).click();
+
+		expect( requests ).toHaveLength( 2 );
+		expect( requests[ 1 ].body.choices.sections.paragraphStyles ).toEqual( {
+			s1: { action: 'add' },
+			s2: { action: 'skip' },
+			'color:accent-1': 'value',
+		} );
+	} );
+
 	it( 'keeps the preview and shows the server message when the import fails', async () => {
 		await preview();
 		change( document.getElementById( 'typost-import-font-f1' ), 'map:id:1' );

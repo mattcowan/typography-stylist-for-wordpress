@@ -3682,3 +3682,15 @@ msgstr ""
 msgctxt "block keyword"
 msgid "accessibility"
 msgstr ""
+
+#. translators: %s: the style's GREP rules, such as "Acronyms (NASA) → Small Caps"
+#: includes/class-typost-export.php:614
+#, php-format
+msgid "GREP styles: %s."
+msgstr ""
+
+#. translators: %s: the style's nested rules, such as "Up to 3 words → Small Caps"
+#: includes/class-typost-export.php:616
+#, php-format
+msgid "Nested styles: %s."
+msgstr ""

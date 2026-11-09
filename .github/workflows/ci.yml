@@ -43,6 +43,15 @@ jobs:
           php-version: '8.2'
           tools: composer
       - run: composer install --no-interaction --prefer-dist
+      # The GREP styles engine (#196) runs on WordPress's HTML API, and its
+      # tests use the real parser: fetch just wp-includes/html-api and the
+      # token map from WordPress 6.9 (the first release with a public
+      # serialize_token()). Without TYPOST_WP_DIR those tests are skipped.
+      - name: Fetch the WordPress HTML API
+        run: |
+          git clone --depth 1 --branch 6.9 --filter=blob:none --sparse https://github.com/WordPress/WordPress.git "$RUNNER_TEMP/wordpress"
+          git -C "$RUNNER_TEMP/wordpress" sparse-checkout set --no-cone /wp-includes/html-api/ /wp-includes/class-wp-token-map.php
+          echo "TYPOST_WP_DIR=$RUNNER_TEMP/wordpress" >> "$GITHUB_ENV"
       - run: vendor/bin/phpunit
 
   build:

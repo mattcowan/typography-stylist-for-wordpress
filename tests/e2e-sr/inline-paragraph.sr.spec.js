@@ -91,7 +91,7 @@ test.describe('Inline editor modal on a paragraph with NVDA', () => {
     // Product assertions.
     expect(sizeValue, 'ArrowDown should select Responsive').toBe('responsive');
     expect(sliderStops.length, 'the three size sliders should be reachable by Tab').toBeGreaterThanOrEqual(3);
-    expect(crossed.html, 'crossed values still write the clamp() as typed (soft validation)').toMatch(/clamp\(120px/);
+    expect(crossed.html, 'crossed values still write the clamp() as typed (soft validation)').toMatch(/clamp\(7\.5rem/);
     expect(crossed.notices.some((n) => /out of order/i.test(n)), 'the inline modal shows the out-of-order Notice (E-1)').toBe(true);
     expect(close.closed, 'Escape should close the modal').toBe(true);
 
