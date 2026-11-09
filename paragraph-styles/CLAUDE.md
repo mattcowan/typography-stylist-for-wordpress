@@ -157,7 +157,7 @@ A style can inherit from another: `basedOn` on the record, sparse `properties` =
 - **Parity**: `paragraph-styles/__tests__/fixtures/based-on.json` (resolution, compare, child CSS, overrides) is read by `based-on.test.js` and `tests/Unit/ParagraphStylesBasedOnTest.php`.
 - **Not done / limits**: Based On is set only on the settings tab (the editor panel has no select; Save as New does not link to the active style). Nested/GREP rules (#195/#196) do not inherit (out of scope); GREP rules live on the style record, not in `properties`, so resolution never sees them. A child cannot unset a property that has no empty value of its own beyond the list above — every current property has one; new properties need an entry (see the checklist).
 
-## GREP styles (#196, v2.3.6+)
+## GREP styles (#196, v2.4.0+)
 
 A style can carry an ordered list of rules on its **record** (`grepRules`, beside `basedOn`; not in `properties`, so the editors' Update Style — which PATCHes `properties` only — never touches them, and no property plumbing changed): `{pattern: 'acronyms'|'fractions'|'ordinals'|'numbers'|'ampersand'|'custom', regex (custom only), styleId}`. Text in a block with the style that matches a rule's pattern renders in the rule's style. No editor preview yet (see "Not done").
 
@@ -172,7 +172,7 @@ A style can carry an ordered list of rules on its **record** (`grepRules`, besid
 - **Tests** — `tests/Unit/ParagraphStylesTextRangesTest.php` (engine on the real parser, `wrap_grep`, the render filter, the card), `ParagraphStylesGrepTest.php` (patterns, the subset scanner, limits, order, sanitizing, REST, CSS, fonts), `ParagraphStylesGrepTransferTest.php`, and Jest `__tests__/admin-grep-rules.test.js`. The parser tests load WordPress's HTML API from `TYPOST_WP_DIR` (a WordPress 6.9+ checkout, `tests/Support/HtmlApi.php`, which also loads `utf8.php` when the processor calls `wp_scrub_utf8()`, as 7.1 does) and are skipped without it; CI sparse-clones `wp-includes/html-api` and `class-wp-token-map.php` from WordPress 6.9. Their `tearDown()` sets the engine's support memo back to false, so later tests run as on an older WordPress whatever order PHPUnit picks.
 - **Not done:** an editor preview (the block editor shows the text without the rules; running patterns in the editor needs a Web Worker with a time limit, per the issue — the shared subset means the pattern compiles there, and `\d \w \b \s` need handling on non-ASCII text, see Custom patterns), rules on styles applied to a text selection (out of scope), rules inherited through Based On, fit-to-width text, and combining `font-variation-settings`.
 
-## Nested styles (#195, v2.3.6+)
+## Nested styles (#195, v2.4.0+)
 
 A style can carry an ordered list of **nested rules** on its record (`nestedRules`, beside `grepRules`; not in `properties`, so Update Style never touches them and no property plumbing changed). Each rule applies another style to the start of the text: rule 1 from the first character, each later rule from where the one before stopped. The issue's open question (a separate character style list?) is answered **no**: rules pick from the paragraph style list, as GREP rules do, because a sparse style already works as a character style.
 

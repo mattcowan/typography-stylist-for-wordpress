@@ -247,7 +247,12 @@ small stable release from `main`. If `main` holds unreleased work:
    CLAUDE.md, module CLAUDE.md files, DOCUMENTATION.md) need the new number
    too; `grep -rn "X.Y.Z"` finds them. The merge is also what makes the
    hotfix tag an ancestor of `main`, so the next release's module check
-   diffs against it.
+   diffs against it. Compiled `.mo` files conflict as binaries: rebuild
+   each from its merged `.po` (§4 step 2) instead of picking a side. The
+   merge commit on `release/X.Y.Z` runs CI's module check again, against
+   the tag before the hotfix, so it flags every module whose `assets/`
+   `main` changed: bump those module constants in the merge, since their
+   next release needs the bump anyway.
 
 Between the release and the merge back, do not run the readme/assets sync
 (§7) from `main`: it would put `main`'s readme on the listing. Run it from

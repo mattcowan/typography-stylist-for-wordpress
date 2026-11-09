@@ -2208,7 +2208,7 @@ class Typost {
      * core does not set WP_Block_Supports::$block_to_render for it. The value is
      * restored afterwards, because this can run inside a dynamic parent.
      *
-     * @since 2.3.6
+     * @since 2.4.0
      * @param string $block_content The rendered block HTML.
      * @param array  $block         The parsed block.
      * @return string The HTML, with the settings on the wrapper.
