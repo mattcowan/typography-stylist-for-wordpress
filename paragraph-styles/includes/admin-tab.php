@@ -484,7 +484,7 @@ $render_palette_options = function () use ( $form_palette, $form_palette_groups 
 							<option value=""><?php esc_html_e( 'On top of the fill', 'typost-paragraph-styles' ); ?></option>
 							<option value="behind"><?php esc_html_e( 'Behind the fill', 'typost-paragraph-styles' ); ?></option>
 						</select>
-						<span class="typost-ps-edit-help" id="typost-ps-edit-stroke-position-help"><?php esc_html_e( 'The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape.', 'typost-paragraph-styles' ); ?></span>
+						<span class="typost-ps-edit-help" id="typost-ps-edit-stroke-position-help"><?php esc_html_e( 'The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape.', 'typost-paragraph-styles' ); ?> <?php esc_html_e( 'In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top of the fill shows lines inside the letter. Behind the fill hides these lines, but outline-only text has no fill to hide them.', 'typost-paragraph-styles' ); ?></span>
 					</p>
 				</div>
 				<p class="typost-ps-edit-help" id="typost-ps-edit-hex-help"><?php esc_html_e( 'A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent.', 'typost-paragraph-styles' ); ?></p>

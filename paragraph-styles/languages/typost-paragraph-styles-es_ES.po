@@ -1229,6 +1229,10 @@ msgstr "Detrás del relleno"
 msgid "The outline is centered on the edge of each letter, so on top of the fill a thick outline makes letters look thinner. Behind the fill keeps their shape."
 msgstr "El contorno se centra en el borde de cada letra: encima del relleno, un contorno grueso adelgaza las letras. Detrás del relleno, conservan su forma."
 
+#: includes/admin-tab.php:487
+msgid "In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top of the fill shows lines inside the letter. Behind the fill hides these lines, but outline-only text has no fill to hide them."
+msgstr "En algunas fuentes, a menudo fuentes variables, las partes de una letra se superponen, y un contorno encima del relleno muestra líneas dentro de la letra. Detrás del relleno, estas líneas quedan ocultas, pero el texto solo de contorno no tiene relleno que las oculte."
+
 #: includes/admin-tab.php:376
 msgid "A hex color such as #c00 or #cc0000. Add two digits for transparency: #cc000080 is half transparent."
 msgstr "Un color hexadecimal como #c00 o #cc0000. Añade dos dígitos para la transparencia: #cc000080 es medio transparente."

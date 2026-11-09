@@ -767,9 +767,14 @@
 		// Text color and outline (#215)
 		var palette = colorContext().palette;
 		fillColorField(form, 'textColor', props.textColor, palette);
-		setInput(form, 'textStrokeWidth', utils ? utils.normalizeStrokeWidth(props.textStrokeWidth) : 0);
+		var strokeWidth = utils ? utils.normalizeStrokeWidth(props.textStrokeWidth) : (parseFloat(props.textStrokeWidth) || 0);
+		setInput(form, 'textStrokeWidth', strokeWidth);
 		fillColorField(form, 'textStrokeColor', props.textStrokeColor, palette);
-		selectValue(field(form, 'textStrokePosition'), props.textStrokePosition === 'behind' ? 'behind' : '');
+		// A style with no outline opens on Behind the fill, so a new outline
+		// keeps the letters' shape. An outline (own or from the parent
+		// style) keeps its saved position; '' is On top. The position is
+		// stored only with a width, so the default alone writes nothing.
+		selectValue(field(form, 'textStrokePosition'), strokeWidth <= 0 || props.textStrokePosition === 'behind' ? 'behind' : '');
 
 		var features = Array.isArray(props.features) ? props.features.map(String) : [];
 		var boxes = Array.prototype.slice.call(form.querySelectorAll('input[data-feature]'));
