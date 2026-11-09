@@ -321,7 +321,7 @@ A style can also set how its text is aligned, how wide the spaces between words 
 
 #### Hyphenation
 
-Since v2.3.6, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
+Since v2.4.0, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
 
 - **Hyphenate:** on or off. The default is off. Off writes no CSS, so the browser's own setting applies and soft hyphens that you type in the text (`&shy;`) still work.
 - **Shortest word to hyphenate,** **fewest letters before a hyphen** and **fewest letters after a hyphen:** 1 to 20 letters each. An empty field lets the browser decide. Chrome and Firefox use these limits; Safari ignores them and uses its own.
@@ -335,7 +335,7 @@ Since v2.3.6, a style can turn on automatic hyphenation, so long words break at 
 
 #### Indents and paragraph spacing
 
-Since v2.3.6, a style can also set indents and the space before and after a paragraph, as in a paragraph style in InDesign. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+Since v2.4.0, a style can also set indents and the space before and after a paragraph, as in a paragraph style in InDesign. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
 
 - **Left indent** and **Right indent:** move the whole paragraph in from the start or end edge. They follow the text direction: in right-to-left text, such as Arabic or Hebrew, the left indent is on the right.
 - **First line indent:** moves only the first line. A negative value gives a hanging indent: the first line starts at the edge and the other lines are indented, as in a bibliography or a numbered list written as text.
@@ -397,7 +397,7 @@ The block’s own sidebar settings, for example font size, letter spacing, and l
 
 A First Letter Hang in the style also applies to these blocks. It has no effect when the block is centered, aligned to the end, has a drop cap, or has a text indent.
 
-#### GREP styles (v2.3.6+, WordPress 6.9+)
+#### GREP styles (v2.4.0+, WordPress 6.9+)
 
 Some OpenType features are right for only part of the text. `frac` turns "1/2" into a fraction, but it also changes a date such as "9/22/2026". GREP styles, named after the same feature in Adobe InDesign, apply a style to the text that matches a pattern, automatically.
 
@@ -431,7 +431,7 @@ Built-in patterns:
 - **WordPress before 6.9:** the rules need the HTML API of WordPress 6.9. On an older version, the Edit form does not show them and they have no effect.
 - **Export and import** keep the rules, their order, and the styles they apply (those styles are added to the export). The import preview lists each custom pattern, and refuses a file with a pattern that fails. If you overwrite a style with a style that has no rules, the rules are removed. If the file was made before GREP styles existed, the rules stay.
 
-#### Nested styles (v2.3.6+, WordPress 6.9+)
+#### Nested styles (v2.4.0+, WordPress 6.9+)
 
 Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph differently: "**Step 1:** WHISK THE EGGS until pale." Nested styles, named after the same feature in Adobe InDesign, do this automatically, and follow the text when you edit it.
 

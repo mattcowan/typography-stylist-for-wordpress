@@ -3,7 +3,7 @@
  * Plugin Name: Typography Stylist
  * Plugin URI: https://wordpress.org/plugins/typography-stylist/
  * Description: Add advanced OpenType features (ligatures, stylistic sets, swashes) to headlines with inline text selection and live preview.
- * Version: 2.3.5
+ * Version: 2.3.6
  * Author: Matthew Cowan
  * Author URI: https://mnc4.com
  * License: GPL v2 or later
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
 
 // Define plugin constants (check if already defined for test compatibility)
 if (!defined('TYPOST_VERSION')) {
-    define('TYPOST_VERSION', '2.3.5');
+    define('TYPOST_VERSION', '2.3.6');
 }
 if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', plugin_dir_path(__FILE__));
@@ -2208,7 +2208,7 @@ class Typost {
      * core does not set WP_Block_Supports::$block_to_render for it. The value is
      * restored afterwards, because this can run inside a dynamic parent.
      *
-     * @since 2.3.6
+     * @since 2.4.0
      * @param string $block_content The rendered block HTML.
      * @param array  $block         The parsed block.
      * @return string The HTML, with the settings on the wrapper.

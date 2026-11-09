@@ -3,7 +3,7 @@ Contributors: matthewneilcowan
 Tags: typography, opentype, variable fonts, ligatures, glyphs
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 2.3.5
+Stable tag: 2.3.6
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -336,6 +336,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 == Changelog ==
 
+= 2.3.6 =
+* **Fixed: NVDA said each settings tab twice.** With NVDA in Firefox, each arrow key on the tabs at Settings → Typography Stylist announced the tab two times. Each tab is now announced one time. The arrow keys, Home and End work as before.
+
 = 2.3.5 =
 * **New: Export & Import.** Settings → Typography Stylist → Export & Import moves paragraph styles, presets, the settings on the Options and Accessibility tabs, and the Feature Visibility and variable font axes of each font to another site. The file names each font by its family, and import matches it to a font on the other site. You see every font, style, preset, and option before anything is saved, and you choose what to do with each conflict. Imported styles get new IDs and keep their "Based on" links.
 * **New: Case for selected text** in the Quick Feature Toggles of the Typography Stylist block. For example, a headline in Title Case can have its first word in All Small Caps.
@@ -447,6 +450,9 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 Older releases are documented in changelog.txt (bundled with the plugin) and on the [GitHub Releases page](https://github.com/mattcowan/typography-stylist-for-wordpress/releases).
 
 == Upgrade Notice ==
+
+= 2.3.6 =
+Fixes a screen reader issue: NVDA in Firefox announced each settings tab two times.
 
 = 2.3.5 =
 Adds Export & Import for paragraph styles, presets, options and font settings, Case for selected text, and alignment and line breaking in paragraph styles. The update turns on the Glyphs and Paragraph Styles toolbar buttons one time. To remove them, turn them off in Options.
