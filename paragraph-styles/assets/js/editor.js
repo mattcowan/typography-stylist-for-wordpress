@@ -184,7 +184,7 @@
 	 * stays until dismissed, and core speaks it. Nothing to say, no notice,
 	 * and an earlier Detach's notice goes.
 	 *
-	 * @param {{removed: string[], emConverted: boolean}} result See buildDetachBlockSettings().
+	 * @param {{removed: string[], emConverted: boolean, followsTextSize: boolean}} result See buildDetachBlockSettings().
 	 */
 	function showDetachNotice(result) {
 		var notices = window.wp && wp.data && wp.data.dispatch && wp.data.dispatch('core/notices');
@@ -223,6 +223,10 @@
 		}
 		if (result.emConverted) {
 			parts.push(__('Some values set in em are now in px, at the current text size.', 'typost-paragraph-styles'));
+		}
+		// #363: core's controls cannot show a calc() value
+		if (result.followsTextSize) {
+			parts.push(__('Some indents or spacing now follow the text size as it changes with the screen width. The block’s sidebar shows them as empty: type a value there to replace one.', 'typost-paragraph-styles'));
 		}
 		if (parts.length) {
 			notices.createNotice('info', parts.join(' '), { id: 'typost-ps-detach', isDismissible: true });
@@ -266,7 +270,10 @@
 				Object.assign(update, alignUpdate);
 			}
 			// The values a block setting can hold stay on the block (#346).
-			// It reads the alignment's update too, which can be in style
+			// It reads the alignment's update too, which can be in style. A
+			// first line indent goes to core's Text indent where the block
+			// type has it (#348: Paragraph from WordPress 7.0, not Heading),
+			// and only where it showed
 			if (detached) {
 				var kept = utils.buildDetachBlockSettings(
 					detached.properties,
@@ -278,6 +285,10 @@
 						coreBlock: true,
 						hasGrepRules: !!(detached.grepRules && detached.grepRules.length),
 						hasNestedRules: !!(detached.nestedRules && detached.nestedRules.length),
+						textIndent: utils.readTextIndentSupport(editor.getBlockName(clientId)),
+						followsSameStyle: utils.blockCarriesStyle(utils.readPreviousBlock(clientId), detached),
+						// The size its em values resolved against (#363)
+						emBasis: utils.coreDetachEmBasis(detached.properties, editor.getBlockAttributes(clientId)),
 					}
 				);
 				Object.assign(update, kept.attributes);

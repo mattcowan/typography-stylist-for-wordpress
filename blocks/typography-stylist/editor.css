@@ -86,7 +86,10 @@
  * with a start margin on its wrapper, in the editor and on the frontend.
  * Gated on .typost-hang, which edit.js adds only when the block hangs, so a
  * theme's own text-indent on other blocks is left alone. --typost-hang-on
- * comes from the alignment rules in style.css. */
+ * comes from the alignment rules in style.css. A block with its own Line
+ * indent (#348) gets that indent instead and no hang: the style.css rule for
+ * it has the same specificity and uses !important, so the file order does
+ * not matter. */
 .wp-block-typost > .typost-block-content.typost-hang:not(.typost-fit) {
 	text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);
 }

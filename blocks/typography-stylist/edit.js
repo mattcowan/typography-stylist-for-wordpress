@@ -31,7 +31,7 @@ import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect, dispatch } from '@wordpress/data';
 import { speak } from '@wordpress/a11y';
 import { create, slice as sliceRichText, getTextContent, insert as insertRichText, applyFormat, toHTMLString } from '@wordpress/rich-text';
-import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveHangTextAlign, styleAlignmentToTextAlign, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseApply, normalizeInlineCaseSpans } from './utils';
+import { buildTextOffsetMap, parseInlineStylesAtCursor, updateSpanPropertyInPlace, splitSpanAndApply, detectBlockComputedFont, applyOrMergeStyling, validateRangeMatchesSelection, applyStylingSafeStringMethod, isValidFontSizeRange, debounce, removePropertyFromSelection, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, resolveQftInsertionRange, resolveQftApplyRange, resolveBlockSelectionRange, buildQftEditorState, resolveSelectionFontWeights, filterToolbarButtons, mergeInsertionFormatAttributes, parseStyleString, buildStyleString, detectEmItalicAtRange, detectStrongBoldAtRange, splitContentIntoLines, wrapFitLines, unwrapFitLines, stripRedundantFontSizeAttrs, sanitizeFontVariationSettings, resolveBlockFontFamilyStyle, pruneRawFeatureSettings, countParagraphStyleConflicts, stripParagraphStyleOverrides, applyParagraphStyleBySplit, installModalFocusGuard, findParagraphStyleByClass, stylePropertyOverrides, adjustInsertionRangeForSwap, isOrphanStyleClass, findCoveringParagraphStyleId, selectionHasOneStyleSet, detachParagraphStyleFromSelection, describeInlineApplyFailure, buildInlineFontSizeSpan, resolveScreenReaderClassControl, screenReaderClassForSelect, normalizeHang, initialHangApplies, resolveHangTextAlign, hasBlockTextIndent, buildBlockFontSizeCss,styleAlignmentToTextAlign, resolveFitLineHang, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, INITIAL_HANG_MAX, setFitLineHang, buildFitLinePreviews, buildResponsiveClamp, formatFontSizeLength, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveDetachFontSizeUnit, resolveStyleFontSizeUnit, getResponsiveZoomNotice, getNewFontSizeUnit, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseApply, normalizeInlineCaseSpans } from './utils';
 import { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import { FontPicker } from '../../assets/js/font-picker.js';
 import { calculateResize } from '../../assets/js/modal-drag-resize';
@@ -562,9 +562,25 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 							newAttrs.textAlign = keptAlign;
 						}
 						// The color, spacing and indents stay in the block's own
-						// settings (#346). Measured now, while the style still
-						// renders. The module's notice names what could not stay.
+						// settings (#346), the first line indent in core's Text
+						// indent where core renders it (#348). Measured now, while
+						// the style still renders. The module's notice names what
+						// could not stay.
 						const psUtils = window.typostPSUtils;
+						// The size the style's em values resolved against: the
+						// visual copy's size after Detach (#363), so a
+						// responsive size keeps them as calc(N * clamp(…))
+						const sizeNow = blockPropsRef.current.blockSizeAttrs || {};
+						const pickSize = (key, current) => (newAttrs[key] !== undefined ? newAttrs[key] : current);
+						const detachEmBasis = buildBlockFontSizeCss(
+							{
+								fontSize: pickSize('fontSize', blockPropsRef.current.fontSize),
+								fontSizeMin: pickSize('fontSizeMin', sizeNow.fontSizeMin),
+								fontSizePreferred: pickSize('fontSizePreferred', sizeNow.fontSizePreferred),
+								fontSizeMax: pickSize('fontSizeMax', sizeNow.fontSizeMax),
+							},
+							resolveFontSizeUnit(pickSize('fontSizeUnit', sizeNow.fontSizeUnit))
+						);
 						if (detachedStyle && psUtils && psUtils.buildDetachBlockSettings) {
 							const kept = psUtils.buildDetachBlockSettings(
 								detachedProps,
@@ -578,6 +594,9 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									keepMarginEm: true,
 									hasGrepRules: !!(detachedStyle.grepRules && detachedStyle.grepRules.length),
 									hasNestedRules: !!(detachedStyle.nestedRules && detachedStyle.nestedRules.length),
+									textIndent: !!(psUtils.readTextIndentSupport && psUtils.readTextIndentSupport('typost/block')),
+									followsSameStyle: !!(psUtils.blockCarriesStyle && psUtils.blockCarriesStyle(psUtils.readPreviousBlock(curClientId), detachedStyle)),
+									emBasis: detachEmBasis,
 								}
 							);
 							Object.assign(newAttrs, kept.attributes);
@@ -2050,7 +2069,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		getClosestWeightUtil(currentWeight, availableWeights);
 
 	// Update paragraph style ref now that fontIdMap/getClosestWeight are available
-	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize, blockTextColor: attributes.textColor, blockStyle: attributes.style };
+	blockPropsRef.current = { fontIdMap, fontWeight, getClosestWeight, clientId, isPopoverOpen, selectedBlockClientId, styleClass, textAlign, fontSize, blockTextColor: attributes.textColor, blockStyle: attributes.style, blockSizeAttrs: { fontSizeMin: attributes.fontSizeMin, fontSizePreferred: attributes.fontSizePreferred, fontSizeMax: attributes.fontSizeMax, fontSizeUnit: attributes.fontSizeUnit } };
 
 	// Same reason: the shared editor state advertises the font the block
 	// inherits from the theme when it has none of its own, so consumers that
@@ -5100,6 +5119,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 									help={formatSizeReadout(fitMaxSize, blockFontSizeUnit)}
 								/>
 							)}
+							{/* style.css keeps fit lines unindented (#348) */}
+							{hasBlockTextIndent(attributes.style) && (
+								<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
+									{__('Fit to width does not use the Line indent setting. Each line fills the width of the block.', 'typography-stylist')}
+								</p>
+							)}
 							<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
 								{__('Fallback size for browsers without container query support:', 'typography-stylist')}
 							</p>
@@ -5240,6 +5265,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					), isRTL()) && (
 						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
 							{__('The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it.', 'typography-stylist')}
+						</p>
+					)}
+					{/* The block's own Line indent turns the hang off (#348, style.css) */}
+					{fontSize !== 'fit' && hasBlockTextIndent(attributes.style) && (
+						<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
+							{__('The hang has no effect while the block has a Line indent. Remove the Line indent to use the hang.', 'typography-stylist')}
 						</p>
 					)}
 					<p style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: 0 }}>

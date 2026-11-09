@@ -3518,6 +3518,10 @@ msgid "Maximum size (px)"
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:7
+msgid "Fit to width does not use the Line indent setting. Each line fills the width of the block."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:7
 msgid "Fallback size for browsers without container query support:"
 msgstr ""
 
@@ -3562,6 +3566,10 @@ msgstr ""
 
 #: blocks/typography-stylist/build/index.js:9
 msgid "The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:9
+msgid "The hang has no effect while the block has a Line indent. Remove the Line indent to use the hang."
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:9

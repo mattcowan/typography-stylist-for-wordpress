@@ -6,7 +6,18 @@
 
 const fs = require('fs');
 const path = require('path');
-const { buildDetachBlockSettings, measureBlockFontSize, readEditorPalette } = require('../assets/js/lib/ps-utils');
+const {
+	buildDetachBlockSettings,
+	measureBlockFontSize,
+	readEditorPalette,
+	canKeepTextIndent,
+	blockCarriesStyle,
+	readTextIndentSupport,
+	readPreviousBlock,
+	styleFontSizeCss,
+	coreDetachEmBasis,
+	buildStyleCssBlock,
+} = require('../assets/js/lib/ps-utils');
 
 const PALETTE = [
 	{ slug: 'accent1', color: '#123456' },
@@ -284,16 +295,115 @@ describe('buildDetachBlockSettings', () => {
 		});
 	});
 
+	describe('first line indent (#348)', () => {
+		it('keeps a positive indent in the block\'s Text indent when the block can hold one', () => {
+			const { attributes, removed } = buildDetachBlockSettings({ firstLineIndent: '24px' }, {}, { textIndent: true });
+			expect(attributes).toEqual({ style: { typography: { textIndent: '24px' } } });
+			expect(removed).toEqual([]);
+		});
+
+		it('converts em to px from the size the text renders at', () => {
+			const { attributes, emConverted } = buildDetachBlockSettings({ firstLineIndent: '1.5em' }, {}, { textIndent: true, fontSizePx: 20 });
+			expect(attributes.style.typography.textIndent).toBe('30px');
+			expect(emConverted).toBe(true);
+		});
+
+		it('converts the indent on a Typography Stylist block too, where it moves to the wrapper', () => {
+			const { attributes } = buildDetachBlockSettings(
+				{ firstLineIndent: '1em', spaceBefore: '2em' },
+				{},
+				{ textIndent: true, fontSizePx: 48, keepMarginEm: true }
+			);
+			expect(attributes.style).toEqual({ spacing: { margin: { top: '2em' } }, typography: { textIndent: '48px' } });
+		});
+
+		it('keeps em when the size is unknown, and does not claim a conversion', () => {
+			const { attributes, emConverted } = buildDetachBlockSettings({ firstLineIndent: '2em' }, {}, { textIndent: true, fontSizePx: null });
+			expect(attributes.style.typography.textIndent).toBe('2em');
+			expect(emConverted).toBe(false);
+		});
+
+		it('does not overwrite the block\'s own Text indent, and names nothing, since the block\'s value showed', () => {
+			const { attributes, removed, emConverted } = buildDetachBlockSettings(
+				{ firstLineIndent: '2em' },
+				{ style: { typography: { textIndent: '10px' } } },
+				{ textIndent: true, fontSizePx: 20 }
+			);
+			expect(attributes).toEqual({});
+			expect(removed).toEqual([]);
+			expect(emConverted).toBe(false);
+		});
+
+		it('treats a Text indent of 0 as set by the block', () => {
+			const { attributes } = buildDetachBlockSettings({ firstLineIndent: '24px' }, { style: { typography: { textIndent: '0' } } }, { textIndent: true });
+			expect(attributes).toEqual({});
+		});
+
+		it('keeps the other typography values, such as an alignment Detach also keeps', () => {
+			const { attributes } = buildDetachBlockSettings(
+				{ firstLineIndent: '24px' },
+				{ style: { typography: { textAlign: 'center', lineHeight: 2 }, color: { background: '#eeeeee' } } },
+				{ textIndent: true }
+			);
+			expect(attributes.style).toEqual({
+				typography: { textAlign: 'center', lineHeight: 2, textIndent: '24px' },
+				color: { background: '#eeeeee' },
+			});
+		});
+
+		it('removes the indent and names it on a block that cannot hold it (a Heading, or WordPress before 7.0)', () => {
+			for (const options of [{}, { textIndent: false }]) {
+				const { attributes, removed } = buildDetachBlockSettings({ firstLineIndent: '24px' }, {}, options);
+				expect(attributes).toEqual({});
+				expect(removed).toEqual(['firstLineIndent']);
+			}
+		});
+
+		it('removes a hanging (negative) indent and names it, as before', () => {
+			const { attributes, removed } = buildDetachBlockSettings({ firstLineIndent: '-2em' }, {}, { textIndent: true, fontSizePx: 20 });
+			expect(attributes).toEqual({});
+			expect(removed).toEqual(['firstLineIndent']);
+		});
+
+		describe('“Indent the first line only after a paragraph with the same style”', () => {
+			const props = { firstLineIndent: '24px', indentAfterSame: true };
+
+			it('keeps the indent when the block followed a block with the same style, so it was indented', () => {
+				const { attributes, removed } = buildDetachBlockSettings(props, {}, { textIndent: true, followsSameStyle: true });
+				expect(attributes).toEqual({ style: { typography: { textIndent: '24px' } } });
+				expect(removed).toEqual([]);
+			});
+
+			it('writes and names nothing when the block was not indented', () => {
+				const { attributes, removed } = buildDetachBlockSettings(props, {}, { textIndent: true, followsSameStyle: false });
+				expect(attributes).toEqual({});
+				expect(removed).toEqual([]);
+			});
+
+			it('names both on a block that cannot hold a Text indent, as before', () => {
+				const { removed } = buildDetachBlockSettings(props, {}, { followsSameStyle: true });
+				expect(removed).toEqual(['firstLineIndent', 'indentAfterSame']);
+			});
+		});
+
+		it('writes and names nothing on a fit block, where the style never indented', () => {
+			const { attributes, removed } = buildDetachBlockSettings({ firstLineIndent: '24px' }, {}, { textIndent: true, isFit: true });
+			expect(attributes).toEqual({});
+			expect(removed).toEqual([]);
+		});
+	});
+
 	it('changes nothing for a style with none of these values', () => {
 		expect(buildDetachBlockSettings({ fontId: 3, fontWeight: '700' }, { style: { spacing: {} } })).toEqual({
 			attributes: {},
 			removed: [],
 			emConverted: false,
+			followsTextSize: false,
 		});
 	});
 
 	it.each([[undefined], [null], ['text']])('copes with properties of %p', (properties) => {
-		expect(buildDetachBlockSettings(properties, undefined, undefined)).toEqual({ attributes: {}, removed: [], emConverted: false });
+		expect(buildDetachBlockSettings(properties, undefined, undefined)).toEqual({ attributes: {}, removed: [], emConverted: false, followsTextSize: false });
 	});
 });
 
@@ -374,6 +484,277 @@ describe('readEditorPalette', () => {
 		expect(readEditorPalette()).toEqual([]);
 		withSettings({});
 		expect(readEditorPalette()).toEqual([]);
+	});
+});
+
+describe('canKeepTextIndent (#348)', () => {
+	const paragraph = { supports: { typography: { textIndent: true } } };
+	const heading = { supports: { typography: { textAlign: true } } };
+	// Core's style map knows textIndent from WordPress 7.0
+	const map70 = { textIndent: { value: ['typography', 'textIndent'] } };
+
+	it('is true for a block type with the support when core renders it', () => {
+		expect(canKeepTextIndent(paragraph, map70, undefined, 'core/paragraph')).toBe(true);
+	});
+
+	it('is false for a block type without the support, such as core Heading', () => {
+		expect(canKeepTextIndent(heading, map70, undefined, 'core/heading')).toBe(false);
+		expect(canKeepTextIndent(null, map70, undefined, 'core/heading')).toBe(false);
+	});
+
+	it('is false when core does not know the support (before WordPress 7.0), though block.json declares it', () => {
+		expect(canKeepTextIndent(paragraph, {}, undefined, 'typost/block')).toBe(false);
+		expect(canKeepTextIndent(paragraph, undefined, undefined, 'typost/block')).toBe(false);
+	});
+
+	it('is false when the theme hides the control, since the author could not see or edit the value', () => {
+		expect(canKeepTextIndent(paragraph, map70, { typography: { textIndent: false } }, 'core/paragraph')).toBe(false);
+		expect(canKeepTextIndent(paragraph, map70, { blocks: { 'core/paragraph': { typography: { textIndent: false } } } }, 'core/paragraph')).toBe(false);
+	});
+
+	it('lets a block-level setting win over the global one', () => {
+		const features = { typography: { textIndent: false }, blocks: { 'core/paragraph': { typography: { textIndent: 'all' } } } };
+		expect(canKeepTextIndent(paragraph, map70, features, 'core/paragraph')).toBe(true);
+		expect(canKeepTextIndent(paragraph, map70, { typography: { textIndent: 'subsequent' } }, 'core/paragraph')).toBe(true);
+	});
+});
+
+describe('blockCarriesStyle (#348)', () => {
+	const style = { id: 5 };
+
+	it('matches a core block whose class carries the style, as the style CSS does', () => {
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'is-style-x typost-styled typost-ps-5' } }, style)).toBe(true);
+		expect(blockCarriesStyle({ name: 'core/heading', attributes: { className: 'typost-styled typost-ps-5' } }, style)).toBe(true);
+	});
+
+	it('needs typost-styled on a core block, like the generated selector', () => {
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'typost-ps-5' } }, style)).toBe(false);
+	});
+
+	it('matches a Typography Stylist block by its styleClass, fit or not', () => {
+		expect(blockCarriesStyle({ name: 'typost/block', attributes: { styleClass: 'typost-ps-5' } }, style)).toBe(true);
+		expect(blockCarriesStyle({ name: 'typost/block', attributes: { styleClass: 'typost-ps-5', fontSize: 'fit' } }, style)).toBe(true);
+		expect(blockCarriesStyle({ name: 'typost/block', attributes: { styleClass: '' } }, style)).toBe(false);
+	});
+
+	it('matches whole class names only, and another style does not count', () => {
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-50' } }, style)).toBe(false);
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-6' } }, style)).toBe(false);
+	});
+
+	it('matches the legacy id, which the style CSS lists with the numeric one', () => {
+		const legacy = { id: 5, legacyId: 'ps_1709312345_123' };
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-ps_1709312345_123' } }, legacy)).toBe(true);
+		expect(blockCarriesStyle({ name: 'typost/block', attributes: { styleClass: 'typost-ps-ps_1709312345_123' } }, legacy)).toBe(true);
+	});
+
+	it('is false with no block or no style', () => {
+		expect(blockCarriesStyle(null, style)).toBe(false);
+		expect(blockCarriesStyle({ name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-5' } }, null)).toBe(false);
+		expect(blockCarriesStyle({ name: 'core/paragraph' }, style)).toBe(false);
+	});
+});
+
+describe('readTextIndentSupport and readPreviousBlock (#348)', () => {
+	afterEach(() => {
+		delete window.wp;
+	});
+
+	const withEditor = ({ blockTypes = {}, styleProperty, features, blocks = {}, order = [] } = {}) => {
+		window.wp = {
+			blocks: {
+				getBlockType: (name) => blockTypes[name] || null,
+				__EXPERIMENTAL_STYLE_PROPERTY: styleProperty,
+			},
+			data: {
+				select: () => ({
+					getSettings: () => ({ __experimentalFeatures: features }),
+					getPreviousBlockClientId: (id) => {
+						const i = order.indexOf(id);
+						return i > 0 ? order[i - 1] : null;
+					},
+					getBlockName: (id) => (blocks[id] ? blocks[id].name : null),
+					getBlockAttributes: (id) => (blocks[id] ? blocks[id].attributes : null),
+				}),
+			},
+		};
+	};
+
+	it('reads the support from the registered block type, core\'s style map and the theme settings', () => {
+		withEditor({
+			blockTypes: { 'core/paragraph': { supports: { typography: { textIndent: true } } } },
+			styleProperty: { textIndent: {} },
+			features: { typography: { textIndent: 'subsequent' } },
+		});
+		expect(readTextIndentSupport('core/paragraph')).toBe(true);
+		expect(readTextIndentSupport('core/heading')).toBe(false);
+	});
+
+	it('is false before WordPress 7.0, when core\'s style map has no textIndent', () => {
+		withEditor({ blockTypes: { 'typost/block': { supports: { typography: { textIndent: true } } } }, styleProperty: {} });
+		expect(readTextIndentSupport('typost/block')).toBe(false);
+	});
+
+	it('is false outside the block editor', () => {
+		expect(readTextIndentSupport('core/paragraph')).toBe(false);
+	});
+
+	it('reads the block before this one in the same parent', () => {
+		withEditor({
+			order: ['a', 'b'],
+			blocks: { a: { name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-5' } }, b: { name: 'core/paragraph', attributes: {} } },
+		});
+		expect(readPreviousBlock('b')).toEqual({ name: 'core/paragraph', attributes: { className: 'typost-styled typost-ps-5' } });
+		expect(readPreviousBlock('a')).toBeNull();
+	});
+
+	it('returns null outside the block editor', () => {
+		expect(readPreviousBlock('b')).toBeNull();
+	});
+});
+
+describe('em values follow the text size (#363)', () => {
+	const STYLE = { spaceBefore: '1em', indentStart: '2em', firstLineIndent: '1.5em' };
+	const CLAMP = 'clamp(1rem, 2rem + 3vw, 4rem)';
+
+	it("'keep' leaves em values in em: the text keeps its size", () => {
+		const result = buildDetachBlockSettings(STYLE, {}, { textIndent: true, fontSizePx: 20, emBasis: 'keep' });
+		expect(result.attributes.style).toEqual({
+			spacing: { margin: { top: '1em' }, padding: { left: '2em' } },
+			typography: { textIndent: '1.5em' },
+		});
+		expect(result.emConverted).toBe(false);
+		expect(result.followsTextSize).toBe(false);
+	});
+
+	it('a fixed px size multiplies, whatever the measured size', () => {
+		const result = buildDetachBlockSettings(STYLE, {}, { textIndent: true, fontSizePx: 13, emBasis: '20px' });
+		expect(result.attributes.style).toEqual({
+			spacing: { margin: { top: '20px' }, padding: { left: '40px' } },
+			typography: { textIndent: '30px' },
+		});
+		expect(result.emConverted).toBe(false);
+		expect(result.followsTextSize).toBe(false);
+	});
+
+	it('a fixed rem size writes rem', () => {
+		const { attributes } = buildDetachBlockSettings({ firstLineIndent: '1.5em', indentStart: '0.333em' }, {}, { textIndent: true, emBasis: '1.25rem' });
+		expect(attributes.style.typography.textIndent).toBe('1.875rem');
+		expect(attributes.style.spacing.padding.left).toBe('0.4163rem');
+	});
+
+	it('a responsive size writes calc() of the size, and says so', () => {
+		const result = buildDetachBlockSettings(STYLE, {}, { textIndent: true, fontSizePx: 40.2, emBasis: CLAMP });
+		expect(result.attributes.style).toEqual({
+			spacing: { margin: { top: `calc(1 * ${CLAMP})` }, padding: { left: `calc(2 * ${CLAMP})` } },
+			typography: { textIndent: `calc(1.5 * ${CLAMP})` },
+		});
+		expect(result.emConverted).toBe(false);
+		expect(result.followsTextSize).toBe(true);
+	});
+
+	it('px values stay as they are, and alone do not report calc()', () => {
+		const result = buildDetachBlockSettings({ indentStart: '12px' }, {}, { emBasis: CLAMP });
+		expect(result.attributes.style.spacing.padding.left).toBe('12px');
+		expect(result.followsTextSize).toBe(false);
+	});
+
+	it('margins on the wrapper still stay in em (keepMarginEm)', () => {
+		const { attributes } = buildDetachBlockSettings({ spaceBefore: '1em', indentStart: '1em' }, {}, { emBasis: '20px', keepMarginEm: true });
+		expect(attributes.style.spacing).toEqual({ margin: { top: '1em' }, padding: { left: '20px' } });
+	});
+
+	it.each([[''], [undefined], ['bogus'], ['0px'], ['-2px']])('basis %p falls back to the measured size', (emBasis) => {
+		const result = buildDetachBlockSettings({ firstLineIndent: '1.5em' }, {}, { textIndent: true, fontSizePx: 20, emBasis });
+		expect(result.attributes.style.typography.textIndent).toBe('30px');
+		expect(result.emConverted).toBe(true);
+	});
+});
+
+describe('styleFontSizeCss (#363)', () => {
+	// The value buildStyleCssBlock() writes, so Detach multiplies by what rendered
+	const rendered = (properties) => {
+		const match = /font-size: ([^;}\n]+)/.exec(buildStyleCssBlock({ id: 9, properties }));
+		return match ? match[1].trim() : '';
+	};
+
+	it.each([
+		['no size', {}],
+		['inherit', { fontSize: 'inherit' }],
+		['a fixed px size (no unit key)', { fontSize: '24' }],
+		['a fixed rem size', { fontSize: 24, fontSizeUnit: 'rem' }],
+		['a responsive px size', { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64 }],
+		['a responsive rem size', { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 16, fontSizeMax: 120, fontSizeUnit: 'rem' }],
+		['a fit style (its fallback clamp)', { fontSize: 'fit', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fontSizeUnit: 'rem' }],
+	])('%s: the value the style CSS writes', (_, properties) => {
+		expect(styleFontSizeCss(properties)).toBe(rendered(properties));
+	});
+
+	it('the control finds a size in the CSS', () => {
+		expect(rendered({ fontSize: 24, fontSizeUnit: 'rem' })).toBe('1.5rem');
+		expect(styleFontSizeCss({})).toBe('');
+	});
+});
+
+describe('coreDetachEmBasis (#363)', () => {
+	const RESPONSIVE = { fontSize: 'responsive', fontSizeMin: 16, fontSizePreferred: 32, fontSizeMax: 64, fontSizeUnit: 'rem' };
+
+	it('a style with no size: the block keeps its size, so em stays em', () => {
+		expect(coreDetachEmBasis({ firstLineIndent: '1em' }, {})).toBe('keep');
+		expect(coreDetachEmBasis({ fontSize: 'inherit' }, {})).toBe('keep');
+	});
+
+	it('a block with its own size never had the style\'s size', () => {
+		expect(coreDetachEmBasis(RESPONSIVE, { fontSize: 'large' })).toBe('keep');
+		expect(coreDetachEmBasis(RESPONSIVE, { style: { typography: { fontSize: '2rem' } } })).toBe('keep');
+	});
+
+	it('otherwise the style\'s size, as its CSS writes it', () => {
+		expect(coreDetachEmBasis({ fontSize: '24' }, {})).toBe('24px');
+		expect(coreDetachEmBasis(RESPONSIVE, { style: { typography: { textIndent: '1em' } } })).toBe(styleFontSizeCss(RESPONSIVE));
+		expect(coreDetachEmBasis(RESPONSIVE, {})).toMatch(/^clamp\(/);
+	});
+});
+
+describe('the Detach routes (#348)', () => {
+	// editor.js is an IIFE and edit.js a React component, so neither can be
+	// called here; read the call each makes instead
+	const callIn = (file) => {
+		const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
+		// The call, not a mention in a comment
+		const start = source.indexOf('.buildDetachBlockSettings(');
+		expect(start).toBeGreaterThan(-1);
+		return source.slice(start, source.indexOf(');', start));
+	};
+
+	it.each([
+		['the core block route', '../assets/js/editor.js', /textIndent: utils\.readTextIndentSupport\(editor\.getBlockName\(clientId\)\)/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /textIndent: !!\(psUtils\.readTextIndentSupport && psUtils\.readTextIndentSupport\('typost\/block'\)\)/],
+	])('%s passes whether the block can hold a Text indent', (_, file, pattern) => {
+		expect(callIn(file)).toMatch(pattern);
+	});
+
+	it.each([
+		['the core block route', '../assets/js/editor.js', /followsSameStyle: utils\.blockCarriesStyle\(utils\.readPreviousBlock\(clientId\), detached\)/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /followsSameStyle: !!\(psUtils\.blockCarriesStyle && psUtils\.blockCarriesStyle\(psUtils\.readPreviousBlock\(curClientId\), detachedStyle\)\)/],
+	])('%s passes whether the block before carries the style', (_, file, pattern) => {
+		expect(callIn(file)).toMatch(pattern);
+	});
+
+	it.each([
+		['the core block route', '../assets/js/editor.js', /emBasis: utils\.coreDetachEmBasis\(detached\.properties, editor\.getBlockAttributes\(clientId\)\)/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /emBasis: detachEmBasis/],
+	])('%s passes the size the text has after Detach (#363)', (_, file, pattern) => {
+		expect(callIn(file)).toMatch(pattern);
+	});
+});
+
+describe('the Detach notice (#363)', () => {
+	const editor = fs.readFileSync(path.join(__dirname, '../assets/js/editor.js'), 'utf8');
+	const notice = editor.slice(editor.indexOf('function showDetachNotice('), editor.indexOf('// A Typography Stylist block keeps its values'));
+
+	it('says when kept values follow the text size and show empty in the sidebar', () => {
+		expect(notice).toMatch(/if \(result\.followsTextSize\) \{\s*parts\.push\(__\('[^']*follow the text size[^']*sidebar[^']*'/);
 	});
 });
 

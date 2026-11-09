@@ -190,6 +190,16 @@
 	hyphens: manual !important;
 }
 
+/* Fit-to-width lines take no first line indent (#348). text-indent inherits,
+ * and on the frontend every line is a block, so the block's own Line indent
+ * (on the wrapper) or a theme's paragraph indent would indent every line and
+ * push it past the edge that fit measurement sized it to. A fit block
+ * ignores the Line indent; a paragraph style's indents skip it too. */
+.wp-block-typost .typost-fit,
+.wp-block-typost .typost-fit .typost-line {
+	text-indent: 0;
+}
+
 /* Fit-to-width lines grow with browser zoom (#235).
  * A line is calc(R * 100cqi), and zoom makes the container narrower in CSS
  * px, so on screen the line kept its size at every zoom level (WCAG 1.4.4).
@@ -265,7 +275,8 @@
  * is what measureFitLines() subtracts.
  *
  * --typost-hang-on turns both off for centered text and for text aligned to
- * the end side, where moving the first letter would only shift the line.
+ * the end side, where moving the first letter would only shift the line, and
+ * for a non-fit block with its own Line indent (#348, rule at the end).
  * The block writes its alignment as an inline text-align (with a space in
  * the editor's React style, without one in saved markup). Mirrored in JS by
  * initialHangApplies() in utils.js, which fit measurement uses.
@@ -329,5 +340,26 @@
 }
 
 .wp-block-typost > :is(.typost-styled, .typost-block-content):dir(rtl):is([style*="text-align:left"], [style*="text-align: left"]) {
+	--typost-hang-on: 0;
+}
+
+/* The block's own Line indent (core's Text indent support, WordPress 7.0+,
+ * #348). Core writes it as an inline text-indent on the wrapper: useBlockProps()
+ * in the editor ("text-indent: 24px"), Typost::add_block_support_attributes()
+ * on the frontend ("text-indent:24px"). The visual copy inherits it; this rule
+ * makes it win over a theme's heading or paragraph indent and over a
+ * paragraph style's first line indent, so the block's own setting overrides
+ * the style as it does on a core Paragraph. The screen reader copy inherits
+ * the indent too, which does nothing there: it is clipped and never seen.
+ *
+ * It also turns the First Letter Hang off, as a style's first line indent
+ * does. The editor shows the hang with a negative text-indent (editor.css),
+ * which this rule replaces, and the frontend with a ::first-letter margin,
+ * which --typost-hang-on: 0 removes, so both show the indent alone.
+ * hasBlockTextIndent() in utils.js is the JS mirror, for the Inspector notes.
+ *
+ * Not on fit-to-width blocks (see the fit rule above). */
+.wp-block-typost[style*="text-indent:"] > :is(.typost-styled, .typost-block-content):not(.typost-fit) {
+	text-indent: inherit !important;
 	--typost-hang-on: 0;
 }

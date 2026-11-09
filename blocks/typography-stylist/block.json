@@ -25,7 +25,8 @@
 		},
 		"typography": {
 			"fontSize": false,
-			"lineHeight": true
+			"lineHeight": true,
+			"textIndent": true
 		},
 		"__experimentalTextAlign": true
 	},

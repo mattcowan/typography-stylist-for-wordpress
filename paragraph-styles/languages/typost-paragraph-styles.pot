@@ -1381,6 +1381,10 @@ msgstr ""
 msgid "Some values set in em are now in px, at the current text size."
 msgstr ""
 
+#: assets/js/editor.js:229
+msgid "Some indents or spacing now follow the text size as it changes with the screen width. The block’s sidebar shows them as empty: type a value there to replace one."
+msgstr ""
+
 #: assets/js/editor.js:208
 msgid "first letter hang"
 msgstr ""
