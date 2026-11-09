@@ -3678,6 +3678,29 @@ export function resolveHangTextAlign(textAlign, styleAlignment, isFit, isRtl) {
 }
 
 /**
+ * Whether the block has its own Line indent (core's Text indent support,
+ * WordPress 7.0+, #348), which core writes as an inline text-indent on the
+ * wrapper. Every value core writes counts, the string '0' too, because
+ * style.css matches the declaration, not its value: the visual copy then
+ * takes the wrapper's indent and the First Letter Hang is off, as under a
+ * style's first line indent. Core writes only a truthy value (PHP
+ * is_valid_style_value(), JS generateRule()), so a number 0 does not count.
+ * Fit-to-width blocks ignore it (style.css).
+ *
+ * @param {Object} style The block's style attribute.
+ * @return {boolean}
+ */
+export function hasBlockTextIndent(style) {
+	const typography = style && typeof style === 'object' ? style.typography : null;
+	if (!typography || typeof typography !== 'object') {
+		return false;
+	}
+	// Core's style engine writes only a truthy value (the string '0' is one,
+	// a number 0 is not), so a falsy value never reaches the CSS test
+	return !!typography.textIndent;
+}
+
+/**
  * Whether a hanging initial shows for a given text alignment.
  *
  * The hang moves the first letter past the start edge, which only reads as
@@ -3947,6 +3970,31 @@ export function buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax
 }
 
 export { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, getNewFontSizeUnit, getResponsiveZoomNotice };
+
+/**
+ * The font-size value save() writes for the block's visual copy, '' for
+ * none (#363). Detach multiplies the style's em values by it: the values
+ * move from the visual copy to the wrapper, whose font size is another, so
+ * a responsive size becomes calc(N * clamp(…)) and matches at every width.
+ * Same tests as save(): 'responsive' is the clamp, a positive number the
+ * fixed length. A fit block gives '' (Detach keeps no indents on it), and
+ * so does an inherited size, which is the theme's and not known here.
+ *
+ * @param {Object} attrs The block's size attributes after Detach
+ *                       (fontSize, fontSizeMin, fontSizePreferred, fontSizeMax).
+ * @param {string} unit  The block's font size unit after Detach ('px' or 'rem').
+ * @return {string}
+ */
+export function buildBlockFontSizeCss(attrs, unit) {
+	const a = attrs || {};
+	if (a.fontSize === 'responsive') {
+		return buildResponsiveClamp(a.fontSizeMin, a.fontSizePreferred, a.fontSizeMax, unit);
+	}
+	if (/^\d+(\.\d+)?$/.test(String(a.fontSize)) && Number(a.fontSize) > 0) {
+		return formatFontSizeLength(a.fontSize, unit);
+	}
+	return '';
+}
 
 /**
  * Build the span attributes and style for an inline (selection-scoped)

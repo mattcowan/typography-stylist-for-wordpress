@@ -1381,6 +1381,10 @@ msgstr "Desvincular estilo eliminó estos ajustes del bloque: %s."
 msgid "Some values set in em are now in px, at the current text size."
 msgstr "Algunos valores definidos en em ahora están en px, con el tamaño de texto actual."
 
+#: assets/js/editor.js:229
+msgid "Some indents or spacing now follow the text size as it changes with the screen width. The block’s sidebar shows them as empty: type a value there to replace one."
+msgstr "Algunas sangrías o espaciados ahora siguen el tamaño del texto, que cambia con el ancho de la pantalla. La barra lateral del bloque los muestra vacíos: escribe allí un valor para reemplazar uno."
+
 #: assets/js/editor.js:208
 msgid "first letter hang"
 msgstr "desborde de la primera letra"

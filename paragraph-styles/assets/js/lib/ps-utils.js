@@ -575,17 +575,84 @@
 	}
 
 	/**
+	 * The font-size value a style's CSS writes, '' for none: a fixed size,
+	 * or the responsive clamp (fit styles write the same fallback clamp, see
+	 * the PHP twin for why). Styles saved after #233 write rem; a style
+	 * without the key writes px exactly as before. buildStyleCssBlock()
+	 * writes this value, and Detach (#363) multiplies em values by it.
+	 *
+	 * @param {Object} props A style's properties.
+	 * @return {string}
+	 */
+	function styleFontSizeCss(props) {
+		var p = props && typeof props === 'object' ? props : {};
+		var useRem = p.fontSizeUnit === 'rem';
+		if (p.fontSize !== undefined && isFinite(p.fontSize) && Number(p.fontSize) > 0) {
+			return useRem ? phpFloatStr(pxToRem(p.fontSize)) + 'rem' : phpInt(p.fontSize) + 'px';
+		}
+		if ((p.fontSize === 'responsive' || p.fontSize === 'fit') &&
+			p.fontSizeMin !== undefined && p.fontSizePreferred !== undefined && p.fontSizeMax !== undefined) {
+			var min = phpInt(p.fontSizeMin);
+			var pref = phpInt(p.fontSizePreferred);
+			var max = phpInt(p.fontSizeMax);
+			if (useRem) {
+				return 'clamp(' + phpFloatStr(pxToRem(min)) + 'rem, ' + phpFloatStr(pxToRem(pref)) + 'rem + ' +
+					responsiveZoomVw(min, pref, max) + 'vw, ' + phpFloatStr(pxToRem(max)) + 'rem)';
+			}
+			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
+			return 'clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)';
+		}
+		return '';
+	}
+
+	/**
+	 * The size a core block's text has after Detach, for its em values
+	 * (#363): 'keep' when it does not change — the style sets no size, or
+	 * the block's own size setting already beat it (a preset class with
+	 * !important, or an inline size) — so em values stay in em; else the
+	 * style's size as its CSS writes it, since Detach removes it and the
+	 * block falls back to the theme's.
+	 *
+	 * @param {Object} properties The detached style's resolved properties.
+	 * @param {Object} attrs      The core block's attributes.
+	 * @return {string} 'keep' or a CSS font-size value.
+	 */
+	function coreDetachEmBasis(properties, attrs) {
+		var a = attrs && typeof attrs === 'object' ? attrs : {};
+		var typography = a.style && typeof a.style === 'object' && a.style.typography && typeof a.style.typography === 'object' ? a.style.typography : {};
+		if (a.fontSize || typography.fontSize) return 'keep';
+		return styleFontSizeCss(properties) || 'keep';
+	}
+
+	/**
 	 * What a whole block keeps of a style's own values when it is detached
 	 * (#346). The values a block setting can hold go to that setting: text
-	 * color, margin top and bottom, padding left and right. A setting the
-	 * block already has wins. The rest are reported, so the author knows
-	 * what went.
+	 * color, margin top and bottom, padding left and right, and (#348) a
+	 * positive first line indent in core's Text indent
+	 * (style.typography.textIndent) when the block can hold one
+	 * (canKeepTextIndent()). A setting the block already has wins. The rest
+	 * are reported, so the author knows what went.
+	 *
+	 * The first line indent is kept only where it showed: with "only after a
+	 * paragraph with the same style", the block was indented only when it
+	 * followed a block with the style (followsSameStyle, see
+	 * blockCarriesStyle()), and otherwise nothing is written or reported.
+	 * Text indent is inline on one block, so it indents the block wherever
+	 * it is. A hanging (negative) indent is still reported: Text indent has
+	 * no matching padding.
 	 *
 	 * A style's indents are logical and block padding is physical, so the
-	 * text direction picks the side. An em value that would resolve against
-	 * another size becomes px at the size the text renders at now
-	 * (fontSizePx): a core block loses the style's size, and a Typography
-	 * Stylist block's indent moves from the text element to the wrapper.
+	 * text direction picks the side. An em value keeps its size through
+	 * emBasis (#363), the size the style's em values resolved against:
+	 * 'keep' leaves it in em (a core block whose size does not change), a
+	 * fixed length multiplies it in that unit (1.5em at 1.25rem is 1.875rem),
+	 * and an expression gives calc(N * expression), so a responsive size
+	 * matches at every screen width (followsTextSize: core's sidebar shows
+	 * such a value as empty, and the notice says so). With no usable basis
+	 * it becomes px at the size the text renders at now (fontSizePx,
+	 * emConverted), which matches only at the editor's width: a core block
+	 * loses the style's size, and a Typography Stylist block's indent moves
+	 * from the text element to the wrapper, whose size is another.
 	 * That block's margins stay in em (keepMarginEm): the style wrote them on
 	 * the wrapper too, so the same value gives the same result on every
 	 * theme, where a px value measured in the editor might not. A color that
@@ -603,7 +670,10 @@
 	 * @param {boolean} [options.keepMarginEm] The style's margins are on the element the block's margins go to.
 	 * @param {boolean} [options.hasGrepRules] The style has GREP rules, which are on its record, not in its properties.
 	 * @param {boolean} [options.hasNestedRules] The style has nested rules (#195), also on its record.
-	 * @return {{attributes: Object, removed: string[], emConverted: boolean}}
+	 * @param {boolean} [options.textIndent] The block can hold a Text indent that core renders (#348).
+	 * @param {boolean} [options.followsSameStyle] The block before it carries the same style (#348).
+	 * @param {string}  [options.emBasis] 'keep', or the CSS font-size the em values resolved against (#363).
+	 * @return {{attributes: Object, removed: string[], emConverted: boolean, followsTextSize: boolean}}
 	 */
 	function buildDetachBlockSettings(properties, attrs, options) {
 		var props = properties && typeof properties === 'object' ? properties : {};
@@ -615,6 +685,7 @@
 		var attributes = {};
 		var removed = [];
 		var emConverted = false;
+		var followsTextSize = false;
 		var nextStyle = null;
 
 		function write(group, side, value) {
@@ -654,18 +725,46 @@
 			}
 		}
 
+		// The size the em values resolved against (#363): 'keep', a fixed
+		// length, an expression (clamp(), min(), calc()), or none
+		var basis = typeof opts.emBasis === 'string' ? opts.emBasis.trim() : '';
+		var basisLength = /^(\d*\.?\d+)(px|rem)$/.exec(basis);
+		if (basisLength && !(Number(basisLength[1]) > 0)) basisLength = null;
+		var basisExpression = !basisLength && /^(clamp|min|max|calc)\(.+\)$/.test(basis) ? basis : '';
+
+		// Rounds by textual exponent shift; a product String() writes in
+		// exponent form (1e-7) would give NaN that way, and is 0 at this
+		// precision anyway (PR #368 review)
+		function round(x, digits) {
+			var rounded = Number(Math.round(Number(x + 'e' + digits)) + 'e-' + digits);
+			return isFinite(rounded) ? rounded : Number(x.toFixed(digits));
+		}
+
+		// An em value at the size it resolved against; px at the rendered
+		// size when that size is not known
+		function emToPx(value) {
+			if (!/em$/.test(value) || /rem$/.test(value)) return value;
+			var n = parseFloat(value);
+			if (basis === 'keep') return value;
+			if (basisLength) {
+				return String(round(n * Number(basisLength[1]), basisLength[2] === 'rem' ? 4 : 3)) + basisLength[2];
+			}
+			if (basisExpression) {
+				followsTextSize = true;
+				return 'calc(' + String(n) + ' * ' + basisExpression + ')';
+			}
+			if (!fontSizePx) return value;
+			emConverted = true;
+			return String(round(n * fontSizePx, 3)) + 'px';
+		}
+
 		// Space before and after, and the indents
 		var spacing = style.spacing && typeof style.spacing === 'object' ? style.spacing : {};
 		function keepLength(group, side, value) {
 			if (!value) return;
 			var current = spacing[group];
 			if (current !== undefined && current !== null && (typeof current !== 'object' || current[side] !== undefined)) return;
-			var written = value;
-			if (fontSizePx && /em$/.test(value) && !(group === 'margin' && opts.keepMarginEm)) {
-				written = String(Number(Math.round(Number(parseFloat(value) * fontSizePx + 'e3')) + 'e-3')) + 'px';
-				emConverted = true;
-			}
-			write(group, side, written);
+			write(group, side, group === 'margin' && opts.keepMarginEm ? value : emToPx(value));
 		}
 		keepLength('margin', 'top', normalizeLength(props.spaceBefore));
 		keepLength('margin', 'bottom', normalizeLength(props.spaceAfter));
@@ -674,11 +773,31 @@
 			keepLength('padding', opts.isRtl ? 'left' : 'right', normalizeLength(props.indentEnd));
 		}
 
+		// The first line indent (#348): a positive one goes to core's Text
+		// indent where the block can hold it, and only where it showed. With
+		// "only after a paragraph with the same style", the block was indented
+		// only when it followed a block with that style; otherwise nothing
+		// visible is lost, so nothing is written or named.
+		var firstLine = isFit ? '' : normalizeLength(props.firstLineIndent, true);
+		var afterSame = firstLine !== '' && indentAfterSameApplies(props);
+		var keepsFirstLine = firstLine !== '' && firstLine.charAt(0) !== '-' && !!opts.textIndent;
+		if (keepsFirstLine && (!afterSame || opts.followsSameStyle)) {
+			var typography = style.typography && typeof style.typography === 'object' ? style.typography : {};
+			var ownIndent = typography.textIndent;
+			// A Text indent the block has (the string '0' too) already showed
+			// over the style's. Core writes nothing for a falsy value (a number
+			// 0), so then the style's indent showed (PR #368 review)
+			if (!ownIndent) {
+				nextStyle = nextStyle || Object.assign({}, style);
+				nextStyle.typography = Object.assign({}, nextStyle.typography, { textIndent: emToPx(firstLine) });
+			}
+		}
+
 		// No block setting holds these
 		if (normalizeStrokeWidth(props.textStrokeWidth) > 0) removed.push('textStrokeWidth');
-		if (!isFit && normalizeLength(props.firstLineIndent, true)) {
+		if (firstLine && !keepsFirstLine) {
 			removed.push('firstLineIndent');
-			if (indentAfterSameApplies(props)) removed.push('indentAfterSame');
+			if (afterSame) removed.push('indentAfterSame');
 		}
 		if (props.fontSize !== 'fit') {
 			if (phpInt(props.wordSpacing)) removed.push('wordSpacing');
@@ -708,7 +827,7 @@
 		}
 
 		if (nextStyle) attributes.style = nextStyle;
-		return { attributes: attributes, removed: removed, emConverted: emConverted };
+		return { attributes: attributes, removed: removed, emConverted: emConverted, followsTextSize: followsTextSize };
 	}
 
 	/**
@@ -753,6 +872,114 @@
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Whether Detach can keep a first line indent in a block's Text indent
+	 * (#348): the block type has core's typography.textIndent support, core
+	 * renders it, and the theme shows the control.
+	 *
+	 * - Support: core Paragraph has it from WordPress 7.0, core Heading has
+	 *   none. The Typography Stylist block declares it on every version, so
+	 *   the support alone does not prove that core renders it.
+	 * - Core renders it: its style map (wp.blocks.__EXPERIMENTAL_STYLE_PROPERTY)
+	 *   lists textIndent from WordPress 7.0, the release that added the
+	 *   output in block-supports/typography.php. Before that the value would
+	 *   be saved and shown nowhere.
+	 * - The theme setting typography.textIndent false hides the sidebar
+	 *   control (useHasTextIndentControl() reads it), while a stored value
+	 *   still renders, so the author could neither see nor change it. A
+	 *   block-level setting wins over the global one; any other value
+	 *   ('subsequent', 'all', unset) shows the control.
+	 *
+	 * @param {?Object} blockType     The registered block type.
+	 * @param {?Object} styleProperty Core's style property map.
+	 * @param {?Object} features      The editor's __experimentalFeatures.
+	 * @param {string}  blockName     The block name, for block-level settings.
+	 * @return {boolean}
+	 */
+	function canKeepTextIndent(blockType, styleProperty, features, blockName) {
+		var supports = blockType && blockType.supports;
+		if (!supports || !supports.typography || !supports.typography.textIndent) return false;
+		if (!styleProperty || !styleProperty.textIndent) return false;
+		var f = features || {};
+		var own = f.blocks && f.blocks[blockName] && f.blocks[blockName].typography;
+		var setting = own && own.textIndent !== undefined ? own.textIndent : (f.typography && f.typography.textIndent);
+		return setting !== false;
+	}
+
+	/**
+	 * Whether a block carries a paragraph style the way the style's "only
+	 * after a paragraph with the same style" rule sees it (#348). The rule is
+	 * `:is(W, S) + S` with S the style's class on a .typost-styled element
+	 * and W a .wp-block-typost wrapper with S as a child
+	 * (paragraphLayoutCss()), so the block before counts when it is:
+	 *
+	 * - a Typography Stylist block whose styleClass is the style (its visual
+	 *   copy always carries typost-styled; a fit block counts, since W has no
+	 *   fit guard);
+	 * - any other block whose className carries typost-styled and the style
+	 *   (core Paragraph and Heading, #219).
+	 *
+	 * The numeric id and the legacy id both count, as in the CSS.
+	 *
+	 * @param {?{name: string, attributes: Object}} block The block before.
+	 * @param {?Object} style The style ({id, legacyId}).
+	 * @return {boolean}
+	 */
+	function blockCarriesStyle(block, style) {
+		if (!block || !style) return false;
+		var attrs = block.attributes || {};
+		var tokens;
+		if (block.name === 'typost/block') {
+			tokens = classTokens(attrs.styleClass);
+		} else {
+			tokens = classTokens(attrs.className);
+			if (tokens.indexOf('typost-styled') === -1) return false;
+		}
+		var refs = [String(style.id)];
+		if (style.legacyId) refs.push(String(style.legacyId));
+		return refs.some(function (ref) {
+			return tokens.indexOf('typost-ps-' + ref) !== -1;
+		});
+	}
+
+	/**
+	 * canKeepTextIndent() for a block name, from the editor (#348). False
+	 * outside the block editor.
+	 *
+	 * @param {string} blockName
+	 * @return {boolean}
+	 */
+	function readTextIndentSupport(blockName) {
+		var wp = typeof window !== 'undefined' ? window.wp : null;
+		if (!wp || !wp.blocks || !wp.blocks.getBlockType) return false;
+		var store = wp.data && wp.data.select && wp.data.select('core/block-editor');
+		var settings = store && store.getSettings ? store.getSettings() : null;
+		return canKeepTextIndent(
+			wp.blocks.getBlockType(blockName),
+			wp.blocks.__EXPERIMENTAL_STYLE_PROPERTY,
+			settings && settings.__experimentalFeatures,
+			blockName
+		);
+	}
+
+	/**
+	 * The block before a block in the same parent, as {name, attributes}, or
+	 * null (#348). The editor's block order stands for the published page:
+	 * adjacent blocks are adjacent elements there, except where a block
+	 * renders nothing.
+	 *
+	 * @param {string} clientId
+	 * @return {?{name: string, attributes: Object}}
+	 */
+	function readPreviousBlock(clientId) {
+		var wp = typeof window !== 'undefined' ? window.wp : null;
+		var store = wp && wp.data && wp.data.select && wp.data.select('core/block-editor');
+		if (!clientId || !store || !store.getPreviousBlockClientId) return null;
+		var previous = store.getPreviousBlockClientId(clientId);
+		if (!previous) return null;
+		return { name: store.getBlockName(previous), attributes: store.getBlockAttributes(previous) || {} };
 	}
 
 	/**
@@ -2063,30 +2290,9 @@
 			}
 		}
 
-		// Styles saved after #233 write rem; a style without the key writes
-		// px exactly as before (see the PHP twin)
-		var useRem = props.fontSizeUnit === 'rem';
-
-		if (props.fontSize !== undefined && isFinite(props.fontSize) && Number(props.fontSize) > 0) {
-			rules.push(useRem
-				? 'font-size: ' + phpFloatStr(pxToRem(props.fontSize)) + 'rem'
-				: 'font-size: ' + phpInt(props.fontSize) + 'px');
-		}
-
-		// Responsive clamp; fit styles emit the same fallback clamp (see the
-		// PHP twin for why)
-		if ((props.fontSize === 'responsive' || props.fontSize === 'fit') &&
-			props.fontSizeMin !== undefined && props.fontSizePreferred !== undefined && props.fontSizeMax !== undefined) {
-			var min = phpInt(props.fontSizeMin);
-			var pref = phpInt(props.fontSizePreferred);
-			var max = phpInt(props.fontSizeMax);
-			var vw = ((max - min) / (RESPONSIVE_FONT_MAX_VIEWPORT - RESPONSIVE_FONT_MIN_VIEWPORT)) * 100;
-			if (useRem) {
-				rules.push('font-size: clamp(' + phpFloatStr(pxToRem(min)) + 'rem, ' + phpFloatStr(pxToRem(pref)) + 'rem + ' +
-					responsiveZoomVw(min, pref, max) + 'vw, ' + phpFloatStr(pxToRem(max)) + 'rem)');
-			} else {
-				rules.push('font-size: clamp(' + min + 'px, ' + round4(pref / 16) + 'rem + ' + round4(vw) + 'vw, ' + max + 'px)');
-			}
+		var sizeCss = styleFontSizeCss(props);
+		if (sizeCss) {
+			rules.push('font-size: ' + sizeCss);
 		}
 
 		// Hanging initial (#242): a custom property that core's block
@@ -3417,6 +3623,12 @@
 		buildDetachBlockSettings: buildDetachBlockSettings,
 		measureBlockFontSize: measureBlockFontSize,
 		readEditorPalette: readEditorPalette,
+		canKeepTextIndent: canKeepTextIndent,
+		styleFontSizeCss: styleFontSizeCss,
+		coreDetachEmBasis: coreDetachEmBasis,
+		blockCarriesStyle: blockCarriesStyle,
+		readTextIndentSupport: readTextIndentSupport,
+		readPreviousBlock: readPreviousBlock,
 		ALIGNMENT_VALUES: ALIGNMENT_VALUES,
 		normalizeLength: normalizeLength,
 		indentAfterSameApplies: indentAfterSameApplies,

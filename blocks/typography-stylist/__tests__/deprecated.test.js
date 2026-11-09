@@ -293,8 +293,17 @@ describe('Typography Stylist - deprecated save (v2, pre-rem #233)', () => {
 		expect(v2.attributes).toEqual(withoutUnit);
 	});
 
-	it('v2 supports match block.json', () => {
+	// The frozen supports are block.json's at #233. typography.textIndent
+	// (#348) came later and is left out of them: core runs the
+	// blocks.registerBlockType filters on each deprecation with its own
+	// supports, and the style attribute it would add is already there from
+	// the color, spacing and line height supports, so the deprecated schema
+	// is the same; save() never reads style. A pre-#233 block cannot store a
+	// Text indent before it is migrated.
+	it('v2 supports match block.json, apart from the later Text indent', () => {
 		const blockJson = require('../block.json');
-		expect(v2.supports).toEqual(blockJson.supports);
+		const { textIndent, ...typography } = blockJson.supports.typography;
+		expect(textIndent).toBe(true);
+		expect(v2.supports).toEqual({ ...blockJson.supports, typography });
 	});
 });

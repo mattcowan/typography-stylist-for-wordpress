@@ -58,6 +58,19 @@ class BlockSupportsRenderTest extends TestCase {
         );
     }
 
+    public function test_a_text_indent_reaches_the_wrapper_in_the_form_style_css_matches() {
+        // Core's typography support writes "text-indent:24px;" (WordPress 7.0+,
+        // #348); style.css passes it to the visual copy through
+        // .wp-block-typost[style*="text-indent:"]
+        $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('style' => array('typography' => array('textIndent' => '24px')))), array(
+            'class' => 'wp-block-typost-block',
+            'style' => 'text-indent:24px;',
+        ));
+
+        $this->assertSame('<div class="wp-block-typost" style="text-indent:24px;">' . self::TAIL, $out);
+        $this->assertStringContainsString('style="text-indent:', $out);
+    }
+
     public function test_a_block_with_nothing_set_stays_byte_identical() {
         $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('content' => 'Own')), array(
             'class' => 'wp-block-typost-block',

@@ -2758,6 +2758,10 @@ msgid "Maximum size (px)"
 msgstr "Tamaño máximo (px)"
 
 #: blocks/typography-stylist/build/index.js:7
+msgid "Fit to width does not use the Line indent setting. Each line fills the width of the block."
+msgstr "«Ajustar al ancho» no usa el ajuste Sangría de línea. Cada línea ocupa todo el ancho del bloque."
+
+#: blocks/typography-stylist/build/index.js:7
 msgid "Fallback size for browsers without container query support:"
 msgstr "Tamaño alternativo para navegadores sin compatibilidad con consultas de contenedor:"
 
@@ -2924,6 +2928,10 @@ msgstr "Desactivado"
 #: blocks/typography-stylist/build/index.js:9
 msgid "The hang has no effect while the text is centered or aligned to the end. Align the text to the start to use it."
 msgstr "El desborde no tiene efecto mientras el texto está centrado o alineado al final. Alinea el texto al inicio para usarlo."
+
+#: blocks/typography-stylist/build/index.js:9
+msgid "The hang has no effect while the block has a Line indent. Remove the Line indent to use the hang."
+msgstr "El desborde no tiene efecto mientras el bloque tiene una sangría de línea. Quita la sangría de línea para usar el desborde."
 
 #: blocks/typography-stylist/build/index.js:9
 msgid "The swash draws outside the block. Some themes cut off content that goes outside its container, and then the swash is cut off on the site. Check the published page."
