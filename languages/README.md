@@ -42,6 +42,19 @@ The block’s source files (`edit.js` and the others) go into `build/index.js` w
 
 A module’s `.json` file name also uses the path from the plugin root, for example `paragraph-styles/assets/js/editor.js`.
 
+### The inline editor has more than one source file
+
+Since 2.4.0, the inline editor’s strings are in `assets/js/block-editor.js` and in the files of `assets/js/inline-editor/`. Browserify puts all of these files into one script, `assets/js/block-editor.min.js`. WordPress loads one `.json` file for that script: the file for `assets/js/block-editor.js`.
+
+Thus, a string in `assets/js/inline-editor/` must go into the `.json` file of `assets/js/block-editor.js`. If it goes into a `.json` file with the hash of its own path, WordPress does not load that file, and the string shows in English.
+
+The catalogs of 2.4.0 still name `assets/js/block-editor.js` for all the inline editor’s strings, and its `.json` files hold all of them. When you make the template again with the command below, `make-pot` names the files in `assets/js/inline-editor/` for the strings that they hold. Before you run `make-json`, make sure that these strings go into the `.json` file of `assets/js/block-editor.js`. The `--use-map` option of `make-json` can do this. Read these facts first (WP-CLI 2.12):
+
+- With `--use-map`, `make-json` drops each reference to a file that is not in the map. Thus the map must also name `assets/js/block-editor.js` and `blocks/typography-stylist/build/index.js`, each to itself.
+- `make-json` removes `.min` from a file name before it calculates the hash.
+
+The same rule applies to a shared module in `assets/js/` (for example `font-size-units.js`) if it gets a translatable string: both scripts bundle it. Today the shared modules hold no translatable strings.
+
 ## For translators
 
 1. Open the `.pot` file of the catalog in [Poedit](https://poedit.net/) or a different gettext editor.
