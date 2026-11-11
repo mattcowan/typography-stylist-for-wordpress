@@ -60,18 +60,21 @@ class NewFontSizeUnitOptionTest extends TestCase {
      */
     public function test_option_is_wired_through_the_save_paths() {
         $main = file_get_contents(TYPOST_PLUGIN_DIR . '/typography-stylist.php');
+        // The REST handlers live in the controller split out of Typost (#360)
+        $rest = file_get_contents(TYPOST_PLUGIN_DIR . '/includes/class-typost-rest-controller.php');
 
         // REST save: only when the client sent the value
         $this->assertMatchesRegularExpression(
             "/null !== \\\$request->get_param\('new_font_sizes_px'\)\)\s*\{\s*update_option\('typost_new_font_sizes_px'/",
-            $main
+            $rest
         );
         // No-JS POST fallback: listed with the checkboxes that the loop
         // writes through the shared sanitizer (#205)
         $this->assertStringContainsString("'typost_new_font_sizes_px', // #248", $main);
         $this->assertStringContainsString("update_option(\$option_key, Typost_Admin_Options::sanitize(\$option_key, isset(\$_POST[\$option_key])));", $main);
-        // Editor data
-        $this->assertStringContainsString("'newFontSizeUnit' => \$this->get_new_font_size_unit()", $main);
+        // Editor data (enqueued by the assets service split out of Typost, #360)
+        $assets = file_get_contents(TYPOST_PLUGIN_DIR . '/includes/class-typost-assets.php');
+        $this->assertStringContainsString("'newFontSizeUnit' => \$this->typost->get_new_font_size_unit()", $assets);
 
         $uninstall = file_get_contents(TYPOST_PLUGIN_DIR . '/uninstall.php');
         $this->assertStringContainsString("delete_option('typost_new_font_sizes_px');", $uninstall);

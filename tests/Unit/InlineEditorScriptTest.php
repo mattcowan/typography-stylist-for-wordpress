@@ -13,7 +13,8 @@ use TypographyStylist\Tests\TestCase;
 class InlineEditorScriptTest extends TestCase {
 
     public function test_the_handle_always_loads_the_built_file() {
-        $source = file_get_contents( dirname( __DIR__, 2 ) . '/typography-stylist.php' );
+        // The editor assets are enqueued by the service split out of Typost (#360)
+        $source = file_get_contents( dirname( __DIR__, 2 ) . '/includes/class-typost-assets.php' );
 
         $this->assertStringContainsString( '"assets/js/block-editor.min.js"', $source );
         $this->assertStringNotContainsString( 'assets/js/block-editor{$suffix}.js', $source );

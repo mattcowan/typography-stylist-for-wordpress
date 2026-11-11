@@ -82,6 +82,9 @@ class VariableWeightsOptionTest extends TestCase {
         $source = file_get_contents(TYPOST_PLUGIN_DIR . '/typography-stylist.php');
 
         $this->assertSame(0, preg_match('/update_option\(\s*[\'"]typost_allow_variable_weights[\'"]/', $source));
+        // The REST admin/options handler lives in the controller split out of Typost (#360)
+        $rest = file_get_contents(TYPOST_PLUGIN_DIR . '/includes/class-typost-rest-controller.php');
+        $this->assertSame(0, preg_match('/update_option\(\s*[\'"]typost_allow_variable_weights[\'"]/', $rest));
         // Control: the sanitizer read is still there (proves the pattern style matches)
         $this->assertSame(1, preg_match('/get_option\(\s*[\'"]typost_allow_variable_weights[\'"]/', $source));
 

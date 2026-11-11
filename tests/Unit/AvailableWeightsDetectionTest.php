@@ -93,6 +93,11 @@ class AvailableWeightsDetectionTest extends TestCase {
         return $reflection->invokeArgs($object, $args);
     }
 
+    /** Adobe weight detection lives in the REST controller split out of Typost (#360). */
+    private function restController($plugin) {
+        return $this->invokePrivate($plugin, 'rest_controller');
+    }
+
     private function faces(...$weights) {
         return array_map(function ($w) {
             return ['weight' => $w];
@@ -215,7 +220,7 @@ class AvailableWeightsDetectionTest extends TestCase {
         $plugin = $this->getPluginInstance();
 
         $detected = $this->invokePrivate(
-            $plugin, 'detect_adobe_available_weights',
+            $this->restController($plugin), 'detect_adobe_available_weights',
             'https://use.typekit.net/abc1234.css', ['Proxima Nova']
         );
 
@@ -227,7 +232,7 @@ class AvailableWeightsDetectionTest extends TestCase {
         $plugin = $this->getPluginInstance();
 
         $detected = $this->invokePrivate(
-            $plugin, 'detect_adobe_available_weights',
+            $this->restController($plugin), 'detect_adobe_available_weights',
             'https://use.typekit.net/abc1234.css', ['Missing Family']
         );
 
@@ -239,7 +244,7 @@ class AvailableWeightsDetectionTest extends TestCase {
         $plugin = $this->getPluginInstance();
 
         $detected = $this->invokePrivate(
-            $plugin, 'detect_adobe_available_weights',
+            $this->restController($plugin), 'detect_adobe_available_weights',
             'https://use.typekit.net/abc1234.css', ['Proxima Nova']
         );
 
@@ -251,7 +256,7 @@ class AvailableWeightsDetectionTest extends TestCase {
         $plugin = $this->getPluginInstance();
 
         $detected = $this->invokePrivate(
-            $plugin, 'detect_adobe_available_weights',
+            $this->restController($plugin), 'detect_adobe_available_weights',
             'https://use.typekit.net/abc1234.css', ['Proxima Nova']
         );
 
