@@ -45,7 +45,7 @@ describe('CSS (shared fixture)', () => {
 		expect(lineRule).not.toBeNull();
 		expect(lineRule[0]).toMatch(/-webkit-hyphens: manual;/);
 		expect(lineRule[0]).toMatch(/\bhyphens: manual;/);
-		const edit = fs.readFileSync(path.join(block, 'edit.js'), 'utf8');
+		const edit = fs.readFileSync(path.join(block, 'hooks', 'use-fit-measurement.js'), 'utf8');
 		expect(edit).toMatch(/node\.style\.hyphens = 'manual';/);
 		expect(edit).toMatch(/node\.style\.webkitHyphens = 'manual';/);
 	});
@@ -61,7 +61,7 @@ describe('CSS (shared fixture)', () => {
 		expect(rule[0]).toMatch(/-webkit-hyphens: manual !important;/);
 		expect(rule[0]).toMatch(/\bhyphens: manual !important;/);
 		// The probe holds the same spans
-		const edit = fs.readFileSync(path.join(block, 'edit.js'), 'utf8');
+		const edit = fs.readFileSync(path.join(block, 'hooks', 'use-fit-measurement.js'), 'utf8');
 		expect(edit).toMatch(/node\.querySelectorAll\('\*'\)\.forEach\(\(s\) => \{\s*s\.style\.setProperty\('-webkit-hyphens', 'manual', 'important'\);\s*s\.style\.setProperty\('hyphens', 'manual', 'important'\);/);
 	});
 
