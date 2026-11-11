@@ -731,8 +731,9 @@ describe('coreDetachEmBasis (#363)', () => {
 });
 
 describe('the Detach routes (#348)', () => {
-	// editor.js is an IIFE and edit.js a React component, so neither can be
-	// called here; read the call each makes instead
+	// editor.js is an IIFE and the block's route a React hook
+	// (use-apply-block-properties.js), so neither can be called here; read the
+	// call each makes instead
 	const callIn = (file) => {
 		const source = fs.readFileSync(path.join(__dirname, file), 'utf8');
 		// The call, not a mention in a comment
@@ -743,21 +744,21 @@ describe('the Detach routes (#348)', () => {
 
 	it.each([
 		['the core block route', '../assets/js/editor.js', /textIndent: utils\.readTextIndentSupport\(editor\.getBlockName\(clientId\)\)/],
-		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /textIndent: !!\(psUtils\.readTextIndentSupport && psUtils\.readTextIndentSupport\('typost\/block'\)\)/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/hooks/use-apply-block-properties.js', /textIndent: !!\(psUtils\.readTextIndentSupport && psUtils\.readTextIndentSupport\('typost\/block'\)\)/],
 	])('%s passes whether the block can hold a Text indent', (_, file, pattern) => {
 		expect(callIn(file)).toMatch(pattern);
 	});
 
 	it.each([
 		['the core block route', '../assets/js/editor.js', /followsSameStyle: utils\.blockCarriesStyle\(utils\.readPreviousBlock\(clientId\), detached\)/],
-		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /followsSameStyle: !!\(psUtils\.blockCarriesStyle && psUtils\.blockCarriesStyle\(psUtils\.readPreviousBlock\(curClientId\), detachedStyle\)\)/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/hooks/use-apply-block-properties.js', /followsSameStyle: !!\(psUtils\.blockCarriesStyle && psUtils\.blockCarriesStyle\(psUtils\.readPreviousBlock\(curClientId\), detachedStyle\)\)/],
 	])('%s passes whether the block before carries the style', (_, file, pattern) => {
 		expect(callIn(file)).toMatch(pattern);
 	});
 
 	it.each([
 		['the core block route', '../assets/js/editor.js', /emBasis: utils\.coreDetachEmBasis\(detached\.properties, editor\.getBlockAttributes\(clientId\)\)/],
-		['the Typography Stylist block route', '../../blocks/typography-stylist/edit.js', /emBasis: detachEmBasis/],
+		['the Typography Stylist block route', '../../blocks/typography-stylist/hooks/use-apply-block-properties.js', /emBasis: detachEmBasis/],
 	])('%s passes the size the text has after Detach (#363)', (_, file, pattern) => {
 		expect(callIn(file)).toMatch(pattern);
 	});

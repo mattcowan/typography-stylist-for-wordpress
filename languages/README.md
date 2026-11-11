@@ -59,10 +59,12 @@ Run all the commands from the plugin root. The commands need [WP-CLI](https://wp
 ### Make the core template
 
 ```bash
-wp i18n make-pot . languages/typography-stylist.pot --domain=typography-stylist --exclude=node_modules,vendor,tests,test-results,playwright-report-sr,playwright-profile,private,glyphs-panel,variable-fonts,paragraph-styles,blocks/typography-stylist/edit.js,blocks/typography-stylist/save.js,blocks/typography-stylist/utils.js,blocks/typography-stylist/index.js,blocks/typography-stylist/deprecated.js,blocks/typography-stylist/__tests__,blocks/typography-stylist/__mocks__,*.min.js
+wp i18n make-pot . languages/typography-stylist.pot --domain=typography-stylist --exclude=node_modules,vendor,tests,test-results,playwright-report-sr,playwright-profile,private,glyphs-panel,variable-fonts,paragraph-styles,blocks/typography-stylist/edit.js,blocks/typography-stylist/save.js,blocks/typography-stylist/utils.js,blocks/typography-stylist/index.js,blocks/typography-stylist/deprecated.js,blocks/typography-stylist/qft-preview.js,blocks/typography-stylist/editor-style.js,blocks/typography-stylist/feature-categories.js,blocks/typography-stylist/components,blocks/typography-stylist/hooks,blocks/typography-stylist/qft,blocks/typography-stylist/__tests__,blocks/typography-stylist/__mocks__,*.min.js
 ```
 
 The command reads the block’s strings from `blocks/typography-stylist/build/index.js`, so build the block first (`npm run build:block`). If you do not, the template gets the strings of the old build.
+
+The `--exclude` list names each source file and folder of the block. When you add a source file or folder to the block, add it to the list. Do not use a wildcard such as `blocks/typography-stylist/*.js`: WP-CLI lets `*` match across folders, so it also excludes `build/index.js`.
 
 ### Make a module template
 
