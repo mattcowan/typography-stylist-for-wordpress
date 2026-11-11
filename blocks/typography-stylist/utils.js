@@ -8,6 +8,10 @@
 import { resolveFontSizeUnit, formatFontSizeLength, parseFixedFontSize, pxToRem, resolveStyleFontSizeUnit, resolveSpanFontSizeUnit, getNewFontSizeUnit, getResponsiveZoomNotice, buildResponsiveClamp as buildResponsiveClampForUnit, buildInlineFontSizeValue, buildInlineFontSizeAttributes } from '../../assets/js/font-size-units.js';
 import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.js';
 import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseAttributes } from '../../assets/js/text-case.js';
+import { buildTextOffsetMap, buildBreakOffsetMap } from '../../assets/js/text-offsets.js';
+import { filterToolbarButtons } from '../../assets/js/toolbar-buttons.js';
+import { getClosestWeight } from '../../assets/js/font-weights.js';
+import { sanitizeFontVariationSettings } from '../../assets/js/font-variation-settings.js';
 
 /**
  * Build a text offset map from a DOM container, accounting for <br> elements.
@@ -22,70 +26,11 @@ import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeT
  * wrapped in <span> elements. Callers iterate the returned entries to find or wrap
  * text at a given offset range.
  *
- * @param {Node} container - DOM node to walk
- * @param {Document} docContext - Document context for creating the TreeWalker
- * @return {Array<{node: Node, start: number, end: number, text: string}>} Text node map with BR-adjusted offsets
+ * buildBreakOffsetMap() gives the offsets of the <br> elements in the same
+ * coordinate space. Both live in assets/js/text-offsets.js, shared with the
+ * inline editor's separate build (#357).
  */
-export function buildTextOffsetMap(container, docContext) {
-	return walkTextOffsets(container, docContext).text;
-}
-
-/**
- * Offsets of the <br> elements inside a container, in the same coordinate
- * space as buildTextOffsetMap(): each break occupies one position, as it
- * does in a WordPress RichText value. Kept apart from the text map because
- * that map's consumers read entry.text and entry.node.nodeValue.
- *
- * @param {Element}  container  Container element
- * @param {Document} docContext Document that owns the container
- * @returns {Array<{node: Element, start: number, end: number}>}
- */
-export function buildBreakOffsetMap(container, docContext) {
-	return walkTextOffsets(container, docContext).breaks;
-}
-
-function walkTextOffsets(container, docContext) {
-	const walker = docContext.createTreeWalker(
-		container,
-		NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
-		{
-			acceptNode: function (node) {
-				if (node.nodeType === Node.TEXT_NODE) {
-					return NodeFilter.FILTER_ACCEPT;
-				}
-				if (node.nodeName === 'BR') {
-					return NodeFilter.FILTER_ACCEPT;
-				}
-				// Skip other elements but still visit their children
-				return NodeFilter.FILTER_SKIP;
-			}
-		}
-	);
-
-	const map = [];
-	const breaks = [];
-	let currentOffset = 0;
-	let node;
-
-	while ((node = walker.nextNode())) {
-		if (node.nodeType === Node.TEXT_NODE) {
-			const text = node.nodeValue || '';
-			map.push({
-				node: node,
-				start: currentOffset,
-				end: currentOffset + text.length,
-				text: text
-			});
-			currentOffset += text.length;
-		} else if (node.nodeName === 'BR') {
-			// BR counts as 1 character position to match WordPress RichText offsets
-			breaks.push({ node: node, start: currentOffset, end: currentOffset + 1 });
-			currentOffset += 1;
-		}
-	}
-
-	return { text: map, breaks: breaks };
-}
+export { buildTextOffsetMap, buildBreakOffsetMap };
 
 /**
  * Get the effective text length of a DOM node, counting <br> elements as 1 character.
@@ -2420,25 +2365,15 @@ export function buildQftEditorState(s) {
  *
  * A descriptor without an `editors` array is offered in every editor.
  *
+ * Lives in assets/js/toolbar-buttons.js, shared with the inline editor's
+ * separate build (#357).
+ *
  * @since 2.3.0
  * @param {Array} buttons - Descriptors returned by the typost_editor_toolbar_buttons filter
  * @param {string} editor - Editor key ('qft' or 'inline')
  * @return {Array} Valid descriptors for this editor
  */
-export function filterToolbarButtons(buttons, editor) {
-	if (!Array.isArray(buttons)) {
-		return [];
-	}
-	return buttons.filter((button) => {
-		if (!button || !button.id || typeof button.onClick !== 'function') {
-			return false;
-		}
-		if (Array.isArray(button.editors)) {
-			return button.editors.indexOf(editor) !== -1;
-		}
-		return true;
-	});
-}
+export { filterToolbarButtons };
 
 /**
  * Checks if font size values are in valid order
@@ -2876,27 +2811,14 @@ export function getFilteredWeightOptions(targetFontId, fontIdMap, includeInherit
 /**
  * Get the closest available weight to the given weight.
  *
+ * Lives in assets/js/font-weights.js, shared with the inline editor's
+ * separate build (#357).
+ *
  * @param {string} currentWeight    The current weight value (e.g., '400').
  * @param {Array}  availableWeights Array of available weight strings (e.g., ['200', '700']).
  * @return {string} The closest available weight.
  */
-export function getClosestWeight(currentWeight, availableWeights) {
-	if (!availableWeights || availableWeights.length === 0) return currentWeight;
-	if (availableWeights.includes(currentWeight)) return currentWeight;
-
-	const current = parseInt(currentWeight, 10);
-	let closest = availableWeights[0];
-	let minDiff = Math.abs(current - parseInt(closest, 10));
-
-	for (const w of availableWeights) {
-		const diff = Math.abs(current - parseInt(w, 10));
-		if (diff < minDiff) {
-			minDiff = diff;
-			closest = w;
-		}
-	}
-	return closest;
-}
+export { getClosestWeight };
 
 /**
  * Filter the full features list to only those enabled for a given font.
@@ -3348,26 +3270,14 @@ export function overrideStylingInDescendantSpans(wrapper, attributes, styleStrin
  * never reach a style string unvalidated (e.g. '"wght" 700; color:red'
  * would smuggle extra declarations in).
  *
- * Same rules as the inline-format editor's sanitizer (block-editor.js);
- * save.js and deprecated.js intentionally keep their own frozen copies
- * for save-output byte-stability.
+ * Lives in assets/js/font-variation-settings.js, shared with the inline
+ * editor's separate build (#357); save.js and deprecated.js intentionally
+ * keep their own frozen copies for save-output byte-stability.
  *
  * @param {string} value - font-variation-settings string
  * @return {string} Validated and normalized value, or empty string
  */
-export function sanitizeFontVariationSettings(value) {
-	if (!value) return '';
-	const str = String(value).trim();
-	if (!str) return '';
-	const entries = str.split(',').map(e => e.trim()).filter(Boolean);
-	const validEntries = [];
-	for (const entry of entries) {
-		const match = entry.match(/^["']([a-zA-Z][a-zA-Z0-9 ]{0,3})["']\s+(-?\d+(?:\.\d+)?)$/);
-		if (!match) return '';
-		validEntries.push(`"${match[1]}" ${match[2]}`);
-	}
-	return validEntries.join(', ');
-}
+export { sanitizeFontVariationSettings };
 
 // ===== Fit-to-width sizing (fontSize: "fit") =====
 

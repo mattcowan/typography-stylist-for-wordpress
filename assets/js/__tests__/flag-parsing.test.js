@@ -6,23 +6,12 @@
  * "0" — truthy in JavaScript. That silently inverted every affected setting:
  * turning one off did nothing at all.
  *
- * block-editor.js is a large IIFE bundled by browserify and cannot be
- * required directly under Jest, so the helper is exercised through the
- * window.typostUtils surface it publishes. Keep this mirroring the
- * implementation.
+ * The helper lives in assets/js/inline-editor/sanitize.js (#357), which this
+ * test requires directly, so it tests the real function rather than a copy.
+ * block-editor.js also publishes it on window.typostUtils.
  */
 
-// Mirrors isFlagEnabled() in assets/js/block-editor.js
-function isFlagEnabled(value) {
-	if (value === undefined || value === null || value === false) {
-		return false;
-	}
-	if (typeof value === 'string') {
-		const normalized = value.trim().toLowerCase();
-		return normalized !== '' && normalized !== '0' && normalized !== 'false';
-	}
-	return !!value;
-}
+const { isFlagEnabled } = require('../inline-editor/sanitize.js');
 
 describe('isFlagEnabled', () => {
 	test('the string "0" is off — the bug this exists to prevent', () => {
