@@ -30,6 +30,11 @@ class FontKitCssPipelineTest extends TestCase {
         return $reflection->invokeArgs($object, $args);
     }
 
+    /** The ZIP pipeline's private steps live in the service split out of Typost (#360). */
+    private function kitUpload($plugin) {
+        return $this->invokePrivate($plugin, 'font_kit_upload');
+    }
+
     private function generatedVariableCss() {
         require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-font-metadata.php';
         $kit = '/tmp/kit-test';
@@ -73,7 +78,7 @@ class FontKitCssPipelineTest extends TestCase {
         $plugin = $this->getPluginInstance();
         $base = 'http://example.test/wp-content/uploads/typography-stylist/fonts/kit-x';
         $rewritten = $plugin->rewrite_css_urls($this->generatedVariableCss(), $base);
-        $sanitized = $this->invokePrivate($plugin, 'sanitize_font_css', $rewritten);
+        $sanitized = $this->invokePrivate($this->kitUpload($plugin), 'sanitize_font_css', $rewritten);
 
         $this->assertNotSame('', $sanitized);
         $this->assertStringContainsString('@font-face', $sanitized);
@@ -105,7 +110,7 @@ class FontKitCssPipelineTest extends TestCase {
 
         try {
             $plugin = $this->getPluginInstance();
-            $result = $this->invokePrivate($plugin, 'generate_css_from_fonts', $kit, $wp_filesystem);
+            $result = $this->invokePrivate($this->kitUpload($plugin), 'generate_css_from_fonts', $kit, $wp_filesystem);
 
             $this->assertIsArray($result);
             $this->assertCount(1, $result['warnings']);

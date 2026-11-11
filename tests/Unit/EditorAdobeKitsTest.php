@@ -192,9 +192,13 @@ class EditorAdobeKitsTest extends TestCase {
 
     public function test_replacement_mappings_for_the_editor_are_positive_integers() {
         $plugin = $this->plugin(array(), array('16' => '29', 0 => 5, 7 => 0, 'x' => 3));
-        $method = new \ReflectionMethod($plugin, 'get_replacement_mappings_for_editor');
+        // The helper lives in the assets service split out of Typost (#360)
+        $accessor = new \ReflectionMethod(\Typost::class, 'assets');
+        $accessor->setAccessible(true);
+        $assets = $accessor->invoke($plugin);
+        $method = new \ReflectionMethod($assets, 'get_replacement_mappings_for_editor');
         $method->setAccessible(true);
 
-        $this->assertSame(array(16 => 29), $method->invoke($plugin));
+        $this->assertSame(array(16 => 29), $method->invoke($assets));
     }
 }
