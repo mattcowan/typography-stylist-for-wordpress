@@ -336,7 +336,7 @@ Since v2.4.0, a style can turn on automatic hyphenation, so long words break at 
 
 #### Indents and paragraph spacing
 
-Since v2.4.0, a style can also set indents and the space before and after a paragraph, as in a paragraph style in InDesign. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+Since v2.4.0, a style can also set indents and the space before and after a paragraph. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
 
 - **Left indent** and **Right indent:** move the whole paragraph in from the start or end edge. They follow the text direction: in right-to-left text, such as Arabic or Hebrew, the left indent is on the right.
 - **First line indent:** moves only the first line. A negative value gives a hanging indent: the first line starts at the edge and the other lines are indented, as in a bibliography or a numbered list written as text.
@@ -369,7 +369,7 @@ In a Typography Stylist block, the Paragraph Style panel in the Quick Feature To
 
 #### Based On
 
-A style can be based on another style, like “Based On” in Adobe InDesign. For example, “Body” sets the font, size, and line height. “Caption” is based on Body and sets only a smaller size. To use a new body font, change Body. Caption follows.
+A style can be based on another style. For example, “Body” sets the font, size, and line height. “Caption” is based on Body and sets only a smaller size. To use a new body font, change Body. Caption follows.
 
 - To set it, go to Settings → Typography Stylist → Paragraph Styles, click “Edit” on the style, and choose a style in “Based on”. The list leaves out the style itself and the styles based on it.
 - A style uses the value of the style it is based on for every setting it does not set itself. A change to that style changes every style based on it, on every page, with no change to your posts.
@@ -400,7 +400,7 @@ A First Letter Hang in the style also applies to these blocks. It has no effect 
 
 #### GREP styles (v2.4.0+, WordPress 6.9+)
 
-Some OpenType features are right for only part of the text. `frac` turns "1/2" into a fraction, but it also changes a date such as "9/22/2026". GREP styles, named after the same feature in Adobe InDesign, apply a style to the text that matches a pattern, automatically.
+Some OpenType features are right for only part of the text. `frac` turns "1/2" into a fraction, but it also changes a date such as "9/22/2026". GREP styles apply a style to the text that matches a pattern, automatically.
 
 1. Make a style for the matched text, for example "Fraction" with only the `frac` feature, or "Small caps" with `c2sc`. A style that sets only a few things works like a character style.
 2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Body".
@@ -434,7 +434,7 @@ Built-in patterns:
 
 #### Nested styles (v2.4.0+, WordPress 6.9+)
 
-Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph differently: "**Step 1:** WHISK THE EGGS until pale." Nested styles, named after the same feature in Adobe InDesign, do this automatically, and follow the text when you edit it.
+Recipe steps, FAQ labels and magazine lead-ins style the start of a paragraph differently: "**Step 1:** WHISK THE EGGS until pale." Nested styles do this automatically, and follow the text when you edit it.
 
 1. Make a style for each part, for example "Bold" with only weight 700, and "Small caps" with `c2sc` or the case "Small caps". A style that sets only a few things works like a character style.
 2. Go to Settings → Typography Stylist → Paragraph Styles and click "Edit" on the style the text uses, for example "Step".

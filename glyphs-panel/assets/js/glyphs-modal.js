@@ -1,7 +1,7 @@
 /**
  * Glyphs Panel — Modal UI
  *
- * Illustrator-style glyph browser: full character grid (windowed for
+ * Full-font glyph browser: full character grid (windowed for
  * performance), search, Unicode-block filter, OpenType feature filter,
  * hover detail bar, and click-to-insert.
  *
