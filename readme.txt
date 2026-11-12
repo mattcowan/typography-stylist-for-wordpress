@@ -20,7 +20,7 @@ If you set type in professional design tools, you know what these fonts can do. 
 
 = Glyphs Panel =
 
-The Glyphs Panel shows every character in a font, like the Glyphs panel in Adobe Illustrator.
+The Glyphs Panel shows every character in a font.
 
 * Search by character, by codepoint (`U+XXXX`), or by glyph name.
 * Filter by OpenType feature (this includes the stylistic sets) or by Unicode block.
@@ -33,12 +33,12 @@ The panel reads the font in your browser, and it reads only the font’s metadat
 
 = Paragraph Styles =
 
-A paragraph style is a named set of typography settings, like a paragraph style in Adobe InDesign. Save a style one time, then apply it to text in any heading, paragraph, or Typography Stylist block.
+A paragraph style is a named set of typography settings, like a paragraph style in page layout software. Save a style one time, then apply it to text in any heading, paragraph, or Typography Stylist block.
 
 * A style holds the font, weight, italic, case (All Caps, Small Caps and others), size, letter spacing, line height, OpenType features, variable font axes, and the First Letter Hang. Fit-to-width sizes can also go into a style.
 * “Browse styles…” shows each style in its own typeface, with your selected words as the sample text. You can search the list, and group it by font family, by size mode, or by recent use.
 * Each style is one CSS class. Change a style and click “Update Style”. All text that uses the style then changes.
-* A style can be based on another style, like “Based On” in InDesign. It uses that style’s value for every setting it does not set itself, so one change to a “Body” style also changes “Caption” and the other styles based on it.
+* A style can be based on another style. It uses that style’s value for every setting it does not set itself, so one change to a “Body” style also changes “Caption” and the other styles based on it.
 * If the selected text already has its own settings, the editor asks before the style replaces them.
 * “Detach Style” changes styled text back to independent settings.
 * In a core Paragraph or Heading block, a style can apply to the whole block. Use the Paragraph Style panel in the block sidebar, or the toolbar button with no text selected. The block’s own sidebar settings override the style, and the theme’s block styles (such as “Outline”) keep working.
@@ -351,7 +351,7 @@ Beta builds are pre-releases on the [GitHub Releases page](https://github.com/ma
 
 = 2.3.4 =
 * **New: edit every setting of a paragraph style on the Paragraph Styles tab.** Edit on a style card opens a form with the font, weight, font style, size, letter spacing, line height, First Letter Hang, case, OpenType features, and variable font axes. Save changes the style on every post that uses it.
-* **New: a paragraph style can be based on another style**, as with "Based On" in Adobe InDesign. The style uses the values of the other style for each setting that it does not set itself, and follows later changes to that style. "Reset to Base" removes the settings of the style itself, and tells you when the Edit form has changes that are not saved.
+* **New: a paragraph style can be based on another style**. The style uses the values of the other style for each setting that it does not set itself, and follows later changes to that style. "Reset to Base" removes the settings of the style itself, and tells you when the Edit form has changes that are not saved.
 * **Fixed: with text selected, the Paragraph Style panel in the Quick Feature Toggles applied a style to the whole Typography Stylist block.** It now works on the selected text only, and "Detach Style" on selected text keeps the look of the style.
 * **Fixed: fonts that the plugin registered in the WordPress Font Library had no family name in the Library.** When an administrator opens the dashboard after the update, the plugin repairs these fonts one time.
 * **Fixed: on the settings page, some messages showed HTML codes instead of apostrophes and quotation marks, and some parts used the site language instead of your profile language.**
