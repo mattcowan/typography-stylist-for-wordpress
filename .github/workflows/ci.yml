@@ -126,7 +126,11 @@ jobs:
       WP_USERNAME: admin
       WP_PASSWORD: password
     steps:
+      # No later step needs git, so the token is not kept in the checkout
+      # while the job installs packages and runs the pull request's code.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 24

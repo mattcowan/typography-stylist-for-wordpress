@@ -7,9 +7,13 @@
  *
  *   npm run build
  *   WP_BASE_URL=http://localhost:8888 WP_USERNAME=admin WP_PASSWORD=password \
- *     node tests/e2e/fixtures/saved-markup/generate.js [file …]
+ *     node tests/e2e/fixtures/saved-markup/generate.js [--without-inline | file …]
  *
- * With file names, only those fixtures are written. Every file is the
+ * With file names, only those fixtures are written. With --without-inline,
+ * every file except the two that a site with SCRIPT_DEBUG on (wp-env)
+ * cannot generate (README.md, "A known limit"). Nothing is written unless
+ * every requested file was generated, so a failed run leaves the fixtures
+ * as they were. Every file is the
  * content the editor saves, read from the editor (getEditedPostContent())
  * after the editor has settled; no markup is typed by hand:
  *
@@ -307,6 +311,11 @@ const GENERATORS = {
 	'inline-style-id.html': inlineStyleId,
 };
 
+// These apply a paragraph style to selected text, which the inline editor
+// does not do on a site with SCRIPT_DEBUG on (README.md, "A known limit")
+const NEEDS_SCRIPT_DEBUG_OFF = [ 'inline-spans.html', 'inline-style-id.html' ];
+const WITHOUT_INLINE = '--without-inline';
+
 async function styledBlock(page, detach) {
 	const style = await createStyle(page, STYLE);
 	try {
@@ -413,8 +422,15 @@ async function inlineStyleId(page) {
 	if (!BASE) {
 		fail('Set WP_BASE_URL, WP_USERNAME and WP_PASSWORD');
 	}
-	const only = process.argv.slice(2);
-	const files = only.length ? only : Object.keys(GENERATORS);
+	const args = process.argv.slice(2);
+	const withoutInline = args.includes(WITHOUT_INLINE);
+	const only = args.filter((arg) => arg !== WITHOUT_INLINE);
+	if (withoutInline && only.length) {
+		fail(`Give ${WITHOUT_INLINE} or file names, not both`);
+	}
+	const files = only.length
+		? only
+		: Object.keys(GENERATORS).filter((file) => !withoutInline || !NEEDS_SCRIPT_DEBUG_OFF.includes(file));
 	files.forEach((file) => {
 		if (!GENERATORS[file]) {
 			fail(`No generator for ${file}`);
@@ -445,15 +461,29 @@ async function inlineStyleId(page) {
 		if (unit !== 'rem') {
 			fail('This site writes new font sizes in px. The fixtures are for the default setting (rem).');
 		}
+		// Generate every file first and write only when all are ready: a
+		// failure part of the way must not leave a set that is half new.
+		const generated = [];
 		if (!only.length) {
-			fs.writeFileSync(path.join(DIR, REGISTERED_FILE), `${JSON.stringify(registered, null, '\t')}\n`);
-			process.stdout.write(`wrote ${REGISTERED_FILE}\n`);
+			generated.push([ REGISTERED_FILE, `${JSON.stringify(registered, null, '\t')}\n` ]);
 		}
 		for (const file of files) {
-			const content = await GENERATORS[file](page);
+			let content;
+			try {
+				content = await GENERATORS[file](page);
+			} catch (error) {
+				const hint = NEEDS_SCRIPT_DEBUG_OFF.includes(file)
+					? ` A site with SCRIPT_DEBUG on (wp-env) cannot generate this file: run with ${WITHOUT_INLINE} there, and see "A known limit" in README.md.`
+					: '';
+				fail(`${file} was not generated, and no file was written.${hint}\n${error.stack || error}`);
+			}
+			generated.push([ file, content ]);
+			process.stdout.write(`generated ${file}\n`);
+		}
+		generated.forEach(([ file, content ]) => {
 			fs.writeFileSync(path.join(DIR, file), content);
 			process.stdout.write(`wrote ${file}\n`);
-		}
+		});
 	} finally {
 		await page.close({ runBeforeUnload: false });
 		await browser.close();

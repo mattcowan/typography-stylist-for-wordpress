@@ -49,8 +49,17 @@ Generate the files on a fresh wp-env site with only this plugin, after a build:
 npm run build
 npx @wordpress/env start
 WP_BASE_URL=http://localhost:8888 WP_USERNAME=admin WP_PASSWORD=password \
-  node tests/e2e/fixtures/saved-markup/generate.js
+  node tests/e2e/fixtures/saved-markup/generate.js --without-inline
 ```
+
+`--without-inline` writes every file except `inline-spans.html` and `inline-style-id.html`, which wp-env cannot generate (see "A known limit" below). Generate those two on a site with `SCRIPT_DEBUG` off:
+
+```bash
+WP_BASE_URL=<site> WP_USERNAME=<user> WP_PASSWORD=<password> \
+  node tests/e2e/fixtures/saved-markup/generate.js inline-spans.html inline-style-id.html
+```
+
+With no argument the script generates all files, and it also writes `registered-attributes.json`, as `--without-inline` does. The script writes nothing unless it generated every file that the command asked for. A run that fails leaves the fixtures as they were.
 
 Give file names to write only those files. The script reads every file from the real editor; nothing is typed by hand:
 
