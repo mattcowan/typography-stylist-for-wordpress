@@ -3,13 +3,14 @@
  * #348): declared in block.json, rendered on the wrapper by core (editor
  * useBlockProps(), frontend Typost::add_block_support_attributes()), passed
  * to the visual copy by style.css, kept off fit-to-width lines, and it turns
- * the First Letter Hang off the way a style's first line indent does.
+ * the First Letter Hang off the way a style's first line indent does. Since
+ * #364 the wrapper repeats it as --typost-text-indent, which the copy reads.
  */
 
 import fs from 'fs';
 import path from 'path';
 import { renderToString } from '@wordpress/element';
-import { hasBlockTextIndent, buildBlockFontSizeCss, buildResponsiveClamp, formatFontSizeLength } from '../utils';
+import { hasBlockTextIndent, withBlockTextIndentProperty, BLOCK_TEXT_INDENT_PROPERTY, buildFitProbeClassName, buildBlockFontSizeCss, buildResponsiveClamp, formatFontSizeLength } from '../utils';
 
 jest.mock('@wordpress/block-editor');
 
@@ -82,12 +83,73 @@ describe('hasBlockTextIndent', () => {
 	});
 });
 
+describe('withBlockTextIndentProperty (#364)', () => {
+	it('repeats the Text indent core wrote into the wrapper props as --typost-text-indent', () => {
+		for (const value of ['24px', '1.5em', '0', 'calc(1.5 * clamp(1rem, 2rem + 3vw, 4rem))', 'var(--wp--preset--spacing--20)']) {
+			const props = { className: 'wp-block-typost x', style: { lineHeight: 1.2, textIndent: value } };
+			expect(withBlockTextIndentProperty(props)).toEqual({
+				className: 'wp-block-typost x',
+				style: { lineHeight: 1.2, textIndent: value, [BLOCK_TEXT_INDENT_PROPERTY]: value },
+			});
+		}
+		expect(BLOCK_TEXT_INDENT_PROPERTY).toBe('--typost-text-indent');
+	});
+
+	it('returns the props unchanged when core wrote no Text indent', () => {
+		// Before WordPress 7.0 core writes none, and it writes none for a falsy
+		// value. A number is left out: React adds px to text-indent but not to
+		// a custom property, so the copy inherits the wrapper's value as before
+		for (const style of [undefined, null, {}, { color: 'red' }, { textIndent: '' }, { textIndent: '  ' }, { textIndent: 24 }, { textIndent: null }, 'text-indent: 2em']) {
+			const props = { className: 'wp-block-typost', style };
+			expect(withBlockTextIndentProperty(props)).toBe(props);
+		}
+		expect(withBlockTextIndentProperty(undefined)).toBeUndefined();
+	});
+
+	it('does not change the props it was given', () => {
+		const props = { style: { textIndent: '2em' } };
+		withBlockTextIndentProperty(props);
+		expect(props).toEqual({ style: { textIndent: '2em' } });
+	});
+
+	it('agrees with hasBlockTextIndent() and the style.css presence test for every value core writes', () => {
+		// The editor wrapper's style attribute as React writes it
+		const attr = (props) => (/style="([^"]*)"/.exec(renderToString(<div style={props.style} />)) || [])[1] || '';
+		for (const textIndent of ['24px', '1.5em', '0']) {
+			const props = withBlockTextIndentProperty({ style: { textIndent } });
+			expect(hasBlockTextIndent({ typography: { textIndent } })).toBe(true);
+			expect(attr(props)).toContain('text-indent:');
+			expect(attr(props)).toContain('--typost-text-indent:' + textIndent);
+		}
+	});
+});
+
 describe('style.css', () => {
-	it('passes the wrapper\'s Text indent to the visual copy, over a theme or style rule, and turns the hang off', () => {
-		const body = ruleBody(css, /\.wp-block-typost\[style\*="text-indent:"\] > :is\(\.typost-styled, \.typost-block-content\):not\(\.typost-fit\)/);
+	it('passes the block\'s Text indent to the visual copy from the custom property, over a theme or style rule, and turns the hang off', () => {
+		const body = ruleBody(css, /\.wp-block-typost\[style\*="text-indent:"\] > :is\(\.typost-styled, \.typost-block-content\):not\(\.typost-fit, \.typost-fit-editing\)/);
 		expect(body).not.toBeNull();
-		expect(body).toMatch(/text-indent: inherit !important;/);
+		// #364: var(), so an em value resolves against the text's own size;
+		// inherit passed the wrapper's computed px (intent moved: the rule
+		// still passes the block's indent to the copy)
+		expect(body).toMatch(/text-indent: var\(--typost-text-indent\) !important;/);
 		expect(body).toMatch(/--typost-hang-on: 0;/);
+	});
+
+	it('leaves out the copy fit measurement builds, which keeps typost-fit-editing and drops typost-fit (#364)', () => {
+		// buildFitProbeClassName() is what the measuring hook gives its probe
+		const probe = buildFitProbeClassName('typost-block-content typost-styled typost-fit typost-fit-editing typost-ps-3 block-editor-rich-text__editable rich-text').split(' ');
+		expect(probe).toContain('typost-fit-editing');
+		expect(probe).not.toContain('typost-fit');
+		const rule = /\.wp-block-typost\[style\*="text-indent:"\] > :is\(\.typost-styled, \.typost-block-content\):not\(([^)]*)\)/.exec(css);
+		expect(rule).not.toBeNull();
+		const excluded = rule[1].split(',').map((s) => s.trim().replace(/^\./, ''));
+		expect(probe.some((name) => excluded.includes(name))).toBe(true);
+	});
+
+	it('reads --typost-text-indent in that rule only, so spans that inherit it ignore it', () => {
+		const readers = (source) => (source.match(/var\(--typost-text-indent/g) || []).length;
+		expect(readers(css)).toBe(1);
+		expect(readers(editorCss)).toBe(0);
 	});
 
 	it('keeps fit-to-width lines unindented, since each frontend line is a block', () => {
@@ -98,6 +160,15 @@ describe('style.css', () => {
 
 	it('control: the rule finder finds a rule known to be there', () => {
 		expect(ruleBody(css, /\.wp-block-typost\.has-text-color > :is\(\.typost-styled, \.typost-block-content\)/)).toMatch(/color: inherit/);
+	});
+});
+
+describe('edit.js (#364)', () => {
+	it('gives the editor wrapper the property, from the props core\'s block supports produced', () => {
+		// edit.js is the composition root and cannot be rendered here
+		const edit = fs.readFileSync(path.join(__dirname, '..', 'edit.js'), 'utf8');
+		expect(edit).toMatch(/const blockProps = withBlockTextIndentProperty\(useBlockProps\(\{/);
+		expect(edit).toMatch(/<div \{\.\.\.blockProps\}>/);
 	});
 });
 

@@ -346,11 +346,12 @@
 /* The block's own Line indent (core's Text indent support, WordPress 7.0+,
  * #348). Core writes it as an inline text-indent on the wrapper: useBlockProps()
  * in the editor ("text-indent: 24px"), Typost::add_block_support_attributes()
- * on the frontend ("text-indent:24px"). The visual copy inherits it; this rule
- * makes it win over a theme's heading or paragraph indent and over a
- * paragraph style's first line indent, so the block's own setting overrides
- * the style as it does on a core Paragraph. The screen reader copy inherits
- * the indent too, which does nothing there: it is clipped and never seen.
+ * on the frontend ("text-indent:24px"). Both also write it as
+ * --typost-text-indent (#364), which the visual copy reads: em then resolves
+ * against the text's size, not the wrapper's. Without the property, var() is
+ * invalid and the copy inherits the wrapper's value, as before. This rule
+ * makes it win over a theme's or a paragraph style's indent. The screen
+ * reader copy inherits the indent, which does nothing there (clipped).
  *
  * It also turns the First Letter Hang off, as a style's first line indent
  * does. The editor shows the hang with a negative text-indent (editor.css),
@@ -358,8 +359,9 @@
  * which --typost-hang-on: 0 removes, so both show the indent alone.
  * hasBlockTextIndent() in utils.js is the JS mirror, for the Inspector notes.
  *
- * Not on fit-to-width blocks (see the fit rule above). */
-.wp-block-typost[style*="text-indent:"] > :is(.typost-styled, .typost-block-content):not(.typost-fit) {
-	text-indent: inherit !important;
+ * Not on fit-to-width blocks (see the fit rule above), nor on the copy fit
+ * measurement builds (typost-fit-editing, no typost-fit), which it widened. */
+.wp-block-typost[style*="text-indent:"] > :is(.typost-styled, .typost-block-content):not(.typost-fit, .typost-fit-editing) {
+	text-indent: var(--typost-text-indent) !important;
 	--typost-hang-on: 0;
 }

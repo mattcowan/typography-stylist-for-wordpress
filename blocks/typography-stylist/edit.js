@@ -46,6 +46,7 @@ import renderFeaturesPanel from './components/inspector/features-panel';
 import renderAccessibilityPanel from './components/inspector/accessibility-panel';
 import useDebouncedAppliers from './hooks/use-debounced-appliers';
 import useApplyBlockProperties from './hooks/use-apply-block-properties';
+import { withBlockTextIndentProperty } from './utils';
 import { removePreviewSpans } from './qft-preview';
 import useInsertContent from './hooks/use-insert-content';
 import useQftEditorState from './hooks/use-qft-editor-state';
@@ -407,9 +408,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		}
 	}, [content, setAttributes]);
 
-	const blockProps = useBlockProps({
+	// The Line indent is repeated as --typost-text-indent for style.css (#364)
+	const blockProps = withBlockTextIndentProperty(useBlockProps({
 		className: 'wp-block-typost'
-	});
+	}));
 
 	// Get available features from localized data, filtered by per-font visibility
 	const allFeatures = window.typostData?.features || [];

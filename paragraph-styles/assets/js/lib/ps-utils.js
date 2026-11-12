@@ -625,6 +625,23 @@
 	}
 
 	/**
+	 * An em basis for Detach, parsed (#363, #364): {keep: true}, a fixed
+	 * length {amount, unit} (px or rem, above 0), an expression
+	 * {expression} (clamp(), min(), max(), calc() or var()), or null when
+	 * the value gives no basis.
+	 *
+	 * @param {*} value 'keep', or a CSS font-size value.
+	 * @return {?Object}
+	 */
+	function parseEmBasis(value) {
+		var basis = typeof value === 'string' ? value.trim() : '';
+		if (basis === 'keep') return { keep: true };
+		var length = /^(\d*\.?\d+)(px|rem)$/.exec(basis);
+		if (length) return Number(length[1]) > 0 ? { amount: Number(length[1]), unit: length[2] } : null;
+		return /^(clamp|min|max|calc|var)\(.+\)$/.test(basis) ? { expression: basis } : null;
+	}
+
+	/**
 	 * What a whole block keeps of a style's own values when it is detached
 	 * (#346). The values a block setting can hold go to that setting: text
 	 * color, margin top and bottom, padding left and right, and (#348) a
@@ -653,6 +670,16 @@
 	 * emConverted), which matches only at the editor's width: a core block
 	 * loses the style's size, and a Typography Stylist block's indent moves
 	 * from the text element to the wrapper, whose size is another.
+	 *
+	 * A Typography Stylist block whose text keeps the theme's size (#364:
+	 * no size of its own after Detach and none from the style) has two more
+	 * ways. Its Line indent reaches the text through --typost-text-indent,
+	 * so an em value resolves against the text's own size on every theme
+	 * (textIndentInEm): the first line indent stays in em. Its padding stays
+	 * on the wrapper, so it needs the theme's size as a value: themeEmBasis,
+	 * the size theme.json gives the text, which the caller has checked in the
+	 * canvas (readThemeTextSizeBasis()), multiplies the indents as emBasis
+	 * does. Without it the indents become px as above.
 	 * That block's margins stay in em (keepMarginEm): the style wrote them on
 	 * the wrapper too, so the same value gives the same result on every
 	 * theme, where a px value measured in the editor might not. A color that
@@ -673,6 +700,8 @@
 	 * @param {boolean} [options.textIndent] The block can hold a Text indent that core renders (#348).
 	 * @param {boolean} [options.followsSameStyle] The block before it carries the same style (#348).
 	 * @param {string}  [options.emBasis] 'keep', or the CSS font-size the em values resolved against (#363).
+	 * @param {boolean} [options.textIndentInEm] The block's Text indent resolves em against the text's own size (#364).
+	 * @param {string}  [options.themeEmBasis] The theme's size for the text, checked in the canvas: the indents' basis when emBasis gives none (#364).
 	 * @return {{attributes: Object, removed: string[], emConverted: boolean, followsTextSize: boolean}}
 	 */
 	function buildDetachBlockSettings(properties, attrs, options) {
@@ -726,11 +755,16 @@
 		}
 
 		// The size the em values resolved against (#363): 'keep', a fixed
-		// length, an expression (clamp(), min(), calc()), or none
-		var basis = typeof opts.emBasis === 'string' ? opts.emBasis.trim() : '';
-		var basisLength = /^(\d*\.?\d+)(px|rem)$/.exec(basis);
-		if (basisLength && !(Number(basisLength[1]) > 0)) basisLength = null;
-		var basisExpression = !basisLength && /^(clamp|min|max|calc)\(.+\)$/.test(basis) ? basis : '';
+		// length, an expression (clamp(), min(), calc(), var()), or none
+		var basis = parseEmBasis(opts.emBasis);
+		// #364: with none, and no size from the style either, the text keeps
+		// the theme's size. The first line indent then stays in em where the
+		// block's Text indent resolves em against the text, and the indents
+		// take the theme's size when the caller found one ('keep' is no size)
+		var themeText = !basis && !styleFontSizeCss(props);
+		var themeBasis = themeText ? parseEmBasis(opts.themeEmBasis) : null;
+		var indentBasis = basis || (themeBasis && !themeBasis.keep ? themeBasis : null);
+		var firstLineBasis = basis || (themeText && opts.textIndentInEm ? { keep: true } : null);
 
 		// Rounds by textual exponent shift; a product String() writes in
 		// exponent form (1e-7) would give NaN that way, and is 0 at this
@@ -740,18 +774,18 @@
 			return isFinite(rounded) ? rounded : Number(x.toFixed(digits));
 		}
 
-		// An em value at the size it resolved against; px at the rendered
-		// size when that size is not known
-		function emToPx(value) {
+		// An em value at the size it resolved against (a parsed basis); px at
+		// the rendered size when that size is not known
+		function emToPx(value, size) {
 			if (!/em$/.test(value) || /rem$/.test(value)) return value;
 			var n = parseFloat(value);
-			if (basis === 'keep') return value;
-			if (basisLength) {
-				return String(round(n * Number(basisLength[1]), basisLength[2] === 'rem' ? 4 : 3)) + basisLength[2];
+			if (size && size.keep) return value;
+			if (size && size.unit) {
+				return String(round(n * size.amount, size.unit === 'rem' ? 4 : 3)) + size.unit;
 			}
-			if (basisExpression) {
+			if (size && size.expression) {
 				followsTextSize = true;
-				return 'calc(' + String(n) + ' * ' + basisExpression + ')';
+				return 'calc(' + String(n) + ' * ' + size.expression + ')';
 			}
 			if (!fontSizePx) return value;
 			emConverted = true;
@@ -764,7 +798,11 @@
 			if (!value) return;
 			var current = spacing[group];
 			if (current !== undefined && current !== null && (typeof current !== 'object' || current[side] !== undefined)) return;
-			write(group, side, group === 'margin' && opts.keepMarginEm ? value : emToPx(value));
+			if (group === 'margin') {
+				write(group, side, opts.keepMarginEm ? value : emToPx(value, basis));
+				return;
+			}
+			write(group, side, emToPx(value, indentBasis));
 		}
 		keepLength('margin', 'top', normalizeLength(props.spaceBefore));
 		keepLength('margin', 'bottom', normalizeLength(props.spaceAfter));
@@ -789,7 +827,7 @@
 			// 0), so then the style's indent showed (PR #368 review)
 			if (!ownIndent) {
 				nextStyle = nextStyle || Object.assign({}, style);
-				nextStyle.typography = Object.assign({}, nextStyle.typography, { textIndent: emToPx(firstLine) });
+				nextStyle.typography = Object.assign({}, nextStyle.typography, { textIndent: emToPx(firstLine, firstLineBasis) });
 			}
 		}
 
@@ -872,6 +910,245 @@
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The font size theme.json gives a text element, as the CSS core's
+	 * global styles write for it, or '' (#364). A heading takes
+	 * styles.elements.h1…h6, else styles.elements.heading; a paragraph the
+	 * root styles.typography (body text). A preset reference
+	 * (var:preset|font-size|x-large, or the var() form the core data store
+	 * returns) becomes its custom property, as core's style engine writes it,
+	 * or the preset's own length when its CSS value is a plain px or rem
+	 * length (a preset that is not fluid). With fluid typography on, a plain
+	 * size is the clamp() core computes for it (fluidFontSizeValue()). A size
+	 * in % is left out: on the wrapper's padding it would be a share of the
+	 * width.
+	 *
+	 * This reads what theme.json and the Site Editor's user styles set, not
+	 * a theme's own CSS: the caller checks the value in the canvas.
+	 *
+	 * @param {?Object}   styles       The global styles' styles tree (readGlobalStylesTree()).
+	 * @param {?Object}   features     The editor's __experimentalFeatures.
+	 * @param {string}    tagName      The text element's tag (h1…h6, p).
+	 * @param {?Function} computeFluid Core's fluid size function, if any.
+	 * @return {string}
+	 */
+	function themeTextSizeCss(styles, features, tagName, computeFluid) {
+		var st = styles && typeof styles === 'object' ? styles : {};
+		var elements = st.elements && typeof st.elements === 'object' ? st.elements : {};
+		var tag = String(tagName || '').toLowerCase();
+		function sizeOf(node) {
+			var typography = node && typeof node === 'object' ? node.typography : null;
+			return typography && typeof typography === 'object' ? typography.fontSize : null;
+		}
+		var size = null;
+		if (/^h[1-6]$/.test(tag)) {
+			size = sizeOf(elements[tag]) || sizeOf(elements.heading);
+		} else if (tag === 'p') {
+			size = sizeOf(st);
+		}
+		if (typeof size !== 'string' || !size.trim() || size.indexOf('%') !== -1) return '';
+		size = size.trim();
+		var settings = features && typeof features === 'object' ? features : {};
+		if (size.indexOf('var:') === 0) {
+			// Core's getCSSValueFromRawStyle()
+			size = 'var(--wp--' + size.slice(4).split('|').map(paletteSlugToKebab).join('--') + ')';
+		}
+		var preset = /^var\(--wp--preset--font-size--([a-z0-9-]+)\)$/.exec(size);
+		if (preset) {
+			// A preset whose CSS value is a plain length (not fluid) gives that
+			// length, so Detach writes a value the sidebar shows; a fluid one
+			// stays the custom property
+			var entry = findFontSizePreset(settings, preset[1]);
+			var value = entry ? fluidFontSizeValue(String(entry.size || '').trim(), entry.fluid, settings, computeFluid) : '';
+			return /^\d*\.?\d+(px|rem)$/.test(value) ? value : size;
+		}
+		return fluidFontSizeValue(size, undefined, settings, computeFluid);
+	}
+
+	/**
+	 * A font size preset from the editor's settings by slug (#364): the
+	 * site's own (custom) first, then the theme's, then core's defaults, the
+	 * order in which the later origin's custom property wins.
+	 *
+	 * @param {Object} settings The editor's __experimentalFeatures.
+	 * @param {string} slug     The preset slug, kebab-cased.
+	 * @return {?Object} {slug, size, fluid}
+	 */
+	function findFontSizePreset(settings, slug) {
+		var typography = settings.typography && typeof settings.typography === 'object' ? settings.typography : {};
+		var sizes = typography.fontSizes;
+		var lists = Array.isArray(sizes) ? [sizes] : (sizes && typeof sizes === 'object' ? [sizes.custom, sizes.theme, sizes.default] : []);
+		for (var i = 0; i < lists.length; i++) {
+			var list = Array.isArray(lists[i]) ? lists[i] : [];
+			for (var j = 0; j < list.length; j++) {
+				if (list[j] && typeof list[j].slug === 'string' && paletteSlugToKebab(list[j].slug) === slug) return list[j];
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The CSS core's global styles write for a font size (#364): core's
+	 * getTypographyFontSizeValue({size, fluid}, settings). With fluid
+	 * typography on (for the site or for a preset), a size core can scale is
+	 * the clamp() that computeFluid (wp.blockEditor.getComputedFluidTypographyValue)
+	 * gives; a preset with fluid false, a value core cannot scale (clamp(),
+	 * var()) and no computeFluid keep the size.
+	 *
+	 * @param {string}    size         The size.
+	 * @param {*}         presetFluid  The preset's fluid setting, undefined for a styles value.
+	 * @param {Object}    settings     The editor's __experimentalFeatures.
+	 * @param {?Function} computeFluid Core's fluid size function, if any.
+	 * @return {string}
+	 */
+	function fluidFontSizeValue(size, presetFluid, settings, computeFluid) {
+		if (!size || size === '0' || presetFluid === false || typeof computeFluid !== 'function') return size;
+		var fluidOn = function (fluid) {
+			return fluid === true || (!!fluid && typeof fluid === 'object' && Object.keys(fluid).length > 0);
+		};
+		var typography = settings.typography && typeof settings.typography === 'object' ? settings.typography : {};
+		if (!fluidOn(typography.fluid) && !fluidOn(presetFluid)) return size;
+		// Core's getFluidTypographyOptionsFromSettings(): with fluid on for
+		// the site, the layout's wide size is the default maximum viewport,
+		// when core's getTypographyValueAndUnit() reads it: a string or a
+		// number, which isFinite() (coercing, as core calls it) turns into px,
+		// then digits with rem, px or em, nothing trimmed. Passed on as it is,
+		// and only when it is truthy, as core tests it: the number 0 gives
+		// no wide size (the string '0' does)
+		var wideSize = settings.layout && settings.layout.wideSize;
+		var wideOk = (typeof wideSize === 'string' || typeof wideSize === 'number') &&
+			/^(\d*\.?\d+)(rem|px|em)$/.test(isFinite(wideSize) ? wideSize + 'px' : String(wideSize));
+		var siteOptions = typography.fluid;
+		if (fluidOn(typography.fluid) && wideOk && wideSize) {
+			siteOptions = Object.assign({ maxViewportWidth: wideSize }, typeof typography.fluid === 'object' ? typography.fluid : {});
+		}
+		var options = siteOptions && typeof siteOptions === 'object' ? siteOptions : {};
+		var own = presetFluid && typeof presetFluid === 'object' ? presetFluid : {};
+		var computed = null;
+		try {
+			computed = computeFluid({
+				minimumFontSize: own.min,
+				maximumFontSize: own.max,
+				fontSize: size,
+				minimumFontSizeLimit: options.minFontSize,
+				maximumViewportWidth: options.maxViewportWidth,
+				minimumViewportWidth: options.minViewportWidth,
+			});
+		} catch (e) {
+			computed = null;
+		}
+		return typeof computed === 'string' && computed ? computed : size;
+	}
+
+	/** Merge two global styles trees, the second over the first (plain objects only). */
+	function mergeStyleTrees(base, over) {
+		var isObject = function (value) {
+			return !!value && typeof value === 'object' && !Array.isArray(value);
+		};
+		if (!isObject(over)) return isObject(base) ? base : null;
+		if (!isObject(base)) return over;
+		var merged = Object.assign({}, base);
+		Object.keys(over).forEach(function (key) {
+			merged[key] = isObject(base[key]) && isObject(over[key]) ? mergeStyleTrees(base[key], over[key]) : over[key];
+		});
+		return merged;
+	}
+
+	/**
+	 * The global styles' styles tree in the editor, or null (#364): the
+	 * block editor's __experimentalStyles where an editor sets it, else the
+	 * theme's base global styles from the core data store with the Site
+	 * Editor's user styles merged over them, as core merges them for the
+	 * page. WordPress 7.1's post editor has no __experimentalStyles (checked
+	 * on 7.1.3: core's block-editor.php and dist scripts never set it there),
+	 * and its editor loads both records. A record not loaded yet reads as
+	 * missing, so Detach then keeps px.
+	 *
+	 * @param {Object} wp       window.wp.
+	 * @param {Object} settings The block editor settings.
+	 * @return {?Object}
+	 */
+	function readGlobalStylesTree(wp, settings) {
+		if (settings.__experimentalStyles && typeof settings.__experimentalStyles === 'object') {
+			return settings.__experimentalStyles;
+		}
+		var base = null;
+		var user = null;
+		// Everything that touches the store is inside the try: the two
+		// selectors are experimental, and a failure here must leave Detach
+		// with px, never stop it
+		try {
+			var core = wp.data.select('core');
+			if (!core) return null;
+			var theme = core.__experimentalGetCurrentThemeBaseGlobalStyles ? core.__experimentalGetCurrentThemeBaseGlobalStyles() : null;
+			base = theme && theme.styles;
+			var id = core.__experimentalGetCurrentGlobalStylesId ? core.__experimentalGetCurrentGlobalStylesId() : null;
+			var record = id && core.getEditedEntityRecord ? core.getEditedEntityRecord('root', 'globalStyles', id) : null;
+			user = record && record.styles;
+		} catch (e) {
+			return null;
+		}
+		return mergeStyleTrees(base, user);
+	}
+
+	/**
+	 * The theme.json size of a Typography Stylist block's text, when the
+	 * canvas proves it is the size the text renders at, else '' (#364).
+	 * Detach multiplies the padding by it, so the padding follows the text
+	 * size on the published page. The proof: a hidden probe in the block's
+	 * wrapper takes padding-left: calc(1 * size), and it must come out at the
+	 * text's measured size (within 0.1px). The probe uses padding on an
+	 * element with the wrapper's font size, which is how the kept padding
+	 * resolves. It fails when the theme sets the size in its own CSS (the
+	 * theme.json value is then another), when the browser rejects the value,
+	 * and when the block is not rendered. One width only: a theme CSS size
+	 * that equals the theme.json size at the canvas width but not at others
+	 * passes (not handled).
+	 *
+	 * @param {string} clientId
+	 * @return {string} The CSS size, or ''.
+	 */
+	function readThemeTextSizeBasis(clientId) {
+		var wp = typeof window !== 'undefined' ? window.wp : null;
+		var store = wp && wp.data && wp.data.select && wp.data.select('core/block-editor');
+		var settings = store && store.getSettings ? store.getSettings() : null;
+		if (!clientId || !settings || typeof document === 'undefined') return '';
+		var tree = readGlobalStylesTree(wp, settings);
+		if (!tree) return '';
+		var canvas = document.querySelector('iframe[name="editor-canvas"]');
+		var docs = [canvas && canvas.contentDocument, document];
+		for (var i = 0; i < docs.length; i++) {
+			var block = docs[i] && docs[i].querySelector('[data-block="' + clientId + '"]');
+			var text = block && block.querySelector('.typost-block-content');
+			if (!block) continue;
+			if (!text) return '';
+			var view = docs[i].defaultView;
+			var size = themeTextSizeCss(
+				tree,
+				settings.__experimentalFeatures,
+				text.tagName,
+				wp.blockEditor && wp.blockEditor.getComputedFluidTypographyValue
+			);
+			var measured = parseFloat(view.getComputedStyle(text).fontSize);
+			if (!size || !(measured > 0)) return '';
+			var probe = docs[i].createElement('div');
+			probe.setAttribute('aria-hidden', 'true');
+			probe.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;width:0;height:0;overflow:hidden;margin:0;border:0;padding:0;font-size:inherit;';
+			probe.style.paddingLeft = 'calc(1 * ' + size + ')';
+			// The browser rejected the value
+			if (!probe.style.paddingLeft) return '';
+			block.appendChild(probe);
+			var px;
+			try {
+				px = parseFloat(view.getComputedStyle(probe).paddingLeft);
+			} finally {
+				block.removeChild(probe);
+			}
+			return isFinite(px) && Math.abs(px - measured) <= 0.1 ? size : '';
+		}
+		return '';
 	}
 
 	/**
@@ -3622,6 +3899,8 @@
 		buildCoreBlockAlignUpdate: buildCoreBlockAlignUpdate,
 		buildDetachBlockSettings: buildDetachBlockSettings,
 		measureBlockFontSize: measureBlockFontSize,
+		themeTextSizeCss: themeTextSizeCss,
+		readThemeTextSizeBasis: readThemeTextSizeBasis,
 		readEditorPalette: readEditorPalette,
 		canKeepTextIndent: canKeepTextIndent,
 		styleFontSizeCss: styleFontSizeCss,
