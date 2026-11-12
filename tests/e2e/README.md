@@ -147,7 +147,8 @@ writes it back unchanged: the v1 and v2 (px) blocks through their
 deprecations, rem sizes, fit to width, First Letter Hang, case, paragraph
 style classes, a block after Detach, and inline spans. The markup is in
 [fixtures/saved-markup](fixtures/saved-markup/README.md), which also says
-how to regenerate it.
+how to regenerate it. It runs in Chromium only: no test here has the
+`@firefox` tag, so Firefox does not measure the fit to width fixture.
 
 ### `inline-format.spec.js` — #373
 
@@ -156,7 +157,7 @@ with the keyboard gets one OpenType feature and one responsive size in the
 Typography Stylist Features dialog, and the stored span is compared with
 the expected string. Each test runs with new sizes written in rem and in
 px (the value of the "Write new font sizes in px" option is set in the
-page; the site option is not changed).
+page; the site option is not changed). It runs in Chromium only.
 
 ### `helpers.js`
 

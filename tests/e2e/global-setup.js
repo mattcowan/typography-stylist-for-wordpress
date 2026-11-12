@@ -77,5 +77,3 @@ module.exports = async config => {
   await page.context().storageState({ path: 'tests/e2e/auth.json' });
   await browser.close();
 };
-
-module.exports.turnOffWelcomeGuide = turnOffWelcomeGuide;
