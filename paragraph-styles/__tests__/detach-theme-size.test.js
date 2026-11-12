@@ -317,6 +317,20 @@ describe('readThemeTextSizeBasis (#364)', () => {
 		expect(readThemeTextSizeBasis('a')).toBe('');
 	});
 
+	it('returns nothing when the core data store itself cannot be selected', () => {
+		styles = undefined;
+		const select = window.wp.data.select;
+		window.wp.data.select = (name) => {
+			if (name === 'core') {
+				throw new Error('store not registered');
+			}
+			return select(name);
+		};
+		expect(readThemeTextSizeBasis('a')).toBe('');
+		// No probe was left behind
+		expect(document.querySelector('[data-block="a"]').children).toHaveLength(1);
+	});
+
 	it('returns nothing without theme.json styles, a tag size, a rendered block or a client id', () => {
 		styles = null;
 		expect(readThemeTextSizeBasis('a')).toBe('');

@@ -1074,11 +1074,14 @@
 		if (settings.__experimentalStyles && typeof settings.__experimentalStyles === 'object') {
 			return settings.__experimentalStyles;
 		}
-		var core = wp.data.select('core');
-		if (!core) return null;
 		var base = null;
 		var user = null;
+		// Everything that touches the store is inside the try: the two
+		// selectors are experimental, and a failure here must leave Detach
+		// with px, never stop it
 		try {
+			var core = wp.data.select('core');
+			if (!core) return null;
 			var theme = core.__experimentalGetCurrentThemeBaseGlobalStyles ? core.__experimentalGetCurrentThemeBaseGlobalStyles() : null;
 			base = theme && theme.styles;
 			var id = core.__experimentalGetCurrentGlobalStylesId ? core.__experimentalGetCurrentGlobalStylesId() : null;
