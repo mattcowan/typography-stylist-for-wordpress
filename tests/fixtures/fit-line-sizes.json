@@ -1,0 +1,13 @@
+{
+	"_comment": "The font-size a fit-to-width line carries (#358). buildFitFontSize() in blocks/typography-stylist/utils.js writes it and Typost::add_fit_line_plain_properties() in typography-stylist.php reads the line ratio back out of it at render time (#315). Read by blocks/typography-stylist/__tests__/css-js-mirrors.test.js (args -> fontSize) and tests/Unit/FitLineSizesFixtureTest.php (fontSize -> ratio), so a change to how the block writes a line that the filter cannot read fails one of them.",
+	"cases": [
+		{ "label": "px line", "args": [0.4606, 0, "px"], "fontSize": "calc(0.4606 * 100cqi)", "ratio": "0.4606" },
+		{ "label": "px line with a px cap", "args": [0.1, 96, "px"], "fontSize": "min(calc(0.1 * 100cqi), 96px)", "ratio": "0.1" },
+		{ "label": "px line wider than its container", "args": [1.25, 0, "px"], "fontSize": "calc(1.25 * 100cqi)", "ratio": "1.25" },
+		{ "label": "rem line, no word ratio measured yet", "args": [0.25, 0, "rem"], "fontSize": "min(calc(0.25 * var(--typost-fit-width, 100cqi)), calc(0.25 * 100cqi))", "ratio": "0.25" },
+		{ "label": "rem line capped by its widest word", "args": [0.25, 0, "rem", 0.4], "fontSize": "min(calc(0.25 * var(--typost-fit-width, 100cqi)), calc(0.4 * 100cqi))", "ratio": "0.25" },
+		{ "label": "rem line, word ratio below the line ratio", "args": [0.25, 0, "rem", 0.2], "fontSize": "min(calc(0.25 * var(--typost-fit-width, 100cqi)), calc(0.25 * 100cqi))", "ratio": "0.25" },
+		{ "label": "rem line with a rem cap", "args": [0.25, 96, "rem", 0.4], "fontSize": "min(calc(0.25 * var(--typost-fit-width, 100cqi)), calc(0.4 * 100cqi), 6rem)", "ratio": "0.25" },
+		{ "label": "rem line with a fractional rem cap", "args": [0.0731, 100, "rem", 0.0731], "fontSize": "min(calc(0.0731 * var(--typost-fit-width, 100cqi)), calc(0.0731 * 100cqi), 6.25rem)", "ratio": "0.0731" }
+	]
+}

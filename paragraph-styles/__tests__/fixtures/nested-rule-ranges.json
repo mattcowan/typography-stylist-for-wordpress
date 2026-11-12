@@ -437,5 +437,15 @@
 				"👨‍👩 go "
 			]
 		]
+	},
+	{
+		"name": "a count above the cap counts 100 (#358)",
+		"plain": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"rules": [
+			{ "styleId": 2, "unit": "characters", "count": 150 }
+		],
+		"covered": [
+			[ 2, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ]
+		]
 	}
 ]

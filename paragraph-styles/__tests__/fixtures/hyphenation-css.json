@@ -136,6 +136,16 @@
 				"hyphenateLimitWord": 6
 			},
 			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1rem, 2rem + 3vw, 4rem);\n}"
+		},
+		{
+			"label": "the smallest limit, 1, is kept in both generators",
+			"properties": {
+				"hyphens": "auto",
+				"hyphenateLimitWord": 1,
+				"hyphenateLimitBefore": "1",
+				"hyphenateLimitAfter": 0.5
+			},
+			"css": ".typost-ps-9,\n.typost-styled.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9.typost-ps-9,\n.typost-styled[data-style-id=\"9\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    hyphenate-limit-chars: 1 1 auto;\n}"
 		}
 	]
 }

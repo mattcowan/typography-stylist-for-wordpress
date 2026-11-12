@@ -1,0 +1,4 @@
+{
+	"_comment": "The OpenType feature categories that includes/available-features.php uses (#358); the order does not matter. tests/Unit/FeatureCategoriesFixtureTest.php checks the PHP list against it as a set; assets/js/__tests__/twin-parity.test.js checks that both getCategoryTitle() copies give each one a title.",
+	"categories": ["ligatures", "stylistic-sets", "alternates", "decorative", "numerals", "capitals", "positional", "super-sub", "other"]
+}
