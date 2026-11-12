@@ -1846,7 +1846,8 @@ class Typost {
      * filter asks core's block supports API for what the editor shows and adds
      * it at render time. Saved markup does not change (no deprecation), content
      * already saved is covered, and the frontend loads no script. A block with
-     * none of these settings comes back byte for byte.
+     * none of these settings comes back byte for byte. A Line indent is also
+     * repeated as --typost-text-indent (#364, add_text_indent_property()).
      *
      * Runs on `render_block`, because a static block has no render callback, so
      * core does not set WP_Block_Supports::$block_to_render for it. The value is
@@ -1876,7 +1877,7 @@ class Typost {
         // Core's generated class is not one of the settings, and the block's
         // CSS does not use it, so a block with nothing set stays as it was saved
         $classes = array_diff($classes, array('', 'wp-block-typost', 'wp-block-typost-block'));
-        $style = isset($support['style']) ? trim((string) $support['style']) : '';
+        $style = self::add_text_indent_property(isset($support['style']) ? trim((string) $support['style']) : '');
         // WordPress before 7.0 has no anchor support on the server. block.json
         // declares supports.anchor, so the attribute is the block's own, and it is
         // escaped below
@@ -1905,6 +1906,37 @@ class Typost {
             $block_content,
             1
         );
+    }
+
+    /**
+     * Repeat the Line indent core wrote as --typost-text-indent (#364).
+     *
+     * style.css gives the block's visual copy `text-indent: var(...)`, so an
+     * em value resolves against the text's own size, not the wrapper's. The
+     * value is taken from the declarations core's block supports produced
+     * (WordPress 7.0 and later write `text-indent:24px;`), not from the block
+     * attribute: only a value core accepted is repeated, in the form it wrote
+     * it, and the caller escapes the whole attribute. The editor writes the
+     * same pair (withBlockTextIndentProperty() in the block's utils.js).
+     * When the string holds more than one text-indent (an attribute edited by
+     * hand can make core write two), the last one that has a value is
+     * repeated, because that is the one the browser applies to the wrapper.
+     *
+     * @since 2.4.0
+     * @param string $style The wrapper's inline style from core.
+     * @return string The style, with the property added after core's
+     *                declarations when they hold a text-indent.
+     */
+    private static function add_text_indent_property($style) {
+        if (!preg_match_all('/(?:^|;)\s*text-indent\s*:\s*([^;]*)/i', $style, $matches)) {
+            return $style;
+        }
+        $values = array_values(array_filter(array_map('trim', $matches[1]), 'strlen'));
+        $value  = empty($values) ? '' : end($values);
+        if ('' === $value) {
+            return $style;
+        }
+        return $style . (preg_match('/;\s*$/', $style) ? '' : ';') . '--typost-text-indent:' . $value . ';';
     }
 
     /**

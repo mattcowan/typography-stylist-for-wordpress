@@ -1,7 +1,7 @@
 /**
  * Typography Stylist Block - the typost-apply-block-properties bridge.
  *
- * Moved out of edit.js unchanged (#356). See HOOKS.md for the event.
+ * Moved out of edit.js (#356). See HOOKS.md for the event.
  */
 
 import { isRTL } from '@wordpress/i18n';
@@ -178,6 +178,12 @@ export default function useApplyBlockProperties({
 									textIndent: !!(psUtils.readTextIndentSupport && psUtils.readTextIndentSupport('typost/block')),
 									followsSameStyle: !!(psUtils.blockCarriesStyle && psUtils.blockCarriesStyle(psUtils.readPreviousBlock(curClientId), detachedStyle)),
 									emBasis: detachEmBasis,
+									// With the theme's size (#364): the Line indent reaches
+									// the text through --typost-text-indent, so em stays em;
+									// the padding stays on the wrapper and takes theme.json's
+									// size when the canvas proves it, else px as before
+									textIndentInEm: true,
+									themeEmBasis: !detachEmBasis && psUtils.readThemeTextSizeBasis ? psUtils.readThemeTextSizeBasis(curClientId) : '',
 								}
 							);
 							Object.assign(newAttrs, kept.attributes);

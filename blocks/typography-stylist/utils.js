@@ -3611,6 +3611,38 @@ export function hasBlockTextIndent(style) {
 }
 
 /**
+ * The custom property that repeats the block's Line indent on its wrapper
+ * (#364). style.css gives the visual copy `text-indent: var(…)`, so an em
+ * value resolves against the text's own size (the theme's heading size, or
+ * the block's), not the wrapper's. Unregistered, so it inherits as written.
+ */
+export const BLOCK_TEXT_INDENT_PROPERTY = '--typost-text-indent';
+
+/**
+ * The editor wrapper's props with the block's Line indent repeated as
+ * --typost-text-indent (#364), the editor twin of
+ * Typost::add_block_support_attributes() on the frontend. The value is the
+ * one core's block supports already wrote into the props (style.textIndent,
+ * from useBlockProps()), so only a value core renders is repeated, in the
+ * form core wrote it. Core writes it only on WordPress 7.0 and later and only
+ * for a truthy value (hasBlockTextIndent()), so there is nothing to add
+ * otherwise. A number is left out: React writes it with px for text-indent
+ * but as a bare number for a custom property, and the visual copy then
+ * inherits the wrapper's value as before.
+ *
+ * @param {Object} blockProps The props useBlockProps() returned.
+ * @return {Object} The same props, or a copy with the property added.
+ */
+export function withBlockTextIndentProperty(blockProps) {
+	const style = blockProps && blockProps.style;
+	const value = style && typeof style === 'object' ? style.textIndent : undefined;
+	if (typeof value !== 'string' || !value.trim()) {
+		return blockProps;
+	}
+	return { ...blockProps, style: { ...style, [BLOCK_TEXT_INDENT_PROPERTY]: value } };
+}
+
+/**
  * Whether a hanging initial shows for a given text alignment.
  *
  * The hang moves the first letter past the start edge, which only reads as

@@ -61,14 +61,76 @@ class BlockSupportsRenderTest extends TestCase {
     public function test_a_text_indent_reaches_the_wrapper_in_the_form_style_css_matches() {
         // Core's typography support writes "text-indent:24px;" (WordPress 7.0+,
         // #348); style.css passes it to the visual copy through
-        // .wp-block-typost[style*="text-indent:"]
+        // .wp-block-typost[style*="text-indent:"]. Since #364 the value is
+        // repeated as --typost-text-indent, which the copy reads (intent moved:
+        // core's declaration still comes first, unchanged)
         $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('style' => array('typography' => array('textIndent' => '24px')))), array(
             'class' => 'wp-block-typost-block',
             'style' => 'text-indent:24px;',
         ));
 
-        $this->assertSame('<div class="wp-block-typost" style="text-indent:24px;">' . self::TAIL, $out);
+        $this->assertSame('<div class="wp-block-typost" style="text-indent:24px;--typost-text-indent:24px;">' . self::TAIL, $out);
         $this->assertStringContainsString('style="text-indent:', $out);
+    }
+
+    /**
+     * @dataProvider text_indent_values
+     */
+    public function test_the_text_indent_core_wrote_is_repeated_as_a_custom_property($core_style, $expected_style) {
+        // The value comes from core's output, not from the attribute
+        $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('style' => array('typography' => array('textIndent' => 'ignored')))), array(
+            'class' => 'wp-block-typost-block',
+            'style' => $core_style,
+        ));
+
+        $this->assertSame('<div class="wp-block-typost" style="' . $expected_style . '">' . self::TAIL, $out);
+    }
+
+    public function text_indent_values() {
+        return array(
+            'em'                            => array('text-indent:1.5em;', 'text-indent:1.5em;--typost-text-indent:1.5em;'),
+            'the string 0, which core writes' => array('text-indent:0;', 'text-indent:0;--typost-text-indent:0;'),
+            'calc() from a Detach (#363)'   => array('text-indent:calc(1.5 * clamp(1rem, 2rem + 3vw, 4rem));', 'text-indent:calc(1.5 * clamp(1rem, 2rem + 3vw, 4rem));--typost-text-indent:calc(1.5 * clamp(1rem, 2rem + 3vw, 4rem));'),
+            'among other declarations'      => array('padding-left:80px;text-indent:2em;line-height:1.2;', 'padding-left:80px;text-indent:2em;line-height:1.2;--typost-text-indent:2em;'),
+            'no final semicolon'            => array('line-height:1.2;text-indent:2em', 'line-height:1.2;text-indent:2em;--typost-text-indent:2em;'),
+            'spaces around the colon'       => array('text-indent : 2em ;', 'text-indent : 2em ;--typost-text-indent:2em;'),
+            // An attribute edited by hand ("10px;text-indent:99px") makes core
+            // write two; the browser applies the last to the wrapper
+            'two, the last one wins'        => array('text-indent:10px;text-indent:99px;', 'text-indent:10px;text-indent:99px;--typost-text-indent:99px;'),
+            'two, the last one empty'       => array('text-indent:10px;text-indent:;', 'text-indent:10px;text-indent:;--typost-text-indent:10px;'),
+        );
+    }
+
+    public function test_nothing_is_added_when_core_wrote_no_text_indent() {
+        // WordPress before 7.0 has no Text indent output, so core gives no
+        // declaration even when the attribute is stored
+        $attrs = array('style' => array('typography' => array('textIndent' => '24px'), 'spacing' => array('padding' => array('left' => '10px'))));
+        $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => $attrs), array(
+            'class' => 'wp-block-typost-block',
+            'style' => 'padding-left:10px;',
+        ));
+        $this->assertSame('<div class="wp-block-typost" style="padding-left:10px;">' . self::TAIL, $out);
+
+        $none = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => $attrs), array('class' => 'wp-block-typost-block'));
+        $this->assertSame(self::SAVED, $none);
+    }
+
+    public function test_a_property_whose_name_ends_in_text_indent_is_not_taken_for_it() {
+        foreach (array('--x-text-indent:9px;', 'color:red;--foo-text-indent:9px', 'text-indent:;') as $style) {
+            $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('className' => 'x')), array('style' => $style));
+
+            $this->assertSame('<div class="wp-block-typost" style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '">' . self::TAIL, $out);
+        }
+    }
+
+    public function test_a_hostile_text_indent_value_is_escaped_in_the_property_too() {
+        $out = $this->render(self::SAVED, array('blockName' => 'typost/block', 'attrs' => array('className' => 'x')), array(
+            'style' => 'text-indent:1em"><script>alert(1)</script>',
+        ));
+
+        $this->assertStringNotContainsString('<script>', $out);
+        $this->assertSame(2, substr_count($out, '1em&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;'));
+        $this->assertStringStartsWith('<div class="wp-block-typost" style="text-indent:1em&quot;&gt;', $out);
     }
 
     public function test_a_block_with_nothing_set_stays_byte_identical() {
