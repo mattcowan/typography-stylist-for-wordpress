@@ -447,6 +447,67 @@ add_filter('typost_force_enqueue_paragraph_style_ids', function($ids) {
 - You do not need this filter for blocks. The plugin scans the queried post, the synced patterns in it, and, on a classic theme, the block widgets. It also records the styles of every block as it renders. A block theme renders its template parts before `wp_head`, so their styles print in the head. A block that renders after `wp_head` (for example a block in a custom query loop) gets its rules in a second `<style>` element at the end of `wp_footer`. Markup that is not a block, such as a classic text widget or a template file, needs this filter.
 - Content loaded by AJAX does not run `wp_head` or `wp_footer`, so it can use only the rules that the page that loads it printed. A "load more" button on an archive is safe, because archives print every style. If a single post or page loads content by AJAX (for example related posts), add the style IDs of that content with this filter. The core Query Loop block's own pagination is not affected: it copies the `<style>` elements of the page it loads.
 
+#### `typost_check_full_content_on_archives`
+
+Filter whether the frontend font scan reads the full content of a post on a page that lists posts (an archive, the blog page, search results). The filter runs only for a post that has no manual excerpt and no `<!--more-->` tag. For other posts, the scan reads the excerpt or the content before the tag. The default comes from Settings → Typography Stylist → Options → "Archive Page Font Detection", which is on by default. Return `false` when your theme shows such posts as plain text excerpts: the scan then reads no content for the post, so the fonts of that post do not load on the page.
+
+```php
+add_filter('typost_check_full_content_on_archives', function($check_full_content, $post) {
+    // e.g. the theme shows only a plain text excerpt for posts in this category
+    if (has_category('news', $post)) {
+        return false;
+    }
+    return $check_full_content;
+}, 10, 2);
+```
+
+**Parameters:**
+- `$check_full_content` (bool) — `true` when the Options setting is on (the default), else `false`
+- `$post` (WP_Post) — The post in the list
+
+**Details:**
+- Frontend only, on pages that are not singular. It runs for the posts of the main query when the font detection is not cached, and it can run more than once for a post. The result goes through [`typost_archive_post_content`](#typost_archive_post_content).
+- Results are cached for 12 hours for each list of posts. When what your callback returns changes, call `Typost::get_instance()->clear_font_detection_cache()` (on saves, not on every request).
+
+#### `typost_archive_post_content`
+
+Filter the part of a post that the frontend font scan reads on a page that lists posts (an archive, the blog page, search results). The default is the manual excerpt when the post has one, else the content before the first `<!--more-->` tag, else the full content (or `''` when [`typost_check_full_content_on_archives`](#typost_check_full_content_on_archives) returns `false`). Use this filter when your theme uses other rules to decide what it shows of a post in a list.
+
+```php
+add_filter('typost_archive_post_content', function($content_to_check, $post) {
+    // e.g. the theme shows the full content of sticky posts
+    if (is_sticky($post->ID)) {
+        return $post->post_content;
+    }
+    return $content_to_check;
+}, 10, 2);
+```
+
+**Parameters:**
+- `$content_to_check` (string) — The content that the default rules chose
+- `$post` (WP_Post) — The post in the list
+
+**Details:**
+- Frontend only, on pages that are not singular. It runs for the posts of the main query when the font detection is not cached, and it can run more than once for a post. The scan reads the returned content as saved and as rendered (see [`typost_use_full_content_filter`](#typost_use_full_content_filter)).
+- Results are cached for 12 hours for each list of posts, like `typost_check_full_content_on_archives`.
+
+#### `typost_use_full_content_filter`
+
+Filter whether the frontend font scan renders post content with the full `the_content` filter instead of `do_blocks()`. The default is `false`. Return `true` only when another plugin adds font references to content through `the_content` and the scan must find them.
+
+**Security and performance:** with `true`, the scan runs shortcodes, oEmbed and every other `the_content` callback again for each post it reads, also for the posts on a page that lists posts. These callbacks can run code, call external services, count page views or send notifications, and the first, uncached page load gets slower.
+
+```php
+add_filter('typost_use_full_content_filter', '__return_true');
+```
+
+**Parameters:**
+- `$use_full_content_filter` (bool) — `false`
+
+**Details:**
+- Frontend only, when the font detection is not cached: for the queried post on a single post or page, and for the posts of the main query on a page that lists posts. The result is cached for 12 hours with the rest of the detection.
+- The scan always reads the content as saved too. This filter changes only how the scan renders the copy that it reads with it.
+
 ---
 
 ## Theme CSS Switches
@@ -595,6 +656,8 @@ window.typostHooks.addAction('typost_inspector_after_font_weight', function(cont
 
 Buttons appear next to the Typography Stylist button — in the Typography Stylist block's toolbar (`qft`) and, for rich text blocks, in the inline format toolbar (`inline`).
 
+**`typost_editor_toolbar_buttons`** (*since 2.3.0*, `typostHooks` filter, `(buttons, editor)`). Return the array of button descriptors with yours added. `editor` is `'qft'` or `'inline'`.
+
 ```javascript
 window.typostHooks.addFilter('typost_editor_toolbar_buttons', function(buttons, editor) {
     return buttons.concat([{
@@ -614,6 +677,8 @@ window.typostHooks.doAction('typost_editor_toolbar_buttons_changed');
 
 Descriptors without an `id` or a callable `onClick` are dropped.
 
+**`typost_editor_toolbar_buttons_changed`** (*since 2.3.0*, `typostHooks` action, no arguments). Fire it after you add a toolbar button filter later than script load. Both editors then render their toolbars again. The bundled Glyphs panel and Paragraph Styles module fire it after they add their buttons.
+
 **The click context** carries everything the panel needs, because no host modal was opened to gather it:
 
 | Field | `qft` | `inline` |
@@ -630,6 +695,8 @@ Descriptors without an `id` or a callable `onClick` are dropped.
 `context.state` carries two style ids: `paragraphStyleId` is the style on the block (or, in the inline editor, at the selection), and `selectionParagraphStyleId` (*since 2.3.0*) is the `data-style-id` of the span that covers the whole selected text, `0` when no single style does (a style over part of the selection does not count). In the inline editor the two are the same value. A panel that applies to a selection should treat the second as "active"; the block's style says nothing about the selected words.
 
 **`typost_extension_panel_closed`** (*since 2.3.0*, `typostHooks` action, `(source, { range, reopenHost })`). Opening a second `Modal` from inside the inline editor's modal makes WordPress close the inline modal. A panel launched from inside it fires this action when it closes so the inline modal reopens where the author was; `range` is the host's saved selection (`{ start, end }`) as received from the `typost_inline_modal_top` / `typost_inline_modal_opened` hook state, and `reopenHost: false` means "do not reopen" (launched from the toolbar). `typost_glyphs_panel_closed` is the older, Glyphs-specific name for the same contract and keeps working.
+
+**`typost_glyphs_panel_closed`** (`typostHooks` action, `(source, { clientId, range, reopenHost })`). The bundled Glyphs panel fires it when it closes. For `source: 'inline'`, the inline editor handles it like `typost_extension_panel_closed`. For `source: 'qft'`, the Typography Stylist block with that `clientId` opens its Quick Feature Toggles modal again. With `reopenHost: false`, neither editor opens a modal.
 
 **`typost-paragraph-style-apply-cancelled`** (*since 2.3.0*, `document` CustomEvent). Both editors ask before a paragraph style replaces styling the selected text already carries. When the author cancels, the editor fires this event with `detail: { source: 'inline' | 'qft', paragraphStyleId }` instead of applying, so the panel that dispatched `typost-apply-block-properties` can put its previous state back. Listen for it if your UI shows the applied style before the apply resolves.
 
@@ -828,7 +895,7 @@ window.typostHooks.addAction('typost_inline_modal_closed', function() {
 
 #### Reading Editor State
 
-Use the `typost_current_editor_state` filter to read the current editor state:
+**`typost_current_editor_state`** (`typostHooks` filter, `(state, editorType)`). Use this filter to read the current editor state. Pass `{}` and the editor type, `'inline'` or `'qft'`:
 
 ```javascript
 // Get state from whichever editor is active
