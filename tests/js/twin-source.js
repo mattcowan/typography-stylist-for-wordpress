@@ -8,6 +8,16 @@
  * the file by name and turn it into something the test can call, so the
  * test compares behavior, never source text.
  *
+ * The cutting is done by matchingBrace(), a small scanner and not a parser.
+ * It guesses a regular expression literal from the token before the slash
+ * (a slash after `)` or after a word such as `return` is read as division,
+ * so `if (x) /re/.test(y)` and `return /re/` are misread), and it does not
+ * follow a backtick nested inside `${…}` of a
+ * template string. A missing name throws "renamed or moved". A wrong cut
+ * shows as a syntax error from `new Function`, or as a function that ends
+ * early: if a test fails that way after an edit to the copy it reads, check
+ * matchingBrace() first.
+ *
  * This file is outside every folder Jest collects (`__tests__`, `test/`,
  * `*.test.js`; see @wordpress/jest-preset-default), so it is a helper, not
  * a test. It does not ship (`/tests` is in .distignore).

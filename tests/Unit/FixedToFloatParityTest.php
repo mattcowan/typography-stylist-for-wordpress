@@ -21,6 +21,9 @@ class FixedToFloatParityTest extends TestCase {
     }
 
     public function values() {
+        // The values from 0x80000000 up are unsigned 32-bit numbers, as the
+        // font file holds them. They are ints only where PHP's int is 64-bit
+        // (every supported platform); on a 32-bit build they would be floats.
         return array(
             'zero'                   => array(0),
             'one'                    => array(0x00010000),
