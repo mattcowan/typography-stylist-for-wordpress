@@ -93,7 +93,7 @@ Method: each step of `docs/typography-property-checklist.md`, the function that 
 | 8 | i18n | catalogs | **Code** | Strings cannot live in a JSON registry that `make-pot` does not read. |
 | 9 | Tests and docs | Jest, PHPUnit, CLAUDE.md | **Data for coverage tests** | |
 
-Count: the checklist has 39 checkboxes (the table merges a few). For plain properties, 13 rows can become data, 3 partly (span writer, the two CSS generators), and the rest stay code: UI, frozen save output, i18n, caches, other modules, docs.
+Count: the checklist has 40 checkboxes, 39 of them steps (the one about CRLF catalog files is a note, not a step; the table merges a few). For plain properties, 13 rows can become data, 3 partly (span writer, the two CSS generators), and the rest stay code: UI, frozen save output, i18n, caches, other modules, docs.
 
 ### 2.2 The special cases
 
@@ -225,7 +225,7 @@ A registry would remove the **data twins** only: `EMPTY_PROPERTY_VALUES` and `BA
 
 **Decided 2026-11-11: option A — drop the run-time registry.** The proof was not merged.
 
-The options that were on the table:
+The options that were on the table. Two sets of names are in use: the letters A, B and C name the scope of the decision, and the numbers (1) to (4) and the letter (a) of section 3.2 name how the definitions would reach PHP and JS. A keeps (4). B and C are a registry at two scopes, which the proof delivered with (1). "(a)" is the same option in both sections, and is not "option A".
 
 - **A — drop the run-time registry (chosen).** Keep the hand-written paths. Protect against unclassified or partly wired properties with a test, not with run-time indirection.
 - **A-narrow** is the proposed first step of A: the classification test below, and nothing that drives every path.
@@ -235,11 +235,11 @@ The options that were on the table:
 
 Why: one plain property is 10 module edit sites, which a registry turns into one, but no planned property is plain (#198, #209, #210, #216 are groups, an HTML attribute and a cross-style reference); the machinery costs about 110 decision points to save about 190 across a full migration of properties that already exist; and the run-time delivery to a no-build script brings a global whose absence deletes stored values. **What would change the answer:** several more plain single-value properties expected. Then start with option (a).
 
-Proposed follow-ups (not agreed work, no issues created):
+Proposed follow-ups (not agreed work; 1 and 3 were opened as candidate issues on 2026-11-12, 2 has no issue):
 
-1. **Classification test (A-narrow), first and smallest.** One test with a closed world: every key that core reports or bridges — the keys of the inline state provider and of `buildQftEditorState()`, the keys of both apply bridges, `PARAGRAPH_STYLE_OWNED_ATTRS` / `PARAGRAPH_STYLE_OWNED_PROPS`, `DETACH_SPAN_GROUPS` — and every key `sanitize_properties()` stores must appear in one list, as a style property (with the paths it must reach: owned or style-only, Based On group or empty value, export plain or mapped; `fontSizeUnit` is one whose value comes from the site's new-content unit, not from the editor state) or as excluded with a reason (`layeredConfigId`, `animationConfigId`, `data-feature-settings`, the fit content attributes). Where the source lists are not exported, read them as `ExportRegistryTest` reads `sanitize_properties()`, with a control that the scan finds a known key. Acceptance: a new key in any source list fails until it is classified; a classified style property missing from `EMPTY_PROPERTY_VALUES` (or, for a group member, from its group in `BASED_ON_GROUPS`), the CSS fixtures or `everyProperty()` fails; no source file changes. It cannot catch a wrong classification, and does not claim to.
+1. **Classification test (A-narrow), first and smallest (#397).** One test with a closed world: every key that core reports or bridges — the keys of the inline state provider and of `buildQftEditorState()`, the keys of both apply bridges, `PARAGRAPH_STYLE_OWNED_ATTRS` / `PARAGRAPH_STYLE_OWNED_PROPS`, `DETACH_SPAN_GROUPS` — and every key `sanitize_properties()` stores must appear in one list, as a style property (with the paths it must reach: owned or style-only, Based On group or empty value, export plain or mapped; `fontSizeUnit` is one whose value comes from the site's new-content unit, not from the editor state) or as excluded with a reason (`layeredConfigId`, `animationConfigId`, `data-feature-settings`, the fit content attributes). Where the source lists are not exported, read them as `ExportRegistryTest` reads `sanitize_properties()`, with a control that the scan finds a known key. Acceptance: a new key in any source list fails until it is classified; a classified style property missing from `EMPTY_PROPERTY_VALUES` (or, for a group member, from its group in `BASED_ON_GROUPS`), the CSS fixtures or `everyProperty()` fails; no source file changes. It cannot catch a wrong classification, and does not claim to.
 2. **Path-driving manifest, optional second step.** For each style property in the list of (1), a sample value and its expected declaration; Jest and PHPUnit drive capture, diff, normalize, `buildPropertiesForStyleSave()`, both CSS generators, the sanitizer and the Based On helpers with it. Over (1) it adds behavior checks (a property that is listed but not handled in one path); over the #358 parity tests and `ExportRegistryTest` it adds the capture, diff and normalize paths, which those do not drive per property. Worth it only if (1) shows gaps.
-3. **One equality rule for `letterSpacing`** (`isStyleModified()` strict, `propertyValuesEqual()` / `property_values_equal()` int, `stylePropertyOverrides()` `Number()`), as its own issue because it changes behavior.
+3. **One equality rule for `letterSpacing` (#398)** (`isStyleModified()` strict, `propertyValuesEqual()` / `property_values_equal()` int, `stylePropertyOverrides()` `Number()`), as its own issue because it changes behavior.
 
 ## 8. Open decisions
 
@@ -251,7 +251,7 @@ Closed on 2026-11-11: drop vs narrow vs full (A); what to merge (this document o
 
 ## 9. The proof (not in the repository)
 
-What was built and measured on 2026-11-11, then removed; kept here as a description so the numbers above can be checked against what was done.
+What was built and measured on 2026-11-11, then removed; kept here as a description so the numbers above can be checked against what was done. The case counts, the post count and the timings in this document are measurements of that day, on one machine and one test site. They are a record, not targets for a later run.
 
 - **Files:** `paragraph-styles/property-registry.json` (one entry). In `ps-utils.js`, a "Property registry (#359)" block before `isStyleModified()` (`loadPropertyRegistry()`, `REGISTRY_CSS_VALUES`, `captureRegistryProperties()`, `registryPropertyModified()`, `addRegistryApplyDefaults()`, `registryDeclarations()`) replaced the `letterSpacing` branches of `isStyleModified()`, `buildPropertiesFromState()`, `normalizeApplyProperties()` (literal split so key order stayed) and `buildStyleCssBlock()`; `window.typostPSUtils` got no new key. In `paragraph-styles.php`, `property_registry()`, `registry_sanitized_properties()` and `registry_declarations()` replaced the branches of `sanitize_properties()` and `property_declarations()`, and `enqueue_utils_script()` called `wp_localize_script()`. Tests: a Jest file (47 tests, `require()` and browser paths), a PHPUnit file (26 tests), a 20-case CSS fixture generated from the old generator; `ExportRegistryTest::sanitizedPropertyKeys()` read the registry keys; `ParagraphStylesFrontendCssTest` stubbed `wp_localize_script()` in two methods. No existing expectation or fixture changed.
 - **Exercised:** the six generic module paths on both sides, key order of stored and normalized properties, the browser delivery, and the REST, export and admin paths through `sanitize_properties()`. **Not exercised:** a reported-only or style-only property, a group, an export mapping, a declaration away from the loop's position, the Based On helpers, Detach, the apply bridges and the editors' span code.
