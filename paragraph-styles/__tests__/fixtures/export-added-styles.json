@@ -1,0 +1,61 @@
+{
+	"_comment": "The styles an export adds to the ones chosen (#358). The Export & Import tab says before the export which styles will be added (addedParents() in assets/js/admin-export.js, Based On parents only); the server adds them and says so after it (Typost_PS_Transfer::export(): Based On parents, GREP targets and nested rule targets, breadth first). Read by assets/js/__tests__/admin-export-added-styles.test.js (client: [added name, because]) and tests/Unit/ParagraphStylesExportAddedStylesTest.php (server: notes). A label that starts with differs: is a case where the two lists do not match today.",
+	"cases": [
+		{
+			"label": "a child adds its parent",
+			"styles": [ { "id": 1, "name": "Body" }, { "id": 2, "name": "Body First", "basedOn": 1 } ],
+			"items": [ 2 ],
+			"client": [ [ "Body", "Body First" ] ],
+			"server": [ "“Body” was added because “Body First” is based on it." ]
+		},
+		{
+			"label": "a chain adds every level",
+			"styles": [ { "id": 1, "name": "A" }, { "id": 2, "name": "B", "basedOn": 1 }, { "id": 3, "name": "C", "basedOn": 2 } ],
+			"items": [ 3 ],
+			"client": [ [ "B", "C" ], [ "A", "B" ] ],
+			"server": [ "“B” was added because “C” is based on it.", "“A” was added because “B” is based on it." ]
+		},
+		{
+			"label": "a parent two children share is added once",
+			"styles": [ { "id": 1, "name": "Base" }, { "id": 2, "name": "X", "basedOn": 1 }, { "id": 3, "name": "Y", "basedOn": 1 } ],
+			"items": [ 2, 3 ],
+			"client": [ [ "Base", "X" ] ],
+			"server": [ "“Base” was added because “X” is based on it." ]
+		},
+		{
+			"label": "a parent that is chosen too is not added",
+			"styles": [ { "id": 1, "name": "Body" }, { "id": 2, "name": "Body First", "basedOn": 1 } ],
+			"items": [ 1, 2 ],
+			"client": [],
+			"server": []
+		},
+		{
+			"label": "differs: the order (the client walks each chain to its top, the server goes breadth first)",
+			"styles": [ { "id": 5, "name": "Grand" }, { "id": 1, "name": "P1", "basedOn": 5 }, { "id": 2, "name": "C1", "basedOn": 1 }, { "id": 3, "name": "P2" }, { "id": 4, "name": "C2", "basedOn": 3 } ],
+			"items": [ 2, 4 ],
+			"client": [ [ "P1", "C1" ], [ "Grand", "P1" ], [ "P2", "C2" ] ],
+			"server": [ "“P1” was added because “C1” is based on it.", "“P2” was added because “C2” is based on it.", "“Grand” was added because “P1” is based on it." ]
+		},
+		{
+			"label": "differs: a GREP rule target (only the server adds it)",
+			"styles": [ { "id": 1, "name": "Body", "grepRules": [ { "pattern": "numbers", "styleId": 2 } ] }, { "id": 2, "name": "Figures" } ],
+			"items": [ 1 ],
+			"client": [],
+			"server": [ "“Figures” was added because a GREP rule of “Body” applies it." ]
+		},
+		{
+			"label": "differs: a nested rule target (only the server adds it)",
+			"styles": [ { "id": 1, "name": "Body", "nestedRules": [ { "styleId": 2, "unit": "words", "count": 1, "end": "through" } ] }, { "id": 2, "name": "Lead" } ],
+			"items": [ 1 ],
+			"client": [],
+			"server": [ "“Lead” was added because a nested rule of “Body” applies it." ]
+		},
+		{
+			"label": "differs: the parent of a GREP rule target (only the server adds it)",
+			"styles": [ { "id": 1, "name": "Body", "grepRules": [ { "pattern": "numbers", "styleId": 2 } ] }, { "id": 2, "name": "Figures", "basedOn": 3 }, { "id": 3, "name": "Numbers" } ],
+			"items": [ 1 ],
+			"client": [],
+			"server": [ "“Figures” was added because a GREP rule of “Body” applies it.", "“Numbers” was added because “Figures” is based on it." ]
+		}
+	]
+}

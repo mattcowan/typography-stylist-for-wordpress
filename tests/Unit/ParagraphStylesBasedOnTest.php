@@ -217,6 +217,15 @@ class ParagraphStylesBasedOnTest extends TestCase {
         $this->assertSame(array(), \Typost_Paragraph_Styles::descendant_ids($styles, 5));
     }
 
+    public function test_descendants_match_the_shared_fixture() {
+        // based-on.test.js holds getStyleDescendantIds() to the same cases (#358)
+        $cases = $this->fixture()['descendants'];
+        $this->assertGreaterThanOrEqual(3, count($cases));
+        foreach ($cases as $case) {
+            $this->assertSame($case['expected'], \Typost_Paragraph_Styles::descendant_ids($case['styles'], $case['id']), $case['label']);
+        }
+    }
+
     public function test_based_on_rejects_itself_a_descendant_and_a_missing_style() {
         $styles = array(
             array('id' => 1, 'properties' => array()),

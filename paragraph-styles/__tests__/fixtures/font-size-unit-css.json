@@ -19,6 +19,7 @@
 		{ "label": "responsive 10/17/100, rem (limited slope rounds down)", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 10, "fontSizePreferred": 17, "fontSizeMax": 100 }, "rule": "font-size: clamp(0.625rem, 1.0625rem + 2.6562vw, 6.25rem)" },
 		{ "label": "responsive 40/16/120, rem (limited by the mobile size)", "properties": { "fontSize": "responsive", "fontSizeUnit": "rem", "fontSizeMin": 40, "fontSizePreferred": 16, "fontSizeMax": 120 }, "rule": "font-size: clamp(2.5rem, 1rem + 4.375vw, 7.5rem)" },
 		{ "label": "fit fallback 16/16/120, rem (slope limited for zoom)", "properties": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 16, "fontSizeMax": 120, "fitMaxSize": 0 }, "rule": "font-size: clamp(1rem, 1rem + 2.5vw, 7.5rem)" },
-		{ "label": "an unknown unit writes px", "properties": { "fontSize": "24", "fontSizeUnit": "em" }, "rule": "font-size: 24px" }
+		{ "label": "an unknown unit writes px", "properties": { "fontSize": "24", "fontSizeUnit": "em" }, "rule": "font-size: 24px" },
+		{ "label": "fixed size 13.33, rem (all six decimals of pxToRem)", "properties": { "fontSize": "13.33", "fontSizeUnit": "rem" }, "rule": "font-size: 0.833125rem" }
 	]
 }

@@ -815,7 +815,17 @@
 		{ "label": "a hyphenation limit as number and string (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": "6" }, "equal": true },
 		{ "label": "an unknown hyphens value and no hyphenation (#208)", "key": "hyphens", "a": { "hyphens": "manual", "hyphenateLimitWord": 6 }, "b": {}, "equal": true },
 		{ "label": "another limit differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 6 }, "b": { "hyphens": "auto", "hyphenateLimitWord": 7 }, "equal": false },
-		{ "label": "another hyphen character differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateCharacter": "=" }, "b": { "hyphens": "auto" }, "equal": false }
+		{ "label": "another hyphen character differs (#208)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateCharacter": "=" }, "b": { "hyphens": "auto" }, "equal": false },
+		{ "label": "fit sizes that differ only in the cap (#358)", "key": "fontSize", "a": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 32, "fontSizeMax": 64, "fitMaxSize": 100 }, "b": { "fontSize": "fit", "fontSizeUnit": "rem", "fontSizeMin": 16, "fontSizePreferred": 32, "fontSizeMax": 64, "fitMaxSize": 120 }, "equal": false },
+		{ "label": "line heights 0.03 apart differ (#358)", "key": "lineHeight", "a": { "lineHeight": 1.5 }, "b": { "lineHeight": 1.53 }, "equal": false },
+		{ "label": "line heights within the 0.0005 tolerance are the same (#358)", "key": "lineHeight", "a": { "lineHeight": 1.5 }, "b": { "lineHeight": 1.5004 }, "equal": true },
+		{ "label": "a hyphenation limit of 1 is not the same as no limit (#358)", "key": "hyphens", "a": { "hyphens": "auto", "hyphenateLimitWord": 1 }, "b": { "hyphens": "auto" }, "equal": false }
+	],
+	"descendants": [
+		{ "label": "every level, breadth first, in stored order (#358)", "styles": [ { "id": 1 }, { "id": 2, "basedOn": 1 }, { "id": 3, "basedOn": 2 }, { "id": 4, "basedOn": 1 }, { "id": 5, "basedOn": 3 }, { "id": 6 }, { "id": 7, "basedOn": 6 } ], "id": 1, "expected": [ 2, 4, 3, 5 ] },
+		{ "label": "a style in the middle of a chain (#358)", "styles": [ { "id": 1 }, { "id": 2, "basedOn": 1 }, { "id": 3, "basedOn": 2 }, { "id": 4, "basedOn": 1 }, { "id": 5, "basedOn": 3 } ], "id": 2, "expected": [ 3, 5 ] },
+		{ "label": "a style with no children (#358)", "styles": [ { "id": 1 }, { "id": 2, "basedOn": 1 } ], "id": 2, "expected": [] },
+		{ "label": "a loop stops at the style itself (#358)", "styles": [ { "id": 1, "basedOn": 2 }, { "id": 2, "basedOn": 1 } ], "id": 1, "expected": [ 2 ] }
 	],
 	"css": [
 		{
@@ -1071,6 +1081,12 @@
 			"full": { "hyphens": "auto", "hyphenateLimitWord": 6 },
 			"parent": { "hyphens": "auto", "hyphenateLimitWord": "6" },
 			"expected": {}
+		},
+		{
+			"label": "a parent's plain values the child does not set are unset with their empty values (#358)",
+			"full": { "fontId": 5 },
+			"parent": { "fontId": 5, "fontWeight": "700", "letterSpacing": 20, "features": [ "liga" ], "textColor": "#112233" },
+			"expected": { "fontWeight": "", "letterSpacing": 0, "features": [], "textColor": "" }
 		}
 	]
 }

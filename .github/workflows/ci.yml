@@ -46,13 +46,16 @@ jobs:
       # The GREP styles engine (#196) runs on WordPress's HTML API, and its
       # tests use the real parser: fetch just wp-includes/html-api and the
       # token map from WordPress 6.9 (the first release with a public
-      # serialize_token()). Without TYPOST_WP_DIR those tests are skipped.
+      # serialize_token()). The synced pattern parity test (#358) also needs
+      # the block parser (class-wp-block-parser*.php), for parse_blocks().
+      # Without TYPOST_WP_DIR those tests are skipped, so --fail-on-skipped
+      # below fails the job when this fetch stops giving them what they need.
       - name: Fetch the WordPress HTML API
         run: |
           git clone --depth 1 --branch 6.9 --filter=blob:none --sparse https://github.com/WordPress/WordPress.git "$RUNNER_TEMP/wordpress"
-          git -C "$RUNNER_TEMP/wordpress" sparse-checkout set --no-cone /wp-includes/html-api/ /wp-includes/class-wp-token-map.php
+          git -C "$RUNNER_TEMP/wordpress" sparse-checkout set --no-cone /wp-includes/html-api/ /wp-includes/class-wp-token-map.php /wp-includes/class-wp-block-parser.php /wp-includes/class-wp-block-parser-block.php /wp-includes/class-wp-block-parser-frame.php
           echo "TYPOST_WP_DIR=$RUNNER_TEMP/wordpress" >> "$GITHUB_ENV"
-      - run: vendor/bin/phpunit
+      - run: vendor/bin/phpunit --fail-on-skipped
 
   build:
     name: Version check + production build

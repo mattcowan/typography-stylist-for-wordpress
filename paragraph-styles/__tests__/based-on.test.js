@@ -21,6 +21,20 @@ const {
 
 const fixture = require('./fixtures/based-on.json');
 
+describe('getStyleDescendantIds matches PHP descendant_ids (shared fixture)', () => {
+	const { getStyleDescendantIds } = require('../assets/js/lib/ps-utils');
+
+	test('the fixture is read', () => {
+		expect(fixture.descendants.length).toBeGreaterThanOrEqual(3);
+	});
+
+	fixture.descendants.forEach(({ label, styles, id, expected }) => {
+		test(label, () => {
+			expect(getStyleDescendantIds(styles, id)).toEqual(expected);
+		});
+	});
+});
+
 describe('resolveStyleProperties (shared fixture)', () => {
 	fixture.resolve.forEach(({ label, styles, expected }) => {
 		test(label, () => {

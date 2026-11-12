@@ -57,6 +57,17 @@ describe('referencesFromHtml', () => {
 		expect(referencesFromHtml(html).styleRefs).toEqual(['4', 'ps_old', '3']);
 	});
 
+	test('differs: the escaped quote of saved block comments (backslash, u0022) gives a wrong reference (#358)', () => {
+		// The PHP scan (Typost_Paragraph_Styles::style_refs_from_content())
+		// accepts this quote form and reads 5. This scan takes the backslash
+		// as a quote and reads "u00225". docs/twins.md row 19.
+		const backslash = String.fromCharCode(92);
+		const quote = backslash + 'u0022';
+		const html = 'data-style-id=' + quote + '5' + quote;
+		expect(html.length).toBe('data-style-id='.length + 13);
+		expect(referencesFromHtml(html).styleRefs).toEqual(['u00225']);
+	});
+
 	test('returns nothing for empty or non-string input', () => {
 		expect(referencesFromHtml('')).toEqual({ fontIds: [], styleRefs: [] });
 		expect(referencesFromHtml(null)).toEqual({ fontIds: [], styleRefs: [] });

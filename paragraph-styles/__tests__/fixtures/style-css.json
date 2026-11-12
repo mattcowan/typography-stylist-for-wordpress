@@ -1,0 +1,816 @@
+{
+	"_comment": "The main rule of a paragraph style: generate_style_css() in paragraph-styles.php and its JS twin buildStyleCssBlock() in ps-utils.js (#358). Read by paragraph-styles/__tests__/style-css.test.js and tests/Unit/ParagraphStylesStyleCssTest.php, so a change to either generator fails one of them. Raw (unsanitized) properties on purpose: both generators re-validate what they read, with PHP intval()/empty()/float printing that the JS emulates (phpInt, phpFalsy, phpFloatStr). The other fixtures in this folder hold alignment, hyphenation, color, layout, size units and Based On.",
+	"cases": [
+		{
+			"label": "font family by id",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": 12
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-12);\n}"
+		},
+		{
+			"label": "font family from a numeric string",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": "12"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-12);\n}"
+		},
+		{
+			"label": "font family junk id still emits var(--font-0) (PHP absint)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": "abc",
+					"fontWeight": "700"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-0);\n    font-weight: 700;\n}"
+		},
+		{
+			"label": "font family negative id is made positive (PHP absint)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": -7
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-7);\n}"
+		},
+		{
+			"label": "font family \"0\" is empty (PHP empty)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": "0",
+					"fontWeight": "700"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}"
+		},
+		{
+			"label": "weight numeric",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": 700
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}"
+		},
+		{
+			"label": "weight numeric string",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "300"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 300;\n}"
+		},
+		{
+			"label": "weight 1000 is the top",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "1000"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 1000;\n}"
+		},
+		{
+			"label": "weight 1001 is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "1001",
+					"fontStyle": "italic"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: italic;\n}"
+		},
+		{
+			"label": "weight exponent string casts like intval",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "1e3"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 1000;\n}"
+		},
+		{
+			"label": "weight decimal is truncated",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "450.7"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 450;\n}"
+		},
+		{
+			"label": "weight keyword bold",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "bold"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: bold;\n}"
+		},
+		{
+			"label": "weight keyword bolder",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "bolder"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: bolder;\n}"
+		},
+		{
+			"label": "weight unknown keyword is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "heavy",
+					"fontStyle": "normal"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: normal;\n}"
+		},
+		{
+			"label": "weight keyword normal",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "normal"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: normal;\n}"
+		},
+		{
+			"label": "weight keyword lighter",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "lighter"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: lighter;\n}"
+		},
+		{
+			"label": "weight keyword in capitals is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "BOLD",
+					"fontStyle": "italic"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: italic;\n}"
+		},
+		{
+			"label": "weight with a leading space (PHP 7.4 and 8 both read it)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": " 600"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 600;\n}"
+		},
+		{
+			"label": "font style italic",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontStyle": "italic"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: italic;\n}"
+		},
+		{
+			"label": "font style oblique",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontStyle": "oblique"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: oblique;\n}"
+		},
+		{
+			"label": "font style unknown is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontStyle": "slanted",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "features in stored order",
+			"style": {
+				"id": 8,
+				"properties": {
+					"features": [
+						"liga",
+						"ss01",
+						"swsh"
+					]
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-feature-settings: \"liga\" 1, \"ss01\" 1, \"swsh\" 1;\n}"
+		},
+		{
+			"label": "letter spacing positive",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": 50
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n}"
+		},
+		{
+			"label": "letter spacing negative",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": -25
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: -0.025em;\n}"
+		},
+		{
+			"label": "letter spacing suffixed string reads its leading number",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": "50px"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.05em;\n}"
+		},
+		{
+			"label": "letter spacing junk emits 0em (PHP !empty then intval)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": "abc"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0em;\n}"
+		},
+		{
+			"label": "letter spacing \"0\" is empty",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": "0",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "line height number",
+			"style": {
+				"id": 8,
+				"properties": {
+					"lineHeight": 1.5
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    line-height: 1.5;\n}"
+		},
+		{
+			"label": "line height string",
+			"style": {
+				"id": 8,
+				"properties": {
+					"lineHeight": "1.25"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    line-height: 1.25;\n}"
+		},
+		{
+			"label": "line height prints at PHP precision",
+			"style": {
+				"id": 8,
+				"properties": {
+					"lineHeight": 1.1234567890123457
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    line-height: 1.1234567890123;\n}"
+		},
+		{
+			"label": "variation settings",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontVariationSettings": "\"wght\" 650, \"wdth\" 87.5"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-variation-settings: \"wght\" 650, \"wdth\" 87.5;\n}"
+		},
+		{
+			"label": "variation settings negative value and trailing zero",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontVariationSettings": "\"slnt\" -10, \"wght\" 650.0"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-variation-settings: \"slnt\" -10, \"wght\" 650;\n}"
+		},
+		{
+			"label": "variation settings drop invalid pairs",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontVariationSettings": "\"wght\" 650, wdth 80, \"opsz\" abc, \"GRAD\" 0.5"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-variation-settings: \"wght\" 650, \"GRAD\" 0.5;\n}"
+		},
+		{
+			"label": "variation settings with no valid pair write nothing",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontVariationSettings": "garbage",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "fixed size px",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "24"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: 24px;\n}"
+		},
+		{
+			"label": "fixed size rem",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "24",
+					"fontSizeUnit": "rem"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: 1.5rem;\n}"
+		},
+		{
+			"label": "fixed size 0 writes nothing",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "0",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "responsive px",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "responsive",
+					"fontSizeMin": 16,
+					"fontSizePreferred": 24,
+					"fontSizeMax": 64
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(16px, 1.5rem + 3vw, 64px);\n}"
+		},
+		{
+			"label": "responsive rem",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "responsive",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 16,
+					"fontSizePreferred": 32,
+					"fontSizeMax": 64
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1rem, 2rem + 3vw, 4rem);\n}"
+		},
+		{
+			"label": "responsive rem, zoom-limited slope",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "responsive",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 16,
+					"fontSizePreferred": 16,
+					"fontSizeMax": 120
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1rem, 1rem + 2.5vw, 7.5rem);\n}"
+		},
+		{
+			"label": "responsive without the trio writes nothing",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "responsive",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "fit writes the fallback clamp",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "fit",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 20,
+					"fontSizePreferred": 40,
+					"fontSizeMax": 80,
+					"fitMaxSize": 120
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(1.25rem, 2.5rem + 3.75vw, 5rem);\n}"
+		},
+		{
+			"label": "hang",
+			"style": {
+				"id": 8,
+				"properties": {
+					"initialHang": 0.1
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.1;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "hang is capped at 1",
+			"style": {
+				"id": 8,
+				"properties": {
+					"initialHang": 2
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 1;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "hang below 0.0005 is none",
+			"style": {
+				"id": 8,
+				"properties": {
+					"initialHang": "0.0004",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "case uppercase",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textCase": "uppercase"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    text-transform: uppercase;\n    font-variant-caps: normal;\n}"
+		},
+		{
+			"label": "case small caps without fake small caps",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textCase": "small-caps",
+					"fakeSmallCaps": false
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    text-transform: none;\n    font-variant-caps: small-caps;\n    font-synthesis-small-caps: none;\n}"
+		},
+		{
+			"label": "case all small caps",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textCase": "all-small-caps"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    text-transform: none;\n    font-variant-caps: all-small-caps;\n    font-synthesis-small-caps: auto;\n}"
+		},
+		{
+			"label": "case unknown is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textCase": "UPPERCASE",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "word spacing",
+			"style": {
+				"id": 8,
+				"properties": {
+					"wordSpacing": 100
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    word-spacing: 0.1em;\n}"
+		},
+		{
+			"label": "word spacing \"0\" is empty",
+			"style": {
+				"id": 8,
+				"properties": {
+					"wordSpacing": "0",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "text wrap",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textWrap": "balance"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    text-wrap: balance;\n    text-wrap-mode: inherit;\n}"
+		},
+		{
+			"label": "text wrap unknown is dropped",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textWrap": "stable",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "fit writes no word spacing, text wrap or alignment",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "fit",
+					"fontSizeMin": 20,
+					"fontSizePreferred": 40,
+					"fontSizeMax": 80,
+					"wordSpacing": 100,
+					"textWrap": "pretty",
+					"alignment": "center"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(20px, 2.5rem + 3.75vw, 80px);\n}"
+		},
+		{
+			"label": "legacy id adds its selectors",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "700"
+				},
+				"legacyId": "legacy-1"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id],\n.typost-ps-legacy-1,\n.typost-styled.typost-ps-legacy-1.typost-ps-legacy-1.typost-ps-legacy-1.typost-ps-legacy-1.typost-ps-legacy-1,\n.typost-styled[data-style-id=\"legacy-1\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}"
+		},
+		{
+			"label": "every main-rule property, in order",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": 3,
+					"fontWeight": "600",
+					"fontStyle": "italic",
+					"features": [
+						"liga",
+						"onum"
+					],
+					"letterSpacing": 20,
+					"lineHeight": 1.4,
+					"fontVariationSettings": "\"wght\" 600",
+					"fontSize": "responsive",
+					"fontSizeUnit": "rem",
+					"fontSizeMin": 18,
+					"fontSizePreferred": 20,
+					"fontSizeMax": 28,
+					"initialHang": 0.05,
+					"textCase": "capitalize",
+					"wordSpacing": 50,
+					"textWrap": "pretty",
+					"hyphens": "auto",
+					"textColor": "#336699"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-3);\n    font-weight: 600;\n    font-style: italic;\n    font-feature-settings: \"liga\" 1, \"onum\" 1;\n    letter-spacing: 0.02em;\n    line-height: 1.4;\n    font-variation-settings: \"wght\" 600;\n    font-size: clamp(1.125rem, 1.25rem + 0.625vw, 1.75rem);\n    --typost-hang: 0.05;\n    text-transform: capitalize;\n    font-variant-caps: normal;\n    word-spacing: 0.05em;\n    text-wrap: pretty;\n    text-wrap-mode: inherit;\n    -webkit-hyphens: auto;\n    hyphens: auto;\n    color: #336699;\n}\n\n.wp-block-typost.has-text-color > .typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 {\n    color: inherit;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "no properties write nothing",
+			"style": {
+				"id": 8,
+				"properties": {}
+			},
+			"css": ""
+		},
+		{
+			"label": "letter spacing decimal is truncated (PHP intval)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"letterSpacing": 1.9
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    letter-spacing: 0.001em;\n}"
+		},
+		{
+			"label": "line height suffixed string reads its leading number (PHP floatval)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"lineHeight": "1.5abc"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    line-height: 1.5;\n}"
+		},
+		{
+			"label": "font family decimal id is truncated (PHP absint)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontId": 3.7
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-family: var(--font-3);\n}"
+		},
+		{
+			"label": "fixed size with a leading space (PHP is_numeric)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": " 24"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: 24px;\n}"
+		},
+		{
+			"label": "responsive trio as suffixed strings (PHP intval)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "responsive",
+					"fontSizeMin": "16px",
+					"fontSizePreferred": "24px",
+					"fontSizeMax": "64px"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-size: clamp(16px, 1.5rem + 3vw, 64px);\n}"
+		},
+		{
+			"label": "variation settings with extra spaces",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontVariationSettings": "  \"wght\"   650 ,\"wdth\" 80"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-variation-settings: \"wght\" 650, \"wdth\" 80;\n}"
+		},
+		{
+			"label": "hang as a string with spaces",
+			"style": {
+				"id": 8,
+				"properties": {
+					"initialHang": " 0.25 "
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.25;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "fake small caps 0 is not false",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textCase": "small-caps",
+					"fakeSmallCaps": 0
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    text-transform: none;\n    font-variant-caps: small-caps;\n    font-synthesis-small-caps: auto;\n}"
+		},
+		{
+			"label": "word spacing decimal string is truncated",
+			"style": {
+				"id": 8,
+				"properties": {
+					"wordSpacing": "12.9"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    word-spacing: 0.012em;\n}"
+		},
+		{
+			"label": "legacy id with hang and text wrap",
+			"style": {
+				"id": 8,
+				"properties": {
+					"textWrap": "balance",
+					"initialHang": 0.2
+				},
+				"legacyId": "old_7"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id],\n.typost-ps-old_7,\n.typost-styled.typost-ps-old_7.typost-ps-old_7.typost-ps-old_7.typost-ps-old_7.typost-ps-old_7,\n.typost-styled[data-style-id=\"old_7\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    --typost-hang: 0.2;\n    text-wrap: balance;\n    text-wrap-mode: inherit;\n}\n\n.typost-styled.typost-ps-8:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, .block-editor-rich-text__editable, [style*=\"text-indent\"])::first-letter {\n    margin-inline-start: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * (1 - var(--typost-plain, 0)) * -1em);\n}\n\n.typost-styled.typost-ps-8.block-editor-rich-text__editable:is(p, h1, h2, h3, h4, h5, h6):not(.wp-block-typost *, .has-drop-cap, [style*=\"text-indent\"]) {\n    text-indent: calc(var(--typost-hang, 0) * var(--typost-hang-on, 1) * -1em);\n}\n\n.typost-styled.typost-ps-8.has-text-align-center {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:dir(ltr) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:dir(rtl) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 0;\n}\n\n.typost-styled.typost-ps-8.has-text-align-right:is([style*=\"direction: rtl\"], [style*=\"direction:rtl\"]) {\n    --typost-hang-on: 1;\n}\n\n.typost-styled.typost-ps-8.has-text-align-left:is([style*=\"direction: ltr\"], [style*=\"direction:ltr\"]) {\n    --typost-hang-on: 1;\n}"
+		},
+		{
+			"label": "differs: a feature tag that is not a word (JS drops it, PHP writes it)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"features": [
+						"liga",
+						"a b"
+					]
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-feature-settings: \"liga\" 1;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-feature-settings: \"liga\" 1, \"a b\" 1;\n}"
+		},
+		{
+			"label": "differs: a legacy id outside [A-Za-z0-9_-] (JS writes no legacy selectors, PHP does)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "700"
+				},
+				"legacyId": "a.b"
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id],\n.typost-ps-a.b,\n.typost-styled.typost-ps-a.b.typost-ps-a.b.typost-ps-a.b.typost-ps-a.b.typost-ps-a.b,\n.typost-styled[data-style-id=\"a.b\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}"
+		},
+		{
+			"label": "differs: a hex string size (JS writes font-size: 0px, PHP writes nothing; storable through the REST route)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontSize": "0x1A",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n    font-size: 0px;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		},
+		{
+			"label": "differs: a hex string weight (JS writes font-weight: 0, PHP writes nothing; storable through the REST route)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": "0x1A",
+					"fontStyle": "italic"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 0;\n    font-style: italic;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: italic;\n}"
+		},
+		{
+			"label": "differs: a boolean weight (JS writes font-weight: 0, PHP writes nothing)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"fontWeight": true,
+					"fontStyle": "italic"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 0;\n    font-style: italic;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-style: italic;\n}"
+		},
+		{
+			"label": "differs: features as a string (JS writes one tag per letter, PHP writes nothing)",
+			"style": {
+				"id": 8,
+				"properties": {
+					"features": "liga",
+					"fontWeight": "400"
+				}
+			},
+			"css": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n    font-feature-settings: \"l\" 1, \"i\" 1, \"g\" 1, \"a\" 1;\n}",
+			"php": ".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 400;\n}"
+		}
+	]
+}
