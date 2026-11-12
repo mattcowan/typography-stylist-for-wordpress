@@ -12,29 +12,14 @@
  * wp-env site (#189) as well as on a local development site.
  */
 const { test, expect } = require('@playwright/test');
+const { BASE, openNewPost, editable, select, deleteDraft } = require('./helpers');
 
 test.setTimeout(90000);
-
-const BASE = process.env.WP_BASE_URL;
 
 const TEXT = 'Hello Beautiful World';
 // Text offsets in TEXT
 const BEAUTIFUL = [6, 15];
 const WORLD = [16, 21];
-
-// The editor canvas iframe
-function canvas(page) {
-	return page.frameLocator('iframe[name="editor-canvas"]');
-}
-
-async function openNewPost(page) {
-	const authState = require('./auth.json');
-	await page.context().addCookies(authState.cookies);
-	await page.goto(`${BASE}/wp-admin/post-new.php`, { waitUntil: 'domcontentloaded' });
-	await page.waitForFunction(() => window.wp && wp.data && wp.data.select('core/block-editor') && window.typostHooks);
-	await page.evaluate(() => wp.data.dispatch('core/preferences').set('core/edit-post', 'welcomeGuide', false));
-	await page.waitForSelector('iframe[name="editor-canvas"]');
-}
 
 async function insertBlock(page, text = TEXT) {
 	const clientId = await page.evaluate((content) => {
@@ -44,54 +29,6 @@ async function insertBlock(page, text = TEXT) {
 	}, text);
 	await editable(page, clientId).waitFor();
 	return clientId;
-}
-
-function editable(page, clientId) {
-	return canvas(page).locator(`[data-block="${clientId}"] [contenteditable="true"]`).first();
-}
-
-function selectionOffsets(page) {
-	return page.evaluate(() => {
-		const s = wp.data.select('core/block-editor');
-		return [s.getSelectionStart().offset, s.getSelectionEnd().offset];
-	});
-}
-
-// Press `key` until the editor store reports `done(offsets)`. The number of
-// presses is not the number of characters: at the edge of a styled span the
-// first arrow press only moves the caret into or out of the format (RichText
-// format boundaries) and leaves the offset where it is.
-async function pressUntil(page, key, done, maxPresses) {
-	for (let i = 0; i < maxPresses; i++) {
-		const before = await selectionOffsets(page);
-		if (done(before)) {
-			return;
-		}
-		await page.keyboard.press(key);
-		// The store follows the DOM selection on selectionchange, a moment
-		// after the key press. Give it up to a second, because a press made
-		// before the store catches up overshoots, and these loops only move
-		// forward (a boundary press changes no offset, so this cannot wait
-		// for a change alone).
-		for (let tries = 0; tries < 50; tries++) {
-			const after = await selectionOffsets(page);
-			if (after[0] !== before[0] || after[1] !== before[1]) {
-				break;
-			}
-			await page.waitForTimeout(20);
-		}
-	}
-}
-
-// Put the caret at `start` and, when `end` is past it, select up to `end`,
-// with the keyboard. Waits until the editor store reports the selection.
-async function select(page, clientId, start, end = start) {
-	await editable(page, clientId).click();
-	await page.keyboard.press('Home');
-	await expect.poll(async () => (await selectionOffsets(page))[0]).toBe(0);
-	await pressUntil(page, 'ArrowRight', ([caret]) => caret >= start, start * 2 + 2);
-	await pressUntil(page, 'Shift+ArrowRight', ([, focus]) => focus >= end, (end - start) * 2 + 2);
-	await expect.poll(() => selectionOffsets(page)).toEqual([start, end]);
 }
 
 async function openQuickFeatureToggles(page) {
@@ -147,14 +84,6 @@ async function applyResponsiveFontSize(modal, min, preferred, max) {
 	await spinbutton(modal, 'Mobile (320px+)').fill(String(min));
 	await spinbutton(modal, 'Intermediate').fill(String(preferred));
 	await spinbutton(modal, 'Large (1920px)').fill(String(max));
-}
-
-// Delete the draft that post-new.php autosaves once the content changes
-async function deleteDraft(page) {
-	await page.evaluate(() => {
-		const postId = wp.data.select('core/editor').getCurrentPostId();
-		return postId ? wp.apiFetch({ path: `/wp/v2/posts/${postId}?force=true`, method: 'DELETE' }).catch(() => {}) : null;
-	}).catch(() => {});
 }
 
 test.describe('Typography Stylist block - Quick Feature Toggles on selected text', () => {

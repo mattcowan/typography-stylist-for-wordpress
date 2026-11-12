@@ -140,6 +140,30 @@ and checks the block's stored content (what gets saved):
 The Paragraph Style panel in the Quick Feature Toggles works on the selected
 text, not the whole block. Tests tagged `@firefox` also run in Firefox.
 
+### `saved-markup.spec.js` — #373
+
+The editor opens each save format and feature the plugin has written and
+writes it back unchanged: the v1 and v2 (px) blocks through their
+deprecations, rem sizes, fit to width, First Letter Hang, case, paragraph
+style classes, a block after Detach, and inline spans. The markup is in
+[fixtures/saved-markup](fixtures/saved-markup/README.md), which also says
+how to regenerate it. It runs in Chromium only: no test here has the
+`@firefox` tag, so Firefox does not measure the fit to width fixture.
+
+### `inline-format.spec.js` — #373
+
+The inline format on a core Heading and a core Paragraph: a word selected
+with the keyboard gets one OpenType feature and one responsive size in the
+Typography Stylist Features dialog, and the stored span is compared with
+the expected string. Each test runs with new sizes written in rem and in
+px (the value of the "Write new font sizes in px" option is set in the
+page; the site option is not changed). It runs in Chromium only.
+
+### `helpers.js`
+
+Shared helpers (open the editor, select text with the keyboard, REST
+requests as the logged-in user). Not a spec file.
+
 ## Writing New Tests
 
 Follow the helpers in the spec files:
@@ -178,8 +202,13 @@ Handles WordPress authentication:
 1. Launches browser
 2. Navigates to `/wp-login.php`
 3. Fills in username and password from `.env`
-4. Saves authentication state to `auth.json`
-5. All tests reuse this authenticated state
+4. Turns the editor's welcome guide off in the user's saved preferences
+   (the `persisted_preferences` user meta), when it is not off already,
+   and keeps every other preference. Without this, for a new user (every
+   fresh wp-env site) the guide could open in the middle of a test and
+   take every click.
+5. Saves authentication state to `auth.json`
+6. All tests reuse this authenticated state
 
 ## Troubleshooting
 
@@ -261,6 +290,16 @@ That is what the weekly **Compatibility** workflow
 with WordPress trunk and the latest Gutenberg every Monday and on demand,
 and attaches the Playwright report to a failed run. It does not run on push
 or pull request. See `RELEASING.md` § 9.
+
+The **CI** workflow (`.github/workflows/ci.yml`, job "E2E (stable
+WordPress)", #373) runs the same suite in wp-env with the stable WordPress
+on each pull request to `main`, on each push to `main`, and on manual runs.
+A failed test fails the pull request.
+
+wp-env turns on `SCRIPT_DEBUG`, so the editor runs React's development
+build, which mounts each component, unmounts it and mounts it again in
+StrictMode. Code that works on a site with `SCRIPT_DEBUG` off can fail
+there: see "A known limit" in the saved-markup fixtures README.
 
 The screen-reader suite (`npm run test:sr`, `tests/e2e-sr/`) needs Windows
 and NVDA, so it stays local.

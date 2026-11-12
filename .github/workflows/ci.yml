@@ -1,4 +1,5 @@
-# CI: tests + build verification on every push and pull request.
+# CI: tests + build verification on every push and pull request, and the
+# e2e suite in wp-env on pull requests to main (#373).
 #
 # The "build" job also proves that the gitignored production artifacts
 # (minified JS/CSS, blocks/typography-stylist/build/) can be produced from a
@@ -96,3 +97,71 @@ jobs:
           name: typography-stylist-${{ github.sha }}
           path: typography-stylist.zip
           retention-days: 7
+
+  # The Playwright suite (tests/e2e) in wp-env on the stable WordPress, so a
+  # pull request cannot merge with a broken editor (#373). The same suite
+  # runs weekly on WordPress trunk in compat.yml.
+  #
+  # Pull requests to main only (and pushes to main, and manual runs): a
+  # stacked pull request into another branch runs it when it reaches main.
+  # A skipped job reports success, so this is safe as a required check.
+  #
+  # It needs no secret and only a read-only token, so it runs the same way
+  # for Dependabot and for pull requests from forks.
+  #
+  # Supply chain: @wordpress/env is not a dev dependency, so it is installed
+  # here at one pinned version (its own dependencies are resolved at install
+  # time, as in compat.yml). This job does not use the npm Actions cache, so
+  # nothing it installs is saved for the jobs that restore it.
+  e2e:
+    name: E2E (stable WordPress)
+    if: github.event_name != 'pull_request' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    concurrency:
+      group: e2e-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      # wp-env's default site and admin user, not a local development site.
+      WP_BASE_URL: http://localhost:8888
+      WP_USERNAME: admin
+      WP_PASSWORD: password
+    steps:
+      # No later step needs git, so the token is not kept in the checkout
+      # while the job installs packages and runs the pull request's code.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # The bundles are gitignored, and the editor is broken without them.
+      - run: npm ci
+      - run: npm run build
+      # .wp-env.json: the WordPress release wp-env installs by default (the
+      # latest stable), PHP 8.2, this checkout as the plugin.
+      - run: npm install -g --no-audit --no-fund @wordpress/env@12.0.0
+      - run: wp-env start
+      - name: WordPress and plugin versions
+        run: |
+          wp-env run cli wp core version -- --extra
+          wp-env run cli wp plugin list
+      - run: npx playwright install --with-deps chromium firefox
+      # A step timeout, under the job's, fails the step instead of cancelling
+      # the job, so the report and the logs below are still collected.
+      - run: npx playwright test
+        timeout-minutes: 30
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+      - name: wp-env logs
+        if: failure()
+        run: wp-env logs --watch=false
