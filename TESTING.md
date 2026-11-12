@@ -201,6 +201,15 @@ npm test -- edit.test.js
 npm test -- -u
 ```
 
+## When You Add or Change a Hook
+
+`__tests__/hooks-doc.test.js` compares the hooks in the code with the entries in `HOOKS.md`. It fails when one side has a hook that the other side does not have. The comment at the top of the test file gives the full rules.
+
+- **A new hook:** add an entry to `HOOKS.md`. Put the name in backticks at the start of a heading, of the first cell of a table row, or of a bold paragraph. Put a PHP filter under "PHP Filters" and a PHP action under "PHP Actions". Put a JavaScript hook under "JavaScript Hooks".
+- **A name built at run time:** write the changing part as a placeholder, for example `typost_admin_tab_content_{tab_id}`.
+- **A hook name the test cannot read:** the test fails and names the file and the line. Write the name as a literal string, and call `window.typostHooks.doAction()` or `window.typostHooks.applyFilters()` directly.
+- **A new component that fires a hook named by a prop:** add it to `JS_HOOK_WRAPPERS` in the test file. `HookPoint` is the only such component today. Give the component name, the prop, the kind (action or filter) and the file. Do not import the component under another name.
+
 ## Continuous Integration
 
 Consider adding tests to your CI/CD pipeline:

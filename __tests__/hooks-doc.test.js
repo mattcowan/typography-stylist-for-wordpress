@@ -52,7 +52,9 @@
  * a name in a variable or a constant, a name that starts with a run-time
  * part, a method or variable named like a hook function, a hook function
  * passed by name (`call_user_func( 'do_action', … )`), a typostHooks method
- * reached through an alias, destructuring, `.call()` or `.bind()`, a call
+ * reached through an alias, destructuring, `.call()` or `.bind()`, a
+ * computed property of typostHooks (`typostHooks[ method ]( … )`), a
+ * wrapper imported, exported or destructured under another name, a call
  * on another hook registry, a JS hook call inside a PHP string or in a PHP
  * file's inline HTML, a PHP short open tag, a file Babel cannot parse, an
  * unterminated PHP string or comment, and a broken link that would ship.
@@ -70,7 +72,8 @@
  *
  * PHP hooks count only under "## PHP Hooks", JavaScript hooks only under
  * "## JavaScript Hooks". Under PHP Hooks, a filter must be under
- * "### PHP Filters" and an action under "### PHP Actions". This filter or
+ * "### PHP Filters" and an action under "### PHP Actions", and an entry
+ * of the other kind beside a correct one fails too. This filter or
  * action check is for PHP only: HOOKS.md has no JavaScript Filters and
  * Actions sections (JS hooks are grouped by where they fire, and
  * `typost_weight_control` is both), so for JavaScript only the names are
@@ -854,6 +857,18 @@ function scanJs( source, file, wrappers = JS_HOOK_WRAPPERS ) {
 			);
 		},
 		'MemberExpression|OptionalMemberExpression'( memberPath ) {
+			// typostHooks[ method ]( … ): the property is known only at run time,
+			// so it can be a hook method that fires a name no scan reads.
+			if (
+				memberPath.node.computed &&
+				propertyName( memberPath.node ) === null &&
+				isTypostHooks( memberPath.node.object )
+			) {
+				problems.push(
+					`${ at( memberPath.node ) } reads a computed property of typostHooks; the test cannot tell whether it is a hook method. Call window.typostHooks.doAction() or .applyFilters() by name`
+				);
+				return;
+			}
 			const method = hookMethod( memberPath.node );
 			if ( ! method ) {
 				return;
@@ -926,17 +941,39 @@ function scanJs( source, file, wrappers = JS_HOOK_WRAPPERS ) {
 			) {
 				return; // Its definition.
 			}
-			if (
-				[ 'ImportSpecifier', 'ImportDefaultSpecifier', 'ExportSpecifier' ].includes(
-					parent.type
-				)
-			) {
+			// A wrapper under another name (`import { HookPoint as Slot }`)
+			// renders as <Slot hook="…">, which the scan does not know; another
+			// component under the wrapper's name would be read as the wrapper.
+			const renamed = () =>
+				problems.push(
+					`${ at( idPath.node ) } imports, exports or destructures ${ wrapper.component } under another name; the test finds <${ wrapper.component } ${ wrapper.prop }="…"> by that name only. Keep the name`
+				);
+			if ( parent.type === 'ImportDefaultSpecifier' ) {
+				return;
+			}
+			if ( parent.type === 'ImportSpecifier' || parent.type === 'ExportSpecifier' ) {
+				const outer = parent.type === 'ImportSpecifier' ? parent.imported : parent.exported;
+				if ( outer.type === 'Identifier' && outer.name === parent.local.name ) {
+					return;
+				}
+				renamed();
 				return;
 			}
 			if ( parent.type === 'ObjectProperty' ) {
 				const container = idPath.parentPath.parentPath;
 				if ( container.isObjectPattern() ) {
-					return; // const { HookPoint } = require( … )
+					const value =
+						parent.value.type === 'AssignmentPattern' ? parent.value.left : parent.value;
+					if (
+						! parent.computed &&
+						parent.key.type === 'Identifier' &&
+						value.type === 'Identifier' &&
+						parent.key.name === value.name
+					) {
+						return; // const { HookPoint } = require( … )
+					}
+					renamed(); // const { HookPoint: Slot } = require( … )
+					return;
 				}
 				if ( parent.key === idPath.node && ! parent.shorthand && ! parent.computed ) {
 					return; // A key with the same name.
@@ -1080,6 +1117,7 @@ function compareHooks( codeHooks, docEntries ) {
 	}
 	const missingFromDoc = [];
 	const wrongKind = [];
+	const kindReported = new Set();
 	for ( const [ name, sites ] of byName ) {
 		const entries = docEntries.filter( ( e ) => documents( e.canonical, name ) );
 		const where = sites.map( ( s ) => s.at ).join( ', ' );
@@ -1092,6 +1130,7 @@ function compareHooks( codeHooks, docEntries ) {
 				entries.some( ( e ) => e.kind !== null ) &&
 				! entries.some( ( e ) => e.kind === kind )
 			) {
+				kindReported.add( name );
 				wrongKind.push(
 					`${ name } is fired as a ${ kind } (${ where }) but HOOKS.md lists it under ${ entries
 						.map( ( e ) => `the ${ e.kind }s (line ${ e.line })` )
@@ -1105,16 +1144,42 @@ function compareHooks( codeHooks, docEntries ) {
 			);
 		}
 	}
+	// The other direction, by name and by kind: an entry under PHP Actions
+	// for a hook the code fires only as a filter is wrong even when a correct
+	// entry under PHP Filters exists beside it. An entry with no kind (a
+	// JavaScript entry) is compared by name only. A name the loop above
+	// already reported for its kind is not reported again.
 	const missingFromCode = [];
 	const seen = new Set();
+	const missingReported = new Set();
 	for ( const entry of docEntries ) {
-		if ( seen.has( entry.canonical ) ) {
+		const key = `${ entry.canonical }|${ entry.kind }`;
+		if ( seen.has( key ) ) {
 			continue;
 		}
-		seen.add( entry.canonical );
-		if ( ! [ ...byName.keys() ].some( ( name ) => firedBy( entry.canonical, name ) ) ) {
-			missingFromCode.push(
-				`${ entry.name } (HOOKS.md:${ entry.line }) is not fired anywhere in the code`
+		seen.add( key );
+		const fired = codeHooks.filter( ( hook ) => firedBy( entry.canonical, hook.name ) );
+		if ( ! fired.length ) {
+			if ( ! missingReported.has( entry.canonical ) ) {
+				missingReported.add( entry.canonical );
+				missingFromCode.push(
+					`${ entry.name } (HOOKS.md:${ entry.line }) is not fired anywhere in the code`
+				);
+			}
+			continue;
+		}
+		if (
+			entry.kind !== null &&
+			! fired.some( ( hook ) => hook.kind === entry.kind ) &&
+			! fired.every( ( hook ) => kindReported.has( hook.name ) )
+		) {
+			const kinds = [ ...new Set( fired.map( ( hook ) => hook.kind ) ) ]
+				.map( ( kind ) => ( kind === 'action' ? 'an action' : `a ${ kind }` ) )
+				.join( ' and ' );
+			wrongKind.push(
+				`${ entry.name } is in HOOKS.md under the ${ entry.kind }s (line ${ entry.line }) but the code fires it only as ${ kinds } (${ fired
+					.map( ( hook ) => hook.at )
+					.join( ', ' ) })`
 			);
 		}
 	}
@@ -1484,6 +1549,24 @@ describe( 'control cases', () => {
 			[ 'a bare call', "applyFilters( 'typost_x', 1 );" ],
 			[ '.call()', "window.typostHooks.doAction.call( null, 'typost_x' );" ],
 			[ 'a method passed on', 'run( window.typostHooks.applyFilters );' ],
+			[ 'a computed method', "const m = 'doAction'; window.typostHooks[ m ]( 'typost_x' );" ],
+			[ 'a computed method that is not called', 'const f = typostHooks[ m ];' ],
+			[
+				'a wrapper imported under another name',
+				"import { HookPoint as Slot } from './plant'; const a = <Slot hook=\"typost_x\" />;",
+			],
+			[
+				'another component imported under the wrapper name',
+				"import { Other as HookPoint } from './other';",
+			],
+			[
+				'a wrapper required under another name',
+				"const { HookPoint: Slot } = require( './plant' ); const a = <Slot hook=\"typost_x\" />;",
+			],
+			[
+				'a wrapper exported under another name',
+				'function HookPoint() { return null; } export { HookPoint as Slot };',
+			],
 			[ 'a wrapper with a run-time prop', 'const a = <HookPoint hook={ name } />;' ],
 			[ 'a wrapper with spread props', 'const a = <HookPoint { ...props } />;' ],
 			[ 'a wrapper called as a function', "const a = HookPoint( { hook: 'typost_x' } );" ],
@@ -1642,6 +1725,40 @@ describe( 'control cases', () => {
 			expect( result.wrongKind ).toEqual( [
 				'typost_value is fired as a filter (x.php:1) but HOOKS.md lists it under the actions (line 1)',
 			] );
+		} );
+
+		test( 'reports a PHP entry of the other kind beside a correct one', () => {
+			const result = compareHooks(
+				[ code( 'typost_value', 'filter' ) ],
+				[ doc( 'typost_value', 'filter' ), doc( 'typost_value', 'action' ) ]
+			);
+			expect( result.missingFromDoc ).toEqual( [] );
+			expect( result.missingFromCode ).toEqual( [] );
+			expect( result.wrongKind ).toEqual( [
+				'typost_value is in HOOKS.md under the actions (line 1) but the code fires it only as a filter (x.php:1)',
+			] );
+		} );
+
+		test( 'reports a pattern entry of the other kind beside a correct one', () => {
+			const result = compareHooks(
+				[ code( 'typost_tab_after_fonts' ), code( 'typost_tab_after_help' ) ],
+				[ doc( 'typost_tab_after_{tab_id}', 'action' ), doc( 'typost_tab_after_{tab_id}', 'filter' ) ]
+			);
+			expect( result.wrongKind ).toEqual( [
+				'typost_tab_after_{tab_id} is in HOOKS.md under the filters (line 1) but the code fires it only as an action (x.php:1, x.php:1)',
+			] );
+		} );
+
+		test( 'accepts a hook fired as both kinds with an entry for each, and JavaScript entries of one name', () => {
+			expect(
+				compareHooks(
+					[ code( 'typost_value', 'filter' ), code( 'typost_value', 'action' ) ],
+					[ doc( 'typost_value', 'filter' ), doc( 'typost_value', 'action' ) ]
+				)
+			).toEqual( { missingFromDoc: [], missingFromCode: [], wrongKind: [] } );
+			expect(
+				compareHooks( [ code( 'typost_weight', 'filter' ) ], [ doc( 'typost_weight' ), doc( 'typost_weight' ) ] )
+			).toEqual( { missingFromDoc: [], missingFromCode: [], wrongKind: [] } );
 		} );
 	} );
 
