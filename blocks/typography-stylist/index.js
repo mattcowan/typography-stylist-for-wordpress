@@ -6,10 +6,18 @@
  */
 
 import { registerBlockType, createBlock } from '@wordpress/blocks';
+import { addFilter } from '@wordpress/hooks';
 import Edit from './edit';
 import save from './save';
 import deprecated from './deprecated';
 import { analyzeInlineFeatures, stripInlineFeatures, detectBlockComputedWeight, getNewFontSizeUnit } from './utils';
+import { isEmptyBlockContent, buildEmptySourceBlockAttributes } from '../../assets/js/theme-look.js';
+import { resetEmptySourceBlock } from './strip-styles/empty-source';
+
+// A block made from an empty Paragraph or Heading gets the theme's look
+// (#412). WordPress's own filters copy the source's extra CSS class and
+// colors at the default priority 10; this one runs after them.
+addFilter('blocks.switchToBlockType.transformedBlock', 'typost/block/empty-source', resetEmptySourceBlock, 20);
 
 /**
  * The weight the block being transformed is currently rendering at.
@@ -73,12 +81,19 @@ registerBlockType('typost/block', {
 	// new-content size unit (#248): block.json's 'rem' default cannot follow
 	// the setting without breaking how saved blocks parse. Read at transform
 	// time, when the editor data is loaded.
+	// A source with no text (only spaces, line breaks or empty elements)
+	// gives a block with its tag, the size unit and the theme's look, and
+	// nothing else (#412): no weight read from the source.
 	transforms: {
 		from: [
 			{
 				type: 'block',
 				blocks: ['core/paragraph'],
 				transform: (attributes) => {
+					if (isEmptyBlockContent(attributes.content)) {
+						return createBlock('typost/block', buildEmptySourceBlockAttributes('p', getNewFontSizeUnit()));
+					}
+
 					// Analyze inline features to determine conversion strategy
 					const analysis = analyzeInlineFeatures(attributes.content);
 
@@ -110,6 +125,10 @@ registerBlockType('typost/block', {
 				type: 'block',
 				blocks: ['core/heading'],
 				transform: (attributes) => {
+					if (isEmptyBlockContent(attributes.content)) {
+						return createBlock('typost/block', buildEmptySourceBlockAttributes('h' + attributes.level, getNewFontSizeUnit()));
+					}
+
 					// Analyze inline features to determine conversion strategy
 					const analysis = analyzeInlineFeatures(attributes.content);
 

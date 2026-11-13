@@ -66,7 +66,9 @@ export default function renderResetPanel(props) {
 						🚨 {__('Reset Entire Block?', 'typography-stylist')}
 					</p>
 					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
-						{__('This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac).', 'typography-stylist')}
+						{/* The same text as the toolbar's "Remove all styling"
+						    dialog (strip-styles-button.js): the same action (#411) */}
+						{__('This removes all styling from the block: text formats such as bold and italic, the inline features, the block-level settings (font, size, features, spacing, and more), the paragraph style, colors, text alignment and the extra CSS class. The text stays, with its links, line breaks, footnotes, images, subscript and superscript. To undo, press Ctrl+Z (Cmd+Z on Mac).', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
@@ -113,7 +115,7 @@ export default function renderResetPanel(props) {
 					{__('Reset Entire Block', 'typography-stylist')}
 				</Button>
 				<p style={{ fontSize: '11px', color: '#666', margin: '8px 0 0 0' }}>
-					{__('Clears the inline features and the block-level settings (font, features, spacing, and more).', 'typography-stylist')}
+					{__('Removes all styling, so the block looks as the theme styles a heading or paragraph. The text and its links stay. Same as “Remove all styling” in the block toolbar.', 'typography-stylist')}
 				</p>
 			</>
 		);

@@ -66,6 +66,7 @@ import createFontActions from './qft/font-actions';
 import createFeatureActions from './qft/feature-actions';
 import createParagraphStyleActions from './qft/paragraph-style-actions';
 import createResetActions from './qft/reset-actions';
+import StripStylesButton from './strip-styles/strip-styles-button';
 
 // Keep keyboard focus inside the plugin's modals (inline modal, QFT modal,
 // Glyphs panel, Paragraph Styles browser) when RichText re-applies a
@@ -618,6 +619,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					value={textAlign}
 					onChange={(newAlign) => setAttributes({ textAlign: newAlign })}
 				/>
+				{/* "Remove all styling" (#411): the same action as Reset
+				    Entire Block in the sidebar. A real component, so it may
+				    keep its confirmation's state. */}
+				<StripStylesButton onStrip={resetEntireBlock} />
 			</BlockControls>
 
 			<InspectorControls>
@@ -632,7 +637,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				{fontOptions.length > 0 && (
 					renderFontFamilyPanel({
-						fontFamily, fontId, fontIdMap, fontOptions, fontWeight, getClosestWeight, setAttributes
+						clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, setAttributes
 					})
 				)}
 

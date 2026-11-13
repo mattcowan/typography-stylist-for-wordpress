@@ -1,13 +1,15 @@
 /**
  * Typography Stylist Block - clearing inline formatting and resetting the block.
  *
- * Moved out of edit.js unchanged (#356). The functions were closures inside
+ * Moved out of edit.js unchanged (#356); resetEntireBlock() calls the shared
+ * "Remove all styling" action since #411. The functions were closures inside
  * Edit and are still rebuilt on every render: Edit calls this factory once
  * per render with the current values, so every function sees the same
  * values it saw before.
  */
 
 import { getRangeForOffsets } from '../qft-preview';
+import { stripBlockStyles } from '../strip-styles/strip-styles';
 
 /**
  * Clear the inline formatting at the selection, clear all inline features,
@@ -110,51 +112,14 @@ export default function createResetActions(ctx) {
 		setShowInlineResetConfirm(false);
 	};
 
-	// Reset entire block (both inline and block-level features/styles)
+	// Reset entire block: the same action as "Remove all styling" in the
+	// block toolbar (#411). The content loses every Typography Stylist span
+	// and inline format (links and line breaks stay), and the block goes back
+	// to the theme's look: the plugin settings, the paragraph style, colors,
+	// spacing, line height, Line indent, alignment and extra CSS class. One
+	// setAttributes call, so one undo step restores the block.
 	const resetEntireBlock = () => {
-		// Clear inline features and reset block-level attributes in a single setAttributes call
-		let newContent = content;
-
-		if (content) {
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
-			const container = doc.body.firstChild;
-			const styledSpans = container.querySelectorAll('span.typost-styled');
-			styledSpans.forEach(span => {
-				if (span.parentNode) {
-					while (span.firstChild) {
-						span.parentNode.insertBefore(span.firstChild, span);
-					}
-					span.parentNode.removeChild(span);
-				}
-			});
-			newContent = container.innerHTML;
-		}
-
-		// Single setAttributes call for both content and block-level attributes.
-		// A full reset also drops the paragraph style (otherwise the class kept
-		// rendering it) and the block-level font, style and variation axes.
-		setAttributes({
-			content: newContent,
-			styleClass: '',
-			features: [],
-			fontId: 0,
-			fontFamily: '',
-			fontWeight: '',
-			fontStyle: '',
-			fontVariationSettings: '',
-			letterSpacing: 0,
-			lineHeight: 0,
-			fontSize: 'responsive',
-			fontSizeMin: 16,
-			fontSizePreferred: 32,
-			fontSizeMax: 64,
-			fitMaxSize: 0,
-			initialHang: 0,
-			fitLineHangs: [],
-			textCase: '',
-			fakeSmallCaps: true
-		});
+		stripBlockStyles({ content, setAttributes });
 
 		setShowInlineResetConfirm(false);
 		setShowFullResetConfirm(false);
