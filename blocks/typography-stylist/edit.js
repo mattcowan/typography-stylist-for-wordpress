@@ -19,7 +19,6 @@ import {
 	
 	
 	ToolbarGroup,
-	ToolbarDropdownMenu,
 	ToolbarButton,
 	Popover
 } from '@wordpress/components';
@@ -44,6 +43,7 @@ import renderLetterSpacingPanel from './components/inspector/letter-spacing-pane
 import renderFirstLetterHangPanel from './components/inspector/first-letter-hang-panel';
 import renderFeaturesPanel from './components/inspector/features-panel';
 import renderAccessibilityPanel from './components/inspector/accessibility-panel';
+import renderHeadingLevelToolbar from './components/heading-level-toolbar';
 import useDebouncedAppliers from './hooks/use-debounced-appliers';
 import useApplyBlockProperties from './hooks/use-apply-block-properties';
 import { withBlockTextIndentProperty } from './utils';
@@ -613,54 +613,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 						})
 					)}
 				</ToolbarGroup>
-				<ToolbarGroup>
-					<ToolbarDropdownMenu
-						icon="heading"
-						label={__('Change heading level', 'typography-stylist')}
-						controls={[
-							{
-								title: __('Heading 1', 'typography-stylist'),
-								isActive: tagName === 'h1',
-								onClick: () => setAttributes({ tagName: 'h1' })
-							},
-							{
-								title: __('Heading 2', 'typography-stylist'),
-								isActive: tagName === 'h2',
-								onClick: () => setAttributes({ tagName: 'h2' })
-							},
-							{
-								title: __('Heading 3', 'typography-stylist'),
-								isActive: tagName === 'h3',
-								onClick: () => setAttributes({ tagName: 'h3' })
-							},
-							{
-								title: __('Heading 4', 'typography-stylist'),
-								isActive: tagName === 'h4',
-								onClick: () => setAttributes({ tagName: 'h4' })
-							},
-							{
-								title: __('Heading 5', 'typography-stylist'),
-								isActive: tagName === 'h5',
-								onClick: () => setAttributes({ tagName: 'h5' })
-							},
-							{
-								title: __('Heading 6', 'typography-stylist'),
-								isActive: tagName === 'h6',
-								onClick: () => setAttributes({ tagName: 'h6' })
-							},
-							{
-								title: __('Paragraph', 'typography-stylist'),
-								isActive: tagName === 'p',
-								onClick: () => setAttributes({ tagName: 'p' })
-							},
-							{
-								title: __('Div', 'typography-stylist'),
-								isActive: tagName === 'div',
-								onClick: () => setAttributes({ tagName: 'div' })
-							}
-						]}
-					/>
-				</ToolbarGroup>
+				{renderHeadingLevelToolbar({ tagName, setAttributes })}
 				<AlignmentToolbar
 					value={textAlign}
 					onChange={(newAlign) => setAttributes({ textAlign: newAlign })}
