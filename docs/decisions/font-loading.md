@@ -23,8 +23,7 @@ The plugin uses different WordPress hooks for font detection depending on page t
 - No changes to singular page code path (already works correctly)
 
 **Why This Architecture:**
-- WordPress executes the main query AFTER `wp_enqueue_scripts` fires
-- On archive pages, `$wp_query->posts` is empty during `wp_enqueue_scripts`
+- Not true, kept as history: the 1.1.9 change (`changelog.txt`) gave the reason as "`wp_enqueue_scripts` (before query)", and this list said that `$wp_query->posts` is empty during `wp_enqueue_scripts` on archive pages. In core's order `wp()` runs the main query first (`wp-blog-header.php`, `WP::main()` → `query_posts()`), then `template-loader.php` fires `template_redirect`, and `wp_enqueue_scripts` fires later from `wp_head` (`default-filters.php`, checked on WordPress 7.1.3). The code does not record the real reason for the move.
 - `template_redirect` fires AFTER query execution, so `$wp_query->posts` is populated
 - Detection results cached in instance variables (`$detected_fonts`, `$has_styled_content`, `$fonts_detected`)
 - Singular pages use `get_queried_object()` which doesn't depend on `$wp_query->posts` array

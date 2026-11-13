@@ -11,7 +11,7 @@ Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361. Two items of the old "
 The plugin provides a lightweight action/filter system (`window.typostHooks`) for JavaScript and standard WordPress hooks for PHP. See [HOOKS.md](../../HOOKS.md) for the complete developer reference. `__tests__/hooks-doc.test.js` (#372) fails when HOOKS.md and the code list different hooks; how to write an entry (a backticked name at the start of a heading, a first table cell or a bold paragraph, under the right section; `{placeholder}` for a name built at run time; `JS_HOOK_WRAPPERS` for a component that fires a hook named by a prop) is in [TESTING.md](../../TESTING.md), "When You Add or Change a Hook".
 
 **Key concepts:**
-- Extensions are generally separate WordPress plugins (the bundled Glyphs Panel module is the one exception — see [bundled-modules.md](bundled-modules.md))
+- Extensions are generally separate WordPress plugins (the bundled Glyphs Panel, Variable Fonts and Paragraph Styles modules are the exceptions — see [bundled-modules.md](bundled-modules.md))
 - JS hook containers use `data-hook` attribute for context-aware CSS: `[data-hook="typost_qft_modal_top"]`
 - `typost-apply-block-properties` CustomEvent is the generic bridge for extensions to set editor properties
 - Block attribute `styleClass` + inline attribute `data-style-id` provide generic infrastructure for class-based styling by extensions
@@ -25,5 +25,5 @@ The plugin provides a lightweight action/filter system (`window.typostHooks`) fo
 
 **Filter hooks for extensibility:**
 - `typost_available_features` - Filter available features
-- `typost_presets` - Filter presets list (renamed from `TYPOST_default_presets`; update any custom integrations using the old hook name)
+- `typost_presets` - Filter presets list (renamed from `typost_default_presets`; update any custom integrations using the old hook name)
 - `typost_force_enqueue_font_ids` - Force fonts (by numeric ID) to load on every page — for fonts referenced only from theme/extension CSS (v2.1+; see HOOKS.md)

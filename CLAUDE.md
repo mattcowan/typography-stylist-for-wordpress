@@ -35,7 +35,7 @@ Each rule protects saved content, block validity or a release. The link names th
 - **No logging:** no `console.*` in JavaScript and no `error_log()` in PHP, in production code or tests. See [code-patterns.md](docs/decisions/code-patterns.md).
 - **Translations:** wrap user-facing strings in `__()` and its variants with the file's text domain; after adding strings, update the `.pot` and the fr_FR and es_ES `.po` of that catalog (each bundled module has its own). See [code-patterns.md](docs/decisions/code-patterns.md).
 - **Floor:** PHP 7.4+ and WordPress 5.8+: no PHP 8 syntax, and no WordPress API newer than 5.8 without a feature check.
-- **Version numbers:** see Important Notes at the end: do not update them unless asked.
+- **Version numbers:** do not update the version number unless asked.
 
 ## Before you change it, read the note
 
@@ -75,7 +75,7 @@ Each rule protects saved content, block validity or a release. The link names th
 - Manages presets stored in `wp_options` table (`typost_presets` — note: all option keys are lowercase `typost_*`; PHP constants are the uppercase ones)
 - Constants: `TYPOST_VERSION`, `TYPOST_PLUGIN_DIR`, `TYPOST_PLUGIN_URL`, `TYPOST_PLUGIN_BASENAME`
 - Font subsystem modules in `includes/`: `Typost_Font_Sources` (option-backed font storage, shared font ID sequence, replacements) and `Typost_Font_Library_Bridge` (WP Font Library read/registration/adoption, WP 6.5+ feature-gated). `Typost` keeps delegating wrappers, so the public extension API (`get_custom_fonts()` etc.) is unchanged.
-- Services in `includes/` (#360): `Typost_Rest_Controller` (REST routes, their handlers and the write rate limit), `Typost_Font_Kit_Upload` (font kit ZIP processing), `Typost_Assets` (editor, canvas and admin enqueueing), and `includes/available-features.php` (the feature list). Each takes the `Typost` instance, calls only its public methods, and registers no hook itself (the three classes contain no `add_action` or `add_filter`); `Typost` keeps each public method as a delegating wrapper.
+- Services in `includes/` (#360): `Typost_Rest_Controller` (REST routes, their handlers and the write rate limit), `Typost_Font_Kit_Upload` (font kit ZIP processing), `Typost_Assets` (editor, canvas and admin enqueueing), and `includes/available-features.php` (the feature list). Each takes the `Typost` instance, calls only its public methods, and registers no hook itself (the three classes contain no `add_action` or `add_filter`). Every public method `Typost` had before #360 is still public on `Typost`; the ones whose body moved are one-line wrappers that call the service. Eight former private helpers became public, marked `@internal`.
 
 **Block Editor Integration:**
 
@@ -96,7 +96,7 @@ The plugin provides two distinct interfaces for applying OpenType features:
    - **When:** Use for complex typography with accessibility features or when styling partial words
    - **Components:**
      - **Inspector Controls (Sidebar):** Block-level settings for font family, weight, size, letter spacing, and OpenType features
-     - **Quick Feature Toggles (Modal):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="typost-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to Typographic Stylist block content)
+     - **Quick Feature Toggles (Modal):** Appears when text is selected within the block, allows inline styling of selected text with `<span class="typost-styled">` elements. Provides controls for letter spacing, font size, font family, font weight, and OpenType features (similar to inline editor but scoped to Typography Stylist block content)
    - **Features:**
      - Dual content approach: clean semantic heading for screen readers, styled version for visual display
      - Built with JSX/React using `@wordpress/scripts` build toolchain
@@ -177,7 +177,7 @@ PHPUnit: `npm run test:php` (`tests/Unit/`). Playwright: `npm run test:e2e` (`te
 - **Data attribute naming (v1.1.6+):** Standardized to `data-font-id` (inline) matching `fontId` (block-level) for consistency
 - Uploaded font files stored in `wp-content/uploads/typography-stylist/fonts/` with .htaccess protection
 - Frontend has zero JavaScript - purely CSS-based rendering
-- Block editor UI uses WordPress components (Popover, Button, ToggleControl, PanelBody, RangeControl)
+- Block editor UI uses WordPress components (Modal, Button, ToggleControl, SelectControl, PanelBody, RangeControl, Notice)
 - **Plugin supports two usage methods:**
   1. **Inline Format** - For complete words/phrases in any heading block (H1-H6)
   2. **Typography Stylist Block** - For complex typography with accessibility features

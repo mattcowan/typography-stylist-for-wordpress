@@ -12,7 +12,7 @@ Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361. The guide keeps the lo
 
 **Nonce verification:** REST API uses `wp_create_nonce('wp_rest')` and `check_permissions()` method checks `current_user_can('edit_posts')`
 
-**Localization:** All strings use `__()` with text domain `typography-stylist`
+**Localization:** All strings use `__()` with text domain `typography-stylist`, except in the bundled modules, which use their own text domains: `typost-glyphs-panel`, `typost-variable-fonts` and `typost-paragraph-styles`
 
 **Debug and Console Logging:**
 

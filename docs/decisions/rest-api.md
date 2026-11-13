@@ -1,10 +1,10 @@
 # REST API
 
-- **Topic:** every route in the `typost/v1` namespace with its capability, and what all routes share: the write rate limit, nonces and caching.
+- **Topic:** the main routes in the `typost/v1` namespace with their capabilities (not every route: see below), and what all routes share: the write rate limit, nonces and caching.
 - **Issues:** #205 (export and import routes), #239 (rate limit review)
 - **Code:** `includes/class-typost-rest-controller.php`, `typography-stylist.php`, `paragraph-styles/paragraph-styles.php`, `variable-fonts/variable-fonts.php`, `includes/class-typost-export.php`, `tests/Unit/RestRateLimitTest.php`
 
-Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361.
+Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361. Routes this list does not hold: `admin/refresh`, `admin/options`, `admin/accessibility` and `admin/clear-cache` (see [admin-settings-page.md](admin-settings-page.md)); `features`, `font-feature-visibility[/{font_id}]`, `font-order`, `font-replacements[/{id}]`, `font-replacements/orphans`, `fonts/{id}/load-on-all-pages`, `adobe-fonts/{id}/load-on-all-pages`, `fonts/detect-weights/bulk`, `fonts/wp-library/dismiss-notice` and `PATCH manual-fonts/{id}`. `Typost_Rest_Controller::register_rest_routes()` registers every core route; the export and import routes are in `includes/class-typost-export.php`, the module routes in each module's main file.
 
 ## REST API Endpoints
 
