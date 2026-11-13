@@ -232,6 +232,9 @@ describe('isEmptyBlockContent (#412)', () => {
 		['a formula', '<math><mi>x</mi></math>'],
 		['a formula with no text', '<math><mspace width="1em"></mspace></math>'],
 		['an svg with no text', '<svg viewBox="0 0 10 10"><rect width="10" height="10"></rect></svg>'],
+		// Core writes the footnote's number as the anchor's text, so a
+		// block that holds only a footnote is not empty
+		['a footnote anchor', '<sup data-fn="0a1b2c" class="fn"><a href="#0a1b2c" id="0a1b2c-link">1</a></sup>'],
 		['a RichTextData-like object with text', { toString: () => 'Hi' }],
 		['a tag with ">" in an attribute and text', '<span title="a>b">c</span>'],
 	])('%s is not empty', (_, html) => {

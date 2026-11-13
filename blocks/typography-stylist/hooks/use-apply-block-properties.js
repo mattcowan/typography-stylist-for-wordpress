@@ -105,7 +105,10 @@ export default function useApplyBlockProperties({
 							// No weight of its own (#411 review): placed at the
 							// weight the text renders at, '' kept when the font
 							// has it. A fontWeight in the event (a paragraph
-							// style always sends one) still wins below.
+							// style always sends one) still wins below. When the
+							// block is not rendered, or the computed weight
+							// cannot be read, the lookup gives '' and the weight
+							// stays '': the safe result, as nothing is guessed.
 							const placed = resolveFontPickWeight('', available, detectBlockComputedWeight(curClientId));
 							if (placed !== '') {
 								newAttrs.fontWeight = placed;
