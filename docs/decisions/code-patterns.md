@@ -51,6 +51,7 @@ Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361. The guide keeps the lo
   1. **Base template:** [languages/typography-stylist.pot](../../languages/typography-stylist.pot)
   2. **French translation:** [languages/typography-stylist-fr_FR.po](../../languages/typography-stylist-fr_FR.po)
   3. **Spanish translation:** [languages/typography-stylist-es_ES.po](../../languages/typography-stylist-es_ES.po)
+- A string in a bundled module goes into that module's own catalog, not the three files above: the `.pot`, fr_FR `.po` and es_ES `.po` in `glyphs-panel/languages/` (`typost-glyphs-panel`), `variable-fonts/languages/` (`typost-variable-fonts`) or `paragraph-styles/languages/` (`typost-paragraph-styles`)
 - Format for .pot and .po files:
   ```
   #: path/to/file.php:123
