@@ -1,6 +1,6 @@
 # CLAUDE.md — Glyphs Panel module
 
-Bundled module (formerly a standalone extension plugin, merged into core for v2.0). An Illustrator-style full-font glyph browser with insertion into the editor. Core's CLAUDE.md describes how bundling works (class_exists/defined guards, no plugin header); this file covers module internals.
+Bundled module (formerly a standalone extension plugin, merged into core for v2.0). A full-font glyph browser with insertion into the editor. Core's [docs/decisions/bundled-modules.md](../docs/decisions/bundled-modules.md) describes how bundling works (class_exists/defined guards, no plugin header); this file covers module internals.
 
 ## Structure
 
