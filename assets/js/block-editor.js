@@ -2583,15 +2583,17 @@ registerFormatType(FORMAT_TYPE, {
 });
 
 /**
- * New Typography Stylist blocks store the site's size unit (#248).
+ * New Typography Stylist blocks from the inserter store the site's size
+ * unit (#248) and start with the tag the author chose last (#410).
  *
- * Registered here rather than in the block script because typostData is
+ * Installed here rather than in the block script because typostData is
  * localized on this handle; the block script has no guaranteed order
  * relative to it. Variations are stored by block name, so registering
  * before the block type exists is fine. Blocks created in code (the
- * transforms, Convert to block) pass the unit themselves.
+ * transforms, Convert to block) pass the unit and the tag themselves. The
+ * block's heading level menu updates the variation when the author picks a
+ * tag (rememberNewBlockTag), and a pick in another tab updates it here
+ * through the storage event. See assets/js/new-block-tag.js.
  */
-const newBlockUnitVariation = buildNewBlockUnitVariation(getNewFontSizeUnit());
-if (newBlockUnitVariation && wp.blocks && wp.blocks.registerBlockVariation) {
-    wp.blocks.registerBlockVariation('typost/block', newBlockUnitVariation);
-}
+const { installNewBlockVariation } = require('./new-block-tag.js');
+installNewBlockVariation();
