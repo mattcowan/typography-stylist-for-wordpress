@@ -104,7 +104,7 @@ from a PHP template. Their field values are serialized into the block delimiter 
 follows from them being blocks).
 
 That has a happy consequence for font loading. Detection in
-`render_content_for_detection()` ([typography-stylist.php:435](../typography-stylist.php#L435))
+`render_content_for_detection()` ([typography-stylist.php](../typography-stylist.php))
 runs `do_blocks($content)`, which invokes ACF's render callback, so **anything an ACF
 block template prints — including `var(--font-N)` and `typost-styled` — is visible to
 `has_styled_content()` and `get_used_fonts_in_content()`.** ACF-block-rendered

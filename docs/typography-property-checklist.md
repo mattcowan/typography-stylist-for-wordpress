@@ -6,24 +6,24 @@ The rule of thumb: a property is not done until it round-trips through **every**
 
 ## 1. Core editor state (both editors)
 
-- [ ] **Inline editor** ([assets/js/block-editor.js](../assets/js/block-editor.js)): component state + a `getActiveX()` reader that resolves the value at the selection (span attribute first, then computed/rendered value if consumers need the *effective* value — see `getRenderedFontStyle`).
+- [ ] **Inline editor** ([assets/js/block-editor.js](../assets/js/block-editor.js)): component state + a `getActiveX()` reader that resolves the value at the selection (span attribute first, then computed/rendered value if consumers need the *effective* value — see `getRenderedFontStyle`). The modal's control goes in [assets/js/inline-editor/modal-panels.js](../assets/js/inline-editor/modal-panels.js).
 - [ ] **Inline editor state provider** (`typost_current_editor_state` filter for `'inline'`, in the constructor): report the property. Extensions — including the bundled Paragraph Styles and Glyphs modules — see only what this filter reports.
-- [ ] **Block editor** ([blocks/typography-stylist/edit.js](../blocks/typography-stylist/edit.js)): block attribute in [block.json](../blocks/typography-stylist/block.json), Inspector control, and the QFT selection-level detection (`parseInlineStylesAtCursor` in [utils.js](../blocks/typography-stylist/utils.js)).
+- [ ] **Block editor** ([blocks/typography-stylist/edit.js](../blocks/typography-stylist/edit.js)): block attribute in [block.json](../blocks/typography-stylist/block.json), Inspector control (`components/inspector/*-panel.js`), and the QFT selection-level detection (`parseInlineStylesAtCursor` in [utils.js](../blocks/typography-stylist/utils.js), read in `hooks/use-qft-selection-styles.js`).
 - [ ] **Shared QFT state** (`buildQftEditorState` in [blocks/typography-stylist/utils.js](../blocks/typography-stylist/utils.js)): add the key, deciding inline-span-at-selection vs block-attribute precedence explicitly.
 - [ ] **Rendered vs explicit channels**: if the state reports a *rendered/effective* value (theme CSS, semantic markup like `<em>`/`<strong>`), decide whether persisting consumers need a separate explicit-only channel. `fontStyle` (rendered, for previews/Glyphs) is paired with `explicitFontStyle` (set values only) precisely because capturing `<em>`-derived italic into a paragraph style produced CSS that could neither reproduce nor reset it, plus a permanently-lying "(modified)" badge.
 - [ ] **Pending-changes tracking** (inline editor `_pendingChanges` / `_recordChange`): register the property so mixed selections only patch what the author actually changed.
 
 ## 2. Apply bridge (how extensions write)
 
-- [ ] **Inline handler** (`typost-apply-block-properties` listener in block-editor.js): map `props.yourProperty` into state with the `!== undefined` partial-update pattern, and record it in the pending-changes branch.
-- [ ] **Block handler** (same event, edit.js): map `props.yourProperty` to `newAttrs`.
+- [ ] **Inline handler** (`typost-apply-block-properties` listener: `createApplyBlockPropertiesHandler()`, `resolveApplyEventChanges()` and `buildApplyEventState()` in `assets/js/inline-editor/extension-bridge.js`): map `props.yourProperty` into state with the `!== undefined` partial-update pattern, and record it in the pending-changes branch.
+- [ ] **Block handler** (same event, `blocks/typography-stylist/hooks/use-apply-block-properties.js`): map `props.yourProperty` to `newAttrs`.
 
 ## 3. Serialization
 
-- [ ] **Inline span** (`applyFormatting` in block-editor.js): `data-*` attribute + inline style declaration — and the declaration must be **skipped under `hasActiveStyle`** (spans with `data-style-id` render from the style's CSS class; the data attribute is still written for detection).
+- [ ] **Inline span** (`buildFormatAttributes()`, `buildPatchFromPending()` and `applyPatchToRuns()` in `assets/js/inline-editor/apply-features.js`): `data-*` attribute + inline style declaration — and the declaration must be **skipped under `hasActiveStyle`** (spans with `data-style-id` render from the style's CSS class; the data attribute is still written for detection).
 - [ ] **Block save** ([blocks/typography-stylist/save.js](../blocks/typography-stylist/save.js)): emit the style — noting that *all* typography inline styles are skipped when `styleClass` is set, so whatever the property does must also be expressible by the paragraph-style CSS class (next section) or it vanishes on styled blocks.
 - [ ] **Deprecation check**: if the block's *save output changes for existing attribute values*, add a deprecation entry ([deprecated.js](../blocks/typography-stylist/deprecated.js)). A new attribute that only adds output for new content usually doesn't need one — verify by loading an existing post in the editor and checking for block validation errors.
-- [ ] **Editor preview parity** (edit.js preview node + inline editor preview): the editor always renders inline styles for preview; make the preview honour the property.
+- [ ] **Editor preview parity** (the block's preview style, `buildEditorStyle()` in `blocks/typography-stylist/editor-style.js`, + inline editor preview; a property that changes widths also goes on the fit measurement probe in `hooks/use-fit-measurement.js`): the editor always renders inline styles for preview; make the preview honour the property.
 
 ## 4. Paragraph Styles module — the part `fontStyle` missed
 
@@ -34,7 +34,7 @@ All in [paragraph-styles/](../paragraph-styles/):
 - [ ] **Normalize**: `normalizeApplyProperties()` (same file) — decide explicitly whether the property is *style-owned* (gets a default, so applying a style without it resets the editor — the usual case) or *deliberately not normalized* (like `fontSizeMin/Preferred/Max`); record the decision in the docblock either way.
 - [ ] **Client CSS**: `buildStyleCssBlock()` (same file) — the JS twin of the PHP generator, used to inject CSS for styles saved in-session. **Must stay byte-identical to the PHP output.**
 - [ ] **Server sanitize**: `sanitize_properties()` in [paragraph-styles.php](../paragraph-styles/paragraph-styles.php) — it whitelists keys, so an un-listed property is stripped at the REST layer even if the client sends it.
-- [ ] **Server CSS**: `generate_style_css()` (same file) — emit the declaration, mirroring the JS twin.
+- [ ] **Server CSS**: `generate_style_css()` (same file) — emit the declaration, mirroring the JS twin. Add a case to `paragraph-styles/__tests__/fixtures/style-css.json` (or to the property's own shared fixture); `style-css.test.js` (JS) and `tests/Unit/ParagraphStylesStyleCssTest.php` (PHP) both read it, so the two generators cannot drift.
 - [ ] **Based On** (#200): a property inherits from a parent style with no extra code, key by key. Decide whether it belongs to a group that must inherit as a whole (`BASED_ON_GROUPS` in both `paragraph-styles.php` and `ps-utils.js`, like the size and the case), give it an empty value a child can store to unset it (`EMPTY_PROPERTY_VALUES` in both ps-utils.js and `paragraph-styles.php`, and let `sanitize_properties()` keep that value when `$keep_empty`), and add a compare case to `property_values_equal()` / `propertyValuesEqual()` when a plain string compare is wrong for it (an array, a float). Add a case to `paragraph-styles/__tests__/fixtures/based-on.json`.
 - [ ] **Admin tab card** (`render_card_details()` in [paragraph-styles.php](../paragraph-styles/paragraph-styles.php)): show the property in the style card details, with the keys it shows (for its Inherited/Override label, #200) and a "None" row for an empty override (new strings go in the *module's* catalog — see i18n below).
 - [ ] **Style browser preview**: usually free — rows carry the style's real CSS class — but check `buildStylePreviewStyle()` doesn't override the property away (it deliberately overrides size/line-height).
@@ -74,7 +74,7 @@ A paragraph style property and a plugin option travel to other sites through Set
 - [ ] Jest: unit tests for every pure function touched (utils.js, ps-utils.js) — including the "property is absent" defaults, since that's exactly where `fontStyle` broke.
 - [ ] Update tests that pinned the old behavior *deliberately*, stating the intent moved.
 - [ ] `npm test` before and after `npm run build` (modules have no build step; core blocks do).
-- [ ] CLAUDE.md (root + affected module), README.md/readme.txt/DOCUMENTATION.md if author-facing.
+- [ ] CLAUDE.md (root + affected module) and the matching design note in `docs/decisions/`, README.md/readme.txt/DOCUMENTATION.md if author-facing.
 
 ## Known deliberate exclusions (don't "fix" these)
 

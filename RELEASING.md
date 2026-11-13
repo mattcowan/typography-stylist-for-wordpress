@@ -117,22 +117,37 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
 
    ```bash
    wp i18n make-mo languages languages
-   wp i18n make-json languages languages --no-purge      --use-map='{"blocks/typography-stylist/edit.js":"blocks/typography-stylist/build/index.js"}'
+   wp i18n make-json languages languages --no-purge      --use-map='{"blocks/typography-stylist/edit.js":"blocks/typography-stylist/build/index.js","blocks/typography-stylist/build/index.js":"blocks/typography-stylist/build/index.js","assets/js/block-editor.js":"assets/js/block-editor.js"}'
    ```
 
    Notes that are easy to get wrong here:
    - **`--no-purge` is required.** Without it, make-json strips the JS strings
      out of the `.po` files it just read.
-   - **Only `edit.js` needs mapping.** It is bundled into `build/index.js`.
-     `assets/js/block-editor.js` needs no entry: WordPress always derives the
-     translation filename from the *unminified* path, so one file serves both
-     `block-editor.js` and `block-editor.min.js`.
+   - **The map names three files.** `edit.js` is bundled into
+     `build/index.js`, so it maps there. `build/index.js` and
+     `assets/js/block-editor.js` each map to themselves: with `--use-map`,
+     `make-json` drops each reference to a file the map does not name, and
+     the catalogues name these two files for every script string. WordPress
+     always derives the translation filename from the *unminified* path, so
+     one file serves both `block-editor.js` and `block-editor.min.js`.
+   - **After a new `make-pot` the map above is not enough** (#357): since
+     2.4.0 the inline editor's strings are also in
+     `assets/js/inline-editor/`, and `make-pot` then names those files.
+     Each needs an entry that maps it to `assets/js/block-editor.js`. Read
+     `languages/README.md` before you run `make-json`.
    - **Check `X-Domain` is `typography-stylist`** in all three catalogues. It
      is what prefixes every generated `.json` filename, and a wrong value
      produces files WordPress will never look for. It has been wrong before.
-   - Run the same commands in `glyphs-panel/`, `paragraph-styles/` and
-     `variable-fonts/` if their strings changed — each module has its own
-     domain and its own `languages/` directory.
+   - **A module needs its own commands**, not the two above, if its strings
+     changed. `glyphs-panel/`, `paragraph-styles/` and `variable-fonts/`
+     each have their own domain and `languages/` directory. Run `make-mo`
+     and `make-json --no-purge` on that directory, with no `--use-map`: the
+     core map names no module file, so it would drop every module string.
+     A module catalogue names its scripts relative to the module folder
+     (`assets/js/admin.js`), but WordPress looks for the hash of the path
+     from the plugin root (`variable-fonts/assets/js/admin.js`), so rename
+     each new `.json` file to that hash. `languages/README.md`, "Make the
+     `.json` files", has the steps.
 
    Confirm the result rather than assuming it: the new string should appear in
    the `.mo` (`wp i18n make-mo` reports the file count) and in the matching
@@ -244,15 +259,15 @@ small stable release from `main`. If `main` holds unreleased work:
    `changelog.txt` and README.md: keep the hotfix section, and move
    `main`'s parked entries to the next patch number. Docs on `main` that
    label unreleased work with the number the hotfix took ("v2.3.5+" in
-   CLAUDE.md, module CLAUDE.md files, DOCUMENTATION.md) need the new number
-   too; `grep -rn "X.Y.Z"` finds them. The merge is also what makes the
-   hotfix tag an ancestor of `main`, so the next release's module check
-   diffs against it. Compiled `.mo` files conflict as binaries: rebuild
-   each from its merged `.po` (§4 step 2) instead of picking a side. The
-   merge commit on `release/X.Y.Z` runs CI's module check again, against
-   the tag before the hotfix, so it flags every module whose `assets/`
-   `main` changed: bump those module constants in the merge, since their
-   next release needs the bump anyway.
+   CLAUDE.md, docs/decisions/, module CLAUDE.md files, DOCUMENTATION.md)
+   need the new number too; `grep -rn "X.Y.Z"` finds them. The merge is
+   also what makes the hotfix tag an ancestor of `main`, so the next
+   release's module check diffs against it. Compiled `.mo` files conflict
+   as binaries: rebuild each from its merged `.po` (§4 step 2) instead of
+   picking a side. The merge commit on `release/X.Y.Z` runs CI's module
+   check again, against the tag before the hotfix, so it flags every
+   module whose `assets/` `main` changed: bump those module constants in
+   the merge, since their next release needs the bump anyway.
 
 Between the release and the merge back, do not run the readme/assets sync
 (§7) from `main`: it would put `main`'s readme on the listing. Run it from
@@ -412,6 +427,10 @@ the run. GitHub disables scheduled workflows in a public repository after
 60 days with no repository activity, without a warning: after a pause in
 development, re-enable it in the Actions tab.
 
+The CI workflow (`.github/workflows/ci.yml`) runs the same suite in
+`wp-env` on the stable WordPress, on each pull request to `main` and each
+push to `main` (#373). That job is a pull request check.
+
 Jest cannot see every break: of the editor packages the source imports,
 `@wordpress/block-editor` is mocked in the unit tests and `blocks`,
 `components`, `data` and `rich-text` are not installed at all (WordPress
@@ -427,10 +446,6 @@ the archives.
 
 ## Future work
 
-- **E2E on pull requests**: the Playwright suite runs in `wp-env` in the
-  weekly compatibility run (§ 9), not on push or pull request. Running it
-  there too, against the stable WordPress in `.wp-env.json`, is possible
-  but would add minutes and browser flakiness to every pull request.
 - **Real 2x banner**: `.wordpress-org/banner-1544x500.png` is currently a
   copy of the 772×250 file, not a true retina banner — regenerate from
   source art when convenient.
