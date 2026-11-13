@@ -49,17 +49,10 @@ Generate the files on a fresh wp-env site with only this plugin, after a build:
 npm run build
 npx @wordpress/env start
 WP_BASE_URL=http://localhost:8888 WP_USERNAME=admin WP_PASSWORD=password \
-  node tests/e2e/fixtures/saved-markup/generate.js --without-inline
+  node tests/e2e/fixtures/saved-markup/generate.js
 ```
 
-`--without-inline` writes every file except `inline-spans.html` and `inline-style-id.html`, which wp-env cannot generate (see "A known limit" below). Generate those two on a site with `SCRIPT_DEBUG` off:
-
-```bash
-WP_BASE_URL=<site> WP_USERNAME=<user> WP_PASSWORD=<password> \
-  node tests/e2e/fixtures/saved-markup/generate.js inline-spans.html inline-style-id.html
-```
-
-With no argument the script generates all files, and it also writes `registered-attributes.json`, as `--without-inline` does. The script writes nothing unless it generated every file that the command asked for. A run that fails leaves the fixtures as they were.
+With no argument the script generates all files, and it also writes `registered-attributes.json`. The script writes nothing unless it generated every file that the command asked for. A run that fails leaves the fixtures as they were.
 
 Give file names to write only those files. The script reads every file from the real editor; nothing is typed by hand:
 
@@ -68,7 +61,5 @@ Give file names to write only those files. The script reads every file from the 
 - Paragraph styles, Detach and inline spans: the sidebar Paragraph Style select, Detach Style, and the inline Typography Stylist Features dialog. A style is applied to selected text with the event that the style browser sends, built by the module's `buildApplyEventDetail()`.
 
 The script makes drafts and paragraph styles named "ZZ E2E fixture …" and deletes each one by its ID. It stops when the site writes new font sizes in px.
-
-A known limit: on a site with `SCRIPT_DEBUG` on (wp-env turns it on), the inline dialog ignores `typost-apply-block-properties` events, so `inline-spans.html` and `inline-style-id.html` cannot be generated there. This is a bug in the inline editor, found while writing these fixtures. Until it is fixed, generate those two files on a site with `SCRIPT_DEBUG` off, as was done for the files here.
 
 After you regenerate, run the spec, and review the diff of each file: a changed fixture is a changed save format.
