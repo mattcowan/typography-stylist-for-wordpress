@@ -138,9 +138,16 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
    - **Check `X-Domain` is `typography-stylist`** in all three catalogues. It
      is what prefixes every generated `.json` filename, and a wrong value
      produces files WordPress will never look for. It has been wrong before.
-   - Run the same commands in `glyphs-panel/`, `paragraph-styles/` and
-     `variable-fonts/` if their strings changed — each module has its own
-     domain and its own `languages/` directory.
+   - **A module needs its own commands**, not the two above, if its strings
+     changed. `glyphs-panel/`, `paragraph-styles/` and `variable-fonts/`
+     each have their own domain and `languages/` directory. Run `make-mo`
+     and `make-json --no-purge` on that directory, with no `--use-map`: the
+     core map names no module file, so it would drop every module string.
+     A module catalogue names its scripts relative to the module folder
+     (`assets/js/admin.js`), but WordPress looks for the hash of the path
+     from the plugin root (`variable-fonts/assets/js/admin.js`), so rename
+     each new `.json` file to that hash. `languages/README.md`, "Make the
+     `.json` files", has the steps.
 
    Confirm the result rather than assuming it: the new string should appear in
    the `.mo` (`wp i18n make-mo` reports the file count) and in the matching
