@@ -11,9 +11,11 @@
 
 import { PanelBody, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import { buildSidebarWeightOptions, shouldShowWeightPanel } from '../../strip-styles/theme-default-weight';
 
 /**
- * Block font weight, limited to the weights the font has. An extension can
+ * Block font weight, limited to the weights the font has, after a "Theme
+ * default" option (fontWeight '', no weight of its own; #411). An extension can
  * replace the control (typost_weight_control filter) or hide it.
  *
  * @param {Object} props Values, state and handlers from Edit, by name.
@@ -46,12 +48,17 @@ export default function renderFontWeightPanel(props) {
 	}
 
 	const sidebarWeightOptions = getFilteredWeightOptions(fontId, false);
-	if (sidebarWeightOptions.length <= 1) return null;
+	if (!shouldShowWeightPanel(sidebarWeightOptions)) return null;
+	// "Theme default" ('') is the weight a block with no weight of its own
+	// stores (after Remove all styling, #411): without it the select showed
+	// its first option for ''. Choosing it writes '' again.
 	return (
 		<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
 			<SelectControl
+				label={__('Font Weight', 'typography-stylist')}
+				hideLabelFromVision
 				value={fontWeight}
-				options={sidebarWeightOptions}
+				options={buildSidebarWeightOptions(sidebarWeightOptions, __('Theme default', 'typography-stylist'))}
 				onChange={(value) => setAttributes({ fontWeight: value })}
 			/>
 		</PanelBody>

@@ -11,6 +11,7 @@
 const { buildInlineFontSizeValue, buildInlineFontSizeAttributes } = require('../font-size-units.js');
 const { caseDeclarations, buildInlineCaseAttributes } = require('../text-case.js');
 const { escapeHTML, escapeAttribute, hasHTMLTags, sanitizeFontFamily, sanitizeCSSValue } = require('./sanitize.js');
+const { isEmptyBlockContent } = require('../theme-look.js');
 
 /**
  * The tag of the Typography Stylist block a conversion creates or keeps.
@@ -29,6 +30,29 @@ function resolveConvertTagName(block) {
         tagName = 'p';
     }
     return tagName;
+}
+
+/**
+ * Whether the block a conversion starts from has no text (#412).
+ *
+ * Tested on the same text the whole-block conversion uses: the block's
+ * content attribute, or, when the block has none (a Pullquote, or any block
+ * whose text is not in `content`), the text of the RichText that holds the
+ * caret. Testing the content attribute alone treated such a block as empty
+ * and replaced its text with an empty block (review of #412).
+ *
+ * @param {*}      blockContent The block's content attribute (string,
+ *                              RichTextData or undefined)
+ * @param {string} valueText    The text of the RichText value (getTextContent(value))
+ * @return {boolean} True when there is no text to convert
+ */
+function isConvertSourceEmpty(blockContent, valueText) {
+    const content = String(blockContent || '');
+    if (content) {
+        return isEmptyBlockContent(content);
+    }
+    // getTextContent(value) is plain text, not markup: '<b>' is text
+    return isEmptyBlockContent(escapeHTML(String(valueText || '')));
 }
 
 /**
@@ -199,6 +223,7 @@ function scheduleConvertFallback(clientId, onFallback) {
 
 module.exports = {
     resolveConvertTagName: resolveConvertTagName,
+    isConvertSourceEmpty: isConvertSourceEmpty,
     buildConvertSpanParts: buildConvertSpanParts,
     buildPartialConvertContent: buildPartialConvertContent,
     scheduleConvertFallback: scheduleConvertFallback

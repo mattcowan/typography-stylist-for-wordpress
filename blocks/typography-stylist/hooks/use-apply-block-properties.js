@@ -6,7 +6,8 @@
 
 import { isRTL } from '@wordpress/i18n';
 import { useRef, useEffect } from '@wordpress/element';
-import { normalizeHang, normalizeTextCase, resolveDetachFontSizeUnit, findParagraphStyleByClass, styleAlignmentToTextAlign, buildBlockFontSizeCss, resolveFontSizeUnit } from '../utils';
+import { normalizeHang, normalizeTextCase, resolveDetachFontSizeUnit, findParagraphStyleByClass, styleAlignmentToTextAlign, buildBlockFontSizeCss, resolveFontSizeUnit, detectBlockComputedWeight } from '../utils';
+import { resolveFontPickWeight } from '../../../assets/js/font-weights.js';
 
 /**
  * Listen for the typost-apply-block-properties CustomEvent and apply its
@@ -100,7 +101,16 @@ export default function useApplyBlockProperties({
 						// Validate weight against new font's available weights
 						const weight = props.fontWeight || curWeight;
 						const available = fontData.availableWeights;
-						if (available && available.length > 0 && !available.includes(weight)) {
+						if (weight === '') {
+							// No weight of its own (#411 review): placed at the
+							// weight the text renders at, '' kept when the font
+							// has it. A fontWeight in the event (a paragraph
+							// style always sends one) still wins below.
+							const placed = resolveFontPickWeight('', available, detectBlockComputedWeight(curClientId));
+							if (placed !== '') {
+								newAttrs.fontWeight = placed;
+							}
+						} else if (available && available.length > 0 && !available.includes(weight)) {
 							newAttrs.fontWeight = closestWeight(weight, available);
 						}
 					}

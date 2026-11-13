@@ -13,6 +13,8 @@ import { PanelBody } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { adoptWpFont, isWpLibraryValue, wpSlugFromValue } from '../../../../assets/js/font-options.js';
 import { FontPicker } from '../../../../assets/js/font-picker.js';
+import { resolveFontPickWeight } from '../../../../assets/js/font-weights.js';
+import { detectBlockComputedWeight } from '../../utils';
 
 /**
  * Block font family. Edit renders it only when there are fonts to choose
@@ -23,7 +25,7 @@ import { FontPicker } from '../../../../assets/js/font-picker.js';
  */
 export default function renderFontFamilyPanel(props) {
 	const {
-		fontFamily, fontId, fontIdMap, fontOptions, fontWeight, getClosestWeight, setAttributes
+		clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, setAttributes
 	} = props;
 
 	return (
@@ -65,15 +67,17 @@ export default function renderFontFamilyPanel(props) {
 								fontId: selectedFontId
 							};
 
-							// Validate weight against new font's available weights
+							// Validate weight against new font's available weights.
+							// A block with no weight of its own ('') is placed at
+							// the weight its text renders at now (#411 review): it
+							// keeps '' when the font has that weight, else gets the
+							// closest. Any other weight: getClosestWeight(), and
+							// the only weight of a one-weight font, as before.
 							const available = fontData.availableWeights;
-							if (available && available.length > 0) {
-								if (!available.includes(fontWeight)) {
-									newAttrs.fontWeight = getClosestWeight(fontWeight, available);
-								}
-								if (available.length === 1 && fontWeight !== available[0]) {
-									newAttrs.fontWeight = available[0];
-								}
+							const rendered = fontWeight === '' ? detectBlockComputedWeight(clientId) : '';
+							const nextWeight = resolveFontPickWeight(fontWeight, available, rendered);
+							if (nextWeight !== fontWeight) {
+								newAttrs.fontWeight = nextWeight;
 							}
 
 							setAttributes(newAttrs);

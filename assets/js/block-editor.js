@@ -1762,6 +1762,27 @@ class TypographyFeaturesControl extends Component {
             );
         };
 
+        // A block with no text (only spaces, line breaks or empty elements)
+        // becomes a block with its tag, the size unit and the theme's look:
+        // nothing of this dialog's state and nothing of the source (#412).
+        // Tested on the text the whole-block path below converts: a block
+        // with no content attribute (a Pullquote) is judged by its RichText.
+        // Required here, not at the top of the file, so this change stays
+        // inside convertToBlock().
+        const { isConvertSourceEmpty } = require('./inline-editor/convert-to-block.js');
+        if (!isAlreadyTypostBlock && isConvertSourceEmpty(currentBlock.attributes.content, getTextContent(value))) {
+            const emptyBlock = createBlock('typost/block', buildConvertBlockAttributes({
+                emptySource: true,
+                isNewBlock: true,
+                tagName: tagName,
+                fontSizeUnit: getNewFontSizeUnit()
+            }));
+            dispatch('core/block-editor').replaceBlocks(selectedBlockClientId, emptyBlock);
+            scheduleConvertFallback(selectedBlockClientId, fallBack);
+            this.setState({ isOpen: false });
+            return;
+        }
+
         // Check if there's a selection (partial text selected)
         if (effectiveStart !== effectiveEnd) {
             // User selected a portion of text - apply styling only to that portion.

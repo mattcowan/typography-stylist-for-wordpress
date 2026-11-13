@@ -24,6 +24,7 @@
 
 var normalizeTextCase = require('./text-case.js').normalizeTextCase;
 var isSmallCapsCase = require('./text-case.js').isSmallCapsCase;
+var buildEmptySourceBlockAttributes = require('./theme-look.js').buildEmptySourceBlockAttributes;
 
 /**
  * Whether three responsive sizes are in order (min ≤ preferred ≤ max).
@@ -143,11 +144,23 @@ function resolveApplyWeightChoice(detail) {
  * @param {string}  args.fontSizeUnit     Size unit for a new block: the site's
  *                                        new-content unit (#248). Ignored for an
  *                                        existing block, which keeps its own.
+ * @param {boolean} args.emptySource      True when the block being converted has
+ *                                        no text (isEmptyBlockContent() in
+ *                                        theme-look.js). A new block then gets
+ *                                        its tag, the size unit and the theme's
+ *                                        look, and nothing from the modal or the
+ *                                        source (#412), with or without a
+ *                                        selection. Ignored for an existing block.
  * @return {object} Attributes for createBlock() or updateBlockAttributes().
  */
 function buildConvertBlockAttributes(args) {
 	var a = args || {};
 	var state = a.state || {};
+
+	if (a.emptySource && a.isNewBlock) {
+		return buildEmptySourceBlockAttributes(a.tagName, a.fontSizeUnit);
+	}
+
 	var attrs = { content: a.content };
 
 	if (a.partialSelection) {
