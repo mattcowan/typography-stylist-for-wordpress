@@ -35,7 +35,7 @@ const { getBlockInheritedFont, getBlockInheritedWeight, getSelectedBlockInherite
 const { findStyledSpanInContent, readSpanFeatures } = require('./inline-editor/span-reading.js');
 const { isSelectionLost, findSelectionFormat, resolveRawFeatureSettings, isEmptyFormatState, buildFormatAttributes, buildPatchFromPending, applyPatchToRuns } = require('./inline-editor/apply-features.js');
 const { resolveConvertTagName, buildPartialConvertContent, scheduleConvertFallback } = require('./inline-editor/convert-to-block.js');
-const { createStateProviderFilter, createApplyBlockPropertiesHandler, createInsertContentHandler, createPanelClosedHandler } = require('./inline-editor/extension-bridge.js');
+const { createExtensionListeners, attachExtensionListeners, detachExtensionListeners } = require('./inline-editor/extension-listeners.js');
 const { groupFeatures, getFilteredWeightOptions } = require('./inline-editor/feature-options.js');
 const { InlineToolbar, ModalHeader, TipsNotice, HookPoint, ResizeHandles } = require('./inline-editor/modal-chrome.js');
 const { WordBoundaryNotice, FontDetectionNotice, FontFamilyPanel, FontWeightPanel, FontStylePanel, CasePanel, FontSizePanel, LineHeightPanel, LetterSpacingPanel, PresetsPanel, FeaturesPanel, ConvertSection, ClearConfirmation, ModalActions } = require('./inline-editor/modal-panels.js');
@@ -192,57 +192,12 @@ class TypographyFeaturesControl extends Component {
         this.debouncedApplyDropdown = debounce(this._doApplyFeatures.bind(this), 300);
         this.debouncedApplyFontSize = debounce(this._doApplyFeatures.bind(this), 600);
 
-        // Extension hooks (inline-editor/extension-bridge.js builds the
-        // callbacks). Registered here, in this order, and removed in
-        // componentWillUnmount().
-        const self = this;
-
-        // State provider for extensions to read current state
-        this._stateProviderFilter = createStateProviderFilter(this);
-        window.typostHooks.addFilter('typost_current_editor_state', this._stateProviderFilter, 10);
-
-        // Block property application from extensions. Uses !== undefined
-        // checks so partial updates only override fields present in the
-        // event, preserving current state for missing fields
-        this._handleApplyBlockProperties = createApplyBlockPropertiesHandler(this);
-        document.addEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
-
-        // Content insertion from extensions (e.g., Glyphs Panel)
-        this._handleInsertContent = createInsertContentHandler(this, FORMAT_TYPE);
-        document.addEventListener('typost-insert-content', this._handleInsertContent);
-
-        // When the Glyphs panel (a separate Modal that forced this inline
-        // Modal closed) is dismissed, reopen the inline editor so the
-        // author returns to where they launched from
-        this._handleGlyphsClosed = createPanelClosedHandler(this);
-        window.typostHooks.addAction('typost_glyphs_panel_closed', this._handleGlyphsClosed, 10);
-        // Generic name for the same contract: any panel that opened as a
-        // separate Modal from inside this one (the Paragraph Styles browser
-        // is the second) fires it on close to bring this modal back.
-        window.typostHooks.addAction('typost_extension_panel_closed', this._handleGlyphsClosed, 10);
-
-        // Extension hook: let an extension trigger the conversion its own
-        // UI is offering — the word-boundary notice is only useful if the
-        // fix it recommends is reachable from where the notice is shown.
-        // Every mounted instance handles it, which is harmless: convert
-        // reads the selected block from the store, and replaceBlocks on an
-        // already-replaced client ID is a no-op.
-        this._handleConvertRequest = function() {
-            if (self._isMounted) {
-                self.convertToBlock();
-            }
-        };
-        document.addEventListener('typost-convert-to-block', this._handleConvertRequest);
-
-        // Extension hook: extra toolbar buttons may register after this
-        // component first renders (async or conditionally loaded
-        // extensions), so re-render when the registry changes.
-        this._handleToolbarButtonsChanged = function() {
-            if (self._isMounted) {
-                self.forceUpdate();
-            }
-        };
-        window.typostHooks.addAction('typost_editor_toolbar_buttons_changed', this._handleToolbarButtonsChanged, 10);
+        // Extension hooks (inline-editor/extension-listeners.js). Only
+        // created here: componentDidMount() registers them and
+        // componentWillUnmount() removes them. React may construct an
+        // instance it never mounts (StrictMode does with SCRIPT_DEBUG on),
+        // so the constructor registers nothing (#386).
+        createExtensionListeners(this, FORMAT_TYPE);
     }
 
     /**
@@ -2222,13 +2177,16 @@ class TypographyFeaturesControl extends Component {
     }
 
     /**
-     * Cleanup event listeners and debounced functions when component unmounts
+     * Register the extension listeners. React can run mount, unmount and
+     * mount again on one instance (StrictMode with SCRIPT_DEBUG on), so
+     * every registration here has its removal in componentWillUnmount()
+     * (#386).
      */
     componentDidMount() {
-        // Distinguishes the live instance from StrictMode shadow instances
-        // (whose constructors run but which are never mounted) — see
-        // _handleInsertContent guard
+        // The extension handlers act only while this is true (see
+        // inline-editor/extension-bridge.js)
         this._isMounted = true;
+        attachExtensionListeners(this, window.typostHooks, document);
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -2242,6 +2200,10 @@ class TypographyFeaturesControl extends Component {
         }
     }
 
+    /**
+     * Remove the event listeners, the extension listeners and the pending
+     * debounced applies and announcement.
+     */
     componentWillUnmount() {
         this._isMounted = false;
         this.cancelWordBoundaryAnnouncement();
@@ -2257,34 +2219,9 @@ class TypographyFeaturesControl extends Component {
         this.debouncedApplyDropdown.cancel();
         this.debouncedApplyFontSize.cancel();
 
-        // Cleanup extension hook listeners
-        if (this._handleApplyBlockProperties) {
-            document.removeEventListener('typost-apply-block-properties', this._handleApplyBlockProperties);
-        }
-        if (this._handleInsertContent) {
-            document.removeEventListener('typost-insert-content', this._handleInsertContent);
-        }
-
-        // Cleanup state provider filter
-        if (this._stateProviderFilter) {
-            window.typostHooks.removeFilter('typost_current_editor_state', this._stateProviderFilter);
-        }
-
-        // Cleanup glyphs-panel reopen handler
-        if (this._handleGlyphsClosed) {
-            window.typostHooks.removeAction('typost_glyphs_panel_closed', this._handleGlyphsClosed);
-            window.typostHooks.removeAction('typost_extension_panel_closed', this._handleGlyphsClosed);
-        }
-
-        // Cleanup extension toolbar button re-render handler
-        if (this._handleToolbarButtonsChanged) {
-            window.typostHooks.removeAction('typost_editor_toolbar_buttons_changed', this._handleToolbarButtonsChanged);
-        }
-
-        // Cleanup extension convert bridge
-        if (this._handleConvertRequest) {
-            document.removeEventListener('typost-convert-to-block', this._handleConvertRequest);
-        }
+        // Extension hook listeners, filter and actions (registered in
+        // componentDidMount)
+        detachExtensionListeners(this);
     }
 
     /**

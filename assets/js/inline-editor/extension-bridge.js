@@ -1,12 +1,14 @@
 /**
  * The inline editor's side of the extension API (HOOKS.md): the
- * typost_current_editor_state filter, and the typost-apply-block-properties
- * and typost-insert-content events, plus the panel-closed actions.
+ * typost_current_editor_state filter, the typost-apply-block-properties,
+ * typost-insert-content and typost-convert-to-block events, the
+ * panel-closed actions and the toolbar-buttons-changed action.
  *
  * Moved out of the TypographyFeaturesControl constructor in block-editor.js
  * (#357). Each create*() function returns the same closure the constructor
- * used to define inline, over the component instance; the constructor still
- * registers them, in the same order, and componentWillUnmount() removes them.
+ * used to define inline, over the component instance. The constructor still
+ * creates them; extension-listeners.js registers them in componentDidMount()
+ * and removes them in componentWillUnmount() (#386).
  *
  * @since 2.4.0
  */
@@ -145,9 +147,9 @@ function buildApplyEventState(detail, props, state, resolveFontFamily) {
  */
 function createApplyBlockPropertiesHandler(self) {
     return function(e) {
-        // Registered in the constructor, so a StrictMode shadow
-        // instance can still hold a listener; only the mounted
-        // instance may act (or ask the confirm question twice).
+        // Only the mounted instance may act (or ask the confirm
+        // question twice). The listener is registered only while the
+        // instance is mounted (#386); this test stays as a guard.
         if (!self._isMounted) {
             return;
         }
@@ -246,10 +248,9 @@ function createInsertContentHandler(self, formatType) {
         if (!e.detail || e.detail.source !== 'inline' || !e.detail.text) {
             return;
         }
-        // Only a mounted instance handles insertion. React StrictMode
-        // constructs discarded shadow instances whose constructor-added
-        // listeners are never cleaned up — without this guard each
-        // insert would be applied twice.
+        // Only a mounted instance handles insertion, so an insert is
+        // never applied twice. The listener is registered only while
+        // the instance is mounted (#386); this test stays as a guard.
         if (!self._isMounted) {
             return;
         }
@@ -339,8 +340,9 @@ function createInsertContentHandler(self, formatType) {
  */
 function createPanelClosedHandler(self) {
     return function(src, info) {
-        // Same mount guard as the other constructor-registered
-        // handlers: a StrictMode shadow instance would otherwise fire
+        // Mount guard: doAction() runs the callbacks it listed when the
+        // action started, so a callback removed during the action (its
+        // instance unmounted) still runs, and would otherwise fire
         // typost_inline_modal_opened with stale state.
         if (!self._isMounted || src !== 'inline') {
             return;
@@ -359,6 +361,41 @@ function createPanelClosedHandler(self) {
     };
 }
 
+/**
+ * Build the typost-convert-to-block listener: let an extension trigger the
+ * conversion its own UI is offering — the word-boundary notice is only
+ * useful if the fix it recommends is reachable from where the notice is
+ * shown. Every mounted instance handles it, which is harmless: convert
+ * reads the selected block from the store, and replaceBlocks on an
+ * already-replaced client ID is a no-op.
+ *
+ * @param {Object} self The TypographyFeaturesControl instance
+ * @return {Function} Event listener
+ */
+function createConvertRequestHandler(self) {
+    return function() {
+        if (self._isMounted) {
+            self.convertToBlock();
+        }
+    };
+}
+
+/**
+ * Build the typost_editor_toolbar_buttons_changed action: extra toolbar
+ * buttons may register after this component first renders (async or
+ * conditionally loaded extensions), so re-render when the registry changes.
+ *
+ * @param {Object} self The TypographyFeaturesControl instance
+ * @return {Function} Action callback
+ */
+function createToolbarButtonsChangedHandler(self) {
+    return function() {
+        if (self._isMounted) {
+            self.forceUpdate();
+        }
+    };
+}
+
 module.exports = {
     createStateProviderFilter: createStateProviderFilter,
     resolveApplyEventChanges: resolveApplyEventChanges,
@@ -366,5 +403,7 @@ module.exports = {
     createApplyBlockPropertiesHandler: createApplyBlockPropertiesHandler,
     resolveInsertRange: resolveInsertRange,
     createInsertContentHandler: createInsertContentHandler,
-    createPanelClosedHandler: createPanelClosedHandler
+    createPanelClosedHandler: createPanelClosedHandler,
+    createConvertRequestHandler: createConvertRequestHandler,
+    createToolbarButtonsChangedHandler: createToolbarButtonsChangedHandler
 };
