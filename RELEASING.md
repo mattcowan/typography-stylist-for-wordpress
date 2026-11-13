@@ -117,19 +117,23 @@ workflow permissions can stay **read-only** — `release-deploy.yml` requests
 
    ```bash
    wp i18n make-mo languages languages
-   wp i18n make-json languages languages --no-purge      --use-map='{"blocks/typography-stylist/edit.js":"blocks/typography-stylist/build/index.js"}'
+   wp i18n make-json languages languages --no-purge      --use-map='{"blocks/typography-stylist/edit.js":"blocks/typography-stylist/build/index.js","blocks/typography-stylist/build/index.js":"blocks/typography-stylist/build/index.js","assets/js/block-editor.js":"assets/js/block-editor.js"}'
    ```
 
    Notes that are easy to get wrong here:
    - **`--no-purge` is required.** Without it, make-json strips the JS strings
      out of the `.po` files it just read.
-   - **Only `edit.js` needs mapping.** It is bundled into `build/index.js`.
-     `assets/js/block-editor.js` needs no entry: WordPress always derives the
-     translation filename from the *unminified* path, so one file serves both
-     `block-editor.js` and `block-editor.min.js`.
-   - **Since 2.4.0 the map above is not enough** (#357): the inline editor's
-     strings are also in `assets/js/inline-editor/`, and with `--use-map`,
-     `make-json` drops each reference to a file the map does not name. Read
+   - **The map names three files.** `edit.js` is bundled into
+     `build/index.js`, so it maps there. `build/index.js` and
+     `assets/js/block-editor.js` each map to themselves: with `--use-map`,
+     `make-json` drops each reference to a file the map does not name, and
+     the catalogues name these two files for every script string. WordPress
+     always derives the translation filename from the *unminified* path, so
+     one file serves both `block-editor.js` and `block-editor.min.js`.
+   - **After a new `make-pot` the map above is not enough** (#357): since
+     2.4.0 the inline editor's strings are also in
+     `assets/js/inline-editor/`, and `make-pot` then names those files.
+     Each needs an entry that maps it to `assets/js/block-editor.js`. Read
      `languages/README.md` before you run `make-json`.
    - **Check `X-Domain` is `typography-stylist`** in all three catalogues. It
      is what prefixes every generated `.json` filename, and a wrong value
