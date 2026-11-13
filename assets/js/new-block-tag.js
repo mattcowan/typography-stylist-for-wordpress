@@ -35,11 +35,12 @@
  * variation claims: each insert, transform and Convert to block counts
  * under the one key the inserter reads, whatever tag is remembered. An
  * extension's own variation of the block always wins (see
- * isNewBlockVariationActive), so its blocks show and count as before. The variation has no title, icon or
- * description, so the places that show the active variation (block card,
- * List View, breadcrumb, toolbar icon, drag chip, "block added" message)
- * show the block's own. The function form of isActive is read the same way
- * from WordPress 5.8 on; the array form cannot match every block.
+ * isNewBlockVariationActive), so its blocks show and count as before. The
+ * variation has no title, icon or description, so the places that show the
+ * active variation (block card, List View, breadcrumb, toolbar icon, drag
+ * chip, "block added" message) show the block's own. The function form of
+ * isActive is read the same way from WordPress 5.8 on; the array form
+ * cannot match every block.
  * Trade-off: core reads the count of a block in the "Transform to" menu
  * under `typost/block`, which no longer rises.
  *

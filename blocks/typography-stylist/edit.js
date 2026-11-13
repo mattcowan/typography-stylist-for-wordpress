@@ -19,7 +19,6 @@ import {
 	
 	
 	ToolbarGroup,
-	ToolbarDropdownMenu,
 	ToolbarButton,
 	Popover
 } from '@wordpress/components';

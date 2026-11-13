@@ -17,7 +17,7 @@ const { resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontStat
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
 // unit the span already has (resolveSpanFontSizeUnit), so older spans are
 // not rewritten.
-const { parseFixedFontSize, resolveSpanFontSizeUnit, getNewFontSizeUnit, buildNewBlockUnitVariation } = require('./font-size-units.js');
+const { parseFixedFontSize, resolveSpanFontSizeUnit, getNewFontSizeUnit } = require('./font-size-units.js');
 // Case (#214): the same mapping as the block and the paragraph styles
 const { normalizeTextCase, readInlineCase } = require('./text-case.js');
 // Helpers shared with the Typography Stylist block's build (utils.js
