@@ -1,5 +1,11 @@
 # Feature: Per-selection relative size + vertical shift inside Fit-to-Width
 
+- **Topic:** the design record of `data-fitscale` and `data-fitshift`: a relative size and a vertical shift for selected text inside a fit-to-width line (shipped in 2.2.3).
+- **Issues:** #169
+- **Code:** `blocks/typography-stylist/utils.js`, `blocks/typography-stylist/qft/fit-span-actions.js`, `blocks/typography-stylist/hooks/use-fit-measurement.js`, `blocks/typography-stylist/__tests__/fit-scale-shift.test.js`
+
+Moved from `todo/archive/feature-fit-relative-scale-shift.md` by #377.
+
 Status: **implemented 2026-07-31** (changelog under 2.2.3) — kept as the
 design record. Written 2026-07-29. Design decisions taken: CSS emitted
 unconditionally / UI gated to fit blocks; the fit-scale applier strips
@@ -93,7 +99,7 @@ stays neutralized in fit mode):
 >   sliders populate from the selection, and the QFT live-preview path
 >   (`applyPreviewStyles`) previews both properties at true fit sizes —
 >   the WYSIWYG editing view (RichText value-transform, see
->   `todo/feature-fit-wysiwyg-editing.md`) makes this free.
+>   [feature-fit-wysiwyg-editing.md](feature-fit-wysiwyg-editing.md)) makes this free.
 > - **Save format**: attributes + inline CSS on the span, zero frontend
 >   JS, screen-reader heading untouched (visual-only adjustments). Non-fit
 >   save output stays byte-identical (deprecated.js invariant).

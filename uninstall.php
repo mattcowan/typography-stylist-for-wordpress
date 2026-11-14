@@ -5,7 +5,7 @@
  * This file is called when the plugin is uninstalled via the WordPress admin.
  * It cleans up all plugin data from the database and filesystem.
  *
- * @package OpenType_Stylist
+ * @package Typography_Stylist
  */
 
 // Exit if accessed directly or not uninstalling

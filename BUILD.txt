@@ -1,297 +1,233 @@
 ===============================================================================
-BUILD INSTRUCTIONS - Typography Stylist Plugin
+BUILD AND SOURCE - Typography Stylist
 ===============================================================================
 
-This document provides instructions for developers who want to rebuild the
-Typography Stylist plugin from source code.
+This file tells you what the plugin zip contains, which files are compiled,
+the source files of each compiled file, and how to build them again.
+
+The zip contains the source file of each compiled file. The zip does not
+contain the build configuration (for example .babelrc and package-lock.json).
+To build the plugin, get the source from the public repository:
+
+   https://github.com/mattcowan/typography-stylist-for-wordpress
+
+Each release since 2.1.2 has a tag in the repository, for example v2.3.6.
+The tags of 2.2.0 to 2.2.3 have no "v", for example 2.2.3.
 
 ===============================================================================
-PREREQUISITES
+1. WHAT THE ZIP CONTAINS
 ===============================================================================
 
-- Node.js: Version 18 or higher
-- npm: Version 8 or higher (comes with Node.js)
-- Git: For version control (optional)
+PHP
+   typography-stylist.php, uninstall.php, includes/
+   Each bundled module: glyphs-panel/, variable-fonts/, paragraph-styles/
+   (the main PHP file of the module, and its includes/ directory)
+
+COMPILED FILES (section 3 gives the source files of each one)
+   assets/js/block-editor.min.js
+   assets/js/admin-page.min.js
+   assets/css/block-editor.min.css
+   assets/css/frontend.min.css
+   assets/css/admin-page.min.css
+   blocks/typography-stylist/build/index.js
+   blocks/typography-stylist/build/index.asset.php
+
+SOURCE FILES OF THE COMPILED FILES
+   The zip contains each source file that section 3 names.
+
+SCRIPTS AND STYLES THAT WORDPRESS LOADS AS WRITTEN (not compiled)
+   assets/js/admin-export.js
+   assets/js/editor-font-kits.js
+   blocks/typography-stylist/block.json
+   blocks/typography-stylist/style.css
+   blocks/typography-stylist/editor.css
+   glyphs-panel/assets/js/ (all files except vendor/)
+   glyphs-panel/assets/css/glyphs-panel.css
+   variable-fonts/assets/js/ and variable-fonts/assets/css/
+   paragraph-styles/assets/js/ and paragraph-styles/assets/css/
+
+   These files are hand-written. They are the source, and no build step
+   changes them.
+
+THIRD-PARTY LIBRARIES (section 4)
+   glyphs-panel/assets/js/vendor/opentype.min.js
+   glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js
+
+OTHER FILES
+   assets/images/icons/ (SVG icons)
+   languages/ and the languages/ directory of each module (translations,
+   see languages/README.md)
+   readme.txt, changelog.txt, BUILD.txt (this file), package.json
+
+NOT IN THE ZIP
+   The tests, the build configuration, the developer documentation and
+   the development tools. The .distignore file in the repository lists
+   them.
 
 ===============================================================================
-INSTALLATION
+2. HOW TO BUILD
 ===============================================================================
 
-1. Navigate to the plugin directory:
+You need Node.js 22.22.2 or later in the 22 line, 24.15.0 or later in the
+24 line, or 26 or later. @wordpress/scripts requires one of these versions.
+npm comes with Node.js.
 
-   cd wp-content/plugins/typography-stylist
+1. Get the source:
 
-2. Install dependencies:
+      git clone https://github.com/mattcowan/typography-stylist-for-wordpress.git
+      cd typography-stylist-for-wordpress
 
-   npm install
+   To build one release, check out its tag, for example:
 
-This will install all required build tools and dependencies listed in package.json.
+      git checkout v2.3.6
 
-===============================================================================
-BUILD COMMANDS
-===============================================================================
+2. Install the build tools at the versions in package-lock.json:
 
-FULL BUILD
-----------
-Rebuild all JavaScript and CSS files:
+      npm ci
 
-   npm run build
+3. Build all compiled files:
 
-This command runs:
-- Block build (React/JSX compilation)
-- JavaScript transpilation and minification
-- CSS minification
+      npm run build
 
-PARTIAL BUILDS
---------------
-Build only the Gutenberg block:
-   npm run build:block
+   This command runs build:block, build:js and build:css (section 3).
 
-Build only JavaScript files:
-   npm run build:js
+4. Make the plugin zip (optional):
 
-Build only CSS files:
-   npm run build:css
+      npm run package
 
-INDIVIDUAL ASSET BUILDS
------------------------
-Build block editor JavaScript:
-   npm run build:js:editor
+   This command runs the build again, then writes typography-stylist.zip.
+   The .distignore file decides which files go into the zip.
 
-Build admin page JavaScript:
-   npm run build:js:admin
+The compiled files are not in the repository (git ignores them). A copy of
+the repository works in WordPress only after step 3.
 
-Build block editor CSS:
-   npm run build:css:editor
-
-Build frontend CSS:
-   npm run build:css:frontend
-
-Build admin page CSS:
-   npm run build:css:admin
-
-DEVELOPMENT WATCH MODE
-----------------------
-Automatically rebuild files when changes are detected:
-
-   npm run watch
-
-This is useful during development - it watches JavaScript and CSS files
-and rebuilds them automatically.
+To run the tests, read TESTING.md in the repository.
 
 ===============================================================================
-TESTING
+3. COMPILED FILES AND THEIR SOURCE FILES
 ===============================================================================
 
-RUN UNIT TESTS
---------------
-Run all Jest unit tests:
-   npm test
+All paths are from the plugin root. The command names are scripts in
+package.json. "npm run build" runs all of them.
 
-Run tests in watch mode (re-runs on file changes):
-   npm run test:watch
+Shared modules: these CommonJS files in assets/js/ go into more than one
+compiled file. Each entry below names the shared modules that it uses.
 
-Generate test coverage report:
-   npm test -- --coverage
+-------------------------------------------------------------------------------
+Output:  assets/js/block-editor.min.js
+Command: npm run build:js:editor
+         (browserify assets/js/block-editor.js -o assets/js/block-editor.min.js
+          -t [ babelify ], with the Babel settings in .babelrc)
+Purpose: the inline editor (the "Typography Stylist Features" toolbar button
+         on core blocks).
+Source:  assets/js/block-editor.js
+Source:  assets/js/inline-editor/*.js
+Source:  assets/js/convert-capability.js
+Source:  assets/js/font-options.js
+Source:  assets/js/font-picker.js
+Source:  assets/js/font-size-units.js
+Source:  assets/js/font-variation-settings.js
+Source:  assets/js/font-weights.js
+Source:  assets/js/inline-apply-rules.js
+Source:  assets/js/modal-drag-resize.js
+Source:  assets/js/new-block-tag.js
+Source:  assets/js/text-case.js
+Source:  assets/js/text-offsets.js
+Source:  assets/js/theme-look.js
+Source:  assets/js/toolbar-buttons.js
 
-===============================================================================
-BUILD OUTPUT
-===============================================================================
+The output is not minified. Browserify joins the files into one script, and
+Babel compiles the JSX.
 
-JAVASCRIPT FILES
-----------------
-Block Editor Integration:
-- Source: assets/js/block-editor.js (110KB, 2,350 lines)
-- Output: assets/js/block-editor.min.js (91KB)
-- Tool: Browserify + Babelify
+-------------------------------------------------------------------------------
+Output:  blocks/typography-stylist/build/index.js
+Output:  blocks/typography-stylist/build/index.asset.php
+Command: npm run build:block
+         (wp-scripts build blocks/typography-stylist/index.js
+          --output-path=blocks/typography-stylist/build)
+Purpose: the Typography Stylist block. index.asset.php lists the WordPress
+         scripts that the block needs, and a version hash.
+Source:  blocks/typography-stylist/*.js
+Source:  blocks/typography-stylist/components/*.js
+Source:  blocks/typography-stylist/components/inspector/*.js
+Source:  blocks/typography-stylist/hooks/*.js
+Source:  blocks/typography-stylist/qft/*.js
+Source:  blocks/typography-stylist/strip-styles/*.js
+Source:  assets/js/inline-editor/sanitize.js
+Source:  assets/js/font-options.js
+Source:  assets/js/font-picker.js
+Source:  assets/js/font-size-units.js
+Source:  assets/js/font-variation-settings.js
+Source:  assets/js/font-weights.js
+Source:  assets/js/inline-apply-rules.js
+Source:  assets/js/modal-drag-resize.js
+Source:  assets/js/new-block-tag.js
+Source:  assets/js/text-case.js
+Source:  assets/js/text-offsets.js
+Source:  assets/js/theme-look.js
+Source:  assets/js/toolbar-buttons.js
 
-Admin Page:
-- Source: assets/js/admin-page.js (53KB, 1,317 lines)
-- Output: assets/js/admin-page.min.js (35KB)
-- Tool: Terser
+@wordpress/scripts uses webpack and Babel. Because the repository has a
+.babelrc file, Babel uses the settings in it. The output is minified. The
+__tests__/ and __mocks__/ directories are not part of the build.
 
-Typography Stylist Block:
-- Sources: blocks/typography-stylist/*.js (index.js, edit.js, save.js, utils.js)
-- Output: blocks/typography-stylist/build/index.js (37KB bundled)
-- Tool: @wordpress/scripts (webpack + babel)
+-------------------------------------------------------------------------------
+Output:  assets/js/admin-page.min.js
+Command: npm run build:js:admin
+         (terser assets/js/admin-page.js --compress --mangle
+          --output assets/js/admin-page.min.js)
+Purpose: the settings page (Settings > Typography Stylist).
+Source:  assets/js/admin-page.js
 
-CSS FILES
----------
-Block Editor Styles:
-- Source: assets/css/block-editor.css (15KB)
-- Output: assets/css/block-editor.min.css (11KB)
-- Tool: clean-css-cli
+-------------------------------------------------------------------------------
+Output:  assets/css/block-editor.min.css
+Command: npm run build:css:editor
+         (cleancss -o assets/css/block-editor.min.css assets/css/block-editor.css)
+Source:  assets/css/block-editor.css
 
-Frontend Styles:
-- Source: assets/css/frontend.css (4.4KB)
-- Output: assets/css/frontend.min.css (2.4KB)
-- Tool: clean-css-cli
+-------------------------------------------------------------------------------
+Output:  assets/css/frontend.min.css
+Command: npm run build:css:frontend
+         (cleancss -o assets/css/frontend.min.css assets/css/frontend.css)
+Source:  assets/css/frontend.css
 
-Admin Page Styles:
-- Source: assets/css/admin-page.css (21KB)
-- Output: assets/css/admin-page.min.css (15KB)
-- Tool: clean-css-cli
+-------------------------------------------------------------------------------
+Output:  assets/css/admin-page.min.css
+Command: npm run build:css:admin
+         (cleancss -o assets/css/admin-page.min.css assets/css/admin-page.css)
+Source:  assets/css/admin-page.css
 
-===============================================================================
-BUILD TOOLS
-===============================================================================
-
-The following build tools are used:
-
-- @wordpress/scripts: 36.1.0 - Block building and testing
-- Browserify: 17.0.1 - JavaScript bundling
-- Babelify: 10.0.0 - JavaScript transpilation
-- Terser: 5.16.0 - JavaScript minification
-- clean-css-cli: 5.6.2 - CSS minification
-- Jest: 30.5.0 - Unit testing
-
-See package.json for complete list of dependencies.
-
-===============================================================================
-BUILD CONFIGURATION
-===============================================================================
-
-- Babel Configuration: .babelrc - Transpilation settings for ES6+ and JSX
-- Jest Configuration: jest.config.js - Test framework settings
-- Package Scripts: package.json - All build commands
-
-===============================================================================
-GLYPHS PANEL MODULE (glyphs-panel/)
-===============================================================================
-
-The Glyphs Panel (bundled into core in v2.0.0) lives in glyphs-panel/. Its
-browser JavaScript is hand-written ES5 using wp.element.createElement (no JSX,
-no bundler), so there is NO build step for it — editing a file under
-glyphs-panel/assets/js/ is the deployable change. Pure helper modules under
-glyphs-panel/assets/js/lib/ have Jest unit tests in glyphs-panel/__tests__/
-(run by the top-level `npm test`).
-
-THIRD-PARTY LIBRARIES (bundled, unmodified, in glyphs-panel/assets/js/vendor/)
------------------------------------------------------------------------------
-These are upstream distributions, included as-is, loaded on demand in the
-browser. They are NOT minified/obfuscated first-party code.
-
-- opentype.js v1.3.4 (MIT) — TTF/OTF/WOFF parser.
-  File: glyphs-panel/assets/js/vendor/opentype.min.js
-  Source / non-minified build: https://github.com/opentypejs/opentype.js
-  (release v1.3.4; the unminified dist/opentype.js is available there)
-
-- wawoff2 (MIT) — WOFF2 -> TTF decompressor (Emscripten/WebAssembly build of
-  Google's woff2, single file with embedded WASM).
-  File: glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js
-  Source: https://github.com/fontello/wawoff2
-
-To update a library, replace the file with the corresponding upstream release.
-
-TRANSLATIONS (glyphs-panel/languages/)
---------------------------------------
-The module uses its own text domain, "typost-glyphs-panel". Compiled files are
-built with WP-CLI from the .po sources:
-
-   wp i18n make-mo   glyphs-panel/languages glyphs-panel/languages
-   wp i18n make-json glyphs-panel/languages glyphs-panel/languages --no-purge
-
-IMPORTANT: the .po file references (#: lines) for JS files must be plugin-root
-relative (e.g. "glyphs-panel/assets/js/glyphs-modal.js"), because WordPress
-locates a script's JSON translations by md5() of that path. If the references
-are wrong, make-json produces .json files with the wrong filename hash and JS
-strings will not translate.
+-------------------------------------------------------------------------------
+Bundled modules: the Glyphs Panel, Variable Fonts and Paragraph Styles
+modules have no build step. Their scripts are hand-written ES5 and their
+styles are plain CSS. WordPress loads these files as written. The one
+exception is the third-party libraries of the Glyphs Panel (section 4).
 
 ===============================================================================
-PACKAGING FOR DISTRIBUTION
+4. THIRD-PARTY LIBRARIES
 ===============================================================================
 
-Create a distribution ZIP file:
+The Glyphs Panel reads font files in the browser with two open-source
+libraries. They are the upstream distribution files, not changed and not
+built by this plugin.
 
-   npm run package
+opentype.js v1.3.4 (MIT License): reads TTF, OTF and WOFF font files.
+   File:   glyphs-panel/assets/js/vendor/opentype.min.js
+   Source: https://github.com/opentypejs/opentype.js
+           (tag 1.3.4; the repository at that tag has the unminified
+           dist/opentype.js)
 
-This will:
-1. Run full build process
-2. Create a typography-stylist.zip file
-3. Include both source and compiled files
-4. Include necessary configuration files (package.json, .babelrc)
-5. Include documentation (BUILD.txt)
+wawoff2 2.0.1 (MIT License): decompresses WOFF2 font files. It is a WebAssembly
+build of Google's woff2, in one file with the WebAssembly code embedded.
+   File:   glyphs-panel/assets/js/vendor/wawoff2/decompress_binding.js
+   Source: https://github.com/fontello/wawoff2
 
-The ZIP file will be approximately 250KB and ready for WordPress.org distribution.
-
-===============================================================================
-VERIFICATION CHECKLIST
-===============================================================================
-
-After building, verify everything works:
-
-1. Build succeeds: npm run build completes without errors
-2. Tests pass: npm test shows all tests passing
-3. Files generated: Check that minified files exist and are smaller than source files
-4. WordPress activation: Plugin activates without PHP errors
-5. Block editor: Typography features button appears in toolbar
-6. Frontend: Styled content displays correctly
-7. Admin page: Settings page loads at Settings -> Typography Stylist
+To update a library, replace its file with the file from the upstream
+release.
 
 ===============================================================================
-TROUBLESHOOTING
+5. LICENSE
 ===============================================================================
 
-BUILD ERRORS
-------------
-"Cannot find module": Run npm install to install dependencies
-
-"Command not found": Ensure Node.js and npm are installed and in your PATH
-
-Babel errors: Check that .babelrc exists and is valid JSON
-
-TEST FAILURES
--------------
-"No tests found": Ensure you're in the plugin root directory
-
-Import errors: Check that file paths in tests match actual file locations
-
-Snapshot mismatches: Run npm test -- -u to update snapshots
-(only if changes are intentional)
-
-WORDPRESS ERRORS
-----------------
-Plugin won't activate: Check PHP error log for syntax errors
-
-Block won't load: Ensure blocks/typography-stylist/build/index.js was generated
-
-Styles missing: Check that minified CSS files exist in assets/css/
-
-===============================================================================
-DEVELOPMENT WORKFLOW
-===============================================================================
-
-1. Make changes to source files (.js or .css files, not .min.js or .min.css)
-2. Run npm run build (or use watch mode: npm run watch)
-3. Run npm test to verify no regressions
-4. Test manually in WordPress
-5. Create git commit (handled by user)
-
-===============================================================================
-IMPORTANT NOTES
-===============================================================================
-
-- DO NOT edit minified files (*.min.js, *.min.css) directly - they will be
-  overwritten on next build
-
-- DO NOT edit blocks/typography-stylist/build/ files directly - they are
-  generated from block source files
-
-- Source files are the source of truth - all changes should be made to
-  unminified files
-
-- After making changes, always rebuild and test before committing
-
-===============================================================================
-LICENSE
-===============================================================================
-
-All source code is licensed under GPLv2 or later. See plugin header for details.
-
-===============================================================================
-QUESTIONS OR ISSUES?
-===============================================================================
-
-See CLAUDE.md for plugin architecture and development guidelines.
-
-===============================================================================
+The plugin source code is licensed under the GPLv2 or later. The plugin
+header in typography-stylist.php gives the details.

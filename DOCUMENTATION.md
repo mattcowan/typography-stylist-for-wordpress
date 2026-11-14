@@ -970,7 +970,7 @@ typography-stylist/
 │   │   ├── editor-font-kits.js       # Adobe Fonts kits in the editor
 │   │   ├── font-options.js           # Font list helpers
 │   │   ├── font-picker.js            # Searchable font menus
-│   │   └── utils.js                  # Shared utility functions
+│   │   └── inline-editor/            # Inline editor modules (bundled with block-editor.js)
 │   ├── css/
 │   │   ├── block-editor.css          # Editor styles
 │   │   ├── admin-page.css            # Settings page styles

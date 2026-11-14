@@ -1,5 +1,11 @@
 # Feature: True WYSIWYG editing for Fit-to-Width blocks (single view)
 
+- **Topic:** the design record of fit-to-width editing in one view: the RichText value transform (`wrapFitLines()` / `unwrapFitLines()`) that shows each line at its fitted size while the stored content stays flat (shipped in 2.2.2).
+- **Issues:** #163
+- **Code:** `blocks/typography-stylist/utils.js` (`wrapFitLines()`, `unwrapFitLines()`), `blocks/typography-stylist/edit.js`, `blocks/typography-stylist/editor.css`, `blocks/typography-stylist/__tests__/fit-wrap.test.js`
+
+Moved from `todo/archive/feature-fit-wysiwyg-editing.md` by #377.
+
 Status: **DONE 2026-07-29, shipping in 2.2.2** — implemented via an approach
 none of the candidates below anticipated: the RichText **value transform**.
 The stored `content` stays flat; `wrapFitLines()` feeds RichText a per-line

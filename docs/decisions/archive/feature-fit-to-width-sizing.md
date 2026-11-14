@@ -1,5 +1,11 @@
 # Feature: Fit-to-Width Font Sizing ("scale to fill the row")
 
+- **Topic:** the design record of the fit-to-width font size mode (`fontSize: 'fit'`): per-line ratios measured in the editor and `cqi` sizes on the frontend (shipped in 2.2.2).
+- **Issues:** #163
+- **Code:** `blocks/typography-stylist/hooks/use-fit-measurement.js` (`measureFitLines()`), `blocks/typography-stylist/save.js`, `blocks/typography-stylist/utils.js` (`buildFitLinesHtml()`, `computeFitRatio()`), `blocks/typography-stylist/style.css`
+
+Moved from `todo/archive/feature-fit-to-width-sizing.md` by #377. Later fit-to-width notes: [fit-to-width-natural-width.md](../fit-to-width-natural-width.md), [font-size-units-and-zoom.md](../font-size-units-and-zoom.md).
+
 Status: **implemented** (2026-07-28) — shipped as the third `fontSize` mode
 (`"fit"`) on the Typography Stylist block: per-line ratios measured in the
 editor (`measureFitLines` in edit.js), stored in `fitLineSizes`, rendered as

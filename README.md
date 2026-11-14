@@ -8,7 +8,7 @@ Typography Stylist is a WordPress plugin. It adds OpenType features, variable fo
 - **Stable and beta downloads:** [GitHub Releases](https://github.com/mattcowan/typography-stylist-for-wordpress/releases). Each release has an installable ZIP. Betas are marked as pre-releases, and they do not go to WordPress.org.
 - **Extend the plugin:** [HOOKS.md](HOOKS.md). **Release process:** [RELEASING.md](RELEASING.md).
 
-> **Note:** The GitHub “Download ZIP” of this repository is **not** an installable plugin. The release process makes the minified assets and the block build. Use a release ZIP or WordPress.org, or build from source (see [BUILD.md](BUILD.md)).
+> **Note:** The GitHub “Download ZIP” of this repository is **not** an installable plugin. The release process makes the minified assets and the block build. Use a release ZIP or WordPress.org, or build from source (see [BUILD.txt](BUILD.txt)).
 
 ## Requirements
 
@@ -891,7 +891,7 @@ npm run build:block
 npm run watch
 ```
 
-The inline editor and the block both contain JSX, so run `npm run build` before you use a clone of the repository. `npm run watch` does not rebuild the block. Run `npm run build:block` after you change the block. [BUILD.md](BUILD.md) has the full build instructions.
+The inline editor and the block both contain JSX, so run `npm run build` before you use a clone of the repository. `npm run watch` does not rebuild the block. Run `npm run build:block` after you change the block. [BUILD.txt](BUILD.txt) has the full build instructions and the map from each compiled file to its source files.
 
 ### Extending the Plugin
 

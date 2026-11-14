@@ -92,7 +92,7 @@ None of the fixtures or tests ship: `.distignore` excludes `__tests__`, `/tests`
 - No longer two copies: the Feature Visibility fieldsets in `assets/js/admin-page.js` "mirror the old PHP output", which was removed (#226), so the JS is the only renderer.
 - Methods of the same name in `typography-stylist.php` and `includes/` (`get_custom_fonts()`, `rewrite_css_urls()`, the REST endpoints …): one-line wrappers that delegate to the service classes (#360), kept for the public API.
 - The GREP and nested rule engines' `find_ranges()`, `sanitize_rules()` and `target_style_ids()`: the same names for different jobs. Their shared part is `Typost_PS_Text_Ranges`. The per-module admin hooks (`add_editor_data()`, `register_option_key()`, `render_options_row()`, `export_option_details()`) each register their own module's data.
-- A dead copy: `assets/js/utils.js` (`escapeHTML()`, `hasHTMLTags()`, `validateSelectionBounds()`, copies of `assets/js/inline-editor/sanitize.js`). No script or build loads it.
+- A dead copy, now removed: `assets/js/utils.js` held copies of `escapeHTML()`, `hasHTMLTags()` and `validateSelectionBounds()` from `assets/js/inline-editor/sanitize.js`. No script or build loaded it, and #377 deleted it.
 
 ## How a row was checked
 

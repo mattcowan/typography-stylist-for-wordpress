@@ -1,5 +1,11 @@
 # Refactor: Extract `parseStyleString` / `buildStyleString` Helpers
 
+- **Topic:** the record of the style-string helper refactor: one parser and one builder for inline style strings, one whole-span merge, one Quick Feature Toggles selection resolver, and why `save.js` keeps its own code (done 2026-07-26).
+- **Issues:** none
+- **Code:** `blocks/typography-stylist/utils.js` (`parseStyleString()`, `buildStyleString()`, `mergeTypostSpanStyling()`, `canCreateNestedSpan()`), `blocks/typography-stylist/save.js`, `blocks/typography-stylist/__tests__/styleString.test.js`
+
+Moved from `todo/archive/refactor-style-string-helpers.md` by #377.
+
 > **STATUS: DONE (2026-07-26), expanded beyond this doc's scope.** The
 > canonical helpers exist in `blocks/typography-stylist/utils.js` and every
 > live parse/build site is migrated EXCEPT save.js (deliberately kept inline —
