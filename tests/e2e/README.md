@@ -259,7 +259,7 @@ Handles WordPress authentication:
 E2E tests are:
 - ✅ Included in Git repository (source control)
 - ✅ Listed in `devDependencies` (development only)
-- ❌ **Excluded from npm package** (via `.npmignore`)
+- ❌ **Excluded from the plugin zip** (via `.distignore`)
 - ❌ Not distributed to end users
 
 Rationale: E2E tests are for development/CI only, not needed in production plugin.

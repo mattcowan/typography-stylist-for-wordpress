@@ -63,6 +63,8 @@ Each rule protects saved content, block validity or a release. The link names th
 | sanitization, nonces, logging, PHPCS exceptions, or translation catalogs | [code-patterns.md](docs/decisions/code-patterns.md) |
 | logic that has a copy elsewhere | [docs/twins.md](docs/twins.md) |
 | how properties are listed by hand (before you propose a property registry) | [docs/property-registry-design.md](docs/property-registry-design.md) |
+| a compiled file, a build script in `package.json`, what ships in the zip, or a new module that a bundle loads (name it in that bundle's Source list) | [BUILD.txt](BUILD.txt), `.distignore` |
+| the Site Title or Site Tagline block, or the history of a shipped design (fit-to-width, Glyphs Panel italic faces, style-string helpers) | [site-title-tagline-opentype.md](docs/decisions/site-title-tagline-opentype.md), [docs/decisions/archive/](docs/decisions/archive/) |
 
 ## Architecture
 

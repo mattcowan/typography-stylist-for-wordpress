@@ -2,204 +2,94 @@
 
 ## Overview
 
-This plugin uses **Jest** for unit testing. Tests help catch bugs before they reach users and make refactoring safer.
+The plugin has four test suites:
 
-## Quick Start
+| Suite | Tool | Where | Command | Runs in CI |
+| --- | --- | --- | --- | --- |
+| Unit tests for JavaScript | Jest | the `__tests__/` folders | `npm test` | on every pull request, and on each push to `main` |
+| Unit tests for PHP | PHPUnit with Brain Monkey | `tests/Unit/` | `npm run test:php` | on every pull request, and on each push to `main` |
+| End-to-end tests | Playwright | `tests/e2e/` | `npm run test:e2e` | on pull requests to `main`, and every week against WordPress trunk |
+| Screen-reader journeys | Playwright with Guidepup and NVDA | `tests/e2e-sr/` | `npm run test:sr` | no (Windows only, by hand) |
 
-```bash
-# Run all tests once
-npm test
+`npm run test:all` runs Jest and PHPUnit. None of the tests ship in the plugin zip.
 
-# Run tests in watch mode (re-runs when files change)
-npm run test:watch
+Install the tools once with `npm install` (Jest, Playwright) and `composer install` (PHPUnit).
 
-# Run tests with coverage report
-npm test -- --coverage
-```
+## Jest
 
-## Test Structure
+Jest tests the pure functions of the editors, the block's `save()` output, and the hand-written scripts of the modules. `npm test` runs `wp-scripts test-unit-jest` with the settings in `jest.config.js` and `jest.setup.js`. The tests run in jsdom, not in a browser.
 
-```
-opentype-stylist/
-├── blocks/
-│   └── opentype-stylist/
-│       ├── edit.js                    # Editor component code
-│       ├── save.js                    # Frontend rendering component
-│       ├── utils.js                   # Shared utility functions
-│       └── __tests__/                 # Tests
-│           ├── edit.test.js           # Editor logic tests
-│           └── save.test.js           # Frontend rendering tests
-├── jest.config.js                     # Jest configuration
-└── jest.setup.js                      # Test setup (runs before each test)
-```
+Jest runs every file in a `__tests__/` folder:
 
-## What We Test
+- `__tests__/` (plugin root): tests that read the documentation, for example `hooks-doc.test.js`.
+- `assets/js/__tests__/`: the inline editor modules, the shared modules and the settings page scripts.
+- `blocks/typography-stylist/__tests__/`: the Typography Stylist block.
+- `glyphs-panel/__tests__/`, `variable-fonts/__tests__/`, `paragraph-styles/__tests__/`: the bundled modules.
+- `scripts/__tests__/`: the version check script (`scripts/check-versions.js`).
+- `tests/e2e-sr/__tests__/`: the setup code of the screen-reader journeys (not the journeys).
 
-### 1. **Helper Functions** (Pure Functions)
-These are the easiest to test because they:
-- Have no side effects
-- Always return the same output for the same input
-- Don't depend on external state
-
-Example:
-```javascript
-describe('sanitizeFontFamily', () => {
-  it('should remove double quotes from font names', () => {
-    const input = '"Arial"';
-    const result = sanitizeFontFamily(input);
-    expect(result).toBe('Arial');
-  });
-});
-```
-
-### 2. **Business Logic**
-Tests for the core functionality like:
-- `toggleFeature()` - Applies features inline or to block
-- Feature string building
-- Attribute updates
-
-Example:
-```javascript
-it('should apply inline when text is selected', () => {
-  const hasSelection = true;
-  const result = toggleFeatureLogic('ss14', hasSelection, []);
-  expect(result.type).toBe('inline');
-});
-```
-
-### 3. **Frontend Rendering** (save.js)
-Tests for the HTML output that WordPress saves to the database:
-- Semantic heading structure (both screen reader and visual versions)
-- ARIA attributes (`aria-hidden="true"` on visual content)
-- Screen reader class assignment
-- HTML stripping for clean text accessibility
-
-Example:
-```javascript
-it('should render both versions with same heading tag', () => {
-  const attributes = { tagName: 'h2', content: 'Test', ... };
-  const component = create(save({ attributes }));
-  const tree = component.toJSON();
-
-  // Both children should be H2 elements
-  expect(tree.children[0].type).toBe('h2');
-  expect(tree.children[1].type).toBe('h2');
-});
-```
-
-**Why This Matters:** These tests prevent regressions in accessibility. If someone accidentally changes the screen reader version back to a `<span>`, tests will fail, protecting users who rely on assistive technology.
-
-### 4. **Edge Cases**
-Tests for unusual inputs like:
-- `null` or `undefined` values
-- Empty strings
-- Duplicate features
-
-## Testing Best Practices
-
-### The AAA Pattern
-Every test should follow this pattern:
-
-```javascript
-it('should do something', () => {
-  // ARRANGE - Set up test data
-  const input = 'test';
-  const expected = 'TEST';
-
-  // ACT - Call the function
-  const result = someFunction(input);
-
-  // ASSERT - Check the result
-  expect(result).toBe(expected);
-});
-```
-
-### Descriptive Test Names
-✅ **Good:** `should apply inline when text is selected`
-❌ **Bad:** `test1` or `it works`
-
-### Test One Thing Per Test
-Each test should verify one specific behavior.
-
-### Keep Tests Independent
-Tests should not depend on each other. Each test should work on its own.
-
-## Common Jest Matchers
-
-```javascript
-// Equality
-expect(value).toBe(expected);           // Strict equality (===)
-expect(value).toEqual(expected);        // Deep equality (for objects/arrays)
-
-// Truthiness
-expect(value).toBeTruthy();
-expect(value).toBeFalsy();
-expect(value).toBeNull();
-expect(value).toBeUndefined();
-
-// Numbers
-expect(value).toBeGreaterThan(3);
-expect(value).toBeLessThan(5);
-
-// Strings
-expect(string).toMatch(/pattern/);
-expect(string).toContain('substring');
-
-// Arrays
-expect(array).toContain(item);
-expect(array).toHaveLength(3);
-
-// Functions
-expect(fn).toHaveBeenCalled();
-expect(fn).toHaveBeenCalledWith(arg);
-```
-
-## The Bug We Fixed
-
-Our tests specifically verify the fix for the toggleFeature bug:
-
-**Bug:** When a user selected text and clicked a checkbox, the OpenType feature was applied to the entire block instead of just the selected text.
-
-**Fix:** Modified `toggleFeature()` to check if there's a selection and apply inline if so.
-
-**Test:**
-```javascript
-it('should apply inline when text is selected', () => {
-  const hasSelection = true; // User has text selected
-  const result = toggleFeatureLogic('ss14', hasSelection, []);
-
-  // Before fix: result.type would be 'block' ❌
-  // After fix: result.type is 'inline' ✅
-  expect(result.type).toBe('inline');
-});
-```
-
-## Next Steps for Learning
-
-1. **Start simple:** Test pure functions first
-2. **Add more tests:** Test other helper functions in `edit.js`
-3. **Test React components:** Learn to use `@testing-library/react`
-4. **Add integration tests:** Test multiple functions working together
-5. **Aim for coverage:** Try to get 80%+ code coverage
-
-## Resources
-
-- [Jest Documentation](https://jestjs.io/docs/getting-started)
-- [Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
-- [WordPress Scripts Testing](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/#test-unit-js)
-
-## Running Specific Tests
+Shared fixtures are in `tests/fixtures/` and `paragraph-styles/__tests__/fixtures/`. Some fixtures are read by Jest and by PHPUnit, so that the JavaScript and the PHP copy of a function give the same result. [docs/twins.md](docs/twins.md) lists these pairs and their tests.
 
 ```bash
-# Run only tests matching "sanitize"
-npm test -- --testNamePattern="sanitize"
-
-# Run only one test file
-npm test -- edit.test.js
-
-# Update snapshots
-npm test -- -u
+npm test                                   # all Jest tests
+npm test -- blocks/typography-stylist/__tests__/save.test.js   # one file
+npm test -- --testNamePattern="sanitize"   # tests whose name matches
+npm run test:watch                         # run again when a file changes
+npm test -- --coverage                     # coverage report
 ```
+
+Give the path of the file after `--`. Do not use `wp-scripts test-unit-js`: it prints a message about Vitest and runs no test.
+
+## PHPUnit
+
+PHPUnit tests the PHP classes without a WordPress installation. Brain Monkey replaces the WordPress functions that a test needs. The settings are in `phpunit.xml.dist`. `tests/bootstrap.php` defines the plugin constants and starts Brain Monkey, and the tests load the plugin files that they need.
+
+- `tests/Unit/`: the test classes, one file for each topic.
+- `tests/TestCase.php`, `tests/ExportTestCase.php`, `tests/Support/`: shared base classes and helpers.
+
+```bash
+composer install
+npm run test:php                                  # all PHPUnit tests
+vendor/bin/phpunit tests/Unit/SafeStyleCssTest.php   # one file
+```
+
+Some tests need real WordPress files: the HTML API (WordPress 6.9 or later) for the GREP and nested styles tests, and the block parser for the synced pattern test. Set the environment variable `TYPOST_WP_DIR` to the root of a WordPress installation or checkout. Without it, these tests are skipped. In CI, the "PHP tests" job fetches these files from WordPress 6.9 and runs `vendor/bin/phpunit --fail-on-skipped`, so a skipped test fails the job.
+
+## End-to-end tests (`tests/e2e/`)
+
+These Playwright tests drive the real block editor in a browser. They insert blocks, select text with real key presses, and check the saved markup and the frontend. Each test makes its own drafts and deletes them. The settings are in `playwright.config.js`: Chromium runs all tests, and Firefox runs only the tests tagged `@firefox` (keyboard focus checks).
+
+To run them on your computer you need a WordPress site with the plugin active:
+
+```bash
+npx playwright install chromium firefox
+cp .env.example .env    # then set WP_BASE_URL, WP_USERNAME, WP_PASSWORD
+npm run build           # the editor needs the compiled files
+npm run test:e2e
+```
+
+[tests/e2e/README.md](tests/e2e/README.md) has the details and the other commands (`test:e2e:ui`, `test:e2e:debug`, `test:e2e:headed`).
+
+In CI, the "E2E (stable WordPress)" job in `.github/workflows/ci.yml` runs the suite in wp-env on the latest WordPress release, for pull requests to `main`, pushes to `main` and manual runs. `.github/workflows/compat.yml` runs it every week on WordPress trunk.
+
+## Screen-reader journeys (`tests/e2e-sr/`)
+
+These tests drive the editor and the settings page with a real NVDA screen reader, through Guidepup, and record what NVDA says. Each file is one journey, for example the Glyphs panel or the Paragraph Styles browser. They run on Windows only, and they are not part of `npm test` or of CI.
+
+A run takes control of the keyboard. Guidepup sends key presses to the window in the foreground, so do not use the keyboard or the mouse while a run goes on. [tests/e2e-sr/README.md](tests/e2e-sr/README.md) tells you how to set up NVDA and how to run the journeys (`npm run test:sr`, settings in `playwright.nvda.config.js`).
+
+## How to write a unit test
+
+- **Test the real code.** Import the function from its file. Do not copy it into the test.
+- **Put logic in pure functions.** A function with no side effects is easy to test. The editors keep such functions in `blocks/typography-stylist/utils.js`, `assets/js/inline-editor/` and the shared modules in `assets/js/`.
+- **Use the AAA pattern:** arrange the data, act (call the function), assert the result.
+- **Test one behavior in each test,** and give the test a name that says the behavior: `should apply inline when text is selected`, not `test1`.
+- **Keep tests independent.** A test must not depend on the result of another test.
+- **Test the edge cases:** `null`, `undefined`, empty strings, values out of range, content saved by an older version.
+- **A new test must be able to fail.** Break the code that it guards once, and see the test fail.
+- **A test that reads a source file as text** (it checks that a pattern is or is not in the file) can pass when the code moves. When you move code, plant a violation once to prove that the test still finds it.
+
+[docs/decisions/testing-practices.md](docs/decisions/testing-practices.md) gives more rules, and how to test the plugin by hand in WordPress.
 
 ## When You Add or Change a Hook
 
@@ -210,40 +100,10 @@ npm test -- -u
 - **A hook name the test cannot read:** the test fails and names the file and the line. Write the name as a literal string, and call `window.typostHooks.doAction()` or `window.typostHooks.applyFilters()` directly.
 - **A new component that fires a hook named by a prop:** add it to `JS_HOOK_WRAPPERS` in the test file. `HookPoint` is the only such component today. Give the component name, the prop, the kind (action or filter) and the file. Do not import the component under another name.
 
-## Continuous Integration
+## Resources
 
-Consider adding tests to your CI/CD pipeline:
-
-```yaml
-# .github/workflows/test.yml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-      - run: npm install
-      - run: npm test
-```
-
-## Test Coverage
-
-To see which parts of your code are tested:
-
-```bash
-npm test -- --coverage
-```
-
-This generates a report showing:
-- **Statements:** % of code statements executed
-- **Branches:** % of if/else branches tested
-- **Functions:** % of functions called
-- **Lines:** % of code lines executed
-
-Aim for at least 80% coverage on critical code paths.
-
----
-
-**Remember:** Tests are documentation! They show how your code should work and make it safe to refactor.
+- [Jest documentation](https://jestjs.io/docs/getting-started)
+- [Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
+- [Playwright documentation](https://playwright.dev/docs/intro)
+- [Brain Monkey documentation](https://giuseppe-mazzapica.gitbook.io/brain-monkey)
+- [Guidepup documentation](https://www.guidepup.dev/)

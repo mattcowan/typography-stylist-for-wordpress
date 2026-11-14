@@ -32,4 +32,4 @@ Moved from the "Testing the Plugin" section of the root [CLAUDE.md](../../CLAUDE
 - Extract testable logic to `utils.js` for both component and tests to use
 - Use AAA pattern: Arrange, Act, Assert
 - Test both happy path and edge cases
-- See [TESTING.md](../../TESTING.md) for beginner-friendly testing guide
+- See [TESTING.md](../../TESTING.md) for the four test suites and how to run each one
