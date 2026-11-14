@@ -3296,6 +3296,10 @@ msgstr ""
 msgid "The styling could not be applied to this selection."
 msgstr ""
 
+#: blocks/typography-stylist/build/index.js:4
+msgid "All styling removed from the block."
+msgstr ""
+
 #: blocks/typography-stylist/build/index.js:5
 msgid "Inherit from block"
 msgstr ""
@@ -3421,6 +3425,12 @@ msgstr ""
 msgid "Clear All"
 msgstr ""
 
+#. translators: %s: the block's current tag, for example "Heading 2", "Paragraph" or "Div"
+#: blocks/typography-stylist/build/index.js:7
+#, js-format
+msgid "Change heading level (current: %s)"
+msgstr ""
+
 #: blocks/typography-stylist/build/index.js:7
 msgid "Change heading level"
 msgstr ""
@@ -3457,6 +3467,23 @@ msgstr ""
 msgid "Div"
 msgstr ""
 
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove all styling"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove all styling?"
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:10
+msgid "This removes all styling from the block: text formats such as bold and italic, the inline features, the block-level settings (font, size, features, spacing, and more), the paragraph style, colors, text alignment and the extra CSS class. The text stays, with its links, line breaks, footnotes, images, subscript and superscript. To undo, press Ctrl+Z (Cmd+Z on Mac)."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove styling"
+msgstr ""
+
 #: blocks/typography-stylist/build/index.js:7
 msgid "Help & Tips"
 msgstr ""
@@ -3487,6 +3514,10 @@ msgstr ""
 
 #: blocks/typography-stylist/build/index.js:7
 msgid "Tip: By default, fonts added in Settings → Typography Stylist load only on pages that use them."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:7
+msgid "Theme default"
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:7
@@ -3629,10 +3660,6 @@ msgid "Reset Entire Block?"
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:9
-msgid "This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac)."
-msgstr ""
-
-#: blocks/typography-stylist/build/index.js:9
 msgid "Yes, Reset All"
 msgstr ""
 
@@ -3648,8 +3675,8 @@ msgstr ""
 msgid "Reset Entire Block"
 msgstr ""
 
-#: blocks/typography-stylist/build/index.js:9
-msgid "Clears the inline features and the block-level settings (font, features, spacing, and more)."
+#: blocks/typography-stylist/build/index.js:10
+msgid "Removes all styling, so the block looks as the theme styles a heading or paragraph. The text and its links stay. Same as “Remove all styling” in the block toolbar."
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:9
