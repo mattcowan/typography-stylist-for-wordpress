@@ -10,7 +10,7 @@ import { resolveSpanStoredFontWeight } from '../../assets/js/inline-apply-rules.
 import { TEXT_CASE_VALUES, CASE_DATA_ATTRIBUTES, CASE_CSS_PROPERTIES, normalizeTextCase, isSmallCapsCase, caseDeclarations, caseStyleObject, buildInlineCaseAttributes } from '../../assets/js/text-case.js';
 import { buildTextOffsetMap, buildBreakOffsetMap } from '../../assets/js/text-offsets.js';
 import { filterToolbarButtons } from '../../assets/js/toolbar-buttons.js';
-import { getClosestWeight } from '../../assets/js/font-weights.js';
+import { getClosestWeight, normalizeRenderedWeight } from '../../assets/js/font-weights.js';
 import { sanitizeFontVariationSettings } from '../../assets/js/font-variation-settings.js';
 
 /**
@@ -1758,19 +1758,12 @@ export function detectBlockComputedWeight(clientId, elementSelector = '.typost-b
 			return '';
 		}
 
-		const weight = targetWindow.getComputedStyle(textElement).getPropertyValue('font-weight');
-		if (!weight) {
-			return '';
-		}
-
-		// Some platforms report keywords; map them so the result is always a
-		// valid block attribute value.
-		const keywords = { normal: '400', bold: '700', bolder: '700', lighter: '300' };
-		const normalized = String(weight).trim().toLowerCase();
-		if (keywords[normalized]) {
-			return keywords[normalized];
-		}
-		return /^\d+$/.test(normalized) ? normalized : '';
+		// Some platforms report keywords; normalizeRenderedWeight() (shared
+		// with the font pick rule) maps them, so the result is always a valid
+		// block attribute value or ''.
+		return normalizeRenderedWeight(
+			targetWindow.getComputedStyle(textElement).getPropertyValue('font-weight')
+		);
 	} catch (error) {
 		return '';
 	}
