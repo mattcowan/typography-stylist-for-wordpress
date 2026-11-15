@@ -1,5 +1,11 @@
 # Follow-up: inline font apply leaves legacy `data-font` attribute stale
 
+- **Topic:** when the editors remove a legacy `data-font` family-name attribute from a span, and why the Glyphs Panel's `data-font` must survive other applies (resolved 2026-08-06).
+- **Issues:** none
+- **Code:** `assets/js/inline-editor/apply-features.js` (`_buildPatchFromPending()`, `_doApplyFeatures()`), `blocks/typography-stylist/utils.js` (`mergeTypostSpanStyling()`, `updateSpanPropertyInPlace()`, `splitSpanAndApply()`)
+
+Moved from `todo/archive/followup-stale-data-font-attribute.md` by #377. Since #357 the two inline editor write paths that the note places in `assets/js/block-editor.js` are in `assets/js/inline-editor/apply-features.js`.
+
 Status: **RESOLVED 2026-08-06.** Investigation found the inline editor half
 was already fixed (both write paths in `assets/js/block-editor.js` —
 `_buildPatchFromPending` and `_doApplyFeatures` — write/clear `data-font`

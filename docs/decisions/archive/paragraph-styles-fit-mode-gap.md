@@ -1,5 +1,11 @@
 # Gap: Paragraph styles saved from a Fit-to-Width block (`fontSize: 'fit'`)
 
+- **Topic:** why `fontSize: 'fit'` is a paragraph style property with its `fitMaxSize` cap and a fallback clamp, and how inline spans fall back to that clamp (resolved 2026-08-06).
+- **Issues:** none
+- **Code:** `paragraph-styles/paragraph-styles.php` (`generate_style_css()`), `paragraph-styles/assets/js/lib/ps-utils.js` (`isStyleModified()`), `paragraph-styles/__tests__/ps-utils.test.js`
+
+Moved from `todo/archive/paragraph-styles-fit-mode-gap.md` by #377. The `edit.js` and `block-editor.js` line numbers in the original analysis are from 2026-08; #356 and #357 moved that code.
+
 Status: **RESOLVED 2026-08-06 — Option B implemented** (fit is a first-class
 style property). Decisions made with Matt: styles saved from fit blocks also
 capture `fitMaxSize` (always stored, 0 = uncapped, so applies are
@@ -99,4 +105,4 @@ surface-dependent.
 - `paragraph-styles/includes/admin-tab.php` — size display branch
 - `blocks/typography-stylist/save.js:56-108` — styleClass vs fit fallback clamp
 - `blocks/typography-stylist/edit.js:366-406` — apply handler; `:559` state provider
-- `todo/archive/feature-fit-to-width-sizing.md` (archived design record) — fit-mode rationale
+- [feature-fit-to-width-sizing.md](feature-fit-to-width-sizing.md) (archived design record) — fit-mode rationale

@@ -21,7 +21,6 @@
 /coverage
 /scripts
 /tests
-/todo
 /docs
 /private
 
@@ -38,7 +37,6 @@ __mocks__
 /.env
 /.env.example
 /.gitignore
-/.npmignore
 /.wp-env.json
 /.wp-env.override.json
 /.phpunit.result.cache
@@ -54,16 +52,15 @@ __mocks__
 /.gitattributes
 
 # --- docs that live on GitHub, not in the distributed plugin ---
-# (readme.txt, changelog.txt, BUILD.txt, and SOURCE.md DO ship: readme.txt is
-# the WordPress.org listing, and BUILD.txt + SOURCE.md + package.json satisfy
-# the directory's build-instructions / minified-source-mapping requirements.)
-/BUILD.md
+# (readme.txt, changelog.txt and BUILD.txt DO ship: readme.txt is the
+# WordPress.org listing, and BUILD.txt satisfies the directory's
+# build-instructions / minified-source-mapping requirement. It names the
+# public repository for the build configuration, which does not ship (#377).)
 /CLAUDE.md
 /DOCUMENTATION.md
 /HOOKS.md
 /README.md
 /RELEASING.md
-/ROADMAP.md
 /TESTING.md
 
 # --- misc ---

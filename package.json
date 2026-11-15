@@ -2,6 +2,7 @@
   "name": "typost",
   "version": "2.3.6",
   "description": "WordPress plugin for advanced OpenType typography features in Gutenberg headlines",
+  "private": true,
   "scripts": {
     "build": "npm run build:block && npm run build:js && npm run build:css",
     "build:block": "wp-scripts build blocks/typography-stylist/index.js --output-path=blocks/typography-stylist/build",

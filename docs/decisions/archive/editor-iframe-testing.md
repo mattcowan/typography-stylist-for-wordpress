@@ -1,5 +1,11 @@
 # Block Editor Iframe vs Non-Iframe Testing
 
+- **Topic:** when the block editor runs in an iframe, which asset hooks reach the iframe, and a manual checklist for the paragraph styles CSS in both editors and on the frontend.
+- **Issues:** none
+- **Code:** `paragraph-styles/paragraph-styles.php` (`enqueue_editor_style_css()`), `typography-stylist.php` and `includes/class-typost-assets.php` (`enqueue_block_assets()`)
+
+Moved from `todo/archive/editor-iframe-testing.md` by #377. `ROADMAP.md` listed it as a checklist to run again on each major WordPress release.
+
 ## When Does WordPress Use an Iframe for the Block Editor?
 
 WordPress 5.4+ introduced the concept of an "iframed" block editor, and it has become the default in newer versions. The behavior depends on several factors:

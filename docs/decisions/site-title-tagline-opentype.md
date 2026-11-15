@@ -1,5 +1,11 @@
 # Block-level OpenType support for `core/site-title` and `core/site-tagline`
 
+- **Topic:** why the inline format cannot reach the Site Title and Site Tagline blocks, and a design sketch for block-level typography on them (open, not started).
+- **Issues:** none open yet; #185 (closed) named this support in its title, and the code has none
+- **Code:** none yet; the sketch names `blocks/typography-stylist/edit.js` (the Quick Feature Toggles) and the `typost_force_enqueue_font_ids` filter
+
+Moved from `todo/site-title-tagline-opentype.md` by #377, which removed `ROADMAP.md` ("Planned (next up)" listed this item).
+
 **Status:** not started. Investigated 18 August 2026; the finding below is
 verified, the solution is not.
 

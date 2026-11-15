@@ -1,5 +1,11 @@
 # Glyphs Panel: italic face support
 
+- **Topic:** how the Glyphs Panel picks the italic or roman face of a font from the style at the editor selection, with two small follow-ups that are still open (shipped in the 2.2.0 batch).
+- **Issues:** none
+- **Code:** `glyphs-panel/assets/js/lib/font-loader.js` (`pickFaceForWeight()`, `resolveFontFile()`), `glyphs-panel/assets/js/editor.js`, `glyphs-panel/assets/js/glyphs-modal.js`, `glyphs-panel/__tests__/font-loader.test.js`
+
+Moved from `todo/archive/feature-glyphs-panel-italic-faces.md` by #377.
+
 **STATUS: DONE (2026-07-27), design revised.** The original plan proposed a
 Roman/Italic toggle in the panel toolbar; the shipped design is
 **context-driven with no toggle** (per Matt's direction): the panel loads and

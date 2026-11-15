@@ -4908,7 +4908,7 @@ class Typost {
 /**
  * Initialize plugin
  *
- * Returns the singleton instance of the OpenType_Stylist plugin class.
+ * Returns the singleton instance of the Typost plugin class.
  * Called on 'plugins_loaded' hook.
  *
  * @since 1.0.0

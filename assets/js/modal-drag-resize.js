@@ -2,7 +2,7 @@
  * Modal Drag and Resize Utilities
  * Pure functions for draggable/resizable modal functionality
  *
- * @package OpenType_Stylist
+ * @package Typography_Stylist
  */
 
 /**
