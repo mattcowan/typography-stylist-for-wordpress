@@ -2545,6 +2545,10 @@ msgstr "Profondeur d’imbrication maximale (%d) atteinte. Sélectionnez tout le
 msgid "The styling could not be applied to this selection."
 msgstr "Le style n’a pas pu être appliqué à cette sélection."
 
+#: blocks/typography-stylist/build/index.js:4
+msgid "All styling removed from the block."
+msgstr "Toute la mise en forme a été supprimée du bloc."
+
 #: blocks/typography-stylist/build/index.js:5
 msgid "Inherit from block"
 msgstr "Hériter du bloc"
@@ -2665,6 +2669,12 @@ msgstr "Fonctionnalités actives :"
 msgid "Clear All"
 msgstr "Tout effacer"
 
+#. translators: %s: the block's current tag, for example "Heading 2", "Paragraph" or "Div"
+#: blocks/typography-stylist/build/index.js:7
+#, js-format
+msgid "Change heading level (current: %s)"
+msgstr "Changer le niveau de titre (actuel : %s)"
+
 #: blocks/typography-stylist/build/index.js:7
 msgid "Change heading level"
 msgstr "Changer le niveau de titre"
@@ -2701,6 +2711,23 @@ msgstr "Paragraphe"
 msgid "Div"
 msgstr "Div"
 
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove all styling"
+msgstr "Supprimer toute la mise en forme"
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove all styling?"
+msgstr "Supprimer toute la mise en forme ?"
+
+#: blocks/typography-stylist/build/index.js:3
+#: blocks/typography-stylist/build/index.js:10
+msgid "This removes all styling from the block: text formats such as bold and italic, the inline features, the block-level settings (font, size, features, spacing, and more), the paragraph style, colors, text alignment and the extra CSS class. The text stays, with its links, line breaks, footnotes, images, subscript and superscript. To undo, press Ctrl+Z (Cmd+Z on Mac)."
+msgstr "Cette action supprime toute la mise en forme du bloc : les formats de texte comme le gras et l’italique, les fonctionnalités en ligne, les réglages du bloc (police, taille, fonctionnalités, espacement, etc.), le style de paragraphe, les couleurs, l’alignement du texte et la classe CSS additionnelle. Le texte reste, avec ses liens, ses sauts de ligne, ses notes de bas de page, ses images, ses indices et ses exposants. Pour annuler, appuyez sur Ctrl+Z (Cmd+Z sur Mac)."
+
+#: blocks/typography-stylist/build/index.js:3
+msgid "Remove styling"
+msgstr "Supprimer la mise en forme"
+
 #: blocks/typography-stylist/build/index.js:7
 msgid "Help & Tips"
 msgstr "Aide et conseils"
@@ -2732,6 +2759,10 @@ msgstr "Le bloc ajoute automatiquement une copie en texte brut de son contenu po
 #: blocks/typography-stylist/build/index.js:7
 msgid "Tip: By default, fonts added in Settings → Typography Stylist load only on pages that use them."
 msgstr "Astuce : par défaut, les polices ajoutées dans Réglages → Typography Stylist se chargent uniquement sur les pages qui les utilisent."
+
+#: blocks/typography-stylist/build/index.js:7
+msgid "Theme default"
+msgstr "Par défaut du thème"
 
 #: blocks/typography-stylist/build/index.js:7
 msgid "Fit to width"
@@ -2834,10 +2865,6 @@ msgid "Reset Entire Block?"
 msgstr "Réinitialiser tout le Bloc ?"
 
 #: blocks/typography-stylist/build/index.js:9
-msgid "This resets the whole block. It removes the inline features and all block-level settings (font, features, spacing, and more). To undo, press Ctrl+Z (Cmd+Z on Mac)."
-msgstr "Cette action réinitialise tout le bloc. Elle supprime les fonctionnalités en ligne et tous les réglages du bloc (police, fonctionnalités, espacement, etc.). Pour annuler, appuyez sur Ctrl+Z (Cmd+Z sur Mac)."
-
-#: blocks/typography-stylist/build/index.js:9
 msgid "Yes, Reset All"
 msgstr "Oui, tout réinitialiser"
 
@@ -2853,9 +2880,9 @@ msgstr "Supprime toutes les fonctionnalités en ligne (spans typost-styled) mais
 msgid "Reset Entire Block"
 msgstr "Réinitialiser tout le Bloc"
 
-#: blocks/typography-stylist/build/index.js:9
-msgid "Clears the inline features and the block-level settings (font, features, spacing, and more)."
-msgstr "Efface les fonctionnalités en ligne et les réglages du bloc (police, fonctionnalités, espacement, etc.)."
+#: blocks/typography-stylist/build/index.js:10
+msgid "Removes all styling, so the block looks as the theme styles a heading or paragraph. The text and its links stay. Same as “Remove all styling” in the block toolbar."
+msgstr "Supprime toute la mise en forme : le bloc prend l’apparence que le thème donne à un titre ou à un paragraphe. Le texte et ses liens restent. Identique à « Supprimer toute la mise en forme » dans la barre d’outils du bloc."
 
 #: blocks/typography-stylist/build/index.js:9
 msgid "Add text with advanced typography…"
