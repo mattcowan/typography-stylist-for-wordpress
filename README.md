@@ -240,11 +240,11 @@ The panel always offers “Convert to Typography Stylist Block” for a heading 
 #### Method 2: Typography Stylist Block (for complex typography)
 
 1. Add a Typography Stylist block from the block inserter.
-2. Choose the heading level (H1–H6, Paragraph, or Div) with “Change heading level” in the block toolbar.
+2. Choose the heading level (H1–H6, Paragraph, or Div) with “Change heading level” in the block toolbar. The button shows the current level.
 3. Type your text in the block.
 4. Set the typography for the whole block in the sidebar. The sidebar has panels for these settings:
    - Font family
-   - Font weight
+   - Font weight (“Theme default” uses the weight that the theme gives the tag)
    - Font style
    - Font size (inherit, responsive (fluid), or fit to width)
    - Line height
@@ -254,6 +254,12 @@ The panel always offers “Convert to Typography Stylist Block” for a heading 
 5. To style only part of the text, select it and click “Typography Stylist Features” in the block toolbar. The Quick Feature Toggles then change only the selected text.
 
 The editor shows each change at once.
+
+**Heading level of new blocks:** A new block from the block inserter starts with the heading level that you chose last. The editor does not keep Heading 1. Until you choose a level, a new block is Heading 2. The browser keeps the choice for the site.
+
+**Remove all styling:** “Remove all styling” in the block toolbar shows the block as the theme shows its tag. It removes the text formats (such as bold and italic), the Typography Stylist features, the block settings, the paragraph style, the colors, the spacing, the text alignment, and the additional CSS class. The text stays, with its links, line breaks, footnotes, images, subscript, and superscript. Press Ctrl+Z (Cmd+Z on Mac) to undo. If “Clear Button Confirmation” is on in Settings → Typography Stylist → Options, a dialog asks first. “Reset Entire Block” in the sidebar does the same.
+
+**Empty blocks:** When you convert an empty Paragraph or Heading block to a Typography Stylist block, the new block gets only the heading level. It does not get the paragraph style, the colors, or the CSS class of the empty block.
 
 **Line breaks:** In a Typography Stylist block, Enter adds a line break and keeps you in the same block. Thus a headline with many lines has one set of typography settings. If you want Enter to start a new block (as in a core heading), turn off “Enter adds a line break inside the block” in Settings → Typography Stylist → Options. Shift+Enter always adds a line break. The setting does not change existing content.
 

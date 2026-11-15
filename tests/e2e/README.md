@@ -159,6 +159,44 @@ the expected string. Each test runs with new sizes written in rem and in
 px (the value of the "Write new font sizes in px" option is set in the
 page; the site option is not changed). It runs in Chromium only.
 
+### `inline-extension-listeners.spec.js` — #386
+
+The inline editor's side of the extension API on a core Paragraph: a style
+picked in the style browser styles the selected text and the dialog opens
+again; `typost-insert-content` inserts at the selection; the dialog opens
+again when `typost_glyphs_panel_closed` fires; the
+`typost_current_editor_state` filter returns the open dialog's state after
+a feature is turned on; `typost-convert-to-block` converts the Paragraph;
+and a toolbar button that an extension adds later shows. These tests failed
+in wp-env before #386, because the inline editor registered its listeners
+in its constructor (see "Running in wp-env" below). Each test works on its
+own draft, and the first on its own paragraph style ("ZZ #386 …"). It runs
+in Chromium only.
+
+### `heading-level.spec.js` — #409, #410
+
+The Typography Stylist block's "Change heading level" button: its name
+carries the current tag and follows a pick, a block from the main inserter
+starts with the tag picked last and stores it, a pick of Heading 1 is not
+remembered, and `createBlock('typost/block')` with no `tagName` still gives
+h2. Each test gets a new browser context, so nothing is remembered at the
+start; the test removes the remembered tag first and puts back what it
+found. It runs in Chromium only.
+
+### `strip-styling.spec.js` — #411, #412
+
+"Remove all styling" in the block toolbar on a styled block (a responsive
+size, a feature span, bold, a link, a text color, padding and alignment):
+the stored content and attributes match the expected values character for
+character, focus stays on the button, the polite live region says "All
+styling removed from the block.", and one undo brings the styled block
+back. A second test turns an empty Paragraph that has a paragraph style
+class and colors into a Typography Stylist block with
+`switchToBlockType()`, and expects only its tag (`p`) and `fontWeight: ''`:
+WordPress copies the class and the colors, and the plugin's filter removes
+them. The clear confirmation option and the size unit are set in the page
+only. It runs in Chromium only.
+
 ### `helpers.js`
 
 Shared helpers (open the editor, select text with the keyboard, REST
@@ -298,8 +336,9 @@ A failed test fails the pull request.
 
 wp-env turns on `SCRIPT_DEBUG`, so the editor runs React's development
 build, which mounts each component, unmounts it and mounts it again in
-StrictMode. Code that works on a site with `SCRIPT_DEBUG` off can fail
-there: see "A known limit" in the saved-markup fixtures README.
+StrictMode. Code that registers listeners in a constructor, or anywhere
+outside a mount and unmount pair, works on a site with `SCRIPT_DEBUG` off
+and fails there (#386, `inline-extension-listeners.spec.js`).
 
 The screen-reader suite (`npm run test:sr`, `tests/e2e-sr/`) needs Windows
 and NVDA, so it stays local.

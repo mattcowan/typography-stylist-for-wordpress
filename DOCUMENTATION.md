@@ -245,15 +245,17 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
    - Click the (+) button.
    - Search for “Typography Stylist”.
    - Click the block to insert it.
-2. Choose the heading level with “Change heading level” in the block toolbar: Heading 1–6, Paragraph, or Div.
+2. Choose the heading level with “Change heading level” in the block toolbar: Heading 1–6, Paragraph, or Div. The button shows the icon of the current level, and its name tells the level, for example “Change heading level (current: Heading 4)”.
 3. Type your text in the block.
 4. Set the typography for the whole block in the sidebar.
 5. To style only part of the text, select it and click “Typography Stylist Features” in the block toolbar. The Quick Feature Toggles then change only the selected text.
 
+**The heading level of a new block:** The editor keeps the heading level that you chose last in “Change heading level”. A new Typography Stylist block from the block inserter then starts with that level. This applies to the (+) inserter, the quick inserter, the slash command (“/”), and a block that you drag from the inserter. Until you choose a level, a new block is Heading 2. The editor does not keep Heading 1, because a page usually has only one Heading 1. If you choose Heading 1, the next new block starts with the level that you chose before. The browser keeps the choice for the site, so it stays after a reload. All users of this browser share it. Other browser tabs of the site get the choice at once. A block that you make from a core Heading or Paragraph block keeps the level of that block. A duplicated, copied, or pasted block keeps its own level, and so does a block in a pattern.
+
 **Sidebar settings:**
 
 - **Font Family:** Select one of your fonts.
-- **Font Weight:** Choose a weight (100–900). For a variable font with a weight axis, a slider replaces the list.
+- **Font Weight:** Choose a weight (100–900), or “Theme default”. With “Theme default”, the block has no weight of its own: the text shows at the weight that the theme or a paragraph style gives it. A heading that the theme makes bold stays bold. When you choose a font for a block with “Theme default”, the block keeps “Theme default” if the font has the weight that the text shows now. If the font does not have that weight, the block gets the nearest weight of the font. For a variable font with a weight axis, a slider replaces the list.
 - **Font Style:** Choose the italic face of the font.
 - **Font Size:** “Inherit”, “Responsive (Fluid)”, or “Fit to width”. A responsive size has three values: “Mobile (320px and up)”, “Intermediate”, and “Large (up to 1920px)”. Fit to width makes each line fill the width of the block.
   - You enter sizes in px. A new block writes them in rem (the px value divided by 16), so the size follows the default font size that the reader sets in the browser. The slider shows both values, for example “24px (1.5rem)”.
@@ -269,6 +271,24 @@ Use this block for complex typography, letter-by-letter styling, or the most acc
 - **Case:** Change how the letters look: “Default” (the case the theme sets), “Normal” (removes a case the theme sets), “All Caps”, “Lowercase”, “Title Case”, “Small Caps” (lowercase letters become small caps), or “All Small Caps” (capitals become small caps too). The stored text keeps the case you typed, so you can change the setting at any time. For Small Caps and All Small Caps, “Allow fake small caps” lets the browser shrink capitals when the font has no small caps; turn it off to keep such a font in normal case. Title Case capitalizes every word, including short words such as “of” and “the”. Case follows the language of the text: with Turkish, `i` becomes `İ`. All caps are harder to read in long text. In this block, screen readers read the original text; when All Caps is applied to text in other blocks, some screen readers spell out short all-caps words letter by letter. A paragraph style can keep the setting. The inline format (Method 1) has the same setting for selected text. To change the case of part of the text, select it and use “Case (for selected text)” in the Quick Feature Toggles. The block’s own Case setting does not change.
 - **OpenType Features:** Turn on features for the whole block. The features are in groups: ligatures, stylistic sets, swashes and alternates, decorative, numerals and figures, capitals and case, positional forms, superscript and ordinals, and other features.
 - **Accessibility:** Choose the screen reader class: `visually-hidden`, `sr-only`, `screen-reader-text`, or a custom class name.
+- **Reset Features:** “Clear Individual Features” removes the Typography Stylist features on parts of the text and keeps the settings of the block. “Reset Entire Block” removes all styling from the block. It is the same as “Remove all styling” in the block toolbar (see below). The sidebar always asks first.
+
+**Remove all styling:** Click “Remove all styling” in the block toolbar to show the block as the theme shows a heading or paragraph. The button has the icon of a “T” with an eraser. It removes:
+
+- Text formats on the text, such as bold, italic, and text color, and the Typography Stylist features on parts of the text.
+- The settings of the block in the sidebar: font, weight, size, features, spacing, and more.
+- The paragraph style.
+- The colors, padding, margin, line height, Line indent, text alignment, and additional CSS class of the block.
+
+These stay:
+
+- The text, with its links, line breaks, footnotes, inline images, formulas, subscript, and superscript. The language, abbreviation, and note formats also stay.
+- The heading level, the wide or full width setting, the HTML anchor, the unit of the text size, and the screen reader class.
+- The settings that extension plugins keep on the block.
+
+After this, the block has “Theme default” as its font weight. Screen readers announce “All styling removed from the block.” To undo, press Ctrl+Z (Cmd+Z on Mac) one time. If **Clear Button Confirmation** is on (Settings → Typography Stylist → Options), a dialog asks first: click “Remove styling” to continue, or “Cancel” to keep the styling.
+
+**A block made from an empty block:** You can convert an empty core Paragraph or Heading block to a Typography Stylist block. Use the block switcher, or “Convert to Typography Stylist Block” in the inline editor. With the default toolbar position, WordPress shows no block toolbar for an empty Paragraph block; an empty Heading block has the toolbar. The new block gets only the heading level of the empty block and the unit for new text sizes. It does not get the paragraph style, the colors, or the additional CSS class of the empty block. It also does not get the settings of the inline editor. The new block has “Theme default” as its font weight, so it shows as the theme shows its tag. A block is empty when it has only spaces, line breaks, or empty formats. A block with text converts as before.
 
 The block writes two copies of your content:
 
@@ -544,7 +564,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 ### Options Tab
 
 - **Admin Color Scheme:** The color scheme of this settings screen. The change applies at once.
-- **Clear Button Confirmation:** Ask before the “Clear” button in the editor panels removes styling.
+- **Clear Button Confirmation:** Ask before the “Clear” button in the editor panels removes styling. It also controls the dialog of “Remove all styling” in the toolbar of the Typography Stylist block.
 - **Enter Key in Typography Stylist Blocks:** Enter adds a line break inside the block (the default), or Enter starts a new block, as in a core heading.
 - **Archive Page Font Detection:** Check the full post content on archive pages, so that fonts load there too.
 - **WordPress Font Library:** Register new uploads in the Font Library automatically (WordPress 6.5+).
