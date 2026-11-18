@@ -1,14 +1,15 @@
 /**
  * Typography Stylist Block - fit-to-width measurement.
  *
- * Moved out of edit.js unchanged (#356).
+ * Moved out of edit.js (#356). Since #388 it also builds the fit editing
+ * value and its line sizes, which must stay apart (see the hook's docblock).
  */
 
 import { isRTL } from '@wordpress/i18n';
 import { store as blockEditorStore } from '@wordpress/block-editor';
-import { useRef, useEffect } from '@wordpress/element';
+import { useRef, useEffect, useMemo } from '@wordpress/element';
 import { dispatch } from '@wordpress/data';
-import { debounce, splitContentIntoLines, resolveBlockFontFamilyStyle, resolveFitLineHang, initialHangApplies, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, caseDeclarations } from '../utils';
+import { debounce, splitContentIntoLines, resolveBlockFontFamilyStyle, resolveFitLineHang, initialHangApplies, computeHungFitRatio, computeFitWordRatio, buildFitProbeClassName, caseDeclarations, wrapFitLinesBySizeProperty, buildFitLineSizeProperties } from '../utils';
 
 /**
  * Measure a fit-to-width block's lines and store their ratios in
@@ -18,8 +19,19 @@ import { debounce, splitContentIntoLines, resolveBlockFontFamilyStyle, resolveFi
  * Does nothing unless fontSize is 'fit'. The measurement is debounced and
  * reads the latest values through a ref, so it never runs on stale ones.
  *
+ * Also returns the RichText value for a fit block and the line sizes that
+ * go on an ancestor of it (#388). The value holds no ratio, so a new
+ * measurement changes only the style: when the ratios were in the value,
+ * core's RichText saw its value change with the same text and marked the
+ * measurement's not-persistent write as persistent, and a post that the
+ * author only opened was dirty on some opens.
+ *
  * @param {Object} block Block attributes the measurement reads, plus
  *                       setAttributes, clientId and blockFontSizeUnit.
+ * @return {{fitEditingValue: string, fitLineSizeStyle: (Object|undefined)}}
+ *         The RichText value ('' unless fontSize is 'fit' and there is
+ *         content), and the custom properties with the line sizes
+ *         (undefined when there are none).
  */
 export default function useFitMeasurement({
 	fontSize,
@@ -33,6 +45,7 @@ export default function useFitMeasurement({
 	fontVariationSettings,
 	fitLineSizes,
 	fitWordSizes,
+	fitMaxSize,
 	setAttributes,
 	initialHang,
 	fitLineHangs,
@@ -169,8 +182,15 @@ export default function useFitMeasurement({
 				// typing snaps line sizes back instead of undoing the text.
 				// Undone content re-triggers this effect, so ratios always
 				// recompute to match whatever content undo lands on.
+				// history 'ignore' (WordPress 7.1+; older versions take no
+				// argument and merge the write into the next undo step)
+				// keeps the write out of the undo history: the write on open
+				// otherwise became a second undo step after the author's
+				// first edit, which brought back only the stored ratios and
+				// left them on the canvas, as nothing measured again (#388).
+				// The write still reaches the post with the next real edit.
 				if (typeof dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent === 'function') {
-					dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent();
+					dispatch(blockEditorStore).__unstableMarkNextChangeAsNotPersistent({ history: 'ignore' });
 				}
 				measureFitPropsRef.current.setAttributes(measureWords
 					? { fitLineSizes: ratios, fitWordSizes: wordRatios }
@@ -228,4 +248,24 @@ export default function useFitMeasurement({
 			}
 		};
 	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Fit-to-width editing value: the flat content attribute wrapped into
+	// per-line typost-line spans (with <br> separators kept) for the
+	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
+	// the render branch ever sees the wrapped form. No ratio is in it: each
+	// line reads its size from a custom property (fitLineSizeStyle), so a
+	// measurement does not change the value (#388).
+	const fitEditingValue = useMemo(
+		() => (fontSize === 'fit' && content ? wrapFitLinesBySizeProperty(content, fitLineHangs) : ''),
+		[fontSize, content, fitLineHangs]
+	);
+	const fitLineSizeStyle = useMemo(() => {
+		if (fontSize !== 'fit' || !content) {
+			return undefined;
+		}
+		const properties = buildFitLineSizeProperties(content, fitLineSizes, fitMaxSize, blockFontSizeUnit, fitWordSizes);
+		return Object.keys(properties).length ? properties : undefined;
+	}, [fontSize, content, fitLineSizes, fitMaxSize, blockFontSizeUnit, fitWordSizes]);
+
+	return { fitEditingValue, fitLineSizeStyle };
 }

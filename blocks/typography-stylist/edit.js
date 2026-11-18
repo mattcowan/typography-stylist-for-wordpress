@@ -26,7 +26,7 @@ import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
 import { useSelect } from '@wordpress/data';
 import {  } from '@wordpress/rich-text';
-import { parseInlineStylesAtCursor, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, wrapFitLines, unwrapFitLines, installModalFocusGuard, resolveScreenReaderClassControl, normalizeHang, buildFitLinePreviews, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit } from './utils';
+import { parseInlineStylesAtCursor, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, unwrapFitLines, installModalFocusGuard, resolveScreenReaderClassControl, normalizeHang, buildFitLinePreviews, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
 import renderQuickFeatureToggles from './components/quick-feature-toggles';
 import renderHelpPanel from './components/inspector/help-panel';
@@ -340,21 +340,15 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	// The theme font the block inherits (hooks/use-computed-font.js)
 	useComputedFont(fontFamily, clientId, setComputedFont);
 
-	// Fit-to-width measurement and its re-measure triggers (hooks/use-fit-measurement.js)
-	useFitMeasurement({
+	// Fit-to-width measurement and its re-measure triggers, and the fit
+	// editing value with its line sizes, which go on the block wrapper so a
+	// measurement does not change the RichText value (#388)
+	// (hooks/use-fit-measurement.js)
+	const { fitEditingValue: wrappedFitValue, fitLineSizeStyle } = useFitMeasurement({
 		fontSize, content, fontId, fontFamily, fontWeight, fontStyle, letterSpacing, features,
-		fontVariationSettings, fitLineSizes, fitWordSizes, setAttributes, initialHang, fitLineHangs,
+		fontVariationSettings, fitLineSizes, fitWordSizes, fitMaxSize, setAttributes, initialHang, fitLineHangs,
 		textAlign, blockFontSizeUnit, clientId, textCase, fakeSmallCaps
 	});
-
-	// Fit-to-width editing value: the flat content attribute wrapped into
-	// per-line typost-line spans (with <br> separators kept) for the
-	// RichText. unwrapFitLines in onChange is the inverse; nothing outside
-	// the render branch ever sees the wrapped form.
-	const wrappedFitValue = useMemo(
-		() => (fontSize === 'fit' && content ? wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit, fitWordSizes) : ''),
-		[fontSize, content, fitLineSizes, fitMaxSize, fitLineHangs, blockFontSizeUnit, fitWordSizes]
-	);
 
 	// Labels for the per-line hang controls (fit-to-width only)
 	const hangLinePreviews = useMemo(
@@ -411,7 +405,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 	// The Line indent is repeated as --typost-text-indent for style.css (#364)
 	const blockProps = withBlockTextIndentProperty(useBlockProps({
-		className: 'wp-block-typost'
+		className: 'wp-block-typost',
+		style: fitLineSizeStyle
 	}));
 
 	// Get available features from localized data, filtered by per-font visibility
@@ -726,9 +721,10 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				{fontSize === 'fit' && content ? (
 					/* Fit-to-width WYSIWYG editing (single view): the RichText
 					   is fed a WRAPPED value — per-line typost-line spans, each
-					   with its own calc(R * 100cqi) font-size, joined with <br>
+					   with font-size var(--typost-fit-line-N) (the block wrapper
+					   sets the sizes, #388), joined with <br>
 					   — while the stored content attribute stays flat.
-					   wrapFitLines/unwrapFitLines are the entire boundary. The
+					   wrapFitLinesBySizeProperty/unwrapFitLines are the entire boundary. The
 					   kept <br> separators make the rich-text record's text
 					   byte-identical to the flat model, so store selection
 					   offsets and the whole QFT machinery are untouched.
