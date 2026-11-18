@@ -3297,6 +3297,10 @@ msgid "The styling could not be applied to this selection."
 msgstr ""
 
 #: blocks/typography-stylist/build/index.js:4
+msgid "Inline features removed from the block."
+msgstr ""
+
+#: blocks/typography-stylist/build/index.js:4
 msgid "All styling removed from the block."
 msgstr ""
 

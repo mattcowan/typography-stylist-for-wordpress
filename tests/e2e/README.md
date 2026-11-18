@@ -192,6 +192,18 @@ h2. Each test gets a new browser context, so nothing is remembered at the
 start; the test removes the remembered tag first and puts back what it
 found. It runs in Chromium only.
 
+### `reset-panel-focus.spec.js` — #420
+
+The block sidebar's Reset Features panel with real key presses, from the
+panel toggle on: each opener focuses its confirmation's Cancel (with the
+question and message as its description, without the emoji), Cancel and
+Yes give focus back to the opener, the polite live region says the result,
+one undo restores the block after Yes, Reset All, and a change to another
+control (an attribute update and typing in HTML anchor) does not move
+focus. A caret is put in the block first, for Firefox. Tagged `@firefox`,
+so it also runs in the firefox-focus project. Each test works on its own
+draft.
+
 ### `strip-styling.spec.js` — #411, #412
 
 "Remove all styling" in the block toolbar on a styled block (a responsive

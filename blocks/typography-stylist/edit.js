@@ -34,6 +34,7 @@ import renderHelpPanel from './components/inspector/help-panel';
 import renderFontFamilyPanel from './components/inspector/font-family-panel';
 import renderFontWeightPanel from './components/inspector/font-weight-panel';
 import renderResetPanel from './components/inspector/reset-panel';
+import useResetPanelFocus from './hooks/use-reset-panel-focus';
 import getCategoryTitle from './feature-categories';
 import buildEditorStyle from './editor-style';
 import renderFontStylePanel from './components/inspector/font-style-panel';
@@ -261,6 +262,8 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 	const [inlineFontFamily, setInlineFontFamily] = useState('');
 	const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
 	const [showFullResetConfirm, setShowFullResetConfirm] = useState(false);
+	// Where focus goes when a Reset Features button removes itself (#420)
+	const resetFocus = useResetPanelFocus();
 	const [capturedSelection, setCapturedSelection] = useState(null);
 	// Warning shown in the QFT modal after an inline apply both strategies
 	// refused (null = none). See reportInlineApplyFailure().
@@ -702,7 +705,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				{renderResetPanel({
 					showInlineResetConfirm, setShowInlineResetConfirm, showFullResetConfirm, setShowFullResetConfirm,
-					clearAllInlineFeatures, resetEntireBlock
+					clearAllInlineFeatures, resetEntireBlock, clientId, resetFocus
 				})}
 			</InspectorControls>
 
