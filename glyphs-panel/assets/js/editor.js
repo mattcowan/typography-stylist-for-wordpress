@@ -163,22 +163,38 @@
 	// the page, and the observer that notices when they leave (#419)
 	var buttonMounts = [];
 	var buttonMountObserver = null;
+	// The documents the observer watches (an iframe's document too)
+	var observedDocuments = [];
 
 	/**
 	 * Unmount each button whose element left the page, and stop observing
-	 * when none is left.
+	 * when none is left. An error in one unmount does not stop the others;
+	 * the first is thrown again afterward, so it still shows in the console.
 	 */
 	function releaseDetachedButtons() {
+		var firstError = null;
 		buttonMounts = buttonMounts.filter(function(mount) {
 			if (mount.isConnected) {
 				return true;
 			}
-			wp.element.unmountComponentAtNode(mount);
+			try {
+				wp.element.unmountComponentAtNode(mount);
+			} catch (error) {
+				if (!firstError) {
+					firstError = error;
+				}
+			}
 			return false;
 		});
 		if (buttonMounts.length === 0 && buttonMountObserver) {
 			buttonMountObserver.disconnect();
 			buttonMountObserver = null;
+			observedDocuments = [];
+		}
+		if (firstError) {
+			setTimeout(function() {
+				throw firstError;
+			}, 0);
 		}
 	}
 
@@ -201,8 +217,13 @@
 		if (!buttonMountObserver) {
 			buttonMountObserver = new window.MutationObserver(releaseDetachedButtons);
 		}
-		// A container in another document (an iframe) is observed there too
-		buttonMountObserver.observe(mount.ownerDocument.body, { childList: true, subtree: true });
+		// A container in another document (an iframe) is observed there too;
+		// each document once
+		var doc = mount.ownerDocument;
+		if (observedDocuments.indexOf(doc) === -1) {
+			observedDocuments.push(doc);
+			buttonMountObserver.observe(doc.body, { childList: true, subtree: true });
+		}
 	}
 
 	/**

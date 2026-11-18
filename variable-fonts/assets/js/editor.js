@@ -118,7 +118,8 @@
 		// the selected block. The editors apply an 'inspector' event to the
 		// block selected when it arrives, so after the author selected
 		// another block the value would land on that block (#419 review).
-		// A move in a dialog is dropped too: its selection is gone.
+		// Closing a dialog does not change the selected block, so a value
+		// set just before the close still applies.
 		function send() {
 			clearTimeout(debounceTimers[timerId]);
 			delete debounceTimers[timerId];
@@ -139,13 +140,47 @@
 			debounceTimers[timerId] = setTimeout(send, delay);
 		};
 		dispatch.timerId = timerId;
-		// Send the waiting dispatch now. A panel unmounts when its hook
-		// container leaves the page (#419). When the dialog closes, the block
-		// stays selected, and a slider moved just before still applies, as it
-		// did when the panel stayed mounted and the timer fired after the
-		// close. When the author selected another block, nothing is sent.
-		dispatch.flush = send;
+		// Send the waiting dispatch now, or with `drop` true, discard it. A
+		// panel unmounts when its hook container leaves the page (#419).
+		// When the dialog closes, the block stays selected, and a slider
+		// moved just before still applies, as it did when the panel stayed
+		// mounted and the timer fired after the close. When the author
+		// selected another block, nothing is sent; when the font changed,
+		// the caller drops it.
+		dispatch.flush = function(drop) {
+			if (drop) {
+				pending = null;
+			}
+			send();
+		};
 		return dispatch;
+	}
+
+	/**
+	 * The open dialog or block sidebar a panel's hook container is in, or
+	 * null.
+	 *
+	 * @param {Element|null} containerEl The panel's hook container
+	 * @return {Element|null} The modal frame or the block inspector
+	 */
+	function findAxesSurface(containerEl) {
+		if (!containerEl || typeof containerEl.closest !== 'function') {
+			return null;
+		}
+		return containerEl.closest('.components-modal__frame') ||
+			containerEl.closest('.block-editor-block-inspector') || null;
+	}
+
+	/**
+	 * Whether the dialog or sidebar of a panel that unmounts is still on
+	 * the page. Then only the panel's container left: its key changed with
+	 * the font, and a waiting dispatch belongs to the old font.
+	 *
+	 * @param {Element|null} surface findAxesSurface() at mount
+	 * @return {boolean} True when the waiting dispatch must be dropped
+	 */
+	function isSurfaceStillOpen(surface) {
+		return !!(surface && surface.isConnected);
 	}
 
 	function dispatchVariationSettings(variationSettingsObj, editorType) {
@@ -320,11 +355,19 @@
 		}
 
 		// On unmount, send this instance's waiting dispatch now and drop its
-		// timer (see createDebouncedDispatch)
+		// timer (see createDebouncedDispatch), unless the panel left a
+		// dialog or sidebar that is still open: then its container was
+		// replaced because the font changed, and the old font's axes must
+		// not be written (#419 review)
+		var surfaceRef = useRef(undefined);
+		if (surfaceRef.current === undefined) {
+			surfaceRef.current = findAxesSurface(props.containerEl || null);
+		}
 		useEffect(function() {
 			var debounced = debouncedRef.current;
+			var surface = surfaceRef.current;
 			return function() {
-				debounced.flush();
+				debounced.flush(isSurfaceStillOpen(surface));
 			};
 		}, []);
 

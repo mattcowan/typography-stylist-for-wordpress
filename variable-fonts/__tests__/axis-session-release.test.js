@@ -17,7 +17,7 @@
 const { extractFunction } = require('../../tests/js/twin-source.js');
 
 const FILE = 'variable-fonts/assets/js/editor.js';
-const NAMES = [ 'hasPanelOnPage', 'acquireAxisSession', 'releaseAxisSession', 'selectedBlockClientId', 'createDebouncedDispatch' ];
+const NAMES = [ 'hasPanelOnPage', 'acquireAxisSession', 'releaseAxisSession', 'selectedBlockClientId', 'createDebouncedDispatch', 'findAxesSurface', 'isSurfaceStillOpen' ];
 
 // The functions with their module-scope variables, around stubs
 function load(stubs) {
@@ -25,7 +25,8 @@ function load(stubs) {
 	const factory = new Function('window', 'wp', 'dispatchVariationSettings',
 		'var axisSessions = {}; var debounceTimers = {}; var debounceCounter = 0;\n' + code +
 		'\nreturn { sessions: function() { return axisSessions; }, acquireAxisSession: acquireAxisSession,' +
-		' releaseAxisSession: releaseAxisSession, createDebouncedDispatch: createDebouncedDispatch };');
+		' releaseAxisSession: releaseAxisSession, createDebouncedDispatch: createDebouncedDispatch,' +
+		' findAxesSurface: findAxesSurface, isSurfaceStillOpen: isSurfaceStillOpen };');
 	return factory(stubs.window, stubs.window.wp, stubs.dispatch);
 }
 
@@ -147,5 +148,53 @@ describe('the debounced dispatch', () => {
 		s.state.selected = 'A';
 		send.flush();
 		expect(s.dispatch).not.toHaveBeenCalled();
+	});
+});
+
+describe('a panel that unmounts because the font changed', () => {
+	// A dialog (or the block sidebar) with a hook container in it
+	function surfaceWithContainer(className) {
+		const surface = document.createElement('div');
+		surface.className = className;
+		const hook = document.createElement('div');
+		surface.appendChild(hook);
+		document.body.appendChild(surface);
+		return { surface, hook };
+	}
+
+	test('flush(true) discards the waiting dispatch', () => {
+		const s = stubs();
+		const send = load(s).createDebouncedDispatch(400);
+		s.state.selected = 'A';
+		send({ CONY: 700 }, 'inspector');
+		send.flush(true);
+		send.flush();
+		expect(s.dispatch).not.toHaveBeenCalled();
+	});
+
+	test.each([ 'components-modal__frame', 'block-editor-block-inspector' ])('in a %s that stays open, only the container left: drop', (className) => {
+		const vf = load(stubs());
+		const { surface, hook } = surfaceWithContainer(className);
+		// Found when the panel mounts
+		const found = vf.findAxesSurface(hook);
+		expect(found).toBe(surface);
+		// The font changed: a new key replaced the container
+		hook.remove();
+		expect(vf.isSurfaceStillOpen(found)).toBe(true);
+	});
+
+	test('the dialog closed (its frame left with the container): send', () => {
+		const vf = load(stubs());
+		const { surface, hook } = surfaceWithContainer('components-modal__frame');
+		const found = vf.findAxesSurface(hook);
+		surface.remove();
+		expect(vf.isSurfaceStillOpen(found)).toBe(false);
+	});
+
+	test('a container in no dialog or sidebar, or none: send', () => {
+		const vf = load(stubs());
+		expect(vf.findAxesSurface(container())).toBeNull();
+		expect(vf.findAxesSurface(null)).toBeNull();
+		expect(vf.isSurfaceStillOpen(null)).toBe(false);
 	});
 });

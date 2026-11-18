@@ -15,7 +15,7 @@ const FILE = 'glyphs-panel/assets/js/editor.js';
 function load(wp) {
 	const code = [ 'releaseDetachedButtons', 'watchButtonMount' ].map((name) => extractFunction(FILE, name)).join('\n');
 	return new Function('window', 'wp',
-		'var buttonMounts = []; var buttonMountObserver = null;\n' + code +
+		'var buttonMounts = []; var buttonMountObserver = null; var observedDocuments = [];\n' + code +
 		'\nreturn { watchButtonMount: watchButtonMount, mounts: function() { return buttonMounts; },' +
 		' observing: function() { return buttonMountObserver !== null; } };')(window, wp);
 }
@@ -67,4 +67,42 @@ test('a button that is not on the page, or no unmountComponentAtNode() (React 19
 	const noUnmount = load({ element: {} });
 	noUnmount.watchButtonMount(buttonIn(document.body));
 	expect(noUnmount.mounts()).toEqual([]);
+});
+
+test('an error in one unmount does not stop the others or the disconnect, and is thrown again later', async () => {
+	const error = new Error('cleanup');
+	const wp = { element: { unmountComponentAtNode: jest.fn().mockImplementationOnce(() => { throw error; }) } };
+	const glyphs = load(wp);
+	const container = document.createElement('div');
+	document.body.append(container);
+	const first = buttonIn(container);
+	const second = buttonIn(container);
+	glyphs.watchButtonMount(first);
+	glyphs.watchButtonMount(second);
+
+	jest.useFakeTimers({ doNotFake: [ 'queueMicrotask', 'nextTick', 'setImmediate' ] });
+	try {
+		container.remove();
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(wp.element.unmountComponentAtNode.mock.calls).toEqual([ [ first ], [ second ] ]);
+		expect(glyphs.mounts()).toEqual([]);
+		expect(glyphs.observing()).toBe(false);
+		expect(() => jest.runOnlyPendingTimers()).toThrow('cleanup');
+	} finally {
+		jest.useRealTimers();
+	}
+});
+
+test('each document is observed once', () => {
+	const observe = jest.spyOn(window.MutationObserver.prototype, 'observe');
+	try {
+		const glyphs = load({ element: { unmountComponentAtNode: jest.fn() } });
+		glyphs.watchButtonMount(buttonIn(document.body));
+		glyphs.watchButtonMount(buttonIn(document.body));
+		glyphs.watchButtonMount(buttonIn(document.body));
+		expect(observe).toHaveBeenCalledTimes(1);
+	} finally {
+		observe.mockRestore();
+	}
 });
