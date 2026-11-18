@@ -24,8 +24,8 @@
  * machine, the browser and the theme, so they are not compared with the
  * fixture's; they must follow the rules in fit-invariants.js instead (see
  * the README). The rest of the block is compared byte for byte. Where the
- * editor measures other ratios it stores them; the dirty flag is then only
- * reported, because of a known plugin bug.
+ * editor measures other ratios it stores them, and the post must still not
+ * be dirty (#388).
  *
  * What a test makes (draft, style) is deleted in afterEach without the
  * test's page, so it goes also after a time-out; a delete that fails adds a
@@ -267,19 +267,36 @@ for (const fixture of FIXTURES) {
 		const dirty = await page.evaluate(() => wp.data.select('core/editor').isEditedPostDirty());
 		if (fixture.measured) {
 			// Where the fonts measure the lines as the fixture has them,
-			// nothing changes and the post must not be dirty. Elsewhere the
-			// editor stores the new ratios. That write is marked not
-			// persistent, so by design it leaves the post clean, but the
-			// plugin sometimes leaves the post dirty after it (a known bug,
-			// see the fixtures README): the flag is reported, not checked.
+			// nothing changes. Elsewhere the editor stores the new ratios,
+			// marked not persistent, so the post is not dirty either (#388):
+			// the next real edit saves them.
 			const remeasured = JSON.stringify(measuredNumbers(opened)) !== JSON.stringify(measuredNumbers(markup));
 			if (remeasured) {
-				test.info().annotations.push({ type: 'measured', description: `The editor measured other ratios and stored them; the post is ${dirty ? 'dirty' : 'not dirty'} (the plugin sometimes leaves a re-measured post dirty: a known bug, not checked here)` });
-			} else {
-				expect(dirty, 'the post is not dirty').toBe(false);
+				test.info().annotations.push({ type: 'measured', description: 'The editor measured other ratios and stored them' });
 			}
+			expect(dirty, 'the post is not dirty').toBe(false);
 			expect(comparable(opened), 'the content a save writes now').toBe(comparable(markup));
 			expect(fitInvariantProblems(opened, { wordLonger: true }), 'the measured ratios and the line sizes agree').toEqual([]);
+			// The canvas shows the measured sizes: each line fills the
+			// text's content width. The sizes are not in the RichText value
+			// but on the block wrapper (#388), so check what renders. A fresh
+			// measurement can leave a line a little wider than the box (CI:
+			// 646.7px in 645px; #458), so the tolerance is 1% of the width,
+			// at least 1px. A missing wrapper style is far outside it (a line
+			// 361px wide in a 672px box).
+			const canvasFit = await page.frameLocator('iframe[name="editor-canvas"]').locator('.typost-block-content.typost-fit').first().evaluate((heading) => {
+				const style = heading.ownerDocument.defaultView.getComputedStyle(heading);
+				const contentWidth = heading.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+				return {
+					contentWidth,
+					lines: Array.from(heading.querySelectorAll('.typost-line'), (line) => line.getBoundingClientRect().width),
+				};
+			});
+			expect(canvasFit.lines.length, 'the canvas shows each fit line').toBeGreaterThan(0);
+			const tolerance = Math.max(1, canvasFit.contentWidth * 0.01);
+			canvasFit.lines.forEach((width, i) => {
+				expect(Math.abs(width - canvasFit.contentWidth), `canvas line ${i + 1} (${width}px) fills the text's width (${canvasFit.contentWidth}px)`).toBeLessThanOrEqual(tolerance);
+			});
 		} else {
 			expect(dirty, 'the post is not dirty').toBe(false);
 			expect(opened, 'the content a save writes now (the stored content)').toBe(stored);

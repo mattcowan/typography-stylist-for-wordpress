@@ -3453,7 +3453,7 @@ export function computeFitWordRatio(referenceSize, wordWidth, hang) {
  * Compose the per-line wrapper HTML for a fit-to-width block's FRONTEND
  * markup (save.js): typost-line wrappers with no separators — display:
  * block does the line breaking. The editor's fit editing value is built
- * by wrapFitLines instead, which keeps the <br> separators so rich-text
+ * by wrapFitLinesBySizeProperty instead, which keeps the <br> separators so rich-text
  * offsets stay flat-model-identical. Lines without a valid ratio get no
  * font-size and inherit the block-level fallback clamp.
  *
@@ -3748,8 +3748,8 @@ export function buildFitLinePreviews(content, maxChars) {
 
 /**
  * Opening tag for one typost-line wrapper, shared by the frontend markup
- * (buildFitLinesHtml) and the editing value (wrapFitLines) so the two can
- * never drift apart.
+ * (buildFitLinesHtml) and the editing value (wrapFitLines, and the hang of
+ * wrapFitLinesBySizeProperty) so the two can never drift apart.
  *
  * Lines without a usable ratio and without a hang keep the bare tag, and a
  * line with a ratio but no hang keeps exactly `style="font-size:…"`, so fit
@@ -3781,9 +3781,12 @@ export function buildFitLineOpenTag(ratio, fitMaxSize, fitLineHangs, index, unit
 }
 
 /**
- * Wrap flat br-model content into the fit-mode EDITING value fed to
- * RichText: each non-empty visual line wrapped in span.typost-line with
- * its per-line font-size, joined with '<br>'. Unlike buildFitLinesHtml
+ * Wrap flat br-model content into the fit-mode EDITING value shape: each
+ * non-empty visual line wrapped in span.typost-line with its per-line
+ * font-size, joined with '<br>'. Since #388 the RichText gets
+ * wrapFitLinesBySizeProperty instead (the same shape with the sizes kept
+ * out of the value); the tests still use this form to check the editing
+ * shape against the frontend sizes. Unlike buildFitLinesHtml
  * (frontend/preview markup, no separators, display:block lines), the
  * <br> separators are KEPT so the rich-text record's text is byte-identical
  * to the flat model ("line1\nline2") — every stored selection offset and
@@ -3819,7 +3822,90 @@ export function wrapFitLines(content, fitLineSizes, fitMaxSize, fitLineHangs, un
 }
 
 /**
- * Inverse of wrapFitLines: strip the span.typost-line wrappers from a
+ * Name of the custom property that carries one fit line's font-size in the
+ * editor (#388, see wrapFitLinesBySizeProperty).
+ *
+ * @param {number} index - Visual line index
+ * @return {string} Custom property name
+ */
+export function fitLineSizeProperty(index) {
+	return `--typost-fit-line-${index}`;
+}
+
+/**
+ * The fit-to-width EDITING value, with the line sizes kept out of it (#388).
+ *
+ * Like wrapFitLines (same lines, same <br> separators, same hang), but each
+ * wrapper's font-size is `var(--typost-fit-line-N)`, and the sizes are set
+ * on an ancestor (buildFitLineSizeProperties). So the value changes only
+ * with the content and the hangs, not with the measured ratios. That
+ * matters because core's RichText marks the last block change as
+ * persistent whenever its value changes and its text does not
+ * (useMarkPersistent): with the ratios in the value, the measurement's
+ * not-persistent write was turned into a persistent change, and a post
+ * that was only opened became dirty. A line whose property is not set
+ * gets no font-size (the declaration is invalid at computed-value time)
+ * and inherits the block-level fallback, as an unmeasured line does in
+ * wrapFitLines.
+ *
+ * @param {string} content - Flat serialized RichText content (br-model)
+ * @param {number[]} [fitLineHangs] - Per-line hangs in em (lines 2+)
+ * @return {string} Wrapped editing value for RichText
+ */
+export function wrapFitLinesBySizeProperty(content, fitLineHangs) {
+	if (!content) {
+		return '';
+	}
+	return splitContentIntoLines(content).map((lineHtml, i) => {
+		if (!lineHtml) {
+			return '';
+		}
+		// The hang comes from the shared tag builder; with no ratio it
+		// writes only the hang (or a bare tag)
+		const size = `font-size:var(${fitLineSizeProperty(i)})`;
+		const hangTag = buildFitLineOpenTag(undefined, 0, fitLineHangs, i);
+		const openTag = hangTag.includes(' style="')
+			? hangTag.replace(' style="', ` style="${size};`)
+			: `<span class="typost-line" style="${size}">`;
+		return `${openTag}${lineHtml}</span>`;
+	}).join('<br>');
+}
+
+/**
+ * The line sizes for wrapFitLinesBySizeProperty, as a React style object:
+ * one custom property per line that has a usable ratio, each the same
+ * font-size the frontend line gets (buildFitFontSize). Lines with no ratio
+ * get no property. The var(--typost-fit-width, 100cqi) in a rem value is
+ * substituted on the element that sets the property (the block wrapper),
+ * not on the line, so a rule that set --typost-fit-width on .typost-line
+ * in the editor would not reach it (none does: the style.css rule is for
+ * the frontend only).
+ *
+ * @param {string} content - Flat serialized RichText content (br-model)
+ * @param {number[]} fitLineSizes - Per-line ratios (index = visual line)
+ * @param {number} fitMaxSize - Optional cap in px (0 = no cap)
+ * @param {string} [unit='px'] - Unit the cap is written in ('px' or 'rem')
+ * @param {number[]} [fitWordSizes] - Per-line widest-word ratios (see buildFitFontSize)
+ * @return {Object} Custom properties, empty when no line has a size
+ */
+export function buildFitLineSizeProperties(content, fitLineSizes, fitMaxSize, unit, fitWordSizes) {
+	const properties = {};
+	if (!content) {
+		return properties;
+	}
+	const sizes = Array.isArray(fitLineSizes) ? fitLineSizes : [];
+	const words = Array.isArray(fitWordSizes) ? fitWordSizes : [];
+	splitContentIntoLines(content).forEach((lineHtml, i) => {
+		const size = lineHtml ? buildFitFontSize(sizes[i], fitMaxSize, unit, words[i]) : '';
+		if (size) {
+			properties[fitLineSizeProperty(i)] = size;
+		}
+	});
+	return properties;
+}
+
+/**
+ * Inverse of wrapFitLinesBySizeProperty (and wrapFitLines): strip the span.typost-line wrappers from a
  * RichText onChange value, leaving flat br-model content for the stored
  * attribute. Only the wrappers are removed — inner markup, <br>s (both
  * the line separators and any the rich-text ops placed inside/around a

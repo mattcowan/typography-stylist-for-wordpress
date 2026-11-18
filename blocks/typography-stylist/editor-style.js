@@ -79,8 +79,9 @@ export default function buildEditorStyle({
 	}
 
 	// Fit-to-width: the editing surface renders the real per-line
-	// typost-line wrappers (wrapFitLines), each carrying its own cqi
-	// font-size. The block-level size is only the fallback that
+	// typost-line wrappers (wrapFitLinesBySizeProperty), whose cqi sizes
+	// come from the --typost-fit-line-N properties on the block wrapper
+	// (#388). The block-level size is only the fallback that
 	// unmeasured lines and empty lines inherit — the same clamp the
 	// frontend emits (save.js) for browsers without container queries.
 	if (fontSize === 'fit' && rendersInline('fontSize')) {
