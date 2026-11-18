@@ -188,8 +188,13 @@ function buildPartialConvertContent(args) {
     const sizeAttributeString = Object.keys(extraAttributes)
         .map((key) => ` ${key}="${escapeAttribute(extraAttributes[key])}"`)
         .join('');
+    // The style value is escaped like every other attribute (#369): a
+    // feature's quotes ("dlig" 1) ended the attribute early, and the browser
+    // read `font-feature-settings: ` with no value. The quotes are written
+    // as &quot;, as the DOM serializer writes them for the block's own
+    // controls (applyStylingSafeStringMethod() in the branch above).
     return escapeHTML(beforeText) +
-        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${styleString}">${escapeHTML(selectedText)}</span>` +
+        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${escapeAttribute(styleString)}">${escapeHTML(selectedText)}</span>` +
         escapeHTML(afterText);
 }
 

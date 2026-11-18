@@ -117,6 +117,11 @@ const FIXTURES = [
 		paths: [ 'core' ],
 		style: true,
 	},
+	{
+		file: 'partial-convert.html',
+		title: 'span of a partial Convert to block of plain text (#369)',
+		paths: [ 'current' ],
+	},
 ];
 
 // The attribute names each block type in the fixtures has on a site with

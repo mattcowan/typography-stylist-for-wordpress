@@ -135,9 +135,9 @@ describe('convert to block', () => {
 		expect(resolveConvertTagName({ name: 'other/block', attributes: {} })).toBe('h2');
 	});
 
-	// Pins the output as it was before #357. The style value is not
-	// attribute-escaped, so a feature's quotes end the style attribute early;
-	// reported separately as a bug, not changed by this refactor.
+	// The style value is attribute-escaped (#369): before, a feature's quotes
+	// ended the style attribute early, so the browser read
+	// `font-feature-settings: ` with no value and dropped the rest.
 	test('plain text: the selection is wrapped, the rest escaped', () => {
 		const content = buildPartialConvertContent({
 			existingContent: 'Convert <b part',
@@ -150,9 +150,95 @@ describe('convert to block', () => {
 			clearWeight: false,
 			shared: undefined,
 		});
-		// KNOWN DEFECT: the unescaped quotes below are the bug, not the test.
-		// Fix buildPartialConvertContent(), then update this expectation.
-		expect(content).toBe('Convert &lt;b <span class="typost-styled" data-features="liga" data-fontsize="responsive" data-fontsize-min="16" data-fontsize-preferred="24" data-fontsize-max="32" style="font-feature-settings: "liga" 1; font-weight: 700; letter-spacing: 0.025em; font-size: clamp(1rem, 1.5rem + 1vw, 2rem)">part</span>');
+		expect(content).toBe('Convert &lt;b <span class="typost-styled" data-features="liga" data-fontsize="responsive" data-fontsize-min="16" data-fontsize-preferred="24" data-fontsize-max="32" style="font-feature-settings: &quot;liga&quot; 1; font-weight: 700; letter-spacing: 0.025em; font-size: clamp(1rem, 1.5rem + 1vw, 2rem)">part</span>');
+	});
+
+	// #369: what a browser reads from the span is every declaration of the
+	// selection, and no attribute made out of a broken style value
+	test('plain text with features: the browser reads the whole style and only the written attributes', () => {
+		const spanState = Object.assign({}, state, {
+			selectedFeatures: ['dlig', 'ss01'],
+			fontSize: 'responsive',
+			letterSpacing: 25,
+			lineHeight: 1.2,
+			textCase: 'small-caps',
+			fakeSmallCaps: false,
+		});
+		const content = buildPartialConvertContent({
+			existingContent: 'Moonlit garden party',
+			fullText: 'Moonlit garden party',
+			start: 8,
+			end: 14,
+			state: spanState,
+			spanWeight: '700',
+			sizeUnit: 'rem',
+			clearWeight: false,
+			shared: undefined,
+		});
+		const holder = document.createElement('div');
+		holder.innerHTML = content;
+		const span = holder.querySelector('span');
+		expect(span.getAttributeNames()).toEqual(['class', 'data-features', 'data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max', 'data-textcase', 'data-fakesmallcaps', 'style']);
+		expect(span.getAttribute('style')).toBe('font-feature-settings: "dlig" 1, "ss01" 1; font-weight: 700; letter-spacing: 0.025em; line-height: 1.2; font-size: clamp(1rem, 1.5rem + 1vw, 2rem); text-transform: none; font-variant-caps: small-caps; font-synthesis-small-caps: none');
+		expect(span.style.fontFeatureSettings).toBe('"dlig" 1, "ss01" 1');
+		expect(span.textContent).toBe('garden');
+		expect(holder.textContent).toBe('Moonlit garden party');
+	});
+
+	// #369: for the same attributes and style string, the same span, byte
+	// for byte, as the shared applier that the Typography Stylist block's own
+	// controls write with (it sets the attribute through the DOM, and the
+	// serializer writes quotes as &quot;). The block's controls can also
+	// write data-fontweight, data-letterspacing and data-font-id, which
+	// Convert does not write; only the style string is the same.
+	test('plain text: the span is the one the block\'s shared applier writes for the same settings', () => {
+		const utils = require('../../../blocks/typography-stylist/utils.js');
+		const { buildConvertSpanParts } = require('../inline-editor/convert-to-block.js');
+		const spanState = Object.assign({}, state, { selectedFeatures: ['dlig'], fontSize: 'responsive', letterSpacing: 25, textCase: 'uppercase' });
+		const text = 'Fish & <chips> party';
+		const content = buildPartialConvertContent({
+			existingContent: 'Fish &amp; &lt;chips&gt; party', fullText: text, start: 7, end: 14, state: spanState, spanWeight: '', sizeUnit: 'rem', clearWeight: false, shared: undefined,
+		});
+		const parts = buildConvertSpanParts(spanState, '', 'rem');
+		const attributes = Object.assign({ 'data-features': 'dlig' }, parts.sizeAttributes, parts.caseAttributes);
+		const applied = utils.applyStylingSafeStringMethod('Fish &amp; &lt;chips&gt; party', 7, 14, attributes, parts.styleString);
+		expect(applied.success).toBe(true);
+		expect(content).toBe(applied.content);
+		expect(content).toContain('style="font-feature-settings: &quot;dlig&quot; 1;');
+	});
+
+	// Must keep (#369): with no feature the style has no quote, and the
+	// content is byte for byte what it was before the fix
+	test('plain text with no feature: the content is unchanged by the escape', () => {
+		const content = buildPartialConvertContent({
+			existingContent: 'Moonlit garden party',
+			fullText: 'Moonlit garden party',
+			start: 8,
+			end: 14,
+			state: Object.assign({}, state, {
+				selectedFeatures: [], selectedFontId: 7, fontSize: 'responsive', letterSpacing: -10, lineHeight: 1.1, textCase: 'all-small-caps', fakeSmallCaps: true,
+			}),
+			spanWeight: '300',
+			sizeUnit: 'px',
+			clearWeight: false,
+			shared: undefined,
+		});
+		expect(content).toBe('Moonlit <span class="typost-styled" data-features="" data-fontsize="responsive" data-fontsize-min="16" data-fontsize-preferred="24" data-fontsize-max="32" data-textcase="all-small-caps" style="font-family: var(--font-7); font-weight: 300; letter-spacing: -0.01em; line-height: 1.1; font-size: clamp(16px, 1.5rem + 1vw, 32px); text-transform: none; font-variant-caps: all-small-caps; font-synthesis-small-caps: auto">garden</span> party');
+		// A family name without a font ID: sanitizeFontFamily() leaves no quote
+		const named = buildPartialConvertContent({
+			existingContent: 'ab', fullText: 'ab', start: 0, end: 1, state: Object.assign({}, state, { selectedFeatures: [], selectedFont: 'Bookmania "Pro"' }), spanWeight: '', sizeUnit: 'rem', clearWeight: false, shared: undefined,
+		});
+		expect(named).toBe('<span class="typost-styled" data-features="" style="font-family: Bookmania Pro">a</span>b');
+	});
+
+	// Must keep (#369): a whole-block Convert writes no span. Its content is
+	// the block's own content, passed through buildConvertBlockAttributes()
+	// without buildPartialConvertContent()
+	test('a whole-block conversion keeps the content as it is and writes no span', () => {
+		const { buildConvertBlockAttributes } = require('../inline-apply-rules.js');
+		const attrs = buildConvertBlockAttributes({ partialSelection: false, isNewBlock: true, content: 'Moonlit garden party', tagName: 'p', state: Object.assign({}, state, { selectedFeatures: ['dlig'] }) });
+		expect(attrs.content).toBe('Moonlit garden party');
+		expect(attrs.features).toEqual(['dlig']);
 	});
 
 	test('HTML content goes through the shared applier, after a weight clear', () => {
@@ -167,6 +253,25 @@ describe('convert to block', () => {
 		// A failed apply keeps the content rather than rebuilding it from text
 		shared.applyStylingSafeStringMethod.mockReturnValue({ success: false });
 		expect(buildPartialConvertContent(Object.assign({}, args, { clearWeight: false }))).toBe('a <em>b</em>');
+	});
+
+	// #369: content with tags goes through the shared applier with the raw
+	// style string; the applier escapes it (setAttribute, then the DOM
+	// serializer), so that branch never had the defect
+	test('HTML content: the real shared applier escapes the quotes of the style value', () => {
+		const utils = require('../../../blocks/typography-stylist/utils.js');
+		const content = buildPartialConvertContent({
+			existingContent: 'Moonlit <em>garden</em> party',
+			fullText: 'Moonlit garden party',
+			start: 15,
+			end: 20,
+			state: Object.assign({}, state, { selectedFeatures: ['dlig'] }),
+			spanWeight: '',
+			sizeUnit: 'rem',
+			clearWeight: false,
+			shared: utils,
+		});
+		expect(content).toBe('Moonlit <em>garden</em> <span class="typost-styled" data-features="dlig" style="font-feature-settings: &quot;dlig&quot; 1">party</span>');
 	});
 
 	test('the fallback runs only when the old block is still there and no Typography Stylist block is selected', () => {
