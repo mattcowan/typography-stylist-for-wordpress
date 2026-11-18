@@ -25,7 +25,8 @@
  * - Paragraph styles, Detach and inline spans: through the editor's own
  *   controls (the sidebar Paragraph Style select, Detach Style, the inline
  *   Typography Stylist Features dialog, and the style browser of the block
- *   toolbar's Paragraph Styles button).
+ *   toolbar's Paragraph Styles button). The partial conversion: the inline
+ *   dialog's "Convert to Typography Stylist Block" (#369).
  * - The px inline span is written with the "Write new font sizes in px"
  *   setting simulated in the page (typostData.newFontSizeUnit = 'px', the
  *   value that setting sends to the editor), so the site's option is never
@@ -308,6 +309,7 @@ const GENERATORS = {
 	'after-detach.html': (page) => styledBlock(page, true),
 	'inline-spans.html': inlineSpans,
 	'inline-style-id.html': inlineStyleId,
+	'partial-convert.html': partialConvert,
 };
 
 async function styledBlock(page, detach) {
@@ -409,6 +411,41 @@ async function inlineStyleId(page) {
 	} finally {
 		await deleteCurrentPost(page);
 		await deleteStyle(page, style);
+	}
+}
+
+// A core Paragraph of plain text, part of it converted with the inline
+// dialog's "Convert to Typography Stylist Block" (#369): the span that the
+// conversion writes for a plain-text source. The dialog applies each change
+// at once, so the feature and the case are applied, then undone in the
+// editor: the text is plain again and the dialog keeps the selection's
+// settings, which the conversion writes on the span.
+async function partialConvert(page) {
+	await openEditor(page);
+	try {
+		const [ paragraph ] = await insertBlocks(page, [ [ 'core/paragraph', { content: TEXT } ] ]);
+		await selectText(page, paragraph, GARDEN);
+		const modal = await openInlineDialog(page);
+		await modal.getByRole('checkbox', { name: 'Discretionary Ligatures' }).check();
+		await waitForContent(page, paragraph, (c) => c.includes('data-features="dlig"'), 'feature');
+		await modal.getByRole('combobox', { name: 'Case' }).selectOption('small-caps');
+		await waitForContent(page, paragraph, (c) => c.includes('data-textcase="small-caps"'), 'case');
+		for (let i = 0; i < 10 && (await blockContent(page, paragraph)).includes('<'); i++) {
+			await page.evaluate(() => wp.data.dispatch('core/editor').undo());
+			await page.waitForTimeout(300);
+		}
+		if (await blockContent(page, paragraph) !== TEXT) {
+			fail('Undo did not give the plain text back');
+		}
+		await modal.getByRole('button', { name: 'Convert to Typography Stylist Block' }).first().click();
+		await page.waitForFunction(() => wp.data.select('core/block-editor').getBlocks().map((b) => b.name).join() === 'typost/block');
+		const content = await settledContent(page);
+		if (!content.includes('data-features=\\u0022dlig\\u0022') || !content.includes('data-features="dlig"')) {
+			fail(`The converted block has no feature span: ${content}`);
+		}
+		return content;
+	} finally {
+		await deleteCurrentPost(page);
 	}
 }
 

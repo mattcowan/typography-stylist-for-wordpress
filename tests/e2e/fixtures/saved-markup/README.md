@@ -26,6 +26,7 @@ These files hold post content as the editor saved it, one file for each save for
 | `after-detach.html` | The same block after Detach Style. | current |
 | `inline-spans.html` | Inline spans in a core Heading and Paragraphs: a responsive size in rem, a case, a responsive size in px, a fixed size. | core |
 | `inline-style-id.html` | An inline span with a paragraph style ID. | core |
+| `partial-convert.html` | A block made by "Convert to Typography Stylist Block" on part of a plain-text Paragraph, with a feature and a case: the span's `style` has the feature's quotes as `&quot;` (#369). The block's `fontWeight` is the weight at which the theme shows the Paragraph (300 on wp-env). The saved-markup spec does not catch a broken style attribute (such a block still loads valid); the Jest test `assets/js/__tests__/partial-convert-fixture.test.js` does. | current |
 | `registered-attributes.json` | The attribute names of each block type on a site with only this plugin (see "Other plugins"). | — |
 
 All content is demo text.
@@ -59,6 +60,7 @@ Give file names to write only those files. The script reads every file from the 
 - `v1` and `v2`: the deprecated entry's own `save()`, run in the editor page, with core's serializer for the block comment. The `.after.html` files: the editor opens the old markup and serializes it again.
 - Typography Stylist blocks: inserted with the attribute values that the Inspector controls set, and saved by the editor. Fit to width: the editor measures the lines.
 - Paragraph styles, Detach and inline spans: the sidebar Paragraph Style select, Detach Style, and the inline Typography Stylist Features dialog. A style is applied to selected text with the event that the style browser sends, built by the module's `buildApplyEventDetail()`.
+- The partial conversion: the inline dialog's "Convert to Typography Stylist Block". The dialog applies each change at once, so the script applies the feature and the case, undoes them in the editor (the text is plain again, and the dialog keeps the settings), and then converts.
 
 The script makes drafts and paragraph styles named "ZZ E2E fixture …" and deletes each one by its ID. It stops when the site writes new font sizes in px.
 

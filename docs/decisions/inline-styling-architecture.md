@@ -39,6 +39,7 @@ When applying sequential inline styles (e.g., first font-family, then line-heigh
 - Preserved attributes are copied to new styling operations
 - Style properties matching preserved attributes aren't overwritten
 - See `applyOrMergeStyling()` and `applyStylingSafeStringMethod()` in [utils.js](../../blocks/typography-stylist/utils.js)
+- **Escape every attribute a string writer builds (#369):** the span writers set `style` with `setAttribute()`, and the serializer writes quotes as `&quot;`. The one writer that builds the span as a string, the plain-text branch of `buildPartialConvertContent()` (`assets/js/inline-editor/convert-to-block.js`), passes the style through `escapeAttribute()` so a feature's quotes do not end the attribute; its style string is the one the shared applier writes. The saved-markup spec cannot catch a broken style (such a block still loads valid); `assets/js/__tests__/partial-convert-fixture.test.js` does. The span's other data attributes differ from the Quick Feature Toggles' (#454).
 
 **Preview System:**
 Quick Feature Toggle previews detect inline fonts at cursor position:
