@@ -17,6 +17,24 @@
 	outline-color: rgba(0, 122, 204, 0.6);
 }
 
+/* The text's own margins, as on the frontend (#422). The frontend copy has
+ * typost-styled, so the style.css reset (.wp-block-typost .typost-styled,
+ * margin and padding 0) keeps a theme's or the browser's h1-h6 and p margins
+ * off it, and only the wrapper's margins (flow layout, Dimensions panel)
+ * count, as for a core block. The RichText has typost-styled only with a
+ * paragraph style or fit to width, so without this rule it kept those
+ * margins in the editor. They added space wherever they were larger than
+ * the flow margin they collapse with, or could not collapse (first block in
+ * a column, a block margin of 0 in the Dimensions panel): Twenty Twenty-Five
+ * h2, 24.9px above and below instead of 19.2px. Same (0,2,0) specificity
+ * as the frontend reset, so a theme rule such as h2 { margin } loses to it
+ * in both places. A paragraph style's space before and after (#199) and its
+ * indents are (0,6,0) or more and still win. */
+.wp-block-typost .typost-block-content {
+	margin: 0;
+	padding: 0;
+}
+
 /* Feature category headings in inspector */
 .typost-feature-category {
 	margin-bottom: 16px;

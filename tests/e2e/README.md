@@ -159,6 +159,15 @@ the expected string. Each test runs with new sizes written in rem and in
 px (the value of the "Write new font sizes in px" option is set in the
 page; the site option is not changed). It runs in Chromium only.
 
+### `editor-text-margins.spec.js` — #422
+
+For h1, h2 and p, a Typography Stylist block and the matching core block,
+both with a top and bottom margin of 0 in the Dimensions panel, between
+core Paragraphs: the Typography Stylist block's text has no margin or
+padding of its own in the editor, and the space above and below it is the
+same as for the core block (within 1px). Works on its own draft. It runs
+in Chromium only.
+
 ### `inline-extension-listeners.spec.js` — #386
 
 The inline editor's side of the extension API on a core Paragraph: a style

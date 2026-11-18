@@ -85,7 +85,6 @@ Measured: a source with a plugin span, bold, an em inside a link and a br stores
 - Core hides the block toolbar on an empty default Paragraph, so the switcher and the inline button cannot be reached there; authors use List View or the sidebar.
 - In the sidebar confirmations, "Yes, …" and "Cancel" unmount with the confirmation, so focus is lost (older than #411; read only).
 - A whole-block Convert to block of a source with text still stores the dialog's slider defaults `fontSizePreferred: 24` / `fontSizeMax: 32`; nothing renders while the size is `inherit`, but a later switch to Responsive starts at 24/32.
-- In the editor, the margins of `.typost-block-content` differ from a core block's (p 16/16 against 0/0, h2 4/16 against 24/0). No CSS was added.
 - `index.js` builds the heading tag as `'h' + attributes.level`, which gives `'hundefined'` with no level (an older pattern, reused).
 
 ## Traps
