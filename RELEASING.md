@@ -362,13 +362,13 @@ run the build.
 ## 8. Manual SVN fallback (emergency only)
 
 If GitHub Actions is down or the pipeline is broken and a release can't
-wait, deploy by hand. The old checkout lives at
-`C:\wamp64\www\wordpress-plugins\typography-stylist` — treat it as
+wait, deploy by hand from an SVN checkout of the plugin
+(`<svn-checkout>` below) — treat it as
 fallback-only; **never** edit trunk there day-to-day (the next CI deploy
 rsyncs over trunk with deletion, discarding anything local).
 
 ```bash
-cd C:\wamp64\www\wordpress-plugins\typography-stylist
+cd <svn-checkout>
 svn update                       # sync the working copy first
 # Build the exact file set locally:
 cd <repo> && npm run build && node scripts/package.js --keep

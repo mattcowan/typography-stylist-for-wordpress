@@ -26,9 +26,9 @@ describe('screen-reader login HTTP policy', () => {
 	});
 
 	test('a hosts-file dev name that resolves to loopback passes and is pinned to that address', async () => {
-		const lookup = lookupTable({ 'wp.test': ['127.0.0.1'], 'typography-stylist': ['127.0.0.1'] });
+		const lookup = lookupTable({ 'wp.test': ['127.0.0.1'], 'plugin-dev': ['127.0.0.1'] });
 		await expect(assertSafeBaseUrl('http://wp.test', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
-		await expect(assertSafeBaseUrl('http://typography-stylist:8080', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
+		await expect(assertSafeBaseUrl('http://plugin-dev:8080', lookup)).resolves.toEqual({ pinned: '127.0.0.1' });
 		expect(buildChromiumArgs('wp.test', '127.0.0.1')).toEqual(['--host-resolver-rules=MAP wp.test 127.0.0.1']);
 	});
 

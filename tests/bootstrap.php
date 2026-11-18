@@ -14,7 +14,7 @@ if (!defined('TYPOST_PLUGIN_DIR')) {
     define('TYPOST_PLUGIN_DIR', dirname(__DIR__));
 }
 if (!defined('TYPOST_PLUGIN_URL')) {
-    define('TYPOST_PLUGIN_URL', 'http://localhost/wp-content/plugins/opentype-stylist/');
+    define('TYPOST_PLUGIN_URL', 'http://localhost/wp-content/plugins/typography-stylist/');
 }
 if (!defined('TYPOST_PLUGIN_BASENAME')) {
     define('TYPOST_PLUGIN_BASENAME', 'typography-stylist/typography-stylist.php');
