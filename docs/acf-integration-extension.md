@@ -24,7 +24,7 @@ Read from source rather than documentation, on 2026-08-09:
 
 | Thing | Version | Where |
 | --- | --- | --- |
-| Advanced Custom Fields **Pro** | 6.8.1 | `Local Sites/loopchicago/.../advanced-custom-fields-pro` |
+| Advanced Custom Fields **Pro** | 6.8.1 | a test site, `wp-content/plugins/advanced-custom-fields-pro` |
 | WordPress | 7.0.2 | `wp-includes/js/dist/block-editor.js` |
 | Typography Stylist | 2.3.0-dev | this repo |
 

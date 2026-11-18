@@ -13,14 +13,14 @@ const {
 } = require('../assets/js/lib/font-loader.js');
 
 describe('normalizeFetchUrl', () => {
-	const httpsPage = { protocol: 'https:', host: 'mnc4.com' };
-	const httpPage = { protocol: 'http:', host: 'mnc4.com' };
+	const httpsPage = { protocol: 'https:', host: 'www.example.com' };
+	const httpPage = { protocol: 'http:', host: 'www.example.com' };
 
 	test('upgrades a same-host http:// font URL to https on an HTTPS page', () => {
 		expect(normalizeFetchUrl(
-			'http://mnc4.com/bus1984/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2',
+			'http://www.example.com/blog/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2',
 			httpsPage
-		)).toBe('https://mnc4.com/bus1984/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2');
+		)).toBe('https://www.example.com/blog/wp-content/uploads/typography-stylist/fonts/kit-1/font.woff2');
 	});
 
 	test('leaves a cross-origin http:// URL untouched (other origin may not serve HTTPS)', () => {
@@ -29,13 +29,13 @@ describe('normalizeFetchUrl', () => {
 	});
 
 	test('does not change URLs when the page is not HTTPS', () => {
-		const url = 'http://mnc4.com/font.woff2';
+		const url = 'http://www.example.com/font.woff2';
 		expect(normalizeFetchUrl(url, httpPage)).toBe(url);
 	});
 
 	test('leaves already-secure, protocol-relative, and root-relative URLs as-is', () => {
-		expect(normalizeFetchUrl('https://mnc4.com/font.woff2', httpsPage)).toBe('https://mnc4.com/font.woff2');
-		expect(normalizeFetchUrl('//mnc4.com/font.woff2', httpsPage)).toBe('//mnc4.com/font.woff2');
+		expect(normalizeFetchUrl('https://www.example.com/font.woff2', httpsPage)).toBe('https://www.example.com/font.woff2');
+		expect(normalizeFetchUrl('//www.example.com/font.woff2', httpsPage)).toBe('//www.example.com/font.woff2');
 		expect(normalizeFetchUrl('/wp-content/uploads/font.woff2', httpsPage)).toBe('/wp-content/uploads/font.woff2');
 	});
 
