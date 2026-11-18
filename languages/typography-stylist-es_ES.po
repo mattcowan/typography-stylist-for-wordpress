@@ -2546,6 +2546,10 @@ msgid "The styling could not be applied to this selection."
 msgstr "El estilo no se pudo aplicar a esta selección."
 
 #: blocks/typography-stylist/build/index.js:4
+msgid "Inline features removed from the block."
+msgstr "Se han quitado las funciones en línea del bloque."
+
+#: blocks/typography-stylist/build/index.js:4
 msgid "All styling removed from the block."
 msgstr "Se ha quitado todo el estilo del bloque."
 

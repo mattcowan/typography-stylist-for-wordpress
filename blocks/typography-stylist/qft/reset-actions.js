@@ -2,12 +2,15 @@
  * Typography Stylist Block - clearing inline formatting and resetting the block.
  *
  * Moved out of edit.js unchanged (#356); resetEntireBlock() calls the shared
- * "Remove all styling" action since #411. The functions were closures inside
+ * "Remove all styling" action since #411, and clearAllInlineFeatures() speaks
+ * its result since #420. The functions were closures inside
  * Edit and are still rebuilt on every render: Edit calls this factory once
  * per render with the current values, so every function sees the same
  * values it saw before.
  */
 
+import { speak } from '@wordpress/a11y';
+import { __ } from '@wordpress/i18n';
 import { getRangeForOffsets } from '../qft-preview';
 import { stripBlockStyles } from '../strip-styles/strip-styles';
 
@@ -84,7 +87,11 @@ export default function createResetActions(ctx) {
 		}
 	};
 
-	// Clear all inline typost-styled spans from content (doesn't affect block-level settings)
+	// Clear all inline typost-styled spans from content (doesn't affect block-level settings).
+	// "Yes, Clear" in the Reset Features panel. The result is spoken, as
+	// stripBlockStyles() speaks the result of "Reset Entire Block": the text
+	// changes in the canvas, away from the sidebar where the author is, so a
+	// screen reader user would not hear it otherwise (#420).
 	const clearAllInlineFeatures = () => {
 		if (!content) return;
 
@@ -110,6 +117,7 @@ export default function createResetActions(ctx) {
 		const newContent = container.innerHTML;
 		setAttributes({ content: newContent });
 		setShowInlineResetConfirm(false);
+		speak(__('Inline features removed from the block.', 'typography-stylist'), 'polite');
 	};
 
 	// Reset entire block: the same action as "Remove all styling" in the

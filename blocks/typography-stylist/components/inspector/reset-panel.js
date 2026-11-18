@@ -7,23 +7,44 @@
  * markup and every translation call in it are evaluated exactly when and as
  * often as before. It must not call hooks: it runs inside Edit's render
  * (__tests__/render-functions-no-hooks.test.js).
+ *
+ * Keyboard focus (#420): each button here removes itself from the page when
+ * it is pressed, so each one also says where focus goes next, through
+ * `resetFocus` (hooks/use-reset-panel-focus.js, called in Edit). A
+ * confirmation that opens focuses its "Cancel", the least destructive
+ * choice; "Cancel" carries the question and the message as its description
+ * (aria-describedby), so a screen reader reads them with the button. The
+ * emoji before each question is aria-hidden: it is decoration, and a screen
+ * reader would read its name first.
+ * "Cancel", "Yes, Clear" and "Yes, Reset All" give focus back to the button
+ * that opened the confirmation; both openers always render.
  */
 
 import { Button, PanelBody } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+
+// When Edit passes no resetFocus: focus is not moved
+const NO_FOCUS = { targetRef: () => undefined, focusAfterRender: () => {} };
 
 /**
  * Clear the inline features or reset the whole block, each after a
  * confirmation.
  *
  * @param {Object} props Values, state and handlers from Edit, by name.
+ *                       `clientId` makes the description ids unique;
+ *                       `resetFocus` is the return of useResetPanelFocus().
  * @return {Element} The panel.
  */
 export default function renderResetPanel(props) {
 	const {
 		showInlineResetConfirm, setShowInlineResetConfirm, showFullResetConfirm, setShowFullResetConfirm,
-		clearAllInlineFeatures, resetEntireBlock
+		clearAllInlineFeatures, resetEntireBlock, clientId
 	} = props;
+	const { targetRef, focusAfterRender } = props.resetFocus || NO_FOCUS;
+	const inlineTitleId = `typost-reset-inline-title-${clientId}`;
+	const inlineMessageId = `typost-reset-inline-message-${clientId}`;
+	const fullTitleId = `typost-reset-full-title-${clientId}`;
+	const fullMessageId = `typost-reset-full-message-${clientId}`;
 
 	// Render reset panel content based on confirmation state
 	const renderResetPanelContent = () => {
@@ -31,24 +52,32 @@ export default function renderResetPanel(props) {
 		if (showInlineResetConfirm) {
 			return (
 				<div style={{ padding: '16px', backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px' }}>
-					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
-						⚠️ {__('Are you sure?', 'typography-stylist')}
+					<p id={inlineTitleId} style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#856404' }}>
+						<span aria-hidden="true">⚠️</span> {__('Are you sure?', 'typography-stylist')}
 					</p>
-					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
+					<p id={inlineMessageId} style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#856404' }}>
 						{__('This will remove all inline features (typost-styled spans) from this block. Block-level settings will remain.', 'typography-stylist')}
 					</p>
 					<div style={{ display: 'flex', gap: '8px' }}>
 						<Button
 							variant="primary"
 							isDestructive
-							onClick={clearAllInlineFeatures}
+							onClick={() => {
+								clearAllInlineFeatures();
+								focusAfterRender('inlineOpener');
+							}}
 							style={{ flex: 1 }}
 						>
 							{__('Yes, Clear', 'typography-stylist')}
 						</Button>
 						<Button
+							ref={targetRef('inlineCancel')}
 							variant="secondary"
-							onClick={() => setShowInlineResetConfirm(false)}
+							aria-describedby={`${inlineTitleId} ${inlineMessageId}`}
+							onClick={() => {
+								setShowInlineResetConfirm(false);
+								focusAfterRender('inlineOpener');
+							}}
 							style={{ flex: 1 }}
 						>
 							{__('Cancel', 'typography-stylist')}
@@ -62,10 +91,10 @@ export default function renderResetPanel(props) {
 		if (showFullResetConfirm) {
 			return (
 				<div style={{ padding: '16px', backgroundColor: '#ffe5e5', border: '1px solid #dc3232', borderRadius: '4px' }}>
-					<p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#a00' }}>
-						🚨 {__('Reset Entire Block?', 'typography-stylist')}
+					<p id={fullTitleId} style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: 600, color: '#a00' }}>
+						<span aria-hidden="true">🚨</span> {__('Reset Entire Block?', 'typography-stylist')}
 					</p>
-					<p style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
+					<p id={fullMessageId} style={{ margin: '0 0 16px 0', fontSize: '12px', color: '#a00' }}>
 						{/* The same text as the toolbar's "Remove all styling"
 						    dialog (strip-styles-button.js): the same action (#411) */}
 						{__('This removes all styling from the block: text formats such as bold and italic, the inline features, the block-level settings (font, size, features, spacing, and more), the paragraph style, colors, text alignment and the extra CSS class. The text stays, with its links, line breaks, footnotes, images, subscript and superscript. To undo, press Ctrl+Z (Cmd+Z on Mac).', 'typography-stylist')}
@@ -74,14 +103,22 @@ export default function renderResetPanel(props) {
 						<Button
 							variant="primary"
 							isDestructive
-							onClick={resetEntireBlock}
+							onClick={() => {
+								resetEntireBlock();
+								focusAfterRender('fullOpener');
+							}}
 							style={{ flex: 1 }}
 						>
 							{__('Yes, Reset All', 'typography-stylist')}
 						</Button>
 						<Button
+							ref={targetRef('fullCancel')}
 							variant="secondary"
-							onClick={() => setShowFullResetConfirm(false)}
+							aria-describedby={`${fullTitleId} ${fullMessageId}`}
+							onClick={() => {
+								setShowFullResetConfirm(false);
+								focusAfterRender('fullOpener');
+							}}
 							style={{ flex: 1 }}
 						>
 							{__('Cancel', 'typography-stylist')}
@@ -95,9 +132,13 @@ export default function renderResetPanel(props) {
 		return (
 			<>
 				<Button
+					ref={targetRef('inlineOpener')}
 					variant="secondary"
 					isDestructive
-					onClick={() => setShowInlineResetConfirm(true)}
+					onClick={() => {
+						setShowInlineResetConfirm(true);
+						focusAfterRender('inlineCancel');
+					}}
 					style={{ marginBottom: '12px', width: '100%', justifyContent: 'center' }}
 				>
 					{__('Clear Individual Features', 'typography-stylist')}
@@ -107,9 +148,13 @@ export default function renderResetPanel(props) {
 				</p>
 
 				<Button
+					ref={targetRef('fullOpener')}
 					variant="secondary"
 					isDestructive
-					onClick={() => setShowFullResetConfirm(true)}
+					onClick={() => {
+						setShowFullResetConfirm(true);
+						focusAfterRender('fullCancel');
+					}}
 					style={{ width: '100%', justifyContent: 'center' }}
 				>
 					{__('Reset Entire Block', 'typography-stylist')}
