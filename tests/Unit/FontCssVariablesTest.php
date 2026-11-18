@@ -105,8 +105,24 @@ class FontCssVariablesTest extends TestCase {
 
         $css = $this->freshInstance()->get_font_css_variables();
 
+        // The fallbacks follow the var(): WordPress always defines the preset
+        // variable, so a stack inside var() never applied.
         $this->assertStringContainsString(
-            '--font-7: var(--wp--preset--font-family--playfair-display, "Playfair Display", serif)',
+            '--font-7: var(--wp--preset--font-family--playfair-display, "Playfair Display"), serif',
+            $css
+        );
+    }
+
+    public function test_migrated_font_without_fallbacks_emits_bare_alias() {
+        $this->options['typost_custom_fonts'] = [
+            $this->kitEntry(['wp_slug' => 'playfair-display', 'wp_post_id' => 500, 'fallbacks' => '']),
+        ];
+        $this->addLibraryPost('playfair-display', 'Playfair Display');
+
+        $css = $this->freshInstance()->get_font_css_variables();
+
+        $this->assertStringContainsString(
+            '--font-7: var(--wp--preset--font-family--playfair-display, "Playfair Display");',
             $css
         );
     }

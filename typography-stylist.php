@@ -4384,9 +4384,16 @@ class Typost {
                 // slug-based preset variable, with the literal family as the
                 // var() fallback so contexts without preset variables (plain
                 // admin pages) and stale registrations still render.
+                //
+                // The font's own fallbacks go AFTER the var(), not inside it.
+                // WordPress always defines the preset variable, so a stack
+                // inside var() never applied, and the wp_font_family post
+                // gets the fallbacks only at registration
+                // (build_font_family_post_content): a fallback added later in
+                // the font's settings never reached the page.
                 if ($this->font_library_bridge()->entry_has_live_registration($font)) {
                     $css_vars[] = sprintf(
-                        '--font-%d: var(--wp--preset--font-family--%s, "%s"%s)',
+                        '--font-%d: var(--wp--preset--font-family--%s, "%s")%s',
                         $font['font_id'],
                         sanitize_title($font['wp_slug']),
                         $family,
