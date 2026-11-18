@@ -101,15 +101,50 @@
 	var debounceTimers = {};
 	var debounceCounter = 0;
 
+	/**
+	 * The client ID of the selected block, or null.
+	 */
+	function selectedBlockClientId() {
+		var store = window.wp && wp.data && wp.data.select && wp.data.select('core/block-editor');
+		return (store && typeof store.getSelectedBlockClientId === 'function' && store.getSelectedBlockClientId()) || null;
+	}
+
 	function createDebouncedDispatch(delay) {
 		var timerId = 'vf_' + (++debounceCounter);
+		// The dispatch that waits: [settings, editorType, selected block], or null
+		var pending = null;
+
+		// Send the waiting dispatch, if the block it was made for is still
+		// the selected block. The editors apply an 'inspector' event to the
+		// block selected when it arrives, so after the author selected
+		// another block the value would land on that block (#419 review).
+		// A move in a dialog is dropped too: its selection is gone.
+		function send() {
+			clearTimeout(debounceTimers[timerId]);
+			delete debounceTimers[timerId];
+			if (!pending) {
+				return;
+			}
+			var args = pending;
+			pending = null;
+			if (selectedBlockClientId() !== args[2]) {
+				return;
+			}
+			dispatchVariationSettings(args[0], args[1]);
+		}
+
 		var dispatch = function(variationSettingsObj, editorType) {
 			clearTimeout(debounceTimers[timerId]);
-			debounceTimers[timerId] = setTimeout(function() {
-				dispatchVariationSettings(variationSettingsObj, editorType);
-			}, delay);
+			pending = [variationSettingsObj, editorType, selectedBlockClientId()];
+			debounceTimers[timerId] = setTimeout(send, delay);
 		};
 		dispatch.timerId = timerId;
+		// Send the waiting dispatch now. A panel unmounts when its hook
+		// container leaves the page (#419). When the dialog closes, the block
+		// stays selected, and a slider moved just before still applies, as it
+		// did when the panel stayed mounted and the timer fired after the
+		// close. When the author selected another block, nothing is sent.
+		dispatch.flush = send;
 		return dispatch;
 	}
 
@@ -198,22 +233,55 @@
 		return editorType + ':' + (fontId || 0);
 	}
 
-	function acquireAxisSession(sessionKey, axes, initialSettings) {
+	/**
+	 * Whether a panel of the session is still on the page. A panel whose
+	 * container is not known counts as on the page.
+	 */
+	function hasPanelOnPage(session) {
+		for (var i = 0; i < session.containers.length; i++) {
+			if (!session.containers[i] || session.containers[i].isConnected) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Join the session for a key, or start one. A session whose panels have
+	 * all left the page belongs to text that is no longer selected: core
+	 * unmounts those panels after the commit (#419), so when the sidebar
+	 * goes from one block to another in the same font, the new panel mounts
+	 * first. It starts a new session instead of taking the other block's
+	 * axis values.
+	 *
+	 * @param {string}  sessionKey      axisSessionKey()
+	 * @param {Array}   axes            Axis definitions
+	 * @param {Object}  initialSettings Parsed settings on the text
+	 * @param {Element} containerEl     The panel's hook container, or null
+	 * @return {Object} The session
+	 */
+	function acquireAxisSession(sessionKey, axes, initialSettings, containerEl) {
 		var session = axisSessions[sessionKey];
-		if (!session) {
-			session = { values: {}, touched: {}, refs: 0 };
+		if (!session || !hasPanelOnPage(session)) {
+			session = { values: {}, touched: {}, refs: 0, containers: [] };
 			axisSessions[sessionKey] = session;
 		}
 		window.typostVFUtils.mergeAxisSession(session, axes, initialSettings);
 		session.refs++;
+		session.containers.push(containerEl || null);
 		return session;
 	}
 
-	function releaseAxisSession(sessionKey) {
-		var session = axisSessions[sessionKey];
-		if (!session) return;
+	/**
+	 * Leave a session. Released by object: a newer session can hold the key.
+	 */
+	function releaseAxisSession(sessionKey, session, containerEl) {
+		var index = session.containers.indexOf(containerEl || null);
+		if (index !== -1) {
+			session.containers.splice(index, 1);
+		}
 		session.refs--;
-		if (session.refs <= 0) {
+		if (session.refs <= 0 && axisSessions[sessionKey] === session) {
 			delete axisSessions[sessionKey];
 		}
 	}
@@ -230,12 +298,14 @@
 		var sessionRef = useRef(null);
 		if (sessionRef.current === null) {
 			sessionKeyRef.current = axisSessionKey(editorType, fontId);
-			sessionRef.current = acquireAxisSession(sessionKeyRef.current, axes, initialSettings);
+			sessionRef.current = acquireAxisSession(sessionKeyRef.current, axes, initialSettings, props.containerEl || null);
 		}
 		useEffect(function() {
 			var key = sessionKeyRef.current;
+			var session = sessionRef.current;
+			var containerEl = props.containerEl || null;
 			return function() {
-				releaseAxisSession(key);
+				releaseAxisSession(key, session, containerEl);
 			};
 		}, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -249,12 +319,12 @@
 			debouncedRef.current = createDebouncedDispatch(400);
 		}
 
-		// Cleanup only this instance's debounce timer on unmount
+		// On unmount, send this instance's waiting dispatch now and drop its
+		// timer (see createDebouncedDispatch)
 		useEffect(function() {
-			var id = debouncedRef.current.timerId;
+			var debounced = debouncedRef.current;
 			return function() {
-				clearTimeout(debounceTimers[id]);
-				delete debounceTimers[id];
+				debounced.flush();
 			};
 		}, []);
 
@@ -406,7 +476,8 @@
 				editorType: editorType,
 				fontId: fontId,
 				filterAxes: 'wght',
-				initialSettings: currentSettings
+				initialSettings: currentSettings,
+				containerEl: containerEl
 			}),
 			containerEl
 		);
@@ -436,7 +507,8 @@
 					editorType: editorType,
 					fontId: fontId,
 					filterAxes: 'non-wght',
-					initialSettings: currentSettings
+					initialSettings: currentSettings,
+					containerEl: containerEl
 				})
 			),
 			containerEl

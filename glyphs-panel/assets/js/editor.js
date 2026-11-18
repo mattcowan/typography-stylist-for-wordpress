@@ -159,6 +159,52 @@
 		);
 	}
 
+	// The elements a "Glyphs…" button is rendered into, while they are on
+	// the page, and the observer that notices when they leave (#419)
+	var buttonMounts = [];
+	var buttonMountObserver = null;
+
+	/**
+	 * Unmount each button whose element left the page, and stop observing
+	 * when none is left.
+	 */
+	function releaseDetachedButtons() {
+		buttonMounts = buttonMounts.filter(function(mount) {
+			if (mount.isConnected) {
+				return true;
+			}
+			wp.element.unmountComponentAtNode(mount);
+			return false;
+		});
+		if (buttonMounts.length === 0 && buttonMountObserver) {
+			buttonMountObserver.disconnect();
+			buttonMountObserver = null;
+		}
+	}
+
+	/**
+	 * Unmount a button when its hook container leaves the page (the dialog
+	 * closes). Core unmounts only a root rendered into the container itself,
+	 * and the button has its own element in the container, so that other
+	 * extensions can render into the same container (#419).
+	 *
+	 * @param {Element} mount Element the button is rendered into
+	 */
+	function watchButtonMount(mount) {
+		// Only an element on the page can be seen leaving it
+		if (typeof wp.element.unmountComponentAtNode !== 'function' ||
+			typeof window.MutationObserver !== 'function' ||
+			!mount.isConnected) {
+			return;
+		}
+		buttonMounts.push(mount);
+		if (!buttonMountObserver) {
+			buttonMountObserver = new window.MutationObserver(releaseDetachedButtons);
+		}
+		// A container in another document (an iframe) is observed there too
+		buttonMountObserver.observe(mount.ownerDocument.body, { childList: true, subtree: true });
+	}
+
 	/**
 	 * Render the "Glyphs…" button into a hook container.
 	 *
@@ -173,6 +219,7 @@
 		var mount = document.createElement('div');
 		mount.className = 'typost-glyphs-button-wrap';
 		container.appendChild(mount);
+		watchButtonMount(mount);
 
 		wp.element.render(
 			el(Button, {

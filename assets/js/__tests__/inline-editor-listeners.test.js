@@ -343,4 +343,41 @@ describe('the inline editor component in React StrictMode', () => {
 		expect(hooks.applyFilters('typost_current_editor_state', { untouched: true }, 'inline')).toEqual({ untouched: true });
 		constructed.mockRestore();
 	});
+
+	test('each mounted instance names its dialog with the next number; the thrown-away instance takes none (#419)', () => {
+		const constructed = jest.spyOn(Control.prototype, '_buildInitialState');
+		const props = {
+			value: { text: '', formats: [], replacements: [], start: 0, end: 0 },
+			onChange: () => {},
+			isActive: false,
+			activeAttributes: {},
+			isInTypostBlock: true,
+		};
+		const numbers = [];
+		const kept = [];
+		for (let i = 0; i < 2; i++) {
+			let mounted = null;
+			act(() => {
+				root.render(
+					React.createElement(React.StrictMode, null,
+						React.createElement(Control, Object.assign({ key: i, ref: (instance) => { if (instance) { mounted = instance; } } }, props))
+					)
+				);
+			});
+			const match = /^typost-inline-title-(\d+)$/.exec(mounted.modalTitleId);
+			expect(match).not.toBeNull();
+			expect(mounted.wordBoundaryNoticeId).toBe(`typost-inline-word-boundary-${match[1]}`);
+			numbers.push(Number(match[1]));
+			kept.push(mounted);
+		}
+		// Two constructions each, one number each
+		expect(constructed.mock.instances).toHaveLength(4);
+		const thrownAway = constructed.mock.instances.filter((instance) => !kept.includes(instance));
+		expect(thrownAway.map((instance) => instance.modalTitleId)).toEqual([ '', '' ]);
+		expect(numbers[1]).toBe(numbers[0] + 1);
+		act(() => {
+			root.unmount();
+		});
+		constructed.mockRestore();
+	});
 });

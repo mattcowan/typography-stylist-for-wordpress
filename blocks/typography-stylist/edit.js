@@ -28,6 +28,7 @@ import { useSelect } from '@wordpress/data';
 import {  } from '@wordpress/rich-text';
 import { parseInlineStylesAtCursor, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, wrapFitLines, unwrapFitLines, installModalFocusGuard, resolveScreenReaderClassControl, normalizeHang, buildFitLinePreviews, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
+import { hookContainerRef } from '../../assets/js/hook-container.js';
 import renderQuickFeatureToggles from './components/quick-feature-toggles';
 import renderHelpPanel from './components/inspector/help-panel';
 import renderFontFamilyPanel from './components/inspector/font-family-panel';
@@ -628,12 +629,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 			<InspectorControls>
 				{renderHelpPanel()}
 
-				<div className="typost-hook-point" data-hook="typost_inspector_top" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_inspector_top" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_inspector_top', el, { fontId, fontWeight, features, fontSize, letterSpacing, lineHeight });
 					}
-				}} />
+				})} />
 
 				{fontOptions.length > 0 && (
 					renderFontFamilyPanel({
@@ -648,12 +649,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				{/* Extension hook point: after font weight (e.g., Variable Font axes).
 				    key: remount (and re-fire the action) when the font changes */}
-				<div key={`typost-afw-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={(el) => {
+				<div key={`typost-afw-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_inspector_after_font_weight" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_inspector_after_font_weight', el, { fontId, fontWeight, fontVariationSettings: fontVariationSettings || '' });
 					}
-				}} />
+				})} />
 
 				{renderFontStylePanel({
 					fontStyle, setAttributes
@@ -682,12 +683,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				})}
 
 				{/* Extension hook point: before features (e.g., Glyphs panel) */}
-				<div className="typost-hook-point" data-hook="typost_inspector_before_features" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_inspector_before_features" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_inspector_before_features', el, { fontId, features });
 					}
-				}} />
+				})} />
 
 				{renderFeaturesPanel({
 					features, getCategoryTitle, groupedFeatures, toggleBlockFeature
@@ -697,12 +698,12 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 					screenReaderClassControl, setAttributes, setScreenReaderCustomMode
 				})}
 
-				<div className="typost-hook-point" data-hook="typost_inspector_after_features" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_inspector_after_features" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_inspector_after_features', el, { fontId, features });
 					}
-				}} />
+				})} />
 
 				{renderResetPanel({
 					showInlineResetConfirm, setShowInlineResetConfirm, showFullResetConfirm, setShowFullResetConfirm,

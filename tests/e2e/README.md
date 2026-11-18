@@ -197,6 +197,25 @@ WordPress copies the class and the colors, and the plugin's filter removes
 them. The clear confirmation option and the size unit are set in the page
 only. It runs in Chromium only.
 
+### `hook-container-unmount.spec.js` — #419
+
+What an extension renders into a hook container is unmounted when the
+container leaves the page. The Paragraph Styles panel calls the
+`typost_current_editor_state` filter while the inline dialog is open (and
+its "(modified)" badge updates), and not after the dialog closes; after 10
+opens and closes, one panel follows the store; the same after the Quick
+Feature Toggles close and after the block sidebar shows another block. A
+planted extension that renders into three containers with
+`wp.element.render()` shows its content, stays mounted while the dialog
+re-renders, and is unmounted when the dialog closes. Two tests set a
+Variable Fonts axis on a block in the sidebar, then show a second block in
+the same font, once after another block and once directly: the second block
+shows the axis defaults. They are skipped on a site with no variable font
+that has an axis other than weight (wp-env has none). The calls are counted
+by a page script that wraps `typostHooks.applyFilters`. Each test works on
+its own draft, and the first four on their own paragraph style ("ZZ #419
+…"). It runs in Chromium only.
+
 ### `helpers.js`
 
 Shared helpers (open the editor, select text with the keyboard, REST
