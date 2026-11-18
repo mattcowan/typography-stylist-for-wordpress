@@ -21,3 +21,4 @@ Bundled module (formerly a standalone extension plugin, merged into core for v2.
 
 - Glyph cells are text-rendered (real Unicode characters + `font-feature-settings`), never outline-rendered — this is both the accessibility model and the EULA compliance model.
 - Version constant `TYPOST_GP_VERSION` in glyphs-panel.php is the source of truth.
+- The "Glyphs…" button renders into its own appended element, which core cannot unmount; `watchButtonMount()` unmounts it when it leaves the page (#419). `glyphs-panel/__tests__/button-unmount.test.js` holds this.

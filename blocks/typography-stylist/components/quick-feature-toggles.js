@@ -13,6 +13,7 @@ import { Button, Modal, Notice, PanelBody, RangeControl, SelectControl, ToggleCo
 import { __, sprintf } from '@wordpress/i18n';
 import { adoptWpFont, isWpLibraryValue, wpSlugFromValue } from '../../../assets/js/font-options.js';
 import { FontPicker } from '../../../assets/js/font-picker.js';
+import { hookContainerRef } from '../../../assets/js/hook-container.js';
 import ZoomNotice from './zoom-notice';
 import { caseStyleObject, isSmallCapsCase, isValidFontSizeRange, normalizeTextCase, resolveBlockFontFamilyStyle } from '../utils';
 
@@ -174,7 +175,7 @@ export default function renderQuickFeatureToggles(props) {
 				)}
 
 				{/* Extension hook point: top of QFT modal (e.g., Paragraph Styles dropdown) */}
-				<div className="typost-hook-point" data-hook="typost_qft_modal_top" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_qft_modal_top" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_qft_modal_top', el, {
@@ -183,7 +184,7 @@ export default function renderQuickFeatureToggles(props) {
 							inlineFontFamily, inlineFontWeight
 						});
 					}
-				}} />
+				})} />
 
 				{/* Font Family Control */}
 				<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
@@ -261,7 +262,7 @@ export default function renderQuickFeatureToggles(props) {
 						return (
 							<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
 								{/* key: remount (and re-fire the action) when the active font changes */}
-								<div key={`typost-weight-${activeFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+								<div key={`typost-weight-${activeFontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={hookContainerRef((el) => {
 									if (el && !el._hooked) {
 										el._hooked = true;
 										window.typostHooks.doAction('typost_weight_control', el, {
@@ -269,7 +270,7 @@ export default function renderQuickFeatureToggles(props) {
 											fontVariationSettings: inlineStylesAtSelection?.fontVariationSettings || fontVariationSettings || ''
 										});
 									}
-								}} />
+								})} />
 							</div>
 						);
 					}
@@ -310,7 +311,7 @@ export default function renderQuickFeatureToggles(props) {
 				    Sits directly below the weight control so a variable font's
 				    axis sliders stay grouped with the weight they extend.
 				    key: remount (and re-fire the action) when any active font changes */}
-				<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={(el) => {
+				<div key={`typost-afc-${fontId || 'none'}-${inlineFontFamily || 'none'}-${inlineFontFamilyAtSelection || 'none'}`} className="typost-hook-point" data-hook="typost_qft_after_font_controls" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_qft_after_font_controls', el, {
@@ -318,7 +319,7 @@ export default function renderQuickFeatureToggles(props) {
 							fontVariationSettings: inlineStylesAtSelection?.fontVariationSettings || fontVariationSettings || ''
 						});
 					}
-				}} />
+				})} />
 
 				{/* Font Style Control (visual italic — semantic emphasis stays <em>) */}
 				<div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '2px solid #ddd' }}>
@@ -660,14 +661,14 @@ export default function renderQuickFeatureToggles(props) {
 				</div>
 
 				{/* Extension hook point: before features (e.g., Glyphs panel) */}
-				<div className="typost-hook-point" data-hook="typost_qft_before_features" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_qft_before_features" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_qft_before_features', el, {
 							fontId, features, inlineFontFamily, capturedSelection, content, clientId
 						});
 					}
-				}} />
+				})} />
 
 				{/* Active Features Summary */}
 				{inlineFeaturesAtSelection.length > 0 && (
@@ -785,14 +786,14 @@ export default function renderQuickFeatureToggles(props) {
 				</div>
 
 				{/* Extension hook point: after features */}
-				<div className="typost-hook-point" data-hook="typost_qft_after_features" ref={(el) => {
+				<div className="typost-hook-point" data-hook="typost_qft_after_features" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_qft_after_features', el, {
 							fontId, features, content
 						});
 					}
-				}} />
+				})} />
 			</div>
 
 			{/* Resize handles */}

@@ -9,6 +9,8 @@
  * @since 2.4.0
  */
 
+const { hookContainerRef } = require('../hook-container.js');
+
 /**
  * The format's block toolbar buttons: the Typography Stylist button and
  * the extension-registered buttons (v2.3.0), rendered as real
@@ -130,7 +132,9 @@ function TipsNotice({ isDismissed, onDismiss }) {
 /**
  * Extension hook point: an empty div an extension renders into. The
  * action fires once per element (el._hooked); a parent that wants it to
- * fire again (a new font) gives the hook point a new key.
+ * fire again (a new font) gives the hook point a new key. When the div
+ * leaves the page (the dialog closes, a new key), the root an extension
+ * rendered into it is unmounted (hookContainerRef, #419).
  *
  * @param {Object} props
  * @param {string} props.hook  Action name, also the data-hook value
@@ -138,12 +142,12 @@ function TipsNotice({ isDismissed, onDismiss }) {
  */
 function HookPoint({ hook, state }) {
     return (
-        <div className="typost-hook-point" data-hook={hook} ref={(el) => {
+        <div className="typost-hook-point" data-hook={hook} ref={hookContainerRef((el) => {
             if (el && !el._hooked) {
                 el._hooked = true;
                 window.typostHooks.doAction(hook, el, state);
             }
-        }} />
+        })} />
     );
 }
 

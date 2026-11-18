@@ -128,6 +128,7 @@ Source:  assets/js/font-picker.js
 Source:  assets/js/font-size-units.js
 Source:  assets/js/font-variation-settings.js
 Source:  assets/js/font-weights.js
+Source:  assets/js/hook-container.js
 Source:  assets/js/inline-apply-rules.js
 Source:  assets/js/modal-drag-resize.js
 Source:  assets/js/new-block-tag.js
@@ -159,6 +160,7 @@ Source:  assets/js/font-picker.js
 Source:  assets/js/font-size-units.js
 Source:  assets/js/font-variation-settings.js
 Source:  assets/js/font-weights.js
+Source:  assets/js/hook-container.js
 Source:  assets/js/inline-apply-rules.js
 Source:  assets/js/modal-drag-resize.js
 Source:  assets/js/new-block-tag.js

@@ -111,6 +111,12 @@ const TSIcon = () => (
  * The inline format control is a class component with no clientId to lean
  * on, and two instances can be mounted at once (one per rich-text field),
  * so the heading each dialog is named by has to be unique per instance.
+ *
+ * Counted in componentDidMount(), not in the constructor: with SCRIPT_DEBUG
+ * on, React's development build constructs an instance it never mounts,
+ * and a count in the constructor skipped a number for it (#419). The modal
+ * renders only while `isOpen`, which is false on the first render, so the
+ * ids exist before any render reads them.
  */
 let typostInlineInstanceCount = 0;
 
@@ -130,10 +136,10 @@ class TypographyFeaturesControl extends Component {
     constructor(props) {
         super(props);
 
-        // Names this instance's modal. See typostInlineInstanceCount above.
-        typostInlineInstanceCount += 1;
-        this.modalTitleId = `typost-inline-title-${typostInlineInstanceCount}`;
-        this.wordBoundaryNoticeId = `typost-inline-word-boundary-${typostInlineInstanceCount}`;
+        // Name this instance's modal; set in componentDidMount(). See
+        // typostInlineInstanceCount above.
+        this.modalTitleId = '';
+        this.wordBoundaryNoticeId = '';
         // Pending deferred announcement of the word-boundary notice (see togglePopover)
         this._noticeSpeakTimer = null;
 
@@ -2198,12 +2204,20 @@ class TypographyFeaturesControl extends Component {
     }
 
     /**
-     * Register the extension listeners. React can run mount, unmount and
-     * mount again on one instance (StrictMode with SCRIPT_DEBUG on), so
-     * every registration here has its removal in componentWillUnmount()
-     * (#386).
+     * Name the modal and register the extension listeners. React can run
+     * mount, unmount and mount again on one instance (StrictMode with
+     * SCRIPT_DEBUG on), so every registration here has its removal in
+     * componentWillUnmount() (#386), and the modal is named only once
+     * (#419).
      */
     componentDidMount() {
+        // Name this instance's modal, once: StrictMode mounts the instance
+        // it keeps twice (see typostInlineInstanceCount above)
+        if (!this.modalTitleId) {
+            typostInlineInstanceCount += 1;
+            this.modalTitleId = `typost-inline-title-${typostInlineInstanceCount}`;
+            this.wordBoundaryNoticeId = `typost-inline-word-boundary-${typostInlineInstanceCount}`;
+        }
         // The extension handlers act only while this is true (see
         // inline-editor/extension-bridge.js)
         this._isMounted = true;

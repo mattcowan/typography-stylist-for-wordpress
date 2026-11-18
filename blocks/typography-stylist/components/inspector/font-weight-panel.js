@@ -12,6 +12,7 @@
 import { PanelBody, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { buildSidebarWeightOptions, shouldShowWeightPanel } from '../../strip-styles/theme-default-weight';
+import { hookContainerRef } from '../../../../assets/js/hook-container.js';
 
 /**
  * Block font weight, limited to the weights the font has, after a "Theme
@@ -37,12 +38,12 @@ export default function renderFontWeightPanel(props) {
 		return (
 			<PanelBody title={__('Font Weight', 'typography-stylist')} initialOpen={false}>
 				{/* key: remount (and re-fire the action) when the font changes */}
-				<div key={`typost-weight-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={(el) => {
+				<div key={`typost-weight-${fontId || 'none'}`} className="typost-hook-point" data-hook="typost_weight_control" ref={hookContainerRef((el) => {
 					if (el && !el._hooked) {
 						el._hooked = true;
 						window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight, fontVariationSettings: fontVariationSettings || '' });
 					}
-				}} />
+				})} />
 			</PanelBody>
 		);
 	}
