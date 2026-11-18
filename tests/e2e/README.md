@@ -39,7 +39,7 @@ WP_PASSWORD=your_password
 WP_ADMIN_PATH=/wp-admin
 ```
 
-Set `WP_BASE_URL` to the URL of your test site. The tests make their own draft posts and delete them, so the site needs no test content.
+Set `WP_BASE_URL` to the URL of your test site. The tests make their own draft posts, so the site needs no test content.
 
 **IMPORTANT**: Never commit your `.env` file to Git. It contains sensitive credentials and is already git-ignored.
 

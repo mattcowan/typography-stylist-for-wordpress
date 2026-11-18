@@ -18,13 +18,15 @@
  */
 const { execFileSync } = require( 'child_process' );
 const fs = require( 'fs' );
+const os = require( 'os' );
 const path = require( 'path' );
 
 const ROOT = path.resolve( __dirname, '..' );
 const SELF = path.relative( ROOT, __filename ).split( path.sep ).join( '/' );
 
 const PATTERNS = [
-	{ name: 'a Windows user folder', re: /[A-Za-z]:[\\/]+Users[\\/]/ },
+	// Windows paths are not case-sensitive: C:\users is the same folder
+	{ name: 'a Windows user folder', re: /[A-Za-z]:[\\/]+Users[\\/]/i },
 	{ name: 'the folder of the Local site tool', re: /Local Sites/ },
 	{ name: 'a WAMP install folder', re: /wamp64/i },
 	{ name: 'the old development host', re: /typography-stylist:8080/i },
@@ -40,20 +42,42 @@ function listFiles() {
 	return [ ...new Set( out.toString( 'utf8' ).split( '\0' ).filter( Boolean ) ) ];
 }
 
-function findMatches( files ) {
+/**
+ * The text to scan for one listed path: a regular file's content, or a
+ * symlink's own target path (never the content it points to, which can be
+ * outside the repository). Anything else (a deleted file, a directory, a
+ * FIFO, which would block a read) gives null.
+ *
+ * @param {string} root Repository root
+ * @param {string} file Path relative to the root
+ * @return {?Buffer} The bytes to scan, or null
+ */
+function readScannable( root, file ) {
+	const full = path.join( root, file );
+	let stat;
+	try {
+		stat = fs.lstatSync( full );
+	} catch ( error ) {
+		if ( error.code === 'ENOENT' ) {
+			return null;
+		}
+		throw error;
+	}
+	if ( stat.isSymbolicLink() ) {
+		return Buffer.from( fs.readlinkSync( full ), 'utf8' );
+	}
+	return stat.isFile() ? fs.readFileSync( full ) : null;
+}
+
+function findMatches( files, root = ROOT ) {
 	const hits = [];
 	for ( const file of files ) {
 		if ( file === SELF ) {
 			continue;
 		}
-		let buffer;
-		try {
-			buffer = fs.readFileSync( path.join( ROOT, file ) );
-		} catch ( error ) {
-			if ( error.code === 'ENOENT' || error.code === 'EISDIR' ) {
-				continue;
-			}
-			throw error;
+		const buffer = readScannable( root, file );
+		if ( ! buffer ) {
+			continue;
 		}
 		if ( buffer.subarray( 0, 8000 ).includes( 0 ) ) {
 			continue;
@@ -71,19 +95,45 @@ function findMatches( files ) {
 }
 
 describe( 'no local machine details in the repository', () => {
-	test( 'each pattern matches a known example', () => {
+	test( 'each pattern matches its known examples', () => {
 		const examples = [
-			'C:\\Users\\someone\\project',
-			'c:/Users/someone/project',
-			'~/Local Sites/example/app/public',
-			'C:\\wamp64\\www\\plugin',
-			'http://typography-stylist:8080/?p=1',
-			'wp-content/plugins/opentype-stylist/',
+			[ 'a Windows user folder', 'C:\\Users\\someone\\project' ],
+			[ 'a Windows user folder', 'c:/Users/someone/project' ],
+			[ 'a Windows user folder', 'C:\\users\\someone\\project' ],
+			[ 'the folder of the Local site tool', '~/Local Sites/example/app/public' ],
+			[ 'a WAMP install folder', 'C:\\wamp64\\www\\plugin' ],
+			[ 'the old development host', 'http://typography-stylist:8080/?p=1' ],
+			[ 'the old plugin folder name', 'wp-content/plugins/opentype-stylist/' ],
 		];
-		for ( const pattern of PATTERNS ) {
-			expect( examples.some( ( example ) => pattern.re.test( example ) ) ).toBe( true );
+		for ( const [ name, example ] of examples ) {
+			const pattern = PATTERNS.find( ( candidate ) => candidate.name === name );
+			expect( { name, example, matches: pattern.re.test( example ) } ).toEqual( { name, example, matches: true } );
 		}
 		expect( PATTERNS.some( ( pattern ) => pattern.re.test( 'http://localhost:8080' ) ) ).toBe( false );
+	} );
+
+	test( 'only regular files and link text are scanned', () => {
+		const dir = fs.mkdtempSync( path.join( os.tmpdir(), 'no-local-details-' ) );
+		try {
+			fs.writeFileSync( path.join( dir, 'plain.txt' ), 'see C:\\Users\\someone\\x\n' );
+			fs.mkdirSync( path.join( dir, 'folder' ) );
+			expect( findMatches( [ 'plain.txt', 'folder', 'gone.txt' ], dir ) ).toEqual( [ 'plain.txt:1: a Windows user folder' ] );
+
+			// A link is scanned by its own target path, not by the target's content
+			fs.writeFileSync( path.join( dir, 'outside.txt' ), 'see C:\\Users\\someone\\x\n' );
+			let linked = true;
+			try {
+				fs.symlinkSync( 'outside.txt', path.join( dir, 'link.txt' ) );
+			} catch ( error ) {
+				// Windows without the symlink right: nothing to check here
+				linked = false;
+			}
+			if ( linked ) {
+				expect( findMatches( [ 'link.txt' ], dir ) ).toEqual( [] );
+			}
+		} finally {
+			fs.rmSync( dir, { recursive: true, force: true } );
+		}
 	} );
 
 	test( 'the file list holds this repository', () => {
