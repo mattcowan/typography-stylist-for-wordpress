@@ -85,9 +85,10 @@ final class Typost_Paragraph_Styles {
 	const CACHE_KEY = 'typost_paragraph_styles_cache';
 
 	/** @var string Transient key for caching generated CSS */
-	// Renamed when the generated CSS changes (v2: #315), so an update never
-	// serves CSS cached by the previous version for up to 12 hours.
-	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v2';
+	// Renamed when the generated CSS changes (v2: #315, v3: #450), so an
+	// update never serves CSS cached by the previous version for up to 12
+	// hours.
+	const CSS_CACHE_KEY = 'typost_paragraph_styles_css_v3';
 
 	/** @var string Option storing whether the block toolbar gets a direct styles button */
 	const TOOLBAR_OPTION = 'typost_ps_toolbar_button';
@@ -545,7 +546,121 @@ final class Typost_Paragraph_Styles {
 			$css .= self::core_block_hang_css( $id );
 		}
 
+		// Bold and emphasis on styled text (#450)
+		$emphasis_refs = array( (string) $id );
+		if ( ! empty( $style['legacyId'] ) ) {
+			$emphasis_refs[] = esc_attr( $style['legacyId'] );
+		}
+		$emphasis_css = self::emphasis_css( $props, $emphasis_refs );
+		if ( '' !== $emphasis_css ) {
+			$css .= "\n\n" . $emphasis_css;
+		}
+
 		return $css;
+	}
+
+	/**
+	 * The bold and emphasis rules of a style (#450).
+	 *
+	 * The browser's bold is `font-weight: bolder`, relative to the parent,
+	 * so bold text inside a style with weight 300 showed at 400. And a
+	 * `<strong>` around a style span lost to the span's own weight. The
+	 * first rule gives the weight from bold_weight() to bold text inside
+	 * the style (block or span) and to a style span inside bold text. It is
+	 * written only for a style that sets a weight. Three selectors per ref:
+	 *
+	 * - Bold inside a block with the style: (0,7,1), over the style rule.
+	 * - Bold inside a style span: (0,8,1), so the span, which is nearer to
+	 *   the text, wins over a block style around it.
+	 * - Neither form applies to a block or span whose own style attribute
+	 *   sets a weight (the block's own font weight, or an author's change on
+	 *   a span, #450): bold there keeps the browser's bolder, relative to
+	 *   that weight.
+	 * - A style span anywhere inside bold text, with formats such as `<em>`
+	 *   or a link between them (RichText nests formats in the order they
+	 *   were applied): (0,6,1), over the style rule's (0,6,0). An inline
+	 *   `font-weight` on the span still wins.
+	 *
+	 * Emphasis inside the style keeps the browser's italic, because the
+	 * `<em>` declares its own font-style. Only a style span inside `<em>`
+	 * or `<i>` lost it, to a style that sets `font-style: normal`: the
+	 * second rule, written only for that value, gives it back. A span whose
+	 * own style attribute sets a font-style keeps it (inline wins).
+	 *
+	 * buildStyleCssBlock() in ps-utils.js emits the same text.
+	 *
+	 * @param array    $props Resolved properties.
+	 * @param string[] $refs  The style's id, then its legacy id when it has one.
+	 * @return string CSS, '' for none.
+	 */
+	private static function emphasis_css( $props, $refs ) {
+		$css    = array();
+		$weight = self::bold_weight( $props );
+		if ( $weight > 0 ) {
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$selectors[] = '.typost-styled' . str_repeat( '.typost-ps-' . $ref, 5 ) . ':not([style*="font-weight"]) :is(strong, b)';
+				$selectors[] = self::span_selector( $ref ) . '[data-style-id]:not([style*="font-weight"]) :is(strong, b)';
+				$selectors[] = ':is(strong, b) ' . self::span_selector( $ref );
+			}
+			$css[] = implode( ",\n", $selectors ) . " {\n    font-weight: " . $weight . ";\n}";
+		}
+		if ( ! empty( $props['fontStyle'] ) && 'normal' === $props['fontStyle'] ) {
+			$selectors = array();
+			foreach ( $refs as $ref ) {
+				$selectors[] = ':is(em, i) ' . self::span_selector( $ref );
+			}
+			$css[] = implode( ",\n", $selectors ) . " {\n    font-style: italic;\n}";
+		}
+		return implode( "\n\n", $css );
+	}
+
+	/**
+	 * The inline-span selector of a style, (0,6,0), as the style rule
+	 * writes it.
+	 *
+	 * @param string $ref Style id or legacy id.
+	 * @return string Selector.
+	 */
+	private static function span_selector( $ref ) {
+		return '.typost-styled[data-style-id="' . $ref . '"][data-style-id][data-style-id][data-style-id][data-style-id]';
+	}
+
+	/**
+	 * The weight of bold text in a style (#450), or 0 when the style needs
+	 * no bold rule: max(700, bolder(W)), where bolder() is the CSS Fonts
+	 * table the browser uses for `<strong>`. So a style under 550 gives
+	 * 700, a style from 550 to 899 gives 900, and a style at 900 or more
+	 * keeps its weight. Bold is then always visible, and as heavy as the
+	 * browser makes it today; the browser's font matching picks the
+	 * nearest face the font has.
+	 *
+	 * Reads the weight as property_declarations() does. `normal` is 400
+	 * (700) and `bold` is 700 (900). `lighter` and `bolder` are relative to
+	 * a parent weight that the style does not know, so they give no rule:
+	 * bold text there keeps the browser's bolder.
+	 *
+	 * @param array $props Resolved properties.
+	 * @return int Weight, 0 for none.
+	 */
+	private static function bold_weight( $props ) {
+		if ( empty( $props['fontWeight'] ) ) {
+			return 0;
+		}
+		$weight = $props['fontWeight'];
+		if ( is_numeric( $weight ) && $weight >= 1 && $weight <= 1000 ) {
+			$weight = intval( $weight );
+		} elseif ( 'normal' === $weight ) {
+			$weight = 400;
+		} elseif ( 'bold' === $weight ) {
+			$weight = 700;
+		} else {
+			return 0;
+		}
+		if ( $weight < 550 ) {
+			return 700;
+		}
+		return $weight < 900 ? 900 : $weight;
 	}
 
 	/**

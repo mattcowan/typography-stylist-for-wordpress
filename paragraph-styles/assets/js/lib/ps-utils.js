@@ -2657,7 +2657,86 @@
 		if (hang > 0) {
 			css += coreBlockHangCss(id);
 		}
+		// Bold and emphasis on styled text (#450, PHP twin)
+		var emphasis = emphasisCss(props, hasLegacy ? [String(id), String(style.legacyId)] : [String(id)]);
+		if (emphasis) {
+			css += '\n\n' + emphasis;
+		}
 		return css;
+	}
+
+	/**
+	 * The inline-span selector of a style, (0,6,0), as the style rule
+	 * writes it. Twin of PHP span_selector().
+	 *
+	 * @param {string} ref Style id or legacy id.
+	 * @return {string} Selector.
+	 */
+	function spanSelector(ref) {
+		return '.typost-styled[data-style-id="' + ref + '"][data-style-id][data-style-id][data-style-id][data-style-id]';
+	}
+
+	/**
+	 * The weight of bold text in a style (#450), or 0 when the style needs
+	 * no bold rule: max(700, bolder(W)), with the CSS Fonts bolder table.
+	 * Under 550 gives 700, 550 to 899 gives 900, 900 or more keeps the
+	 * weight. Twin of PHP bold_weight(), which explains why; reads the
+	 * weight as buildStyleCssBlock() does. normal is 400 and bold is 700;
+	 * lighter and bolder are relative to an unknown parent and give no rule.
+	 *
+	 * @param {Object} props Resolved properties.
+	 * @return {number} Weight, 0 for none.
+	 */
+	function boldWeight(props) {
+		if (phpFalsy(props.fontWeight)) return 0;
+		var weight = props.fontWeight;
+		if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
+			weight = phpInt(weight);
+		} else if (String(weight) === 'normal') {
+			weight = 400;
+		} else if (String(weight) === 'bold') {
+			weight = 700;
+		} else {
+			return 0;
+		}
+		if (weight < 550) return 700;
+		return weight < 900 ? 900 : weight;
+	}
+
+	/**
+	 * The bold and emphasis rules of a style (#450). Twin of PHP
+	 * emphasis_css(), which explains each selector: bold text inside the
+	 * style (a block or a span with no weight of its own), and a style
+	 * span anywhere inside bold text, take boldWeight(); a style span
+	 * inside em or i is italic again under a style that sets
+	 * font-style: normal.
+	 *
+	 * @param {Object}   props Resolved properties.
+	 * @param {string[]} refs  The style's id, then its legacy id.
+	 * @return {string} CSS, '' for none.
+	 */
+	function emphasisCss(props, refs) {
+		var css = [];
+		var weight = boldWeight(props);
+		var selectors;
+		if (weight > 0) {
+			selectors = [];
+			refs.forEach(function (ref) {
+				var cls = '.typost-ps-' + ref;
+				selectors.push('.typost-styled' + cls + cls + cls + cls + cls + ':not([style*="font-weight"]) :is(strong, b)');
+				selectors.push(spanSelector(ref) + '[data-style-id]:not([style*="font-weight"]) :is(strong, b)');
+				selectors.push(':is(strong, b) ' + spanSelector(ref));
+			});
+			css.push(selectors.join(',\n') + ' {\n    font-weight: ' + weight + ';\n}');
+		}
+		// The same test as the main rule's font-style
+		if (props.fontStyle && String(props.fontStyle) === 'normal') {
+			selectors = refs.map(function (ref) {
+				return ':is(em, i) ' + spanSelector(ref);
+			});
+			css.push(selectors.join(',\n') + ' {\n    font-style: italic;\n}');
+		}
+		return css.join('\n\n');
 	}
 
 	/**

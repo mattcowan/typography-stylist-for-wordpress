@@ -309,6 +309,7 @@ const GENERATORS = {
 	'after-detach.html': (page) => styledBlock(page, true),
 	'inline-spans.html': inlineSpans,
 	'inline-style-id.html': inlineStyleId,
+	'inline-style-override.html': inlineStyleOverride,
 	'partial-convert.html': partialConvert,
 };
 
@@ -408,6 +409,34 @@ async function inlineStyleId(page) {
 		await waitForContent(page, paragraph, (c) => c.includes(`data-style-id="${style.id}"`), 'style');
 		await closeInlineDialog(page, modal);
 		return tokenize(await settledContent(page), style);
+	} finally {
+		await deleteCurrentPost(page);
+		await deleteStyle(page, style);
+	}
+}
+
+// The span of inline-style-id.html, then Font Weight 400 picked in the
+// inline dialog on the same text (#450; the style's weight is 700): the
+// span keeps its style and gets an inline declaration for the weight only
+async function inlineStyleOverride(page) {
+	const style = await createStyle(page, STYLE);
+	try {
+		await openEditor(page);
+		const [ paragraph ] = await insertBlocks(page, [ [ 'core/paragraph', { content: TEXT } ] ]);
+		await selectText(page, paragraph, GARDEN);
+		let modal = await applyStyleToSelection(page, style);
+		await waitForContent(page, paragraph, (c) => c.includes(`data-style-id="${style.id}"`), 'style');
+		await closeInlineDialog(page, modal);
+		await selectText(page, paragraph, GARDEN);
+		modal = await openInlineDialog(page);
+		await modal.getByRole('combobox', { name: 'Font Weight' }).selectOption('400');
+		await waitForContent(page, paragraph, (c) => c.includes('style="font-weight: 400"'), 'weight override');
+		await closeInlineDialog(page, modal);
+		const content = await settledContent(page);
+		if (!content.includes(`data-style-id="${style.id}"`)) {
+			fail(`The override dropped the style: ${content}`);
+		}
+		return tokenize(content, style);
 	} finally {
 		await deleteCurrentPost(page);
 		await deleteStyle(page, style);
