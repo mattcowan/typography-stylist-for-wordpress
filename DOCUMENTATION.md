@@ -325,11 +325,17 @@ text color, and outline.
 3. Select other text.
 4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
 
-To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
+To change a style on all pages:
+
+1. Change the settings of text or a block that uses the style. The Paragraph Style panel then says “This text is different from the style.” (or “This block is different from the style.”).
+2. Click “Update Style…”. The panel asks if you want to update the style, and names it.
+3. Click “Yes, Update Style”. All text and blocks that use the style change, on every page. You cannot undo this. The panel shows the result, and a screen reader announces it.
+
+In a core Paragraph or Heading block, “Update Style…” copies the block’s own font weight, italic, line height, letter spacing, case and a fixed font size into the style, and removes them from the block. A font or a font size from the theme’s lists, and a font size on a theme with fluid typography, stay on the block; the panel names them. “Save as New Style…” saves the settings as a new style. “Detach Style” changes the text back to independent settings.
 
 #### Alignment, word spacing and line breaking
 
-A style can also set how its text is aligned, how wide the spaces between words are, and how lines break. Set them in the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+A style can also set how its text is aligned, how wide the spaces between words are, and how lines break. Set them in the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style…” and “Save as New Style…” keep the values the style has.
 
 - **Alignment:** Start, Center, End, or Justify. Start and End follow the text direction: Start is left in English and right in Arabic or Hebrew. The alignment setting of a block (in the block toolbar) overrides the style's alignment. Alignment applies to whole blocks only: when you apply the style to selected text, the text keeps the alignment of its block.
 - **Last line:** for justified text, the alignment of the last line: Start (the default), Center, End, or Justify.
@@ -342,7 +348,7 @@ A style can also set how its text is aligned, how wide the spaces between words 
 
 #### Hyphenation
 
-Since v2.4.0, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style” and “Save as New” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
+Since v2.4.0, a style can turn on automatic hyphenation, so long words break at the end of a line. This evens out the gaps between words in justified text and keeps long words from overflowing a narrow column. Set it in the “Hyphenation” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for it, so “Update Style…” and “Save as New Style…” keep the values the style has. Example: a “Body – Justified” style with Justify and Hyphenate on gives even word spacing in a narrow sidebar.
 
 - **Hyphenate:** on or off. The default is off. Off writes no CSS, so the browser's own setting applies and soft hyphens that you type in the text (`&shy;`) still work.
 - **Shortest word to hyphenate,** **fewest letters before a hyphen** and **fewest letters after a hyphen:** 1 to 20 letters each. An empty field lets the browser decide. Chrome and Firefox use these limits; Safari ignores them and uses its own.
@@ -356,7 +362,7 @@ Since v2.4.0, a style can turn on automatic hyphenation, so long words break at 
 
 #### Indents and paragraph spacing
 
-Since v2.4.0, a style can also set indents and the space before and after a paragraph. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+Since v2.4.0, a style can also set indents and the space before and after a paragraph. Set them in the “Indents and spacing” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. Each value is a number in em or px; 0 or an empty field means none. The editors have no control for them, so “Update Style…” and “Save as New Style…” keep the values the style has.
 
 - **Left indent** and **Right indent:** move the whole paragraph in from the start or end edge. They follow the text direction: in right-to-left text, such as Arabic or Hebrew, the left indent is on the right.
 - **First line indent:** moves only the first line. A negative value gives a hanging indent: the first line starts at the edge and the other lines are indented, as in a bibliography or a numbered list written as text.
@@ -372,7 +378,7 @@ Since v2.4.0, a style can also set indents and the space before and after a para
 
 #### Text color and outline
 
-A style can set a text color and an outline. Set them in the “Color and outline” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style” and “Save as New” keep the values the style has.
+A style can set a text color and an outline. Set them in the “Color and outline” part of the Edit form on the Settings → Typography Stylist → Paragraph Styles tab. The editors have no control for them, so “Update Style…” and “Save as New Style…” keep the values the style has.
 
 - **Text color:** a color from the theme's palette (listed first), a color from the site's palette in Global Styles, a color from the WordPress default palette when the theme keeps it, or a custom hex color. A palette color follows the theme: if the theme changes its “Accent” color, every style that uses “Accent” changes too. The style also stores the color the palette had when you saved it, so a theme that no longer has that color still shows it. A custom color can be partly transparent: add two digits to the hex code (`#cc000080` is half transparent). This is how a style gets a tint.
 - **Outline:** a width from 0 to 20 pixels, a color (by default the text color), and a position. “On top of the fill” draws the outline over the letters; the outline is centered on the edge of each letter, so a thick outline makes them look thinner. “Behind the fill” keeps their shape. In some fonts, often variable fonts, the parts of a letter overlap, and an outline on top shows lines inside the letter; behind the fill hides them, except in outline-only text, which has no fill. A new outline starts behind the fill. An outline you saved before keeps its position.
@@ -414,7 +420,7 @@ You can also use the Paragraph Styles toolbar button (on by default; the “Para
 
 The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove these classes by hand. To remove the style, click “Detach Style” in the “Paragraph Style” panel. The block keeps its own settings and its other classes.
 
-The block’s own sidebar settings, for example font size, letter spacing, and line height, override the style. The theme’s block styles, for example “Outline”, keep working. “Update Style” on text elsewhere also changes these blocks. If the style was deleted, the panel shows “Missing style”. Click “Detach Style” to remove the class.
+The block’s own sidebar settings, for example font size, letter spacing, and line height, override the style. The theme’s block styles, for example “Outline”, keep working. “Update Style…” on text elsewhere also changes these blocks. If the block has its own font weight, italic, line height, letter spacing, case or fixed font size, “Update Style…” in this panel copies them into the style. If the style was deleted, the panel shows “Missing style”. Click “Detach Style” to remove the class.
 
 A First Letter Hang in the style also applies to these blocks. It has no effect when the block is centered, aligned to the end, has a drop cap, or has a text indent.
 
@@ -569,6 +575,7 @@ When you delete a font, the plugin removes its files from the server. You can ch
 - **Archive Page Font Detection:** Check the full post content on archive pages, so that fonts load there too.
 - **WordPress Font Library:** Register new uploads in the Font Library automatically (WordPress 6.5+).
 - **Glyphs Toolbar Button** and **Paragraph Styles Toolbar Button:** Add buttons to the block toolbar. Both are on by default. A button that you turn off stays off.
+- **Only administrators can change paragraph styles:** When this is on, users without the “Manage options” capability can apply and detach paragraph styles, but they cannot create, update or delete them: the editor does not show those buttons, and the plugin’s REST routes refuse their requests. Administrators can still change styles in the editor and on the Paragraph Styles tab. Off by default. Export and Import of settings include it.
 - **Clear Font Cache:** Remove the saved font detection results. The plugin finds the fonts again on the next page load.
 - **Show Editor Tips Again:** Show the tips notice in the editor panels again, in this browser.
 
