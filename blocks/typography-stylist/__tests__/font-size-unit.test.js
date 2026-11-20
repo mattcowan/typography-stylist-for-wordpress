@@ -17,7 +17,7 @@ import {
 	buildFitFontSize,
 	buildFitLineOpenTag,
 	buildFitLinesHtml,
-	wrapFitLines,
+	buildFitLineSizeProperties,
 	buildResponsiveClamp,
 	formatFontSizeLength,
 	resolveFontSizeUnit,
@@ -158,12 +158,14 @@ describe('fit helpers take the unit', () => {
 	});
 
 	it('gives the editing value and the saved markup the same unit and word caps', () => {
-		// The editor renders wrapFitLines, the frontend buildFitLinesHtml;
-		// both must carry the same cap so the editor and the frontend agree
-		expect(wrapFitLines('A b<br>C', [0.2, 0.3], 96, [], 'rem', [0.5, 0.3])).toBe(
-			'<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), calc(0.5 * 100cqi), 6rem)">A b</span><br>' +
-			'<span class="typost-line" style="font-size:min(calc(0.3 * var(--typost-fit-width, 100cqi)), calc(0.3 * 100cqi), 6rem)">C</span>'
-		);
+		// The editor sets the line sizes as custom properties
+		// (buildFitLineSizeProperties), the frontend writes them on the lines
+		// (buildFitLinesHtml); both must carry the same cap so the editor and
+		// the frontend agree
+		expect(buildFitLineSizeProperties('A b<br>C', [0.2, 0.3], 96, 'rem', [0.5, 0.3])).toEqual({
+			'--typost-fit-line-0': 'min(calc(0.2 * var(--typost-fit-width, 100cqi)), calc(0.5 * 100cqi), 6rem)',
+			'--typost-fit-line-1': 'min(calc(0.3 * var(--typost-fit-width, 100cqi)), calc(0.3 * 100cqi), 6rem)',
+		});
 		expect(buildFitLinesHtml('A b<br>C', [0.2, 0.3], 96, [], 'rem', [0.5, 0.3])).toBe(
 			'<span class="typost-line" style="font-size:min(calc(0.2 * var(--typost-fit-width, 100cqi)), calc(0.5 * 100cqi), 6rem)">A b</span>' +
 			'<span class="typost-line" style="font-size:min(calc(0.3 * var(--typost-fit-width, 100cqi)), calc(0.3 * 100cqi), 6rem)">C</span>'
