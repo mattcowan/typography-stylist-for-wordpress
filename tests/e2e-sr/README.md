@@ -8,6 +8,7 @@ Each file is one journey:
 
 - `glyphs-panel.sr.spec.js` — open the Glyphs panel from the block toolbar, Tab to the glyph grid, arrow to an alternate, insert it with Enter, close with Escape.
 - `paragraph-styles-browser.sr.spec.js` — open the Paragraph Styles browser from the block toolbar (focus lands on the style listbox), move the cursor with the arrow keys and first-letter type-ahead, apply the cursor row with Enter.
+- `paragraph-styles-combobox.sr.spec.js` — the Paragraph Style field in the Quick Feature Toggles is a combobox (#453): NVDA reads its name, typing part of a style name lists the matches and announces a count, Tab leaves the field without stopping on the list, and typing, Down Arrow and Enter applies the style. It needs one saved style and saves nothing.
 - `admin-tabs.sr.spec.js` — Settings → Typography Stylist: arrow through the tablist, change the Admin Color Scheme select, save and clear the font cache with Enter, restore the scheme.
 - `paragraph-styles-admin-edit.sr.spec.js` — Settings → Typography Stylist → Paragraph Styles: open a scratch style's Edit form with Enter, Tab through the first fields, submit an empty name (the field must be read as invalid, with the message), save with Enter on Save. It creates and deletes its own style.
 - `paragraph-styles-admin-fields.sr.spec.js` — the new fields of the Edit form: NVDA reads each indent, spacing, color and outline field, then the contrast notice, the outline error, and adding, moving, removing and failing a GREP rule. It needs #196, #199 and #215. It saves nothing.

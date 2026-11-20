@@ -307,6 +307,37 @@
 	}
 
 	/**
+	 * The Paragraph Style picker of the Typography Stylist block's sidebar
+	 * panel and of the Quick Feature Toggles (#453). The author types to
+	 * find a style: the list holds the styles whose "Name — Font (weight)"
+	 * label contains the text, so a style name and a font name both match.
+	 * Where wp.components has no ComboboxControl it is the plain select.
+	 *
+	 * Module scope on purpose: a component defined inside the panel is a new
+	 * component on every render, which would remount the field and drop focus.
+	 * The prop builders and the Tab-order fix are in ps-utils.js (Jest tests).
+	 *
+	 * @param {Object} props See buildStyleComboboxProps() in ps-utils.js
+	 */
+	function StylePicker(props) {
+		// Hooks run before the branch so their order never changes; the
+		// select never attaches the ref.
+		var wrapRef = useRef(null);
+		useEffect(function() {
+			return utils.watchSuggestionsList(wrapRef.current);
+		}, []);
+
+		if (wp.components.ComboboxControl) {
+			// The wrapper keeps core's suggestions list out of the Tab order
+			// (QA finding SR-5)
+			return el('div', { className: 'typost-ps-style-picker', ref: wrapRef },
+				el(wp.components.ComboboxControl, utils.buildStyleComboboxProps(props))
+			);
+		}
+		return el(SelectControl, utils.buildStyleSelectProps(props));
+	}
+
+	/**
 	 * ParagraphStylesPanel component.
 	 *
 	 * Props:
@@ -387,7 +418,10 @@
 				if (!panel || (active && active !== doc.body)) return;
 				var target = panel.querySelector('.typost-ps-save-form input') ||
 					panel.querySelector('.typost-ps-badge') ||
-					panel.querySelector('button:not([disabled]), select:not([disabled]), input:not([disabled])');
+					// Not the style combobox (#453): focus opens its list, and while
+					// a combobox has focus core swallows Escape, so Escape would no
+					// longer close the dialog
+					panel.querySelector('button:not([disabled]), select:not([disabled]), input:not([disabled]):not([role="combobox"])');
 				if (target) {
 					target.focus();
 				}
@@ -825,16 +859,16 @@
 						// Names what opens; the panel heading above is a plain div
 						'aria-haspopup': 'dialog',
 					}, __('Browse styles…', 'typost-paragraph-styles'))
-					: el(SelectControl, {
+					: el(StylePicker, {
 						// The visible "Paragraph Style" heading above is a plain div, so
-						// without this the select had no accessible name — NVDA read it
-						// as "combo box, — Select a style —, collapsed" (QA finding SR-2).
+						// without this the field had no accessible name — NVDA read the
+						// select as "combo box, — Select a style —, collapsed" (QA finding SR-2).
 						label: __('Paragraph Style', 'typost-paragraph-styles'),
 						hideLabelFromVision: true,
+						placeholder: __('Select a style…', 'typost-paragraph-styles'),
 						value: selectedStyleId,
 						options: options,
 						onChange: onSelectStyle,
-						__nextHasNoMarginBottom: true,
 					}),
 				!isShowSave && el(Button, {
 					variant: 'secondary',

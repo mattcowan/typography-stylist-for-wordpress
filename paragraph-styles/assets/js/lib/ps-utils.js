@@ -2933,6 +2933,159 @@
 	}
 
 	/**
+	 * Whether a Paragraph Style picker value means "no style".
+	 *
+	 * Empty string, null, undefined and false qualify. A numeric 0 does not:
+	 * no style has id 0, but swallowing it would hide the mistake.
+	 *
+	 * @param {*} value
+	 * @return {boolean}
+	 */
+	function isEmptyStylePickerValue(value) {
+		return value === '' || value === null || value === undefined || value === false;
+	}
+
+	/**
+	 * Normalize a value coming back from the Paragraph Style picker.
+	 *
+	 * ComboboxControl hands back null when it clears itself. The panel's
+	 * handler treats the empty string as "no style".
+	 *
+	 * @param {*} value Raw value from the control
+	 * @return {string} The style id as a string, or '' for none
+	 */
+	function normalizeStylePickerValue(value) {
+		return isEmptyStylePickerValue(value) ? '' : String(value);
+	}
+
+	/**
+	 * Props for the searchable form of the Paragraph Style picker (#453): a
+	 * ComboboxControl, which matches the typed text anywhere in the option
+	 * label. A label is "Name — Font (weight)", so the style name and the
+	 * font name are both searchable with core's own filter. A native select
+	 * only jumps to a label that starts with the typed letters.
+	 *
+	 * `config.options` is the list the select shows: a leading "no style" row
+	 * (value '') and one row per style. The combobox does not list that row.
+	 * Nothing is picked until a style is chosen, and its placeholder says so.
+	 *
+	 * Core's ComboboxControl draws its reset button only while the field is
+	 * closed, and the field opens on focus, so the button would be gone when
+	 * someone reached for it: allowReset is off. The panel leaves this picker
+	 * for the style badge as soon as a style applies.
+	 *
+	 * This file and assets/js/font-picker.js (buildComboboxProps()) make the
+	 * same choices for two pickers; the panel script cannot require that
+	 * module (docs/twins.md).
+	 *
+	 * @param {Object}   config
+	 * @param {string}   config.label                 Accessible name ("Paragraph Style")
+	 * @param {boolean}  [config.hideLabelFromVision] True where a heading above already shows the name
+	 * @param {string}   [config.value]               Selected style id, '' for none
+	 * @param {Array}    config.options               {label, value} rows, the "no style" row first
+	 * @param {string}   [config.placeholder]         Text of the empty field
+	 * @param {Function} config.onChange              Receives the style id as a string, '' for none
+	 * @return {Object} Props for wp.components.ComboboxControl
+	 */
+	function buildStyleComboboxProps(config) {
+		config = config || {};
+		var rows = (config.options || []).filter(function (option) {
+			return option && option.value !== '';
+		});
+		return {
+			label: config.label,
+			hideLabelFromVision: !!config.hideLabelFromVision,
+			// null, not '': ComboboxControl looks the current row up by strict
+			// equality and shows the placeholder only for null
+			value: isEmptyStylePickerValue(config.value) ? null : String(config.value),
+			options: rows,
+			placeholder: config.placeholder,
+			allowReset: false,
+			onChange: function (value) {
+				config.onChange(normalizeStylePickerValue(value));
+			},
+			__nextHasNoMarginBottom: true,
+		};
+	}
+
+	/**
+	 * Props for the SelectControl fallback of the Paragraph Style picker: the
+	 * panel's select as it was before #453. Used where
+	 * wp.components.ComboboxControl does not exist.
+	 *
+	 * @param {Object} config Same shape as buildStyleComboboxProps()
+	 * @return {Object} Props for wp.components.SelectControl
+	 */
+	function buildStyleSelectProps(config) {
+		config = config || {};
+		return {
+			label: config.label,
+			hideLabelFromVision: !!config.hideLabelFromVision,
+			value: isEmptyStylePickerValue(config.value) ? '' : String(config.value),
+			options: config.options || [],
+			onChange: function (value) {
+				config.onChange(normalizeStylePickerValue(value));
+			},
+			__nextHasNoMarginBottom: true,
+		};
+	}
+
+	/**
+	 * Selector of ComboboxControl's suggestions list.
+	 */
+	var SUGGESTIONS_LIST_SELECTOR = 'ul[role="listbox"]';
+
+	/**
+	 * Take the combobox's suggestions list out of the Tab order (QA finding
+	 * SR-5). The list is a scroll container, browsers put scrollable
+	 * elements in the Tab order, and NVDA reads the bare list as "list" and
+	 * nothing else. The arrow keys operate the list from the field. Core
+	 * renders the list without a tabindex.
+	 *
+	 * ES5 twin of removeSuggestionsListFromTabOrder() in
+	 * assets/js/font-picker.js (docs/twins.md).
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {number} How many lists were changed
+	 */
+	function removeSuggestionsListFromTabOrder(root) {
+		if (!root || !root.querySelectorAll) {
+			return 0;
+		}
+		var lists = root.querySelectorAll(SUGGESTIONS_LIST_SELECTOR);
+		var changed = 0;
+		for (var i = 0; i < lists.length; i++) {
+			if (lists[i].getAttribute('tabindex') !== '-1') {
+				lists[i].setAttribute('tabindex', '-1');
+				changed++;
+			}
+		}
+		return changed;
+	}
+
+	/**
+	 * Keep every suggestions list inside a wrapper out of the Tab order, now
+	 * and when core adds one (it renders the list only while the field is
+	 * open). ES5 twin of watchSuggestionsList() in assets/js/font-picker.js.
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {Function} Stops watching
+	 */
+	function watchSuggestionsList(root) {
+		removeSuggestionsListFromTabOrder(root);
+		if (!root || typeof MutationObserver === 'undefined') {
+			return function () {};
+		}
+		var observer = new MutationObserver(function () {
+			removeSuggestionsListFromTabOrder(root);
+		});
+		observer.observe(root, { childList: true, subtree: true });
+		return function () {
+			observer.disconnect();
+		};
+	}
+
+	/**
 	 * The text each browser row renders in its style: the author's selection,
 	 * so the preview shows the words about to be styled rather than the
 	 * style's name.
@@ -3931,6 +4084,11 @@
 		readRecentStyleIds: readRecentStyleIds,
 		recordRecentStyleId: recordRecentStyleId,
 		filterParagraphStyles: filterParagraphStyles,
+		normalizeStylePickerValue: normalizeStylePickerValue,
+		buildStyleComboboxProps: buildStyleComboboxProps,
+		buildStyleSelectProps: buildStyleSelectProps,
+		removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
+		watchSuggestionsList: watchSuggestionsList,
 		buildBrowserSampleText: buildBrowserSampleText,
 		groupParagraphStyles: groupParagraphStyles,
 		paginateGroups: paginateGroups,

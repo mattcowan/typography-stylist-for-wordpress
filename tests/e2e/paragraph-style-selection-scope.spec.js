@@ -253,7 +253,7 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		await expect(sidebarBadge).toHaveText(blockStyle.name);
 	});
 
-	test('Choosing a style in the panel select styles only the selected letter', async ({ page }) => {
+	test('Choosing a style in the panel field styles only the selected letter', async ({ page }) => {
 		await openNewPost(page);
 		const name = `ZZ #303 bold ${Date.now()}`;
 		const style = await page.evaluate((styleName) => wp.apiFetch({
@@ -270,8 +270,11 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		await selectFirstLetter(page, clientId);
 		const modal = await openQuickFeatureToggles(page);
 
-		const select = modal.getByRole('combobox', { name: 'Paragraph Style' });
-		await select.selectOption({ label: await select.locator('option', { hasText: name }).first().textContent() });
+		// The field is a combobox since #453: type to search, then pick with the keyboard
+		const field = modal.getByRole('combobox', { name: 'Paragraph Style' });
+		await field.fill(name);
+		await field.press('ArrowDown');
+		await field.press('Enter');
 		await page.waitForTimeout(1000);
 
 		const after = await readBlock(page, clientId);

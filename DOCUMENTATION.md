@@ -323,7 +323,7 @@ text color, and outline.
 1. Set the typography of some text in either editor.
 2. Click “Save Current Settings as Style” and give the style a name.
 3. Select other text.
-4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, pick the style from the Paragraph Style list.
+4. To apply the style in a heading or paragraph, click “Browse styles…” and pick the style. In a Typography Stylist block, type part of the style's name or of its font name in the Paragraph Style field, and pick the style from the list.
 
 To change a style everywhere, change the settings on text that uses the style and click “Update Style”. “Detach Style” changes the text back to independent settings.
 

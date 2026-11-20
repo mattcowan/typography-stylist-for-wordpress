@@ -318,7 +318,10 @@ async function styledBlock(page, detach) {
 		await openEditor(page);
 		const [ clientId ] = await insertBlocks(page, [ [ 'typost/block', { content: TEXT } ] ]);
 		await editable(page, clientId).click();
-		await page.getByRole('combobox', { name: 'Paragraph Style' }).selectOption(String(style.id));
+		// The field is a combobox (#453): type the name, then click the row by
+		// its name (ArrowDown can land on the second match)
+		await page.getByRole('combobox', { name: 'Paragraph Style' }).fill(style.name);
+		await page.getByRole('option', { name: style.name }).click();
 		let content = await settledContent(page);
 		if (!content.includes(`typost-ps-${style.id}`)) {
 			fail('The style was not applied');
