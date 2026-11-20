@@ -59,6 +59,8 @@ var THEME_LOOK_PLUGIN_ATTRIBUTES = {
 	textCase: '',
 	fakeSmallCaps: true,
 	fontVariationSettings: '',
+	// The settings changed on top of a paragraph style (#451): none without a style
+	overrideKeys: [],
 	styleClass: ''
 };
 

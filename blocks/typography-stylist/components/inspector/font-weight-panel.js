@@ -13,6 +13,24 @@ import { PanelBody, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { buildSidebarWeightOptions, shouldShowWeightPanel } from '../../strip-styles/theme-default-weight';
 import { hookContainerRef } from '../../../../assets/js/hook-container.js';
+import renderOverrideReset from './override-reset';
+
+/**
+ * The reset controls of the weight and of the variation axes (#451). The
+ * axes have no panel of their own: an extension shows them here, in place
+ * of the weight select, or after this panel.
+ *
+ * @param {?Object} overrideControls From Edit.
+ * @return {Element} The controls.
+ */
+function renderWeightOverrideResets(overrideControls) {
+	return (
+		<>
+			{renderOverrideReset(overrideControls, 'fontWeight', __('Font Weight', 'typography-stylist'))}
+			{renderOverrideReset(overrideControls, 'fontVariationSettings', __('Font variation axes', 'typography-stylist'))}
+		</>
+	);
+}
 
 /**
  * Block font weight, limited to the weights the font has, after a "Theme
@@ -24,7 +42,7 @@ import { hookContainerRef } from '../../../../assets/js/hook-container.js';
  */
 export default function renderFontWeightPanel(props) {
 	const {
-		fontId, fontVariationSettings, fontWeight, getFilteredWeightOptions, setAttributes
+		fontId, fontVariationSettings, fontWeight, getFilteredWeightOptions, overrideControls, setAttributes
 	} = props;
 
 	const weightControlType = window.typostHooks
@@ -44,6 +62,7 @@ export default function renderFontWeightPanel(props) {
 						window.typostHooks.doAction('typost_weight_control', el, { fontId, fontWeight, fontVariationSettings: fontVariationSettings || '' });
 					}
 				})} />
+				{renderWeightOverrideResets(overrideControls)}
 			</PanelBody>
 		);
 	}
@@ -62,6 +81,7 @@ export default function renderFontWeightPanel(props) {
 				options={buildSidebarWeightOptions(sidebarWeightOptions, __('Theme default', 'typography-stylist'))}
 				onChange={(value) => setAttributes({ fontWeight: value })}
 			/>
+			{renderWeightOverrideResets(overrideControls)}
 		</PanelBody>
 	);
 }

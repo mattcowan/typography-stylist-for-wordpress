@@ -11,6 +11,7 @@
 
 import { PanelBody, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block font style (visual italic).
@@ -20,7 +21,7 @@ import { __ } from '@wordpress/i18n';
  */
 export default function renderFontStylePanel(props) {
 	const {
-		fontStyle, setAttributes
+		fontStyle, overrideControls, setAttributes
 	} = props;
 
 	return (
@@ -35,6 +36,7 @@ export default function renderFontStylePanel(props) {
 				onChange={(value) => setAttributes({ fontStyle: value })}
 				help={__('Visual style only. This uses the font’s italic face and does not add emphasis. To add semantic emphasis that screen readers can announce, use the editor’s Italic button instead.', 'typography-stylist')}
 			/>
+			{renderOverrideReset(overrideControls, 'fontStyle', __('Font Style', 'typography-stylist'))}
 		</PanelBody>
 	);
 }

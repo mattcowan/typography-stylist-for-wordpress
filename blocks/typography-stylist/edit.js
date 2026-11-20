@@ -22,9 +22,9 @@ import {
 	ToolbarButton,
 	Popover
 } from '@wordpress/components';
-import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
+import { useState, useRef, useEffect, useMemo, useCallback } from '@wordpress/element';
 import { hasBlockSupport } from '@wordpress/blocks';
-import { useSelect } from '@wordpress/data';
+import { useSelect, select } from '@wordpress/data';
 import {  } from '@wordpress/rich-text';
 import { parseInlineStylesAtCursor, getFilteredWeightOptions as getFilteredWeightOptionsUtil, getClosestWeight as getClosestWeightUtil, ALL_WEIGHT_OPTIONS, filterFeaturesByVisibility, unwrapFitLines, installModalFocusGuard, resolveScreenReaderClassControl, normalizeHang, buildFitLinePreviews, parseFixedFontSize, resolveFontSizeUnit, pxToRem, resolveStyleFontSizeUnit, getNewFontSizeUnit } from './utils';
 import { buildFontOptions, resolveFontIdFromFamily } from '../../assets/js/font-options.js';
@@ -48,7 +48,7 @@ import renderAccessibilityPanel from './components/inspector/accessibility-panel
 import renderHeadingLevelToolbar from './components/heading-level-toolbar';
 import useDebouncedAppliers from './hooks/use-debounced-appliers';
 import useApplyBlockProperties from './hooks/use-apply-block-properties';
-import { withBlockTextIndentProperty } from './utils';
+import { withBlockTextIndentProperty, resolveOverrideKeysPatch, buildStyleOverrideReset, findParagraphStyleByClass } from './utils';
 import { removePreviewSpans } from './qft-preview';
 import useInsertContent from './hooks/use-insert-content';
 import useQftEditorState from './hooks/use-qft-editor-state';
@@ -142,7 +142,22 @@ const TSIcon = () => (
 	</svg>
 );
 
-export default function Edit({ attributes, setAttributes, clientId, isSelected }) {
+export default function Edit({ attributes, setAttributes: setBlockAttributes, clientId, isSelected }) {
+	/**
+	 * setAttributes for every change the author makes in this editor: it
+	 * keeps the overrideKeys attribute (#451) — the settings changed on top
+	 * of the block's paragraph style, which save() writes inline — in step
+	 * with the change (resolveOverrideKeysPatch()). It reads the attributes
+	 * from the store at the time of the call, so two changes in one event
+	 * see each other. Derived writes that are not an edit (the re-sync after
+	 * a style update or of an old copy, the orphaned class) use
+	 * setBlockAttributes.
+	 */
+	const setAttributes = useCallback((patch) => {
+		const current = select(blockEditorStore).getBlockAttributes(clientId);
+		setBlockAttributes(resolveOverrideKeysPatch(current, patch, window.typostData && window.typostData.paragraphStyles));
+	}, [setBlockAttributes, clientId]);
+
 	/**
 	 * Id of the Quick Feature Toggles heading, used to name its dialog.
 	 *
@@ -474,18 +489,40 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 		: resolveFontIdFromFamily(computedFont || fontFamily, fontIdMap);
 
 	// The paragraph style behind styleClass: re-sync on style updates, drop an
-	// orphaned class, and the attributes that differ from the style
+	// orphaned class, and the settings the block overrides (#451)
 	// (hooks/use-paragraph-style-sync.js)
 	const { activeParagraphStyle, styleOverrides } = useParagraphStyleSync({
-		styleClass, setAttributes, qftStateRef, blockPropsRef,
-		fontId, fontWeight, fontStyle, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, fitMaxSize,
-		letterSpacing, lineHeight, features, fontVariationSettings, initialHang, textCase, fakeSmallCaps
+		clientId, styleClass, overrideKeys: attributes.overrideKeys, attributes, setAttributes: setBlockAttributes, blockPropsRef
 	});
-	// Under a paragraph style an edited size previews in the style's unit:
-	// Update Style writes it there, and Detach gives the block that unit
+
+	// A reset control in the sidebar (#451): the setting follows the
+	// paragraph style again. Its attributes take the style's values and the
+	// key leaves overrideKeys.
+	const resetStyleOverride = (key) => {
+		const current = select(blockEditorStore).getBlockAttributes(clientId) || attributes;
+		const style = findParagraphStyleByClass(current.styleClass, window.typostData && window.typostData.paragraphStyles);
+		if (!style) {
+			return;
+		}
+		const psUtils = window.typostPSUtils;
+		const props = psUtils && psUtils.normalizeApplyProperties ? psUtils.normalizeApplyProperties(style.properties || {}) : (style.properties || {});
+		const update = buildStyleOverrideReset(current, key, props, fontIdMap);
+		if (update) {
+			setBlockAttributes(update);
+		}
+	};
+	// What the sidebar panels need to show their reset controls: the listed
+	// keys under an active style (null without one), and the reset
+	const overrideControls = { styleOverrides, resetStyleOverride };
+	// Under a paragraph style a size previews in the style's unit: Update
+	// Style writes it there, and Detach gives the block that unit
 	// (resolveDetachFontSizeUnit). The block's own unit says nothing while it
-	// has a styleClass (#233).
-	const sizePreviewUnit = activeParagraphStyle ? resolveStyleFontSizeUnit(activeParagraphStyle) : blockFontSizeUnit;
+	// has a styleClass (#233), unless the size is an override (#451): save()
+	// then writes it in the block's unit, which the block took from the
+	// style when the size became an override (resolveOverrideKeysPatch()).
+	const sizePreviewUnit = activeParagraphStyle && !(styleOverrides && styleOverrides.fontSize)
+		? resolveStyleFontSizeUnit(activeParagraphStyle)
+		: blockFontSizeUnit;
 	// typost-hang gates the editor-only hang rules in editor.css (#242). The
 	// attribute is the working copy, equal to the style's value unless edited.
 	const hangClass = normalizeHang(initialHang) > 0 ? ' typost-hang' : '';
@@ -636,13 +673,13 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 
 				{fontOptions.length > 0 && (
 					renderFontFamilyPanel({
-						clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, setAttributes
+						clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, overrideControls, setAttributes
 					})
 				)}
 
 				{/* Font Weight - replaceable via typost_weight_control filter */}
 				{renderFontWeightPanel({
-					fontId, fontVariationSettings, fontWeight, getFilteredWeightOptions, setAttributes
+					fontId, fontVariationSettings, fontWeight, getFilteredWeightOptions, overrideControls, setAttributes
 				})}
 
 				{/* Extension hook point: after font weight (e.g., Variable Font axes).
@@ -655,29 +692,29 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				})} />
 
 				{renderFontStylePanel({
-					fontStyle, setAttributes
+					fontStyle, overrideControls, setAttributes
 				})}
 
 				{renderCasePanel({
-					fakeSmallCaps, setAttributes, textCase
+					fakeSmallCaps, overrideControls, setAttributes, textCase
 				})}
 
 				{renderFontSizePanel({
 					attributes, blockFontSizeUnit, fitMaxSize, fontSize, fontSizeMax, fontSizeMin,
-					fontSizePreferred, formatSizeReadout, setAttributes, sizePreviewUnit
+					fontSizePreferred, formatSizeReadout, overrideControls, setAttributes, sizePreviewUnit
 				})}
 
 				{renderLineHeightPanel({
-					lineHeight, setAttributes
+					lineHeight, overrideControls, setAttributes
 				})}
 
 				{renderLetterSpacingPanel({
-					letterSpacing, setAttributes
+					letterSpacing, overrideControls, setAttributes
 				})}
 
 				{renderFirstLetterHangPanel({
 					activeParagraphStyle, attributes, fitLineHangs, fontSize, hangLinePreviews, initialHang,
-					setAttributes, textAlign
+					overrideControls, setAttributes, textAlign
 				})}
 
 				{/* Extension hook point: before features (e.g., Glyphs panel) */}
@@ -689,7 +726,7 @@ export default function Edit({ attributes, setAttributes, clientId, isSelected }
 				})} />
 
 				{renderFeaturesPanel({
-					features, getCategoryTitle, groupedFeatures, toggleBlockFeature
+					features, getCategoryTitle, groupedFeatures, overrideControls, toggleBlockFeature
 				})}
 
 				{renderAccessibilityPanel({

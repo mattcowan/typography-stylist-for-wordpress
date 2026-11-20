@@ -15,6 +15,7 @@ import { adoptWpFont, isWpLibraryValue, wpSlugFromValue } from '../../../../asse
 import { FontPicker } from '../../../../assets/js/font-picker.js';
 import { resolveFontPickWeight } from '../../../../assets/js/font-weights.js';
 import { detectBlockComputedWeight } from '../../utils';
+import renderOverrideReset from './override-reset';
 
 /**
  * Block font family. Edit renders it only when there are fonts to choose
@@ -25,7 +26,7 @@ import { detectBlockComputedWeight } from '../../utils';
  */
 export default function renderFontFamilyPanel(props) {
 	const {
-		clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, setAttributes
+		clientId, fontFamily, fontId, fontIdMap, fontOptions, fontWeight, overrideControls, setAttributes
 	} = props;
 
 	return (
@@ -91,6 +92,7 @@ export default function renderFontFamilyPanel(props) {
 					}
 				}}
 			/>
+			{renderOverrideReset(overrideControls, 'fontId', __('Font Family', 'typography-stylist'))}
 		</PanelBody>
 	);
 }

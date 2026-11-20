@@ -285,11 +285,14 @@ describe('Typography Stylist - deprecated save (v2, pre-rem #233)', () => {
 		// textCase/fakeSmallCaps (#214) came after #233: a pre-rem block never
 		// stores them and v2Save never writes them, so the frozen schema stays
 		// without them (a migrated block takes the Default case)
-		const { fontSizeUnit, fitWordSizes, textCase, fakeSmallCaps, ...withoutUnit } = blockJson.attributes;
+		// overrideKeys (#451) came after #233: a pre-rem block never stores
+		// it and v2Save never reads it (a migrated block overrides nothing)
+		const { fontSizeUnit, fitWordSizes, textCase, fakeSmallCaps, overrideKeys, ...withoutUnit } = blockJson.attributes;
 		expect(fontSizeUnit).toEqual({ type: 'string', enum: ['px', 'rem'], default: 'rem' });
 		expect(fitWordSizes).toEqual({ type: 'array', default: [] });
 		expect(textCase).toEqual({ type: 'string', default: '' });
 		expect(fakeSmallCaps).toEqual({ type: 'boolean', default: true });
+		expect(overrideKeys).toEqual({ type: 'array', default: [] });
 		expect(v2.attributes).toEqual(withoutUnit);
 	});
 

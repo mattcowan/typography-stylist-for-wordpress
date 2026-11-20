@@ -127,6 +127,10 @@
 			"type": "string",
 			"default": ""
 		},
+		"overrideKeys": {
+			"type": "array",
+			"default": []
+		},
 		"fontVariationSettings": {
 			"type": "string",
 			"default": ""
