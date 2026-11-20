@@ -11,7 +11,10 @@
  * - "Yes, Clear" and "Yes, Reset All" return focus to that button too, and
  *   the polite live region says what happened;
  * - a change to another control while a confirmation is open does not move
- *   focus.
+ *   focus;
+ * - "Yes, Clear" on a block with nothing to clear (no text, or no inline
+ *   features) closes the confirmation, says so, writes nothing and returns
+ *   focus to the opener (#455).
  *
  * The test uses real key presses from the panel's toggle on. A real caret is
  * put in the block first: Firefox can move focus into the canvas when
@@ -43,20 +46,22 @@ test.afterEach(async ({ playwright }) => {
  * text, the block sidebar open and the Reset Features panel expanded with
  * the keyboard. Returns the block's client ID and the panel.
  */
-async function startWithPanel(page) {
+async function startWithPanel(page, content = CONTENT) {
 	await openNewPost(page);
 	const postId = await page.evaluate(() => wp.data.select('core/editor').getCurrentPostId());
 	created.push(`/wp/v2/posts/${postId}?force=true`);
 
-	const clientId = await page.evaluate((content) => {
-		const block = wp.blocks.createBlock('typost/block', { content, fontWeight: '300', letterSpacing: 40 });
+	const clientId = await page.evaluate((text) => {
+		const block = wp.blocks.createBlock('typost/block', { content: text, fontWeight: '300', letterSpacing: 40 });
 		wp.data.dispatch('core/block-editor').insertBlocks(block);
 		wp.data.dispatch('core/block-editor').selectBlock(block.clientId);
 		return block.clientId;
-	}, CONTENT);
+	}, content);
 	await editable(page, clientId).click();
 	await page.keyboard.press('End');
-	await expect.poll(() => page.evaluate(() => wp.data.select('core/block-editor').getSelectionStart().offset)).toBeGreaterThan(0);
+	if (content) {
+		await expect.poll(() => page.evaluate(() => wp.data.select('core/block-editor').getSelectionStart().offset)).toBeGreaterThan(0);
+	}
 
 	await page.evaluate(() => wp.data.dispatch('core/edit-post').openGeneralSidebar('edit-post/block'));
 	const toggle = page.getByRole('button', { name: 'Reset Features', exact: true });
@@ -118,7 +123,47 @@ test('Clear Individual Features: focus stays in the panel, and the result is spo
 	// Focus is still there after the canvas has caught up
 	await page.waitForTimeout(1000);
 	await expectFocusOn(page, 'Clear Individual Features');
+
+	// One undo step restores the spans (a clear that removes spans, as before #455)
+	await page.evaluate(() => wp.data.dispatch('core/editor').undo());
+	await expect.poll(async () => (await blockAttributes(page, clientId)).content).toBe(CONTENT);
 });
+
+// A block with nothing to clear (#455): "Yes, Clear" closes the confirmation,
+// says so, writes nothing, and gives focus back to the opener. The third
+// case has a span the clear does not touch (no typost-styled class).
+const NOTHING_TO_CLEAR = [
+	['a block with no text', ''],
+	['text with no inline features', 'Moonlit garden party'],
+	['text with a span that is not a Typography Stylist span', 'Moonlit <span class="other">garden</span> party'],
+];
+
+for (const [label, content] of NOTHING_TO_CLEAR) {
+	test(`Clear Individual Features on ${label}: closes, says so, writes nothing @firefox`, async ({ page }) => {
+		const { clientId, panel } = await startWithPanel(page, content);
+		// Save the draft, so a change after this point makes the post dirty
+		await page.evaluate(() => wp.data.dispatch('core/editor').savePost());
+		await expect.poll(() => page.evaluate(() => !wp.data.select('core/editor').isSavingPost() && !wp.data.select('core/editor').isEditedPostDirty())).toBe(true);
+		const before = await blockAttributes(page, clientId);
+
+		await page.keyboard.press('Enter');
+		await expectFocusOn(page, 'Cancel');
+		await page.keyboard.press('Shift+Tab');
+		await expectFocusOn(page, 'Yes, Clear');
+		await page.keyboard.press('Enter');
+
+		// The confirmation is closed, and focus is on the opener
+		await expect(panel.getByRole('button', { name: 'Yes, Clear' })).toHaveCount(0);
+		await expectFocusOn(page, 'Clear Individual Features');
+		await expect(page.locator('#a11y-speak-polite')).toHaveText(/No inline features to remove/);
+		await expect(page.locator('#a11y-speak-polite')).not.toHaveText(/Inline features removed from the block/);
+		// Nothing was written
+		await page.waitForTimeout(1000);
+		expect(await blockAttributes(page, clientId)).toEqual(before);
+		expect(await page.evaluate(() => wp.data.select('core/editor').isEditedPostDirty()), 'the post stays clean').toBe(false);
+		await expectFocusOn(page, 'Clear Individual Features');
+	});
+}
 
 test('Reset Entire Block: focus stays in the panel, the result is spoken, and one undo restores the block @firefox', async ({ page }) => {
 	const { clientId, panel } = await startWithPanel(page);

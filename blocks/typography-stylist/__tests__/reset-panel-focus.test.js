@@ -81,8 +81,8 @@ describe('Reset Features panel: focus (#420)', () => {
 		const { rerender } = render(<WithClear />);
 		fireEvent.click(button('Clear Individual Features'));
 		expect(document.activeElement).toBe(button('Cancel'));
-		// This mock leaves the confirmation open, as the real action does with
-		// no content: the request finds no opener, and focus stays
+		// This mock leaves the confirmation open: the focus request finds no
+		// opener, and focus stays
 		fireEvent.click(button('Yes, Clear'));
 		expect(clear).toHaveBeenCalledTimes(1);
 		expect(screen.queryByRole('button', { name: 'Clear Individual Features' })).toBeNull();
@@ -91,8 +91,8 @@ describe('Reset Features panel: focus (#420)', () => {
 	});
 
 	it('the same target asked twice in a row is focused the second time too', () => {
-		// Yes, Clear on an empty block asks for the opener while the
-		// confirmation stays open (no opener, nothing happens); Cancel then
+		// Yes, Clear asks for the opener while the confirmation stays open
+		// (here a mock that does not close it: no opener, nothing happens); Cancel then
 		// asks for the opener again, once it is mounted. Each request must
 		// be a new value, or React keeps the old state and the effect does
 		// not run.
@@ -197,7 +197,7 @@ describe('focusIfConnected', () => {
 	});
 });
 
-describe('clearAllInlineFeatures speaks its result (#420)', () => {
+describe('clearAllInlineFeatures speaks its result (#420, #455)', () => {
 	beforeEach(() => speak.mockClear());
 
 	it('removes the spans, closes the confirmation and speaks once, politely', () => {
@@ -214,13 +214,62 @@ describe('clearAllInlineFeatures speaks its result (#420)', () => {
 		expect(speak).toHaveBeenCalledWith('Inline features removed from the block.', 'polite');
 	});
 
-	it('with no content: changes nothing and speaks nothing', () => {
+	// Nothing to clear (#455): the confirmation closes, the result is spoken
+	// once, and nothing is written
+	it.each([
+		['no text', ''],
+		['undefined content', undefined],
+		['null content', null],
+		['text with no span', 'Moonlit garden party'],
+		['a line break written <br />, which a parse would rewrite as <br>', 'a<br />b'],
+		['a span without the typost-styled class', 'A <span class="other">b</span> c'],
+		['a span whose class only contains the name', 'A <span class="not-typost-styled">b</span> c'],
+	])('with %s: closes, says so once, and writes nothing', (label, content) => {
 		const setAttributes = jest.fn();
+		const setShowInlineResetConfirm = jest.fn();
 		const { clearAllInlineFeatures } = createResetActions({
-			content: '', resolvedApplyRange: null, setAttributes, setShowInlineResetConfirm: jest.fn(), setShowFullResetConfirm: jest.fn()
+			content, resolvedApplyRange: null, setAttributes, setShowInlineResetConfirm, setShowFullResetConfirm: jest.fn()
 		});
 		clearAllInlineFeatures();
 		expect(setAttributes).not.toHaveBeenCalled();
-		expect(speak).not.toHaveBeenCalled();
+		expect(setShowInlineResetConfirm).toHaveBeenCalledWith(false);
+		expect(speak).toHaveBeenCalledTimes(1);
+		expect(speak).toHaveBeenCalledWith('No inline features to remove.', 'polite');
+	});
+
+	it('a span with the class plus others is cleared, as before', () => {
+		const setAttributes = jest.fn();
+		const { clearAllInlineFeatures } = createResetActions({
+			content: 'A <span class="typost-styled extra">b</span> c', resolvedApplyRange: null, setAttributes,
+			setShowInlineResetConfirm: jest.fn(), setShowFullResetConfirm: jest.fn()
+		});
+		clearAllInlineFeatures();
+		expect(setAttributes).toHaveBeenCalledWith({ content: 'A b c' });
+		expect(speak).toHaveBeenCalledWith('Inline features removed from the block.', 'polite');
+	});
+
+	it('in the panel, "Yes, Clear" with nothing to clear closes the confirmation and focuses the opener', () => {
+		function WithRealAction({ content }) {
+			const [showInlineResetConfirm, setShowInlineResetConfirm] = useState(false);
+			const resetFocus = useResetPanelFocus();
+			const { clearAllInlineFeatures } = createResetActions({
+				content, resolvedApplyRange: null, setAttributes: jest.fn(), setShowInlineResetConfirm, setShowFullResetConfirm: jest.fn()
+			});
+			return renderResetPanel({
+				showInlineResetConfirm, setShowInlineResetConfirm, showFullResetConfirm: false, setShowFullResetConfirm: () => {},
+				clearAllInlineFeatures, resetEntireBlock: () => {}, clientId: 'abc', resetFocus
+			});
+		}
+		['', 'Moonlit garden party'].forEach((content) => {
+			speak.mockClear();
+			const { unmount } = render(<WithRealAction content={content} />);
+			fireEvent.click(button('Clear Individual Features'));
+			expect(document.activeElement).toBe(button('Cancel'));
+			fireEvent.click(button('Yes, Clear'));
+			expect(screen.queryByRole('button', { name: 'Yes, Clear' })).toBeNull();
+			expect(document.activeElement).toBe(button('Clear Individual Features'));
+			expect(speak).toHaveBeenCalledWith('No inline features to remove.', 'polite');
+			unmount();
+		});
 	});
 });
