@@ -303,6 +303,9 @@ class Typost {
         // Let the plain typography switch keep hung fit lines inside the block (#315)
         add_filter('render_block', array($this, 'add_fit_line_plain_properties'), 10, 2);
 
+        // Let each fit line resolve the block's em letter spacing at its own size (#458)
+        add_filter('render_block', array($this, 'add_fit_letter_spacing_property'), 10, 2);
+
         // Write the block's sidebar settings to its wrapper at render time
         add_filter('render_block', array($this, 'add_block_support_attributes'), 10, 2);
 
@@ -1998,6 +2001,69 @@ class Typost {
             return $tag;
         }
         $added = rtrim($css, "; \t") . ';--typost-fit-ratio:' . $ratio[1] . ';--typost-fit-size:' . $size[1];
+        return substr_replace($tag, $added, $style[1][1], strlen($css));
+    }
+
+    /**
+     * Give the fit-to-width heading of a rendered Typography Stylist block
+     * its letter spacing as `--typost-fit-letter-spacing` (#458).
+     *
+     * save.js writes the block's letter spacing in em on the heading. An em
+     * value is resolved where it is declared, so every fit line inherited
+     * it at the heading's fallback font size, not at the line's own size,
+     * and lines with letter spacing were wider or narrower than the block.
+     * A custom property inherits the em value unresolved; style.css sets
+     * each line's letter-spacing from it. The value is copied from the
+     * heading's own declaration, so it is what save() wrote, also for
+     * content saved before #458: saved markup does not change (no
+     * deprecation). A block with a paragraph style has no inline letter
+     * spacing; the style's class rule sets the property. The editor sets it
+     * in buildEditorStyle().
+     *
+     * @since 2.4.0
+     * @param string $block_content The rendered block HTML.
+     * @param array  $block         The parsed block.
+     * @return string The HTML, with the property on the fit heading.
+     */
+    public function add_fit_letter_spacing_property($block_content, $block) {
+        if (!is_string($block_content) || !is_array($block)
+            || !isset($block['blockName']) || 'typost/block' !== $block['blockName']
+            || false === strpos($block_content, 'typost-fit')
+            || false === stripos($block_content, 'letter-spacing')) {
+            return $block_content;
+        }
+        // Only opening tags that mention typost-fit reach the callback, which
+        // then checks the class word exactly
+        $result = preg_replace_callback('/<[a-z][a-z0-9]*\s[^>]*typost-fit[^>]*>/i', function ($match) {
+            return self::add_letter_spacing_property_to_fit_tag($match[0]);
+        }, $block_content);
+        return null === $result ? $block_content : $result;
+    }
+
+    /**
+     * Add `--typost-fit-letter-spacing` to one opening tag, when it is a fit
+     * heading (class `typost-fit`) whose inline style sets an em letter
+     * spacing.
+     *
+     * Only a number in em is copied (save.js writes no other form), so the
+     * value needs no new escaping. A tag that already has the property, or
+     * has no such declaration, is returned unchanged.
+     *
+     * @since 2.4.0
+     * @param string $tag An opening tag.
+     * @return string The tag.
+     */
+    public static function add_letter_spacing_property_to_fit_tag($tag) {
+        if (!preg_match('/\sclass="(?:[^"]*\s)?typost-fit(?:\s[^"]*)?"/i', $tag)
+            || !preg_match('/\sstyle="([^"]*)"/i', $tag, $style, PREG_OFFSET_CAPTURE)) {
+            return $tag;
+        }
+        $css = $style[1][0];
+        if (false !== strpos($css, '--typost-fit-letter-spacing')
+            || !preg_match('/(?:^|;)\s*letter-spacing\s*:\s*(-?(?:\d+(?:\.\d+)?|\.\d+)em)\s*(?:;|$)/i', $css, $spacing)) {
+            return $tag;
+        }
+        $added = rtrim($css, "; \t") . ';--typost-fit-letter-spacing:' . $spacing[1];
         return substr_replace($tag, $added, $style[1][1], strlen($css));
     }
 

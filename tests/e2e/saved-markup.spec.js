@@ -281,9 +281,9 @@ for (const fixture of FIXTURES) {
 			// text's content width. The sizes are not in the RichText value
 			// but on the block wrapper (#388), so check what renders. A fresh
 			// measurement can leave a line a little wider than the box (CI:
-			// 646.7px in 645px; #458), so the tolerance is 1% of the width,
-			// at least 1px. A missing wrapper style is far outside it (a line
-			// 361px wide in a 672px box).
+			// 646.7px in 645px; cause not known), so the tolerance is 1% of
+			// the width, at least 1px. A missing wrapper style is far outside
+			// it (a line 361px wide in a 672px box).
 			const canvasFit = await page.frameLocator('iframe[name="editor-canvas"]').locator('.typost-block-content.typost-fit').first().evaluate((heading) => {
 				const style = heading.ownerDocument.defaultView.getComputedStyle(heading);
 				const contentWidth = heading.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);

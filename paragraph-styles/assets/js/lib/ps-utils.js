@@ -2546,7 +2546,11 @@
 		// '50px' renders 0.05em and even garbage renders 0em — which matters,
 		// because an explicit 0 resets inherited spacing where absence would not
 		if (!phpFalsy(props.letterSpacing)) {
-			rules.push('letter-spacing: ' + (phpInt(props.letterSpacing) / 1000) + 'em');
+			// The custom property copy is what a fit-to-width line reads, so
+			// it resolves the em value at its own size (#458, PHP twin).
+			var letterSpacing = (phpInt(props.letterSpacing) / 1000) + 'em';
+			rules.push('letter-spacing: ' + letterSpacing);
+			rules.push('--typost-fit-letter-spacing: ' + letterSpacing);
 		}
 
 		if (!phpFalsy(props.lineHeight)) {
