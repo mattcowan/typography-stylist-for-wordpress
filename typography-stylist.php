@@ -520,9 +520,13 @@ class Typost {
                 return false;
             }
 
-            // Cache the result per post
+            // Cache the result per post. A preview by a user who can edit
+            // the post neither reads nor writes the cache (#480): it can show
+            // an autosave, not the saved post. Anyone can add ?preview=true,
+            // but without the capability WordPress shows the saved post.
             $cache_key = 'typost_has_styled_' . $post->ID;
-            $has_styled = get_transient($cache_key);
+            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $has_styled = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $has_styled) {
                 // Check both raw content and rendered content (for Gutenberg blocks)
@@ -546,7 +550,9 @@ class Typost {
 
                 $has_styled = ($has_styled_class || $has_typost_block || $has_extension_fonts) ? 'yes' : 'no';
 
-                set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
+                if ($use_cache) {
+                    set_transient($cache_key, $has_styled, 12 * HOUR_IN_SECONDS);
+                }
             }
 
             return $has_styled === 'yes';
@@ -616,9 +622,13 @@ class Typost {
                 return array();
             }
 
-            // Cache the result per post
+            // Cache the result per post. A preview by a user who can edit
+            // the post neither reads nor writes the cache (#480): it can show
+            // an autosave, not the saved post. Anyone can add ?preview=true,
+            // but without the capability WordPress shows the saved post.
             $cache_key = 'typost_used_fonts_' . $post->ID;
-            $used_fonts = get_transient($cache_key);
+            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $used_fonts = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $used_fonts) {
                 $used_fonts = array();
@@ -657,7 +667,9 @@ class Typost {
                 // Remove duplicates and empty values
                 $used_fonts = array_filter(array_unique($used_fonts));
 
-                set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
+                if ($use_cache) {
+                    set_transient($cache_key, $used_fonts, 12 * HOUR_IN_SECONDS);
+                }
             }
 
             return $used_fonts;
@@ -2695,7 +2707,16 @@ class Typost {
      * Clears stale font detection transients when post content changes,
      * ensuring the frontend re-detects fonts on the next page load.
      *
+     * A save of any status clears the post's own caches (#480): a draft,
+     * pending or scheduled post kept the fonts of its first view for 12
+     * hours. The archive caches (a wildcard delete and an object cache
+     * flush) are cleared only for a published or private post, because
+     * archives list no other status. Autosaves and revisions clear nothing.
+     * An autosave of a draft by its author updates the draft itself, but a
+     * draft is seen only in Preview, which reads no per-post cache.
+     *
      * @since 1.1.9
+     * @since 2.4.0 Clears the post's own caches for every status.
      *
      * @param int     $post_id  Post ID.
      * @param WP_Post $_post    Post object. Unused but required by the save_post hook signature.
@@ -2710,11 +2731,17 @@ class Typost {
             return;
         }
 
-        if (!in_array(get_post_status($post_id), array('publish', 'private'), true)) {
+        if (in_array(get_post_status($post_id), array('publish', 'private'), true)) {
+            $this->clear_post_content_caches($post_id);
             return;
         }
 
-        $this->clear_post_content_caches($post_id);
+        // Exact keys: no wildcard delete, and safe under a persistent object cache
+        $post_id = absint($post_id);
+        if ($post_id) {
+            delete_transient('typost_has_styled_' . $post_id);
+            delete_transient('typost_used_fonts_' . $post_id);
+        }
     }
 
     /**
