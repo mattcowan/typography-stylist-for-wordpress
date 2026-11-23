@@ -53,6 +53,20 @@ describe('screen reader copy CSS (#475)', () => {
 		}
 	});
 
+	it('has no :focus rule for the copy (#476)', () => {
+		// The copy has no tabindex, so it cannot take focus, and the clip
+		// would hide an outline anyway.
+		const clean = styleCss.replace(/\/\*[\s\S]*?\*\//g, '');
+		for (const cls of HIDDEN_CLASSES) {
+			expect(clean).not.toContain(cls + ':focus');
+		}
+	});
+
+	it('control: the :focus check finds a planted rule', () => {
+		const planted = '.wp-block-typost .sr-only:focus { outline: 3px solid; }';
+		expect(planted).toContain('.sr-only:focus');
+	});
+
 	it('control: the color check finds a color declaration', () => {
 		const planted = rules('.wp-block-typost .sr-only { clip-path: inset(50%); color: transparent; }');
 		expect(planted[0].body).toMatch(/(^|[;\s])color\s*:/);
