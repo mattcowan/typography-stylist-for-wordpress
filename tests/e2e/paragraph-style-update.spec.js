@@ -60,6 +60,26 @@ function sidebarPanel(page) {
 	return page.locator('[data-hook="typost_inspector_top"] .typost-ps-panel');
 }
 
+// Open a panel of the block sidebar by its title
+async function openSidebarPanel(page, title) {
+	const toggle = page.getByRole('button', { name: title, exact: true }).first();
+	if ((await toggle.getAttribute('aria-expanded')) !== 'true') {
+		await toggle.click();
+	}
+}
+
+// Change a setting with its control in the block sidebar, as the author
+// does. Not with updateBlockAttributes(): the block's own change handler
+// can do more than set the attribute (with #451 it also lists the setting
+// as the block's own), and a raw attribute change skips that.
+async function setSidebarNumber(page, title, value) {
+	await openSidebarPanel(page, title);
+	const input = page.locator('.components-panel__body').filter({ has: page.getByRole('button', { name: title, exact: true }) })
+		.locator('input[type="number"]').first();
+	await input.fill(String(value));
+	await input.press('Tab');
+}
+
 function focused(page) {
 	return page.evaluate(() => {
 		const el = document.activeElement;
@@ -91,14 +111,13 @@ test.afterEach(async ({ page }) => {
 test('Update Style… asks first; Cancel sends nothing; Yes sends one request and says so @firefox', async ({ page }) => {
 	await openNewPost(page);
 	const style = await createStyle(page, 'sidebar', { fontWeight: '300', letterSpacing: 20, textColor: '#aa0000' });
-	const clientId = await insertStyledBlock(page, style, 'Sidebar block');
+	await insertStyledBlock(page, style, 'Sidebar block');
 	const panel = sidebarPanel(page);
 	await expect(panel.locator('.typost-ps-badge-name')).toHaveText(style.name);
 	await expect(panel).not.toContainText('.typost-ps-');
 	await expect(panel.locator('.typost-ps-help')).toHaveText('To change this style on all pages, change this block. Then click “Update Style”.');
 
-	// What the sidebar's Letter Spacing control does
-	await page.evaluate((id) => wp.data.dispatch('core/block-editor').updateBlockAttributes(id, { letterSpacing: 60 }), clientId);
+	await setSidebarNumber(page, 'Letter Spacing', 60);
 	await expect(panel.locator('.typost-ps-status')).toHaveText('This block is different from the style.');
 
 	const writes = trackWrites(page);
@@ -129,7 +148,7 @@ test('A refused update keeps the confirmation, the error, the focus and the chan
 	const style = await createStyle(page, 'refused', { fontWeight: '300' });
 	const clientId = await insertStyledBlock(page, style, 'Refused block');
 	const panel = sidebarPanel(page);
-	await page.evaluate((id) => wp.data.dispatch('core/block-editor').updateBlockAttributes(id, { lineHeight: 2.4 }), clientId);
+	await setSidebarNumber(page, 'Line Height', 2.4);
 	// Only the update is refused (apiFetch sends PATCH as POST with an
 	// override header)
 	await page.route(/paragraph-styles(%2F|\/)\d+/, (route) => {
@@ -180,11 +199,12 @@ test('With the lock on, nothing in the panel changes a style, and Detach keeps f
 	await page.evaluate(() => {
 		window.typostData.paragraphStylesOptions.styleChangesLocked = true;
 	});
-	const clientId = await insertStyledBlock(page, style, 'Locked block');
+	await insertStyledBlock(page, style, 'Locked block');
 	const panel = sidebarPanel(page);
 	await expect(panel.locator('.typost-ps-badge-name')).toHaveText(style.name);
 	await expect(panel.locator('.typost-ps-help')).toHaveCount(0);
-	await page.evaluate((id) => wp.data.dispatch('core/block-editor').updateBlockAttributes(id, { fontWeight: '700' }), clientId);
+	await openSidebarPanel(page, 'Font Weight');
+	await page.getByRole('combobox', { name: 'Font Weight' }).selectOption('700');
 	await expect(panel).toContainText('Only an administrator can change this style.');
 	await expect(panel.getByRole('button', { name: /Update Style|Save as New/ })).toHaveCount(0);
 

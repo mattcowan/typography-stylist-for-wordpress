@@ -152,17 +152,21 @@
 	/**
 	 * Send "Update Style": one PATCH with the properties (#452). On success
 	 * the style list is resolved again (the styles based on this one change
-	 * with it), written to typostData, and typost-paragraph-styles-updated
-	 * fires, so every use in the open editor changes: the CSS is rebuilt and
-	 * read again from the server, and Typography Stylist blocks re-sync. The
-	 * event's detail names the style and the editor the update came from,
-	 * for listeners that treat the source text differently.
+	 * with it) and written to typostData. The result's notify() fires
+	 * typost-paragraph-styles-updated, so every use in the open editor
+	 * changes: the CSS is rebuilt and read again from the server, and
+	 * Typography Stylist blocks re-sync. The event's detail names the style
+	 * and the editor the update came from, for listeners that treat the
+	 * source text differently. The caller fires it after it has set the
+	 * panel's result, so the re-synced block and the result render together
+	 * (before, the help text showed for a moment between the two).
 	 *
 	 * @param {Object} style        The style to update (client shape).
 	 * @param {Object} properties   buildStyleUpdateProperties() result.
 	 * @param {Array}  styles       Every style.
 	 * @param {string} editorSource 'inline' | 'qft' | 'inspector' | 'core-block'.
-	 * @return {Promise<{style: Object, styles: Array}>} The updated style and list.
+	 * @return {Promise<{style: Object, styles: Array, notify: Function}>} The updated
+	 *         style and list, and the function that fires the event.
 	 */
 	function sendStyleUpdate(style, properties, styles, editorSource) {
 		return wp.apiFetch({
@@ -175,9 +179,6 @@
 			}));
 			if (window.typostData) {
 				window.typostData.paragraphStyles = updated;
-				document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated', {
-					detail: { styleId: updatedStyle.id, editorSource: editorSource },
-				}));
 			}
 			var resolved = updatedStyle;
 			for (var i = 0; i < updated.length; i++) {
@@ -186,7 +187,17 @@
 					break;
 				}
 			}
-			return { style: resolved, styles: updated };
+			return {
+				style: resolved,
+				styles: updated,
+				notify: function() {
+					if (window.typostData) {
+						document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated', {
+							detail: { styleId: updatedStyle.id, editorSource: editorSource },
+						}));
+					}
+				},
+			};
 		});
 	}
 
@@ -312,6 +323,15 @@
 						__('“%s” is updated. All text that uses this style changed.', 'typost-paragraph-styles'),
 						style.name
 					);
+					// The result first, then the event: React renders the
+					// re-synced block and the result together, so the help
+					// text does not show in between
+					if (mountedRef.current) {
+						setBusy(false);
+						setConfirming(false);
+						setStatus({ type: 'success', text: text });
+					}
+					result.notify();
 					if (onSaved) {
 						// The style is saved whatever happens here: a failure in
 						// this follow-up must not report the save as failed
@@ -325,9 +345,6 @@
 					// selected, the dialog closed): the request was theirs
 					speak(text, 'polite');
 					if (!mountedRef.current) return;
-					setBusy(false);
-					setConfirming(false);
-					setStatus({ type: 'success', text: text });
 					setFocus({ selector: '.typost-ps-badge' });
 					if (onSuccess) {
 						onSuccess(result);
