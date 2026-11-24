@@ -2709,20 +2709,35 @@ class Typost {
      *
      * A save of any status clears the post's own caches (#480): a draft,
      * pending or scheduled post kept the fonts of its first view for 12
-     * hours. The archive caches (a wildcard delete and an object cache
-     * flush) are cleared only for a published or private post, because
-     * archives list no other status. Autosaves and revisions clear nothing.
+     * hours. The archive caches (a wildcard delete, and an object cache
+     * flush under a persistent object cache) are cleared only for a
+     * published or private post, because archives list no other status
+     * (clear_font_caches_for_status()). Autosaves and revisions clear
+     * nothing.
      * An autosave of a draft by its author updates the draft itself, but a
      * draft is seen only in Preview, which reads no per-post cache.
      *
-     * @since 1.1.9
-     * @since 2.4.0 Clears the post's own caches for every status.
+     * Only a post type whose content the frontend scan reads clears (#483):
+     * a type with a frontend view (is_post_type_viewable(): posts, pages,
+     * attachments, public custom post types) and synced patterns
+     * (wp_block), which have no view but render in the posts that reference
+     * them. Menu items, Font Library faces and families, global styles,
+     * templates, template parts, navigation menus and other internal types
+     * clear nothing: a menu save or a font family install saves one post per
+     * item or face, and each published save ran a wildcard delete and an
+     * object cache flush. A block theme reads the fonts of its templates and
+     * template parts as they render, with no cache (#481).
      *
-     * @param int     $post_id  Post ID.
-     * @param WP_Post $_post    Post object. Unused but required by the save_post hook signature.
-     * @param bool    $_update  Whether this is an update to an existing post. Unused but required by the hook.
+     * @since 1.1.9
+     * @since 2.4.0 Clears the post's own caches for every status, and only
+     *              for content post types.
+     *
+     * @param int          $post_id Post ID.
+     * @param WP_Post|null $post    Post object. Its post type is read;
+     *                              without one, get_post_type() is asked.
+     * @param bool         $_update Whether this is an update to an existing post. Unused but required by the hook.
      */
-    public function on_post_save($post_id, $_post, $_update) {
+    public function on_post_save($post_id, $post, $_update) {
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return;
         }
@@ -2731,6 +2746,27 @@ class Typost {
             return;
         }
 
+        $post_type = (is_object($post) && isset($post->post_type)) ? $post->post_type : get_post_type($post_id);
+        if (!$this->is_font_cache_post_type($post_type)) {
+            return;
+        }
+
+        $this->clear_font_caches_for_status($post_id);
+    }
+
+    /**
+     * Clear the font caches that a save or delete of this post changes
+     *
+     * A published or private post: its own two caches and the archive
+     * caches (clear_post_content_caches()). Any other status (draft,
+     * pending, future, auto-draft, trash): only its own two caches, by exact
+     * key, because archives list no other status (#480).
+     *
+     * @since 2.4.0
+     *
+     * @param int $post_id Post ID.
+     */
+    private function clear_font_caches_for_status($post_id) {
         if (in_array(get_post_status($post_id), array('publish', 'private'), true)) {
             $this->clear_post_content_caches($post_id);
             return;
@@ -2745,9 +2781,42 @@ class Typost {
     }
 
     /**
+     * Whether a save or delete of this post type clears the font caches (#483)
+     *
+     * True for a type with a frontend view (is_post_type_viewable()) and for
+     * synced patterns (wp_block), whose content renders in the posts that
+     * reference them. False for internal types and for anything that is not
+     * a post type name (get_post_type() of a missing post is false).
+     *
+     * @since 2.4.0
+     *
+     * @param mixed $post_type Post type name.
+     * @return bool
+     */
+    private function is_font_cache_post_type($post_type) {
+        if (!is_string($post_type) || '' === $post_type) {
+            return false;
+        }
+        return 'wp_block' === $post_type || is_post_type_viewable($post_type);
+    }
+
+    /**
      * Handle post deletion: clear per-post and archive font detection caches.
      *
+     * The same rules as on_post_save() (#483). Only a content post type
+     * clears: deleting a menu deletes each of its items, and deleting a Font
+     * Library family deletes each face, and each delete ran a full clear.
+     * Only a published or private post clears the archive caches; any other
+     * status clears only the post's own caches. WordPress deletes old
+     * auto-drafts every day (wp_delete_auto_drafts()) and "Empty Trash"
+     * deletes trashed posts one by one, and each of those deletes ran a
+     * full clear. before_delete_post fires while the post still exists, so
+     * get_post_type() and get_post_status() read it; a missing post clears
+     * nothing.
+     *
      * @since 1.1.9
+     * @since 2.4.0 Only for content post types, and the archive caches only
+     *              for a published or private post.
      *
      * @param int $post_id Post ID being deleted.
      */
@@ -2756,7 +2825,11 @@ class Typost {
             return;
         }
 
-        $this->clear_post_content_caches($post_id);
+        if (!$this->is_font_cache_post_type(get_post_type($post_id))) {
+            return;
+        }
+
+        $this->clear_font_caches_for_status($post_id);
     }
 
     /**
