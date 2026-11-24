@@ -3119,7 +3119,7 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/editor.js',
-			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready' ),
+			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready', 'wp-a11y' ),
 			TYPOST_PS_VERSION,
 			true
 		);
