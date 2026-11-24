@@ -371,6 +371,17 @@ class RenderedBlockFontsTest extends TestCase {
         $this->assertSame([3, 9], $this->variables($plugin));
     }
 
+    public function test_a_page_with_nothing_styled_prints_the_template_font_variable() {
+        // A site title in the header on a page with plain content: the
+        // variables element prints when the page's list has a font (#482).
+        $this->seedFonts();
+        $this->content([]);
+
+        $plugin = $this->renderTemplate($this->freshInstance(), [$this->typostBlock(9)]);
+
+        $this->assertSame([9], $this->variables($plugin));
+    }
+
     public function test_a_deleted_template_font_prints_its_alias_and_the_replacement() {
         $this->seedFonts();
         $this->options['typost_font_replacements'] = [
