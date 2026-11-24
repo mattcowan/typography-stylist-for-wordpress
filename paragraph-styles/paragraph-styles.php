@@ -575,7 +575,12 @@ final class Typost_Paragraph_Styles {
 	 * - Neither form applies to a block or span whose own style attribute
 	 *   sets a weight (the block's own font weight, or an author's change on
 	 *   a span, #450): bold there keeps the browser's bolder, relative to
-	 *   that weight.
+	 *   that weight. `[style*="font-weight"]` is a substring test, not an
+	 *   exact property match: it also matches `--x-font-weight` or
+	 *   `font-weight` inside a value. The plugin writes neither in a
+	 *   style attribute (an author can add one only by editing the HTML),
+	 *   and a false match only gives bold there the browser's bolder, as
+	 *   before #450.
 	 * - A style span anywhere inside bold text, with formats such as `<em>`
 	 *   or a link between them (RichText nests formats in the order they
 	 *   were applied): (0,6,1), over the style rule's (0,6,0). An inline

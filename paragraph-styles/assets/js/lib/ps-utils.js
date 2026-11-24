@@ -2709,7 +2709,8 @@
 	 * style (a block or a span with no weight of its own), and a style
 	 * span anywhere inside bold text, take boldWeight(); a style span
 	 * inside em or i is italic again under a style that sets
-	 * font-style: normal.
+	 * font-style: normal. [style*="font-weight"] is a substring test, not
+	 * an exact property match (see the PHP docblock).
 	 *
 	 * @param {Object}   props Resolved properties.
 	 * @param {string[]} refs  The style's id, then its legacy id.
