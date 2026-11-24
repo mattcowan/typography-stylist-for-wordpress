@@ -10,6 +10,7 @@
  */
 const { buildInlineFontSizeValue, buildInlineFontSizeAttributes } = require('../font-size-units.js');
 const { caseDeclarations, buildInlineCaseAttributes } = require('../text-case.js');
+const { sanitizeFontVariationSettings } = require('../font-variation-settings.js');
 const { escapeHTML, escapeAttribute, hasHTMLTags, sanitizeFontFamily, sanitizeCSSValue } = require('./sanitize.js');
 const { isEmptyBlockContent } = require('../theme-look.js');
 
@@ -56,45 +57,92 @@ function isConvertSourceEmpty(blockContent, valueText) {
 }
 
 /**
- * The style declarations and extra attributes of the span a partial
- * conversion wraps the selection in.
+ * The attributes and the style of the span a partial conversion wraps the
+ * selection in.
  *
- * @param {Object} state      Component state
- * @param {string} spanWeight Weight the span gets ('' for none)
- * @param {string} sizeUnit   Unit of the size (getZoomNoticeUnit())
- * @return {{styleString: string, sizeAttributes: ?Object, caseAttributes: Object}} Span parts
+ * Both branches of buildPartialConvertContent() write the span from these
+ * parts, so text with tags and plain text get the same span (#454). The
+ * attributes are the ones the block's Quick Feature Toggles write for the
+ * same settings: data-font-id (no data-font family name: the toggles do
+ * not write it, and rendering keys off the ID), data-fontweight,
+ * data-fontstyle, data-letterspacing, data-lineheight and
+ * data-font-variation-settings, so the block reads the selection's
+ * settings back from the span. A raw feature value (an indexed alternate
+ * such as "salt" 2) is kept in data-feature-settings and leads the
+ * font-feature-settings value, as the inline editor's apply writes it
+ * (buildFormatAttributes() in apply-features.js).
+ *
+ * Every value is sanitized here. The caller escapes the attribute values
+ * when it serializes them.
+ *
+ * @param {Object} state              Component state
+ * @param {string} spanWeight         Weight the span gets ('' for none)
+ * @param {string} sizeUnit           Unit of the size (getZoomNoticeUnit())
+ * @param {string} [rawFeatureSettings] Raw feature value of the selection
+ *                                    (resolveRawFeatureSettings()), or ''
+ * @return {{attributes: Object, styleString: string, sizeAttributes: ?Object, caseAttributes: Object}} Span parts;
+ *         attributes holds every data attribute of the span, in the order
+ *         of the style declarations (sizeAttributes and caseAttributes are
+ *         also in it)
  */
-function buildConvertSpanParts(state, spanWeight, sizeUnit) {
+function buildConvertSpanParts(state, spanWeight, sizeUnit, rawFeatureSettings) {
     // Build style string for the selected portion
     const { selectedFeatures, selectedFont, fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, letterSpacing, lineHeight } = state;
     const styleArray = [];
+    const attributes = {};
 
-    if (selectedFeatures.length > 0) {
-        // Sanitize each feature ID to prevent injection
-        const sanitizedFeatures = selectedFeatures.map(f => sanitizeCSSValue(f));
-        styleArray.push(`font-feature-settings: ${sanitizedFeatures.map(f => `"${f}" 1`).join(', ')}`);
+    // Sanitize each feature ID to prevent injection; an ID that sanitizes
+    // to nothing is dropped
+    const sanitizedFeatures = (selectedFeatures || []).map(f => sanitizeCSSValue(f)).filter(f => f);
+    // The raw value keeps its quotes; a ';' or an angle bracket could add a
+    // declaration or end the markup
+    const raw = rawFeatureSettings ? String(rawFeatureSettings).replace(/[;<>]/g, '').trim() : '';
+    if (raw || sanitizedFeatures.length > 0) {
+        // Raw clauses first; a toggled tag the raw value does not name is
+        // appended with 1 (as buildFormatAttributes() writes it)
+        const extraTags = raw ? sanitizedFeatures.filter(f => raw.indexOf(`"${f}"`) === -1) : sanitizedFeatures;
+        const plain = extraTags.map(f => `"${f}" 1`).join(', ');
+        if (raw) {
+            attributes['data-feature-settings'] = raw;
+        }
+        if (sanitizedFeatures.length > 0) {
+            attributes['data-features'] = sanitizedFeatures.join(',');
+        }
+        styleArray.push(`font-feature-settings: ${raw ? (plain ? `${raw}, ${plain}` : raw) : plain}`);
     }
-    if (state.selectedFontId) {
+    // A font ID that is not a positive number is no ID
+    const fontId = parseInt(state.selectedFontId, 10) || 0;
+    if (fontId > 0) {
         // Modern format: CSS variable keyed by numeric font ID (drives
         // frontend @font-face detection like every other span)
-        styleArray.push(`font-family: var(--font-${parseInt(state.selectedFontId, 10)})`);
+        attributes['data-font-id'] = String(fontId);
+        styleArray.push(`font-family: var(--font-${fontId})`);
     } else if (selectedFont) {
         const sanitizedFont = sanitizeFontFamily(selectedFont);
         styleArray.push(`font-family: ${sanitizedFont}`);
     }
     if (spanWeight) {
         const sanitizedWeight = sanitizeCSSValue(spanWeight);
+        attributes['data-fontweight'] = sanitizedWeight;
         styleArray.push(`font-weight: ${sanitizedWeight}`);
     }
-    if (letterSpacing !== 0) {
-        const sanitizedSpacing = parseFloat(letterSpacing) || 0;
+    // Visual italic (semantic emphasis stays <em>)
+    const sanitizedFontStyle = sanitizeCSSValue(state.fontStyle);
+    if (sanitizedFontStyle) {
+        attributes['data-fontstyle'] = sanitizedFontStyle;
+        styleArray.push(`font-style: ${sanitizedFontStyle}`);
+    }
+    // Thousandths of an em, as the controls store it; 0 (or a value that is
+    // not a number) is no spacing
+    const sanitizedSpacing = parseFloat(letterSpacing) || 0;
+    if (sanitizedSpacing !== 0) {
+        attributes['data-letterspacing'] = String(sanitizedSpacing);
         styleArray.push(`letter-spacing: ${sanitizedSpacing / 1000}em`);
     }
-    if (lineHeight && lineHeight !== 0) {
-        const sanitizedLineHeight = parseFloat(lineHeight) || 0;
-        if (sanitizedLineHeight > 0) {
-            styleArray.push(`line-height: ${sanitizedLineHeight}`);
-        }
+    const sanitizedLineHeight = parseFloat(lineHeight) || 0;
+    if (sanitizedLineHeight > 0) {
+        attributes['data-lineheight'] = String(sanitizedLineHeight);
+        styleArray.push(`line-height: ${sanitizedLineHeight}`);
     }
     // The size is written as in an apply: a fixed size (64, from a
     // paragraph style) as a length, not dropped, in the unit the
@@ -107,15 +155,23 @@ function buildConvertSpanParts(state, spanWeight, sizeUnit) {
     // data-fontsize lets the block read the size back (#255, review)
     const sizeAttributes = sizeValue ? buildInlineFontSizeAttributes(fontSize, minPx, prefPx, maxPx) : null;
     if (sizeValue) {
+        Object.assign(attributes, sizeAttributes);
         styleArray.push(`font-size: ${sizeValue}`);
     }
     // Case (#214): the span keeps the selection's case, as an apply writes it
     const caseAttributes = buildInlineCaseAttributes(state.textCase, state.fakeSmallCaps);
+    Object.assign(attributes, caseAttributes);
     caseDeclarations(state.textCase, state.fakeSmallCaps).forEach(([property, declared]) => {
         styleArray.push(`${property}: ${declared}`);
     });
+    // Variable font axes: '' for a value that is not a valid list of axes
+    const safeFontVariationSettings = sanitizeFontVariationSettings(state.fontVariationSettings);
+    if (safeFontVariationSettings) {
+        attributes['data-font-variation-settings'] = safeFontVariationSettings;
+        styleArray.push(`font-variation-settings: ${safeFontVariationSettings}`);
+    }
 
-    return { styleString: styleArray.join('; '), sizeAttributes: sizeAttributes, caseAttributes: caseAttributes };
+    return { attributes: attributes, styleString: styleArray.join('; '), sizeAttributes: sizeAttributes, caseAttributes: caseAttributes };
 }
 
 /**
@@ -132,26 +188,18 @@ function buildConvertSpanParts(state, spanWeight, sizeUnit) {
  * @param {string}  args.sizeUnit        Unit of the size
  * @param {boolean} args.clearWeight     An extension asked for the weight to be removed
  * @param {Object}  args.shared          window.typostSharedUtils (or undefined)
+ * @param {string}  [args.rawFeatureSettings] Raw feature value of the selection, or ''
  * @return {string} Content for the block
  */
 function buildPartialConvertContent(args) {
     const { existingContent, fullText, start, end, state, spanWeight, clearWeight, shared } = args;
-    const { selectedFeatures } = state;
-    const { styleString, sizeAttributes, caseAttributes } = buildConvertSpanParts(state, spanWeight, args.sizeUnit);
+    // One attribute map for both branches (#454)
+    const { attributes, styleString } = buildConvertSpanParts(state, spanWeight, args.sizeUnit, args.rawFeatureSettings);
 
     // If we have existing HTML content with spans, we need to preserve it
     if (hasHTMLTags(existingContent)) {
-        // Build the new span's attributes in the modern format
-        const spanAttributes = Object.assign({}, sizeAttributes, caseAttributes);
-        if (selectedFeatures.length > 0) {
-            spanAttributes['data-features'] = selectedFeatures.map(f => sanitizeCSSValue(f)).join(',');
-        }
-        if (state.selectedFontId) {
-            spanAttributes['data-font-id'] = String(state.selectedFontId);
-        }
-        if (spanWeight) {
-            spanAttributes['data-fontweight'] = String(spanWeight);
-        }
+        // A copy: the applier's merge writes into the object it is given
+        const spanAttributes = Object.assign({}, attributes);
 
         // Apply over the existing HTML with the shared span-preserving
         // applier: selections crossing span boundaries are extracted and
@@ -184,17 +232,21 @@ function buildPartialConvertContent(args) {
     const beforeText = fullText.substring(0, start);
     const selectedText = fullText.substring(start, end);
     const afterText = fullText.substring(end);
-    const extraAttributes = Object.assign({}, sizeAttributes, caseAttributes);
-    const sizeAttributeString = Object.keys(extraAttributes)
-        .map((key) => ` ${key}="${escapeAttribute(extraAttributes[key])}"`)
+    // The same attributes as the branch above, written in the same way as
+    // the shared applier writes a new span (an empty value is left out), so
+    // the content is the one the applier would write on the escaped text.
+    // Every value is escaped (#369, #454): a feature's quotes ("dlig" 1)
+    // ended the style attribute early, and the browser read
+    // `font-feature-settings: ` with no value. The quotes are written as
+    // &quot;, as the DOM serializer writes them for the block's own controls
+    // (applyStylingSafeStringMethod() in the branch above).
+    const attributeString = Object.keys(attributes)
+        .filter((key) => attributes[key] !== null && attributes[key] !== undefined && attributes[key] !== '')
+        .map((key) => ` ${key}="${escapeAttribute(attributes[key])}"`)
         .join('');
-    // The style value is escaped like every other attribute (#369): a
-    // feature's quotes ("dlig" 1) ended the attribute early, and the browser
-    // read `font-feature-settings: ` with no value. The quotes are written
-    // as &quot;, as the DOM serializer writes them for the block's own
-    // controls (applyStylingSafeStringMethod() in the branch above).
+    const styleAttribute = styleString ? ` style="${escapeAttribute(styleString)}"` : '';
     return escapeHTML(beforeText) +
-        `<span class="typost-styled" data-features="${selectedFeatures.join(',')}"${sizeAttributeString} style="${escapeAttribute(styleString)}">${escapeHTML(selectedText)}</span>` +
+        `<span class="typost-styled"${attributeString}${styleAttribute}>${escapeHTML(selectedText)}</span>` +
         escapeHTML(afterText);
 }
 
