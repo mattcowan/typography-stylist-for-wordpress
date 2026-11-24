@@ -15,7 +15,7 @@ import {
 	computeFitRatio,
 	buildFitLineOpenTag,
 	buildFitLinesHtml,
-	wrapFitLines,
+	wrapFitLinesBySizeProperty,
 	unwrapFitLines,
 	setFitLineHang,
 	buildFitLinePreviews,
@@ -189,8 +189,9 @@ describe('fit-to-width line markup with hangs', () => {
 	});
 
 	test('the editing value carries the same hang and unwraps to the flat content', () => {
-		const wrapped = wrapFitLines(content, [0.2, 0.3], 0, [0, 0.1]);
-		expect(wrapped).toContain('--typost-line-hang:0.1');
+		const wrapped = wrapFitLinesBySizeProperty(content, [0, 0.1]);
+		// The same hang declaration the frontend line carries (above)
+		expect(wrapped).toContain('<span class="typost-line" style="font-size:var(--typost-fit-line-1);--typost-line-hang:0.1">Moonlit</span>');
 		expect(unwrapFitLines(wrapped)).toBe(content);
 	});
 });

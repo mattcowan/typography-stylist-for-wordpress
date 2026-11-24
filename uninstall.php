@@ -79,6 +79,9 @@ delete_transient('typost_combined_font_css');
 delete_transient('typost_admin_font_css');
 delete_transient('typost_editor_font_css');
 delete_transient('typost_block_font_css');
+// --font-N declarations: the list since 2.4.0, the joined string before
+delete_transient('typost_css_variable_decls');
+delete_transient('typost_css_variables');
 
 // Delete bundled module transients
 delete_transient('typost_paragraph_styles_cache');
