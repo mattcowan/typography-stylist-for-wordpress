@@ -315,7 +315,8 @@
 	 *
 	 * Module scope on purpose: a component defined inside the panel is a new
 	 * component on every render, which would remount the field and drop focus.
-	 * The prop builders and the Tab-order fix are in ps-utils.js (Jest tests).
+	 * The prop builders, the Tab-order fix and the message for the row that
+	 * typing highlights are in ps-utils.js (Jest tests).
 	 *
 	 * @param {Object} props See buildStyleComboboxProps() in ps-utils.js
 	 */
@@ -324,12 +325,17 @@
 		// select never attaches the ref.
 		var wrapRef = useRef(null);
 		useEffect(function() {
-			return utils.watchSuggestionsList(wrapRef.current);
+			var stopList = utils.watchSuggestionsList(wrapRef.current);
+			var stopSpeech = utils.watchTypingHighlight(wrapRef.current);
+			return function() {
+				stopList();
+				stopSpeech();
+			};
 		}, []);
 
 		if (wp.components.ComboboxControl) {
 			// The wrapper keeps core's suggestions list out of the Tab order
-			// (QA finding SR-5)
+			// (QA finding SR-5) and says the row that typing highlights
 			return el('div', { className: 'typost-ps-style-picker', ref: wrapRef },
 				el(wp.components.ComboboxControl, utils.buildStyleComboboxProps(props))
 			);

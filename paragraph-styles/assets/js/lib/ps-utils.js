@@ -2969,10 +2969,12 @@
 	 * (value '') and one row per style. The combobox does not list that row.
 	 * Nothing is picked until a style is chosen, and its placeholder says so.
 	 *
-	 * Core's ComboboxControl draws its reset button only while the field is
-	 * closed, and the field opens on focus, so the button would be gone when
-	 * someone reached for it: allowReset is off. The panel leaves this picker
-	 * for the style badge as soon as a style applies.
+	 * The list does not open on focus (expandOnFocus: false). Open on focus,
+	 * NVDA in Firefox read the result count and the highlighted row and never
+	 * the field's name; now the list opens on typing or a click (#453, SR-2).
+	 * The prop is in WordPress 6.6+; an older core ignores it.
+	 * allowReset stays off: the panel leaves this picker for the style badge
+	 * as soon as a style applies, so there is nothing to reset.
 	 *
 	 * This file and assets/js/font-picker.js (buildComboboxProps()) make the
 	 * same choices for two pickers; the panel script cannot require that
@@ -3001,6 +3003,7 @@
 			options: rows,
 			placeholder: config.placeholder,
 			allowReset: false,
+			expandOnFocus: false,
 			onChange: function (value) {
 				config.onChange(normalizeStylePickerValue(value));
 			},
@@ -3082,6 +3085,144 @@
 		observer.observe(root, { childList: true, subtree: true });
 		return function () {
 			observer.disconnect();
+		};
+	}
+
+	/**
+	 * How long after an input event the highlighted row is read, in ms: core
+	 * moves its highlight in an effect after it re-renders. ES5 twin of
+	 * TYPING_ANNOUNCE_DELAY in assets/js/font-picker.js, which says why.
+	 */
+	var TYPING_ANNOUNCE_DELAY = 100;
+
+	/**
+	 * The row ComboboxControl highlights, as a screen reader reads it: the
+	 * field's aria-activedescendant names the row. Core's row ids are
+	 * positions in the list, so the row is identified by its label.
+	 *
+	 * ES5 twin of readHighlightedOption() in assets/js/font-picker.js.
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {Object|null} { label, position, total } (position from 1), or
+	 *                       null when the list is closed or nothing is
+	 *                       highlighted
+	 */
+	function readHighlightedOption(root) {
+		if (!root || !root.querySelector) {
+			return null;
+		}
+		var input = root.querySelector('input[role="combobox"]');
+		if (!input || input.getAttribute('aria-expanded') !== 'true') {
+			return null;
+		}
+		var activeId = input.getAttribute('aria-activedescendant');
+		var doc = root.ownerDocument;
+		var active = activeId && doc ? doc.getElementById(activeId) : null;
+		if (!active) {
+			return null;
+		}
+		var lists = root.querySelectorAll(SUGGESTIONS_LIST_SELECTOR);
+		for (var i = 0; i < lists.length; i++) {
+			if (!lists[i].contains(active)) {
+				continue;
+			}
+			var options = lists[i].querySelectorAll('[role="option"]');
+			for (var j = 0; j < options.length; j++) {
+				if (options[j] === active) {
+					var label = (active.textContent || '').replace(/\s+/g, ' ').trim();
+					return label ? { label: label, position: j + 1, total: options.length } : null;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * What to say about the highlighted row after the author typed (#453).
+	 * Core's message after typing gives only the number of results, and a
+	 * screen reader reads the highlighted row only when an arrow key moves
+	 * it, so Enter picked a style nobody named. wp.a11y.speak() replaces
+	 * core's message, so this one stands alone: label and position.
+	 *
+	 * ES5 twin of typingHighlightMessage() in assets/js/font-picker.js.
+	 *
+	 * @param {Object|null} row       From readHighlightedOption()
+	 * @param {string|null} lastLabel Label of the row last read for this field
+	 * @return {string|null} The message, or null when there is nothing new
+	 */
+	function typingHighlightMessage(row, lastLabel) {
+		if (!row || row.label === lastLabel) {
+			return null;
+		}
+		return format(
+			/* translators: 1: label of the highlighted option, 2: its position in the list, 3: number of options in the list. */
+			__('%1$s, %2$s of %3$s', 'typost-paragraph-styles'),
+			[row.label, String(row.position), String(row.total)]
+		);
+	}
+
+	/**
+	 * Say the highlighted row when typing moves it; returns a function that
+	 * stops watching. Only an input event leads to a message: a screen
+	 * reader already reads the row an arrow key highlights, so after
+	 * ArrowUp or ArrowDown the row is only remembered, and a keydown cancels
+	 * a message not yet said. The same row is not said twice in a row; the
+	 * memory clears when the list closes and when no row is highlighted.
+	 *
+	 * ES5 twin of watchTypingHighlight() in assets/js/font-picker.js.
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {Function} Stops watching
+	 */
+	function watchTypingHighlight(root) {
+		if (!root || !root.addEventListener) {
+			return function () {};
+		}
+		var lastLabel = null;
+		var timer = null;
+		var schedule = function (announce) {
+			clearTimeout(timer);
+			timer = setTimeout(function () {
+				timer = null;
+				var row = readHighlightedOption(root);
+				var message = announce ? typingHighlightMessage(row, lastLabel) : null;
+				lastLabel = row ? row.label : null;
+				var a11y = typeof window !== 'undefined' && window.wp && window.wp.a11y;
+				if (message && a11y && typeof a11y.speak === 'function') {
+					a11y.speak(message, 'polite');
+				}
+			}, TYPING_ANNOUNCE_DELAY);
+		};
+		var onInput = function (event) {
+			if (event.target && event.target.getAttribute && event.target.getAttribute('role') === 'combobox') {
+				schedule(true);
+			}
+		};
+		var onKeyDown = function (event) {
+			clearTimeout(timer);
+			timer = null;
+			if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+				schedule(false);
+			}
+		};
+		root.addEventListener('input', onInput);
+		root.addEventListener('keydown', onKeyDown);
+		var observer = null;
+		if (typeof MutationObserver !== 'undefined') {
+			observer = new MutationObserver(function () {
+				if (!root.querySelector(SUGGESTIONS_LIST_SELECTOR)) {
+					lastLabel = null;
+				}
+			});
+			observer.observe(root, { childList: true, subtree: true });
+		}
+		return function () {
+			clearTimeout(timer);
+			root.removeEventListener('input', onInput);
+			root.removeEventListener('keydown', onKeyDown);
+			if (observer) {
+				observer.disconnect();
+			}
 		};
 	}
 
@@ -4089,6 +4230,10 @@
 		buildStyleSelectProps: buildStyleSelectProps,
 		removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
 		watchSuggestionsList: watchSuggestionsList,
+		TYPING_ANNOUNCE_DELAY: TYPING_ANNOUNCE_DELAY,
+		readHighlightedOption: readHighlightedOption,
+		typingHighlightMessage: typingHighlightMessage,
+		watchTypingHighlight: watchTypingHighlight,
 		buildBrowserSampleText: buildBrowserSampleText,
 		groupParagraphStyles: groupParagraphStyles,
 		paginateGroups: paginateGroups,

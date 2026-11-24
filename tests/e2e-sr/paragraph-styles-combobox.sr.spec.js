@@ -53,10 +53,14 @@ test.describe('Paragraph Style combobox with NVDA', () => {
 
     // The field, read by NVDA. Playwright moves focus (a key sent with
     // page.keyboard would never be logged), then NVDA reports the focus.
-    await page.locator(COMBOBOX).focus();
+    // Arrive the way a user does: from the next control, Shift+Tab sent
+    // through NVDA. Reporting the focus after a Playwright focus() reads the
+    // row that core's ComboboxControl highlights when its list opens on
+    // focus, not the field.
+    await page.locator(MODAL + ' .typost-ps-panel button', { hasText: 'Save Current Settings as Style' }).focus();
     await h.delay(500);
-    await nvda.perform(nvda.keyboardCommands.reportCurrentFocus);
-    await h.delay(600);
+    await nvda.press('Shift+Tab');
+    await h.delay(900);
     const fieldPhrase = await nvda.lastSpokenPhrase();
     const focusAtField = await h.describeFocus(page);
 
@@ -88,10 +92,21 @@ test.describe('Paragraph Style combobox with NVDA', () => {
     const tabPhrase = await nvda.lastSpokenPhrase();
 
     // Back into the field, search again, pick with Down Arrow and Enter.
+    // The log is measured from here: fill('') is an input event too, and the
+    // row it highlights can be the one the query keeps.
+    const logBeforeTyping = (await nvda.spokenPhraseLog()).length;
     await page.locator(COMBOBOX).focus();
     await page.locator(COMBOBOX).fill('');
     await nvda.type(query);
     await h.delay(900);
+    // #453: core's message after typing names only the result count, and
+    // NVDA reads the highlighted row only when an arrow key moves it. The
+    // picker says the row that typing highlights, with its position.
+    const typingPhrases = (await nvda.spokenPhraseLog()).slice(logBeforeTyping);
+    const typedHighlight = await page.evaluate(() => {
+      const row = document.querySelector('.typost-ps-style-picker [role="option"][aria-selected="true"]');
+      return row ? row.textContent : null;
+    });
     await nvda.press('ArrowDown');
     await h.delay(700);
     const downPhrase = await nvda.lastSpokenPhrase();
@@ -118,7 +133,7 @@ test.describe('Paragraph Style combobox with NVDA', () => {
 
     const log = await h.saveSpeechLog(nvda, 'paragraph-styles-combobox', {
       focusTitles, openPhrase, fieldPhrase, focusAtField, modePhrases, query, typedPhrase, matches,
-      listTabindex, afterTab, tabPhrase, downPhrase, highlighted, enterPhrase, after, html, styles,
+      listTabindex, afterTab, tabPhrase, typingPhrases, typedHighlight, downPhrase, highlighted, enterPhrase, after, html, styles,
     });
 
     // Product assertions.
@@ -140,8 +155,18 @@ test.describe('Paragraph Style combobox with NVDA', () => {
     expect(fieldPhrase, 'NVDA should read the accessible name (SR-2)').toMatch(/Paragraph Style/i);
     expect(fieldPhrase, 'NVDA should not read the old select wording (SR-2)').not.toMatch(/Select a style, collapsed/i);
     expect(log.some((phrase) => /result/i.test(phrase)), 'NVDA should announce a result count (core live region)').toBe(true);
+    expect(typedHighlight, 'typing should highlight a row').not.toBeNull();
+    const typedName = typedHighlight.split(' — ')[0].trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    expect(typingPhrases.join(' | '), 'NVDA should read the row that typing highlights, with its position (#453)').toMatch(
+      new RegExp(typedName + '.*\\d+ of \\d+', 'i')
+    );
     expect(highlighted, 'Down Arrow should leave one row highlighted').not.toBeNull();
-    const highlightedName = highlighted.split(' — ')[0].trim();
-    expect(downPhrase, 'Down Arrow should announce the highlighted style').toMatch(new RegExp(highlightedName.slice(0, 3).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+    // With one match, typing already highlights that row and NVDA has read
+    // it (asserted above), so Down Arrow has nowhere to move and says nothing.
+    // Down Arrow moves, and must be announced, only with two or more.
+    if (matches.length >= 2) {
+      const highlightedName = highlighted.split(' — ')[0].trim();
+      expect(downPhrase, 'Down Arrow should announce the highlighted style').toMatch(new RegExp(highlightedName.slice(0, 3).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'));
+    }
   });
 });

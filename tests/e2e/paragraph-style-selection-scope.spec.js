@@ -273,6 +273,10 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		// The field is a combobox since #453: type to search, then pick with the keyboard
 		const field = modal.getByRole('combobox', { name: 'Paragraph Style' });
 		await field.fill(name);
+		// Core highlights the first match while you type, and ArrowDown moves
+		// to the next one. The name is unique, so there is one match: check
+		// that it is the highlighted row before Enter picks it.
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveText(new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' — '));
 		await field.press('ArrowDown');
 		await field.press('Enter');
 		await page.waitForTimeout(1000);

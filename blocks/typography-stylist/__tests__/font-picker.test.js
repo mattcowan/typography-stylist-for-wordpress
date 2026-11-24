@@ -240,4 +240,42 @@ describe('SR-5: the suggestions list is not a Tab stop', () => {
 			window.wp = previous;
 		}
 	});
+
+	test('FontPicker says the row that typing highlights (#453)', async () => {
+		const { TYPING_ANNOUNCE_DELAY } = require('../../../assets/js/font-picker.js');
+		// Stand-in for core's ComboboxControl with its list open and the
+		// first row highlighted, as after typing
+		const ComboboxControl = () =>
+			React.createElement(
+				'div',
+				null,
+				React.createElement('input', { role: 'combobox', 'aria-expanded': 'true', 'aria-activedescendant': 'fp-row-0', readOnly: true }),
+				React.createElement(
+					'ul',
+					{ role: 'listbox' },
+					React.createElement('li', { id: 'fp-row-0', role: 'option' }, '🌐 Inter'),
+					React.createElement('li', { id: 'fp-row-1', role: 'option' }, '🅰 Bookmania')
+				)
+			);
+		const spoken = [];
+		const previous = window.wp;
+		window.wp = {
+			element: { createElement: React.createElement, useRef: React.useRef, useEffect: React.useEffect },
+			components: { ComboboxControl },
+			a11y: { speak: (message) => spoken.push(message) },
+		};
+		const wait = () => new Promise((resolve) => setTimeout(resolve, TYPING_ANNOUNCE_DELAY + 30));
+		try {
+			const { container, unmount } = render(
+				React.createElement(FontPicker, { label: 'Font Family', value: '', options: OPTIONS, placeholder: '(Default)', onChange: () => {} })
+			);
+			const input = container.querySelector('input');
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+			await wait();
+			expect(spoken).toEqual(['🌐 Inter, 1 of 2']);
+			unmount();
+		} finally {
+			window.wp = previous;
+		}
+	});
 });
