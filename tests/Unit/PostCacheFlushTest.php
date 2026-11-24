@@ -64,6 +64,11 @@ class PostCacheFlushTest extends TestCase {
             return abs((int) $value);
         });
         Functions\when('wp_is_post_revision')->justReturn(false);
+        // The post that on_post_delete() sees: a published post. Since #483
+        // the handler reads its type and status before it clears.
+        Functions\when('get_post_type')->justReturn('post');
+        Functions\when('is_post_type_viewable')->justReturn(true);
+        Functions\when('get_post_status')->justReturn('publish');
 
         $queries = &$this->queries;
         $GLOBALS['wpdb'] = new class($queries) {
