@@ -506,6 +506,23 @@ class Typost {
     }
 
     /**
+     * Whether the per-post font caches may be read and written for this view (#480).
+     *
+     * A preview by a user who can edit the post neither reads nor writes them:
+     * it can show an autosave, not the saved post that the cache describes.
+     * Anyone can add ?preview=true, but without the capability WordPress shows
+     * the saved post, so such a request uses the cache. Shared by
+     * has_styled_content() and get_used_fonts_in_content(), so the two cannot
+     * drift apart.
+     *
+     * @param WP_Post $post The queried post.
+     * @return bool
+     */
+    private function use_post_font_cache($post) {
+        return !(is_preview() && current_user_can('edit_post', $post->ID));
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -520,12 +537,9 @@ class Typost {
                 return false;
             }
 
-            // Cache the result per post. A preview by a user who can edit
-            // the post neither reads nor writes the cache (#480): it can show
-            // an autosave, not the saved post. Anyone can add ?preview=true,
-            // but without the capability WordPress shows the saved post.
+            // Cache the result per post, except in a real preview (#480)
             $cache_key = 'typost_has_styled_' . $post->ID;
-            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $use_cache = $this->use_post_font_cache($post);
             $has_styled = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $has_styled) {
@@ -622,12 +636,9 @@ class Typost {
                 return array();
             }
 
-            // Cache the result per post. A preview by a user who can edit
-            // the post neither reads nor writes the cache (#480): it can show
-            // an autosave, not the saved post. Anyone can add ?preview=true,
-            // but without the capability WordPress shows the saved post.
+            // Cache the result per post, except in a real preview (#480)
             $cache_key = 'typost_used_fonts_' . $post->ID;
-            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $use_cache = $this->use_post_font_cache($post);
             $used_fonts = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $used_fonts) {
