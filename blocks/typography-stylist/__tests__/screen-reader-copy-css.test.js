@@ -13,6 +13,11 @@ const styleCss = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8'
 
 const HIDDEN_CLASSES = ['.visually-hidden', '.sr-only', '.screen-reader-text'];
 
+// Every selector of the screen reader copy, with the old "Custom" class that
+// save() once wrote. It shares the rule today; if it ever gets a rule of its
+// own, a color there must fail the test too.
+const HIDDEN_SELECTORS = HIDDEN_CLASSES.map((cls) => '.wp-block-typost ' + cls).concat(['.wp-block-typost > .custom']);
+
 /** Every rule as { selectors, body }, with comments removed. */
 function rules(source) {
 	const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -31,9 +36,7 @@ function rules(source) {
 /** The rules that style a hidden class in its normal (not :focus) state. */
 function hiddenCopyRules() {
 	return rules(styleCss).filter((rule) =>
-		rule.selectors.some((selector) =>
-			HIDDEN_CLASSES.some((cls) => selector === '.wp-block-typost ' + cls)
-		)
+		rule.selectors.some((selector) => HIDDEN_SELECTORS.includes(selector))
 	);
 }
 
