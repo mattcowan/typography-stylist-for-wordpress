@@ -49,6 +49,19 @@ async function openPanel(page, title) {
 	}
 }
 
+// Pick a style in the sidebar's Paragraph Style field. The field is a
+// <select>, or a combobox that searches by name (#453): type the name, then
+// click the row by its name (ArrowDown can land on another match).
+async function pickParagraphStyle(page, style) {
+	const field = page.getByRole('combobox', { name: 'Paragraph Style' });
+	if (await field.evaluate((el) => el.tagName === 'SELECT')) {
+		await field.selectOption(String(style.id));
+		return;
+	}
+	await field.fill(style.name);
+	await page.getByRole('option', { name: style.name }).click();
+}
+
 test('A sidebar change on a styled block is saved, survives Update Style from another block, and Reset to style removes it (#451)', async ({ page }) => {
 	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
 		name: `TEMP #451 light ${Date.now()}`,
@@ -73,7 +86,7 @@ test('A sidebar change on a styled block is saved, survives Update Style from an
 	}, style.id);
 	for (const clientId of [ first, second ]) {
 		await selectBlock(page, clientId);
-		await page.getByRole('combobox', { name: 'Paragraph Style' }).selectOption(String(style.id));
+		await pickParagraphStyle(page, style);
 		await expect.poll(async () => (await attributes(page, clientId)).styleClass).toBe(`typost-ps-${style.id}`);
 	}
 
