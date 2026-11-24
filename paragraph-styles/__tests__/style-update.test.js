@@ -3,13 +3,15 @@
  *
  * - isFlagEnabled(): the editor reads the lock flag like the inline
  *   editor's flags, so a "0" or "false" that reached JavaScript as a string
- *   is off.
+ *   is off. The ES5 copy in ps-utils.js and the inline editor's copy in
+ *   assets/js/inline-editor/sanitize.js run on the same inputs (a twin).
  * - styleRequestErrorText(): the panel shows the server's message when a
  *   save fails (a 429, the lock's 403), else the fallback.
  * - The core Paragraph and Heading subset: the block's own weight, italic,
  *   line height, letter spacing, case and fixed size go into the style; a
  *   preset font family, a preset or fluid size and values that cannot be
- *   converted stay on the block; after the save the copied settings are
+ *   converted (a case included) stay on the block and are reported as
+ *   skipped; after the save the copied settings are
  *   removed from the block, and nothing else.
  */
 
@@ -28,21 +30,37 @@ const {
 } = require('../assets/js/lib/ps-utils');
 
 describe('isFlagEnabled (the lock flag)', () => {
-	test.each([
+	// The ES5 copy in ps-utils.js and the inline editor's copy, which this
+	// module's scripts cannot require (docs/twins.md row 54)
+	const inlineIsFlagEnabled = require('../../assets/js/inline-editor/sanitize.js').isFlagEnabled;
+	const cases = [
 		[true, true],
 		[1, true],
+		[2, true],
 		['1', true],
 		['true', true],
+		[' 1 ', true],
+		['yes', true],
 		[false, false],
 		[0, false],
+		[NaN, false],
 		['0', false],
+		[' 0 ', false],
 		['false', false],
 		[' FALSE ', false],
 		['', false],
+		['   ', false],
 		[null, false],
 		[undefined, false],
-	])('%p is %p', (value, expected) => {
+	];
+
+	test.each(cases)('%p is %p', (value, expected) => {
 		expect(isFlagEnabled(value)).toBe(expected);
+	});
+
+	test.each(cases)('the inline editor twin reads %p the same way', (value, expected) => {
+		expect(inlineIsFlagEnabled(value)).toBe(expected);
+		expect(isFlagEnabled(value)).toBe(inlineIsFlagEnabled(value));
 	});
 });
 
@@ -130,6 +148,21 @@ describe('readCoreBlockTypography (core block subset)', () => {
 
 	test('case "none" is the style\'s Normal case', () => {
 		expect(readCoreBlockTypography({ style: { typography: { textTransform: 'none' } } }).state.textCase).toBe('none');
+	});
+
+	test('a case the style has no value for stays on the block and is reported', () => {
+		['full-width', 'math-auto', 'var(--case)'].forEach((value) => {
+			expect(readCoreBlockTypography({ style: { typography: { textTransform: value } } })).toEqual({ state: {}, keys: [], skipped: ['textCase'] });
+		});
+		// Read case-free, like the other settings
+		expect(readCoreBlockTypography({ style: { typography: { textTransform: ' Capitalize ' } } }).state.textCase).toBe('capitalize');
+	});
+
+	test('a preset size wins over a custom size in the same block, and both stay on the block', () => {
+		const read = readCoreBlockTypography({ fontSize: 'large', style: { typography: { fontSize: '28px', fontWeight: '700' } } });
+		expect(read.state).toEqual({ explicitFontWeight: '700' });
+		expect(read.keys).toEqual(['fontWeight']);
+		expect(read.skipped).toEqual(['fontSize']);
 	});
 });
 

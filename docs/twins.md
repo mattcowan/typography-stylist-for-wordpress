@@ -76,6 +76,7 @@ None of the fixtures or tests ship: `.distignore` excludes `__tests__`, `/tests`
 | 48 | The options each settings form writes | `Typost_Rest_Controller::rest_save_admin_options()` and `rest_save_accessibility_options()`; the no-JS POST handlers in `Typost::render_admin_page()` (the value sanitizer, `Typost_Admin_Options::sanitize()`, is shared; the lists of options are two copies) | PHP/PHP | Same list today | NO TEST (the POST side runs only inside `render_admin_page()`, which renders the whole settings page) | none |
 | 49 | The span a GREP rule and a nested rule wrap text in | `paragraph-styles/includes/class-typost-ps-grep.php` `open_tag()`; `paragraph-styles/includes/class-typost-ps-nested.php` `open_tag()` | PHP/PHP | Same apart from one class on purpose (`typost-grep` or `typost-nested`) | `tests/Unit/ParagraphStylesRuleSpanParityTest.php` | none |
 | 50 | Turning a module's toolbar button on once (#322) | `glyphs-panel/glyphs-panel.php` and the module PHP `maybe_turn_on_toolbar_button()`, each with its own option constants | PHP/PHP | Same pattern | `tests/Unit/ToolbarButtonsDefaultOnTest.php` | none |
+| 54 | Reading a localized boolean flag ("0", "false" and "" are off) | `assets/js/inline-editor/sanitize.js` `isFlagEnabled()`; ps-utils.js `isFlagEnabled()` (ES5, reads `styleChangesLocked`, #452) | JS/JS | Same | `paragraph-styles/__tests__/style-update.test.js` "isFlagEnabled (the lock flag)" (checked by a mutation to each copy in #452; not in twins-mutations.md, which records #358) | none |
 
 ## Twins removed
 

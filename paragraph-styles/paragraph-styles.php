@@ -2847,6 +2847,14 @@ final class Typost_Paragraph_Styles {
 	 * settings tab sends the same requests, and only administrators open it.
 	 * The read routes keep check_permissions().
 	 *
+	 * All style writes that a user without manage_options can start go
+	 * through these three routes. The other writers of the styles option
+	 * do not need the lock: import (Typost_PS_Transfer calls
+	 * save_imported_styles() from the core import route) needs
+	 * manage_options, and maybe_migrate_ids() is a one-time ID migration
+	 * when the module loads, which changes no style settings. A new route
+	 * or path that writes styles must use this check.
+	 *
 	 * The write limit (rest_dispatch_request) runs after this check, so a
 	 * refused request uses no write.
 	 *

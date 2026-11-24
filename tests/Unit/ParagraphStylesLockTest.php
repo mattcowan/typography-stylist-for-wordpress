@@ -122,9 +122,24 @@ class ParagraphStylesLockTest extends TestCase {
     }
 
     public function test_an_options_save_that_unchecks_the_box_turns_the_lock_off() {
-        // Typost_Admin_Options stores '0' for an unchecked box
+        // Both Options saves store through Typost_Admin_Options::sanitize():
+        // the AJAX save sends the JSON false of an unchecked box
+        // (admin-page.js, data-typost-option), and the no-JavaScript POST
+        // fallback sends isset($_POST[...]), which is false for it too
+        require_once TYPOST_PLUGIN_DIR . '/includes/class-typost-admin-options.php';
+        // As core: the strings "false" and "0" are false
+        Functions\when('rest_sanitize_boolean')->alias(function ($value) {
+            if (is_string($value) && in_array(strtolower($value), array('false', '0'), true)) {
+                $value = false;
+            }
+            return (bool) $value;
+        });
         $this->author();
-        $this->lock('0');
+        $this->lock(\Typost_Admin_Options::sanitize('typost_ps_lock_style_changes', true));
+        $this->assertInstanceOf(\WP_Error::class, $this->module()->check_write_permissions(), 'A checked box turns the lock on');
+
+        $this->lock(\Typost_Admin_Options::sanitize('typost_ps_lock_style_changes', false));
+        $this->assertSame('0', $this->options['typost_ps_lock_style_changes'], 'An unchecked box stores 0, not nothing');
         $this->assertTrue($this->module()->check_write_permissions());
     }
 

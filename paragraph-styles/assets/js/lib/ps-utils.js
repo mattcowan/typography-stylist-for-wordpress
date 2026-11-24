@@ -2266,8 +2266,9 @@
 	 * (textTransform) and a fixed font size in px or rem. Not copied, and
 	 * reported in `skipped`: the font family (a theme preset, not a font of
 	 * this plugin), a size from the theme's size list or any other size (a
-	 * preset can be fluid, and clamp(), em or % sizes are not fixed), and a
-	 * letter spacing or line height that cannot be converted. A rem size is
+	 * preset can be fluid, and clamp(), em or % sizes are not fixed), a
+	 * letter spacing or line height that cannot be converted, and a case
+	 * that a style cannot store (not in TEXT_CASE_VALUES). A rem size is
 	 * converted at 16px, the same rule the plugin writes rem with (#233).
 	 * Letter spacing in px or rem needs the block's rendered font size.
 	 * With fluid typography on (theme.json settings.typography.fluid), core
@@ -2283,7 +2284,7 @@
 	 *   lineHeight, letterSpacing, textCase); keys: the style keys they set,
 	 *   in CORE_BLOCK_STYLE_KEYS order; skipped: the block settings that stay
 	 *   on the block ('fontFamily', 'fontSize', 'letterSpacing', 'lineHeight',
-	 *   'fontWeight', 'fontStyle').
+	 *   'fontWeight', 'fontStyle', 'textCase').
 	 */
 	function readCoreBlockTypography(attributes, options) {
 		var a = attributes && typeof attributes === 'object' ? attributes : {};
@@ -2378,6 +2379,8 @@
 			if (textCase) {
 				state.textCase = textCase;
 				found.textCase = true;
+			} else {
+				skip('textCase');
 			}
 		}
 
