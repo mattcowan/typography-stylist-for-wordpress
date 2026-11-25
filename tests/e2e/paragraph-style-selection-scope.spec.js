@@ -167,10 +167,12 @@ async function updateAndDetach(page, createdStyleIds) {
 	const badge = modal.locator('.typost-ps-badge-name');
 	await expect(badge).toHaveText(style.name);
 
-	// Change the styled letter, then Update Style
+	// Change the styled letter, then Update Style (and confirm it, #452)
 	await modal.getByRole('spinbutton', { name: 'Letter Spacing (for selected text)' }).fill('120');
-	await expect(badge).toHaveText(`${style.name} (modified)`);
-	await modal.getByRole('button', { name: 'Update Style' }).click();
+	await expect(modal.locator('.typost-ps-panel .typost-ps-status')).toHaveText('This text is different from the style.');
+	await modal.getByRole('button', { name: 'Update Style…' }).click();
+	await modal.getByRole('button', { name: 'Yes, Update Style' }).click();
+	await expect(modal.locator('.typost-ps-panel .typost-ps-status')).toHaveText(`“${style.name}” is updated. All text that uses this style changed.`);
 	await expect(badge).toHaveText(style.name);
 	// The style holds the change now, so the letter's own declaration is
 	// cleared and a later change to the style reaches it

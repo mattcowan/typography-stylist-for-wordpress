@@ -8,9 +8,13 @@
  * Features:
  * - Dropdown to apply a saved paragraph style
  * - "Save Current Settings as Style" for new styles
- * - Style badge when a style is active (shows name + modified indicator)
- * - "Update Style" to overwrite the active style with current settings
- * - "Save as New" to create a new style from current settings
+ * - Style badge when a style is active, with a line that says when the text
+ *   differs from the style
+ * - "Update Style…" to overwrite the active style with current settings,
+ *   after a confirmation (#452); also from core Paragraph and Heading blocks
+ * - "Save as New Style…" to create a new style from current settings
+ * - With "Only administrators can change paragraph styles" on, a user
+ *   without manage_options gets no button that creates or changes a style
  * - "Detach Style" to remove class association and convert to inline styles
  *
  * Applies styles by dispatching the typost-apply-block-properties
@@ -127,6 +131,282 @@
 		return !!(window.typostData &&
 			window.typostData.paragraphStylesOptions &&
 			window.typostData.paragraphStylesOptions.toolbarButton);
+	}
+
+	// Whether the current user may not create, change or delete styles: the
+	// Options setting "Only administrators can change paragraph styles" is on
+	// and the user is not an administrator (#452). The server enforces it;
+	// this only hides the buttons. "0" and "false" are off.
+	function styleChangesLocked() {
+		var options = window.typostData && window.typostData.paragraphStylesOptions;
+		return !!options && utils.isFlagEnabled(options.styleChangesLocked);
+	}
+
+	// Speak a message through the editor's live region, when there is one
+	function speak(message, politeness) {
+		if (message && window.wp && window.wp.a11y && typeof window.wp.a11y.speak === 'function') {
+			window.wp.a11y.speak(message, politeness);
+		}
+	}
+
+	/**
+	 * Send "Update Style": one PATCH with the properties (#452). On success
+	 * the style list is resolved again (the styles based on this one change
+	 * with it) and written to typostData. The result's notify() fires
+	 * typost-paragraph-styles-updated, so every use in the open editor
+	 * changes: the CSS is rebuilt and read again from the server, and
+	 * Typography Stylist blocks re-sync. The event's detail names the style
+	 * and the editor the update came from, for listeners that treat the
+	 * source text differently. The caller fires it after it has set the
+	 * panel's result, so the re-synced block and the result render together
+	 * (before, the help text showed for a moment between the two).
+	 *
+	 * @param {Object} style        The style to update (client shape).
+	 * @param {Object} properties   buildStyleUpdateProperties() result.
+	 * @param {Array}  styles       Every style.
+	 * @param {string} editorSource 'inline' | 'qft' | 'inspector' | 'core-block'.
+	 * @return {Promise<{style: Object, styles: Array, notify: Function}>} The updated
+	 *         style and list, and the function that fires the event.
+	 */
+	function sendStyleUpdate(style, properties, styles, editorSource) {
+		return wp.apiFetch({
+			path: '/typost/v1/paragraph-styles/' + style.id,
+			method: 'PATCH',
+			data: { properties: properties },
+		}).then(function(updatedStyle) {
+			var updated = resolveStyleList(styles.map(function(s) {
+				return String(s.id) === String(updatedStyle.id) ? updatedStyle : s;
+			}));
+			if (window.typostData) {
+				window.typostData.paragraphStyles = updated;
+			}
+			var resolved = updatedStyle;
+			for (var i = 0; i < updated.length; i++) {
+				if (String(updated[i].id) === String(updatedStyle.id)) {
+					resolved = updated[i];
+					break;
+				}
+			}
+			return {
+				style: resolved,
+				styles: updated,
+				notify: function() {
+					if (window.typostData) {
+						document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated', {
+							detail: { styleId: updatedStyle.id, editorSource: editorSource },
+						}));
+					}
+				},
+			};
+		});
+	}
+
+	var styleUpdateCount = 0;
+
+	/**
+	 * State of "Update Style…" in one panel (#452): the confirmation, the
+	 * request's busy state, the result, and where focus goes.
+	 *
+	 * - open(): shows the confirmation; focus goes to its "Cancel", which
+	 *   carries the question as its description (the #420 pattern).
+	 * - cancel(): closes it, sends nothing; focus goes back to "Update
+	 *   Style…".
+	 * - run(): one request. While it runs, "Yes, Update Style" shows busy and
+	 *   is aria-disabled, never disabled: a disabled button loses focus to
+	 *   the page body. Success closes the confirmation, shows and speaks the
+	 *   result, and focuses the badge. A failure keeps the confirmation open
+	 *   with the error (shown and spoken), focus on the button, and the
+	 *   author's changes on the text.
+	 *
+	 * Focus moves through its own requests, not keepFocusInPanel(): each
+	 * target is known, and the confirmation's buttons are not the panel's
+	 * first controls.
+	 *
+	 * @param {Object} panelRef Ref to the panel's root element.
+	 * @return {Object}
+	 */
+	function useStyleUpdate(panelRef) {
+		var idRef = useRef(0);
+		if (!idRef.current) {
+			idRef.current = ++styleUpdateCount;
+		}
+		var confirmState = useState(false);
+		var busyState    = useState(false);
+		var statusState  = useState(null);
+		var focusState   = useState(null);
+		var busyRef      = useRef(false);
+		var mountedRef   = useRef(true);
+		var setConfirming = confirmState[1];
+		var setBusy       = busyState[1];
+		var setStatus     = statusState[1];
+		var setFocus      = focusState[1];
+		var focusRequest  = focusState[0];
+
+		useEffect(function() {
+			mountedRef.current = true;
+			return function() {
+				mountedRef.current = false;
+			};
+		}, []);
+
+		// After the render that shows the target
+		useEffect(function() {
+			if (!focusRequest) return undefined;
+			var timer = setTimeout(function() {
+				var panel = panelRef.current;
+				if (!panel) return;
+				var target = panel.querySelector(focusRequest.selector) || panel.querySelector('.typost-ps-badge');
+				if (target && typeof target.focus === 'function') {
+					target.focus();
+				}
+			}, 0);
+			return function() {
+				clearTimeout(timer);
+			};
+		}, [focusRequest]);
+
+		return {
+			id: idRef.current,
+			confirming: confirmState[0],
+			busy: busyState[0],
+			status: statusState[0],
+			open: function() {
+				setStatus(null);
+				setConfirming(true);
+				setFocus({ selector: '.typost-ps-confirm-cancel' });
+			},
+			cancel: function() {
+				if (busyRef.current) return;
+				setStatus(null);
+				setConfirming(false);
+				setFocus({ selector: '.typost-ps-update-btn' });
+			},
+			// Forget a result once the text differs from its style again
+			clearStatus: function() {
+				setStatus(null);
+			},
+			// Move focus to another element of the panel after the next render
+			focusTo: function(selector) {
+				setFocus({ selector: selector });
+			},
+			// Another style is shown: close the confirmation, keep focus
+			// where it is. A request that runs still ends with its result.
+			dismiss: function() {
+				setStatus(null);
+				if (!busyRef.current) {
+					setConfirming(false);
+				}
+			},
+			/**
+			 * @param {Object}   style      The style to update.
+			 * @param {Function} build      Returns the properties to send.
+			 * @param {Array}    styles     Every style.
+			 * @param {string}   source     The editor ('inline', 'qft', 'inspector', 'core-block').
+			 * @param {Function} onSuccess  Called with sendStyleUpdate()'s result, only while the
+			 *                              panel is still mounted (work that needs the panel or
+			 *                              its host's state).
+			 * @param {Function} [onSaved]  Called with the result even when the panel has gone:
+			 *                              work on the content that must follow the saved style,
+			 *                              by clientId through the store. It runs first.
+			 */
+			run: function(style, build, styles, source, onSuccess, onSaved) {
+				if (busyRef.current || !style) return;
+				var properties = build();
+				if (!properties) return;
+				busyRef.current = true;
+				setBusy(true);
+				setStatus(null);
+				sendStyleUpdate(style, properties, styles, source).then(function(result) {
+					busyRef.current = false;
+					var text = sprintf(
+						/* translators: %s: paragraph style name. */
+						__('“%s” is updated. All text that uses this style changed.', 'typost-paragraph-styles'),
+						style.name
+					);
+					// The result first, then the event: React renders the
+					// re-synced block and the result together, so the help
+					// text does not show in between
+					if (mountedRef.current) {
+						setBusy(false);
+						setConfirming(false);
+						setStatus({ type: 'success', text: text });
+					}
+					result.notify();
+					if (onSaved) {
+						// The style is saved whatever happens here: a failure in
+						// this follow-up must not report the save as failed
+						try {
+							onSaved(result);
+						} catch (e) {
+							// Nothing to undo; the block keeps its own values
+						}
+					}
+					// Spoken also when the author has moved on (another block
+					// selected, the dialog closed): the request was theirs
+					speak(text, 'polite');
+					if (!mountedRef.current) return;
+					setFocus({ selector: '.typost-ps-badge' });
+					if (onSuccess) {
+						onSuccess(result);
+					}
+				}).catch(function(error) {
+					busyRef.current = false;
+					var text = sprintf(
+						/* translators: 1: paragraph style name, 2: the reason from the server, a full sentence. */
+						__('“%1$s” did not change. %2$s Your changes stay.', 'typost-paragraph-styles'),
+						style.name,
+						utils.styleRequestErrorText(error, __('The server did not answer.', 'typost-paragraph-styles'))
+					);
+					speak(text, 'assertive');
+					if (!mountedRef.current) return;
+					setBusy(false);
+					setStatus({ type: 'error', text: text });
+				});
+			},
+		};
+	}
+
+	/**
+	 * The confirmation of "Update Style…" (#452): the question, an error
+	 * after a failed request, "Cancel" and "Yes, Update Style".
+	 *
+	 * @param {Object}   updater useStyleUpdate() result.
+	 * @param {Object}   style   The style.
+	 * @param {boolean}  isBlock The update comes from a whole block, not selected text.
+	 * @param {Function} onYes   Sends the update.
+	 */
+	function renderStyleUpdateConfirm(updater, style, isBlock, onYes) {
+		var messageId = 'typost-ps-confirm-message-' + updater.id;
+		var errorId = 'typost-ps-confirm-error-' + updater.id;
+		var error = updater.status && updater.status.type === 'error' ? updater.status.text : '';
+		var question = isBlock
+			/* translators: %s: paragraph style name. */
+			? __('Update “%s” on all pages? The style changes to match this block. All text and blocks that use the style change. You cannot undo this.', 'typost-paragraph-styles')
+			/* translators: %s: paragraph style name. */
+			: __('Update “%s” on all pages? The style changes to match this text. All text and blocks that use the style change. You cannot undo this.', 'typost-paragraph-styles');
+		return el('div', { className: 'typost-ps-confirm' },
+			el('p', { id: messageId, className: 'typost-ps-confirm-message' }, sprintf(question, style.name)),
+			error && el('p', { id: errorId, className: 'typost-ps-confirm-error' }, error),
+			el('div', { className: 'typost-ps-save-actions' },
+				el(Button, {
+					variant: 'secondary',
+					className: 'typost-ps-confirm-cancel',
+					onClick: updater.cancel,
+					'aria-describedby': messageId,
+					size: 'small',
+				}, __('Cancel', 'typost-paragraph-styles')),
+				el(Button, {
+					variant: 'primary',
+					className: 'typost-ps-confirm-yes',
+					onClick: onYes,
+					isBusy: updater.busy,
+					// Not disabled: focus stays on the button while it works
+					'aria-disabled': updater.busy ? 'true' : undefined,
+					'aria-describedby': error ? errorId : undefined,
+					size: 'small',
+				}, __('Yes, Update Style', 'typost-paragraph-styles'))
+			)
+		);
 	}
 
 	// Resolve a font name from a numeric font ID. A style may reference any font
@@ -398,6 +678,10 @@
 		var refocusTimerRef = useRef(null);
 		var savingRef       = useRef(false);
 		savingRef.current   = isSaving;
+		// "Update Style…" and its confirmation (#452)
+		var updater         = useStyleUpdate(panelRef);
+		// The dialogs speak "use Update Style at the top" once (#452)
+		var hintSpokenRef   = useRef(false);
 		function keepFocusInPanel() {
 			refocusRef.current = true;
 		}
@@ -460,6 +744,31 @@
 				setActiveStyleId(styleId);
 				setSelectedStyleId(String(styleId));
 			}
+		}, [editorSource]);
+
+		// The block sidebar's panel stays mounted while its block is
+		// selected, so it follows the block's style class: a style applied
+		// from the toolbar's style browser or the Quick Feature Toggles, or
+		// a Detach there, shows here at once (#452). Read from the store,
+		// not through the editor state filter, so a keystroke costs one
+		// attribute read.
+		useEffect(function() {
+			if (editorSource !== 'inspector' || !window.wp || !wp.data || !wp.data.subscribe) return undefined;
+			function readBlockStyleId() {
+				var store = wp.data.select('core/block-editor');
+				var clientId = store && store.getSelectedBlockClientId ? store.getSelectedBlockClientId() : null;
+				var attrs = clientId ? store.getBlockAttributes(clientId) : null;
+				var match = attrs && typeof attrs.styleClass === 'string' ? attrs.styleClass.match(/typost-ps-(\d+)/) : null;
+				return match ? parseInt(match[1], 10) : 0;
+			}
+			var last = readBlockStyleId();
+			return wp.data.subscribe(function() {
+				var next = readBlockStyleId();
+				if (next === last) return;
+				last = next;
+				setActiveStyleId(next);
+				setSelectedStyleId(next ? String(next) : '');
+			});
 		}, [editorSource]);
 
 		// The style shown before the last pick, so a cancelled apply (the
@@ -554,6 +863,12 @@
 		var modified       = modifiedState[0];
 		var setModified    = modifiedState[1];
 
+		// Whether the panel works on a whole block (the block sidebar, or the
+		// Quick Feature Toggles with only a caret), for the wording (#452)
+		var blockScopeState = useState(editorSource === 'inspector');
+		var isBlockScope    = blockScopeState[0];
+		var setBlockScope   = blockScopeState[1];
+
 		useEffect(function() {
 			if (!activeStyle || !window.typostHooks) {
 				setModified(false);
@@ -561,23 +876,66 @@
 			}
 			var editorType = editorSource === 'inspector' ? 'qft' : editorSource;
 			var cancelled = false;
+			// The dialogs show the panel at their top, out of view when the
+			// author changes a setting further down. The first time the text
+			// becomes different from its style, a polite message says where
+			// "Update Style" is (#452). Only a change the author makes counts:
+			// not text that differed when the dialog opened, and not the apply
+			// that made the style active (settled after the 150 ms check).
+			var settled = false;
+			var last = null;
 			var compute = function() {
 				if (cancelled) return;
 				var state = window.typostHooks.applyFilters('typost_current_editor_state', {}, editorType);
-				var next = isStyleModified(resolvePanelScope(editorSource, state).state, activeStyle.properties);
+				var scope = resolvePanelScope(editorSource, state);
+				var next = isStyleModified(scope.state, activeStyle.properties);
+				if (settled && last === false && next && editorSource !== 'inspector' && !hintSpokenRef.current && !styleChangesLocked()) {
+					hintSpokenRef.current = true;
+					speak(sprintf(
+						/* translators: %s: paragraph style name. */
+						__('This text is different from the style “%s”. To change the style, use “Update Style” at the top of this dialog.', 'typost-paragraph-styles'),
+						activeStyle.name
+					), 'polite');
+				}
+				last = next;
+				var block = editorSource !== 'inline' && scope.applyTo !== 'selection';
+				setBlockScope(function(prev) { return prev === block ? prev : block; });
 				setModified(function(prev) { return prev === next ? prev : next; });
 			};
 			// The apply that made this style active is dispatched as an event and
 			// lands in the store a tick later; check now and again after it.
 			compute();
 			var timer = setTimeout(compute, 150);
+			var settleTimer = setTimeout(function() {
+				settled = true;
+			}, 300);
 			var unsubscribe = (window.wp && wp.data && wp.data.subscribe) ? wp.data.subscribe(compute) : function() {};
 			return function() {
 				cancelled = true;
 				clearTimeout(timer);
+				clearTimeout(settleTimer);
 				unsubscribe();
 			};
 		}, [activeStyle, editorSource]);
+
+		// A result belongs to the moment after an update: once the text
+		// differs from its style again, the panel says that instead
+		var clearUpdateStatus = updater.clearStatus;
+		var updateStatus = updater.status;
+		useEffect(function() {
+			if (modified && updateStatus && updateStatus.type === 'success') {
+				clearUpdateStatus();
+			}
+		}, [modified]); // eslint-disable-line react-hooks/exhaustive-deps -- reacts to the flip only
+		// Nor do a result and a confirmation belong to another style
+		var dismissUpdate = updater.dismiss;
+		var activeIdRef = useRef(activeStyleId);
+		useEffect(function() {
+			if (String(activeIdRef.current || '') !== String(activeStyleId || '')) {
+				activeIdRef.current = activeStyleId;
+				dismissUpdate();
+			}
+		}, [activeStyleId]); // eslint-disable-line react-hooks/exhaustive-deps -- reacts to a new style only
 
 		// Get current editor state for saving
 		function getCurrentState() {
@@ -661,56 +1019,40 @@
 			});
 		}, [styleName, currentStyles, editorSource]);
 
-		// Handle "Update Style" — PATCH existing style with current settings
-		var onUpdateStyle = useCallback(function() {
-			if (!activeStyle) return;
-			keepFocusInPanel();
-			setIsSaving(true);
-
-			// Keeps block-only properties (the hang) the inline editor cannot
-			// report, nor a selection in the Quick Feature Toggles (#303). A
-			// style based on another sends only what differs from its parent
-			// (#200), so values equal to the parent's stay inherited.
+		// "Yes, Update Style" in the confirmation: write the text's look into
+		// the style, with one PATCH (#452; the request is sendStyleUpdate())
+		var onUpdateStyle = function() {
+			if (!activeStyle || styleChangesLocked()) return;
+			// Read when the author confirms, not when the confirmation opened
 			var scope = resolvePanelScope(editorSource, getCurrentState());
-			var properties = buildStyleUpdateProperties(scope.state, activeStyle, currentStyles, getNewFontSizeUnit());
-
-			wp.apiFetch({
-				path: '/typost/v1/paragraph-styles/' + activeStyle.id,
-				method: 'PATCH',
-				data: { properties: properties },
-			}).then(function(updatedStyle) {
-				// Resolved again: the styles based on this one change with it,
-				// and the rebuilt CSS and the block re-sync read the new values
-				var updated = resolveStyleList(currentStyles.map(function(s) {
-					return String(s.id) === String(updatedStyle.id) ? updatedStyle : s;
-				}));
-				setCurrentStyles(updated);
-				if (window.typostData) {
-					window.typostData.paragraphStyles = updated;
-					document.dispatchEvent(new CustomEvent('typost-paragraph-styles-updated'));
+			updater.run(activeStyle, function() {
+				// Keeps block-only properties (the hang) the inline editor
+				// cannot report, nor a selection in the Quick Feature Toggles
+				// (#303). A style based on another sends only what differs from
+				// its parent (#200), so values equal to the parent's stay
+				// inherited.
+				return buildStyleUpdateProperties(scope.state, activeStyle, currentStyles, getNewFontSizeUnit());
+			}, currentStyles, editorSource, function(result) {
+				setCurrentStyles(result.styles);
+				// The text carries the change as its own values: a declaration
+				// that beats the style's class (the Quick Feature Toggles, and
+				// the inline editor since #450), and in the inline editor the
+				// span's data copies. The style holds the change now, so apply
+				// the style to the text again: core clears them (asking first
+				// only when the selection has more than one set of values),
+				// and a later change to the style reaches the text again (#303
+				// review). A whole block keeps no values of its own.
+				// Only while the panel is mounted (onSuccess, not onSaved): the
+				// apply goes to the host's saved selection, which is gone once
+				// its dialog closed, and an apply then would land on whatever
+				// text is selected by now.
+				if (scope.applyTo === 'selection' || editorSource === 'inline') {
+					// A cancelled apply puts this style back on the badge
+					rememberActive();
+					dispatchApply(result.style, editorSource, undefined, scope.applyTo, true);
 				}
-				setIsSaving(false);
-				// The Quick Feature Toggles wrote the change onto the styled
-				// text as its own declaration, which beats the style's class.
-				// The style holds it now, so apply the style to the text again:
-				// core clears the declaration (asking first only when the
-				// selection has more than one set of values), and a later
-				// change to the style reaches the text again (#303 review).
-				if (scope.applyTo === 'selection') {
-					for (var i = 0; i < updated.length; i++) {
-						if (String(updated[i].id) === String(updatedStyle.id)) {
-							dispatchApply(updated[i], editorSource, undefined, scope.applyTo, true);
-							break;
-						}
-					}
-				}
-			}).catch(function() {
-				// Nothing changed and focus is still in the form: no refocus
-				// is due later
-				refocusRef.current = false;
-				setIsSaving(false);
 			});
-		}, [activeStyle, currentStyles, editorSource]);
+		};
 
 		// Handle "Save as New"
 		var onSaveAsNew = useCallback(function() {
@@ -755,6 +1097,13 @@
 		// Handle "Detach Style" — remove class association, keep inline styles
 		var onDetachStyle = useCallback(function() {
 			keepFocusInPanel();
+			// With the style lock on, the view without a style has no button
+			// in the block's panels: only the style field, which focus must
+			// not land on (it opens its list, #453). Focus goes to the
+			// panel's heading instead (#452).
+			if (styleChangesLocked() && editorSource !== 'inline') {
+				updater.focusTo('.typost-ps-panel-label');
+			}
 			setActiveStyleId(0);
 			setSelectedStyleId('');
 
@@ -777,9 +1126,23 @@
 
 		// Active style badge + actions
 		if (activeStyle) {
-			var badgeLabel = activeStyle.name;
+			var locked = styleChangesLocked();
+			// One line under the badge (#452): how to change the style, that
+			// the text differs from it, or the result of an update
+			var statusText = '';
+			var statusClass = 'typost-ps-help';
 			if (modified) {
-				badgeLabel += ' ' + __('(modified)', 'typost-paragraph-styles');
+				statusClass = 'typost-ps-status';
+				statusText = isBlockScope
+					? __('This block is different from the style.', 'typost-paragraph-styles')
+					: __('This text is different from the style.', 'typost-paragraph-styles');
+			} else if (updater.status && updater.status.type === 'success') {
+				statusClass = 'typost-ps-status';
+				statusText = updater.status.text;
+			} else if (!locked) {
+				statusText = isBlockScope
+					? __('To change this style on all pages, change this block. Then click “Update Style”.', 'typost-paragraph-styles')
+					: __('To change this style on all pages, change the text. Then click “Update Style”.', 'typost-paragraph-styles');
 			}
 
 			return el('div', { className: 'typost-ps-panel', ref: panelRef },
@@ -791,37 +1154,41 @@
 					// land on it (and a screen reader read the style) after
 					// the action that showed it
 					el('div', { className: 'typost-ps-badge' + (modified ? ' typost-ps-badge--modified' : ''), tabIndex: -1 },
-						el('span', { className: 'typost-ps-badge-name' }, badgeLabel),
-						el('span', { className: 'typost-ps-badge-class' }, '.typost-ps-' + activeStyle.id)
+						el('span', { className: 'typost-ps-badge-name' }, activeStyle.name)
 					),
-					// Actions
-					el('div', { className: 'typost-ps-style-actions' },
-						editorSource === 'inline' && el(Button, {
-							variant: 'secondary',
-							onClick: openBrowserFromPanel,
-							size: 'small',
-						}, __('Browse styles…', 'typost-paragraph-styles')),
-						modified && el(Button, {
-							variant: 'primary',
-							onClick: onUpdateStyle,
-							disabled: isSaving,
-							isBusy: isSaving,
-							size: 'small',
-						}, __('Update Style', 'typost-paragraph-styles')),
-						modified && el(Button, {
-							variant: 'secondary',
-							onClick: function() { setIsSaveAsNew(true); },
-							size: 'small',
-						}, __('Save as New', 'typost-paragraph-styles')),
-						el(Button, {
-							variant: 'link',
-							onClick: onDetachStyle,
-							size: 'small',
-							isDestructive: true,
-						}, __('Detach Style', 'typost-paragraph-styles'))
-					),
+					statusText && el('p', { className: statusClass }, statusText),
+					modified && locked && el('p', { className: 'typost-ps-help' },
+						__('Only an administrator can change this style.', 'typost-paragraph-styles')),
+					// The confirmation of "Update Style…" takes the place of the
+					// actions while it is open
+					updater.confirming && !locked
+						? renderStyleUpdateConfirm(updater, activeStyle, isBlockScope, onUpdateStyle)
+						: el('div', { className: 'typost-ps-style-actions' },
+							editorSource === 'inline' && el(Button, {
+								variant: 'secondary',
+								onClick: openBrowserFromPanel,
+								size: 'small',
+							}, __('Browse styles…', 'typost-paragraph-styles')),
+							modified && !locked && el(Button, {
+								variant: 'primary',
+								className: 'typost-ps-update-btn',
+								onClick: updater.open,
+								size: 'small',
+							}, __('Update Style…', 'typost-paragraph-styles')),
+							modified && !locked && el(Button, {
+								variant: 'secondary',
+								onClick: function() { setIsSaveAsNew(true); },
+								size: 'small',
+							}, __('Save as New Style…', 'typost-paragraph-styles')),
+							el(Button, {
+								variant: 'link',
+								onClick: onDetachStyle,
+								size: 'small',
+								isDestructive: true,
+							}, __('Detach Style', 'typost-paragraph-styles'))
+						),
 					// "Save as New" name input
-					isSaveAsNew && el('div', { className: 'typost-ps-save-form' },
+					isSaveAsNew && !locked && el('div', { className: 'typost-ps-save-form' },
 						el(TextControl, {
 							placeholder: __('New style name…', 'typost-paragraph-styles'),
 							value: saveAsNewName,
@@ -854,7 +1221,9 @@
 		// No active style — show dropdown + save option
 		return el('div', { className: 'typost-ps-panel', ref: panelRef },
 			el('div', { className: 'typost-ps-panel-inner' },
-				el('div', { className: 'typost-ps-panel-label' },
+				// Focusable from script only: the focus target after Detach
+				// when the style lock hides the save button (#452)
+				el('div', { className: 'typost-ps-panel-label', tabIndex: -1 },
 					__('Paragraph Style', 'typost-paragraph-styles')
 				),
 				editorSource === 'inline'
@@ -876,7 +1245,7 @@
 						options: options,
 						onChange: onSelectStyle,
 					}),
-				!isShowSave && el(Button, {
+				!isShowSave && !styleChangesLocked() && el(Button, {
 					variant: 'secondary',
 					className: 'typost-ps-save-btn',
 					onClick: function() {
@@ -885,7 +1254,7 @@
 					},
 					size: 'small',
 				}, __('Save Current Settings as Style', 'typost-paragraph-styles')),
-				isShowSave && el('div', { className: 'typost-ps-save-form' },
+				isShowSave && !styleChangesLocked() && el('div', { className: 'typost-ps-save-form' },
 					el(TextControl, {
 						placeholder: __('Style name…', 'typost-paragraph-styles'),
 						value: styleName,
@@ -1457,17 +1826,23 @@
 	 * change it, and Detach. Always present, so the feature does not depend
 	 * on the optional toolbar button.
 	 *
-	 * No "(modified)" badge: unlike a Typography Stylist block, a core block
-	 * keeps no copy of the style's values to compare — its own sidebar
-	 * settings are overrides by design.
+	 * The block's own sidebar settings are overrides by design. "Update
+	 * Style…" (#452) copies some of them into the style: weight, italic,
+	 * line height, letter spacing, case and a fixed size
+	 * (readCoreBlockTypography()). After the save they are removed from the
+	 * block, so it follows the style again. A preset font family, a size
+	 * from the theme's list and a fluid size stay on the block, and the
+	 * panel says so.
 	 *
-	 * Props: clientId, className, content (the block's attributes)
+	 * Props: clientId, className, content, attributes (the block's attributes)
 	 */
 	function CoreBlockStylePanel(props) {
 		var stylesState      = useState(getStyles());
 		var currentStyles    = stylesState[0];
 		var setCurrentStyles = stylesState[1];
 		var browseRef        = useRef(null);
+		var bodyRef          = useRef(null);
+		var updater          = useStyleUpdate(bodyRef);
 		// Open when the block has a style, decided once. PanelBody reads
 		// initialOpen on every render until the author toggles it, so a live
 		// value closed the panel on Detach, unmounting the Browse button that
@@ -1486,6 +1861,17 @@
 
 		var ref = getCoreBlockStyleRef(props.className);
 		var style = findStyleByRef(currentStyles, ref);
+
+		// A result and a confirmation belong to the style they were for: a
+		// pick through "Browse styles…" or a Detach shows another (#452)
+		var dismissUpdate = updater.dismiss;
+		var refRef = useRef(ref);
+		useEffect(function() {
+			if (String(refRef.current || '') !== String(ref || '')) {
+				refRef.current = ref;
+				dismissUpdate();
+			}
+		}, [ref]); // eslint-disable-line react-hooks/exhaustive-deps -- reacts to a new style only
 
 		// Nothing to apply and nothing to detach
 		if (!ref && !currentStyles.length) {
@@ -1509,31 +1895,124 @@
 			}
 		}
 
+		// The block's own settings that "Update Style…" can copy (#452).
+		// The rendered size converts a letter spacing in px or rem.
+		function readBlock(attributes) {
+			var typography = attributes && attributes.style && attributes.style.typography;
+			var needsSize = !!typography && /(px|rem)\s*$/i.test(String(typography.letterSpacing || ''));
+			var store = wp.data.select('core/block-editor');
+			return utils.readCoreBlockTypography(attributes, {
+				fontSizePx: needsSize ? (utils.measureBlockFontSize(props.clientId) || 0) : 0,
+				// With fluid typography a custom size renders as clamp()
+				fluidTypography: !!(store && store.getSettings) && utils.isFluidTypography(store.getSettings()),
+			});
+		}
+		var locked = styleChangesLocked();
+		var read = style ? readBlock(props.attributes) : null;
+		var differences = read ? utils.coreBlockStyleDifferences(read, style.properties) : [];
+		var settingLabels = {
+			fontWeight: __('font weight', 'typost-paragraph-styles'),
+			fontStyle: __('font style', 'typost-paragraph-styles'),
+			fontSize: __('font size', 'typost-paragraph-styles'),
+			lineHeight: __('line height', 'typost-paragraph-styles'),
+			letterSpacing: __('letter spacing', 'typost-paragraph-styles'),
+			textCase: __('case', 'typost-paragraph-styles'),
+			fontFamily: __('font', 'typost-paragraph-styles'),
+		};
+		function labelList(keys) {
+			return keys.map(function(key) { return settingLabels[key] || key; }).join(', ');
+		}
+
+		function onUpdateStyle() {
+			if (locked) return;
+			var styles = getStyles();
+			var target = findStyleByRef(styles, ref);
+			if (!target) return;
+			// Read when the author confirms, from the store
+			var store = wp.data.select('core/block-editor');
+			var confirmed = store.getBlockAttributes(props.clientId) || {};
+			var fresh = readBlock(confirmed);
+			// The values sent, so a setting the author changes while the
+			// request runs is kept, not cleared
+			var sentTypography = Object.assign({}, confirmed.style && confirmed.style.typography);
+			var clientId = props.clientId;
+			updater.run(target, function() {
+				return buildStyleUpdateProperties(utils.buildCoreBlockStyleState(target.properties, fresh.state), target, styles, getNewFontSizeUnit());
+			}, styles, 'core-block', null, function() {
+				// The style holds these settings now: the block follows it.
+				// Also when the author selected another block while the
+				// request ran, which unmounts this panel: by clientId, through
+				// the store, so the block does not keep values that would pin
+				// those settings with no visible difference.
+				var attributes = store.getBlockAttributes(clientId);
+				var clear = attributes ? utils.buildCoreBlockClearUpdate(attributes, fresh.keys, sentTypography) : null;
+				if (clear) {
+					wp.data.dispatch('core/block-editor').updateBlockAttributes(clientId, clear);
+				}
+			});
+		}
+
+		var statusLines = [];
+		if (style && differences.length) {
+			statusLines.push(sprintf(
+				/* translators: %s: comma-separated list of block settings, for example "font weight, line height". */
+				__('This block has its own settings: %s.', 'typost-paragraph-styles'),
+				labelList(differences)
+			));
+			if (locked) {
+				statusLines.push(__('Only an administrator can change this style.', 'typost-paragraph-styles'));
+			}
+		} else if (style && updater.status && updater.status.type === 'success') {
+			statusLines.push(updater.status.text);
+		} else if (style && !locked) {
+			statusLines.push(__('To change this style on all pages, change this block. Then click “Update Style”.', 'typost-paragraph-styles'));
+		}
+		if (style && !locked && read && read.skipped.length) {
+			statusLines.push(sprintf(
+				/* translators: %s: comma-separated list of block settings, for example "font, font size". */
+				__('“Update Style” does not copy these settings: %s. They stay on the block.', 'typost-paragraph-styles'),
+				labelList(read.skipped)
+			));
+		}
+		var canUpdate = !!style && differences.length > 0 && !locked;
+
 		return el(wp.blockEditor.InspectorControls, null,
 			el(wp.components.PanelBody, {
 				title: __('Paragraph Style', 'typost-paragraph-styles'),
 				initialOpen: initialOpenRef.current,
 				className: 'typost-ps-core-panel',
 			},
-				ref && el('div', { className: 'typost-ps-badge' },
-					el('span', { className: 'typost-ps-badge-name' },
-						style ? style.name : __('Missing style', 'typost-paragraph-styles')),
-					el('span', { className: 'typost-ps-badge-class' }, '.typost-ps-' + ref)
-				),
-				el('p', { className: 'typost-ps-core-help' },
-					__('The style applies to the whole block. The block’s own settings override it.', 'typost-paragraph-styles')),
-				el('div', { className: 'typost-ps-style-actions' },
-					el(Button, {
-						variant: 'secondary',
-						ref: browseRef,
-						onClick: onBrowse,
-						'aria-haspopup': 'dialog',
-					}, __('Browse styles…', 'typost-paragraph-styles')),
-					ref && el(Button, {
-						variant: 'link',
-						isDestructive: true,
-						onClick: onDetach,
-					}, __('Detach Style', 'typost-paragraph-styles'))
+				el('div', { className: 'typost-ps-core-body', ref: bodyRef },
+					// Focusable from script only: focus lands here after an update
+					ref && el('div', { className: 'typost-ps-badge' + (differences.length ? ' typost-ps-badge--modified' : ''), tabIndex: -1 },
+						el('span', { className: 'typost-ps-badge-name' },
+							style ? style.name : __('Missing style', 'typost-paragraph-styles'))
+					),
+					el('p', { className: 'typost-ps-core-help' },
+						__('The style applies to the whole block. The block’s own settings override it.', 'typost-paragraph-styles')),
+					statusLines.map(function(text, index) {
+						return el('p', { key: index, className: 'typost-ps-status' }, text);
+					}),
+					updater.confirming && canUpdate
+						? renderStyleUpdateConfirm(updater, style, true, onUpdateStyle)
+						: el('div', { className: 'typost-ps-style-actions' },
+							el(Button, {
+								variant: 'secondary',
+								ref: browseRef,
+								onClick: onBrowse,
+								'aria-haspopup': 'dialog',
+							}, __('Browse styles…', 'typost-paragraph-styles')),
+							canUpdate && el(Button, {
+								variant: 'primary',
+								className: 'typost-ps-update-btn',
+								onClick: updater.open,
+							}, __('Update Style…', 'typost-paragraph-styles')),
+							ref && el(Button, {
+								variant: 'link',
+								isDestructive: true,
+								onClick: onDetach,
+							}, __('Detach Style', 'typost-paragraph-styles'))
+						)
 				)
 			)
 		);
@@ -1552,6 +2031,7 @@
 						clientId: props.clientId,
 						className: props.attributes && props.attributes.className,
 						content: props.attributes && props.attributes.content,
+						attributes: props.attributes,
 					})
 				);
 			};
@@ -1741,7 +2221,14 @@
 			'.typost-ps-badge:focus { outline: 2px solid #007cba; outline-offset: 1px; }',
 			'.typost-ps-badge--modified { background: #fef8ee; border-color: #e0c8a0; }',
 			'.typost-ps-badge-name { font-size: 13px; font-weight: 600; color: #1e1e1e; }',
-			'.typost-ps-badge-class { font-size: 11px; font-family: monospace; color: #757575; }',
+			// Help, status and the Update Style confirmation (#452). #50575e is
+			// 7.1:1 on white; #cc1818 is WordPress's error red, 5.7:1
+			'.typost-ps-help, .typost-ps-status { font-size: 12px; color: #50575e; margin: -2px 0 10px; }',
+			'.typost-ps-panel-label:focus { outline: 2px solid #007cba; outline-offset: 2px; }',
+			'.typost-ps-status { color: #1e1e1e; }',
+			'.typost-ps-confirm { margin-top: 2px; padding: 10px 12px; border: 1px solid #e0c8a0; border-radius: 4px; background: #fffdf8; }',
+			'.typost-ps-confirm-message { font-size: 13px; color: #1e1e1e; margin: 0 0 10px; }',
+			'.typost-ps-confirm-error { font-size: 13px; color: #cc1818; margin: 0 0 10px; }',
 			// Style actions row
 			'.typost-ps-style-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }',
 			// QFT override — no horizontal margin (parent wrapper handles padding)

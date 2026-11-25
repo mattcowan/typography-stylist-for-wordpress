@@ -46,8 +46,8 @@ Moved from the root [CLAUDE.md](../../CLAUDE.md) by #361. Routes this list does 
 - `POST /wp-json/typost/v1/variable-font-axes/{id}/redetect` - Re-read axes from an uploaded font's own files and return them **without** writing the option; the admin form repopulates its rows for review and the user still saves (requires `manage_options`). Uploaded kit fonts only — Adobe/manual fonts have no server-side files and fall back to the browser parser.
 
 **Paragraph Styles (bundled module, v2.3+):**
-- `GET|POST /wp-json/typost/v1/paragraph-styles` - List / create paragraph styles (requires `edit_posts` — styles are author-facing content)
-- `PATCH|DELETE /wp-json/typost/v1/paragraph-styles/{id}` - Rename/update properties / delete (requires `edit_posts`). POST and PATCH also take `grepRules` (#196; a custom pattern in it needs `manage_options`) and `nestedRules` (#195)
+- `GET|POST /wp-json/typost/v1/paragraph-styles` - List / create paragraph styles (requires `edit_posts` — styles are author-facing content; with the option `typost_ps_lock_style_changes` on, POST also requires `manage_options` and answers 403 `rest_forbidden` otherwise, `check_write_permissions()`, #452; GET is unchanged)
+- `PATCH|DELETE /wp-json/typost/v1/paragraph-styles/{id}` - Rename/update properties / delete (requires `edit_posts`, and `manage_options` while `typost_ps_lock_style_changes` is on, #452). The permission check runs before the write rate limit, so a refused request costs no write. POST and PATCH also take `grepRules` (#196; a custom pattern in it needs `manage_options`) and `nestedRules` (#195)
 - `GET /wp-json/typost/v1/paragraph-styles/{id}/admin-card` - The admin tab card's details and preview HTML plus the regenerated style CSS, fetched after the edit form saves (#221; requires `edit_posts`)
 - `GET /wp-json/typost/v1/paragraph-styles/editor-css` - The main and nested rule CSS, fetched by the editor after a style changes (#354; requires `edit_posts`)
 

@@ -308,13 +308,15 @@ function resolveParagraphStyleFontWeight(styles, styleId) {
 /**
  * Which weight of one span renders: its own, or its paragraph style's.
  *
- * Under a paragraph style the inline apply path keeps the span's
- * data-fontweight but writes no inline font-weight (review of #254). No CSS
+ * A style span can keep a data-fontweight with no inline font-weight: a
+ * style apply keeps the weight the text had (review of #254), and before
+ * #450 a weight picked under a style was written that way too. No CSS
  * reads data-fontweight, so on a span with a data-style-id that attribute
  * renders nothing: the style's weight shows, or, when the style sets none
  * (or was deleted), the weight around the span. A data-fontweight therefore
  * counts as stored only when the span has no data-style-id, or its own
- * style attribute declares font-weight (that declaration beats the class).
+ * style attribute declares font-weight (that declaration beats the class;
+ * the inline editor writes it for a weight the author picks, #450).
  *
  * Read paths only. The apply path keeps the raw data-fontweight.
  *
@@ -375,9 +377,10 @@ function resolveSetFontWeight(facts) {
  * The font set on one span: its own, or its paragraph style's (#278).
  *
  * The font twin of resolveSpanStoredFontWeight(). Under a paragraph style
- * the apply path writes no inline font-family, so the style's class renders
- * the font: a span that took a style without a font has no data-font-id,
- * and keeps none when Update Style later gives the style one, and a span
+ * the apply path writes no inline font-family unless the author picks a
+ * font for the text (#450), so the style's class renders the font: a span
+ * that took a style without a font has no data-font-id, and keeps none
+ * when Update Style later gives the style one, and a span
  * whose style changed its font keeps the old data-font-id. Reading
  * data-font-id alone made the Paragraph Styles badge show "(modified)"
  * there, and Detach dropped the style's font (review of #278). A
@@ -404,6 +407,144 @@ function resolveSpanExplicitFontId(span, styles) {
 	return (style && style.properties && parseInt(style.properties.fontId, 10)) || 0;
 }
 
+var buildInlineCaseAttributes = require('./text-case.js').buildInlineCaseAttributes;
+var CASE_DATA_ATTRIBUTES = require('./text-case.js').CASE_DATA_ATTRIBUTES;
+var CASE_CSS_PROPERTIES = require('./text-case.js').CASE_CSS_PROPERTIES;
+var buildInlineFontSizeAttributes = require('./font-size-units.js').buildInlineFontSizeAttributes;
+var sanitizeFontVariationSettings = require('./font-variation-settings.js').sanitizeFontVariationSettings;
+
+/**
+ * Each group of a style span's data attributes, with the CSS properties
+ * whose inline declaration makes the group the text's own (#450) and the
+ * data attributes a style apply writes for the style's value.
+ *
+ * The weight is not here: resolveSpanStoredFontWeight() reads it, and the
+ * raw data-fontweight stays for getExplicitFontWeight(). Raw
+ * data-feature-settings (glyph alternates) is glyph-level and stays too.
+ */
+var STYLE_SPAN_GROUPS = [
+	{
+		css: ['font-family'],
+		attrs: ['data-font', 'data-font-id'],
+		fromStyle: function (props) {
+			var id = parseInt(props.fontId, 10) || 0;
+			return id ? { 'data-font-id': String(id) } : {};
+		}
+	},
+	{
+		css: ['font-style'],
+		attrs: ['data-fontstyle'],
+		fromStyle: function (props) {
+			return props.fontStyle ? { 'data-fontstyle': String(props.fontStyle) } : {};
+		}
+	},
+	{
+		css: ['font-feature-settings'],
+		attrs: ['data-features'],
+		fromStyle: function (props) {
+			return Array.isArray(props.features) && props.features.length ? { 'data-features': props.features.join(',') } : {};
+		}
+	},
+	{
+		css: CASE_CSS_PROPERTIES,
+		attrs: CASE_DATA_ATTRIBUTES,
+		fromStyle: function (props) {
+			return buildInlineCaseAttributes(props.textCase, props.fakeSmallCaps);
+		}
+	},
+	{
+		css: ['letter-spacing'],
+		attrs: ['data-letterspacing'],
+		fromStyle: function (props) {
+			var spacing = Number(props.letterSpacing) || 0;
+			return spacing ? { 'data-letterspacing': String(spacing) } : {};
+		}
+	},
+	{
+		css: ['line-height'],
+		attrs: ['data-lineheight'],
+		fromStyle: function (props) {
+			var lineHeight = Number(props.lineHeight) || 0;
+			return lineHeight ? { 'data-lineheight': String(lineHeight) } : {};
+		}
+	},
+	{
+		css: ['font-size'],
+		attrs: ['data-fontsize', 'data-fontsize-min', 'data-fontsize-preferred', 'data-fontsize-max'],
+		fromStyle: function (props) {
+			// A fluid size needs its three sizes, as in the CSS generators
+			var fluid = props.fontSize === 'responsive' || props.fontSize === 'fit';
+			if (fluid && !(isFinite(parseFloat(props.fontSizeMin)) && isFinite(parseFloat(props.fontSizePreferred)) && isFinite(parseFloat(props.fontSizeMax)))) {
+				return {};
+			}
+			return buildInlineFontSizeAttributes(props.fontSize, props.fontSizeMin, props.fontSizePreferred, props.fontSizeMax) || {};
+		}
+	},
+	{
+		css: ['font-variation-settings'],
+		attrs: ['data-font-variation-settings'],
+		fromStyle: function (props) {
+			var settings = sanitizeFontVariationSettings(props.fontVariationSettings || '');
+			return settings ? { 'data-font-variation-settings': settings } : {};
+		}
+	}
+];
+
+/**
+ * The attributes of a style span as the text renders them, for the inline
+ * editor's readers (#450).
+ *
+ * A style apply writes copies of the style's values into the span's data
+ * attributes, and no inline style. After Update Style those copies are old,
+ * but the style's class renders the new values. So under a data-style-id a
+ * group of data attributes counts as the text's own only when the span's
+ * style attribute declares the matching CSS property: that declaration
+ * beats the class. Every other group is replaced with what a style apply
+ * writes for the style's current value (nothing, when the style does not
+ * set it). The same rule as resolveSpanStoredFontWeight() for the weight
+ * and as resolveSelectionStyleState() in the block's Quick Feature Toggles.
+ *
+ * Read paths only: the apply path patches the span's raw attributes. A
+ * span with no data-style-id, or whose style is unknown (deleted), is
+ * returned as it is.
+ *
+ * @param {Object} attrs  The span's format attributes.
+ * @param {Array}  styles Stored styles (typostData.paragraphStyles).
+ * @return {Object} Attributes (a copy when anything changed).
+ */
+function resolveStyleSpanAttributes(attrs, styles) {
+	var a = attrs || {};
+	var styleId = a['data-style-id'];
+	if (styleId === undefined || styleId === null || styleId === '' || String(styleId) === '0') {
+		return a;
+	}
+	var style = findStyleById(styles, styleId);
+	if (!style || !style.properties) {
+		return a;
+	}
+	var styleAttr = String(a.style || '');
+	var out = {};
+	Object.keys(a).forEach(function (key) {
+		out[key] = a[key];
+	});
+	STYLE_SPAN_GROUPS.forEach(function (group) {
+		var declared = group.css.some(function (property) {
+			return new RegExp('(^|;)\\s*' + property + '\\s*:', 'i').test(styleAttr);
+		});
+		if (declared) {
+			return;
+		}
+		group.attrs.forEach(function (name) {
+			delete out[name];
+		});
+		var fromStyle = group.fromStyle(style.properties);
+		Object.keys(fromStyle).forEach(function (name) {
+			out[name] = fromStyle[name];
+		});
+	});
+	return out;
+}
+
 module.exports = {
 	isValidFontSizeRange: isValidFontSizeRange,
 	resolveWeightToWrite: resolveWeightToWrite,
@@ -413,5 +554,6 @@ module.exports = {
 	resolveParagraphStyleFontWeight: resolveParagraphStyleFontWeight,
 	resolveSpanStoredFontWeight: resolveSpanStoredFontWeight,
 	resolveSpanExplicitFontId: resolveSpanExplicitFontId,
+	resolveStyleSpanAttributes: resolveStyleSpanAttributes,
 	resolveSetFontWeight: resolveSetFontWeight
 };

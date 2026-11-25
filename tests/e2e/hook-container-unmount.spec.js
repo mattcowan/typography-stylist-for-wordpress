@@ -176,11 +176,11 @@ test('The Paragraph Styles panel calls the state filter while the inline dialog 
 	await select(page, clientId, ...GARDEN);
 	const dialog = await openInlineDialog(page, style.name);
 
-	// Open: the panel follows the store, and its "(modified)" badge updates
-	// (QA findings PS-1/PS-1b)
+	// Open: the panel follows the store, and its "different from the style"
+	// line updates (QA findings PS-1/PS-1b; the "(modified)" badge until #452)
 	expect(await callsAfterStoreChanges(page)).toBeGreaterThan(0);
 	await dialog.getByRole('checkbox', { name: 'Discretionary Ligatures' }).check();
-	await expect(dialog.locator('.typost-ps-badge-name')).toHaveText(`${style.name} (modified)`);
+	await expect(dialog.locator('.typost-ps-panel .typost-ps-status')).toHaveText('This text is different from the style.');
 
 	await closeDialog(page, dialog);
 	expect(await callsAfterStoreChanges(page)).toBe(0);

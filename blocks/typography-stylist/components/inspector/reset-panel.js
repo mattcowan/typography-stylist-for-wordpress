@@ -17,7 +17,11 @@
  * emoji before each question is aria-hidden: it is decoration, and a screen
  * reader would read its name first.
  * "Cancel", "Yes, Clear" and "Yes, Reset All" give focus back to the button
- * that opened the confirmation; both openers always render.
+ * that opened the confirmation; both openers always render. This needs the
+ * action to close the confirmation in the same event: the opener is not
+ * rendered while the confirmation is open, so a request made before the close
+ * finds nothing. clearAllInlineFeatures() therefore always closes it, also
+ * when there is nothing to clear (#455).
  */
 
 import { Button, PanelBody } from '@wordpress/components';

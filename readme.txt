@@ -249,7 +249,7 @@ When you delete a font, you can choose a replacement font. Content that used the
 
 To style a whole Paragraph or Heading block, open Paragraph Style in the block sidebar and click “Browse styles…”. The style goes into the block’s “Additional CSS class(es)” field as `typost-styled typost-ps-N`. Do not remove those two classes by hand; use “Detach Style” instead.
 
-To change a style everywhere, change the settings on text that uses the style and click “Update Style”. The style browser shows 24 styles at a time. A button under the list shows the next styles.
+To change a style everywhere, change the settings on text or a block that uses the style, click “Update Style…”, and then “Yes, Update Style”. All text and blocks that use the style change, on every page; you cannot undo this. In a core Paragraph or Heading block, “Update Style…” copies the block’s own font weight, italic, line height, letter spacing, case and fixed font size into the style. The style browser shows 24 styles at a time. A button under the list shows the next styles.
 
 To base a style on another style, click “Edit” on the style in Settings → Typography Stylist → Paragraph Styles and choose a style in “Based on”. The style then uses that style’s value for every setting it does not set itself, and follows later changes to it. The card marks each value as “Inherited” or “Override”, and “Reset to Base” in the Edit form removes all overrides. When you delete a style, the styles based on it keep their look.
 
