@@ -14,6 +14,7 @@ Each file is one journey:
 - `paragraph-styles-based-on.sr.spec.js` — Based On on the same tab: Tab to the "Based on" select of a child style (label, value and help text), check that "Reset to Base" hides for another choice and comes back for the saved parent, activate it, and delete a parent style (the child keeps its look and loses the link). It creates and deletes its own styles.
 - `inline-paragraph.sr.spec.js` — the Typography Stylist modal on a paragraph: Tab through the first controls, switch Font Size to Responsive with the arrow keys, cross the size sliders and record what is announced.
 - `inline-modal.sr.spec.js` — open the Typography Stylist modal on a heading, Tab through the first 16 controls, toggle Standard Ligatures with Space, close with Escape.
+- `reset-nothing.sr.spec.js` — the Reset Features panel of the block sidebar (#455): "Clear Individual Features", then "Yes, Clear" on an empty block, on plain text and on text with an inline feature. NVDA must say "No inline features to remove." for the first two and "Inline features removed from the block." for the third, and focus goes back to "Clear Individual Features" each time.
 
 Each run writes `tests/e2e-sr/logs/<journey>.json`. The file holds every phrase NVDA spoke and the DOM element that had focus at each Tab stop. Read these logs to see what a screen-reader user hears.
 
