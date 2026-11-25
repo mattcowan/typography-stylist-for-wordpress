@@ -220,7 +220,7 @@ Use this method to style whole words or phrases in a heading, paragraph, or othe
 7. Change the settings. Each change applies to the selected text at once. Use Ctrl+Z (Cmd+Z on Mac) to undo a change.
 8. Click “Close” when you are done. To remove the styling from the selection, click “Clear”.
 
-**Case:** The “Case” setting has the same choices as in the Typography Stylist block (see the sidebar settings in Method 2). It changes how the selected letters look; the text keeps the case you typed. Text in these blocks has no hidden copy for screen readers, so some screen readers spell out short words in All Caps letter by letter. When a paragraph style is applied to the text, the style sets the case. To change the case of this text only, click “Detach Style” first. The text keeps the style’s case when you detach it.
+**Case:** The “Case” setting has the same choices as in the Typography Stylist block (see the sidebar settings in Method 2). It changes how the selected letters look; the text keeps the case you typed. Text in these blocks has no hidden copy for screen readers, so some screen readers spell out short words in All Caps letter by letter. When a paragraph style is applied to the text, the style sets the case. A case that you choose here changes only this text, and the text keeps its style. Choose “Default” to give the case back to the style. The text keeps the style’s case when you detach it.
 
 **Partial word notice:**
 

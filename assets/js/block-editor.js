@@ -11,7 +11,7 @@ const { buildFontOptions, isWpLibraryValue, wpSlugFromValue, adoptWpFont, resolv
 
 // Convert-to-block capability resolution (why the Convert action is offered or not)
 const { CONVERT_BLOCKED, resolveConvertCapability, shouldExplainConvertBlock, shouldExplainInNotice } = require('./convert-capability.js');
-const { resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId, resolveSetFontWeight } = require('./inline-apply-rules.js');
+const { resolveWeightToWrite, buildConvertBlockAttributes, resolvePresetFontState, resolveParagraphStyleFontWeight, resolveSpanStoredFontWeight, resolveSpanExplicitFontId, resolveStyleSpanAttributes, resolveSetFontWeight } = require('./inline-apply-rules.js');
 // A size this editor writes is new content and is written in the site's
 // new-content unit: rem (#233), or px when the Options setting asks for it
 // (#248, getNewFontSizeUnit). A size the author did not change keeps the
@@ -33,7 +33,7 @@ const { createHookRegistry } = require('./inline-editor/hook-registry.js');
 const { escapeHTML, hasHTMLTags, validateSelectionBounds, isFlagEnabled, sanitizeFontFamily, sanitizeCSSValue } = require('./inline-editor/sanitize.js');
 const { getBlockInheritedFont, getBlockInheritedWeight, getSelectedBlockInheritedFont, getSelectedBlockInheritedWeight } = require('./inline-editor/block-dom.js');
 const { findStyledSpanInContent, readSpanFeatures } = require('./inline-editor/span-reading.js');
-const { isSelectionLost, findSelectionFormat, resolveRawFeatureSettings, isEmptyFormatState, buildFormatAttributes, buildPatchFromPending, applyPatchToRuns } = require('./inline-editor/apply-features.js');
+const { isSelectionLost, findSelectionFormat, resolveRawFeatureSettings, isEmptyFormatState, buildFormatAttributes, buildPatchFromPending, applyPatchToRuns, isStyleSpanChange, buildStyleSpanAttributes } = require('./inline-editor/apply-features.js');
 const { resolveConvertTagName, buildPartialConvertContent, scheduleConvertFallback } = require('./inline-editor/convert-to-block.js');
 const { createExtensionListeners, attachExtensionListeners, detachExtensionListeners } = require('./inline-editor/extension-listeners.js');
 const { groupFeatures, getFilteredWeightOptions } = require('./inline-editor/feature-options.js');
@@ -333,17 +333,45 @@ class TypographyFeaturesControl extends Component {
     }
 
     /**
+     * The attributes of the inline format at the selection, as the text
+     * renders them (#450).
+     *
+     * A style apply writes copies of the style's values into the span's
+     * data attributes. Under a data-style-id a data attribute counts as the
+     * text's own value only when the span's style attribute declares the
+     * matching CSS property; every other one is replaced with the style's
+     * current value (resolveStyleSpanAttributes). So after Update Style an
+     * older span of the style shows the new values in the modal, is not
+     * "(modified)", and Detach or Update Style does not write the old
+     * copies back. The weight has its own readers (getStoredFontWeight).
+     *
+     * @return {{attrs: ?Object, fromStyle: boolean}} attrs: null for no
+     *         format. fromStyle: the span's style is known, so a missing
+     *         value means the style sets none; no other source is read.
+     */
+    getActiveFormatAttributes() {
+        const { value } = this.props;
+        const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
+        if (!activeFormat || !activeFormat.attributes) {
+            return { attrs: null, fromStyle: false };
+        }
+        const attrs = resolveStyleSpanAttributes(activeFormat.attributes, window.typostData && window.typostData.paragraphStyles);
+        return { attrs: attrs, fromStyle: attrs !== activeFormat.attributes };
+    }
+
+    /**
      * Get currently active features from format
      * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
      * Uses cached inline features when popover is open for performance
      */
     getActiveFeatures() {
-        const { value } = this.props;
-
         // First, try the standard format API (for inline editor formats)
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-features']) {
-            return activeFormat.attributes['data-features'].split(',');
+        const { attrs, fromStyle } = this.getActiveFormatAttributes();
+        if (attrs && attrs['data-features']) {
+            return attrs['data-features'].split(',');
+        }
+        if (fromStyle) {
+            return [];
         }
 
         // Use cached inline features if popover is open (performance optimization)
@@ -361,12 +389,13 @@ class TypographyFeaturesControl extends Component {
      * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
      */
     getActiveFont() {
-        const { value } = this.props;
-
         // First, try the standard format API
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font']) {
-            return activeFormat.attributes['data-font'];
+        const { attrs, fromStyle } = this.getActiveFormatAttributes();
+        if (attrs && attrs['data-font']) {
+            return attrs['data-font'];
+        }
+        if (fromStyle) {
+            return '';
         }
 
         // Check for styled span in Typographic Stylist block
@@ -392,12 +421,13 @@ class TypographyFeaturesControl extends Component {
      * Get currently active font ID from format
      */
     getActiveFontId() {
-        const { value } = this.props;
-
         // First, try the standard format API
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font-id']) {
-            return parseInt(activeFormat.attributes['data-font-id'], 10);
+        const { attrs, fromStyle } = this.getActiveFormatAttributes();
+        if (attrs && attrs['data-font-id']) {
+            return parseInt(attrs['data-font-id'], 10);
+        }
+        if (fromStyle) {
+            return 0;
         }
 
         // Check for styled span in Typographic Stylist block
@@ -416,11 +446,10 @@ class TypographyFeaturesControl extends Component {
      * Get currently active font size mode from format
      */
     getActiveFontSize() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontsize']) {
-            return activeFormat.attributes['data-fontsize'];
+        if (attrs && attrs['data-fontsize']) {
+            return attrs['data-fontsize'];
         }
 
         return 'inherit';
@@ -430,11 +459,10 @@ class TypographyFeaturesControl extends Component {
      * Get currently active font size min from format
      */
     getActiveFontSizeMin() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontsize-min']) {
-            return parseInt(activeFormat.attributes['data-fontsize-min'], 10);
+        if (attrs && attrs['data-fontsize-min']) {
+            return parseInt(attrs['data-fontsize-min'], 10);
         }
 
         return 16;
@@ -444,11 +472,10 @@ class TypographyFeaturesControl extends Component {
      * Get currently active font size preferred from format
      */
     getActiveFontSizePreferred() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontsize-preferred']) {
-            return parseInt(activeFormat.attributes['data-fontsize-preferred'], 10);
+        if (attrs && attrs['data-fontsize-preferred']) {
+            return parseInt(attrs['data-fontsize-preferred'], 10);
         }
 
         return 24;
@@ -458,11 +485,10 @@ class TypographyFeaturesControl extends Component {
      * Get currently active font size max from format
      */
     getActiveFontSizeMax() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontsize-max']) {
-            return parseInt(activeFormat.attributes['data-fontsize-max'], 10);
+        if (attrs && attrs['data-fontsize-max']) {
+            return parseInt(attrs['data-fontsize-max'], 10);
         }
 
         return 32;
@@ -619,11 +645,10 @@ class TypographyFeaturesControl extends Component {
     }
 
     getActiveFontVariationSettings() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-font-variation-settings']) {
-            return activeFormat.attributes['data-font-variation-settings'];
+        if (attrs && attrs['data-font-variation-settings']) {
+            return attrs['data-font-variation-settings'];
         }
 
         return '';
@@ -636,11 +661,10 @@ class TypographyFeaturesControl extends Component {
      * still honored for previews and the Glyphs panel face selection.
      */
     getActiveFontStyle() {
-        const { value } = this.props;
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
+        const { attrs } = this.getActiveFormatAttributes();
 
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-fontstyle']) {
-            return activeFormat.attributes['data-fontstyle'];
+        if (attrs && attrs['data-fontstyle']) {
+            return attrs['data-fontstyle'];
         }
 
         return '';
@@ -649,14 +673,13 @@ class TypographyFeaturesControl extends Component {
     /**
      * The case stored on the active span (#214): data-textcase and
      * data-fakesmallcaps. '' (Default) and true when the span has none —
-     * a theme's or a paragraph style's case is not the span's own.
+     * a theme's case is not the span's own. On a style span with no case
+     * declaration of its own this is the style's current case (#450).
      *
      * @return {{textCase: string, fakeSmallCaps: boolean}}
      */
     getActiveCase() {
-        const { value } = this.props;
-        const activeFormat = value ? getActiveFormat(value, FORMAT_TYPE) : null;
-        return readInlineCase(activeFormat && activeFormat.attributes);
+        return readInlineCase(this.getActiveFormatAttributes().attrs);
     }
 
     /**
@@ -743,12 +766,13 @@ class TypographyFeaturesControl extends Component {
      * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
      */
     getActiveLetterSpacing() {
-        const { value } = this.props;
-
         // First, try the standard format API
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-letterspacing']) {
-            return parseInt(activeFormat.attributes['data-letterspacing'], 10);
+        const { attrs, fromStyle } = this.getActiveFormatAttributes();
+        if (attrs && attrs['data-letterspacing']) {
+            return parseInt(attrs['data-letterspacing'], 10);
+        }
+        if (fromStyle) {
+            return 0;
         }
 
         // Check for styled span in Typographic Stylist block
@@ -776,12 +800,13 @@ class TypographyFeaturesControl extends Component {
      * Also checks for inline <span class="typost-styled"> elements in Typographic Stylist blocks
      */
     getActiveLineHeight() {
-        const { value } = this.props;
-
         // First, try the standard format API
-        const activeFormat = getActiveFormat(value, FORMAT_TYPE);
-        if (activeFormat && activeFormat.attributes && activeFormat.attributes['data-lineheight']) {
-            return parseFloat(activeFormat.attributes['data-lineheight']);
+        const { attrs, fromStyle } = this.getActiveFormatAttributes();
+        if (attrs && attrs['data-lineheight']) {
+            return parseFloat(attrs['data-lineheight']);
+        }
+        if (fromStyle) {
+            return 0;
         }
 
         // Check for styled span in Typographic Stylist block
@@ -1305,6 +1330,19 @@ class TypographyFeaturesControl extends Component {
 
     _resetPendingChanges() {
         this._pendingChanges = { keys: new Set(), featureToggles: [] };
+    }
+
+    /**
+     * Cancel the debounced applies that are still scheduled. Call it when
+     * a patch apply has consumed every pending change (a mixed selection,
+     * or a style span, #450): a second apply with nothing pending would
+     * otherwise run the full rebuild, which stamps the modal's state over
+     * a mixed selection and writes no override under a style.
+     */
+    _cancelScheduledApplies() {
+        this.debouncedApplySlider.cancel();
+        this.debouncedApplyDropdown.cancel();
+        this.debouncedApplyFontSize.cancel();
     }
 
     /**
@@ -1834,8 +1872,9 @@ class TypographyFeaturesControl extends Component {
      * Core feature application logic (live preview auto-apply).
      *
      * A mixed selection gets a per-run patch of the changes made since
-     * the last apply; any other selection a full rebuild of its span from
-     * the popover state. inline-editor/apply-features.js builds both; the
+     * the last apply, and so does text in a paragraph style span (#450);
+     * any other selection a full rebuild of its span from the popover
+     * state. inline-editor/apply-features.js builds both; the
      * reads and the pending-change resets stay here, in this order.
      */
     _doApplyFeatures() {
@@ -1872,9 +1911,29 @@ class TypographyFeaturesControl extends Component {
 
             const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
             this._resetPendingChanges();
+            this._cancelScheduledApplies();
 
             const runs = shared.computeTypostFormatRuns(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE);
-            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE));
+            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE, window.typostData && window.typostData.paragraphStyles));
+            return;
+        }
+        // TEXT IN A STYLE SPAN (#450): a change the author makes wins over
+        // the style for that setting only. The span keeps its style and
+        // gets an inline declaration for each changed key, as a mixed run
+        // does; the keys the author did not change stay with the style's
+        // class, so Update Style still restyles them. A full rebuild would
+        // write no declaration at all under a style, or bake in every value.
+        const spanAttrs = activeFormatForRaw && activeFormatForRaw.attributes;
+        if (isStyleSpanChange(this.state, spanAttrs, hasPending) && shared.patchTypostFormatAttributes && shared.parseStyleString && shared.buildStyleString) {
+            const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
+            this._resetPendingChanges();
+            this._cancelScheduledApplies();
+            const attributes = buildStyleSpanAttributes(spanAttrs, patch, window.typostData && window.typostData.paragraphStyles, shared);
+            if (selectionLost) {
+                onChange(applyFormat(value, { type: FORMAT_TYPE, attributes: attributes }, savedSelectionStart, savedSelectionEnd));
+            } else {
+                onChange(applyFormat(value, { type: FORMAT_TYPE, attributes: attributes }));
+            }
             return;
         }
         // The unit of the size this rebuild writes (#233): a size the author
