@@ -286,6 +286,44 @@ test.describe('#303 Paragraph Style panel in Quick Feature Toggles with a text s
 		expect(await restOfTextWeight(page, clientId)).toBe(weightBefore);
 	});
 
+	test('Enter applies nothing when no style matches the typed text (#453)', async ({ page }) => {
+		await openNewPost(page);
+		const name = `ZZ #453 no match ${Date.now()}`;
+		const style = await page.evaluate((styleName) => wp.apiFetch({
+			path: '/typost/v1/paragraph-styles',
+			method: 'POST',
+			data: { name: styleName, properties: { fontWeight: '700' } },
+		}), name);
+		createdStyleIds.push(style.id);
+		await openNewPost(page);
+
+		const clientId = await insertBlock(page, 'Jumped over the lazy dog');
+		await selectFirstLetter(page, clientId);
+		const modal = await openQuickFeatureToggles(page);
+		const field = modal.getByRole('combobox', { name: 'Paragraph Style' });
+		const rows = page.locator('.typost-ps-style-picker [role="option"]');
+
+		// Typing the name highlights the style
+		await field.fill(name);
+		await expect(page.locator('.typost-ps-style-picker [role="option"][aria-selected="true"]')).toHaveCount(1);
+		// Text that matches nothing empties the list. Core still holds the
+		// style it highlighted, and without the guard Enter applies it.
+		await field.fill('zzzz no style has this name');
+		await expect(page.locator('.typost-ps-style-picker [role="listbox"]')).toHaveCount(1);
+		await expect(rows).toHaveCount(0);
+		await field.press('Enter');
+		await page.waitForTimeout(1000);
+		expect((await readBlock(page, clientId)).content).not.toContain('data-style-id');
+		// The field is still there: no style applied, so no badge replaced it
+		await expect(field).toBeVisible();
+
+		// With a match in the list, Enter still applies the style
+		await field.fill(name);
+		await expect(rows).toHaveCount(1);
+		await field.press('Enter');
+		await expect.poll(() => styledText(page, clientId, style.id)).toBe('J');
+	});
+
 	test('A style saved from one letter captures that letter, not the block', async ({ page }) => {
 		await openNewPost(page);
 		const clientId = await insertBlock(page, 'The quick brown fox');

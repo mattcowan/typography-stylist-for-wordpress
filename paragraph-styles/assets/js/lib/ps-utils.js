@@ -3089,6 +3089,56 @@
 	}
 
 	/**
+	 * Whether the picker's suggestions list is open and shows no row. Core
+	 * renders an empty list while the field is expanded and the typed text
+	 * matches nothing. ES5 twin of isSuggestionsListEmpty() in
+	 * assets/js/font-picker.js.
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {boolean} True only for an open list with no option in it
+	 */
+	function isSuggestionsListEmpty(root) {
+		if (!root || !root.querySelector) {
+			return false;
+		}
+		var list = root.querySelector(SUGGESTIONS_LIST_SELECTOR);
+		return !!list && !list.querySelector('[role="option"]');
+	}
+
+	/**
+	 * Stop Enter from picking a style the list no longer shows. When the
+	 * typed text matches nothing, core's ComboboxControl keeps the row it
+	 * highlighted for the earlier text, and Enter applies that style. Core's
+	 * key handler returns early for an event whose default is already
+	 * prevented, so this capture listener prevents Enter while the open list
+	 * is empty. ES5 twin of guardEnterWithoutMatches() in
+	 * assets/js/font-picker.js, which has the full reasoning.
+	 *
+	 * @param {Element|null} root Wrapper element around the control
+	 * @return {Function} Stops the guard
+	 */
+	function guardEnterWithoutMatches(root) {
+		if (!root || !root.addEventListener) {
+			return function () {};
+		}
+		var onKeyDown = function (event) {
+			if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) {
+				return;
+			}
+			if (!event.target || event.target.tagName !== 'INPUT') {
+				return;
+			}
+			if (isSuggestionsListEmpty(root)) {
+				event.preventDefault();
+			}
+		};
+		root.addEventListener('keydown', onKeyDown, true);
+		return function () {
+			root.removeEventListener('keydown', onKeyDown, true);
+		};
+	}
+
+	/**
 	 * The text each browser row renders in its style: the author's selection,
 	 * so the preview shows the words about to be styled rather than the
 	 * style's name.
@@ -4092,6 +4142,8 @@
 		buildStyleSelectProps: buildStyleSelectProps,
 		removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
 		watchSuggestionsList: watchSuggestionsList,
+		isSuggestionsListEmpty: isSuggestionsListEmpty,
+		guardEnterWithoutMatches: guardEnterWithoutMatches,
 		buildBrowserSampleText: buildBrowserSampleText,
 		groupParagraphStyles: groupParagraphStyles,
 		paginateGroups: paginateGroups,

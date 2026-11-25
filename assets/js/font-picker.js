@@ -196,6 +196,62 @@ function watchSuggestionsList(root) {
 }
 
 /**
+ * Whether the picker's suggestions list is open and shows no row.
+ *
+ * Core renders the list (an empty `ul[role="listbox"]`) while the field is
+ * expanded, also when the typed text matches nothing, and removes it when
+ * the field closes.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {boolean} True only for an open list with no option in it.
+ */
+function isSuggestionsListEmpty(root) {
+	if (!root || !root.querySelector) {
+		return false;
+	}
+	var list = root.querySelector(SUGGESTIONS_LIST_SELECTOR);
+	return !!list && !list.querySelector('[role="option"]');
+}
+
+/**
+ * Stop Enter from picking a row the list no longer shows. Returns a
+ * function that stops the guard.
+ *
+ * When the typed text matches nothing, core's ComboboxControl keeps the row
+ * it highlighted for the earlier text, and Enter picks that row: type "Bo",
+ * then "zzzz", press Enter, and Bookmania applies with no row in sight
+ * (checked in WordPress 7.1.5, `selectedSuggestion` in
+ * packages/components/src/combobox-control). Core's key handler returns
+ * early for an event whose default is already prevented, so this capture
+ * listener on the wrapper prevents Enter while the open list is empty.
+ * Nothing applies, and core does not say "Item selected.". Enter with a
+ * row in the list, and Enter on a closed field, work as before.
+ *
+ * @param {Element|null} root Wrapper element around the control.
+ * @return {Function} Cleanup.
+ */
+function guardEnterWithoutMatches(root) {
+	if (!root || !root.addEventListener) {
+		return function () {};
+	}
+	var onKeyDown = function (event) {
+		if (event.key !== 'Enter' || event.isComposing || event.keyCode === 229) {
+			return;
+		}
+		if (!event.target || event.target.tagName !== 'INPUT') {
+			return;
+		}
+		if (isSuggestionsListEmpty(root)) {
+			event.preventDefault();
+		}
+	};
+	root.addEventListener('keydown', onKeyDown, true);
+	return function () {
+		root.removeEventListener('keydown', onKeyDown, true);
+	};
+}
+
+/**
  * The font family picker.
  *
  * @param {Object} props See buildComboboxProps().
@@ -212,11 +268,16 @@ function FontPicker(props) {
 	// hooks since WordPress 5.2, below this plugin's floor.
 	var ref = element.useRef(null);
 	element.useEffect(function () {
-		return watchSuggestionsList(ref.current);
+		var stopWatching = watchSuggestionsList(ref.current);
+		var stopGuard = guardEnterWithoutMatches(ref.current);
+		return function () {
+			stopWatching();
+			stopGuard();
+		};
 	}, []);
 
 	if (components.ComboboxControl) {
-		// The wrapper exists for the suggestions-list fix above.
+		// The wrapper exists for the suggestions-list fixes above.
 		return createElement(
 			'div',
 			{ className: 'typost-font-picker', ref: ref },
@@ -233,5 +294,7 @@ module.exports = {
 	buildSelectProps: buildSelectProps,
 	normalizeFontPickerValue: normalizeFontPickerValue,
 	removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
-	watchSuggestionsList: watchSuggestionsList
+	watchSuggestionsList: watchSuggestionsList,
+	isSuggestionsListEmpty: isSuggestionsListEmpty,
+	guardEnterWithoutMatches: guardEnterWithoutMatches
 };

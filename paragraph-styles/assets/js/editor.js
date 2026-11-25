@@ -324,12 +324,18 @@
 		// select never attaches the ref.
 		var wrapRef = useRef(null);
 		useEffect(function() {
-			return utils.watchSuggestionsList(wrapRef.current);
+			var stopWatching = utils.watchSuggestionsList(wrapRef.current);
+			var stopGuard = utils.guardEnterWithoutMatches(wrapRef.current);
+			return function() {
+				stopWatching();
+				stopGuard();
+			};
 		}, []);
 
 		if (wp.components.ComboboxControl) {
 			// The wrapper keeps core's suggestions list out of the Tab order
-			// (QA finding SR-5)
+			// (QA finding SR-5), and stops Enter from applying a style the
+			// list no longer shows
 			return el('div', { className: 'typost-ps-style-picker', ref: wrapRef },
 				el(wp.components.ComboboxControl, utils.buildStyleComboboxProps(props))
 			);

@@ -15,6 +15,8 @@ const {
 	buildStyleSelectProps,
 	removeSuggestionsListFromTabOrder,
 	watchSuggestionsList,
+	isSuggestionsListEmpty,
+	guardEnterWithoutMatches,
 } = require('../assets/js/lib/ps-utils.js');
 const fontPicker = require('../../assets/js/font-picker.js');
 
@@ -210,6 +212,64 @@ describe('suggestions list and the Tab order (SR-5)', () => {
 	});
 });
 
+describe('Enter with no matching style (core keeps the old highlight)', () => {
+	// The picker's markup while the field is open: the input, then core's
+	// list. No list means the field is closed.
+	const picker = (listHtml) => {
+		const root = document.createElement('div');
+		root.innerHTML = '<input type="text" />' + (listHtml || '');
+		document.body.appendChild(root);
+		return root;
+	};
+	const pressEnter = (target, extra) => {
+		const event = new KeyboardEvent('keydown', Object.assign({ key: 'Enter', code: 'Enter', bubbles: true, cancelable: true }, extra));
+		target.dispatchEvent(event);
+		return event.defaultPrevented;
+	};
+	afterEach(() => {
+		document.body.innerHTML = '';
+	});
+
+	test('an open list with no row is empty; a list with rows or no list is not', () => {
+		expect(isSuggestionsListEmpty(picker('<ul role="listbox"></ul>'))).toBe(true);
+		expect(isSuggestionsListEmpty(picker('<ul role="listbox"><li role="option">Body</li></ul>'))).toBe(false);
+		expect(isSuggestionsListEmpty(picker(''))).toBe(false);
+		expect(isSuggestionsListEmpty(null)).toBe(false);
+	});
+
+	test('Enter in the field is prevented while the open list is empty, so core picks nothing', () => {
+		const root = picker('<ul role="listbox"></ul>');
+		guardEnterWithoutMatches(root);
+		expect(pressEnter(root.querySelector('input'))).toBe(true);
+	});
+
+	test('Enter still reaches core when the list shows a row, or the field is closed', () => {
+		const withRow = picker('<ul role="listbox"><li role="option">Body</li></ul>');
+		guardEnterWithoutMatches(withRow);
+		expect(pressEnter(withRow.querySelector('input'))).toBe(false);
+
+		const closed = picker('');
+		guardEnterWithoutMatches(closed);
+		expect(pressEnter(closed.querySelector('input'))).toBe(false);
+	});
+
+	test('other keys, and Enter that ends an IME composition, are left alone', () => {
+		const root = picker('<ul role="listbox"></ul>');
+		guardEnterWithoutMatches(root);
+		const input = root.querySelector('input');
+		expect(pressEnter(input, { key: 'ArrowDown', code: 'ArrowDown' })).toBe(false);
+		expect(pressEnter(input, { isComposing: true })).toBe(false);
+	});
+
+	test('the guard stops when its cleanup runs, and a missing root is safe', () => {
+		const root = picker('<ul role="listbox"></ul>');
+		const stop = guardEnterWithoutMatches(root);
+		stop();
+		expect(pressEnter(root.querySelector('input'))).toBe(false);
+		expect(typeof guardEnterWithoutMatches(null)).toBe('function');
+	});
+});
+
 describe('twin: the font picker\'s Tab-order helpers (assets/js/font-picker.js)', () => {
 	const html =
 		'<ul role="listbox"></ul><ul role="listbox" tabindex="-1"></ul><ul></ul><div role="listbox"></div><ul role="listbox" tabindex="0"></ul>';
@@ -290,6 +350,29 @@ describe('twin: the font picker\'s Tab-order helpers (assets/js/font-picker.js)'
 		const input = { label: 'L', placeholder: 'P', options: [{ label: 'A', value: '1' }], onChange: () => {} };
 		expect(fontPicker.buildComboboxProps(input).options.map((o) => o.value)).toEqual(['', '1']);
 		expect(buildStyleComboboxProps(input).options.map((o) => o.value)).toEqual(['1']);
+	});
+
+	test('both copies guard Enter alike', () => {
+		const lists = ['<ul role="listbox"></ul>', '<ul role="listbox"><li role="option">A</li></ul>', ''];
+		const run3 = (guard) =>
+			lists.map((listHtml) => {
+				const root = document.createElement('div');
+				root.innerHTML = '<input type="text" />' + listHtml;
+				document.body.appendChild(root);
+				const stop = guard(root);
+				const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+				root.querySelector('input').dispatchEvent(event);
+				stop();
+				root.remove();
+				return event.defaultPrevented;
+			});
+		expect(run3(guardEnterWithoutMatches)).toEqual([true, false, false]);
+		expect(run3(fontPicker.guardEnterWithoutMatches)).toEqual(run3(guardEnterWithoutMatches));
+		lists.forEach((listHtml) => {
+			const root = document.createElement('div');
+			root.innerHTML = listHtml;
+			expect(isSuggestionsListEmpty(root)).toBe(fontPicker.isSuggestionsListEmpty(root));
+		});
 	});
 
 	test('both copies normalize an empty value alike', () => {
