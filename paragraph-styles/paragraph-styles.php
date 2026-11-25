@@ -96,6 +96,9 @@ final class Typost_Paragraph_Styles {
 	/** @var string Flag: the one-time switch that turned the toolbar button on has run (#322) */
 	const TOOLBAR_DEFAULT_ON_FLAG = 'typost_ps_toolbar_button_default_on';
 
+	/** @var string Option: only users with manage_options create, change and delete styles (#452) */
+	const LOCK_OPTION = 'typost_ps_lock_style_changes';
+
 	/** @var string REST namespace (shared with core plugin) */
 	const REST_NAMESPACE = 'typost/v1';
 
@@ -292,6 +295,7 @@ final class Typost_Paragraph_Styles {
 
 		// Optional toolbar button setting (Options tab)
 		add_action( 'typost_admin_options_rows', array( $this, 'render_options_row' ) );
+		add_action( 'typost_admin_options_rows', array( $this, 'render_lock_options_row' ) );
 		add_filter( 'typost_admin_options_checkboxes', array( $this, 'register_option_key' ) );
 		add_filter( 'typost_export_option_details', array( $this, 'export_option_details' ) );
 		add_action( 'admin_init', array( $this, 'maybe_turn_on_toolbar_button' ) );
@@ -2733,6 +2737,9 @@ final class Typost_Paragraph_Styles {
 			'themeColors'   => self::get_theme_colors(),
 			// The editor previews nested styles (#195) where they render
 			'nestedPreview' => self::grep_supported(),
+			// The current user cannot create, change or delete styles (#452).
+			// Cast: an uncast '0' would reach JavaScript as the truthy "0".
+			'styleChangesLocked' => (bool) $this->style_changes_locked_for_current_user(),
 		);
 		return $data;
 	}
@@ -2806,7 +2813,65 @@ final class Typost_Paragraph_Styles {
 	}
 
 	/**
-	 * Register the toolbar option so core's Options save persists it.
+	 * Whether the lock on style changes is on (#452). Off by default: a new
+	 * install and an updated site store no option. An Options save stores
+	 * '1' or '0', and (bool) '0' is false.
+	 *
+	 * @since 2.4.0
+	 * @return bool
+	 */
+	private function style_changes_lock_enabled() {
+		return (bool) get_option( self::LOCK_OPTION, false );
+	}
+
+	/**
+	 * Whether the current user may not create, change or delete styles: the
+	 * lock is on and the user has no manage_options (#452). Administrators
+	 * keep everything, in the editor and on the settings tab.
+	 *
+	 * @since 2.4.0
+	 * @return bool
+	 */
+	public function style_changes_locked_for_current_user() {
+		return $this->style_changes_lock_enabled() && ! current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Render the style lock setting into the core Options tab, after the
+	 * toolbar button row (#452).
+	 *
+	 * @since 2.4.0
+	 */
+	public function render_lock_options_row() {
+		?>
+		<tr>
+			<th scope="row">
+				<?php esc_html_e( 'Paragraph Style Changes', 'typost-paragraph-styles' ); ?>
+			</th>
+			<td>
+				<input
+					type="checkbox"
+					id="<?php echo esc_attr( self::LOCK_OPTION ); ?>"
+					name="<?php echo esc_attr( self::LOCK_OPTION ); ?>"
+					value="1"
+					data-typost-option="1"
+					aria-describedby="<?php echo esc_attr( self::LOCK_OPTION ); ?>-description"
+					<?php checked( $this->style_changes_lock_enabled() ); ?>
+				/>
+				<label for="<?php echo esc_attr( self::LOCK_OPTION ); ?>">
+					<?php esc_html_e( 'Only administrators can change paragraph styles', 'typost-paragraph-styles' ); ?>
+				</label>
+				<p class="description" id="<?php echo esc_attr( self::LOCK_OPTION ); ?>-description">
+					<?php esc_html_e( 'When this is on, other users can apply and detach paragraph styles, but they cannot create, update or delete them. Administrators can still change styles in the editor and on the Paragraph Styles tab.', 'typost-paragraph-styles' ); ?>
+				</p>
+			</td>
+		</tr>
+		<?php
+	}
+
+	/**
+	 * Register the toolbar option and the style lock (#452) so core's
+	 * Options save persists them.
 	 *
 	 * @since 1.2.0
 	 * @param array $options Registered option keys.
@@ -2814,11 +2879,13 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function register_option_key( $options ) {
 		$options[] = self::TOOLBAR_OPTION;
+		$options[] = self::LOCK_OPTION;
 		return $options;
 	}
 
 	/**
-	 * Name the toolbar option in export files (#205).
+	 * Name the toolbar option (#205) and the style lock (#452) in export
+	 * files.
 	 *
 	 * @since 2.3.5
 	 * @param array $details Option name => {label, default}.
@@ -2829,6 +2896,10 @@ final class Typost_Paragraph_Styles {
 		$details[ self::TOOLBAR_OPTION ] = array(
 			'label'   => __( 'Add a Paragraph Styles button to the block toolbar', 'typost-paragraph-styles' ),
 			'default' => true,
+		);
+		$details[ self::LOCK_OPTION ] = array(
+			'label'   => __( 'Only administrators can change paragraph styles', 'typost-paragraph-styles' ),
+			'default' => false,
 		);
 		return $details;
 	}
@@ -2850,7 +2921,7 @@ final class Typost_Paragraph_Styles {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'rest_create_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 		) );
 
@@ -2858,12 +2929,12 @@ final class Typost_Paragraph_Styles {
 			array(
 				'methods'             => 'PATCH',
 				'callback'            => array( $this, 'rest_update_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 			array(
 				'methods'             => WP_REST_Server::DELETABLE,
 				'callback'            => array( $this, 'rest_delete_style' ),
-				'permission_callback' => array( $this, 'check_permissions' ),
+				'permission_callback' => array( $this, 'check_write_permissions' ),
 			),
 		) );
 
@@ -2893,6 +2964,43 @@ final class Typost_Paragraph_Styles {
 	 */
 	public function check_permissions() {
 		return current_user_can( 'edit_posts' );
+	}
+
+	/**
+	 * Permission check for the routes that create, change and delete a
+	 * style (#452): check_permissions(), and with "Only administrators can
+	 * change paragraph styles" on, manage_options too. The editor hides its
+	 * buttons for such a user; this is what stops a direct request. The
+	 * settings tab sends the same requests, and only administrators open it.
+	 * The read routes keep check_permissions().
+	 *
+	 * All style writes that a user without manage_options can start go
+	 * through these three routes. The other writers of the styles option
+	 * do not need the lock: import (Typost_PS_Transfer calls
+	 * save_imported_styles() from the core import route) needs
+	 * manage_options, and maybe_migrate_ids() is a one-time ID migration
+	 * when the module loads, which changes no style settings. A new route
+	 * or path that writes styles must use this check.
+	 *
+	 * The write limit (rest_dispatch_request) runs after this check, so a
+	 * refused request uses no write.
+	 *
+	 * @since 2.4.0
+	 * @return bool|WP_Error True when allowed, false without edit_posts, a
+	 *                       403 WP_Error when the lock refuses the user.
+	 */
+	public function check_write_permissions() {
+		if ( ! $this->check_permissions() ) {
+			return false;
+		}
+		if ( $this->style_changes_locked_for_current_user() ) {
+			return new WP_Error(
+				'rest_forbidden',
+				__( 'Only administrators can change paragraph styles on this site.', 'typost-paragraph-styles' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+		return true;
 	}
 
 	/**
@@ -3246,7 +3354,8 @@ final class Typost_Paragraph_Styles {
 		wp_enqueue_script(
 			'typost-paragraph-styles-editor',
 			TYPOST_PS_PLUGIN_URL . 'assets/js/editor.js',
-			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready' ),
+			// wp-a11y: the result of Update Style is spoken (#452)
+			array( 'typost-block-editor', 'typost-paragraph-styles-utils', 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch', 'wp-data', 'wp-hooks', 'wp-compose', 'wp-block-editor', 'wp-dom-ready', 'wp-a11y' ),
 			TYPOST_PS_VERSION,
 			true
 		);
