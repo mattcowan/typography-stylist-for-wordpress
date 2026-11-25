@@ -2214,6 +2214,317 @@
 		return computeStyleOverrides(full, resolveStyleProperties(parent, styles));
 	}
 
+	// ---------------------------------------------------------------------
+	// Update Style from the editor, and the lock on style changes (#452)
+	// ---------------------------------------------------------------------
+
+	/**
+	 * Whether a localized flag is on. "0", "false" and "" are off, so a flag
+	 * that reached JavaScript as a string (an uncast '0' from PHP) does not
+	 * turn on by accident. ES5 twin of isFlagEnabled() in
+	 * assets/js/inline-editor/sanitize.js, which this file cannot require.
+	 *
+	 * @param {*} value
+	 * @return {boolean}
+	 */
+	function isFlagEnabled(value) {
+		if (value === undefined || value === null || value === false) {
+			return false;
+		}
+		if (typeof value === 'string') {
+			var normalized = value.trim().toLowerCase();
+			return normalized !== '' && normalized !== '0' && normalized !== 'false';
+		}
+		return !!value;
+	}
+
+	/**
+	 * The server's message from a failed apiFetch() request, for the panel's
+	 * error text: a 429 says "Too many requests…", the lock's 403 names the
+	 * lock. Fallback when the request failed with no message (no network,
+	 * a response that is not JSON).
+	 *
+	 * @param {*}      error    The rejection value of apiFetch().
+	 * @param {string} fallback Text to use when there is no message.
+	 * @return {string}
+	 */
+	function styleRequestErrorText(error, fallback) {
+		var message = error && typeof error.message === 'string' ? error.message.trim() : '';
+		return message || fallback;
+	}
+
+	// The settings of a core Paragraph or Heading block that "Update Style"
+	// copies into the block's style (#452), in the order the panel lists them
+	var CORE_BLOCK_STYLE_KEYS = ['fontWeight', 'fontStyle', 'fontSize', 'lineHeight', 'letterSpacing', 'textCase'];
+
+	/**
+	 * The typography a core Paragraph or Heading block sets itself, in the
+	 * form of an editor state, for "Update Style" from the core block panel
+	 * (#452).
+	 *
+	 * Copied: font weight, italic, line height, letter spacing, case
+	 * (textTransform) and a fixed font size in px or rem. Not copied, and
+	 * reported in `skipped`: the font family (a theme preset, not a font of
+	 * this plugin), a size from the theme's size list or any other size (a
+	 * preset can be fluid, and clamp(), em or % sizes are not fixed), a
+	 * letter spacing or line height that cannot be converted, and a case
+	 * that a style cannot store (not in TEXT_CASE_VALUES). A rem size is
+	 * converted at 16px, the same rule the plugin writes rem with (#233).
+	 * Letter spacing in px or rem needs the block's rendered font size.
+	 * With fluid typography on (theme.json settings.typography.fluid), core
+	 * renders a custom px or rem size as a clamp() too, so it is not fixed
+	 * and stays on the block.
+	 *
+	 * @param {Object}  attributes                The block's attributes.
+	 * @param {Object}  [options]
+	 * @param {number}  [options.fontSizePx]      The block's rendered font size in px.
+	 * @param {boolean} [options.fluidTypography] The site has fluid typography on (isFluidTypography()).
+	 * @return {{state: Object, keys: string[], skipped: string[]}} state: the
+	 *   editor-state values (explicitFontWeight, explicitFontStyle, fontSize,
+	 *   lineHeight, letterSpacing, textCase); keys: the style keys they set,
+	 *   in CORE_BLOCK_STYLE_KEYS order; skipped: the block settings that stay
+	 *   on the block ('fontFamily', 'fontSize', 'letterSpacing', 'lineHeight',
+	 *   'fontWeight', 'fontStyle', 'textCase').
+	 */
+	function readCoreBlockTypography(attributes, options) {
+		var a = attributes && typeof attributes === 'object' ? attributes : {};
+		var opts = options || {};
+		var style = a.style && typeof a.style === 'object' ? a.style : {};
+		var t = style.typography && typeof style.typography === 'object' ? style.typography : {};
+		var fontSizePx = typeof opts.fontSizePx === 'number' && isFinite(opts.fontSizePx) && opts.fontSizePx > 0 ? opts.fontSizePx : 0;
+		var state = {};
+		var found = {};
+		var skipped = [];
+		function has(value) {
+			return value !== undefined && value !== null && value !== '';
+		}
+		function skip(key) {
+			if (skipped.indexOf(key) === -1) skipped.push(key);
+		}
+
+		if (has(a.fontFamily) || has(t.fontFamily)) {
+			skip('fontFamily');
+		}
+
+		if (has(t.fontWeight)) {
+			var weight = String(t.fontWeight).trim().toLowerCase();
+			weight = weight === 'bold' ? '700' : (weight === 'normal' ? '400' : weight);
+			if (/^[1-9]00$/.test(weight)) {
+				state.explicitFontWeight = weight;
+				found.fontWeight = true;
+			} else {
+				skip('fontWeight');
+			}
+		}
+
+		if (has(t.fontStyle)) {
+			var fontStyle = String(t.fontStyle).trim().toLowerCase();
+			if (fontStyle === 'italic' || fontStyle === 'normal' || fontStyle === 'oblique') {
+				state.explicitFontStyle = fontStyle;
+				found.fontStyle = true;
+			} else {
+				skip('fontStyle');
+			}
+		}
+
+		if (has(a.fontSize) || (has(t.fontSize) && opts.fluidTypography)) {
+			// A size from the theme's list can be fluid, and with fluid
+			// typography on a custom size is fluid too
+			skip('fontSize');
+		} else if (has(t.fontSize)) {
+			var size = String(t.fontSize).trim().match(/^(\d*\.?\d+)(px|rem)$/i);
+			var px = size ? parseFloat(size[1]) * (size[2].toLowerCase() === 'rem' ? 16 : 1) : 0;
+			if (px > 0 && isFinite(px)) {
+				state.fontSize = String(Number(Math.round(Number(px + 'e2')) + 'e-2'));
+				found.fontSize = true;
+			} else {
+				skip('fontSize');
+			}
+		}
+
+		if (has(t.lineHeight)) {
+			var lineHeight = String(t.lineHeight).trim();
+			if (/^\d*\.?\d+$/.test(lineHeight) && parseFloat(lineHeight) > 0) {
+				state.lineHeight = roundLineHeight(lineHeight);
+				found.lineHeight = true;
+			} else {
+				skip('lineHeight');
+			}
+		}
+
+		if (has(t.letterSpacing)) {
+			var spacing = String(t.letterSpacing).trim().match(/^(-?\d*\.?\d+)(px|em|rem)$/i);
+			var thousandths = null;
+			if (spacing) {
+				var amount = parseFloat(spacing[1]);
+				var unit = spacing[2].toLowerCase();
+				if (unit === 'em') {
+					thousandths = amount * 1000;
+				} else if (fontSizePx) {
+					thousandths = (unit === 'rem' ? amount * 16 : amount) / fontSizePx * 1000;
+				}
+			} else if (/^0+(\.0+)?$/.test(String(t.letterSpacing).trim())) {
+				thousandths = 0;
+			}
+			if (thousandths !== null && isFinite(thousandths)) {
+				state.letterSpacing = Math.round(thousandths);
+				found.letterSpacing = true;
+			} else {
+				skip('letterSpacing');
+			}
+		}
+
+		if (has(t.textTransform)) {
+			var textCase = normalizeTextCase(String(t.textTransform).trim().toLowerCase());
+			if (textCase) {
+				state.textCase = textCase;
+				found.textCase = true;
+			} else {
+				skip('textCase');
+			}
+		}
+
+		return {
+			state: state,
+			keys: CORE_BLOCK_STYLE_KEYS.filter(function (key) { return !!found[key]; }),
+			skipped: skipped,
+		};
+	}
+
+	/**
+	 * Whether the site has fluid typography on, from the block editor
+	 * settings (#452): theme.json settings.typography.fluid is true or an
+	 * object of options. Absent, false or an editor without the key (before
+	 * the setting existed) is off.
+	 *
+	 * @param {Object} settings getSettings() of core/block-editor.
+	 * @return {boolean}
+	 */
+	function isFluidTypography(settings) {
+		var features = settings && settings.__experimentalFeatures;
+		var typography = features && features.typography;
+		var fluid = typography ? typography.fluid : undefined;
+		return fluid === true || (!!fluid && typeof fluid === 'object');
+	}
+
+	/**
+	 * The keys of readCoreBlockTypography() whose value differs from the
+	 * style's: what "Update Style" would change in the style (#452). An own
+	 * setting equal to the style's changes nothing, so the panel does not
+	 * offer the update for it.
+	 *
+	 * @param {{state: Object, keys: string[]}} read       readCoreBlockTypography().
+	 * @param {Object}                          styleProps The style's resolved properties.
+	 * @return {string[]}
+	 */
+	function coreBlockStyleDifferences(read, styleProps) {
+		var p = styleProps || {};
+		var s = (read && read.state) || {};
+		return ((read && read.keys) || []).filter(function (key) {
+			switch (key) {
+				case 'fontWeight':
+					return s.explicitFontWeight !== String(p.fontWeight || '400');
+				case 'fontStyle':
+					return s.explicitFontStyle !== (p.fontStyle || '');
+				case 'fontSize':
+					return !(isFinite(p.fontSize) && Number(p.fontSize) === Number(s.fontSize));
+				case 'lineHeight':
+					return Math.abs(s.lineHeight - (Number(p.lineHeight) || 0)) > LINE_HEIGHT_TOLERANCE;
+				case 'letterSpacing':
+					return s.letterSpacing !== (Number(p.letterSpacing) || 0);
+				case 'textCase':
+					return s.textCase !== normalizeTextCase(p.textCase);
+			}
+			return false;
+		});
+	}
+
+	/**
+	 * The editor state "Update Style" sends for a core block (#452): the
+	 * style's own look, with the block's copied settings on top. Keys an
+	 * editor does not report (hang, case when the block sets none, and the
+	 * settings only the settings tab has) are left out, so
+	 * buildPropertiesForStyleSave() keeps the style's values for them.
+	 *
+	 * @param {Object} styleProps The style's resolved properties.
+	 * @param {Object} blockState readCoreBlockTypography().state.
+	 * @return {Object} Editor state for buildStyleUpdateProperties().
+	 */
+	function buildCoreBlockStyleState(styleProps, blockState) {
+		var p = styleProps || {};
+		var state = {
+			explicitFontId: parseInt(p.fontId, 10) || 0,
+			explicitFontWeight: p.fontWeight ? String(p.fontWeight) : '',
+			explicitFontStyle: p.fontStyle || '',
+			fontSize: p.fontSize || 'inherit',
+			fitMaxSize: p.fitMaxSize || 0,
+			letterSpacing: Number(p.letterSpacing) || 0,
+			lineHeight: Number(p.lineHeight) || 0,
+			features: Array.isArray(p.features) ? p.features.slice() : [],
+			fontVariationSettings: p.fontVariationSettings || '',
+		};
+		['fontSizeMin', 'fontSizePreferred', 'fontSizeMax'].forEach(function (key) {
+			if (p[key] !== undefined) state[key] = p[key];
+		});
+		var own = blockState || {};
+		// A fixed size from the block replaces a responsive or fit size:
+		// buildPropertiesFromState() stores the min/preferred/max values and
+		// fitMaxSize only for those modes
+		Object.keys(own).forEach(function (key) {
+			state[key] = own[key];
+		});
+		return state;
+	}
+
+	/**
+	 * The attribute update that removes the copied settings from a core block
+	 * after "Update Style" (#452), so the block follows its style again. Only
+	 * the keys in `keys` go; the block's other settings stay. Null when there
+	 * is nothing to remove.
+	 *
+	 * With `sent` (the block's style.typography when the author confirmed),
+	 * a setting goes only while it still has the value that was sent: one
+	 * the author changed while the request ran is their new edit and stays.
+	 *
+	 * @param {Object}   attributes The block's attributes now.
+	 * @param {string[]} keys       readCoreBlockTypography().keys.
+	 * @param {Object}   [sent]     style.typography as it was read for the request.
+	 * @return {?Object} { style } for updateBlockAttributes().
+	 */
+	function buildCoreBlockClearUpdate(attributes, keys, sent) {
+		var a = attributes && typeof attributes === 'object' ? attributes : {};
+		var style = a.style && typeof a.style === 'object' ? a.style : null;
+		if (!style || !style.typography || !Array.isArray(keys) || !keys.length) return null;
+		var names = {
+			fontWeight: 'fontWeight',
+			fontStyle: 'fontStyle',
+			fontSize: 'fontSize',
+			lineHeight: 'lineHeight',
+			letterSpacing: 'letterSpacing',
+			textCase: 'textTransform',
+		};
+		var typography = Object.assign({}, style.typography);
+		var changed = false;
+		keys.forEach(function (key) {
+			var name = names[key];
+			if (name && Object.prototype.hasOwnProperty.call(typography, name)) {
+				if (sent && typeof sent === 'object' && String(sent[name]) !== String(typography[name])) {
+					return;
+				}
+				delete typography[name];
+				changed = true;
+			}
+		});
+		if (!changed) return null;
+		var next = Object.assign({}, style);
+		if (Object.keys(typography).length) {
+			next.typography = typography;
+		} else {
+			delete next.typography;
+		}
+		return { style: Object.keys(next).length ? next : undefined };
+	}
+
 	/**
 	 * Normalize a stored style's properties for the apply event.
 	 *
@@ -2684,9 +2995,12 @@
 	 * The weight of bold text in a style (#450), or 0 when the style needs
 	 * no bold rule: max(700, bolder(W)), with the CSS Fonts bolder table.
 	 * Under 550 gives 700, 550 to 899 gives 900, 900 or more keeps the
-	 * weight. Twin of PHP bold_weight(), which explains why; reads the
-	 * weight as buildStyleCssBlock() does. normal is 400 and bold is 700;
-	 * lighter and bolder are relative to an unknown parent and give no rule.
+	 * weight. Twin of PHP bold_weight(), which explains why. normal is 400
+	 * and bold is 700; lighter and bolder are relative to an unknown parent
+	 * and give no rule. A number is what PHP is_numeric() accepts, so a
+	 * value PHP gives no rule (a hex string, a boolean) gives none here,
+	 * although buildStyleCssBlock() still writes a main-rule weight for it
+	 * (a known difference in fixtures/style-css.json).
 	 *
 	 * @param {Object} props Resolved properties.
 	 * @return {number} Weight, 0 for none.
@@ -2694,7 +3008,8 @@
 	function boldWeight(props) {
 		if (phpFalsy(props.fontWeight)) return 0;
 		var weight = props.fontWeight;
-		if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
+		var numeric = typeof weight === 'string' ? /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(weight) : typeof weight === 'number' && isFinite(weight);
+		if (numeric && Number(weight) >= 1 && Number(weight) <= 1000) {
 			weight = phpInt(weight);
 		} else if (String(weight) === 'normal') {
 			weight = 400;
@@ -2713,7 +3028,8 @@
 	 * style (a block or a span with no weight of its own), and a style
 	 * span anywhere inside bold text, take boldWeight(); a style span
 	 * inside em or i is italic again under a style that sets
-	 * font-style: normal.
+	 * font-style: normal. [style*="font-weight"] is a substring test, not
+	 * an exact property match (see the PHP docblock).
 	 *
 	 * @param {Object}   props Resolved properties.
 	 * @param {string[]} refs  The style's id, then its legacy id.
@@ -2727,8 +3043,10 @@
 			selectors = [];
 			refs.forEach(function (ref) {
 				var cls = '.typost-ps-' + ref;
-				selectors.push('.typost-styled' + cls + cls + cls + cls + cls + ':not([style*="font-weight"]) :is(strong, b)');
-				selectors.push(spanSelector(ref) + '[data-style-id]:not([style*="font-weight"]) :is(strong, b)');
+				var block = '.typost-styled' + cls + cls + cls + cls + cls;
+				var span = spanSelector(ref) + '[data-style-id]';
+				selectors.push(block + ':not([style*="font-weight"]) :is(strong, b):not(' + block + ' [style*="font-weight"] *)');
+				selectors.push(span + ':not([style*="font-weight"]) :is(strong, b):not(' + span + ' [style*="font-weight"] *)');
 				selectors.push(':is(strong, b) ' + spanSelector(ref));
 			});
 			css.push(selectors.join(',\n') + ' {\n    font-weight: ' + weight + ';\n}');
@@ -4031,6 +4349,14 @@
 		resolveStyleList: resolveStyleList,
 		computeStyleOverrides: computeStyleOverrides,
 		buildStyleUpdateProperties: buildStyleUpdateProperties,
+		isFlagEnabled: isFlagEnabled,
+		styleRequestErrorText: styleRequestErrorText,
+		CORE_BLOCK_STYLE_KEYS: CORE_BLOCK_STYLE_KEYS,
+		readCoreBlockTypography: readCoreBlockTypography,
+		isFluidTypography: isFluidTypography,
+		coreBlockStyleDifferences: coreBlockStyleDifferences,
+		buildCoreBlockStyleState: buildCoreBlockStyleState,
+		buildCoreBlockClearUpdate: buildCoreBlockClearUpdate,
 		getStyleDescendantIds: getStyleDescendantIds,
 		normalizeApplyProperties: normalizeApplyProperties,
 		buildApplyEventDetail: buildApplyEventDetail,

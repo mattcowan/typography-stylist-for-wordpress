@@ -1333,6 +1333,19 @@ class TypographyFeaturesControl extends Component {
     }
 
     /**
+     * Cancel the debounced applies that are still scheduled. Call it when
+     * a patch apply has consumed every pending change (a mixed selection,
+     * or a style span, #450): a second apply with nothing pending would
+     * otherwise run the full rebuild, which stamps the modal's state over
+     * a mixed selection and writes no override under a style.
+     */
+    _cancelScheduledApplies() {
+        this.debouncedApplySlider.cancel();
+        this.debouncedApplyDropdown.cancel();
+        this.debouncedApplyFontSize.cancel();
+    }
+
+    /**
      * Set font size mode
      */
     setFontSize(mode) {
@@ -1774,6 +1787,11 @@ class TypographyFeaturesControl extends Component {
             // User selected a portion of text - apply styling only to that portion.
             // Use the current block's HTML content to preserve existing spans.
             // String() matters: content can be a RichTextData object (WP 6.5+)
+            // A raw feature value of the selection ("salt" 2) is kept on the
+            // span, as an apply keeps it (#454). The format is read at the
+            // saved bounds when the live selection collapsed.
+            const convertSelectionLost = isSelectionLost(value, savedSelectionStart, savedSelectionEnd);
+            const convertFormat = findSelectionFormat(value, convertSelectionLost, savedSelectionStart, FORMAT_TYPE, getActiveFormat);
             const contentForBlock = buildPartialConvertContent({
                 existingContent: String(currentBlock.attributes.content || ''),
                 fullText: getTextContent(value),
@@ -1783,7 +1801,8 @@ class TypographyFeaturesControl extends Component {
                 spanWeight: spanWeight,
                 sizeUnit: this.getZoomNoticeUnit(),
                 clearWeight: this._clearWeight,
-                shared: window.typostSharedUtils
+                shared: window.typostSharedUtils,
+                rawFeatureSettings: resolveRawFeatureSettings(convertFormat, this._pendingChanges, window.typostSharedUtils || {})
             });
 
             // The span carries the selection's typography; the block itself
@@ -1892,9 +1911,10 @@ class TypographyFeaturesControl extends Component {
 
             const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
             this._resetPendingChanges();
+            this._cancelScheduledApplies();
 
             const runs = shared.computeTypostFormatRuns(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE);
-            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE));
+            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE, window.typostData && window.typostData.paragraphStyles));
             return;
         }
         // TEXT IN A STYLE SPAN (#450): a change the author makes wins over
@@ -1907,6 +1927,7 @@ class TypographyFeaturesControl extends Component {
         if (isStyleSpanChange(this.state, spanAttrs, hasPending) && shared.patchTypostFormatAttributes && shared.parseStyleString && shared.buildStyleString) {
             const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
             this._resetPendingChanges();
+            this._cancelScheduledApplies();
             const attributes = buildStyleSpanAttributes(spanAttrs, patch, window.typostData && window.typostData.paragraphStyles, shared);
             if (selectionLost) {
                 onChange(applyFormat(value, { type: FORMAT_TYPE, attributes: attributes }, savedSelectionStart, savedSelectionEnd));
