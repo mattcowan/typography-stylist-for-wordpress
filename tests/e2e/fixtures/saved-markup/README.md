@@ -28,7 +28,7 @@ These files hold post content as the editor saved it, one file for each save for
 | `inline-spans.html` | Inline spans in a core Heading and Paragraphs: a responsive size in rem, a case, a responsive size in px, a fixed size. | core |
 | `inline-style-id.html` | An inline span with a paragraph style ID. | core |
 | `inline-style-override.html` | The same span after Font Weight 400 in the inline dialog: the span keeps the style ID and has an inline `font-weight` only (#450). | core |
-| `partial-convert.html` | A block made by "Convert to Typography Stylist Block" on part of a plain-text Paragraph, with a feature and a case: the span's `style` has the feature's quotes as `&quot;` (#369). The block's `fontWeight` is the weight at which the theme shows the Paragraph (300 on wp-env). The saved-markup spec does not catch a broken style attribute (such a block still loads valid); the Jest test `assets/js/__tests__/partial-convert-fixture.test.js` does. | current |
+| `partial-convert.html` | A block made by "Convert to Typography Stylist Block" on part of a plain-text Paragraph, with a feature, a case, a font, weight 700, italic, a letter spacing and a line height: the span has the attributes that the Quick Feature Toggles write for these settings (#454), and its `style` has the feature's quotes as `&quot;` (#369). The font is a font definition for a system font that the script makes and deletes. The file holds font ID 1 in place of the ID the site gave it, because the site's font ID counter only grows. The block's `fontWeight` is the weight at which the theme shows the Paragraph (300 on wp-env). The saved-markup spec does not catch a broken style attribute (such a block still loads valid); the Jest test `assets/js/__tests__/partial-convert-fixture.test.js` does. | current |
 | `registered-attributes.json` | The attribute names of each block type on a site with only this plugin (see "Other plugins"). | — |
 
 All content is demo text.
@@ -62,8 +62,8 @@ Give file names to write only those files. The script reads every file from the 
 - `v1` and `v2`: the deprecated entry's own `save()`, run in the editor page, with core's serializer for the block comment. The `.after.html` files: the editor opens the old markup and serializes it again.
 - Typography Stylist blocks: inserted with the attribute values that the Inspector controls set, and saved by the editor. Fit to width: the editor measures the lines.
 - Paragraph styles, Detach and inline spans: the sidebar Paragraph Style select, the sidebar Font Weight select and OpenType Features toggle on top of a style, Detach Style, and the inline Typography Stylist Features dialog. A style is applied to selected text with the event that the style browser sends, built by the module's `buildApplyEventDetail()`.
-- The partial conversion: the inline dialog's "Convert to Typography Stylist Block". The dialog applies each change at once, so the script applies the feature and the case, undoes them in the editor (the text is plain again, and the dialog keeps the settings), and then converts.
+- The partial conversion: the inline dialog's "Convert to Typography Stylist Block". The dialog applies each change at once, so the script applies the feature, the case, the font, the weight, the italic, the letter spacing and the line height, undoes them in the editor (the text is plain again, and the dialog keeps the settings), and then converts.
 
-The script makes drafts and paragraph styles named "ZZ E2E fixture …" and deletes each one by its ID. It stops when the site writes new font sizes in px.
+The script makes drafts, paragraph styles and one font definition named "ZZ E2E fixture …" and deletes each one by its ID. Before it makes the font, it deletes a font with the same name that a failed run left. It stops when the site writes new font sizes in px.
 
 After you regenerate, run the spec, and review the diff of each file: a changed fixture is a changed save format.

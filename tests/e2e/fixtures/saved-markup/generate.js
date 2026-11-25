@@ -34,8 +34,9 @@
  *   value that setting sends to the editor), so the site's option is never
  *   changed.
  *
- * The script makes drafts and paragraph styles named "ZZ E2E fixture …"
- * and deletes each by its ID. A style's ID is written as {{STYLE_ID}}.
+ * The script makes drafts, paragraph styles and one font definition named
+ * "ZZ E2E fixture …" and deletes each by its ID. A style's ID is written as
+ * {{STYLE_ID}}; the font's ID as 1 (pinFontId()).
  */
 require('dotenv').config();
 const fs = require('fs');
@@ -473,9 +474,65 @@ async function inlineStyleOverride(page) {
 // at once, so the feature and the case are applied, then undone in the
 // editor: the text is plain again and the dialog keeps the selection's
 // settings, which the conversion writes on the span.
+// Since #454 the span has the attributes that the block's Quick Feature
+// Toggles write, so the selection also gets a font (a font definition for a
+// system font, made for the run and deleted after it), weight 700, italic,
+// a letter spacing and a line height. Variable font axes are not set: they
+// need a variable font file, which a wp-env site does not have.
+// The site's font ID counter only grows (a deleted font does not lower it),
+// so the ID differs from run to run: pinFontId() writes PARTIAL_CONVERT_FONT_ID
+// in its place, so the file stays the same.
+const PARTIAL_CONVERT_FONT = { name: 'ZZ E2E fixture serif', font_family: 'Georgia', fallbacks: 'serif' };
+const PARTIAL_CONVERT_FONT_ID = 1;
+
+// Replace the font ID in the converted block: data-font-id in the visual
+// copy and in the comment's JSON copy (where core's serializer writes each
+// quote as the escape u0022 and each "--" as two u002d escapes), and the
+// --font-N variable in both. Fails unless every font reference is this
+// font's and each form occurs exactly twice.
+function pinFontId(content, fontId) {
+	const ids = [];
+	const attribute = /data-font-id=("|\\u0022)(\d+)("|\\u0022)/g;
+	const variable = /(--|\\u002d\\u002d)font-(\d+)\b/g;
+	const attributes = content.match(attribute) || [];
+	const variables = content.match(variable) || [];
+	content.replace(attribute, (m, open, id) => ids.push(id));
+	content.replace(variable, (m, dashes, id) => ids.push(id));
+	if (attributes.length !== 2 || variables.length !== 2 || ids.some((id) => id !== String(fontId))) {
+		fail(`Expected font ${fontId} as 2 data-font-id and 2 --font- references, found ${attributes.length} and ${variables.length} (IDs ${ids}): ${content}`);
+	}
+	return content
+		// Rebuild from the groups: the escaped quote (u0022) holds digits
+		// too, so a search for the ID inside the match could hit it
+		.replace(attribute, (m, open, id, close) => `data-font-id=${open}${PARTIAL_CONVERT_FONT_ID}${close}`)
+		.replace(variable, (m, dashes) => `${dashes}font-${PARTIAL_CONVERT_FONT_ID}`);
+}
+
+async function deleteManualFont(page, font) {
+	const result = await apiFetch(page, { path: `/typost/v1/manual-fonts/${font.id}`, method: 'DELETE' })
+		.catch((error) => ({ error: error && (error.code || error.message) }));
+	if (!result || !result.success) {
+		process.stderr.write(`Could not delete the font "${font.name}" (${font.id}): ${JSON.stringify(result)}. Delete it on the Fonts tab.\n`);
+	}
+}
+
 async function partialConvert(page) {
 	await openEditor(page);
+	// A font left by a failed run would make a second font with this name
+	const existing = await apiFetch(page, { path: '/typost/v1/manual-fonts' });
+	for (const old of Object.values(existing || {}).filter((f) => f && f.name === PARTIAL_CONVERT_FONT.name)) {
+		await deleteManualFont(page, old);
+	}
+	const created = await apiFetch(page, { path: '/typost/v1/manual-fonts', method: 'POST', data: PARTIAL_CONVERT_FONT });
+	const font = created && created.font;
+	if (!font) {
+		fail(`The font was not created: ${JSON.stringify(created)}`);
+	}
 	try {
+		// The editor data lists a new font after a reload. The first
+		// editor's draft is deleted first: the reload makes a new one.
+		await deleteCurrentPost(page);
+		await openEditor(page);
 		const [ paragraph ] = await insertBlocks(page, [ [ 'core/paragraph', { content: TEXT } ] ]);
 		await selectText(page, paragraph, GARDEN);
 		const modal = await openInlineDialog(page);
@@ -483,7 +540,19 @@ async function partialConvert(page) {
 		await waitForContent(page, paragraph, (c) => c.includes('data-features="dlig"'), 'feature');
 		await modal.getByRole('combobox', { name: 'Case' }).selectOption('small-caps');
 		await waitForContent(page, paragraph, (c) => c.includes('data-textcase="small-caps"'), 'case');
-		for (let i = 0; i < 10 && (await blockContent(page, paragraph)).includes('<'); i++) {
+		await modal.getByRole('combobox', { name: 'Font Family' }).fill(font.name);
+		await page.getByRole('option', { name: font.name }).first().waitFor();
+		await page.keyboard.press('Enter');
+		await waitForContent(page, paragraph, (c) => c.includes(`data-font-id="${font.font_id}"`), 'font');
+		await modal.getByRole('combobox', { name: 'Font Weight' }).selectOption('700');
+		await waitForContent(page, paragraph, (c) => c.includes('data-fontweight="700"'), 'weight');
+		await modal.getByRole('combobox', { name: 'Font Style' }).selectOption('italic');
+		await waitForContent(page, paragraph, (c) => c.includes('data-fontstyle="italic"'), 'italic');
+		await modal.getByRole('spinbutton', { name: 'Letter Spacing' }).fill('25');
+		await waitForContent(page, paragraph, (c) => c.includes('data-letterspacing="25"'), 'letter spacing');
+		await modal.getByRole('spinbutton', { name: 'Line Height' }).fill('1.2');
+		await waitForContent(page, paragraph, (c) => c.includes('data-lineheight="1.2"'), 'line height');
+		for (let i = 0; i < 20 && (await blockContent(page, paragraph)).includes('<'); i++) {
 			await page.evaluate(() => wp.data.dispatch('core/editor').undo());
 			await page.waitForTimeout(300);
 		}
@@ -496,9 +565,17 @@ async function partialConvert(page) {
 		if (!content.includes('data-features=\\u0022dlig\\u0022') || !content.includes('data-features="dlig"')) {
 			fail(`The converted block has no feature span: ${content}`);
 		}
-		return content;
+		[ `data-font-id="${font.font_id}"`, 'data-fontweight="700"', 'data-fontstyle="italic"', 'data-letterspacing="25"', 'data-lineheight="1.2"' ].forEach((attribute) => {
+			if (!content.includes(attribute)) {
+				fail(`The converted span has no ${attribute}: ${content}`);
+			}
+		});
+		return pinFontId(content, font.font_id);
 	} finally {
 		await deleteCurrentPost(page);
+		if (font) {
+			await deleteManualFont(page, font);
+		}
 	}
 }
 

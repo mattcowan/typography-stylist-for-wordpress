@@ -174,6 +174,54 @@ test('Text in a style span: a weight and a feature from the dialog show, and Inh
 	await expect.poll(async () => (await computed(page, clientId, span)).weight).toBe('300');
 });
 
+// A key other than the weight goes through the same patch path. The
+// spacing is compared as a ratio, so the theme's font size does not matter
+test('Text in a style span: letter spacing from the dialog shows over the style, and 0 gives the text back to the style (#450)', async ({ page }) => {
+	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
+		name: `TEMP #450 spaced ${Date.now()}`,
+		properties: { fontWeight: '300', letterSpacing: 50, features: [ 'liga' ] },
+	});
+	created.push(`/typost/v1/paragraph-styles/${style.id}`);
+	await openNewPost(page);
+	const postId = await page.evaluate(() => wp.data.select('core/editor').getCurrentPostId());
+	created.push(`/wp/v2/posts/${postId}?force=true`);
+
+	const clientId = await page.evaluate((content) => {
+		const block = wp.blocks.createBlock('core/paragraph', { content });
+		wp.data.dispatch('core/block-editor').insertBlocks(block);
+		return block.clientId;
+	}, `Moonlit ${styleSpan(style.id)} party`);
+	const span = `[data-style-id="${style.id}"]`;
+	await expect.poll(async () => (await computed(page, clientId, span) || {}).weight).toBe('300');
+	const before = await computed(page, clientId, span);
+	expect(parseFloat(before.spacing)).toBeGreaterThan(0);
+
+	await select(page, clientId, ...GARDEN);
+	await page.getByRole('button', { name: 'Typography Stylist Features' }).click();
+	const modal = page.locator('.components-modal__frame');
+	await expect(modal).toBeVisible();
+
+	// 200 (0.2em): only the letter-spacing declaration is written, and the
+	// span keeps its style
+	await modal.getByRole('spinbutton', { name: 'Letter Spacing' }).fill('200');
+	await expect.poll(() => blockContent(page, clientId)).toContain('style="letter-spacing: 0.2em"');
+	const content = await blockContent(page, clientId);
+	expect(content).toContain(`data-style-id="${style.id}"`);
+	expect(content).toContain('data-letterspacing="200"');
+	// The style's 0.05em, four times
+	await expect.poll(async () => parseFloat((await computed(page, clientId, span)).spacing) / parseFloat(before.spacing)).toBeCloseTo(4, 1);
+	// The weight and the features of the style still show
+	const after = await computed(page, clientId, span);
+	expect(after.weight).toBe('300');
+	expect(after.features).toBe(before.features);
+
+	// 0 removes the declaration: the text follows the style again
+	await modal.getByRole('spinbutton', { name: 'Letter Spacing' }).fill('0');
+	await expect.poll(() => blockContent(page, clientId)).not.toContain('letter-spacing');
+	expect(await blockContent(page, clientId)).toContain(`data-style-id="${style.id}"`);
+	await expect.poll(async () => (await computed(page, clientId, span)).spacing).toBe(before.spacing);
+});
+
 test('After the style changes, a style span reads the new values and an override keeps its weight, in the editor and on the frontend (#450)', async ({ page }) => {
 	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
 		name: `TEMP #450 light ${Date.now()}`,
@@ -198,6 +246,12 @@ test('After the style changes, a style span reads the new values and an override
 	const plain = await computed(page, untouched, span);
 	const changed = await computed(page, override, span);
 	expect(plain.weight).toBe('300');
+	// The span reads the new values: size 2.5rem (40 px over a 16 px root)
+	// and spacing 0.1em (0.05em before), as ratios, so the root size and
+	// the canvas zoom do not matter
+	const canvasRoot = await page.frame({ name: 'editor-canvas' }).evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(plain.size) / canvasRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(plain.spacing) / parseFloat(plain.size)).toBeCloseTo(0.1, 3);
 	// The override takes the new size and spacing of the style
 	expect(changed.size).toBe(plain.size);
 	expect(changed.spacing).toBe(plain.spacing);
@@ -221,6 +275,9 @@ test('After the style changes, a style span reads the new values and an override
 		return { weight: cs.fontWeight, size: cs.fontSize, spacing: cs.letterSpacing };
 	}), span);
 	expect(front.map((s) => s.weight)).toEqual([ '300', '700' ]);
+	const frontRoot = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(front[0].size) / frontRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(front[0].spacing) / parseFloat(front[0].size)).toBeCloseTo(0.1, 3);
 	expect(front[1].size).toBe(front[0].size);
 	expect(front[1].spacing).toBe(front[0].spacing);
 });

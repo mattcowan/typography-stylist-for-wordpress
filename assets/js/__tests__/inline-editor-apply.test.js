@@ -327,4 +327,28 @@ describe('applyPatchToRuns', () => {
 		expect(applyPatchToRuns('v', runs, {}, shared, richText, FORMAT)).toBe('var');
 		expect(calls).toEqual([['apply', 'p1', 0, 4], ['remove', FORMAT, 4, 9]]);
 	});
+
+	test('a run in a style span is patched as a style span (#450): a feature the style has, turned off, stays off', () => {
+		const { patchTypostFormatAttributes, parseStyleString, buildStyleString } = require('../../../blocks/typography-stylist/utils.js');
+		const shared = { patchTypostFormatAttributes, parseStyleString, buildStyleString };
+		const calls = [];
+		const richText = {
+			applyFormat: (value, format, start, end) => { calls.push(['apply', format.attributes, start, end]); return value; },
+			removeFormat: (value, type, start, end) => { calls.push(['remove', start, end]); return value; },
+		};
+		const ligaStyle = [{ id: 12, properties: { features: ['liga'] } }];
+		const runs = [
+			{ start: 0, end: 4, attributes: { 'data-style-id': '12', 'data-features': 'liga', class: 'typost-styled' } },
+			{ start: 4, end: 9, attributes: { 'data-features': 'liga', class: 'typost-styled', style: 'font-feature-settings: "liga" 1' } },
+		];
+		const patch = buildPatchFromPending(emptyState(), { keys: new Set(), featureToggles: [{ tag: 'liga', enabled: false }] }, false);
+		applyPatchToRuns('v', runs, patch, shared, richText, FORMAT, ligaStyle);
+		// The style span declares the browser default, so the class's liga
+		// no longer applies; it keeps its style
+		expect(calls[0][0]).toBe('apply');
+		expect(calls[0][1]['data-style-id']).toBe('12');
+		expect(calls[0][1].style).toBe('font-feature-settings: normal');
+		// The plain run has nothing left and loses the format, as before
+		expect(calls[1]).toEqual(['remove', 4, 9]);
+	});
 });

@@ -53,8 +53,8 @@ class ParagraphStylesCssSelectorTest extends TestCase {
             . "    font-size: 24px;\n"
             . "}\n\n"
             // Bold text in the style: max(700, bolder(700)) (#450)
-            . ".typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3:not([style*=\"font-weight\"]) :is(strong, b),\n"
-            . ".typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b),\n"
+            . ".typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3.typost-ps-3 [style*=\"font-weight\"] *),\n"
+            . ".typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*=\"font-weight\"] *),\n"
             . ":is(strong, b) .typost-styled[data-style-id=\"3\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n"
             . "    font-weight: 900;\n"
             . "}";

@@ -19,7 +19,7 @@ import {
 	stripRedundantFontSizeAttrs,
 	mergeTypostSpanStyling,
 	overrideStylingInDescendantSpans,
-	wrapFitLines,
+	wrapFitLinesBySizeProperty,
 	unwrapFitLines
 } from '../utils';
 
@@ -211,10 +211,10 @@ describe('overrideStylingInDescendantSpans — wrapper scale replaces inner scal
 	});
 });
 
-describe('wrapFitLines / unwrapFitLines — round-trip carries the spans verbatim', () => {
+describe('wrapFitLinesBySizeProperty / unwrapFitLines — round-trip carries the spans verbatim', () => {
 	test('fitscale/fitshift spans survive the fit editing-value round trip', () => {
 		const flat = 'April <span class="typost-styled" data-fitscale="0.6" data-fitshift="0.35" style="font-size: 0.6em; vertical-align: 0.35em">&amp;</span> Andy<br>Forever';
-		const wrapped = wrapFitLines(flat, [0.02, 0.05], 0);
+		const wrapped = wrapFitLinesBySizeProperty(flat, [0, 0.1]);
 		expect(wrapped).toContain('data-fitscale="0.6"');
 		expect(wrapped).toContain('data-fitshift="0.35"');
 		expect(unwrapFitLines(wrapped)).toBe(flat);
