@@ -246,6 +246,12 @@ test('After the style changes, a style span reads the new values and an override
 	const plain = await computed(page, untouched, span);
 	const changed = await computed(page, override, span);
 	expect(plain.weight).toBe('300');
+	// The span reads the new values: size 2.5rem (40 px over a 16 px root)
+	// and spacing 0.1em (0.05em before), as ratios, so the root size and
+	// the canvas zoom do not matter
+	const canvasRoot = await page.frame({ name: 'editor-canvas' }).evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(plain.size) / canvasRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(plain.spacing) / parseFloat(plain.size)).toBeCloseTo(0.1, 3);
 	// The override takes the new size and spacing of the style
 	expect(changed.size).toBe(plain.size);
 	expect(changed.spacing).toBe(plain.spacing);
@@ -269,6 +275,9 @@ test('After the style changes, a style span reads the new values and an override
 		return { weight: cs.fontWeight, size: cs.fontSize, spacing: cs.letterSpacing };
 	}), span);
 	expect(front.map((s) => s.weight)).toEqual([ '300', '700' ]);
+	const frontRoot = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(front[0].size) / frontRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(front[0].spacing) / parseFloat(front[0].size)).toBeCloseTo(0.1, 3);
 	expect(front[1].size).toBe(front[0].size);
 	expect(front[1].spacing).toBe(front[0].spacing);
 });
