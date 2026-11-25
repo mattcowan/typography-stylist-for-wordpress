@@ -99,9 +99,9 @@ test.describe('Paragraph Style combobox with NVDA', () => {
     await page.locator(COMBOBOX).fill('');
     await nvda.type(query);
     await h.delay(900);
-    // #453: core's message after typing names only the result count, and
-    // NVDA reads the highlighted row only when an arrow key moves it. The
-    // picker says the row that typing highlights, with its position.
+    // #453: NVDA reads the row that typing highlights, with its position, on
+    // its own (core's ComboboxControl moves aria-activedescendant). The
+    // picker adds no message of its own.
     const typingPhrases = (await nvda.spokenPhraseLog()).slice(logBeforeTyping);
     const typedHighlight = await page.evaluate(() => {
       const row = document.querySelector('.typost-ps-style-picker [role="option"][aria-selected="true"]');

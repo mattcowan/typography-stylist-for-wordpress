@@ -196,162 +196,6 @@ function watchSuggestionsList(root) {
 }
 
 /**
- * How long after an input event the highlighted row is read, in ms.
- *
- * Core's ComboboxControl moves its highlight in an effect that runs after it
- * re-renders for the new text; in Chromium and Firefox the highlight was
- * final by a 0 ms timer (#453). The extra time lets a fast typist finish a
- * word first, so the row is said once, for the last letter.
- */
-var TYPING_ANNOUNCE_DELAY = 100;
-
-/**
- * The row ComboboxControl highlights, as a screen reader reads it.
- *
- * Read from the DOM: the field's aria-activedescendant names the row. Core's
- * row ids are positions in the list (`…-0`, `…-1`), not options, so the
- * row is identified by its label.
- *
- * @param {Element|null} root Wrapper element around the control.
- * @return {Object|null} { label, position, total } (position counts from 1),
- *                       or null when the list is closed or nothing is
- *                       highlighted.
- */
-function readHighlightedOption(root) {
-	if (!root || !root.querySelector) {
-		return null;
-	}
-	var input = root.querySelector('input[role="combobox"]');
-	if (!input || input.getAttribute('aria-expanded') !== 'true') {
-		return null;
-	}
-	var activeId = input.getAttribute('aria-activedescendant');
-	var doc = root.ownerDocument;
-	var active = activeId && doc ? doc.getElementById(activeId) : null;
-	if (!active) {
-		return null;
-	}
-	var lists = root.querySelectorAll(SUGGESTIONS_LIST_SELECTOR);
-	for (var i = 0; i < lists.length; i++) {
-		if (!lists[i].contains(active)) {
-			continue;
-		}
-		var options = lists[i].querySelectorAll('[role="option"]');
-		for (var j = 0; j < options.length; j++) {
-			if (options[j] === active) {
-				var label = (active.textContent || '').replace(/\s+/g, ' ').trim();
-				return label ? { label: label, position: j + 1, total: options.length } : null;
-			}
-		}
-	}
-	return null;
-}
-
-/**
- * What to say about the highlighted row after the author typed.
- *
- * Core's own message after typing gives only the number of results (#453),
- * and a screen reader reads aria-activedescendant only when an arrow key
- * moves it. So nobody says which row typing highlighted, and Enter picks it
- * unheard. wp.a11y.speak() replaces core's message in the polite region, so
- * this one stands alone: the label and its position, as NVDA reads a row.
- *
- * @param {Object|null} row       From readHighlightedOption().
- * @param {string|null} lastLabel Label of the row last read for this field.
- * @return {string|null} The message, or null when there is nothing new.
- */
-function typingHighlightMessage(row, lastLabel) {
-	if (!row || row.label === lastLabel) {
-		return null;
-	}
-	var i18n = typeof window !== 'undefined' && window.wp && window.wp.i18n;
-	var __ = i18n && i18n.__ ? i18n.__ : function (text) {
-		return text;
-	};
-	/* translators: 1: label of the highlighted option, 2: its position in the list, 3: number of options in the list. */
-	var template = __('%1$s, %2$s of %3$s', 'typography-stylist');
-	var args = [row.label, String(row.position), String(row.total)];
-	if (i18n && i18n.sprintf) {
-		return i18n.sprintf.apply(null, [template].concat(args));
-	}
-	var index = 0;
-	return template.replace(/%(\d+\$)?s/g, function (match, position) {
-		return position ? args[parseInt(position, 10) - 1] : args[index++];
-	});
-}
-
-/**
- * Say the highlighted row when typing moves it. Returns a function that
- * stops watching.
- *
- * Only an input event (typing, deleting, pasting) leads to a message. A
- * screen reader already reads the row that an arrow key highlights, so after
- * ArrowUp or ArrowDown the row is only remembered, and a keydown cancels a
- * message not yet said. The same row is not said twice in a row; the memory
- * clears when the list closes (core removes the list) and when no row is
- * highlighted (no results).
- *
- * Twin of watchTypingHighlight() in paragraph-styles/assets/js/lib/ps-utils.js
- * (docs/twins.md).
- *
- * @param {Element|null} root Wrapper element around the control.
- * @return {Function} Cleanup.
- */
-function watchTypingHighlight(root) {
-	if (!root || !root.addEventListener) {
-		return function () {};
-	}
-	var lastLabel = null;
-	var timer = null;
-	var schedule = function (announce) {
-		clearTimeout(timer);
-		timer = setTimeout(function () {
-			timer = null;
-			var row = readHighlightedOption(root);
-			var message = announce ? typingHighlightMessage(row, lastLabel) : null;
-			// Nothing highlighted (no results): the row that comes back
-			// when the text changes again is news.
-			lastLabel = row ? row.label : null;
-			var a11y = typeof window !== 'undefined' && window.wp && window.wp.a11y;
-			if (message && a11y && typeof a11y.speak === 'function') {
-				a11y.speak(message, 'polite');
-			}
-		}, TYPING_ANNOUNCE_DELAY);
-	};
-	var onInput = function (event) {
-		if (event.target && event.target.getAttribute && event.target.getAttribute('role') === 'combobox') {
-			schedule(true);
-		}
-	};
-	var onKeyDown = function (event) {
-		clearTimeout(timer);
-		timer = null;
-		if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-			schedule(false);
-		}
-	};
-	root.addEventListener('input', onInput);
-	root.addEventListener('keydown', onKeyDown);
-	var observer = null;
-	if (typeof MutationObserver !== 'undefined') {
-		observer = new MutationObserver(function () {
-			if (!root.querySelector(SUGGESTIONS_LIST_SELECTOR)) {
-				lastLabel = null;
-			}
-		});
-		observer.observe(root, { childList: true, subtree: true });
-	}
-	return function () {
-		clearTimeout(timer);
-		root.removeEventListener('input', onInput);
-		root.removeEventListener('keydown', onKeyDown);
-		if (observer) {
-			observer.disconnect();
-		}
-	};
-}
-
-/**
  * The font family picker.
  *
  * @param {Object} props See buildComboboxProps().
@@ -368,17 +212,11 @@ function FontPicker(props) {
 	// hooks since WordPress 5.2, below this plugin's floor.
 	var ref = element.useRef(null);
 	element.useEffect(function () {
-		var stopList = watchSuggestionsList(ref.current);
-		var stopSpeech = watchTypingHighlight(ref.current);
-		return function () {
-			stopList();
-			stopSpeech();
-		};
+		return watchSuggestionsList(ref.current);
 	}, []);
 
 	if (components.ComboboxControl) {
-		// The wrapper exists for the suggestions-list fix and the typing
-		// message above.
+		// The wrapper exists for the suggestions-list fix above.
 		return createElement(
 			'div',
 			{ className: 'typost-font-picker', ref: ref },
@@ -395,9 +233,5 @@ module.exports = {
 	buildSelectProps: buildSelectProps,
 	normalizeFontPickerValue: normalizeFontPickerValue,
 	removeSuggestionsListFromTabOrder: removeSuggestionsListFromTabOrder,
-	watchSuggestionsList: watchSuggestionsList,
-	TYPING_ANNOUNCE_DELAY: TYPING_ANNOUNCE_DELAY,
-	readHighlightedOption: readHighlightedOption,
-	typingHighlightMessage: typingHighlightMessage,
-	watchTypingHighlight: watchTypingHighlight
+	watchSuggestionsList: watchSuggestionsList
 };
