@@ -140,6 +140,20 @@ and checks the block's stored content (what gets saved):
 The Paragraph Style panel in the Quick Feature Toggles works on the selected
 text, not the whole block. Tests tagged `@firefox` also run in Firefox.
 
+### `paragraph-style-update.spec.js` — #452
+
+"Update Style…" in the block sidebar opens a confirmation that names the
+style. "Cancel" sends nothing and gives focus back to the button. "Yes,
+Update Style" sends one request, shows and speaks the result, and puts
+focus on the style badge. A refused request (a 429 made by the test) keeps
+the confirmation open, shows and speaks the error, keeps focus on the
+button, and keeps the change on the block. The sidebar follows a style
+applied while it is open. With the lock flag on (set in the page, not in
+the site option), the panel has no button that changes a style, and Detach
+puts focus on the panel heading. A core Paragraph block gives its own
+weight and line height to its style and loses them; its preset size stays.
+Tests tagged `@firefox` also run in Firefox.
+
 ### `saved-markup.spec.js` — #373
 
 The editor opens each save format and feature the plugin has written and
@@ -223,7 +237,7 @@ only. It runs in Chromium only.
 What an extension renders into a hook container is unmounted when the
 container leaves the page. The Paragraph Styles panel calls the
 `typost_current_editor_state` filter while the inline dialog is open (and
-its "(modified)" badge updates), and not after the dialog closes; after 10
+its "different from the style" line updates), and not after the dialog closes; after 10
 opens and closes, one panel follows the store; the same after the Quick
 Feature Toggles close and after the block sidebar shows another block. A
 planted extension that renders into three containers with
