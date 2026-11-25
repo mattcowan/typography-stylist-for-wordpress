@@ -3,7 +3,8 @@
  *
  * Moved out of edit.js unchanged (#356); resetEntireBlock() calls the shared
  * "Remove all styling" action since #411, and clearAllInlineFeatures() speaks
- * its result since #420. The functions were closures inside
+ * its result since #420 (and says so when there is nothing to clear, #455).
+ * The functions were closures inside
  * Edit and are still rebuilt on every render: Edit calls this factory once
  * per render with the current values, so every function sees the same
  * values it saw before.
@@ -92,16 +93,24 @@ export default function createResetActions(ctx) {
 	// stripBlockStyles() speaks the result of "Reset Entire Block": the text
 	// changes in the canvas, away from the sidebar where the author is, so a
 	// screen reader user would not hear it otherwise (#420).
+	// With no typost-styled span in the content (no text at all, or text with
+	// none), nothing is written: the confirmation closes and the result says
+	// so (#455). The test for "nothing to clear" is the query the clear itself
+	// uses, so the two cannot disagree.
 	const clearAllInlineFeatures = () => {
-		if (!content) return;
-
 		// Parse the content and remove all typost-styled spans
 		const parser = new DOMParser();
-		const doc = parser.parseFromString(`<div>${content}</div>`, 'text/html');
+		const doc = parser.parseFromString(`<div>${content || ''}</div>`, 'text/html');
 		const container = doc.body.firstChild;
 
 		// Find all typost-styled spans
 		const styledSpans = container.querySelectorAll('span.typost-styled');
+
+		if (!styledSpans.length) {
+			setShowInlineResetConfirm(false);
+			speak(__('No inline features to remove.', 'typography-stylist'), 'polite');
+			return;
+		}
 
 		// Unwrap each span (replace it with its contents)
 		styledSpans.forEach(span => {

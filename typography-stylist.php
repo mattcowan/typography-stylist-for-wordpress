@@ -506,6 +506,23 @@ class Typost {
     }
 
     /**
+     * Whether the per-post font caches may be read and written for this view (#480).
+     *
+     * A preview by a user who can edit the post neither reads nor writes them:
+     * it can show an autosave, not the saved post that the cache describes.
+     * Anyone can add ?preview=true, but without the capability WordPress shows
+     * the saved post, so such a request uses the cache. Shared by
+     * has_styled_content() and get_used_fonts_in_content(), so the two cannot
+     * drift apart.
+     *
+     * @param WP_Post $post The queried post.
+     * @return bool
+     */
+    private function use_post_font_cache($post) {
+        return !(is_preview() && current_user_can('edit_post', $post->ID));
+    }
+
+    /**
      * Check if current page has styled content
      * Works for all singular post types (posts, pages, custom post types) and archive pages
      */
@@ -520,12 +537,9 @@ class Typost {
                 return false;
             }
 
-            // Cache the result per post. A preview by a user who can edit
-            // the post neither reads nor writes the cache (#480): it can show
-            // an autosave, not the saved post. Anyone can add ?preview=true,
-            // but without the capability WordPress shows the saved post.
+            // Cache the result per post, except in a real preview (#480)
             $cache_key = 'typost_has_styled_' . $post->ID;
-            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $use_cache = $this->use_post_font_cache($post);
             $has_styled = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $has_styled) {
@@ -622,12 +636,9 @@ class Typost {
                 return array();
             }
 
-            // Cache the result per post. A preview by a user who can edit
-            // the post neither reads nor writes the cache (#480): it can show
-            // an autosave, not the saved post. Anyone can add ?preview=true,
-            // but without the capability WordPress shows the saved post.
+            // Cache the result per post, except in a real preview (#480)
             $cache_key = 'typost_used_fonts_' . $post->ID;
-            $use_cache = !(is_preview() && current_user_can('edit_post', $post->ID));
+            $use_cache = $this->use_post_font_cache($post);
             $used_fonts = $use_cache ? get_transient($cache_key) : false;
 
             if (false === $used_fonts) {
@@ -2597,7 +2608,7 @@ class Typost {
         delete_transient('typost_admin_font_css');
         delete_transient('typost_editor_font_css');
         delete_transient('typost_block_font_css');
-        delete_transient('typost_css_variables');
+        delete_transient('typost_css_variable_decls');
 
         // Clear per-page font caches (all cached variations)
         $this->clear_font_detection_cache();
@@ -2941,7 +2952,7 @@ class Typost {
      * they use MD5 hashes of serialized post ID arrays as cache keys).
      *
      * Does NOT clear global font CSS caches (admin_font_css, editor_font_css,
-     * block_font_css, css_variables) because those only change when fonts
+     * block_font_css, css_variable_decls) because those only change when fonts
      * themselves are added/removed/modified. Does NOT clear font_css_* caches
      * because they are keyed by font combination -- when a post's used fonts
      * change, a new cache key is generated automatically.
@@ -4453,20 +4464,32 @@ class Typost {
     }
 
     /**
-     * Get CSS variables string for all fonts
+     * Get CSS variables string for all fonts, or for the fonts of one page
      *
      * Returns CSS string with :root { --font-ID: "Family Name", fallback; } declarations
      * Includes aliases for deleted fonts with replacements
      *
-     * @return string CSS variables string
+     * The editor callers (the typost-block-fonts handle of the editor canvas,
+     * the REST fontVariablesCss field, admin_head) pass no list and get every
+     * font. The frontend passes the fonts of the page (#474,
+     * get_frontend_variable_font_ids()). A deleted font in the list prints
+     * its alias line; the font it points to prints only when it is in the
+     * list too.
+     *
+     * @since 2.4.0 The $font_ids parameter.
+     * @param int[]|null $font_ids Font IDs to declare, or null for every font.
+     * @return string CSS variables string ('' when no font is declared)
      */
-    public function get_font_css_variables() {
-        // Check transient cache first
-        $cache_key = 'typost_css_variables';
-        $cached_css = get_transient($cache_key);
+    public function get_font_css_variables($font_ids = null) {
+        // The transient holds one declaration per font for every font, so a
+        // page selects its fonts after the read and all pages share one
+        // cache entry. Before 2.4.0 the key typost_css_variables held the
+        // joined string; the new key keeps the two shapes apart.
+        $cache_key = 'typost_css_variable_decls';
+        $cached_vars = get_transient($cache_key);
 
-        if (false !== $cached_css) {
-            return $cached_css;
+        if (is_array($cached_vars)) {
+            return $this->join_font_css_declarations($cached_vars, $font_ids);
         }
 
         $css_vars = array();
@@ -4567,23 +4590,136 @@ class Typost {
             $css_vars[] = sprintf('--font-%d: var(--font-%d)', (int) $deleted_id, (int) $replacement_id);
         }
 
-        if (empty($css_vars)) {
-            return '';
-        }
+        // Cache for 24 hours (an empty list too: a site with no fonts reads
+        // it like any other)
+        set_transient($cache_key, $css_vars, DAY_IN_SECONDS);
 
-        $css = ":root {\n    " . implode(";\n    ", $css_vars) . ";\n}";
-
-        // Cache for 24 hours
-        set_transient($cache_key, $css, DAY_IN_SECONDS);
-
-        return $css;
+        return $this->join_font_css_declarations($css_vars, $font_ids);
     }
 
     /**
-     * Output CSS variables for all fonts
+     * Join --font-N declarations into the one :root block that
+     * sanitize_output_css() accepts
+     *
+     * Every declaration starts with `--font-N:` (the sprintf formats in
+     * get_font_css_variables()), so the font ID of each one is read from
+     * that prefix. The order of the declarations does not change.
+     *
+     * @since 2.4.0
+     * @param array      $css_vars Declarations, without the closing semicolon.
+     * @param int[]|null $font_ids Font IDs to keep, or null to keep all.
+     * @return string CSS, or '' when no declaration is left
+     */
+    private function join_font_css_declarations(array $css_vars, $font_ids = null) {
+        $wanted = null;
+        if (null !== $font_ids) {
+            $wanted = array_flip(array_map('intval', (array) $font_ids));
+        }
+
+        $kept = array();
+        foreach ($css_vars as $declaration) {
+            if (!is_string($declaration)) {
+                continue;
+            }
+            if (null === $wanted
+                || (preg_match('/^--font-(\d+):/', $declaration, $matches) && isset($wanted[(int) $matches[1]]))) {
+                $kept[] = $declaration;
+            }
+        }
+
+        if (empty($kept)) {
+            return '';
+        }
+
+        return ":root {\n    " . implode(";\n    ", $kept) . ";\n}";
+    }
+
+    /**
+     * Font IDs whose --font-N variable this frontend page declares (#474)
+     *
+     * - the fonts the content references: on a page that lists posts, the
+     *   results of detect_frontend_fonts() (every post in the loop, with
+     *   replacements and forced fonts merged); on a singular page, the scan
+     *   of get_used_fonts_in_content(). Both scans include the fonts that
+     *   paragraph styles and other extensions report through
+     *   typost_content_font_ids;
+     * - the fonts that typost_force_enqueue_font_ids adds;
+     * - the uploaded kits and Adobe Fonts with "Load on all pages" on;
+     * - the deleted fonts whose replacement is set to load globally;
+     * - for each deleted font in the list, the font that replaces it. The
+     *   map is followed to its end: add_font_replacement() flattens chains,
+     *   but a map written another way can hold one (16 → 29 → 40), and then
+     *   the alias line of 29 must print too.
+     *
+     * Content that names a font only by its family (data-font, before
+     * 1.1.6) writes the family itself, not a variable, so it adds nothing.
+     *
+     * @since 2.4.0
+     * @return int[] Unique positive font IDs
+     */
+    private function get_frontend_variable_font_ids() {
+        $ids = array();
+
+        if (!is_singular() && $this->fonts_detected) {
+            // Pages that list posts: detected on template_redirect. Null when
+            // nothing is styled and no font is forced or loads on all pages.
+            if (is_array($this->detected_fonts) && !empty($this->detected_fonts['font_ids'])) {
+                $ids = (array) $this->detected_fonts['font_ids'];
+            }
+        } else {
+            foreach ((array) $this->get_used_fonts_in_content() as $font_ref) {
+                if (is_string($font_ref) && strpos($font_ref, 'id:') === 0) {
+                    $ids[] = (int) substr($font_ref, 3);
+                }
+            }
+        }
+
+        $ids = array_merge($ids, $this->get_forced_font_ids());
+
+        foreach (array($this->get_custom_fonts(), $this->get_adobe_fonts()) as $fonts) {
+            foreach ((array) $fonts as $font) {
+                if (!empty($font['load_on_all_pages']) && isset($font['font_id'])) {
+                    $ids[] = (int) $font['font_id'];
+                }
+            }
+        }
+
+        $replacements = $this->get_font_replacements();
+        if (!empty($replacements['global_load']) && is_array($replacements['global_load'])) {
+            $ids = array_merge($ids, $replacements['global_load']);
+        }
+        $mappings = (!empty($replacements['mappings']) && is_array($replacements['mappings']))
+            ? $replacements['mappings']
+            : array();
+
+        // Add replacement targets until none is new (a visited set ends a
+        // cycle in a map written by hand)
+        $wanted = array();
+        $queue = $ids;
+        while (!empty($queue)) {
+            $id = (int) array_shift($queue);
+            if ($id <= 0 || isset($wanted[$id])) {
+                continue;
+            }
+            $wanted[$id] = true;
+            if (isset($mappings[$id])) {
+                $queue[] = $mappings[$id];
+            }
+        }
+
+        return array_keys($wanted);
+    }
+
+    /**
+     * Output CSS variables for the fonts of this page
      *
      * Generates :root { --font-ID: "Family Name", fallback; } declarations
      * Includes aliases for deleted fonts with replacements
+     *
+     * A frontend page declares only the fonts it uses (#474,
+     * get_frontend_variable_font_ids()), and prints no element when there
+     * are none. Admin pages and the editor parent document declare every
+     * font, so a font picked while editing renders at once.
      *
      * Note: Serves the frontend (wp_head) and plain admin pages / editor
      * parent document (admin_head) via a directly echoed style element. The
@@ -4603,7 +4739,13 @@ class Typost {
             }
         }
 
-        $css = $this->get_font_css_variables();
+        // null: every font (admin). The frontend list reuses the detection
+        // of this request where it ran (the archive results of
+        // detect_frontend_fonts() on template_redirect, the per-post
+        // transient of the singular scan) and runs the singular scan if not.
+        $font_ids = is_admin() ? null : $this->get_frontend_variable_font_ids();
+
+        $css = $this->get_font_css_variables($font_ids);
         if (!empty($css)) {
             // Additional CSS content sanitization
             // Remove any potentially dangerous CSS constructs

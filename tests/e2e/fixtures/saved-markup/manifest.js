@@ -118,6 +118,12 @@ const FIXTURES = [
 		style: true,
 	},
 	{
+		file: 'inline-style-override.html',
+		title: 'inline span with a paragraph style id and a weight of its own (#450)',
+		paths: [ 'core' ],
+		style: true,
+	},
+	{
 		file: 'partial-convert.html',
 		title: 'span of a partial Convert to block of plain text (#369)',
 		paths: [ 'current' ],
