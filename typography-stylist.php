@@ -125,10 +125,13 @@ class Typost {
 
     /**
      * The markup of the blocks rendered before wp_head that
-     * get_rendered_block_font_ids() has not read yet
+     * get_rendered_block_font_ids() has not read yet, one string for each
+     * block whose output no later block output holds (see
+     * collect_rendered_block_font_ids())
      * @since 2.4.0
+     * @var string[]
      */
-    private $rendered_block_markup = '';
+    private $rendered_block_markup = array();
 
     /**
      * Whether this request collects the fonts of rendered blocks: set by
@@ -4641,6 +4644,21 @@ class Typost {
      * not one for each block, matters: the Paragraph Styles callback resolves
      * the styles that it finds on each call.
      *
+     * Nested blocks: render_block fires for every block, inner blocks first
+     * (WP_Block::render()), and the output of a block usually holds the
+     * output of its inner blocks, so a paragraph in a group in a template
+     * part would be kept once for each level. Each output is kept as one
+     * string; before it is added, the strings at the end of the list that
+     * occur verbatim in it, from the end of the output backward and in
+     * order, are removed (keep_rendered_block_markup()). A string is removed
+     * only when its bytes are in the output that replaces it, so no
+     * reference is lost. A parent that drops or rewrites the output of its
+     * inner blocks keeps them, which can load a font for nothing but never
+     * misses one. No depth count on pre_render_block: blocks that render
+     * through WP_Block::render() directly (the posts of core/post-template,
+     * core/block, core/navigation) fire render_block without it, and a
+     * pre_render_block filter that returns content skips render_block.
+     *
      * @since 2.4.0
      * @param string $block_content The rendered block HTML.
      * @param array  $block         The parsed block.
@@ -4660,10 +4678,54 @@ class Typost {
         }
 
         if (is_string($block_content) && '' !== $block_content) {
-            $this->rendered_block_markup .= $block_content . "\n";
+            $this->keep_rendered_block_markup($block_content);
         }
 
         return $block_content;
+    }
+
+    /**
+     * Add one block output to the markup that
+     * get_rendered_block_font_ids() reads
+     *
+     * Removes the strings at the end of the list that occur verbatim in the
+     * output, in order: the last one must end at or before the end of the
+     * output, the one before it at or before the start of that match, and
+     * so on. The first string that does not occur stops the search. The
+     * outputs of the inner blocks of this block are the strings at the end
+     * of the list, so they are removed; a string that is not from an inner
+     * block can also be removed, but only when the output holds its bytes,
+     * so the references in it are still read.
+     *
+     * Cost: each search runs backward from the end of the output and stops
+     * at the match, so one block output is scanned about once, plus one
+     * scan that finds nothing.
+     *
+     * @since 2.4.0
+     * @param string $block_content A rendered block output, not empty.
+     */
+    private function keep_rendered_block_markup($block_content) {
+        $length = strlen($block_content);
+        $end = $length;
+
+        while (!empty($this->rendered_block_markup)) {
+            $last = end($this->rendered_block_markup);
+            $last_length = strlen($last);
+            if ($last_length > $end) {
+                break;
+            }
+            // A negative offset makes strrpos() return the last match that
+            // ends at or before $end. The offset is at least -$length,
+            // since $last_length <= $end.
+            $start = strrpos($block_content, $last, $end - $last_length - $length);
+            if (false === $start) {
+                break;
+            }
+            array_pop($this->rendered_block_markup);
+            $end = $start;
+        }
+
+        $this->rendered_block_markup[] = $block_content;
     }
 
     /**
@@ -4732,15 +4794,18 @@ class Typost {
      * @return int[] Unique positive font IDs
      */
     private function get_rendered_block_font_ids() {
-        $markup = $this->rendered_block_markup;
-        if ('' !== $markup) {
-            $this->rendered_block_markup = '';
+        if (!empty($this->rendered_block_markup)) {
+            // A line break between two outputs, so no match spans both
+            $markup = implode("\n", $this->rendered_block_markup);
+            $this->rendered_block_markup = array();
 
             // Only a reference inside a tag counts: a template shows the text
             // of other posts (a post excerpt in a query loop), and a text
             // that names a variable (an article about fonts) uses no font.
             // A match is inside a tag when the last "<" before it comes after
-            // the last ">".
+            // the last ">". A ">" in an attribute value (title="a > b")
+            // before the match makes the match count as text, so that case
+            // misses a font; it does not add a wrong one.
             $length = strlen($markup);
             $patterns = array('--font-' => '/--font-(\d+)/', 'data-font-id' => '/data-font-id=["\'](\d+)["\']/');
             foreach ($patterns as $marker => $pattern) {

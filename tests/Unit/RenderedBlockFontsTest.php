@@ -202,6 +202,14 @@ class RenderedBlockFontsTest extends TestCase {
         return $plugin;
     }
 
+    /** The markup that the collector keeps and has not read yet. */
+    private function storedMarkup($plugin) {
+        $markup = new \ReflectionProperty(\Typost::class, 'rendered_block_markup');
+        $markup->setAccessible(true);
+        $value = $markup->getValue($plugin);
+        return is_array($value) ? implode("\n", $value) : $value;
+    }
+
     private function collected($plugin) {
         $ids = $this->invokePrivate($plugin, 'get_rendered_block_font_ids');
         sort($ids);
@@ -340,10 +348,95 @@ class RenderedBlockFontsTest extends TestCase {
             $plugin->collect_rendered_block_font_ids($this->typostBlock(9)[0], $this->typostBlock(9)[1]);
         }
 
-        $markup = new \ReflectionProperty(\Typost::class, 'rendered_block_markup');
-        $markup->setAccessible(true);
-        $this->assertSame('', $markup->getValue($plugin));
+        $this->assertSame('', $this->storedMarkup($plugin));
         $this->assertSame([], $this->collected($plugin));
+    }
+
+    // ── Nested blocks ───────────────────────────────────────────────────────
+
+    public function test_a_nested_block_keeps_its_markup_once() {
+        // render_block fires for each block, inner blocks first, and the
+        // output of a block holds the output of its inner blocks: a
+        // paragraph in a group in a group was kept once for each level
+        $leaf = '<p><span class="typost-styled" style="font-family: var(--font-5)">A</span></p>';
+        $inner = '<div class="wp-block-group inner">' . $leaf . '</div>';
+        $outer = '<div class="wp-block-group outer">' . $inner . '</div>';
+        $part = '<header class="wp-block-template-part">' . $outer . '</header>';
+
+        $plugin = $this->freshInstance();
+        $plugin->start_collecting_rendered_block_fonts('/theme/template-canvas.php');
+        $plugin->collect_rendered_block_font_ids($leaf, ['blockName' => 'core/paragraph', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($inner, ['blockName' => 'core/group', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($outer, ['blockName' => 'core/group', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($part, ['blockName' => 'core/template-part', 'attrs' => []]);
+
+        $this->assertSame(1, substr_count($this->storedMarkup($plugin), $leaf));
+        $this->assertSame($part, $this->storedMarkup($plugin));
+        $this->assertSame([5], $this->collected($plugin));
+    }
+
+    public function test_sibling_blocks_are_all_kept() {
+        $first = '<p><span class="typost-styled" style="font-family: var(--font-5)">A</span></p>';
+        $second = '<p><span class="typost-styled" style="font-family: var(--font-7)">B</span></p>';
+        $group = '<div class="wp-block-group">' . $first . "\n\n" . $second . '</div>';
+        $footer = '<p><span class="typost-styled" data-font-id="9">C</span></p>';
+
+        $plugin = $this->freshInstance();
+        $plugin->start_collecting_rendered_block_fonts('/theme/template-canvas.php');
+        // Two inner blocks of one group, then a block after the group
+        $plugin->collect_rendered_block_font_ids($first, ['blockName' => 'core/paragraph', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($second, ['blockName' => 'core/paragraph', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($group, ['blockName' => 'core/group', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($footer, ['blockName' => 'core/paragraph', 'attrs' => []]);
+
+        $stored = $this->storedMarkup($plugin);
+        $this->assertSame($group . "\n" . $footer, $stored);
+        $this->assertSame(1, substr_count($stored, $first));
+        $this->assertSame(1, substr_count($stored, $second));
+        $this->assertSame([5, 7, 9], $this->collected($plugin));
+    }
+
+    public function test_an_inner_block_that_its_parent_does_not_output_verbatim_is_kept() {
+        // A parent that drops or rewrites the output of its inner blocks:
+        // the collector cannot tell the two apart, so it keeps the inner
+        // block (a font that loads for nothing, never a font that is
+        // missing)
+        $leaf = '<p><span class="typost-styled" style="font-family: var(--font-9)">A</span></p>';
+        $previous = '<p><span class="typost-styled" style="font-family: var(--font-5)">B</span></p>';
+
+        $plugin = $this->freshInstance();
+        $plugin->start_collecting_rendered_block_fonts('/theme/template-canvas.php');
+        $plugin->collect_rendered_block_font_ids($previous, ['blockName' => 'core/paragraph', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids($leaf, ['blockName' => 'core/paragraph', 'attrs' => []]);
+        $plugin->collect_rendered_block_font_ids('<div class="wp-block-example"></div>', ['blockName' => 'example/drops-content', 'attrs' => []]);
+        $rewritten = str_replace('<span ', '<span data-extra="1" ', $leaf);
+        $plugin->collect_rendered_block_font_ids('<div class="wp-block-example">' . $rewritten . '</div>', ['blockName' => 'example/rewrites-content', 'attrs' => []]);
+
+        $stored = $this->storedMarkup($plugin);
+        $this->assertSame(1, substr_count($stored, $previous));
+        $this->assertSame(1, substr_count($stored, $leaf));
+        $this->assertSame([5, 9], $this->collected($plugin));
+    }
+
+    public function test_a_query_loop_keeps_each_post_once() {
+        // core/post-template renders its inner blocks once for each post,
+        // and core/query holds the post template
+        $plugin = $this->freshInstance();
+        $plugin->start_collecting_rendered_block_fonts('/theme/template-canvas.php');
+        $items = '';
+        foreach ([3, 5, 7] as $font_id) {
+            $title = '<h2 class="wp-block-post-title"><span class="typost-styled" data-font-id="' . $font_id . '">T</span></h2>';
+            $plugin->collect_rendered_block_font_ids($title, ['blockName' => 'core/post-title', 'attrs' => []]);
+            $plugin->collect_rendered_block_font_ids($title, ['blockName' => null, 'attrs' => []]);
+            $items .= '<li class="wp-block-post">' . $title . '</li>';
+        }
+        $template = '<ul class="wp-block-post-template">' . $items . '</ul>';
+        $plugin->collect_rendered_block_font_ids($template, ['blockName' => 'core/post-template', 'attrs' => []]);
+        $query = '<div class="wp-block-query">' . $template . '</div>';
+        $plugin->collect_rendered_block_font_ids($query, ['blockName' => 'core/query', 'attrs' => []]);
+
+        $this->assertSame($query, $this->storedMarkup($plugin));
+        $this->assertSame([3, 5, 7], $this->collected($plugin));
     }
 
     public function test_blocks_rendered_for_an_excerpt_are_not_collected() {
