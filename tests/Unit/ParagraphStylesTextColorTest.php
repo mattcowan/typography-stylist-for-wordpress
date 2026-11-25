@@ -69,7 +69,7 @@ class ParagraphStylesTextColorTest extends TestCase {
         $css = $this->instance()->generate_style_css(array('id' => 8, 'properties' => array('fontWeight' => '700')), array());
         // The bold rule of a style with a weight (#450) is not a color rule
         $this->assertSame(".typost-ps-8,\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8,\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 700;\n}"
-            . "\n\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style*=\"font-weight\"]) :is(strong, b),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b),\n:is(strong, b) .typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 900;\n}", $css);
+            . "\n\n.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8.typost-ps-8 [style*=\"font-weight\"] *),\n.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id]:not([style*=\"font-weight\"]) :is(strong, b):not(.typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id][data-style-id] [style*=\"font-weight\"] *),\n:is(strong, b) .typost-styled[data-style-id=\"8\"][data-style-id][data-style-id][data-style-id][data-style-id] {\n    font-weight: 900;\n}", $css);
     }
 
     public function test_normalize_color() {

@@ -569,13 +569,18 @@ final class Typost_Paragraph_Styles {
 	 * the style (block or span) and to a style span inside bold text. It is
 	 * written only for a style that sets a weight. Three selectors per ref:
 	 *
-	 * - Bold inside a block with the style: (0,7,1), over the style rule.
-	 * - Bold inside a style span: (0,8,1), so the span, which is nearer to
+	 * - Bold inside a block with the style: (0,14,1), over the style rule.
+	 * - Bold inside a style span: (0,16,1), so the span, which is nearer to
 	 *   the text, wins over a block style around it.
 	 * - Neither form applies to a block or span whose own style attribute
 	 *   sets a weight (the block's own font weight, or an author's change on
-	 *   a span, #450): bold there keeps the browser's bolder, relative to
-	 *   that weight. `[style*="font-weight"]` is a substring test, not an
+	 *   a span, #450), or to bold inside an element within it whose style
+	 *   attribute sets a weight (an author's weight on part of the text):
+	 *   bold there keeps the browser's bolder, relative to that weight. The
+	 *   second test is the `:not(<owner> [style*="font-weight"] *)` at the
+	 *   end of each selector; its argument counts in the specificity above.
+	 *   `:not()` with a complex selector needs the same browsers as `:is()`.
+	 *   `[style*="font-weight"]` is a substring test, not an
 	 *   exact property match: it also matches `--x-font-weight` or
 	 *   `font-weight` inside a value. The plugin writes neither in a
 	 *   style attribute (an author can add one only by editing the HTML),
@@ -604,8 +609,10 @@ final class Typost_Paragraph_Styles {
 		if ( $weight > 0 ) {
 			$selectors = array();
 			foreach ( $refs as $ref ) {
-				$selectors[] = '.typost-styled' . str_repeat( '.typost-ps-' . $ref, 5 ) . ':not([style*="font-weight"]) :is(strong, b)';
-				$selectors[] = self::span_selector( $ref ) . '[data-style-id]:not([style*="font-weight"]) :is(strong, b)';
+				$block       = '.typost-styled' . str_repeat( '.typost-ps-' . $ref, 5 );
+				$span        = self::span_selector( $ref ) . '[data-style-id]';
+				$selectors[] = $block . ':not([style*="font-weight"]) :is(strong, b):not(' . $block . ' [style*="font-weight"] *)';
+				$selectors[] = $span . ':not([style*="font-weight"]) :is(strong, b):not(' . $span . ' [style*="font-weight"] *)';
 				$selectors[] = ':is(strong, b) ' . self::span_selector( $ref );
 			}
 			$css[] = implode( ",\n", $selectors ) . " {\n    font-weight: " . $weight . ";\n}";

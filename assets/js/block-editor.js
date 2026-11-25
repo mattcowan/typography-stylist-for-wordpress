@@ -1333,6 +1333,19 @@ class TypographyFeaturesControl extends Component {
     }
 
     /**
+     * Cancel the debounced applies that are still scheduled. Call it when
+     * a patch apply has consumed every pending change (a mixed selection,
+     * or a style span, #450): a second apply with nothing pending would
+     * otherwise run the full rebuild, which stamps the modal's state over
+     * a mixed selection and writes no override under a style.
+     */
+    _cancelScheduledApplies() {
+        this.debouncedApplySlider.cancel();
+        this.debouncedApplyDropdown.cancel();
+        this.debouncedApplyFontSize.cancel();
+    }
+
+    /**
      * Set font size mode
      */
     setFontSize(mode) {
@@ -1898,9 +1911,10 @@ class TypographyFeaturesControl extends Component {
 
             const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
             this._resetPendingChanges();
+            this._cancelScheduledApplies();
 
             const runs = shared.computeTypostFormatRuns(value.formats, effectiveStart, effectiveEnd, FORMAT_TYPE);
-            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE));
+            onChange(applyPatchToRuns(value, runs, patch, shared, { applyFormat, removeFormat }, FORMAT_TYPE, window.typostData && window.typostData.paragraphStyles));
             return;
         }
         // TEXT IN A STYLE SPAN (#450): a change the author makes wins over
@@ -1913,6 +1927,7 @@ class TypographyFeaturesControl extends Component {
         if (isStyleSpanChange(this.state, spanAttrs, hasPending) && shared.patchTypostFormatAttributes && shared.parseStyleString && shared.buildStyleString) {
             const patch = buildPatchFromPending(this.state, pending, this._clearWeight);
             this._resetPendingChanges();
+            this._cancelScheduledApplies();
             const attributes = buildStyleSpanAttributes(spanAttrs, patch, window.typostData && window.typostData.paragraphStyles, shared);
             if (selectionLost) {
                 onChange(applyFormat(value, { type: FORMAT_TYPE, attributes: attributes }, savedSelectionStart, savedSelectionEnd));

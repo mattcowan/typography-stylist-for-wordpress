@@ -2680,9 +2680,12 @@
 	 * The weight of bold text in a style (#450), or 0 when the style needs
 	 * no bold rule: max(700, bolder(W)), with the CSS Fonts bolder table.
 	 * Under 550 gives 700, 550 to 899 gives 900, 900 or more keeps the
-	 * weight. Twin of PHP bold_weight(), which explains why; reads the
-	 * weight as buildStyleCssBlock() does. normal is 400 and bold is 700;
-	 * lighter and bolder are relative to an unknown parent and give no rule.
+	 * weight. Twin of PHP bold_weight(), which explains why. normal is 400
+	 * and bold is 700; lighter and bolder are relative to an unknown parent
+	 * and give no rule. A number is what PHP is_numeric() accepts, so a
+	 * value PHP gives no rule (a hex string, a boolean) gives none here,
+	 * although buildStyleCssBlock() still writes a main-rule weight for it
+	 * (a known difference in fixtures/style-css.json).
 	 *
 	 * @param {Object} props Resolved properties.
 	 * @return {number} Weight, 0 for none.
@@ -2690,7 +2693,8 @@
 	function boldWeight(props) {
 		if (phpFalsy(props.fontWeight)) return 0;
 		var weight = props.fontWeight;
-		if (isFinite(weight) && Number(weight) >= 1 && Number(weight) <= 1000) {
+		var numeric = typeof weight === 'string' ? /^\s*[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?\s*$/.test(weight) : typeof weight === 'number' && isFinite(weight);
+		if (numeric && Number(weight) >= 1 && Number(weight) <= 1000) {
 			weight = phpInt(weight);
 		} else if (String(weight) === 'normal') {
 			weight = 400;
@@ -2724,8 +2728,10 @@
 			selectors = [];
 			refs.forEach(function (ref) {
 				var cls = '.typost-ps-' + ref;
-				selectors.push('.typost-styled' + cls + cls + cls + cls + cls + ':not([style*="font-weight"]) :is(strong, b)');
-				selectors.push(spanSelector(ref) + '[data-style-id]:not([style*="font-weight"]) :is(strong, b)');
+				var block = '.typost-styled' + cls + cls + cls + cls + cls;
+				var span = spanSelector(ref) + '[data-style-id]';
+				selectors.push(block + ':not([style*="font-weight"]) :is(strong, b):not(' + block + ' [style*="font-weight"] *)');
+				selectors.push(span + ':not([style*="font-weight"]) :is(strong, b):not(' + span + ' [style*="font-weight"] *)');
 				selectors.push(':is(strong, b) ' + spanSelector(ref));
 			});
 			css.push(selectors.join(',\n') + ' {\n    font-weight: ' + weight + ';\n}');

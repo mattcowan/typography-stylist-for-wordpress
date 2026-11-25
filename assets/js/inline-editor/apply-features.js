@@ -432,20 +432,29 @@ function sameFeatures(dataFeatures, tags) {
 /**
  * Patch each formatting run of a mixed selection: only the properties
  * changed since the last apply, leaving everything else about each run
- * untouched. A run whose patch leaves nothing loses the format.
+ * untouched. A run whose patch leaves nothing loses the format. A run in a
+ * style span is patched as buildStyleSpanAttributes() patches one (#450),
+ * so a feature that the style turns on stays off when the author turns it
+ * off, and the run keeps its style.
  *
  * @param {Object} value      RichText value
  * @param {Array}  runs       From computeTypostFormatRuns()
  * @param {Object} patch      From buildPatchFromPending()
- * @param {Object} shared     window.typostSharedUtils (patchTypostFormatAttributes)
+ * @param {Object} shared     window.typostSharedUtils (patchTypostFormatAttributes,
+ *                            parseStyleString, buildStyleString)
  * @param {Object} richText   { applyFormat, removeFormat }
  * @param {string} formatType Format type name
+ * @param {Array}  [styles]   Stored styles (typostData.paragraphStyles)
  * @return {Object} The new value
  */
-function applyPatchToRuns(value, runs, patch, shared, richText, formatType) {
+function applyPatchToRuns(value, runs, patch, shared, richText, formatType, styles) {
     let newValue = value;
     runs.forEach((run) => {
-        const patchedAttrs = shared.patchTypostFormatAttributes(run.attributes, patch);
+        const styleId = run.attributes && run.attributes['data-style-id'];
+        const inStyleSpan = !!styleId && String(styleId) !== '0' && !!shared.parseStyleString && !!shared.buildStyleString;
+        const patchedAttrs = inStyleSpan
+            ? buildStyleSpanAttributes(run.attributes, patch, styles, shared)
+            : shared.patchTypostFormatAttributes(run.attributes, patch);
         if (patchedAttrs) {
             newValue = richText.applyFormat(newValue, {
                 type: formatType,
