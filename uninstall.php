@@ -37,6 +37,7 @@ delete_option('typost_paragraph_styles_next_id');
 delete_option('typost_font_face_version');
 delete_option('typost_ps_toolbar_button');
 delete_option('typost_ps_toolbar_button_default_on');
+delete_option('typost_ps_lock_style_changes');
 
 // Glyphs Panel module (bundled in v2.0)
 delete_option('typost_glyphs_toolbar_button');
@@ -87,6 +88,7 @@ delete_transient('typost_css_variables');
 delete_transient('typost_paragraph_styles_cache');
 delete_transient('typost_paragraph_styles_css');
 delete_transient('typost_paragraph_styles_css_v2');
+delete_transient('typost_paragraph_styles_css_v3');
 delete_transient('typost_vf_axes_cache');
 
 // Delete per-page font CSS transients

@@ -10,8 +10,9 @@
  * @since 2.4.0
  */
 const { caseDeclarations, buildInlineCaseAttributes, buildInlineCasePatch } = require('../text-case.js');
-const { buildInlineFontSizeValue, buildInlineFontSizeAttributes, getNewFontSizeUnit } = require('../font-size-units.js');
+const { buildInlineFontSizeValue, buildInlineFontSizeAttributes, getNewFontSizeUnit, findStyleById } = require('../font-size-units.js');
 const { sanitizeFontVariationSettings } = require('../font-variation-settings.js');
+const { resolveStyleSpanAttributes } = require('../inline-apply-rules.js');
 
 /**
  * Whether the live selection collapsed because the modal took focus, while
@@ -100,6 +101,11 @@ function isEmptyFormatState(state, opts) {
  * active (its CSS class renders the span then; the data attributes stay for
  * font detection).
  *
+ * Under a style the rebuild runs only when the format is replaced wholesale
+ * (a style apply). A change the author makes to text in a style span takes
+ * buildStyleSpanAttributes() instead, which writes a declaration for each
+ * changed key (#450).
+ *
  * @param {Object} state Component state
  * @param {Object} opts  { weightToWrite, caseValue, rawFeatureSettings, sizeUnit }
  * @return {Object} Format attributes
@@ -116,8 +122,9 @@ function buildFormatAttributes(state, opts) {
         styleString += declaration;
     };
 
-    // When a paragraph style is active, the CSS class provides rendering.
-    // We still set data attributes for font detection but skip inline style.
+    // When a paragraph style is applied, the CSS class provides rendering.
+    // We still set data attributes for font detection but skip inline style
+    // (the author's own changes go through buildStyleSpanAttributes()).
     const hasActiveStyle = paragraphStyleId && paragraphStyleId !== 0;
 
     if (hasActiveStyle) {
@@ -321,22 +328,133 @@ function buildPatchFromPending(state, pending, clearWeight) {
 }
 
 /**
+ * Whether an apply changes text in a paragraph style span (#450): the span
+ * at the selection carries the style the popover shows, and the author
+ * changed something in this popover session. The apply then patches the
+ * span (buildStyleSpanAttributes()) instead of rebuilding it.
+ *
+ * A style apply and Detach reset the pending changes (they replace the
+ * format wholesale), so they still take the rebuild.
+ *
+ * @param {Object}  state      Component state (paragraphStyleId)
+ * @param {?Object} spanAttrs  Attributes of the format at the selection
+ * @param {boolean} hasPending Whether changes are pending
+ * @return {boolean} Whether to patch the style span
+ */
+function isStyleSpanChange(state, spanAttrs, hasPending) {
+    if (!hasPending || !spanAttrs) {
+        return false;
+    }
+    const styleId = spanAttrs['data-style-id'];
+    const stateId = state && state.paragraphStyleId;
+    return !!styleId && String(styleId) !== '0' && !!stateId && String(stateId) === String(styleId);
+}
+
+/**
+ * The attributes of a style span after the author's changes (#450).
+ *
+ * The patch (buildPatchFromPending()) sets a data attribute and an inline
+ * declaration for each changed key, or removes both for a key set back to
+ * Inherit or Default, so the text follows the style again. The span keeps
+ * its data-style-id, and the declarations it had for earlier changes.
+ *
+ * The patch starts from the span as it renders (resolveStyleSpanAttributes()):
+ * the copies of the style's values that a style apply wrote become the
+ * style's current values. So a feature toggle builds its list from the
+ * features the modal shows, not from an old copy. The feature toggles have
+ * no Inherit, so a feature list toggled back to the style's own set drops
+ * its declaration: the style renders the features again.
+ *
+ * @param {Object} spanAttrs Attributes of the style span
+ * @param {Object} patch     From buildPatchFromPending()
+ * @param {Array}  styles    Stored styles (typostData.paragraphStyles)
+ * @param {Object} shared    window.typostSharedUtils (patchTypostFormatAttributes,
+ *                           parseStyleString, buildStyleString)
+ * @return {Object} Format attributes
+ */
+function buildStyleSpanAttributes(spanAttrs, patch, styles, shared) {
+    const patched = shared.patchTypostFormatAttributes(resolveStyleSpanAttributes(spanAttrs, styles), patch);
+    // Never null: the data-style-id is a data attribute the patch keeps
+    const attrs = patched || Object.assign({}, spanAttrs);
+    if (patch.featureToggles && patch.featureToggles.length > 0 && !attrs['data-feature-settings']) {
+        const own = styleFeatures(styles, attrs['data-style-id']);
+        const decls = shared.parseStyleString(attrs.style);
+        if (sameFeatures(attrs['data-features'], own)) {
+            // The feature controls have no Inherit: toggling the features
+            // back to the style's own set gives them back to the style
+            delete decls['font-feature-settings'];
+        } else if (!decls['font-feature-settings'] && own && own.length > 0) {
+            // Every feature off, where the style has some: the patch wrote
+            // no declaration, and the style's class would still apply them
+            decls['font-feature-settings'] = 'normal';
+        }
+        const style = shared.buildStyleString(decls);
+        if (style) {
+            attrs.style = style;
+        } else {
+            delete attrs.style;
+        }
+    }
+    return attrs;
+}
+
+/**
+ * The features of a stored style, or null when the style is unknown.
+ *
+ * @param {Array}  styles  Stored styles
+ * @param {string} styleId Style id
+ * @return {?string[]} Feature tags
+ */
+function styleFeatures(styles, styleId) {
+    const style = findStyleById(styles, styleId);
+    if (!style || !style.properties) {
+        return null;
+    }
+    return Array.isArray(style.properties.features) ? style.properties.features.map(String) : [];
+}
+
+/**
+ * Whether a data-features value holds the same tags as a list, in any order.
+ *
+ * @param {string}    dataFeatures Comma-separated tags, or undefined
+ * @param {?string[]} tags         Tags, or null for an unknown style
+ * @return {boolean} Whether they are the same set
+ */
+function sameFeatures(dataFeatures, tags) {
+    if (!tags) {
+        return false;
+    }
+    const own = String(dataFeatures || '').split(',').map((tag) => tag.trim()).filter(Boolean).sort();
+    const other = tags.slice().sort();
+    return own.length === other.length && own.every((tag, index) => tag === other[index]);
+}
+
+/**
  * Patch each formatting run of a mixed selection: only the properties
  * changed since the last apply, leaving everything else about each run
- * untouched. A run whose patch leaves nothing loses the format.
+ * untouched. A run whose patch leaves nothing loses the format. A run in a
+ * style span is patched as buildStyleSpanAttributes() patches one (#450),
+ * so a feature that the style turns on stays off when the author turns it
+ * off, and the run keeps its style.
  *
  * @param {Object} value      RichText value
  * @param {Array}  runs       From computeTypostFormatRuns()
  * @param {Object} patch      From buildPatchFromPending()
- * @param {Object} shared     window.typostSharedUtils (patchTypostFormatAttributes)
+ * @param {Object} shared     window.typostSharedUtils (patchTypostFormatAttributes,
+ *                            parseStyleString, buildStyleString)
  * @param {Object} richText   { applyFormat, removeFormat }
  * @param {string} formatType Format type name
+ * @param {Array}  [styles]   Stored styles (typostData.paragraphStyles)
  * @return {Object} The new value
  */
-function applyPatchToRuns(value, runs, patch, shared, richText, formatType) {
+function applyPatchToRuns(value, runs, patch, shared, richText, formatType, styles) {
     let newValue = value;
     runs.forEach((run) => {
-        const patchedAttrs = shared.patchTypostFormatAttributes(run.attributes, patch);
+        const styleId = run.attributes && run.attributes['data-style-id'];
+        const inStyleSpan = !!styleId && String(styleId) !== '0' && !!shared.parseStyleString && !!shared.buildStyleString;
+        const patchedAttrs = inStyleSpan
+            ? buildStyleSpanAttributes(run.attributes, patch, styles, shared)
+            : shared.patchTypostFormatAttributes(run.attributes, patch);
         if (patchedAttrs) {
             newValue = richText.applyFormat(newValue, {
                 type: formatType,
@@ -357,5 +475,7 @@ module.exports = {
     isEmptyFormatState: isEmptyFormatState,
     buildFormatAttributes: buildFormatAttributes,
     buildPatchFromPending: buildPatchFromPending,
+    isStyleSpanChange: isStyleSpanChange,
+    buildStyleSpanAttributes: buildStyleSpanAttributes,
     applyPatchToRuns: applyPatchToRuns
 };
