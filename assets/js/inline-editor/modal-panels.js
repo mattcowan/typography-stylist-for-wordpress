@@ -137,6 +137,11 @@ function FontWeightPanel({ state, fontWeight, controlType, weightOptions, onChan
     }
 
     if (weightOptions.length <= 1) return null;
+    // Under a paragraph style, Inherit removes the weight the author set
+    // on this text, so it follows the style's weight again (#450)
+    const options = state && state.paragraphStyleId
+        ? [{ label: __('Inherit', 'typography-stylist'), value: '' }].concat(weightOptions)
+        : weightOptions;
     return (
         <div className="typost-modal-section typost-fontweight-section">
             <h4>{__('Font Weight', 'typography-stylist')}</h4>
@@ -147,7 +152,7 @@ function FontWeightPanel({ state, fontWeight, controlType, weightOptions, onChan
                 label={__('Font Weight', 'typography-stylist')}
                 hideLabelFromVision
                 value={fontWeight}
-                options={weightOptions}
+                options={options}
                 onChange={onChange}
             />
         </div>
@@ -203,9 +208,9 @@ function CasePanel({ textCase, fakeSmallCaps, paragraphStyleId, onChange, onFake
                 ]}
                 onChange={onChange}
                 help={paragraphStyleId
-                    // Under a style the span writes no inline case,
-                    // as with the size (#255)
-                    ? __('The paragraph style sets the case. To change the case of this text only, click Detach Style first.', 'typography-stylist')
+                    // Under a style a case picked here is written on this
+                    // text only, over the style's class (#450)
+                    ? __('The paragraph style sets the case. A case that you choose here changes only this text. Default makes the text follow the style again.', 'typography-stylist')
                     : (normalizeTextCase(textCase) === 'capitalize'
                         ? __('Capitalizes the first letter of every word, including short words such as “of” and “the”, and the letter after a hyphen.', 'typography-stylist')
                         : (normalizeTextCase(textCase) === 'uppercase'
@@ -269,10 +274,10 @@ function FontSizePanel({ fontSize, fontSizeMin, fontSizePreferred, fontSizeMax, 
                     : (fontSize === 'fit'
                         ? __('This paragraph style fits text to the block width. Inline text uses the style’s fluid fallback size instead.', 'typography-stylist')
                         : (fixedSizePx !== null
-                            // Under a style the span writes no inline size, so a
-                            // new size shows only after Detach (#255, review)
+                            // Under a style a size picked here is written on
+                            // this text only, over the style's class (#450)
                             ? (paragraphStyleId
-                                ? __('The paragraph style sets this size. To change the size of this text only, click Detach Style first.', 'typography-stylist')
+                                ? __('The paragraph style sets this size. To change the size of this text only, choose a responsive size. Inherit makes the text follow the style again.', 'typography-stylist')
                                 : __('This text has a fixed size. To change it, choose a responsive size.', 'typography-stylist'))
                             : undefined))}
             />

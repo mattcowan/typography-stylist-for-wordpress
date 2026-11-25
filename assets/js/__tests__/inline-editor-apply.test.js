@@ -14,6 +14,8 @@ const {
 	isEmptyFormatState,
 	buildFormatAttributes,
 	buildPatchFromPending,
+	isStyleSpanChange,
+	buildStyleSpanAttributes,
 	applyPatchToRuns,
 } = require('../inline-editor/apply-features.js');
 
@@ -223,6 +225,92 @@ describe('buildPatchFromPending', () => {
 	});
 });
 
+describe('a change to text in a style span (#450)', () => {
+	const { patchTypostFormatAttributes, parseStyleString, buildStyleString } = require('../../../blocks/typography-stylist/utils.js');
+	const shared = { patchTypostFormatAttributes, parseStyleString, buildStyleString };
+	const pending = (keys, featureToggles = []) => ({ keys: new Set(keys), featureToggles });
+	// The style now: weight 300, letter spacing 100, no features. The span
+	// was styled when the style had dlig and letter spacing 50.
+	const styles = [{ id: 12, properties: { fontWeight: '300', letterSpacing: 100 } }];
+	const oldSpan = { 'data-style-id': '12', 'data-features': 'dlig', 'data-letterspacing': '50', class: 'typost-styled' };
+
+	test('patches only when the span carries the style the popover shows and a change is pending', () => {
+		const state = emptyState({ paragraphStyleId: '12' });
+		expect(isStyleSpanChange(state, oldSpan, true)).toBe(true);
+		expect(isStyleSpanChange(emptyState({ paragraphStyleId: 12 }), oldSpan, true)).toBe(true);
+		// A style apply and Detach reset the pending changes: a rebuild
+		expect(isStyleSpanChange(state, oldSpan, false)).toBe(false);
+		// Another style, Detach (0), no style span, no format
+		expect(isStyleSpanChange(emptyState({ paragraphStyleId: 13 }), oldSpan, true)).toBe(false);
+		expect(isStyleSpanChange(emptyState(), oldSpan, true)).toBe(false);
+		expect(isStyleSpanChange(state, { 'data-features': 'dlig' }, true)).toBe(false);
+		expect(isStyleSpanChange(state, null, true)).toBe(false);
+	});
+
+	test('a weight writes its declaration and keeps the style; the other keys stay with the style', () => {
+		const patch = buildPatchFromPending(emptyState({ fontWeight: '700', paragraphStyleId: 12 }), pending(['fontWeight']), false);
+		expect(buildStyleSpanAttributes(oldSpan, patch, styles, shared)).toEqual({
+			'data-style-id': '12',
+			'data-letterspacing': '100',
+			'data-fontweight': '700',
+			class: 'typost-styled',
+			style: 'font-weight: 700',
+		});
+	});
+
+	test('a feature toggle starts from the features the style has now, not from the old copy', () => {
+		const patch = buildPatchFromPending(emptyState({ paragraphStyleId: 12 }), pending([], [{ tag: 'swsh', enabled: true }]), false);
+		const attrs = buildStyleSpanAttributes(oldSpan, patch, styles, shared);
+		expect(attrs['data-features']).toBe('swsh');
+		expect(attrs.style).toBe('font-feature-settings: "swsh" 1');
+		expect(attrs['data-style-id']).toBe('12');
+	});
+
+	test('a later change keeps the earlier declaration; Inherit removes only its own', () => {
+		const first = buildStyleSpanAttributes(oldSpan, buildPatchFromPending(emptyState({ fontWeight: '700' }), pending(['fontWeight']), false), styles, shared);
+		const second = buildStyleSpanAttributes(first, buildPatchFromPending(emptyState({ letterSpacing: 20 }), pending(['letterSpacing']), false), styles, shared);
+		expect(second.style).toBe('font-weight: 700; letter-spacing: 0.02em');
+		expect(second['data-letterspacing']).toBe('20');
+		// The weight select's Inherit sends ''
+		const back = buildStyleSpanAttributes(second, buildPatchFromPending(emptyState({ fontWeight: '' }), pending(['fontWeight']), false), styles, shared);
+		expect(back.style).toBe('letter-spacing: 0.02em');
+		expect(back['data-fontweight']).toBeUndefined();
+		expect(back['data-style-id']).toBe('12');
+		// Letter spacing back to 0: the span has no style attribute again
+		const plain = buildStyleSpanAttributes(back, buildPatchFromPending(emptyState({ letterSpacing: 0 }), pending(['letterSpacing']), false), styles, shared);
+		expect(plain.style).toBeUndefined();
+		// The data attribute goes too; the readers take the style's value
+		expect(plain['data-letterspacing']).toBeUndefined();
+		expect(plain['data-style-id']).toBe('12');
+	});
+
+	test('features toggled back to the style\'s own set drop their declaration, and keep the others', () => {
+		const ligaStyle = [{ id: 12, properties: { features: ['liga'] } }];
+		const span = { 'data-style-id': '12', 'data-features': 'liga' };
+		const on = buildStyleSpanAttributes(span, buildPatchFromPending(emptyState({ fontWeight: '700' }), pending(['fontWeight'], [{ tag: 'dlig', enabled: true }]), false), ligaStyle, shared);
+		expect(on.style).toBe('font-weight: 700; font-feature-settings: "liga" 1, "dlig" 1');
+		const off = buildStyleSpanAttributes(on, buildPatchFromPending(emptyState(), pending([], [{ tag: 'dlig', enabled: false }]), false), ligaStyle, shared);
+		expect(off.style).toBe('font-weight: 700');
+		expect(off['data-features']).toBe('liga');
+		// Every feature off, where the style has some: the class must not
+		// apply them, so the span declares the browser default
+		const none = buildStyleSpanAttributes(span, buildPatchFromPending(emptyState(), pending([], [{ tag: 'liga', enabled: false }]), false), ligaStyle, shared);
+		expect(none.style).toBe('font-feature-settings: normal');
+		expect(none['data-features']).toBeUndefined();
+		// And on again: the style's set, no declaration
+		const back = buildStyleSpanAttributes(none, buildPatchFromPending(emptyState(), pending([], [{ tag: 'liga', enabled: true }]), false), ligaStyle, shared);
+		expect(back.style).toBeUndefined();
+		expect(back['data-features']).toBe('liga');
+	});
+
+	test('a span written before #450 (data-fontweight, no style) gets the declaration on the next change', () => {
+		const before = { 'data-style-id': '12', 'data-fontweight': '700', class: 'typost-styled' };
+		const attrs = buildStyleSpanAttributes(before, buildPatchFromPending(emptyState({ fontWeight: '800' }), pending(['fontWeight']), false), styles, shared);
+		expect(attrs['data-fontweight']).toBe('800');
+		expect(attrs.style).toBe('font-weight: 800');
+	});
+});
+
 describe('applyPatchToRuns', () => {
 	test('patches each run, and removes the format where the patch leaves nothing', () => {
 		const calls = [];
@@ -238,5 +326,29 @@ describe('applyPatchToRuns', () => {
 		const shared = { patchTypostFormatAttributes: (attrs) => (attrs && attrs.n === 1 ? { n: 'p1' } : null) };
 		expect(applyPatchToRuns('v', runs, {}, shared, richText, FORMAT)).toBe('var');
 		expect(calls).toEqual([['apply', 'p1', 0, 4], ['remove', FORMAT, 4, 9]]);
+	});
+
+	test('a run in a style span is patched as a style span (#450): a feature the style has, turned off, stays off', () => {
+		const { patchTypostFormatAttributes, parseStyleString, buildStyleString } = require('../../../blocks/typography-stylist/utils.js');
+		const shared = { patchTypostFormatAttributes, parseStyleString, buildStyleString };
+		const calls = [];
+		const richText = {
+			applyFormat: (value, format, start, end) => { calls.push(['apply', format.attributes, start, end]); return value; },
+			removeFormat: (value, type, start, end) => { calls.push(['remove', start, end]); return value; },
+		};
+		const ligaStyle = [{ id: 12, properties: { features: ['liga'] } }];
+		const runs = [
+			{ start: 0, end: 4, attributes: { 'data-style-id': '12', 'data-features': 'liga', class: 'typost-styled' } },
+			{ start: 4, end: 9, attributes: { 'data-features': 'liga', class: 'typost-styled', style: 'font-feature-settings: "liga" 1' } },
+		];
+		const patch = buildPatchFromPending(emptyState(), { keys: new Set(), featureToggles: [{ tag: 'liga', enabled: false }] }, false);
+		applyPatchToRuns('v', runs, patch, shared, richText, FORMAT, ligaStyle);
+		// The style span declares the browser default, so the class's liga
+		// no longer applies; it keeps its style
+		expect(calls[0][0]).toBe('apply');
+		expect(calls[0][1]['data-style-id']).toBe('12');
+		expect(calls[0][1].style).toBe('font-feature-settings: normal');
+		// The plain run has nothing left and loses the format, as before
+		expect(calls[1]).toEqual(['remove', 4, 9]);
 	});
 });

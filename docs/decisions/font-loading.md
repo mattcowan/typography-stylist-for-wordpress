@@ -30,6 +30,8 @@ The plugin uses different WordPress hooks for font detection depending on page t
 
 **Cache Management:**
 - Font detection results cached in transients for 12-24 hours
+- A save of a post clears its own `typost_has_styled_<ID>` and `typost_used_fonts_<ID>` for every status (#480); a published or private save also clears the archive caches. Autosaves and revisions clear nothing.
+- A preview by a user who can edit the post (`is_preview()` and `current_user_can('edit_post', ID)`) neither reads nor writes the per-post caches: a preview of a published post shows its autosave, and every view of a draft, pending or scheduled post is a preview. Each call scans the content again. `preview` is a public query var, so a logged-out `?preview=true` also sets `is_preview()`; it shows the published content, so it uses the cache. A preview of a page that lists posts uses the archive caches, because WordPress puts the autosave only into a single post or page.
 - Manual cache clear button available in Settings → Typography Stylist → Options
 - Cache automatically cleared when plugin options change
 - Cache keys: `typost_has_styled_*`, `typost_used_fonts_*`, `typost_font_css_*`, and `typost_css_variable_decls` (one `--font-N` declaration per font, kept 24 h, deleted by `clear_cache()`; before 2.4.0 the key was `typost_css_variables` and held the joined `:root` string)

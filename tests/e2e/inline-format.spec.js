@@ -21,7 +21,7 @@
  * test's page, so it goes also after a time-out.
  */
 const { test, expect } = require('@playwright/test');
-const { openNewPost, select, rest, deleteWithoutPage } = require('./helpers');
+const { BASE, openNewPost, openPost, select, rest, deleteWithoutPage } = require('./helpers');
 
 test.setTimeout(90000);
 
@@ -101,3 +101,183 @@ for (const block of BLOCKS) {
 		});
 	}
 }
+
+/*
+ * Text in a paragraph style span (#450). A change made in the dialog wins
+ * over the style for that setting only: the span keeps its data-style-id
+ * and gets an inline declaration for each changed key. The dialog reads a
+ * style span's values from the style as it is now: the data attributes
+ * that a style apply copied from the style count only where the span's
+ * style attribute declares them.
+ */
+
+// A style span as a style apply writes it: copies of the style's values
+function styleSpan(styleId, extra = '') {
+	return `<span data-style-id="${styleId}" data-features="liga" data-letterspacing="50"${extra} class="typost-styled">garden</span>`;
+}
+
+// What the canvas renders for the text of the first element that matches
+function computed(page, clientId, selector) {
+	return page.frame({ name: 'editor-canvas' }).evaluate(({ id, sel }) => {
+		const el = document.querySelector(`[data-block="${id}"] ${sel}`);
+		if (!el) {
+			return null;
+		}
+		const cs = getComputedStyle(el);
+		return { weight: cs.fontWeight, spacing: cs.letterSpacing, features: cs.fontFeatureSettings, size: cs.fontSize };
+	}, { id: clientId, sel: selector });
+}
+
+test('Text in a style span: a weight and a feature from the dialog show, and Inherit gives the text back to the style (#450)', async ({ page }) => {
+	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
+		name: `TEMP #450 light ${Date.now()}`,
+		properties: { fontWeight: '300', letterSpacing: 50, features: [ 'liga' ] },
+	});
+	created.push(`/typost/v1/paragraph-styles/${style.id}`);
+	await openNewPost(page);
+	const postId = await page.evaluate(() => wp.data.select('core/editor').getCurrentPostId());
+	created.push(`/wp/v2/posts/${postId}?force=true`);
+
+	const clientId = await page.evaluate((content) => {
+		const block = wp.blocks.createBlock('core/paragraph', { content });
+		wp.data.dispatch('core/block-editor').insertBlocks(block);
+		return block.clientId;
+	}, `Moonlit ${styleSpan(style.id)} party`);
+	const span = `[data-style-id="${style.id}"]`;
+	await expect.poll(async () => (await computed(page, clientId, span) || {}).weight).toBe('300');
+	const before = await computed(page, clientId, span);
+
+	await select(page, clientId, ...GARDEN);
+	await page.getByRole('button', { name: 'Typography Stylist Features' }).click();
+	const modal = page.locator('.components-modal__frame');
+	await expect(modal).toBeVisible();
+
+	// Font Weight 700: the declaration is written, the span keeps its style
+	await modal.getByRole('combobox', { name: 'Font Weight' }).selectOption('700');
+	await expect.poll(() => blockContent(page, clientId)).toBe(`Moonlit <span data-style-id="${style.id}" data-features="liga" data-letterspacing="50" data-fontweight="700" style="font-weight: 700" class="typost-styled">garden</span> party`);
+	await expect.poll(async () => (await computed(page, clientId, span)).weight).toBe('700');
+	// The settings of the style that the author did not change still show
+	expect((await computed(page, clientId, span)).spacing).toBe(before.spacing);
+
+	// Discretionary Ligatures: the feature list starts from the style's
+	await modal.getByRole('checkbox', { name: 'Discretionary Ligatures' }).check();
+	await expect.poll(() => blockContent(page, clientId)).toContain('style="font-weight: 700; font-feature-settings: &quot;liga&quot; 1, &quot;dlig&quot; 1"');
+	await expect.poll(async () => (await computed(page, clientId, span)).features).toMatch(/"dlig"/);
+	expect(await blockContent(page, clientId)).toContain(`data-style-id="${style.id}"`);
+
+	// Inherit removes the weight; the feature off removes the last
+	// declaration, so the span has no style attribute again
+	await modal.getByRole('combobox', { name: 'Font Weight' }).selectOption('');
+	await expect.poll(() => blockContent(page, clientId)).not.toContain('font-weight');
+	await modal.getByRole('checkbox', { name: 'Discretionary Ligatures' }).uncheck();
+	await expect.poll(() => blockContent(page, clientId)).toBe(`Moonlit <span data-style-id="${style.id}" data-features="liga" data-letterspacing="50" class="typost-styled">garden</span> party`);
+	await expect.poll(async () => (await computed(page, clientId, span)).weight).toBe('300');
+});
+
+// A key other than the weight goes through the same patch path. The
+// spacing is compared as a ratio, so the theme's font size does not matter
+test('Text in a style span: letter spacing from the dialog shows over the style, and 0 gives the text back to the style (#450)', async ({ page }) => {
+	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
+		name: `TEMP #450 spaced ${Date.now()}`,
+		properties: { fontWeight: '300', letterSpacing: 50, features: [ 'liga' ] },
+	});
+	created.push(`/typost/v1/paragraph-styles/${style.id}`);
+	await openNewPost(page);
+	const postId = await page.evaluate(() => wp.data.select('core/editor').getCurrentPostId());
+	created.push(`/wp/v2/posts/${postId}?force=true`);
+
+	const clientId = await page.evaluate((content) => {
+		const block = wp.blocks.createBlock('core/paragraph', { content });
+		wp.data.dispatch('core/block-editor').insertBlocks(block);
+		return block.clientId;
+	}, `Moonlit ${styleSpan(style.id)} party`);
+	const span = `[data-style-id="${style.id}"]`;
+	await expect.poll(async () => (await computed(page, clientId, span) || {}).weight).toBe('300');
+	const before = await computed(page, clientId, span);
+	expect(parseFloat(before.spacing)).toBeGreaterThan(0);
+
+	await select(page, clientId, ...GARDEN);
+	await page.getByRole('button', { name: 'Typography Stylist Features' }).click();
+	const modal = page.locator('.components-modal__frame');
+	await expect(modal).toBeVisible();
+
+	// 200 (0.2em): only the letter-spacing declaration is written, and the
+	// span keeps its style
+	await modal.getByRole('spinbutton', { name: 'Letter Spacing' }).fill('200');
+	await expect.poll(() => blockContent(page, clientId)).toContain('style="letter-spacing: 0.2em"');
+	const content = await blockContent(page, clientId);
+	expect(content).toContain(`data-style-id="${style.id}"`);
+	expect(content).toContain('data-letterspacing="200"');
+	// The style's 0.05em, four times
+	await expect.poll(async () => parseFloat((await computed(page, clientId, span)).spacing) / parseFloat(before.spacing)).toBeCloseTo(4, 1);
+	// The weight and the features of the style still show
+	const after = await computed(page, clientId, span);
+	expect(after.weight).toBe('300');
+	expect(after.features).toBe(before.features);
+
+	// 0 removes the declaration: the text follows the style again
+	await modal.getByRole('spinbutton', { name: 'Letter Spacing' }).fill('0');
+	await expect.poll(() => blockContent(page, clientId)).not.toContain('letter-spacing');
+	expect(await blockContent(page, clientId)).toContain(`data-style-id="${style.id}"`);
+	await expect.poll(async () => (await computed(page, clientId, span)).spacing).toBe(before.spacing);
+});
+
+test('After the style changes, a style span reads the new values and an override keeps its weight, in the editor and on the frontend (#450)', async ({ page }) => {
+	const style = await rest(page, 'POST', '/typost/v1/paragraph-styles', {
+		name: `TEMP #450 light ${Date.now()}`,
+		properties: { fontWeight: '300', letterSpacing: 50, features: [ 'liga' ] },
+	});
+	created.push(`/typost/v1/paragraph-styles/${style.id}`);
+	const content = [
+		`<!-- wp:paragraph --><p>Moonlit ${styleSpan(style.id)} party</p><!-- /wp:paragraph -->`,
+		`<!-- wp:paragraph --><p>Moonlit ${styleSpan(style.id, ' data-fontweight="700" style="font-weight: 700"')} party</p><!-- /wp:paragraph -->`,
+	].join('\n\n');
+	const post = await rest(page, 'POST', '/wp/v2/posts', { title: 'TEMP #450 style change', status: 'draft', content });
+	created.push(`/wp/v2/posts/${post.id}?force=true`);
+	// "Update Style" with a new size and letter spacing
+	await rest(page, 'PATCH', `/typost/v1/paragraph-styles/${style.id}`, {
+		properties: { fontWeight: '300', letterSpacing: 100, features: [ 'liga' ], fontSize: '40', fontSizeUnit: 'rem' },
+	});
+
+	await openPost(page, post.id);
+	const [ untouched, override ] = await page.evaluate(() => wp.data.select('core/block-editor').getBlockOrder());
+	const span = `[data-style-id="${style.id}"]`;
+	await expect.poll(async () => (await computed(page, override, span) || {}).weight).toBe('700');
+	const plain = await computed(page, untouched, span);
+	const changed = await computed(page, override, span);
+	expect(plain.weight).toBe('300');
+	// The span reads the new values: size 2.5rem (40 px over a 16 px root)
+	// and spacing 0.1em (0.05em before), as ratios, so the root size and
+	// the canvas zoom do not matter
+	const canvasRoot = await page.frame({ name: 'editor-canvas' }).evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(plain.size) / canvasRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(plain.spacing) / parseFloat(plain.size)).toBeCloseTo(0.1, 3);
+	// The override takes the new size and spacing of the style
+	expect(changed.size).toBe(plain.size);
+	expect(changed.spacing).toBe(plain.spacing);
+	expect(await page.evaluate(() => wp.data.select('core/editor').isEditedPostDirty())).toBe(false);
+
+	// The untouched span is not "(modified)": its copies of the old values
+	// do not count
+	await select(page, untouched, ...GARDEN);
+	await page.getByRole('button', { name: 'Typography Stylist Features' }).click();
+	const modal = page.locator('.components-modal__frame');
+	await expect(modal).toBeVisible();
+	await expect(modal.locator('.typost-ps-badge-name')).toHaveText(style.name);
+	await modal.getByRole('button', { name: 'Close', exact: true }).first().click();
+	await expect(modal).toHaveCount(0);
+	expect(await page.evaluate(() => wp.data.select('core/editor').isEditedPostDirty())).toBe(false);
+
+	// The frontend prints the same rules
+	await page.goto(`${BASE}/?p=${post.id}&preview=true`, { waitUntil: 'load' });
+	const front = await page.evaluate((sel) => Array.from(document.querySelectorAll(sel)).map((el) => {
+		const cs = getComputedStyle(el);
+		return { weight: cs.fontWeight, size: cs.fontSize, spacing: cs.letterSpacing };
+	}), span);
+	expect(front.map((s) => s.weight)).toEqual([ '300', '700' ]);
+	const frontRoot = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+	expect(parseFloat(front[0].size) / frontRoot).toBeCloseTo(2.5, 2);
+	expect(parseFloat(front[0].spacing) / parseFloat(front[0].size)).toBeCloseTo(0.1, 3);
+	expect(front[1].size).toBe(front[0].size);
+	expect(front[1].spacing).toBe(front[0].spacing);
+});
