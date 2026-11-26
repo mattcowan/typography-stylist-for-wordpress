@@ -1,0 +1,11 @@
+{
+	"_comment": "The letter spacing a fit-to-width block writes on its heading (#458). save.js writes it as letter-spacing in em, buildEditorStyle() in blocks/typography-stylist/editor-style.js writes the same value as --typost-fit-letter-spacing in the editor, and Typost::add_fit_letter_spacing_property() in typography-stylist.php copies it from the saved declaration into --typost-fit-letter-spacing at render time. Read by blocks/typography-stylist/__tests__/css-js-mirrors.test.js (letterSpacing -> value) and tests/Unit/FitLetterSpacingTest.php (value -> property), so a value the block writes that the filter cannot read fails one of them.",
+	"cases": [
+		{ "label": "positive", "letterSpacing": 50, "value": "0.05em" },
+		{ "label": "negative", "letterSpacing": -30, "value": "-0.03em" },
+		{ "label": "three decimals", "letterSpacing": -25, "value": "-0.025em" },
+		{ "label": "the smallest step", "letterSpacing": 1, "value": "0.001em" },
+		{ "label": "a whole em", "letterSpacing": 1000, "value": "1em" },
+		{ "label": "more than an em", "letterSpacing": 1250, "value": "1.25em" }
+	]
+}

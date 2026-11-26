@@ -84,6 +84,7 @@ class Typost_Export {
         'typost_paragraph_styles_css'             => 'Cache.',
         'typost_paragraph_styles_css_v2'          => 'Cache.',
         'typost_paragraph_styles_css_v3'          => 'Cache.',
+        'typost_paragraph_styles_css_v4'          => 'Cache.',
         'typost_vf_axes_cache'                    => 'Cache.',
     );
 

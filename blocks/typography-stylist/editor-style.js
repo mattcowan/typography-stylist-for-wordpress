@@ -100,6 +100,14 @@ export default function buildEditorStyle({
 		styles.fontSize = buildResponsiveClamp(fontSizeMin, fontSizePreferred, fontSizeMax, sizePreviewUnit);
 	}
 
+	// Fit-to-width: the letter spacing again as a custom property, which
+	// the lines read (style.css), so each line resolves the em value at its
+	// own size and not at the heading's (#458). Same test as the
+	// letter-spacing above; under a paragraph style the class supplies it.
+	if (fontSize === 'fit' && letterSpacing !== 0 && rendersInline('letterSpacing')) {
+		styles['--typost-fit-letter-spacing'] = `${letterSpacing / 1000}em`;
+	}
+
 	// A fixed px size (a style created from the inline editor) has no
 	// block-native control; render it inline when it is not coming from
 	// the style's class (an edit in progress, or a detached block that
