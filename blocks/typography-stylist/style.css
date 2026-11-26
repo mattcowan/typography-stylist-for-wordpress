@@ -199,7 +199,10 @@
  * the em value unresolved, so each line resolves it at its own size. The
  * frontend gets it from the render_block filter
  * (Typost::add_fit_letter_spacing_property()), the editor from
- * buildEditorStyle(), a paragraph style from its class rule. Without the
+ * buildEditorStyle(), a paragraph style from its class rule. A block that
+ * overrides a style's letter spacing (#451) writes its own value, or
+ * `normal` for an override to none, so its lines do not take the style's
+ * value. Without the
  * property the declaration is invalid at computed-value time and the line
  * inherits the heading's letter spacing, as before (a theme's own spacing
  * on headings, or a fit block with no letter spacing). */

@@ -104,8 +104,13 @@ export default function buildEditorStyle({
 	// the lines read (style.css), so each line resolves the em value at its
 	// own size and not at the heading's (#458). Same test as the
 	// letter-spacing above; under a paragraph style the class supplies it.
+	// An override to none on top of a style writes `normal` to the
+	// property too, or the lines would take the style's value from the
+	// class rule while the heading shows none.
 	if (fontSize === 'fit' && letterSpacing !== 0 && rendersInline('letterSpacing')) {
 		styles['--typost-fit-letter-spacing'] = `${letterSpacing / 1000}em`;
+	} else if (fontSize === 'fit' && styleOverrides && styleOverrides.letterSpacing) {
+		styles['--typost-fit-letter-spacing'] = 'normal';
 	}
 
 	// A fixed px size (a style created from the inline editor) has no

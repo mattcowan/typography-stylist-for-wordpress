@@ -13,7 +13,7 @@ import { PanelBody, SelectControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { buildSidebarWeightOptions, shouldShowWeightPanel } from '../../strip-styles/theme-default-weight';
 import { hookContainerRef } from '../../../../assets/js/hook-container.js';
-import renderOverrideReset from './override-reset';
+import renderOverrideReset, { renderStyleDefaultHelp } from './override-reset';
 
 /**
  * The reset controls of the weight and of the variation axes (#451). The
@@ -81,6 +81,7 @@ export default function renderFontWeightPanel(props) {
 				options={buildSidebarWeightOptions(sidebarWeightOptions, __('Theme default', 'typography-stylist'))}
 				onChange={(value) => setAttributes({ fontWeight: value })}
 			/>
+			{renderStyleDefaultHelp(overrideControls, __('Theme default', 'typography-stylist'))}
 			{renderWeightOverrideResets(overrideControls)}
 		</PanelBody>
 	);

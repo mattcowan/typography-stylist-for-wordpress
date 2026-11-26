@@ -46,7 +46,9 @@ class FitLetterSpacingTest extends TestCase {
         $json  = file_get_contents(TYPOST_PLUGIN_DIR . '/tests/fixtures/fit-letter-spacing.json');
         $cases = array();
         foreach (json_decode($json, true)['cases'] as $case) {
-            $cases[$case['label']] = array($case['value']);
+            // A case on top of a paragraph style (#451) adds the style class
+            $class = 'typost-styled typost-fit' . (isset($case['styleClass']) ? ' ' . $case['styleClass'] : '');
+            $cases[$case['label']] = array($case['value'], $class);
         }
         return $cases;
     }
@@ -54,12 +56,17 @@ class FitLetterSpacingTest extends TestCase {
     /**
      * @dataProvider fixtureCases
      */
-    public function test_the_filter_copies_every_value_the_block_writes($value) {
+    public function test_the_filter_copies_every_value_the_block_writes($value, $class) {
         $style = 'font-weight:700;letter-spacing:' . $value . ';font-size:clamp(1rem, 2rem + 2vw, 4rem)';
         $this->assertSame(
-            $this->fitBlock($style . ';--typost-fit-letter-spacing:' . $value),
-            $this->render($this->fitBlock($style))
+            $this->fitBlock($style . ';--typost-fit-letter-spacing:' . $value, $class),
+            $this->render($this->fitBlock($style, $class))
         );
+    }
+
+    public function test_the_fixture_has_a_case_on_top_of_a_style() {
+        // A control: the override to none (#451) is in the provider
+        $this->assertSame(array('normal', 'typost-styled typost-fit typost-ps-3'), $this->fixtureCases()['none on top of a style']);
     }
 
     public function test_the_fixture_is_read() {
@@ -86,6 +93,8 @@ class FitLetterSpacingTest extends TestCase {
             'no letter spacing'                => $this->fitBlock('font-weight:700'),
             'letter spacing in px'             => $this->fitBlock('letter-spacing:2px'),
             'letter spacing in rem'            => $this->fitBlock('letter-spacing:0.05rem'),
+            'normal on a block that is not fit' => $this->fitBlock('letter-spacing:normal', 'typost-styled typost-ps-3'),
+            'a keyword other than normal'      => $this->fitBlock('letter-spacing:inherit'),
             'a paragraph style (no inline)'    => $this->fitBlock('text-align:center', 'typost-styled typost-fit typost-ps-3'),
             'the property already there'       => $this->fitBlock('letter-spacing:0.05em;--typost-fit-letter-spacing:0.05em'),
             'a custom property that ends in it' => $this->fitBlock('--my-letter-spacing:0.05em'),

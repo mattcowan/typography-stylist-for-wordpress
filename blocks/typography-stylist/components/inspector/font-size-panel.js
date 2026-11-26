@@ -13,7 +13,7 @@ import { Notice, PanelBody, RangeControl, SelectControl, ToggleControl } from '@
 import { __ } from '@wordpress/i18n';
 import ZoomNotice from '../zoom-notice';
 import { hasBlockTextIndent, isValidFontSizeRange } from '../../utils';
-import renderOverrideReset from './override-reset';
+import renderOverrideReset, { renderStyleDefaultHelp } from './override-reset';
 
 /**
  * Block font size: inherit, responsive (clamp) or fit to width, with the
@@ -49,6 +49,7 @@ export default function renderFontSizePanel(props) {
 							: undefined
 				}
 			/>
+			{renderStyleDefaultHelp(overrideControls, __('Inherit', 'typography-stylist'))}
 
 			{fontSize === 'fit' && (
 				<>

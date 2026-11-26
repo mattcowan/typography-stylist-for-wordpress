@@ -35,6 +35,35 @@ function focusSettingAfterReset(button) {
 }
 
 /**
+ * The help line under a setting whose empty option ("Theme default",
+ * "(Default)", "Inherit") shows the paragraph style's value, not the
+ * theme's, while the block has a style (#451 review): the empty value is
+ * not an override, so the style's class still sets the property. Detaching
+ * the style is the way to the theme's value. Nothing without an active
+ * style.
+ *
+ * @param {?Object} overrideControls { styleOverrides } from Edit; null
+ *                                   styleOverrides means no active style.
+ * @param {string}  optionLabel      The empty option's label, as the control shows it.
+ * @return {?Element} The help line.
+ */
+export function renderStyleDefaultHelp(overrideControls, optionLabel) {
+	const { styleOverrides } = overrideControls || {};
+	if (!styleOverrides) {
+		return null;
+	}
+	return (
+		<p className="typost-style-default-help" style={{ fontSize: '12px', color: '#757575', marginTop: '8px', marginBottom: '8px' }}>
+			{sprintf(
+				/* translators: %s: the label of a setting's empty option in the block sidebar, for example "Theme default" */
+				__('With a paragraph style, “%s” shows the style’s value. To use the theme’s value, detach the style.', 'typography-stylist'),
+				optionLabel
+			)}
+		</p>
+	);
+}
+
+/**
  * The note and the "Reset to style" button for one override key, or nothing
  * when the block has no active paragraph style or does not override the key.
  *
