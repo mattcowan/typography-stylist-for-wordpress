@@ -4655,22 +4655,21 @@ class Typost {
      * reaches the iframe document.
      */
     public function output_font_css_variables() {
-        // Only output in appropriate contexts
-        if (!is_admin() && !$this->has_styled_content()) {
-            $replacements = $this->get_font_replacements();
-            // Check if any replacements are set to global load, or any fonts
-            // are forced by the typost_force_enqueue_font_ids filter (theme
-            // CSS needs the --font-N definitions even without styled content)
-            if (empty($replacements['global_load']) && empty($this->get_forced_font_ids())) {
-                return;
-            }
-        }
-
         // null: every font (admin). The frontend list reuses the detection
         // of this request where it ran (the archive results of
         // detect_frontend_fonts() on template_redirect, the per-post
         // transient of the singular scan) and runs the singular scan if not.
         $font_ids = is_admin() ? null : $this->get_frontend_variable_font_ids();
+
+        // A frontend page prints the element when its list has a font: the
+        // content fonts, the forced fonts, the fonts with "Load on all
+        // pages" and the global replacements. A page with no styled content
+        // still gets the last three (#482: a "Load on all pages" font loads
+        // its @font-face on every page in enqueue_frontend_assets(), so it
+        // gets its variable there too).
+        if (is_array($font_ids) && empty($font_ids)) {
+            return;
+        }
 
         $css = $this->get_font_css_variables($font_ids);
         if (!empty($css)) {

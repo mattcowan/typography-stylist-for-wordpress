@@ -312,6 +312,24 @@ class FontCssVariablesPerPageTest extends TestCase {
         $this->assertSame([3, 5, 20], $this->printedIds($this->output()));
     }
 
+    public function test_load_on_all_pages_fonts_print_on_a_page_with_nothing_styled() {
+        // #482: these fonts get @font-face on every page
+        // (enqueue_frontend_assets()), so they get their variable there too.
+        $this->options['typost_custom_fonts'] = [
+            $this->kit(3, 'Three'),
+            $this->kit(5, 'Five', ['load_on_all_pages' => true]),
+        ];
+        $this->options['typost_adobe_fonts'] = [
+            ['id' => 'adobe-20', 'font_id' => 20, 'font_family' => 'twenty-pro', 'load_on_all_pages' => true],
+            ['id' => 'adobe-21', 'font_id' => 21, 'font_family' => 'twenty-one-pro'],
+        ];
+        $this->is_singular = true;
+        $this->transients['typost_has_styled_42'] = 'no';
+        $this->transients['typost_used_fonts_42'] = [];
+
+        $this->assertSame([5, 20], $this->printedIds($this->output()));
+    }
+
     public function test_a_global_load_replacement_prints_its_alias_and_target() {
         $this->seedFonts();
         $this->options['typost_font_replacements'] = [
