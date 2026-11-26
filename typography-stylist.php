@@ -116,6 +116,32 @@ class Typost {
     private $forced_font_ids = null;
 
     /**
+     * Font IDs that the blocks rendered before wp_head reference, keyed by
+     * ID: the fontId attributes that collect_rendered_block_font_ids() reads,
+     * and the IDs that get_rendered_block_font_ids() finds in the markup
+     * @since 2.4.0
+     */
+    private $rendered_block_font_ids = array();
+
+    /**
+     * The markup of the blocks rendered before wp_head that
+     * get_rendered_block_font_ids() has not read yet, one string for each
+     * block whose output no later block output holds (see
+     * collect_rendered_block_font_ids())
+     * @since 2.4.0
+     * @var string[]
+     */
+    private $rendered_block_markup = array();
+
+    /**
+     * Whether this request collects the fonts of rendered blocks: set by
+     * start_collecting_rendered_block_fonts() when a block theme's template
+     * loads, so cron, WP-CLI, feeds, REST and admin requests never collect
+     * @since 2.4.0
+     */
+    private $collects_rendered_block_fonts = false;
+
+    /**
      * Hook suffix of the Settings → Typography Stylist page (set in
      * add_admin_menu(), matched in maybe_enqueue_admin_assets()).
      * @since 2.3.1
@@ -248,6 +274,14 @@ class Typost {
 
         // Enqueue frontend assets
         add_action('wp_enqueue_scripts', array($this, 'enqueue_frontend_assets'));
+
+        // Collect the fonts of the template's blocks (template parts, synced
+        // patterns, query loops), which a block theme renders before wp_head.
+        // Late, so it reads the markup after the filters that add to it.
+        // Collection starts when the theme template loads (template_include,
+        // late, after other plugins pick the template) and ends at wp_head.
+        add_filter('template_include', array($this, 'start_collecting_rendered_block_fonts'), 999);
+        add_filter('render_block', array($this, 'collect_rendered_block_font_ids'), 99, 2);
 
         // Clear per-post and archive caches when posts are saved or deleted
         add_action('save_post', array($this, 'on_post_save'), 10, 3);
@@ -927,8 +961,10 @@ class Typost {
         }
 
         // Only return early if NO styled content, NO always-load fonts,
-        // and NO fonts forced by the typost_force_enqueue_font_ids filter
-        if (!$has_styled && !$has_always_load_fonts && empty($this->get_forced_font_ids())) {
+        // NO fonts forced by the typost_force_enqueue_font_ids filter, and
+        // NO fonts in the blocks a block theme rendered before wp_head (#481)
+        if (!$has_styled && !$has_always_load_fonts && empty($this->get_forced_font_ids())
+            && empty($this->get_rendered_block_font_ids())) {
             return;
         }
 
@@ -1043,6 +1079,17 @@ class Typost {
             $used_font_ids = array_values(array_unique(array_merge(
                 $used_font_ids,
                 $this->resolve_used_font_replacements($forced_font_ids)
+            )));
+        }
+
+        // Merge the fonts of the blocks a block theme rendered before
+        // wp_head (#481): template parts, synced patterns and query loops
+        // that the content scan cannot see. Resolved like content IDs.
+        $rendered_font_ids = $this->get_rendered_block_font_ids();
+        if (!empty($rendered_font_ids)) {
+            $used_font_ids = array_values(array_unique(array_merge(
+                $used_font_ids,
+                $this->resolve_used_font_replacements($rendered_font_ids)
             )));
         }
 
@@ -3856,7 +3903,8 @@ class Typost {
      * only for fonts that are either:
      *   - Set to "load on all pages", OR
      *   - Forced by the typost_force_enqueue_font_ids filter, OR
-     *   - Actually used: on the frontend, by the current page; in the block
+     *   - Actually used: on the frontend, by the current page (in a block
+     *     theme also by the template's blocks, since 2.4.0); in the block
      *     editor (since 2.3.1), by the saved content of the post being
      *     edited (get_editor_used_fonts()). editor-font-kits.js adds the kit
      *     for any other font the author uses or previews.
@@ -3921,6 +3969,16 @@ class Typost {
             $used_font_ids = array_values(array_unique(array_merge(
                 $used_font_ids,
                 $this->resolve_used_font_replacements($forced_font_ids)
+            )));
+        }
+
+        // Frontend, block theme: the fonts of the template's blocks (#481).
+        // Empty in the editor, where nothing is collected.
+        $rendered_font_ids = $this->get_rendered_block_font_ids();
+        if (!empty($rendered_font_ids)) {
+            $used_font_ids = array_values(array_unique(array_merge(
+                $used_font_ids,
+                $this->resolve_used_font_replacements($rendered_font_ids)
             )));
         }
 
@@ -4562,6 +4620,219 @@ class Typost {
     }
 
     /**
+     * Collect the font IDs that a rendered block references (#481)
+     *
+     * Hooked to render_block. A block theme renders the whole template
+     * (template parts, synced patterns, query loops and the post content) in
+     * template-canvas.php before it calls wp_head(), so when the font output
+     * runs (enqueue_frontend_assets() on wp_enqueue_scripts, wp_head priority
+     * 1; output_font_css_variables() on priority 5) this list holds the fonts
+     * of every block on the page, also those the content scan cannot see.
+     * A classic theme renders the body after wp_head, so it collects nothing.
+     * enqueue_frontend_assets() loads the frontend CSS when this list has a
+     * font, also on a page whose content is not styled.
+     *
+     * It reads, by ID, what the content scan reads: a --font-N reference, a
+     * data-font-id attribute, the fontId attribute of a Typography Stylist
+     * block, and the fonts that extensions report through
+     * typost_content_font_ids (paragraph styles). A font named only by its
+     * family (data-font, before 1.1.6) is not collected.
+     *
+     * Cost: it runs for every block that renders before wp_head, so it only
+     * keeps the markup; get_rendered_block_font_ids() reads it once, when
+     * the font output asks. One typost_content_font_ids call for the page,
+     * not one for each block, matters: the Paragraph Styles callback resolves
+     * the styles that it finds on each call.
+     *
+     * Nested blocks: render_block fires for every block, inner blocks first
+     * (WP_Block::render()), and the output of a block usually holds the
+     * output of its inner blocks, so a paragraph in a group in a template
+     * part would be kept once for each level. Each output is kept as one
+     * string; before it is added, the strings at the end of the list that
+     * occur verbatim in it, from the end of the output backward and in
+     * order, are removed (keep_rendered_block_markup()). A string is removed
+     * only when its bytes are in the output that replaces it, so no
+     * reference is lost. A parent that drops or rewrites the output of its
+     * inner blocks keeps them, which can load a font for nothing but never
+     * misses one. No depth count on pre_render_block: blocks that render
+     * through WP_Block::render() directly (the posts of core/post-template,
+     * core/block, core/navigation) fire render_block without it, and a
+     * pre_render_block filter that returns content skips render_block.
+     *
+     * @since 2.4.0
+     * @param string $block_content The rendered block HTML.
+     * @param array  $block         The parsed block.
+     * @return string The HTML, unchanged.
+     */
+    public function collect_rendered_block_font_ids($block_content, $block) {
+        // An excerpt (core/post-excerpt on a search or archive page) renders
+        // the whole post through wp_trim_excerpt() on get_the_excerpt and
+        // shows only its text, so its fonts are not on the page
+        if (!$this->should_collect_rendered_block_fonts() || doing_filter('get_the_excerpt')) {
+            return $block_content;
+        }
+
+        if (is_array($block) && isset($block['blockName']) && 'typost/block' === $block['blockName']
+            && isset($block['attrs']['fontId']) && is_numeric($block['attrs']['fontId'])) {
+            $this->add_rendered_block_font_id($block['attrs']['fontId']);
+        }
+
+        if (is_string($block_content) && '' !== $block_content) {
+            $this->keep_rendered_block_markup($block_content);
+        }
+
+        return $block_content;
+    }
+
+    /**
+     * Add one block output to the markup that
+     * get_rendered_block_font_ids() reads
+     *
+     * Removes the strings at the end of the list that occur verbatim in the
+     * output, in order: the last one must end at or before the end of the
+     * output, the one before it at or before the start of that match, and
+     * so on. The first string that does not occur stops the search. The
+     * outputs of the inner blocks of this block are the strings at the end
+     * of the list, so they are removed; a string that is not from an inner
+     * block can also be removed, but only when the output holds its bytes,
+     * so the references in it are still read.
+     *
+     * Cost: each search runs backward from the end of the output and stops
+     * at the match, so one block output is scanned about once, plus one
+     * scan that finds nothing.
+     *
+     * @since 2.4.0
+     * @param string $block_content A rendered block output, not empty.
+     */
+    private function keep_rendered_block_markup($block_content) {
+        $length = strlen($block_content);
+        $end = $length;
+
+        while (!empty($this->rendered_block_markup)) {
+            $last = end($this->rendered_block_markup);
+            $last_length = strlen($last);
+            if ($last_length > $end) {
+                break;
+            }
+            // A negative offset makes strrpos() return the last match that
+            // ends at or before $end. The offset is at least -$length,
+            // since $last_length <= $end.
+            $start = strrpos($block_content, $last, $end - $last_length - $length);
+            if (false === $start) {
+                break;
+            }
+            array_pop($this->rendered_block_markup);
+            $end = $start;
+        }
+
+        $this->rendered_block_markup[] = $block_content;
+    }
+
+    /**
+     * Start collect_rendered_block_font_ids() when a block theme's template
+     * loads (#481)
+     *
+     * Hooked late to template_include, which template-loader.php runs only
+     * when a theme template loads: after the feed, robots and trackback
+     * branches, and never in cron, WP-CLI, XML-RPC, REST or admin requests.
+     * Those requests never fire wp_head either, so a collection that they
+     * started would keep markup for the whole request. Blocks rendered
+     * earlier (on wp or template_redirect) are not collected; the content
+     * scan reads the post content itself.
+     *
+     * @since 2.4.0
+     * @param string $template The template file that loads.
+     * @return string The template, unchanged.
+     */
+    public function start_collecting_rendered_block_fonts($template) {
+        // wp_is_block_theme() arrived in WordPress 5.9
+        $this->collects_rendered_block_fonts = function_exists('wp_is_block_theme') && wp_is_block_theme();
+        return $template;
+    }
+
+    /**
+     * Whether collect_rendered_block_font_ids() records this block
+     *
+     * Only after a block theme's template loaded, and only until wp_head
+     * fires: the fonts print in wp_head, and the content scan that renders
+     * the post again inside wp_head finds nothing new.
+     *
+     * @since 2.4.0
+     * @return bool
+     */
+    private function should_collect_rendered_block_fonts() {
+        return $this->collects_rendered_block_fonts && !did_action('wp_head');
+    }
+
+    /**
+     * Record one font ID for collect_rendered_block_font_ids()
+     *
+     * @since 2.4.0
+     * @param mixed $font_id A font ID; anything that is not a positive
+     *                       integer is ignored.
+     */
+    private function add_rendered_block_font_id($font_id) {
+        $font_id = (int) $font_id;
+        if ($font_id > 0) {
+            $this->rendered_block_font_ids[$font_id] = true;
+        }
+    }
+
+    /**
+     * Font IDs that the blocks rendered before wp_head reference (#481)
+     *
+     * Reads the markup that collect_rendered_block_font_ids() kept with the
+     * patterns of get_used_fonts_in_content(), applied to the HTML tags only
+     * (not to the text), then frees it, so the three callers of one request
+     * read it once. The typost_content_font_ids filter gets the whole
+     * markup, as in the content scan. Empty in a classic theme, in admin,
+     * REST, cron and feed requests, and before the template loads
+     * (template_include). The replacements are not resolved: the callers
+     * resolve them as they do for the content scan.
+     *
+     * @since 2.4.0
+     * @return int[] Unique positive font IDs
+     */
+    private function get_rendered_block_font_ids() {
+        if (!empty($this->rendered_block_markup)) {
+            // A line break between two outputs, so no match spans both
+            $markup = implode("\n", $this->rendered_block_markup);
+            $this->rendered_block_markup = array();
+
+            // Only a reference inside a tag counts: a template shows the text
+            // of other posts (a post excerpt in a query loop), and a text
+            // that names a variable (an article about fonts) uses no font.
+            // A match is inside a tag when the last "<" before it comes after
+            // the last ">". A ">" in an attribute value (title="a > b")
+            // before the match makes the match count as text, so that case
+            // misses a font; it does not add a wrong one.
+            $length = strlen($markup);
+            $patterns = array('--font-' => '/--font-(\d+)/', 'data-font-id' => '/data-font-id=["\'](\d+)["\']/');
+            foreach ($patterns as $marker => $pattern) {
+                if (false === strpos($markup, $marker) || !preg_match_all($pattern, $markup, $matches, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+                foreach ($matches[1] as $match) {
+                    $before = $match[1] - $length;
+                    $open = strrpos($markup, '<', $before);
+                    $close = strrpos($markup, '>', $before);
+                    if (false !== $open && (false === $close || $open > $close)) {
+                        $this->add_rendered_block_font_id($match[0]);
+                    }
+                }
+            }
+
+            $extension_fonts = array();
+            $this->collect_extension_font_ids($markup, $extension_fonts);
+            foreach ($extension_fonts as $font_ref) {
+                $this->add_rendered_block_font_id(substr($font_ref, 3));
+            }
+        }
+
+        return array_keys($this->rendered_block_font_ids);
+    }
+
+    /**
      * Font IDs whose --font-N variable this frontend page declares (#474)
      *
      * - the fonts the content references: on a page that lists posts, the
@@ -4571,6 +4842,9 @@ class Typost {
      *   paragraph styles and other extensions report through
      *   typost_content_font_ids;
      * - the fonts that typost_force_enqueue_font_ids adds;
+     * - in a block theme, the fonts of the blocks that the template rendered
+     *   before wp_head: template parts, synced patterns, query loops (#481,
+     *   get_rendered_block_font_ids());
      * - the uploaded kits and Adobe Fonts with "Load on all pages" on;
      * - the deleted fonts whose replacement is set to load globally;
      * - for each deleted font in the list, the font that replaces it. The
@@ -4601,7 +4875,7 @@ class Typost {
             }
         }
 
-        $ids = array_merge($ids, $this->get_forced_font_ids());
+        $ids = array_merge($ids, $this->get_forced_font_ids(), $this->get_rendered_block_font_ids());
 
         foreach (array($this->get_custom_fonts(), $this->get_adobe_fonts()) as $fonts) {
             foreach ((array) $fonts as $font) {
